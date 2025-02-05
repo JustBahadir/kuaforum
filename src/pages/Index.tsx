@@ -2,22 +2,39 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/lib/supabase";
 
 const Index = () => {
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const { toast } = useToast();
 
-  const handleLogin = () => {
-    // TODO: Bu kısım veritabanı entegrasyonundan sonra güncellenecek
-    if (password === "demo") { // Geçici olarak demo şifresi
+  const handleLogin = async () => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        toast({
+          title: "Hata",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
       toast({
         title: "Giriş başarılı",
         description: "Hoş geldiniz!",
       });
-    } else {
+      
+      // TODO: Başarılı girişten sonra dashboard'a yönlendirme eklenecek
+    } catch (error) {
       toast({
         title: "Hata",
-        description: "Yanlış şifre",
+        description: "Bir hata oluştu",
         variant: "destructive",
       });
     }
@@ -29,6 +46,16 @@ const Index = () => {
         <h1 className="text-2xl font-bold text-center mb-6">Kuaför Yönetim Sistemi</h1>
         
         <div className="space-y-4">
+          <div>
+            <Input
+              type="email"
+              placeholder="E-posta"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full"
+            />
+          </div>
+          
           <div>
             <Input
               type="password"
