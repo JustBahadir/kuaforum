@@ -1,8 +1,11 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// Bu değerleri Supabase proje ayarlarınızdan alıp değiştirin
-const supabaseUrl = 'BURAYA_SUPABASE_PROJECT_URL';  // Sizin Supabase URL'niz
-const supabaseKey = 'BURAYA_SUPABASE_ANON_KEY';     // Sizin Supabase API Key'iniz
+// Örnek değerler:
+// URL: https://abcdefghijk.supabase.co
+// Key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSI...
+
+const supabaseUrl = 'https://abcdefghijk.supabase.co';    // Bu URL'yi kendi Supabase URL'niz ile değiştirin
+const supabaseKey = 'your-anon-key';                      // Bu key'i kendi Supabase anon/public key'iniz ile değiştirin
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
