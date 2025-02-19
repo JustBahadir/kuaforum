@@ -7,20 +7,20 @@ const supabaseKey = 'your-anon-key';                      // Bu key'i kendi Supa
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Müşteri tipi tanımı
-export type Customer = {
+export type Musteri = {
   id: number;
-  created_at?: string;
-  name: string;
-  phone: string;
-  email: string;
-  address: string;
-  customer_number: string;
+  olusturulma_tarihi?: string;
+  ad_soyad: string;
+  telefon: string;
+  eposta: string;
+  adres: string;
+  musteri_no: string;
 }
 
 // Müşteri işlemleri için yardımcı fonksiyonlar
-export const customersService = {
+export const musteriServisi = {
   // Tüm müşterileri getir
-  async getAll() {
+  async hepsiniGetir() {
     const { data, error } = await supabase
       .from('customers')
       .select('*')
@@ -31,11 +31,11 @@ export const customersService = {
   },
 
   // Müşteri ara
-  async search(query: string) {
+  async ara(aramaMetni: string) {
     const { data, error } = await supabase
       .from('customers')
       .select('*')
-      .or(`name.ilike.%${query}%,phone.ilike.%${query}%,email.ilike.%${query}%`)
+      .or(`name.ilike.%${aramaMetni}%,phone.ilike.%${aramaMetni}%,email.ilike.%${aramaMetni}%`)
       .order('created_at', { ascending: false });
     
     if (error) throw error;
@@ -43,10 +43,18 @@ export const customersService = {
   },
 
   // Yeni müşteri ekle
-  async create(customer: Omit<Customer, 'id' | 'created_at'>) {
+  async ekle(musteri: Omit<Musteri, 'id' | 'olusturulma_tarihi'>) {
+    const musteriVerisi = {
+      name: musteri.ad_soyad,
+      phone: musteri.telefon,
+      email: musteri.eposta,
+      address: musteri.adres,
+      customer_number: musteri.musteri_no
+    };
+
     const { data, error } = await supabase
       .from('customers')
-      .insert([customer])
+      .insert([musteriVerisi])
       .select()
       .single();
     
@@ -55,10 +63,17 @@ export const customersService = {
   },
 
   // Müşteri güncelle
-  async update(id: number, customer: Partial<Customer>) {
+  async guncelle(id: number, musteri: Partial<Musteri>) {
+    const guncelVeriler: any = {};
+    if (musteri.ad_soyad) guncelVeriler.name = musteri.ad_soyad;
+    if (musteri.telefon) guncelVeriler.phone = musteri.telefon;
+    if (musteri.eposta) guncelVeriler.email = musteri.eposta;
+    if (musteri.adres) guncelVeriler.address = musteri.adres;
+    if (musteri.musteri_no) guncelVeriler.customer_number = musteri.musteri_no;
+
     const { data, error } = await supabase
       .from('customers')
-      .update(customer)
+      .update(guncelVeriler)
       .eq('id', id)
       .select()
       .single();
@@ -68,7 +83,7 @@ export const customersService = {
   },
 
   // Müşteri sil
-  async delete(id: number) {
+  async sil(id: number) {
     const { error } = await supabase
       .from('customers')
       .delete()
