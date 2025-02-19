@@ -7,18 +7,18 @@ import {
   Phone, Mail, MapPin, Pencil, Trash
 } from "lucide-react";
 
-export default function Customers() {
-  const [searchTerm, setSearchTerm] = useState("");
+export default function Musteriler() {
+  const [aramaMetni, setAramaMetni] = useState("");
   
   // Örnek müşteri verileri (sonra Supabase ile değiştirilecek)
-  const customers = [
+  const musteriler = [
     {
       id: 1,
-      name: "Ahmet Yılmaz",
-      phone: "0532 123 4567",
-      email: "ahmet@example.com",
-      address: "İstanbul, Türkiye",
-      customerNumber: "M001"
+      ad_soyad: "Ahmet Yılmaz",
+      telefon: "0532 123 4567",
+      eposta: "ahmet@example.com",
+      adres: "İstanbul, Türkiye",
+      musteri_no: "M001"
     },
     // ... diğer müşteriler
   ];
@@ -42,8 +42,8 @@ export default function Customers() {
               type="search"
               placeholder="Müşteri Ara..."
               className="pl-10"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              value={aramaMetni}
+              onChange={(e) => setAramaMetni(e.target.value)}
             />
           </div>
         </div>
@@ -72,30 +72,30 @@ export default function Customers() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {customers.map((customer) => (
-                  <tr key={customer.id} className="hover:bg-gray-50">
+                {musteriler.map((musteri) => (
+                  <tr key={musteri.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {customer.customerNumber}
+                      {musteri.musteri_no}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {customer.name}
+                      {musteri.ad_soyad}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-2">
                           <Phone className="w-4 h-4" />
-                          {customer.phone}
+                          {musteri.telefon}
                         </div>
                         <div className="flex items-center gap-2">
                           <Mail className="w-4 h-4" />
-                          {customer.email}
+                          {musteri.eposta}
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <div className="flex items-center gap-2">
                         <MapPin className="w-4 h-4" />
-                        {customer.address}
+                        {musteri.adres}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
