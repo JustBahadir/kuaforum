@@ -1,8 +1,7 @@
-
 import { useNavigate } from "react-router-dom";
 import { 
   Users, Calendar, CreditCard, Heart, 
-  Scissors, PaintBrush, User
+  Scissors, Paintbrush, User
 } from "lucide-react";
 import {
   Sidebar,
@@ -47,7 +46,7 @@ const menuItems = [
   },
   {
     title: "Stil Kataloğu",
-    icon: PaintBrush,
+    icon: Paintbrush,
     path: "/styles"
   },
   {
