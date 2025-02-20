@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = 'https://xkbjjcizncwkrouvoujw.supabase.co';
@@ -252,6 +251,98 @@ export const personelIslemleriServisi = {
   async sil(id: number) {
     const { error } = await supabase
       .from('personel_islemleri')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+  }
+};
+
+// Randevu durumları
+export type RandevuDurumu = "beklemede" | "onaylandi" | "iptal_edildi" | "tamamlandi";
+
+// Randevu tipi
+export type Randevu = {
+  id: number;
+  created_at?: string;
+  musteri_id: number;
+  personel_id: number;
+  tarih: string;
+  saat: string;
+  durum: RandevuDurumu;
+  notlar?: string;
+  musteri?: Musteri;
+  personel?: Personel;
+  islemler: number[]; // İşlem ID'leri
+}
+
+// Randevu servisi
+export const randevuServisi = {
+  async hepsiniGetir() {
+    const { data, error } = await supabase
+      .from('randevular')
+      .select(`
+        *,
+        musteri:musteriler(*),
+        personel:personel(*)
+      `)
+      .order('tarih', { ascending: true })
+      .order('saat', { ascending: true });
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  async bugunkuleriGetir() {
+    const bugun = new Date().toISOString().split('T')[0];
+    const { data, error } = await supabase
+      .from('randevular')
+      .select(`
+        *,
+        musteri:musteriler(*),
+        personel:personel(*)
+      `)
+      .eq('tarih', bugun)
+      .order('saat', { ascending: true });
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  async ekle(randevu: Omit<Randevu, 'id' | 'created_at' | 'musteri' | 'personel'>) {
+    const { data, error } = await supabase
+      .from('randevular')
+      .insert([randevu])
+      .select(`
+        *,
+        musteri:musteriler(*),
+        personel:personel(*)
+      `)
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async guncelle(id: number, randevu: Partial<Randevu>) {
+    const { data, error } = await supabase
+      .from('randevular')
+      .update(randevu)
+      .eq('id', id)
+      .select(`
+        *,
+        musteri:musteriler(*),
+        personel:personel(*)
+      `)
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async sil(id: number) {
+    const { error } = await supabase
+      .from('randevular')
       .delete()
       .eq('id', id);
 
