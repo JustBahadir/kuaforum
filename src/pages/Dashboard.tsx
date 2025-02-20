@@ -1,15 +1,12 @@
+
 import { useNavigate } from "react-router-dom";
-import { 
-  Users, Calendar, CreditCard, Heart, 
-  Scissors, Paintbrush, User
-} from "lucide-react";
+import { Users, Calendar, Scissors, User } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
   SidebarProvider,
-  SidebarTrigger,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -30,29 +27,14 @@ const menuItems = [
     path: "/appointments"
   },
   {
-    title: "Ödemeler",
-    icon: CreditCard,
-    path: "/payments"
-  },
-  {
     title: "Personel",
     icon: User,
-    path: "/staff"
+    path: "/personnel"
   },
   {
     title: "Hizmetler",
     icon: Scissors,
     path: "/services"
-  },
-  {
-    title: "Stil Kataloğu",
-    icon: Paintbrush,
-    path: "/styles"
-  },
-  {
-    title: "Favoriler",
-    icon: Heart,
-    path: "/favorites"
   }
 ];
 
