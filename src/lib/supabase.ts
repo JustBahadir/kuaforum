@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = 'https://xkbjjcizncwkrouvoujw.supabase.co';
@@ -95,59 +96,82 @@ export const musteriServisi = {
 export const personelServisi = {
   // Tüm personeli getir
   async hepsiniGetir() {
-    const { data, error } = await supabase
-      .from('personel')
-      .select('*')
-      .order('olusturulma_tarihi', { ascending: false });
-    
-    if (error) throw error;
-    return data;
+    try {
+      const { data, error } = await supabase
+        .from('personel')
+        .select('*');
+      
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Personel getirme hatası:', error);
+      return [];
+    }
   },
 
   // Personel ara
   async ara(aramaMetni: string) {
-    const { data, error } = await supabase
-      .from('personel')
-      .select('*')
-      .or(`ad_soyad.ilike.%${aramaMetni}%,telefon.ilike.%${aramaMetni}%,eposta.ilike.%${aramaMetni}%`)
-      .order('olusturulma_tarihi', { ascending: false });
-    
-    if (error) throw error;
-    return data;
+    try {
+      const { data, error } = await supabase
+        .from('personel')
+        .select('*')
+        .or(`ad_soyad.ilike.%${aramaMetni}%,telefon.ilike.%${aramaMetni}%,eposta.ilike.%${aramaMetni}%`);
+      
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Personel arama hatası:', error);
+      return [];
+    }
   },
 
   // Yeni personel ekle
   async ekle(personel: Omit<Personel, 'id' | 'olusturulma_tarihi'>) {
-    const { data, error } = await supabase
-      .from('personel')
-      .insert([personel])
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
+    try {
+      const { data, error } = await supabase
+        .from('personel')
+        .insert([personel])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Personel ekleme hatası:', error);
+      throw error;
+    }
   },
 
   // Personel güncelle
   async guncelle(id: number, personel: Partial<Personel>) {
-    const { data, error } = await supabase
-      .from('personel')
-      .update(personel)
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
+    try {
+      const { data, error } = await supabase
+        .from('personel')
+        .update(personel)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Personel güncelleme hatası:', error);
+      throw error;
+    }
   },
 
   // Personel sil
   async sil(id: number) {
-    const { error } = await supabase
-      .from('personel')
-      .delete()
-      .eq('id', id);
-    
-    if (error) throw error;
+    try {
+      const { error } = await supabase
+        .from('personel')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+    } catch (error) {
+      console.error('Personel silme hatası:', error);
+      throw error;
+    }
   }
 };
