@@ -1,27 +1,40 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { 
   Users, Search, Plus, 
   Phone, Mail, MapPin, Pencil, Trash
 } from "lucide-react";
+import { musteriServisi, type Musteri } from "@/lib/supabase";
+import { useQuery } from "@tanstack/react-query";
 
 export default function Musteriler() {
   const [aramaMetni, setAramaMetni] = useState("");
-  
-  // Örnek müşteri verileri (sonra Supabase ile değiştirilecek)
-  const musteriler = [
-    {
-      id: 1,
-      ad_soyad: "Ahmet Yılmaz",
-      telefon: "0532 123 4567",
-      eposta: "ahmet@example.com",
-      adres: "İstanbul, Türkiye",
-      musteri_no: "M001"
-    },
-    // ... diğer müşteriler
-  ];
+
+  // Müşteri verilerini çek
+  const { data: musteriler = [], isLoading, error } = useQuery({
+    queryKey: ['musteriler', aramaMetni],
+    queryFn: () => aramaMetni ? musteriServisi.ara(aramaMetni) : musteriServisi.hepsiniGetir()
+  });
+
+  // Yükleniyor durumu
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-gray-500">Yükleniyor...</div>
+      </div>
+    );
+  }
+
+  // Hata durumu
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-red-500">Bir hata oluştu. Lütfen tekrar deneyin.</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
