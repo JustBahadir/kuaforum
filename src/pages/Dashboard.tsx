@@ -34,7 +34,7 @@ const menuItems = [
   {
     title: "Hizmetler",
     icon: Scissors,
-    path: "/services"
+    path: "/operations"
   }
 ];
 
@@ -78,7 +78,18 @@ export default function Dashboard() {
             <h1 className="text-2xl font-bold mb-6">Hoş Geldiniz</h1>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* İstatistik kartları buraya gelecek */}
+              {menuItems.map((item) => (
+                <button
+                  key={item.path}
+                  onClick={() => navigate(item.path)}
+                  className="p-6 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow"
+                >
+                  <div className="flex items-center gap-3">
+                    <item.icon className="w-6 h-6" />
+                    <span className="text-lg font-medium">{item.title}</span>
+                  </div>
+                </button>
+              ))}
             </div>
           </div>
         </main>

@@ -1,10 +1,9 @@
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Islem, islemServisi } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import {
   Dialog,
@@ -28,6 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export default function Operations() {
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [islemDuzenle, setIslemDuzenle] = useState<Islem | null>(null);
   const [yeniIslem, setYeniIslem] = useState<Omit<Islem, 'id' | 'created_at'>>({
     islem_adi: "",
@@ -43,7 +43,7 @@ export default function Operations() {
     queryFn: islemServisi.hepsiniGetir
   });
 
-  const { mutate: islemEkle } = useMutation({
+  const { mutate: islemEkle, isLoading: isEklemeLoading } = useMutation({
     mutationFn: islemServisi.ekle,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['islemler'] });
@@ -55,6 +55,15 @@ export default function Operations() {
         islem_adi: "",
         fiyat: 0,
         puan: 0
+      });
+      setIsDialogOpen(false);
+    },
+    onError: (error) => {
+      console.error("İşlem eklenirken hata:", error);
+      toast({
+        title: "Hata",
+        description: "İşlem eklenirken bir hata oluştu.",
+        variant: "destructive",
       });
     },
   });
@@ -96,7 +105,21 @@ export default function Operations() {
     }
   };
 
-  // Örnek işlemleri ekle
+  const handleOrnekIslemleriEkle = async () => {
+    for (const islem of ornekIslemler) {
+      try {
+        await islemServisi.ekle(islem);
+      } catch (error) {
+        console.error("İşlem eklenirken hata:", error);
+      }
+    }
+    queryClient.invalidateQueries({ queryKey: ['islemler'] });
+    toast({
+      title: "Başarılı",
+      description: "Örnek işlemler başarıyla eklendi.",
+    });
+  };
+
   const ornekIslemler = [
     { islem_adi: "KALKÜL", fiyat: 3.00, puan: 1 },
     { islem_adi: "PERMA", fiyat: 50.00, puan: 5 },
@@ -119,27 +142,12 @@ export default function Operations() {
     { islem_adi: "AÇMA BOYAMA", fiyat: 70.00, puan: 13 }
   ];
 
-  const handleOrnekIslemleriEkle = async () => {
-    for (const islem of ornekIslemler) {
-      try {
-        await islemServisi.ekle(islem);
-      } catch (error) {
-        console.error("İşlem eklenirken hata:", error);
-      }
-    }
-    queryClient.invalidateQueries({ queryKey: ['islemler'] });
-    toast({
-      title: "Başarılı",
-      description: "Örnek işlemler başarıyla eklendi.",
-    });
-  };
-
   return (
     <div className="container mx-auto py-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Hizmet Yönetimi</h1>
         <div className="flex gap-2">
-          <Dialog>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button>
                 <Plus className="mr-2" />
@@ -198,7 +206,9 @@ export default function Operations() {
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button type="submit">Hizmet Ekle</Button>
+                  <Button type="submit" disabled={isEklemeLoading}>
+                    {isEklemeLoading ? "Ekleniyor..." : "Hizmet Ekle"}
+                  </Button>
                 </DialogFooter>
               </form>
             </DialogContent>
