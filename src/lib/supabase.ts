@@ -6,21 +6,10 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Müşteri tipi tanımı
-export type Musteri = {
-  id: number;
-  olusturulma_tarihi?: string;
-  ad_soyad: string;
-  telefon: string;
-  eposta: string;
-  adres: string;
-  musteri_no: string;
-}
-
 // Personel tipi tanımı
 export type Personel = {
   id: number;
-  olusturulma_tarihi?: string;
+  created_at?: string; // Supabase'in otomatik oluşturduğu alan
   ad_soyad: string;
   telefon: string;
   eposta: string;
@@ -31,145 +20,76 @@ export type Personel = {
   prim_yuzdesi: number;
 }
 
-// Müşteri işlemleri için yardımcı fonksiyonlar
-export const musteriServisi = {
-  // Tüm müşterileri getir
-  async hepsiniGetir() {
-    const { data, error } = await supabase
-      .from('musteriler')
-      .select('*')
-      .order('olusturulma_tarihi', { ascending: false });
-    
-    if (error) throw error;
-    return data;
-  },
-
-  // Müşteri ara
-  async ara(aramaMetni: string) {
-    const { data, error } = await supabase
-      .from('musteriler')
-      .select('*')
-      .or(`ad_soyad.ilike.%${aramaMetni}%,telefon.ilike.%${aramaMetni}%,eposta.ilike.%${aramaMetni}%`)
-      .order('olusturulma_tarihi', { ascending: false });
-    
-    if (error) throw error;
-    return data;
-  },
-
-  // Yeni müşteri ekle
-  async ekle(musteri: Omit<Musteri, 'id' | 'olusturulma_tarihi'>) {
-    const { data, error } = await supabase
-      .from('musteriler')
-      .insert([musteri])
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
-  },
-
-  // Müşteri güncelle
-  async guncelle(id: number, musteri: Partial<Musteri>) {
-    const { data, error } = await supabase
-      .from('musteriler')
-      .update(musteri)
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
-  },
-
-  // Müşteri sil
-  async sil(id: number) {
-    const { error } = await supabase
-      .from('musteriler')
-      .delete()
-      .eq('id', id);
-    
-    if (error) throw error;
-  }
-};
-
 // Personel işlemleri için yardımcı fonksiyonlar
 export const personelServisi = {
   // Tüm personeli getir
   async hepsiniGetir() {
-    try {
-      const { data, error } = await supabase
-        .from('personel')
-        .select('*');
-      
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
+    const { data, error } = await supabase
+      .from('personel')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) {
       console.error('Personel getirme hatası:', error);
-      return [];
+      throw error;
     }
+    return data || [];
   },
 
   // Personel ara
   async ara(aramaMetni: string) {
-    try {
-      const { data, error } = await supabase
-        .from('personel')
-        .select('*')
-        .or(`ad_soyad.ilike.%${aramaMetni}%,telefon.ilike.%${aramaMetni}%,eposta.ilike.%${aramaMetni}%`);
-      
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
+    const { data, error } = await supabase
+      .from('personel')
+      .select('*')
+      .or(`ad_soyad.ilike.%${aramaMetni}%,telefon.ilike.%${aramaMetni}%`)
+      .order('created_at', { ascending: false });
+    
+    if (error) {
       console.error('Personel arama hatası:', error);
-      return [];
+      throw error;
     }
+    return data || [];
   },
 
   // Yeni personel ekle
-  async ekle(personel: Omit<Personel, 'id' | 'olusturulma_tarihi'>) {
-    try {
-      const { data, error } = await supabase
-        .from('personel')
-        .insert([personel])
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return data;
-    } catch (error) {
+  async ekle(personel: Omit<Personel, 'id' | 'created_at'>) {
+    const { data, error } = await supabase
+      .from('personel')
+      .insert([personel])
+      .select()
+      .single();
+    
+    if (error) {
       console.error('Personel ekleme hatası:', error);
       throw error;
     }
+    return data;
   },
 
   // Personel güncelle
   async guncelle(id: number, personel: Partial<Personel>) {
-    try {
-      const { data, error } = await supabase
-        .from('personel')
-        .update(personel)
-        .eq('id', id)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return data;
-    } catch (error) {
+    const { data, error } = await supabase
+      .from('personel')
+      .update(personel)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) {
       console.error('Personel güncelleme hatası:', error);
       throw error;
     }
+    return data;
   },
 
   // Personel sil
   async sil(id: number) {
-    try {
-      const { error } = await supabase
-        .from('personel')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
-    } catch (error) {
+    const { error } = await supabase
+      .from('personel')
+      .delete()
+      .eq('id', id);
+    
+    if (error) {
       console.error('Personel silme hatası:', error);
       throw error;
     }
