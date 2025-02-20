@@ -320,7 +320,14 @@ export default function Personnel() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="calisma_sistemi">Çalışma Sistemi</Label>
-                  <Select onValueChange={(value) => setYeniPersonel((prev) => ({ ...prev, calisma_sistemi: value as "haftalik" | "aylik" }))}>
+                  <Select
+                    onValueChange={(value) =>
+                      setYeniPersonel((prev) => ({
+                        ...prev,
+                        calisma_sistemi: value as "haftalik" | "aylik",
+                      }))
+                    }
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Çalışma Sistemi Seçin" />
                     </SelectTrigger>
@@ -360,7 +367,7 @@ export default function Personnel() {
         <div>Yükleniyor...</div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {personeller.map((personel: Personel) => (
+          {personeller.map((personel) => (
             <div
               key={personel.id}
               className="p-4 border rounded-lg shadow-sm hover:shadow-md transition-shadow"
@@ -387,7 +394,7 @@ export default function Personnel() {
                         <div className="space-y-4 py-4">
                           <div className="space-y-2">
                             <Label htmlFor="edit_ad_soyad">Ad Soyad</Label>
-                            <Input2
+                            <Input
                               id="edit_ad_soyad"
                               value={personelDuzenle?.ad_soyad || personel.ad_soyad}
                               onChange={(e) =>
@@ -400,7 +407,7 @@ export default function Personnel() {
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="edit_telefon">Telefon</Label>
-                            <Input2
+                            <Input
                               id="edit_telefon"
                               type="tel"
                               value={personelDuzenle?.telefon || personel.telefon}
@@ -414,7 +421,7 @@ export default function Personnel() {
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="edit_eposta">E-posta</Label>
-                            <Input2
+                            <Input
                               id="edit_eposta"
                               type="email"
                               value={personelDuzenle?.eposta || personel.eposta}
@@ -428,7 +435,7 @@ export default function Personnel() {
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="edit_adres">Adres</Label>
-                            <Input2
+                            <Input
                               id="edit_adres"
                               value={personelDuzenle?.adres || personel.adres}
                               onChange={(e) =>
@@ -441,7 +448,7 @@ export default function Personnel() {
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="edit_personel_no">Personel No</Label>
-                            <Input2
+                            <Input
                               id="edit_personel_no"
                               value={personelDuzenle?.personel_no || personel.personel_no}
                               onChange={(e) =>
@@ -454,7 +461,7 @@ export default function Personnel() {
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="edit_maas">Maaş</Label>
-                            <Input2
+                            <Input
                               id="edit_maas"
                               type="number"
                               value={personelDuzenle?.maas || personel.maas}
@@ -468,9 +475,25 @@ export default function Personnel() {
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="edit_calisma_sistemi">Çalışma Sistemi</Label>
-                            <Select onValueChange={(value) => setPersonelDuzenle((prev) => prev ? { ...prev, calisma_sistemi: value as "haftalik" | "aylik" } : personel)}>
+                            <Select
+                              onValueChange={(value) =>
+                                setPersonelDuzenle((prev) =>
+                                  prev
+                                    ? {
+                                        ...prev,
+                                        calisma_sistemi: value as "haftalik" | "aylik",
+                                      }
+                                    : personel
+                                )
+                              }
+                            >
                               <SelectTrigger>
-                                <SelectValue placeholder={personelDuzenle?.calisma_sistemi || personel.calisma_sistemi} />
+                                <SelectValue
+                                  placeholder={
+                                    personelDuzenle?.calisma_sistemi ||
+                                    personel.calisma_sistemi
+                                  }
+                                />
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="haftalik">Haftalık</SelectItem>
@@ -480,13 +503,15 @@ export default function Personnel() {
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="edit_prim_yuzdesi">Prim Yüzdesi</Label>
-                            <Input2
+                            <Input
                               id="edit_prim_yuzdesi"
                               type="number"
                               value={personelDuzenle?.prim_yuzdesi || personel.prim_yuzdesi}
                               onChange={(e) =>
                                 setPersonelDuzenle((prev) =>
-                                  prev ? { ...prev, prim_yuzdesi: Number(e.target.value) } : personel
+                                  prev
+                                    ? { ...prev, prim_yuzdesi: Number(e.target.value) }
+                                    : personel
                                 )
                               }
                               required
@@ -523,10 +548,14 @@ export default function Personnel() {
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
-                  <Button onClick={() => {
-                    setSelectedPersonelId(personel.id);
-                    setIslemDialogOpen(true);
-                  }}>İşlem Ekle</Button>
+                  <Button
+                    onClick={() => {
+                      setSelectedPersonelId(personel.id);
+                      setIslemDialogOpen(true);
+                    }}
+                  >
+                    İşlem Ekle
+                  </Button>
                 </div>
               </div>
               {selectedPersonelId === personel.id && renderIslemEkleForm(personel.id)}
