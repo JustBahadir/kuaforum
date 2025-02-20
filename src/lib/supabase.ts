@@ -1,8 +1,8 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = 'BURAYA-KOPYALADIGINIZ-PROJECT-URL';    // Kopyaladığınız Project URL'i buraya yapıştırın
-const supabaseKey = 'BURAYA-KOPYALADIGINIZ-ANON-KEY';      // Kopyaladığınız anon/public key'i buraya yapıştırın
+const supabaseUrl = 'https://xkbjjcizncwkrouvoujw.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhrYmpqY2l6bmN3a3JvdXZvdWp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzk5Njg0NzksImV4cCI6MjA1NTU0NDQ3OX0.RyaC2G1JPHUGQetAcvMgjsTp_nqBB2rZe3U-inU2osw';
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
