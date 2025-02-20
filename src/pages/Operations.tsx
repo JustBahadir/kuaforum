@@ -46,8 +46,13 @@ export default function Operations() {
 
   const { mutate: islemEkle, isPending: isEklemeLoading } = useMutation({
     mutationFn: async (islem: Omit<Islem, 'id' | 'created_at'>) => {
-      const response = await islemServisi.ekle(islem);
-      return response;
+      try {
+        const response = await islemServisi.ekle(islem);
+        return response;
+      } catch (error) {
+        console.error("İşlem eklenirken hata:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['islemler'] });
@@ -62,8 +67,7 @@ export default function Operations() {
       });
       setIsDialogOpen(false);
     },
-    onError: (error) => {
-      console.error("İşlem eklenirken hata:", error);
+    onError: () => {
       toast({
         title: "Hata",
         description: "İşlem eklenirken bir hata oluştu.",
@@ -73,8 +77,15 @@ export default function Operations() {
   });
 
   const { mutate: islemGuncelle } = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<Islem> }) =>
-      islemServisi.guncelle(id, data),
+    mutationFn: async ({ id, data }: { id: number; data: Partial<Islem> }) => {
+      try {
+        const response = await islemServisi.guncelle(id, data);
+        return response;
+      } catch (error) {
+        console.error("İşlem güncellenirken hata:", error);
+        throw error;
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['islemler'] });
       toast({
@@ -83,15 +94,36 @@ export default function Operations() {
       });
       setIslemDuzenle(null);
     },
+    onError: () => {
+      toast({
+        title: "Hata",
+        description: "İşlem güncellenirken bir hata oluştu.",
+        variant: "destructive",
+      });
+    },
   });
 
   const { mutate: islemSil } = useMutation({
-    mutationFn: islemServisi.sil,
+    mutationFn: async (id: number) => {
+      try {
+        await islemServisi.sil(id);
+      } catch (error) {
+        console.error("İşlem silinirken hata:", error);
+        throw error;
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['islemler'] });
       toast({
         title: "Başarılı",
         description: "İşlem başarıyla silindi.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Hata",
+        description: "İşlem silinirken bir hata oluştu.",
+        variant: "destructive",
       });
     },
   });
@@ -159,10 +191,10 @@ export default function Operations() {
               </Button>
             </DialogTrigger>
             <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Yeni Hizmet Ekle</DialogTitle>
+              </DialogHeader>
               <form onSubmit={handleSubmit}>
-                <DialogHeader>
-                  <DialogTitle>Yeni Hizmet Ekle</DialogTitle>
-                </DialogHeader>
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">
                     <Label htmlFor="islem_adi">Hizmet Adı</Label>
@@ -230,7 +262,7 @@ export default function Operations() {
         <div>Yükleniyor...</div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {islemler.map((islem: Islem) => (
+          {islemler.map((islem) => (
             <div
               key={islem.id}
               className="p-4 border rounded-lg shadow-sm hover:shadow-md transition-shadow"
@@ -250,10 +282,10 @@ export default function Operations() {
                       </Button>
                     </DialogTrigger>
                     <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Hizmet Düzenle</DialogTitle>
+                      </DialogHeader>
                       <form onSubmit={handleUpdate}>
-                        <DialogHeader>
-                          <DialogTitle>Hizmet Düzenle</DialogTitle>
-                        </DialogHeader>
                         <div className="space-y-4 py-4">
                           <div className="space-y-2">
                             <Label htmlFor="edit_islem_adi">Hizmet Adı</Label>
@@ -261,7 +293,7 @@ export default function Operations() {
                               id="edit_islem_adi"
                               value={islemDuzenle?.islem_adi || islem.islem_adi}
                               onChange={(e) =>
-                                setIslemDuzenle((prev) =>
+                                setIslemDuzenle(prev =>
                                   prev ? { ...prev, islem_adi: e.target.value } : islem
                                 )
                               }
@@ -275,7 +307,7 @@ export default function Operations() {
                               type="number"
                               value={islemDuzenle?.fiyat || islem.fiyat}
                               onChange={(e) =>
-                                setIslemDuzenle((prev) =>
+                                setIslemDuzenle(prev =>
                                   prev ? { ...prev, fiyat: Number(e.target.value) } : islem
                                 )
                               }
@@ -289,7 +321,7 @@ export default function Operations() {
                               type="number"
                               value={islemDuzenle?.puan || islem.puan}
                               onChange={(e) =>
-                                setIslemDuzenle((prev) =>
+                                setIslemDuzenle(prev =>
                                   prev ? { ...prev, puan: Number(e.target.value) } : islem
                                 )
                               }
