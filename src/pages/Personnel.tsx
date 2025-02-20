@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { 
   Sheet, 
@@ -11,8 +10,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Personel, personelServisi } from "@/lib/supabase";
-import { UserPlus, Search, User, Star, Trash2 } from "lucide-react";
+import { Personel, PersonelIslemi, Islem, personelServisi, islemServisi, personelIslemleriServisi } from "@/lib/supabase";
+import { UserPlus, Search, User, Star, Trash2, Plus } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import {
   Select,
@@ -40,6 +39,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type YeniPersonel = Omit<Personel, 'id' | 'created_at'>;
 
@@ -57,17 +57,35 @@ export default function Personnel() {
     calisma_sistemi: "haftalik",
     prim_yuzdesi: 0,
   });
-  
+  const [secilenIslem, setSecilenIslem] = useState<Islem | null>(null);
+  const [yeniPersonelIslemi, setYeniPersonelIslemi] = useState<Omit<PersonelIslemi, 'id' | 'created_at' | 'islem'>>({
+    personel_id: 0,
+    islem_id: 0,
+    aciklama: "",
+    tutar: 0,
+    prim_yuzdesi: 0,
+    odenen: 0
+  });
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Personel verilerini çek
   const { data: personeller = [], isLoading } = useQuery({
     queryKey: ["personeller", aramaMetni],
     queryFn: () => aramaMetni ? personelServisi.ara(aramaMetni) : personelServisi.hepsiniGetir()
   });
 
-  // Personel ekleme mutasyonu
+  const { data: islemler = [] } = useQuery({
+    queryKey: ['islemler'],
+    queryFn: islemServisi.hepsiniGetir
+  });
+
+  const { data: personelIslemleri = [] } = useQuery({
+    queryKey: ['personelIslemleri', secilenPersonel?.id],
+    queryFn: () => secilenPersonel ? personelIslemleriServisi.hepsiniGetir(secilenPersonel.id) : Promise.resolve([]),
+    enabled: !!secilenPersonel
+  });
+
   const { mutate: personelEkle, isPending } = useMutation({
     mutationFn: personelServisi.ekle,
     onSuccess: () => {
@@ -96,7 +114,6 @@ export default function Personnel() {
     },
   });
 
-  // Personel güncelleme mutasyonu
   const { mutate: personelGuncelle } = useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<Personel> }) =>
       personelServisi.guncelle(id, data),
@@ -117,7 +134,6 @@ export default function Personnel() {
     },
   });
 
-  // Personel silme mutasyonu
   const { mutate: personelSil } = useMutation({
     mutationFn: personelServisi.sil,
     onSuccess: () => {
@@ -133,6 +149,18 @@ export default function Personnel() {
         description: "Personel silinirken bir hata oluştu.",
         variant: "destructive",
       });
+    },
+  });
+
+  const { mutate: islemEkle } = useMutation({
+    mutationFn: personelIslemleriServisi.ekle,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['personelIslemleri'] });
+      toast({
+        title: "Başarılı",
+        description: "İşlem başarıyla eklendi.",
+      });
+      setSecilenIslem(null);
     },
   });
 
@@ -155,6 +183,20 @@ export default function Personnel() {
       title: "Puan Verildi",
       description: "Personel başarıyla puanlandı.",
     });
+  };
+
+  const handleIslemEkle = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (secilenPersonel && secilenIslem) {
+      const yeniIslem = {
+        ...yeniPersonelIslemi,
+        personel_id: secilenPersonel.id,
+        islem_id: secilenIslem.id,
+        tutar: secilenIslem.fiyat,
+        prim_yuzdesi: secilenPersonel.prim_yuzdesi
+      };
+      islemEkle(yeniIslem);
+    }
   };
 
   return (
@@ -404,133 +446,220 @@ export default function Personnel() {
       )}
 
       <Dialog open={!!secilenPersonel} onOpenChange={(open) => !open && setSecilenPersonel(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>Personel Detayları</DialogTitle>
           </DialogHeader>
           {secilenPersonel && (
-            <form onSubmit={handleUpdate}>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit_ad_soyad">Ad Soyad</Label>
-                  <Input
-                    id="edit_ad_soyad"
-                    value={secilenPersonel.ad_soyad}
-                    onChange={(e) =>
-                      setSecilenPersonel((prev) =>
-                        prev ? { ...prev, ad_soyad: e.target.value } : null
-                      )
-                    }
-                    required
-                  />
+            <Tabs defaultValue="bilgiler">
+              <TabsList>
+                <TabsTrigger value="bilgiler">Kişisel Bilgiler</TabsTrigger>
+                <TabsTrigger value="islemler">İşlem Geçmişi</TabsTrigger>
+              </TabsList>
+              <TabsContent value="bilgiler">
+                <form onSubmit={handleUpdate}>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit_ad_soyad">Ad Soyad</Label>
+                      <Input
+                        id="edit_ad_soyad"
+                        value={secilenPersonel.ad_soyad}
+                        onChange={(e) =>
+                          setSecilenPersonel((prev) =>
+                            prev ? { ...prev, ad_soyad: e.target.value } : null
+                          )
+                        }
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit_telefon">Telefon</Label>
+                      <Input
+                        id="edit_telefon"
+                        value={secilenPersonel.telefon}
+                        onChange={(e) =>
+                          setSecilenPersonel((prev) =>
+                            prev ? { ...prev, telefon: e.target.value } : null
+                          )
+                        }
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit_eposta">E-posta</Label>
+                      <Input
+                        id="edit_eposta"
+                        type="email"
+                        value={secilenPersonel.eposta}
+                        onChange={(e) =>
+                          setSecilenPersonel((prev) =>
+                            prev ? { ...prev, eposta: e.target.value } : null
+                          )
+                        }
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit_adres">Adres</Label>
+                      <Input
+                        id="edit_adres"
+                        value={secilenPersonel.adres}
+                        onChange={(e) =>
+                          setSecilenPersonel((prev) =>
+                            prev ? { ...prev, adres: e.target.value } : null
+                          )
+                        }
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit_personel_no">Personel No</Label>
+                      <Input
+                        id="edit_personel_no"
+                        value={secilenPersonel.personel_no}
+                        onChange={(e) =>
+                          setSecilenPersonel((prev) =>
+                            prev ? { ...prev, personel_no: e.target.value } : null
+                          )
+                        }
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit_maas">Maaş</Label>
+                      <Input
+                        id="edit_maas"
+                        type="number"
+                        value={secilenPersonel.maas}
+                        onChange={(e) =>
+                          setSecilenPersonel((prev) =>
+                            prev ? { ...prev, maas: Number(e.target.value) } : null
+                          )
+                        }
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit_calisma_sistemi">Çalışma Sistemi</Label>
+                      <Select
+                        value={secilenPersonel.calisma_sistemi}
+                        onValueChange={(value: 'haftalik' | 'aylik') =>
+                          setSecilenPersonel((prev) =>
+                            prev ? { ...prev, calisma_sistemi: value } : null
+                          )
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Çalışma sistemi seçin" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="haftalik">Haftalık</SelectItem>
+                          <SelectItem value="aylik">Aylık</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit_prim_yuzdesi">Prim Yüzdesi (%)</Label>
+                      <Input
+                        id="edit_prim_yuzdesi"
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={secilenPersonel.prim_yuzdesi}
+                        onChange={(e) =>
+                          setSecilenPersonel((prev) =>
+                            prev ? { ...prev, prim_yuzdesi: Number(e.target.value) } : null
+                          )
+                        }
+                        required
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button type="submit">Değişiklikleri Kaydet</Button>
+                  </DialogFooter>
+                </form>
+              </TabsContent>
+              <TabsContent value="islemler">
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-lg font-medium">İşlem Geçmişi</h3>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button>
+                          <Plus className="mr-2 h-4 w-4" />
+                          Yeni İşlem
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Yeni İşlem Ekle</DialogTitle>
+                        </DialogHeader>
+                        <form onSubmit={handleIslemEkle}>
+                          <div className="space-y-4">
+                            <div className="space-y-2">
+                              <Label>İşlem</Label>
+                              <Select onValueChange={(value) => {
+                                const islem = islemler.find(i => i.id === parseInt(value));
+                                setSecilenIslem(islem || null);
+                              }}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="İşlem seçin" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {islemler.map((islem) => (
+                                    <SelectItem key={islem.id} value={islem.id.toString()}>
+                                      {islem.islem_adi} - {islem.fiyat} TL
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Açıklama</Label>
+                              <Input
+                                value={yeniPersonelIslemi.aciklama}
+                                onChange={(e) =>
+                                  setYeniPersonelIslemi((prev) => ({
+                                    ...prev,
+                                    aciklama: e.target.value,
+                                  }))
+                                }
+                                placeholder="İşlem açıklaması..."
+                              />
+                            </div>
+                          </div>
+                          <DialogFooter className="mt-4">
+                            <Button type="submit" disabled={!secilenIslem}>
+                              İşlem Ekle
+                            </Button>
+                          </DialogFooter>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                  <div className="space-y-4">
+                    {personelIslemleri.map((islem) => (
+                      <div
+                        key={islem.id}
+                        className="flex justify-between items-center p-4 border rounded-lg"
+                      >
+                        <div>
+                          <h4 className="font-medium">{islem.islem?.islem_adi}</h4>
+                          <p className="text-sm text-muted-foreground">{islem.aciklama}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium">{islem.tutar} TL</p>
+                          <p className="text-sm text-muted-foreground">
+                            Prim: {islem.prim_yuzdesi}%
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit_telefon">Telefon</Label>
-                  <Input
-                    id="edit_telefon"
-                    value={secilenPersonel.telefon}
-                    onChange={(e) =>
-                      setSecilenPersonel((prev) =>
-                        prev ? { ...prev, telefon: e.target.value } : null
-                      )
-                    }
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit_eposta">E-posta</Label>
-                  <Input
-                    id="edit_eposta"
-                    type="email"
-                    value={secilenPersonel.eposta}
-                    onChange={(e) =>
-                      setSecilenPersonel((prev) =>
-                        prev ? { ...prev, eposta: e.target.value } : null
-                      )
-                    }
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit_adres">Adres</Label>
-                  <Input
-                    id="edit_adres"
-                    value={secilenPersonel.adres}
-                    onChange={(e) =>
-                      setSecilenPersonel((prev) =>
-                        prev ? { ...prev, adres: e.target.value } : null
-                      )
-                    }
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit_personel_no">Personel No</Label>
-                  <Input
-                    id="edit_personel_no"
-                    value={secilenPersonel.personel_no}
-                    onChange={(e) =>
-                      setSecilenPersonel((prev) =>
-                        prev ? { ...prev, personel_no: e.target.value } : null
-                      )
-                    }
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit_maas">Maaş</Label>
-                  <Input
-                    id="edit_maas"
-                    type="number"
-                    value={secilenPersonel.maas}
-                    onChange={(e) =>
-                      setSecilenPersonel((prev) =>
-                        prev ? { ...prev, maas: Number(e.target.value) } : null
-                      )
-                    }
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit_calisma_sistemi">Çalışma Sistemi</Label>
-                  <Select
-                    value={secilenPersonel.calisma_sistemi}
-                    onValueChange={(value: 'haftalik' | 'aylik') =>
-                      setSecilenPersonel((prev) =>
-                        prev ? { ...prev, calisma_sistemi: value } : null
-                      )
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Çalışma sistemi seçin" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="haftalik">Haftalık</SelectItem>
-                      <SelectItem value="aylik">Aylık</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit_prim_yuzdesi">Prim Yüzdesi (%)</Label>
-                  <Input
-                    id="edit_prim_yuzdesi"
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={secilenPersonel.prim_yuzdesi}
-                    onChange={(e) =>
-                      setSecilenPersonel((prev) =>
-                        prev ? { ...prev, prim_yuzdesi: Number(e.target.value) } : null
-                      )
-                    }
-                    required
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button type="submit">Değişiklikleri Kaydet</Button>
-              </DialogFooter>
-            </form>
+              </TabsContent>
+            </Tabs>
           )}
         </DialogContent>
       </Dialog>
