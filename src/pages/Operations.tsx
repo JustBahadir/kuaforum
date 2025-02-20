@@ -277,7 +277,11 @@ export default function Operations() {
                 <div className="flex gap-2">
                   <Dialog>
                     <DialogTrigger asChild>
-                      <Button variant="ghost" size="icon">
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => setIslemDuzenle(islem)} // Burada düzenleme için mevcut işlemi state'e yüklüyoruz
+                      >
                         <Pencil className="h-4 w-4" />
                       </Button>
                     </DialogTrigger>
@@ -291,7 +295,7 @@ export default function Operations() {
                             <Label htmlFor="edit_islem_adi">Hizmet Adı</Label>
                             <Input
                               id="edit_islem_adi"
-                              value={islemDuzenle?.islem_adi || islem.islem_adi}
+                              value={islemDuzenle?.islem_adi || ""}
                               onChange={(e) =>
                                 setIslemDuzenle(prev =>
                                   prev ? { ...prev, islem_adi: e.target.value } : islem
@@ -305,7 +309,7 @@ export default function Operations() {
                             <Input
                               id="edit_fiyat"
                               type="number"
-                              value={islemDuzenle?.fiyat || islem.fiyat}
+                              value={islemDuzenle?.fiyat || 0}
                               onChange={(e) =>
                                 setIslemDuzenle(prev =>
                                   prev ? { ...prev, fiyat: Number(e.target.value) } : islem
@@ -319,7 +323,7 @@ export default function Operations() {
                             <Input
                               id="edit_puan"
                               type="number"
-                              value={islemDuzenle?.puan || islem.puan}
+                              value={islemDuzenle?.puan || 0}
                               onChange={(e) =>
                                 setIslemDuzenle(prev =>
                                   prev ? { ...prev, puan: Number(e.target.value) } : islem
