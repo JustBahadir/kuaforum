@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = 'https://xkbjjcizncwkrouvoujw.supabase.co';
@@ -181,18 +182,35 @@ export const islemServisi = {
   async ekle(islem: Omit<Islem, 'id' | 'created_at'>) {
     const { data, error } = await supabase
       .from('islemler')
-      .insert([islem])
+      .insert([{
+        islem_adi: islem.islem_adi.trim().toUpperCase(),
+        fiyat: Number(islem.fiyat),
+        puan: Number(islem.puan)
+      }])
       .select()
       .single();
     
-    if (error) throw error;
+    if (error) {
+      console.error("Supabase error:", error);
+      throw error;
+    }
+    
+    if (!data) {
+      throw new Error("İşlem eklenemedi");
+    }
+    
     return data;
   },
 
   async guncelle(id: number, islem: Partial<Islem>) {
     const { data, error } = await supabase
       .from('islemler')
-      .update(islem)
+      .update({
+        ...islem,
+        islem_adi: islem.islem_adi ? islem.islem_adi.trim().toUpperCase() : undefined,
+        fiyat: islem.fiyat ? Number(islem.fiyat) : undefined,
+        puan: islem.puan ? Number(islem.puan) : undefined
+      })
       .eq('id', id)
       .select()
       .single();
