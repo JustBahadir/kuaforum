@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { 
   Sheet, 
@@ -40,7 +41,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-type YeniPersonel = Omit<Personel, 'id' | 'olusturulma_tarihi'>;
+type YeniPersonel = Omit<Personel, 'id' | 'created_at'>;
 
 export default function Personnel() {
   const [aramaMetni, setAramaMetni] = useState("");
@@ -143,7 +144,7 @@ export default function Personnel() {
   const handleUpdate = (e: React.FormEvent) => {
     e.preventDefault();
     if (secilenPersonel) {
-      const { id, olusturulma_tarihi, ...guncellenecekVeriler } = secilenPersonel;
+      const { id, created_at, ...guncellenecekVeriler } = secilenPersonel;
       personelGuncelle({ id, data: guncellenecekVeriler });
     }
   };
