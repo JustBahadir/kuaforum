@@ -23,17 +23,19 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 
+type YeniPersonel = Omit<Personel, 'id' | 'olusturulma_tarihi'>;
+
 export default function Personnel() {
   const [aramaMetni, setAramaMetni] = useState("");
   const [secilenPersonel, setSecilenPersonel] = useState<Personel | null>(null);
-  const [yeniPersonel, setYeniPersonel] = useState({
+  const [yeniPersonel, setYeniPersonel] = useState<YeniPersonel>({
     ad_soyad: "",
     telefon: "",
     eposta: "",
     adres: "",
     personel_no: "",
     maas: 0,
-    calisma_sistemi: "haftalik" as const,
+    calisma_sistemi: "haftalik",
     prim_yuzdesi: 0,
   });
   
