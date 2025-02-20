@@ -45,7 +45,10 @@ export default function Operations() {
   });
 
   const { mutate: islemEkle, isPending: isEklemeLoading } = useMutation({
-    mutationFn: islemServisi.ekle,
+    mutationFn: async (islem: Omit<Islem, 'id' | 'created_at'>) => {
+      const response = await islemServisi.ekle(islem);
+      return response;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['islemler'] });
       toast({
