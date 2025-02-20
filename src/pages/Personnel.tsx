@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { 
   Sheet, 
@@ -12,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Personel, personelServisi } from "@/lib/supabase";
-import { UserPlus, Search, User } from "lucide-react";
+import { UserPlus, Search, User, Star, Trash2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import {
   Select,
@@ -22,12 +21,31 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 type YeniPersonel = Omit<Personel, 'id' | 'olusturulma_tarihi'>;
 
 export default function Personnel() {
   const [aramaMetni, setAramaMetni] = useState("");
   const [secilenPersonel, setSecilenPersonel] = useState<Personel | null>(null);
+  const [puanlar, setPuanlar] = useState<Record<number, number>>({});
   const [yeniPersonel, setYeniPersonel] = useState<YeniPersonel>({
     ad_soyad: "",
     telefon: "",
@@ -77,9 +95,65 @@ export default function Personnel() {
     },
   });
 
+  // Personel güncelleme mutasyonu
+  const { mutate: personelGuncelle } = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Partial<Personel> }) =>
+      personelServisi.guncelle(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["personeller"] });
+      toast({
+        title: "Başarılı",
+        description: "Personel başarıyla güncellendi.",
+      });
+      setSecilenPersonel(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Hata",
+        description: "Personel güncellenirken bir hata oluştu.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Personel silme mutasyonu
+  const { mutate: personelSil } = useMutation({
+    mutationFn: personelServisi.sil,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["personeller"] });
+      toast({
+        title: "Başarılı",
+        description: "Personel başarıyla silindi.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Hata",
+        description: "Personel silinirken bir hata oluştu.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     personelEkle(yeniPersonel);
+  };
+
+  const handleUpdate = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (secilenPersonel) {
+      const { id, olusturulma_tarihi, ...guncellenecekVeriler } = secilenPersonel;
+      personelGuncelle({ id, data: guncellenecekVeriler });
+    }
+  };
+
+  const handlePuanla = (personelId: number, puan: number) => {
+    setPuanlar(prev => ({ ...prev, [personelId]: puan }));
+    toast({
+      title: "Puan Verildi",
+      description: "Personel başarıyla puanlandı.",
+    });
   };
 
   return (
@@ -265,6 +339,30 @@ export default function Personnel() {
                     <p className="text-sm text-muted-foreground">{personel.telefon}</p>
                   </div>
                 </div>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="ghost" size="icon" className="text-destructive">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Personeli Sil</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Bu işlem geri alınamaz. Personeli silmek istediğinizden emin misiniz?
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>İptal</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => personelSil(personel.id)}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        Sil
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
               <div className="mt-4 space-y-2">
                 <div className="text-sm">
@@ -273,6 +371,21 @@ export default function Personnel() {
                 </div>
                 <div className="text-sm">
                   <span className="font-medium">Prim Yüzdesi:</span> %{personel.prim_yuzdesi}
+                </div>
+                <div className="flex items-center gap-1">
+                  {[1, 2, 3, 4, 5].map((puan) => (
+                    <Button
+                      key={puan}
+                      variant="ghost"
+                      size="icon"
+                      className={`p-1 ${
+                        puanlar[personel.id] >= puan ? "text-yellow-400" : "text-gray-300"
+                      }`}
+                      onClick={() => handlePuanla(personel.id, puan)}
+                    >
+                      <Star className="h-4 w-4" />
+                    </Button>
+                  ))}
                 </div>
               </div>
               <div className="mt-4">
@@ -289,7 +402,137 @@ export default function Personnel() {
         </div>
       )}
 
-      {/* Personel detay modalı daha sonra eklenecek */}
+      <Dialog open={!!secilenPersonel} onOpenChange={(open) => !open && setSecilenPersonel(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Personel Detayları</DialogTitle>
+          </DialogHeader>
+          {secilenPersonel && (
+            <form onSubmit={handleUpdate}>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit_ad_soyad">Ad Soyad</Label>
+                  <Input
+                    id="edit_ad_soyad"
+                    value={secilenPersonel.ad_soyad}
+                    onChange={(e) =>
+                      setSecilenPersonel((prev) =>
+                        prev ? { ...prev, ad_soyad: e.target.value } : null
+                      )
+                    }
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit_telefon">Telefon</Label>
+                  <Input
+                    id="edit_telefon"
+                    value={secilenPersonel.telefon}
+                    onChange={(e) =>
+                      setSecilenPersonel((prev) =>
+                        prev ? { ...prev, telefon: e.target.value } : null
+                      )
+                    }
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit_eposta">E-posta</Label>
+                  <Input
+                    id="edit_eposta"
+                    type="email"
+                    value={secilenPersonel.eposta}
+                    onChange={(e) =>
+                      setSecilenPersonel((prev) =>
+                        prev ? { ...prev, eposta: e.target.value } : null
+                      )
+                    }
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit_adres">Adres</Label>
+                  <Input
+                    id="edit_adres"
+                    value={secilenPersonel.adres}
+                    onChange={(e) =>
+                      setSecilenPersonel((prev) =>
+                        prev ? { ...prev, adres: e.target.value } : null
+                      )
+                    }
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit_personel_no">Personel No</Label>
+                  <Input
+                    id="edit_personel_no"
+                    value={secilenPersonel.personel_no}
+                    onChange={(e) =>
+                      setSecilenPersonel((prev) =>
+                        prev ? { ...prev, personel_no: e.target.value } : null
+                      )
+                    }
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit_maas">Maaş</Label>
+                  <Input
+                    id="edit_maas"
+                    type="number"
+                    value={secilenPersonel.maas}
+                    onChange={(e) =>
+                      setSecilenPersonel((prev) =>
+                        prev ? { ...prev, maas: Number(e.target.value) } : null
+                      )
+                    }
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit_calisma_sistemi">Çalışma Sistemi</Label>
+                  <Select
+                    value={secilenPersonel.calisma_sistemi}
+                    onValueChange={(value: 'haftalik' | 'aylik') =>
+                      setSecilenPersonel((prev) =>
+                        prev ? { ...prev, calisma_sistemi: value } : null
+                      )
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Çalışma sistemi seçin" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="haftalik">Haftalık</SelectItem>
+                      <SelectItem value="aylik">Aylık</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit_prim_yuzdesi">Prim Yüzdesi (%)</Label>
+                  <Input
+                    id="edit_prim_yuzdesi"
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={secilenPersonel.prim_yuzdesi}
+                    onChange={(e) =>
+                      setSecilenPersonel((prev) =>
+                        prev ? { ...prev, prim_yuzdesi: Number(e.target.value) } : null
+                      )
+                    }
+                    required
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="submit">Değişiklikleri Kaydet</Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
