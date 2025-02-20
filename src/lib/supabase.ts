@@ -1,8 +1,8 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = 'https://abcdefghijk.supabase.co';    // Bu URL'yi kendi Supabase URL'niz ile değiştirin
-const supabaseKey = 'your-anon-key';                      // Bu key'i kendi Supabase anon/public key'iniz ile değiştirin
+const supabaseUrl = 'BURAYA-KOPYALADIGINIZ-PROJECT-URL';    // Kopyaladığınız Project URL'i buraya yapıştırın
+const supabaseKey = 'BURAYA-KOPYALADIGINIZ-ANON-KEY';      // Kopyaladığınız anon/public key'i buraya yapıştırın
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -22,9 +22,9 @@ export const musteriServisi = {
   // Tüm müşterileri getir
   async hepsiniGetir() {
     const { data, error } = await supabase
-      .from('customers')
+      .from('musteriler')
       .select('*')
-      .order('created_at', { ascending: false });
+      .order('olusturulma_tarihi', { ascending: false });
     
     if (error) throw error;
     return data;
@@ -33,10 +33,10 @@ export const musteriServisi = {
   // Müşteri ara
   async ara(aramaMetni: string) {
     const { data, error } = await supabase
-      .from('customers')
+      .from('musteriler')
       .select('*')
-      .or(`name.ilike.%${aramaMetni}%,phone.ilike.%${aramaMetni}%,email.ilike.%${aramaMetni}%`)
-      .order('created_at', { ascending: false });
+      .or(`ad_soyad.ilike.%${aramaMetni}%,telefon.ilike.%${aramaMetni}%,eposta.ilike.%${aramaMetni}%`)
+      .order('olusturulma_tarihi', { ascending: false });
     
     if (error) throw error;
     return data;
@@ -44,17 +44,9 @@ export const musteriServisi = {
 
   // Yeni müşteri ekle
   async ekle(musteri: Omit<Musteri, 'id' | 'olusturulma_tarihi'>) {
-    const musteriVerisi = {
-      name: musteri.ad_soyad,
-      phone: musteri.telefon,
-      email: musteri.eposta,
-      address: musteri.adres,
-      customer_number: musteri.musteri_no
-    };
-
     const { data, error } = await supabase
-      .from('customers')
-      .insert([musteriVerisi])
+      .from('musteriler')
+      .insert([musteri])
       .select()
       .single();
     
@@ -64,16 +56,9 @@ export const musteriServisi = {
 
   // Müşteri güncelle
   async guncelle(id: number, musteri: Partial<Musteri>) {
-    const guncelVeriler: any = {};
-    if (musteri.ad_soyad) guncelVeriler.name = musteri.ad_soyad;
-    if (musteri.telefon) guncelVeriler.phone = musteri.telefon;
-    if (musteri.eposta) guncelVeriler.email = musteri.eposta;
-    if (musteri.adres) guncelVeriler.address = musteri.adres;
-    if (musteri.musteri_no) guncelVeriler.customer_number = musteri.musteri_no;
-
     const { data, error } = await supabase
-      .from('customers')
-      .update(guncelVeriler)
+      .from('musteriler')
+      .update(musteri)
       .eq('id', id)
       .select()
       .single();
@@ -85,7 +70,7 @@ export const musteriServisi = {
   // Müşteri sil
   async sil(id: number) {
     const { error } = await supabase
-      .from('customers')
+      .from('musteriler')
       .delete()
       .eq('id', id);
     
