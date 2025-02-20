@@ -1,6 +1,13 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { PersonelIslemi, Islem, Personel, personelIslemleriServisi, islemServisi } from "@/lib/supabase";
+import { 
+  PersonelIslemi, 
+  Islem, 
+  Personel, 
+  personelIslemleriServisi, 
+  islemServisi,
+  personelServisi 
+} from "@/lib/supabase";
 import {
   Dialog,
   DialogContent,
@@ -13,7 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Plus } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -21,7 +28,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,17 +39,23 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Pencil, Trash2 } from "lucide-react";
-import { Input as Input2 } from "@/components/ui/input";
-
-interface PersonelProps {
-  personel: Personel;
-  onClose: () => void;
-}
 
 export default function Personnel() {
   const [islemDialogOpen, setIslemDialogOpen] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedPersonelId, setSelectedPersonelId] = useState<number | null>(null);
+  const [personelDuzenle, setPersonelDuzenle] = useState<Personel | null>(null);
+  const [yeniPersonel, setYeniPersonel] = useState<Omit<Personel, 'id' | 'created_at'>>({
+    ad_soyad: "",
+    telefon: "",
+    eposta: "",
+    adres: "",
+    personel_no: "",
+    maas: 0,
+    calisma_sistemi: "aylik",
+    prim_yuzdesi: 0
+  });
+  
   const [yeniIslem, setYeniIslem] = useState<Omit<PersonelIslemi, 'id' | 'created_at' | 'islem'>>({
     personel_id: 0,
     islem_id: 0,
@@ -52,6 +64,9 @@ export default function Personnel() {
     prim_yuzdesi: 0,
     odenen: 0,
   });
+
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: islemler = [] } = useQuery({
     queryKey: ['islemler'],
@@ -70,28 +85,13 @@ export default function Personnel() {
     },
   });
 
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [personelDuzenle, setPersonelDuzenle] = useState<Personel | null>(null);
-  const [yeniPersonel, setYeniPersonel] = useState<Omit<Personel, 'id' | 'created_at'>>({
-    ad_soyad: "",
-    telefon: "",
-    eposta: "",
-    adres: "",
-    personel_no: "",
-    maas: 0,
-    calisma_sistemi: "aylik",
-    prim_yuzdesi: 0
-  });
-
   const { data: personeller = [], isLoading } = useQuery({
     queryKey: ['personel'],
     queryFn: () => personelServisi.hepsiniGetir()
   });
 
   const { mutate: personelEkle, isPending: isEklemeLoading } = useMutation({
-    mutationFn: personelServisi.ekle,
+    mutationFn: (data: Omit<Personel, 'id' | 'created_at'>) => personelServisi.ekle(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['personel'] });
       toast({
@@ -110,14 +110,6 @@ export default function Personnel() {
       });
       setIsDialogOpen(false);
     },
-    onError: (error) => {
-      console.error("Personel eklenirken hata:", error);
-      toast({
-        title: "Hata",
-        description: "Personel eklenirken bir hata oluştu.",
-        variant: "destructive",
-      });
-    },
   });
 
   const { mutate: personelGuncelle } = useMutation({
@@ -134,7 +126,7 @@ export default function Personnel() {
   });
 
   const { mutate: personelSil } = useMutation({
-    mutationFn: personelServisi.sil,
+    mutationFn: (id: number) => personelServisi.sil(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['personel'] });
       toast({
