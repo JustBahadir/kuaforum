@@ -12,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import {
@@ -95,74 +96,120 @@ export default function Operations() {
     }
   };
 
+  // Örnek işlemleri ekle
+  const ornekIslemler = [
+    { islem_adi: "KALKÜL", fiyat: 3.00, puan: 1 },
+    { islem_adi: "PERMA", fiyat: 50.00, puan: 5 },
+    { islem_adi: "GÖLGE", fiyat: 50.00, puan: 5 },
+    { islem_adi: "FÖN", fiyat: 7.00, puan: 2 },
+    { islem_adi: "YIKAMA", fiyat: 3.00, puan: 1 },
+    { islem_adi: "SAÇ KESİMİ", fiyat: 7.00, puan: 2 },
+    { islem_adi: "BOYA", fiyat: 40.00, puan: 4 },
+    { islem_adi: "DIP BOYA", fiyat: 25.00, puan: 3 },
+    { islem_adi: "RÖFLE", fiyat: 70.00, puan: 7 },
+    { islem_adi: "DIP RÖFLE", fiyat: 40.00, puan: 6 },
+    { islem_adi: "MAKYAJ", fiyat: 15.00, puan: 4 },
+    { islem_adi: "ÇIT ÇIT SATIMI", fiyat: 250.00, puan: 40 },
+    { islem_adi: "TOPUZ", fiyat: 20.00, puan: 5 },
+    { islem_adi: "YÜZ ALIMI", fiyat: 15.00, puan: 4 },
+    { islem_adi: "PERMA", fiyat: 50.00, puan: 8 },
+    { islem_adi: "MAŞA", fiyat: 20.00, puan: 5 },
+    { islem_adi: "GELİN", fiyat: 100.00, puan: 40 },
+    { islem_adi: "NYAN", fiyat: 100.00, puan: 20 },
+    { islem_adi: "AÇMA BOYAMA", fiyat: 70.00, puan: 13 }
+  ];
+
+  const handleOrnekIslemleriEkle = async () => {
+    for (const islem of ornekIslemler) {
+      try {
+        await islemServisi.ekle(islem);
+      } catch (error) {
+        console.error("İşlem eklenirken hata:", error);
+      }
+    }
+    queryClient.invalidateQueries({ queryKey: ['islemler'] });
+    toast({
+      title: "Başarılı",
+      description: "Örnek işlemler başarıyla eklendi.",
+    });
+  };
+
   return (
     <div className="container mx-auto py-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">İşlem Yönetimi</h1>
-        <Dialog>
-          <Button asChild>
-            <Label htmlFor="new-operation">
-              <Plus className="mr-2" />
-              Yeni İşlem
-            </Label>
-          </Button>
-          <DialogContent>
-            <form onSubmit={handleSubmit}>
-              <DialogHeader>
-                <DialogTitle>Yeni İşlem Ekle</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="islem_adi">İşlem Adı</Label>
-                  <Input
-                    id="islem_adi"
-                    value={yeniIslem.islem_adi}
-                    onChange={(e) =>
-                      setYeniIslem((prev) => ({
-                        ...prev,
-                        islem_adi: e.target.value,
-                      }))
-                    }
-                    required
-                  />
+        <h1 className="text-2xl font-bold">Hizmet Yönetimi</h1>
+        <div className="flex gap-2">
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2" />
+                Yeni Hizmet
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <form onSubmit={handleSubmit}>
+                <DialogHeader>
+                  <DialogTitle>Yeni Hizmet Ekle</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="islem_adi">Hizmet Adı</Label>
+                    <Input
+                      id="islem_adi"
+                      value={yeniIslem.islem_adi}
+                      onChange={(e) =>
+                        setYeniIslem((prev) => ({
+                          ...prev,
+                          islem_adi: e.target.value,
+                        }))
+                      }
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="fiyat">Fiyat</Label>
+                    <Input
+                      id="fiyat"
+                      type="number"
+                      value={yeniIslem.fiyat}
+                      onChange={(e) =>
+                        setYeniIslem((prev) => ({
+                          ...prev,
+                          fiyat: Number(e.target.value),
+                        }))
+                      }
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="puan">Puan</Label>
+                    <Input
+                      id="puan"
+                      type="number"
+                      value={yeniIslem.puan}
+                      onChange={(e) =>
+                        setYeniIslem((prev) => ({
+                          ...prev,
+                          puan: Number(e.target.value),
+                        }))
+                      }
+                      required
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="fiyat">Fiyat</Label>
-                  <Input
-                    id="fiyat"
-                    type="number"
-                    value={yeniIslem.fiyat}
-                    onChange={(e) =>
-                      setYeniIslem((prev) => ({
-                        ...prev,
-                        fiyat: Number(e.target.value),
-                      }))
-                    }
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="puan">Puan</Label>
-                  <Input
-                    id="puan"
-                    type="number"
-                    value={yeniIslem.puan}
-                    onChange={(e) =>
-                      setYeniIslem((prev) => ({
-                        ...prev,
-                        puan: Number(e.target.value),
-                      }))
-                    }
-                    required
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button type="submit">İşlem Ekle</Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+                <DialogFooter>
+                  <Button type="submit">Hizmet Ekle</Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+          
+          {islemler.length === 0 && (
+            <Button onClick={handleOrnekIslemleriEkle} variant="outline">
+              Örnek Hizmetleri Ekle
+            </Button>
+          )}
+        </div>
       </div>
 
       {isLoading ? (
@@ -182,13 +229,66 @@ export default function Operations() {
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setIslemDuzenle(islem)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <form onSubmit={handleUpdate}>
+                        <DialogHeader>
+                          <DialogTitle>Hizmet Düzenle</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="edit_islem_adi">Hizmet Adı</Label>
+                            <Input
+                              id="edit_islem_adi"
+                              value={islemDuzenle?.islem_adi || islem.islem_adi}
+                              onChange={(e) =>
+                                setIslemDuzenle((prev) =>
+                                  prev ? { ...prev, islem_adi: e.target.value } : islem
+                                )
+                              }
+                              required
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="edit_fiyat">Fiyat</Label>
+                            <Input
+                              id="edit_fiyat"
+                              type="number"
+                              value={islemDuzenle?.fiyat || islem.fiyat}
+                              onChange={(e) =>
+                                setIslemDuzenle((prev) =>
+                                  prev ? { ...prev, fiyat: Number(e.target.value) } : islem
+                                )
+                              }
+                              required
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="edit_puan">Puan</Label>
+                            <Input
+                              id="edit_puan"
+                              type="number"
+                              value={islemDuzenle?.puan || islem.puan}
+                              onChange={(e) =>
+                                setIslemDuzenle((prev) =>
+                                  prev ? { ...prev, puan: Number(e.target.value) } : islem
+                                )
+                              }
+                              required
+                            />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button type="submit">Değişiklikleri Kaydet</Button>
+                        </DialogFooter>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button variant="ghost" size="icon" className="text-destructive">
@@ -197,9 +297,9 @@ export default function Operations() {
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>İşlemi Sil</AlertDialogTitle>
+                        <AlertDialogTitle>Hizmeti Sil</AlertDialogTitle>
                         <AlertDialogDescription>
-                          Bu işlemi silmek istediğinizden emin misiniz?
+                          Bu hizmeti silmek istediğinizden emin misiniz?
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -219,64 +319,6 @@ export default function Operations() {
           ))}
         </div>
       )}
-
-      <Dialog open={!!islemDuzenle} onOpenChange={(open) => !open && setIslemDuzenle(null)}>
-        <DialogContent>
-          {islemDuzenle && (
-            <form onSubmit={handleUpdate}>
-              <DialogHeader>
-                <DialogTitle>İşlem Düzenle</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit_islem_adi">İşlem Adı</Label>
-                  <Input
-                    id="edit_islem_adi"
-                    value={islemDuzenle.islem_adi}
-                    onChange={(e) =>
-                      setIslemDuzenle((prev) =>
-                        prev ? { ...prev, islem_adi: e.target.value } : null
-                      )
-                    }
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit_fiyat">Fiyat</Label>
-                  <Input
-                    id="edit_fiyat"
-                    type="number"
-                    value={islemDuzenle.fiyat}
-                    onChange={(e) =>
-                      setIslemDuzenle((prev) =>
-                        prev ? { ...prev, fiyat: Number(e.target.value) } : null
-                      )
-                    }
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit_puan">Puan</Label>
-                  <Input
-                    id="edit_puan"
-                    type="number"
-                    value={islemDuzenle.puan}
-                    onChange={(e) =>
-                      setIslemDuzenle((prev) =>
-                        prev ? { ...prev, puan: Number(e.target.value) } : null
-                      )
-                    }
-                    required
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button type="submit">Değişiklikleri Kaydet</Button>
-              </DialogFooter>
-            </form>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
