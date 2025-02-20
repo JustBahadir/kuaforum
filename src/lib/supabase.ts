@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = 'https://xkbjjcizncwkrouvoujw.supabase.co';
@@ -15,6 +14,20 @@ export type Musteri = {
   eposta: string;
   adres: string;
   musteri_no: string;
+}
+
+// Personel tipi tanımı
+export type Personel = {
+  id: number;
+  olusturulma_tarihi?: string;
+  ad_soyad: string;
+  telefon: string;
+  eposta: string;
+  adres: string;
+  personel_no: string;
+  maas: number;
+  calisma_sistemi: 'haftalik' | 'aylik';
+  prim_yuzdesi: number;
 }
 
 // Müşteri işlemleri için yardımcı fonksiyonlar
@@ -71,6 +84,67 @@ export const musteriServisi = {
   async sil(id: number) {
     const { error } = await supabase
       .from('musteriler')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+  }
+};
+
+// Personel işlemleri için yardımcı fonksiyonlar
+export const personelServisi = {
+  // Tüm personeli getir
+  async hepsiniGetir() {
+    const { data, error } = await supabase
+      .from('personel')
+      .select('*')
+      .order('olusturulma_tarihi', { ascending: false });
+    
+    if (error) throw error;
+    return data;
+  },
+
+  // Personel ara
+  async ara(aramaMetni: string) {
+    const { data, error } = await supabase
+      .from('personel')
+      .select('*')
+      .or(`ad_soyad.ilike.%${aramaMetni}%,telefon.ilike.%${aramaMetni}%,eposta.ilike.%${aramaMetni}%`)
+      .order('olusturulma_tarihi', { ascending: false });
+    
+    if (error) throw error;
+    return data;
+  },
+
+  // Yeni personel ekle
+  async ekle(personel: Omit<Personel, 'id' | 'olusturulma_tarihi'>) {
+    const { data, error } = await supabase
+      .from('personel')
+      .insert([personel])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  // Personel güncelle
+  async guncelle(id: number, personel: Partial<Personel>) {
+    const { data, error } = await supabase
+      .from('personel')
+      .update(personel)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  // Personel sil
+  async sil(id: number) {
+    const { error } = await supabase
+      .from('personel')
       .delete()
       .eq('id', id);
     
