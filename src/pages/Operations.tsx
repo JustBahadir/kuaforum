@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Islem, islemServisi } from "@/lib/supabase";
@@ -43,7 +44,7 @@ export default function Operations() {
     queryFn: islemServisi.hepsiniGetir
   });
 
-  const { mutate: islemEkle, isLoading: isEklemeLoading } = useMutation({
+  const { mutate: islemEkle, isPending: isEklemeLoading } = useMutation({
     mutationFn: islemServisi.ekle,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['islemler'] });
