@@ -5,23 +5,80 @@ import {
   SheetContent, 
   SheetHeader, 
   SheetTitle, 
-  SheetTrigger 
+  SheetTrigger,
+  SheetFooter
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Personel, personelServisi } from "@/lib/supabase";
 import { UserPlus, Search, User } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 export default function Personnel() {
   const [aramaMetni, setAramaMetni] = useState("");
   const [secilenPersonel, setSecilenPersonel] = useState<Personel | null>(null);
+  const [yeniPersonel, setYeniPersonel] = useState({
+    ad_soyad: "",
+    telefon: "",
+    eposta: "",
+    adres: "",
+    personel_no: "",
+    maas: 0,
+    calisma_sistemi: "haftalik" as const,
+    prim_yuzdesi: 0,
+  });
+  
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // Personel verilerini çek
   const { data: personeller = [], isLoading } = useQuery({
     queryKey: ["personeller", aramaMetni],
     queryFn: () => aramaMetni ? personelServisi.ara(aramaMetni) : personelServisi.hepsiniGetir()
   });
+
+  // Personel ekleme mutasyonu
+  const { mutate: personelEkle, isPending } = useMutation({
+    mutationFn: personelServisi.ekle,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["personeller"] });
+      toast({
+        title: "Başarılı",
+        description: "Personel başarıyla eklendi.",
+      });
+      setYeniPersonel({
+        ad_soyad: "",
+        telefon: "",
+        eposta: "",
+        adres: "",
+        personel_no: "",
+        maas: 0,
+        calisma_sistemi: "haftalik",
+        prim_yuzdesi: 0,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Hata",
+        description: "Personel eklenirken bir hata oluştu.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    personelEkle(yeniPersonel);
+  };
 
   return (
     <div className="container mx-auto py-6">
@@ -35,10 +92,141 @@ export default function Personnel() {
             </Button>
           </SheetTrigger>
           <SheetContent>
-            <SheetHeader>
-              <SheetTitle>Yeni Personel Ekle</SheetTitle>
-            </SheetHeader>
-            {/* Form içeriği daha sonra eklenecek */}
+            <form onSubmit={handleSubmit}>
+              <SheetHeader>
+                <SheetTitle>Yeni Personel Ekle</SheetTitle>
+              </SheetHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="ad_soyad">Ad Soyad</Label>
+                  <Input
+                    id="ad_soyad"
+                    value={yeniPersonel.ad_soyad}
+                    onChange={(e) =>
+                      setYeniPersonel((prev) => ({
+                        ...prev,
+                        ad_soyad: e.target.value,
+                      }))
+                    }
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="telefon">Telefon</Label>
+                  <Input
+                    id="telefon"
+                    value={yeniPersonel.telefon}
+                    onChange={(e) =>
+                      setYeniPersonel((prev) => ({
+                        ...prev,
+                        telefon: e.target.value,
+                      }))
+                    }
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="eposta">E-posta</Label>
+                  <Input
+                    id="eposta"
+                    type="email"
+                    value={yeniPersonel.eposta}
+                    onChange={(e) =>
+                      setYeniPersonel((prev) => ({
+                        ...prev,
+                        eposta: e.target.value,
+                      }))
+                    }
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="adres">Adres</Label>
+                  <Input
+                    id="adres"
+                    value={yeniPersonel.adres}
+                    onChange={(e) =>
+                      setYeniPersonel((prev) => ({
+                        ...prev,
+                        adres: e.target.value,
+                      }))
+                    }
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="personel_no">Personel No</Label>
+                  <Input
+                    id="personel_no"
+                    value={yeniPersonel.personel_no}
+                    onChange={(e) =>
+                      setYeniPersonel((prev) => ({
+                        ...prev,
+                        personel_no: e.target.value,
+                      }))
+                    }
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="maas">Maaş</Label>
+                  <Input
+                    id="maas"
+                    type="number"
+                    value={yeniPersonel.maas}
+                    onChange={(e) =>
+                      setYeniPersonel((prev) => ({
+                        ...prev,
+                        maas: Number(e.target.value),
+                      }))
+                    }
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="calisma_sistemi">Çalışma Sistemi</Label>
+                  <Select
+                    value={yeniPersonel.calisma_sistemi}
+                    onValueChange={(value: 'haftalik' | 'aylik') =>
+                      setYeniPersonel((prev) => ({
+                        ...prev,
+                        calisma_sistemi: value,
+                      }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Çalışma sistemi seçin" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="haftalik">Haftalık</SelectItem>
+                      <SelectItem value="aylik">Aylık</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="prim_yuzdesi">Prim Yüzdesi (%)</Label>
+                  <Input
+                    id="prim_yuzdesi"
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={yeniPersonel.prim_yuzdesi}
+                    onChange={(e) =>
+                      setYeniPersonel((prev) => ({
+                        ...prev,
+                        prim_yuzdesi: Number(e.target.value),
+                      }))
+                    }
+                    required
+                  />
+                </div>
+              </div>
+              <SheetFooter>
+                <Button type="submit" disabled={isPending}>
+                  {isPending ? "Ekleniyor..." : "Personel Ekle"}
+                </Button>
+              </SheetFooter>
+            </form>
           </SheetContent>
         </Sheet>
       </div>
