@@ -150,6 +150,64 @@ export type Database = {
         }
         Relationships: []
       }
+      personel_islemleri: {
+        Row: {
+          aciklama: string
+          created_at: string
+          id: number
+          islem_id: number | null
+          odenen: number
+          personel_id: number | null
+          prim_yuzdesi: number
+          puan: number
+          tutar: number
+        }
+        Insert: {
+          aciklama: string
+          created_at?: string
+          id?: number
+          islem_id?: number | null
+          odenen?: number
+          personel_id?: number | null
+          prim_yuzdesi: number
+          puan?: number
+          tutar: number
+        }
+        Update: {
+          aciklama?: string
+          created_at?: string
+          id?: number
+          islem_id?: number | null
+          odenen?: number
+          personel_id?: number | null
+          prim_yuzdesi?: number
+          puan?: number
+          tutar?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "personel_islemleri_islem_id_fkey"
+            columns: ["islem_id"]
+            isOneToOne: false
+            referencedRelation: "islemler"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "personel_islemleri_personel_id_fkey"
+            columns: ["personel_id"]
+            isOneToOne: false
+            referencedRelation: "personel"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "personel_islemleri_personel_id_fkey"
+            columns: ["personel_id"]
+            isOneToOne: false
+            referencedRelation: "personel_performans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -245,11 +303,29 @@ export type Database = {
             referencedRelation: "personel"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "randevular_personel_id_fkey"
+            columns: ["personel_id"]
+            isOneToOne: false
+            referencedRelation: "personel_performans"
+            referencedColumns: ["id"]
+          },
         ]
       }
     }
     Views: {
-      [_ in never]: never
+      personel_performans: {
+        Row: {
+          ad_soyad: string | null
+          ciro_yuzdesi: number | null
+          id: number | null
+          islem_sayisi: number | null
+          ortalama_puan: number | null
+          toplam_ciro: number | null
+          toplam_odenen: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never

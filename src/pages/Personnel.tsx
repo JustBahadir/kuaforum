@@ -230,7 +230,7 @@ export default function Personnel() {
   // İşlem geçmişi ve performans verileri
   const { data: islemGecmisi = [] } = useQuery({
     queryKey: ['personelIslemleri'],
-    queryFn: personelIslemleriServisi.hepsiniGetir
+    queryFn: () => personelIslemleriServisi.hepsiniGetir()
   });
 
   // Performans verilerini hesapla
