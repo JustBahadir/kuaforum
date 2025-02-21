@@ -1,99 +1,101 @@
-
-import { useNavigate } from "react-router-dom";
-import { Users, Calendar, Scissors, User } from "lucide-react";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarProvider,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-} from "@/components/ui/sidebar";
-
-const menuItems = [
-  {
-    title: "Müşteriler",
-    icon: Users,
-    path: "/customers"
-  },
-  {
-    title: "Randevular",
-    icon: Calendar,
-    path: "/appointments"
-  },
-  {
-    title: "Personel",
-    icon: User,
-    path: "/personnel"
-  },
-  {
-    title: "Hizmetler",
-    icon: Scissors,
-    path: "/operations"
-  }
-];
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BusinessReports } from "@/components/dashboard/BusinessReports";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useQuery } from "@tanstack/react-query";
+import { randevuServisi, personelServisi, islemServisi } from "@/lib/supabase";
 
 export default function Dashboard() {
-  const navigate = useNavigate();
+  const { data: randevular = [] } = useQuery({
+    queryKey: ['randevular'],
+    queryFn: randevuServisi.hepsiniGetir
+  });
+
+  const { data: personeller = [] } = useQuery({
+    queryKey: ['personeller'],
+    queryFn: personelServisi.hepsiniGetir
+  });
+
+  const { data: islemler = [] } = useQuery({
+    queryKey: ['islemler'],
+    queryFn: islemServisi.hepsiniGetir
+  });
 
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-gray-50">
-        <Sidebar>
-          <SidebarHeader>
-            <h2 className="text-xl font-bold px-6 py-4">Kuaför Pro</h2>
-          </SidebarHeader>
-          <SidebarContent>
-            <SidebarGroup>
-              <SidebarGroupLabel>Ana Menü</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {menuItems.map((item) => (
-                    <SidebarMenuItem key={item.path}>
-                      <SidebarMenuButton 
-                        onClick={() => navigate(item.path)}
-                        className="flex items-center gap-3 px-4 py-2 w-full"
-                      >
-                        <item.icon className="w-5 h-5" />
-                        <span>{item.title}</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          </SidebarContent>
-          <SidebarFooter className="p-4 text-sm text-gray-500">
-            v1.0.0
-          </SidebarFooter>
-        </Sidebar>
-        
-        <main className="flex-1 p-8">
-          <div className="max-w-7xl mx-auto">
-            <h1 className="text-2xl font-bold mb-6">Hoş Geldiniz</h1>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {menuItems.map((item) => (
-                <button
-                  key={item.path}
-                  onClick={() => navigate(item.path)}
-                  className="p-6 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow"
-                >
-                  <div className="flex items-center gap-3">
-                    <item.icon className="w-6 h-6" />
-                    <span className="text-lg font-medium">{item.title}</span>
-                  </div>
-                </button>
-              ))}
-            </div>
+    <div className="container mx-auto py-6">
+      <Tabs defaultValue="reports" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="reports">Raporlar</TabsTrigger>
+          <TabsTrigger value="overview">Genel Bakış</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="reports">
+          <BusinessReports />
+        </TabsContent>
+
+        <TabsContent value="overview">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <Card>
+              <CardHeader>
+                <CardTitle>Toplam Randevu</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold">{randevular.length}</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Aktif Personel</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold">{personeller.length}</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Hizmet Sayısı</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold">{islemler.length}</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Bekleyen Randevular</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold">
+                  {randevular.filter(r => r.durum === 'beklemede').length}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Tamamlanan Randevular</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold">
+                  {randevular.filter(r => r.durum === 'tamamlandi').length}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>İptal Edilen Randevular</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold">
+                  {randevular.filter(r => r.durum === 'iptal_edildi').length}
+                </p>
+              </CardContent>
+            </Card>
           </div>
-        </main>
-      </div>
-    </SidebarProvider>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }
