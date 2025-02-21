@@ -46,6 +46,7 @@ export type PersonelIslemi = {
   tutar: number;
   prim_yuzdesi: number;
   odenen: number;
+  puan: number;
   islem?: Islem;
 }
 
@@ -246,15 +247,20 @@ export const personelServisi = {
 
 // Personel İşlemleri servisi
 export const personelIslemleriServisi = {
-  async hepsiniGetir(personelId: number) {
-    const { data, error } = await supabase
+  async hepsiniGetir(personelId?: number) {
+    const query = supabase
       .from('personel_islemleri')
       .select(`
         *,
         islem:islemler(*)
       `)
-      .eq('personel_id', personelId)
       .order('created_at', { ascending: false });
+
+    if (personelId) {
+      query.eq('personel_id', personelId);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
     return data || [];

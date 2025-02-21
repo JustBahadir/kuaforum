@@ -39,6 +39,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
 export default function Personnel() {
   const [islemDialogOpen, setIslemDialogOpen] = useState(false);
@@ -63,6 +69,7 @@ export default function Personnel() {
     tutar: 0,
     prim_yuzdesi: 0,
     odenen: 0,
+    puan: 0,
   });
 
   const { toast } = useToast();
@@ -214,355 +221,499 @@ export default function Personnel() {
     </Dialog>
   );
 
+  // Rapor için tarih filtresi state'i
+  const [dateRange, setDateRange] = useState({
+    from: new Date(),
+    to: new Date()
+  });
+
+  // İşlem geçmişi ve performans verileri
+  const { data: islemGecmisi = [] } = useQuery({
+    queryKey: ['personelIslemleri'],
+    queryFn: personelIslemleriServisi.hepsiniGetir
+  });
+
+  // Performans verilerini hesapla
+  const performansVerileri = personeller?.map(personel => {
+    const islemler = islemGecmisi.filter(i => i.personel_id === personel.id);
+    const toplamCiro = islemler.reduce((sum, i) => sum + i.tutar, 0);
+    return {
+      name: personel.ad_soyad,
+      ciro: toplamCiro,
+      islemSayisi: islemler.length,
+      ortalamaPuan: islemler.reduce((sum, i) => sum + i.prim_yuzdesi, 0) / (islemler.length || 1)
+    };
+  }) || [];
+
   return (
     <div className="container mx-auto py-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Personel Yönetimi</h1>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2" />
-              Yeni Personel Ekle
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <form onSubmit={handleSubmit}>
-              <DialogHeader>
-                <DialogTitle>Yeni Personel Ekle</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="ad_soyad">Ad Soyad</Label>
-                  <Input
-                    id="ad_soyad"
-                    value={yeniPersonel.ad_soyad}
-                    onChange={(e) =>
-                      setYeniPersonel((prev) => ({
-                        ...prev,
-                        ad_soyad: e.target.value,
-                      }))
-                    }
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="telefon">Telefon</Label>
-                  <Input
-                    id="telefon"
-                    type="tel"
-                    value={yeniPersonel.telefon}
-                    onChange={(e) =>
-                      setYeniPersonel((prev) => ({
-                        ...prev,
-                        telefon: e.target.value,
-                      }))
-                    }
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="eposta">E-posta</Label>
-                  <Input
-                    id="eposta"
-                    type="email"
-                    value={yeniPersonel.eposta}
-                    onChange={(e) =>
-                      setYeniPersonel((prev) => ({
-                        ...prev,
-                        eposta: e.target.value,
-                      }))
-                    }
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="adres">Adres</Label>
-                  <Input
-                    id="adres"
-                    value={yeniPersonel.adres}
-                    onChange={(e) =>
-                      setYeniPersonel((prev) => ({
-                        ...prev,
-                        adres: e.target.value,
-                      }))
-                    }
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="personel_no">Personel No</Label>
-                  <Input
-                    id="personel_no"
-                    value={yeniPersonel.personel_no}
-                    onChange={(e) =>
-                      setYeniPersonel((prev) => ({
-                        ...prev,
-                        personel_no: e.target.value,
-                      }))
-                    }
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="maas">Maaş</Label>
-                  <Input
-                    id="maas"
-                    type="number"
-                    value={yeniPersonel.maas}
-                    onChange={(e) =>
-                      setYeniPersonel((prev) => ({
-                        ...prev,
-                        maas: Number(e.target.value),
-                      }))
-                    }
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="calisma_sistemi">Çalışma Sistemi</Label>
-                  <Select
-                    onValueChange={(value) =>
-                      setYeniPersonel((prev) => ({
-                        ...prev,
-                        calisma_sistemi: value as "haftalik" | "aylik",
-                      }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Çalışma Sistemi Seçin" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="haftalik">Haftalık</SelectItem>
-                      <SelectItem value="aylik">Aylık</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="prim_yuzdesi">Prim Yüzdesi</Label>
-                  <Input
-                    id="prim_yuzdesi"
-                    type="number"
-                    value={yeniPersonel.prim_yuzdesi}
-                    onChange={(e) =>
-                      setYeniPersonel((prev) => ({
-                        ...prev,
-                        prim_yuzdesi: Number(e.target.value),
-                      }))
-                    }
-                    required
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button type="submit" disabled={isEklemeLoading}>
-                  {isEklemeLoading ? "Ekleniyor..." : "Personel Ekle"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
+      <Tabs defaultValue="personel" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="personel">Personel Yönetimi</TabsTrigger>
+          <TabsTrigger value="islemler">İşlem Geçmişi</TabsTrigger>
+          <TabsTrigger value="raporlar">Performans Raporları</TabsTrigger>
+        </TabsList>
 
-      {isLoading ? (
-        <div>Yükleniyor...</div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {personeller.map((personel) => (
-            <div
-              key={personel.id}
-              className="p-4 border rounded-lg shadow-sm hover:shadow-md transition-shadow"
-            >
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="font-medium">{personel.ad_soyad}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Telefon: {personel.telefon} | E-posta: {personel.eposta}
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <form onSubmit={handleUpdate}>
-                        <DialogHeader>
-                          <DialogTitle>Personel Düzenle</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4 py-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="edit_ad_soyad">Ad Soyad</Label>
-                            <Input
-                              id="edit_ad_soyad"
-                              value={personelDuzenle?.ad_soyad || personel.ad_soyad}
-                              onChange={(e) =>
-                                setPersonelDuzenle((prev) =>
-                                  prev ? { ...prev, ad_soyad: e.target.value } : personel
-                                )
-                              }
-                              required
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="edit_telefon">Telefon</Label>
-                            <Input
-                              id="edit_telefon"
-                              type="tel"
-                              value={personelDuzenle?.telefon || personel.telefon}
-                              onChange={(e) =>
-                                setPersonelDuzenle((prev) =>
-                                  prev ? { ...prev, telefon: e.target.value } : personel
-                                )
-                              }
-                              required
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="edit_eposta">E-posta</Label>
-                            <Input
-                              id="edit_eposta"
-                              type="email"
-                              value={personelDuzenle?.eposta || personel.eposta}
-                              onChange={(e) =>
-                                setPersonelDuzenle((prev) =>
-                                  prev ? { ...prev, eposta: e.target.value } : personel
-                                )
-                              }
-                              required
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="edit_adres">Adres</Label>
-                            <Input
-                              id="edit_adres"
-                              value={personelDuzenle?.adres || personel.adres}
-                              onChange={(e) =>
-                                setPersonelDuzenle((prev) =>
-                                  prev ? { ...prev, adres: e.target.value } : personel
-                                )
-                              }
-                              required
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="edit_personel_no">Personel No</Label>
-                            <Input
-                              id="edit_personel_no"
-                              value={personelDuzenle?.personel_no || personel.personel_no}
-                              onChange={(e) =>
-                                setPersonelDuzenle((prev) =>
-                                  prev ? { ...prev, personel_no: e.target.value } : personel
-                                )
-                              }
-                              required
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="edit_maas">Maaş</Label>
-                            <Input
-                              id="edit_maas"
-                              type="number"
-                              value={personelDuzenle?.maas || personel.maas}
-                              onChange={(e) =>
-                                setPersonelDuzenle((prev) =>
-                                  prev ? { ...prev, maas: Number(e.target.value) } : personel
-                                )
-                              }
-                              required
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="edit_calisma_sistemi">Çalışma Sistemi</Label>
-                            <Select
-                              onValueChange={(value) =>
-                                setPersonelDuzenle((prev) =>
-                                  prev
-                                    ? {
-                                        ...prev,
-                                        calisma_sistemi: value as "haftalik" | "aylik",
-                                      }
-                                    : personel
-                                )
-                              }
-                            >
-                              <SelectTrigger>
-                                <SelectValue
-                                  placeholder={
-                                    personelDuzenle?.calisma_sistemi ||
-                                    personel.calisma_sistemi
-                                  }
-                                />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="haftalik">Haftalık</SelectItem>
-                                <SelectItem value="aylik">Aylık</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="edit_prim_yuzdesi">Prim Yüzdesi</Label>
-                            <Input
-                              id="edit_prim_yuzdesi"
-                              type="number"
-                              value={personelDuzenle?.prim_yuzdesi || personel.prim_yuzdesi}
-                              onChange={(e) =>
-                                setPersonelDuzenle((prev) =>
-                                  prev
-                                    ? { ...prev, prim_yuzdesi: Number(e.target.value) }
-                                    : personel
-                                )
-                              }
-                              required
-                            />
-                          </div>
-                        </div>
-                        <DialogFooter>
-                          <Button type="submit">Değişiklikleri Kaydet</Button>
-                        </DialogFooter>
-                      </form>
-                    </DialogContent>
-                  </Dialog>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="icon" className="text-destructive">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Personeli Sil</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Bu personeli silmek istediğinizden emin misiniz?
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>İptal</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => personelSil(personel.id)}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        >
-                          Sil
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                  <Button
-                    onClick={() => {
-                      setSelectedPersonelId(personel.id);
-                      setIslemDialogOpen(true);
-                    }}
-                  >
-                    İşlem Ekle
+        <TabsContent value="personel">
+          <div className="container mx-auto py-6">
+            <div className="flex justify-between items-center mb-6">
+              <h1 className="text-2xl font-bold">Personel Yönetimi</h1>
+              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="mr-2" />
+                    Yeni Personel Ekle
                   </Button>
-                </div>
-              </div>
-              {selectedPersonelId === personel.id && renderIslemEkleForm(personel.id)}
+                </DialogTrigger>
+                <DialogContent>
+                  <form onSubmit={handleSubmit}>
+                    <DialogHeader>
+                      <DialogTitle>Yeni Personel Ekle</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="ad_soyad">Ad Soyad</Label>
+                        <Input
+                          id="ad_soyad"
+                          value={yeniPersonel.ad_soyad}
+                          onChange={(e) =>
+                            setYeniPersonel((prev) => ({
+                              ...prev,
+                              ad_soyad: e.target.value,
+                            }))
+                          }
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="telefon">Telefon</Label>
+                        <Input
+                          id="telefon"
+                          type="tel"
+                          value={yeniPersonel.telefon}
+                          onChange={(e) =>
+                            setYeniPersonel((prev) => ({
+                              ...prev,
+                              telefon: e.target.value,
+                            }))
+                          }
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="eposta">E-posta</Label>
+                        <Input
+                          id="eposta"
+                          type="email"
+                          value={yeniPersonel.eposta}
+                          onChange={(e) =>
+                            setYeniPersonel((prev) => ({
+                              ...prev,
+                              eposta: e.target.value,
+                            }))
+                          }
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="adres">Adres</Label>
+                        <Input
+                          id="adres"
+                          value={yeniPersonel.adres}
+                          onChange={(e) =>
+                            setYeniPersonel((prev) => ({
+                              ...prev,
+                              adres: e.target.value,
+                            }))
+                          }
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="personel_no">Personel No</Label>
+                        <Input
+                          id="personel_no"
+                          value={yeniPersonel.personel_no}
+                          onChange={(e) =>
+                            setYeniPersonel((prev) => ({
+                              ...prev,
+                              personel_no: e.target.value,
+                            }))
+                          }
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="maas">Maaş</Label>
+                        <Input
+                          id="maas"
+                          type="number"
+                          value={yeniPersonel.maas}
+                          onChange={(e) =>
+                            setYeniPersonel((prev) => ({
+                              ...prev,
+                              maas: Number(e.target.value),
+                            }))
+                          }
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="calisma_sistemi">Çalışma Sistemi</Label>
+                        <Select
+                          onValueChange={(value) =>
+                            setYeniPersonel((prev) => ({
+                              ...prev,
+                              calisma_sistemi: value as "haftalik" | "aylik",
+                            }))
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Çalışma Sistemi Seçin" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="haftalik">Haftalık</SelectItem>
+                            <SelectItem value="aylik">Aylık</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="prim_yuzdesi">Prim Yüzdesi</Label>
+                        <Input
+                          id="prim_yuzdesi"
+                          type="number"
+                          value={yeniPersonel.prim_yuzdesi}
+                          onChange={(e) =>
+                            setYeniPersonel((prev) => ({
+                              ...prev,
+                              prim_yuzdesi: Number(e.target.value),
+                            }))
+                          }
+                          required
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button type="submit" disabled={isEklemeLoading}>
+                        {isEklemeLoading ? "Ekleniyor..." : "Personel Ekle"}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
             </div>
-          ))}
-        </div>
-      )}
+
+            {isLoading ? (
+              <div>Yükleniyor...</div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {personeller.map((personel) => (
+                  <div
+                    key={personel.id}
+                    className="p-4 border rounded-lg shadow-sm hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h3 className="font-medium">{personel.ad_soyad}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Telefon: {personel.telefon} | E-posta: {personel.eposta}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <form onSubmit={handleUpdate}>
+                              <DialogHeader>
+                                <DialogTitle>Personel Düzenle</DialogTitle>
+                              </DialogHeader>
+                              <div className="space-y-4 py-4">
+                                <div className="space-y-2">
+                                  <Label htmlFor="edit_ad_soyad">Ad Soyad</Label>
+                                  <Input
+                                    id="edit_ad_soyad"
+                                    value={personelDuzenle?.ad_soyad || personel.ad_soyad}
+                                    onChange={(e) =>
+                                      setPersonelDuzenle((prev) =>
+                                        prev ? { ...prev, ad_soyad: e.target.value } : personel
+                                      )
+                                    }
+                                    required
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor="edit_telefon">Telefon</Label>
+                                  <Input
+                                    id="edit_telefon"
+                                    type="tel"
+                                    value={personelDuzenle?.telefon || personel.telefon}
+                                    onChange={(e) =>
+                                      setPersonelDuzenle((prev) =>
+                                        prev ? { ...prev, telefon: e.target.value } : personel
+                                      )
+                                    }
+                                    required
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor="edit_eposta">E-posta</Label>
+                                  <Input
+                                    id="edit_eposta"
+                                    type="email"
+                                    value={personelDuzenle?.eposta || personel.eposta}
+                                    onChange={(e) =>
+                                      setPersonelDuzenle((prev) =>
+                                        prev ? { ...prev, eposta: e.target.value } : personel
+                                      )
+                                    }
+                                    required
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor="edit_adres">Adres</Label>
+                                  <Input
+                                    id="edit_adres"
+                                    value={personelDuzenle?.adres || personel.adres}
+                                    onChange={(e) =>
+                                      setPersonelDuzenle((prev) =>
+                                        prev ? { ...prev, adres: e.target.value } : personel
+                                      )
+                                    }
+                                    required
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor="edit_personel_no">Personel No</Label>
+                                  <Input
+                                    id="edit_personel_no"
+                                    value={personelDuzenle?.personel_no || personel.personel_no}
+                                    onChange={(e) =>
+                                      setPersonelDuzenle((prev) =>
+                                        prev ? { ...prev, personel_no: e.target.value } : personel
+                                      )
+                                    }
+                                    required
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor="edit_maas">Maaş</Label>
+                                  <Input
+                                    id="edit_maas"
+                                    type="number"
+                                    value={personelDuzenle?.maas || personel.maas}
+                                    onChange={(e) =>
+                                      setPersonelDuzenle((prev) =>
+                                        prev ? { ...prev, maas: Number(e.target.value) } : personel
+                                      )
+                                    }
+                                    required
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor="edit_calisma_sistemi">Çalışma Sistemi</Label>
+                                  <Select
+                                    onValueChange={(value) =>
+                                      setPersonelDuzenle((prev) =>
+                                        prev
+                                          ? {
+                                              ...prev,
+                                              calisma_sistemi: value as "haftalik" | "aylik",
+                                            }
+                                          : personel
+                                      )
+                                    }
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue
+                                        placeholder={
+                                          personelDuzenle?.calisma_sistemi ||
+                                          personel.calisma_sistemi
+                                        }
+                                      />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="haftalik">Haftalık</SelectItem>
+                                      <SelectItem value="aylik">Aylık</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor="edit_prim_yuzdesi">Prim Yüzdesi</Label>
+                                  <Input
+                                    id="edit_prim_yuzdesi"
+                                    type="number"
+                                    value={personelDuzenle?.prim_yuzdesi || personel.prim_yuzdesi}
+                                    onChange={(e) =>
+                                      setPersonelDuzenle((prev) =>
+                                        prev
+                                          ? { ...prev, prim_yuzdesi: Number(e.target.value) }
+                                          : personel
+                                      )
+                                    }
+                                    required
+                                  />
+                                </div>
+                              </div>
+                              <DialogFooter>
+                                <Button type="submit">Değişiklikleri Kaydet</Button>
+                              </DialogFooter>
+                            </form>
+                          </DialogContent>
+                        </Dialog>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="text-destructive">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Personeli Sil</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Bu personeli silmek istediğinizden emin misiniz?
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>İptal</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => personelSil(personel.id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Sil
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                        <Button
+                          onClick={() => {
+                            setSelectedPersonelId(personel.id);
+                            setIslemDialogOpen(true);
+                          }}
+                        >
+                          İşlem Ekle
+                        </Button>
+                      </div>
+                    </div>
+                    {selectedPersonelId === personel.id && renderIslemEkleForm(personel.id)}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="islemler">
+          <Card>
+            <CardHeader>
+              <CardTitle>İşlem Geçmişi</CardTitle>
+              <div className="flex gap-4">
+                <DateRangePicker 
+                  from={dateRange.from}
+                  to={dateRange.to}
+                  onSelect={({from, to}) => setDateRange({from, to})}
+                />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tarih</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Personel</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlem</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tutar</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prim %</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ödenen</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Puan</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {islemGecmisi.map((islem) => (
+                      <tr key={islem.id}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {new Date(islem.created_at!).toLocaleDateString('tr-TR')}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {personeller?.find(p => p.id === islem.personel_id)?.ad_soyad}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {islem.aciklama}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {islem.tutar} TL
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          %{islem.prim_yuzdesi}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {islem.odenen} TL
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {islem.puan}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="raporlar">
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Ciro Dağılımı</CardTitle>
+              </CardHeader>
+              <CardContent className="h-[400px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={performansVerileri}
+                      dataKey="ciro"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={100}
+                      label={({name, percent}) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    >
+                      {performansVerileri.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Personel Performans Karşılaştırması</CardTitle>
+              </CardHeader>
+              <CardContent className="h-[400px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={performansVerileri}>
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="islemSayisi" name="İşlem Sayısı" fill="#0088FE" />
+                    <Bar dataKey="ortalamaPuan" name="Ortalama Puan" fill="#00C49F" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
