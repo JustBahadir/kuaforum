@@ -228,9 +228,12 @@ export default function Personnel() {
   });
 
   // İşlem geçmişi ve performans verileri
-  const { data: islemGecmisi = [] } = useQuery({
+  const { data: islemGecmisi = [] }: UseQueryResult<PersonelIslemi[], Error> = useQuery({
     queryKey: ['personelIslemleri'],
-    queryFn: () => personelIslemleriServisi.hepsiniGetir()
+    queryFn: async () => {
+      const data = await personelIslemleriServisi.hepsiniGetir();
+      return data;
+    }
   });
 
   // Performans verilerini hesapla

@@ -64,10 +64,14 @@ export function DateRangePicker({
             mode="range"
             defaultMonth={date?.from}
             selected={date}
-            onSelect={(range) => {
-              setDate(range);
-              if (range?.from && range?.to) {
-                onSelect({ from: range.from, to: range.to });
+            onSelect={(selectedDate) => {
+              setDate(selectedDate);
+              // Only call onSelect when we have both from and to dates
+              if (selectedDate?.from && selectedDate?.to) {
+                onSelect({
+                  from: selectedDate.from,
+                  to: selectedDate.to
+                });
               }
             }}
             numberOfMonths={2}
