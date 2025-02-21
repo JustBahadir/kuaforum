@@ -22,7 +22,7 @@ export default function Appointments() {
   
   // Form state'leri
   const [formData, setFormData] = useState({
-    musteri_id: '',
+    customer_id: '',
     personel_id: '',
     tarih: '',
     saat: '',
@@ -55,7 +55,7 @@ export default function Appointments() {
   // Form işlemleri
   const formReset = () => {
     setFormData({
-      musteri_id: '',
+      customer_id: '',
       personel_id: '',
       tarih: '',
       saat: '',
@@ -71,13 +71,11 @@ export default function Appointments() {
       if (seciliRandevu) {
         await randevuServisi.guncelle(seciliRandevu.id, {
           ...formData,
-          musteri_id: Number(formData.musteri_id),
           personel_id: Number(formData.personel_id)
         });
       } else {
         await randevuServisi.ekle({
           ...formData,
-          musteri_id: Number(formData.musteri_id),
           personel_id: Number(formData.personel_id)
         });
       }
@@ -143,8 +141,8 @@ export default function Appointments() {
               <div className="grid gap-2">
                 <Label htmlFor="musteri">Müşteri</Label>
                 <Select
-                  value={formData.musteri_id}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, musteri_id: value }))}
+                  value={formData.customer_id}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, customer_id: value }))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Müşteri seçin" />
@@ -248,7 +246,7 @@ export default function Appointments() {
             <div className="flex items-center gap-4">
               <div className="flex flex-col">
                 <span className="font-medium">
-                  {randevu.musteri?.ad_soyad}
+                  {randevu.musteri?.first_name} {randevu.musteri?.last_name}
                 </span>
                 <div className="flex items-center gap-2 text-sm text-gray-500">
                   <Calendar className="w-4 h-4" />
@@ -270,8 +268,8 @@ export default function Appointments() {
                 onClick={() => {
                   setSeciliRandevu(randevu);
                   setFormData({
-                    musteri_id: randevu.musteri_id.toString(),
-                    personel_id: randevu.personel_id.toString(),
+                    customer_id: randevu.customer_id,
+                    personel_id: randevu.personel_id?.toString() || '',
                     tarih: randevu.tarih,
                     saat: randevu.saat,
                     durum: randevu.durum,
