@@ -63,6 +63,54 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          created_at: string
+          id: number
+          message: string
+          read: boolean | null
+          related_appointment_id: number | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          message: string
+          read?: boolean | null
+          related_appointment_id?: number | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          message?: string
+          read?: boolean | null
+          related_appointment_id?: number | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_related_appointment_id_fkey"
+            columns: ["related_appointment_id"]
+            isOneToOne: false
+            referencedRelation: "randevular"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       personel: {
         Row: {
           ad_soyad: string
@@ -102,9 +150,38 @@ export type Database = {
         }
         Relationships: []
       }
-      randevular: {
+      profiles: {
         Row: {
           created_at: string
+          first_name: string | null
+          id: string
+          last_name: string | null
+          phone: string | null
+        }
+        Insert: {
+          created_at?: string
+          first_name?: string | null
+          id: string
+          last_name?: string | null
+          phone?: string | null
+        }
+        Update: {
+          created_at?: string
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          phone?: string | null
+        }
+        Relationships: []
+      }
+      randevular: {
+        Row: {
+          admin_notes: string | null
+          counter_proposal_date: string | null
+          counter_proposal_time: string | null
+          created_at: string
+          customer_accepted: boolean | null
+          customer_id: string | null
           durum: string
           id: number
           islemler: number[] | null
@@ -115,7 +192,12 @@ export type Database = {
           tarih: string
         }
         Insert: {
+          admin_notes?: string | null
+          counter_proposal_date?: string | null
+          counter_proposal_time?: string | null
           created_at?: string
+          customer_accepted?: boolean | null
+          customer_id?: string | null
           durum?: string
           id?: number
           islemler?: number[] | null
@@ -126,7 +208,12 @@ export type Database = {
           tarih: string
         }
         Update: {
+          admin_notes?: string | null
+          counter_proposal_date?: string | null
+          counter_proposal_time?: string | null
           created_at?: string
+          customer_accepted?: boolean | null
+          customer_id?: string | null
           durum?: string
           id?: number
           islemler?: number[] | null
@@ -137,6 +224,13 @@ export type Database = {
           tarih?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "randevular_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "randevular_musteri_id_fkey"
             columns: ["musteri_id"]

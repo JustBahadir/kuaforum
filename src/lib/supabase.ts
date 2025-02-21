@@ -49,6 +49,47 @@ export type PersonelIslemi = {
   islem?: Islem;
 }
 
+export type Profile = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  phone: string;
+  created_at?: string;
+}
+
+export type Notification = {
+  id: number;
+  created_at?: string;
+  user_id: string;
+  title: string;
+  message: string;
+  type: string;
+  read: boolean;
+  related_appointment_id?: number;
+}
+
+// Randevu durumları
+export type RandevuDurumu = "beklemede" | "onaylandi" | "iptal_edildi" | "tamamlandi";
+
+// Randevu tipi
+export type Randevu = {
+  id: number;
+  created_at?: string;
+  customer_id: string;
+  personel_id?: number;
+  tarih: string;
+  saat: string;
+  durum: RandevuDurumu;
+  notlar?: string;
+  admin_notes?: string;
+  counter_proposal_date?: string;
+  counter_proposal_time?: string;
+  customer_accepted?: boolean;
+  musteri?: Profile;
+  personel?: Personel;
+  islemler: number[];
+}
+
 // İşlemler servisi
 export const islemServisi = {
   async hepsiniGetir() {
@@ -258,32 +299,75 @@ export const personelIslemleriServisi = {
   }
 };
 
-// Randevu durumları
-export type RandevuDurumu = "beklemede" | "onaylandi" | "iptal_edildi" | "tamamlandi";
+// Profil servisi
+export const profilServisi = {
+  async getir() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
 
-// Randevu tipi
-export type Randevu = {
-  id: number;
-  created_at?: string;
-  musteri_id: number;
-  personel_id: number;
-  tarih: string;
-  saat: string;
-  durum: RandevuDurumu;
-  notlar?: string;
-  musteri?: Musteri;
-  personel?: Personel;
-  islemler: number[]; // İşlem ID'leri
-}
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
 
-// Randevu servisi
+    if (error) throw error;
+    return data;
+  },
+
+  async guncelle(profile: Partial<Profile>) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Kullanıcı girişi yapılmamış');
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .update(profile)
+      .eq('id', user.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+};
+
+// Bildirim servisi
+export const bildirimServisi = {
+  async hepsiniGetir() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
+
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  async okunduIsaretle(id: number) {
+    const { error } = await supabase
+      .from('notifications')
+      .update({ read: true })
+      .eq('id', id);
+
+    if (error) throw error;
+  }
+};
+
+// Randevu servisini güncelle
 export const randevuServisi = {
   async hepsiniGetir() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
+
     const { data, error } = await supabase
       .from('randevular')
       .select(`
         *,
-        musteri:musteriler(*),
+        musteri:profiles(*),
         personel:personel(*)
       `)
       .order('tarih', { ascending: true })
@@ -293,16 +377,19 @@ export const randevuServisi = {
     return data || [];
   },
 
-  async bugunkuleriGetir() {
-    const bugun = new Date().toISOString().split('T')[0];
+  async kendiRandevulariniGetir() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
+
     const { data, error } = await supabase
       .from('randevular')
       .select(`
         *,
-        musteri:musteriler(*),
+        musteri:profiles(*),
         personel:personel(*)
       `)
-      .eq('tarih', bugun)
+      .eq('customer_id', user.id)
+      .order('tarih', { ascending: true })
       .order('saat', { ascending: true });
 
     if (error) throw error;
@@ -310,12 +397,15 @@ export const randevuServisi = {
   },
 
   async ekle(randevu: Omit<Randevu, 'id' | 'created_at' | 'musteri' | 'personel'>) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Kullanıcı girişi yapılmamış');
+
     const { data, error } = await supabase
       .from('randevular')
-      .insert([randevu])
+      .insert([{ ...randevu, customer_id: user.id }])
       .select(`
         *,
-        musteri:musteriler(*),
+        musteri:profiles(*),
         personel:personel(*)
       `)
       .single();
@@ -331,7 +421,7 @@ export const randevuServisi = {
       .eq('id', id)
       .select(`
         *,
-        musteri:musteriler(*),
+        musteri:profiles(*),
         personel:personel(*)
       `)
       .single();
