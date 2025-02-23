@@ -178,4 +178,18 @@ export function AppointmentCard({
                     <Input
                       id="time"
                       type="time"
-                      value
+                      value={proposedTime}
+                      onChange={(e) => setProposedTime(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <Button type="submit">Öner</Button>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
