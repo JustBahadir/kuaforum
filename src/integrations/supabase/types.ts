@@ -9,29 +9,88 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      calisma_saatleri: {
+        Row: {
+          acilis: string | null
+          gun: string
+          id: number
+          kapali: boolean | null
+          kapanis: string | null
+        }
+        Insert: {
+          acilis?: string | null
+          gun: string
+          id?: number
+          kapali?: boolean | null
+          kapanis?: string | null
+        }
+        Update: {
+          acilis?: string | null
+          gun?: string
+          id?: number
+          kapali?: boolean | null
+          kapanis?: string | null
+        }
+        Relationships: []
+      }
+      islem_kategorileri: {
+        Row: {
+          created_at: string
+          id: number
+          kategori_adi: string
+          sira: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          kategori_adi: string
+          sira?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          kategori_adi?: string
+          sira?: number | null
+        }
+        Relationships: []
+      }
       islemler: {
         Row: {
           created_at: string
           fiyat: number
           id: number
           islem_adi: string
+          kategori_id: number | null
           puan: number
+          sira: number | null
         }
         Insert: {
           created_at?: string
           fiyat: number
           id?: number
           islem_adi: string
+          kategori_id?: number | null
           puan: number
+          sira?: number | null
         }
         Update: {
           created_at?: string
           fiyat?: number
           id?: number
           islem_adi?: string
+          kategori_id?: number | null
           puan?: number
+          sira?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "islemler_kategori_id_fkey"
+            columns: ["kategori_id"]
+            isOneToOne: false
+            referencedRelation: "islem_kategorileri"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       musteriler: {
         Row: {
