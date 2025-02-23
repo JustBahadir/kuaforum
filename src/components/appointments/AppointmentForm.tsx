@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface AppointmentFormProps {
   islemler: any[];
@@ -31,6 +32,22 @@ export function AppointmentForm({
   const [selectedStaff, setSelectedStaff] = useState('');
   const [selectedDate, setSelectedDate] = useState<Date>();
   const [selectedTime, setSelectedTime] = useState('');
+
+  // Seçilen hizmet ve personel bilgilerini tut
+  const [selectedServiceInfo, setSelectedServiceInfo] = useState<any>(null);
+  const [selectedStaffInfo, setSelectedStaffInfo] = useState<any>(null);
+
+  // Seçilen hizmet ve personel bilgilerini güncelle
+  useEffect(() => {
+    if (selectedService) {
+      const service = islemler.find(i => i.id.toString() === selectedService);
+      setSelectedServiceInfo(service);
+    }
+    if (selectedStaff) {
+      const staff = personeller.find(p => p.id.toString() === selectedStaff);
+      setSelectedStaffInfo(staff);
+    }
+  }, [selectedService, selectedStaff, islemler, personeller]);
 
   // Örnek saat dilimleri
   const timeSlots = [
@@ -70,24 +87,63 @@ export function AppointmentForm({
 
   const handleSubmit = () => {
     if (selectedService && selectedStaff && selectedDate && selectedTime) {
-      onSubmit({
-        islem_id: selectedService,
-        personel_id: selectedStaff,
+      const randevuData = {
+        islem_id: Number(selectedService),
+        personel_id: Number(selectedStaff),
         tarih: format(selectedDate, 'yyyy-MM-dd'),
-        saat: selectedTime,
-      });
+        saat: selectedTime
+      };
+      console.log('Randevu verisi:', randevuData); // Debug için
+      onSubmit(randevuData);
     }
   };
 
   const handleCancel = () => {
-    // Form verilerini sıfırla
     setSelectedService('');
     setSelectedStaff('');
     setSelectedDate(undefined);
     setSelectedTime('');
     setStep(1);
-    // İptal fonksiyonunu çağır
     onCancel();
+  };
+
+  // Randevu özeti bileşeni
+  const AppointmentSummary = () => {
+    if (!selectedService && !selectedStaff && !selectedDate && !selectedTime) return null;
+
+    return (
+      <Card className="mt-4 mb-6">
+        <CardContent className="pt-6">
+          <h4 className="text-sm font-semibold mb-2">Randevu Özeti</h4>
+          <div className="space-y-2 text-sm">
+            {selectedServiceInfo && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Hizmet:</span>
+                <span className="font-medium">{selectedServiceInfo.islem_adi}</span>
+              </div>
+            )}
+            {selectedStaffInfo && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Personel:</span>
+                <span className="font-medium">{selectedStaffInfo.ad_soyad}</span>
+              </div>
+            )}
+            {selectedDate && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Tarih:</span>
+                <span className="font-medium">{format(selectedDate, 'dd/MM/yyyy')}</span>
+              </div>
+            )}
+            {selectedTime && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Saat:</span>
+                <span className="font-medium">{selectedTime}</span>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
   };
 
   return (
@@ -95,6 +151,9 @@ export function AppointmentForm({
       <DialogHeader>
         <DialogTitle>Randevu Oluştur</DialogTitle>
       </DialogHeader>
+
+      {/* Randevu Özeti */}
+      <AppointmentSummary />
 
       <div className="relative">
         {/* İlerleme çubuğu */}
