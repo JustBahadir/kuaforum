@@ -15,13 +15,13 @@ export type Islem = {
 }
 
 export type Musteri = {
-  id: number;
+  id: string;
+  first_name: string;
+  last_name: string;
+  phone: string;
   created_at?: string;
-  musteri_no: string;
-  ad_soyad: string;
-  telefon: string;
-  eposta: string;
-  adres: string;
+  total_appointments?: number;
+  total_services?: number;
 }
 
 export type Personel = {
@@ -148,9 +148,14 @@ export const islemServisi = {
 export const musteriServisi = {
   async hepsiniGetir() {
     const { data, error } = await supabase
-      .from('musteriler')
-      .select('*')
-      .order('ad_soyad');
+      .from('profiles')
+      .select(`
+        id,
+        first_name,
+        last_name,
+        phone,
+        created_at
+      `);
 
     if (error) throw error;
     return data || [];
@@ -158,10 +163,15 @@ export const musteriServisi = {
 
   async ara(aramaMetni: string) {
     const { data, error } = await supabase
-      .from('musteriler')
-      .select('*')
-      .ilike('ad_soyad', `%${aramaMetni}%`)
-      .order('ad_soyad');
+      .from('profiles')
+      .select(`
+        id,
+        first_name,
+        last_name,
+        phone,
+        created_at
+      `)
+      .or(`first_name.ilike.%${aramaMetni}%,last_name.ilike.%${aramaMetni}%,phone.ilike.%${aramaMetni}%`);
 
     if (error) throw error;
     return data || [];
@@ -169,7 +179,7 @@ export const musteriServisi = {
 
   async ekle(musteri: Omit<Musteri, 'id' | 'created_at'>) {
     const { data, error } = await supabase
-      .from('musteriler')
+      .from('profiles')
       .insert([musteri])
       .select()
       .single();
@@ -178,9 +188,9 @@ export const musteriServisi = {
     return data;
   },
 
-  async guncelle(id: number, musteri: Partial<Musteri>) {
+  async guncelle(id: string, musteri: Partial<Musteri>) {
     const { data, error } = await supabase
-      .from('musteriler')
+      .from('profiles')
       .update(musteri)
       .eq('id', id)
       .select()
@@ -188,15 +198,6 @@ export const musteriServisi = {
 
     if (error) throw error;
     return data;
-  },
-
-  async sil(id: number) {
-    const { error } = await supabase
-      .from('musteriler')
-      .delete()
-      .eq('id', id);
-
-    if (error) throw error;
   }
 };
 
@@ -236,6 +237,13 @@ export const personelServisi = {
   },
 
   async sil(id: number) {
+    const { error: islemSilmeHatasi } = await supabase
+      .from('personel_islemleri')
+      .delete()
+      .eq('personel_id', id);
+
+    if (islemSilmeHatasi) throw islemSilmeHatasi;
+
     const { error } = await supabase
       .from('personel')
       .delete()
