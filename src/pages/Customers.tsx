@@ -7,10 +7,19 @@ import { musteriServisi, type Musteri } from "@/lib/supabase";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "@/components/ui/use-toast";
 
+type ProfileWithStats = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  phone: string;
+  created_at?: string;
+  total_appointments?: number;
+}
+
 export default function Musteriler() {
   const [aramaMetni, setAramaMetni] = useState("");
 
-  const { data: musteriler = [], isLoading } = useQuery({
+  const { data: musteriler = [], isLoading } = useQuery<ProfileWithStats[]>({
     queryKey: ['musteriler', aramaMetni],
     queryFn: () => aramaMetni ? musteriServisi.ara(aramaMetni) : musteriServisi.hepsiniGetir()
   });
