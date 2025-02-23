@@ -12,25 +12,10 @@ export default function Appointments() {
   const [yeniRandevuAcik, setYeniRandevuAcik] = useState(false);
   const [seciliRandevu, setSeciliRandevu] = useState<Randevu | null>(null);
   const [silinecekRandevu, setSilinecekRandevu] = useState<Randevu | null>(null);
-  
-  const [formData, setFormData] = useState({
-    customer_id: '',
-    personel_id: '',
-    tarih: '',
-    saat: '',
-    durum: 'beklemede' as RandevuDurumu,
-    notlar: '',
-    islemler: [] as number[]
-  });
 
   const { data: randevular, isLoading: randevularYukleniyor } = useQuery({
     queryKey: ['randevular'],
     queryFn: randevuServisi.hepsiniGetir
-  });
-
-  const { data: musteriler } = useQuery({
-    queryKey: ['musteriler'],
-    queryFn: musteriServisi.hepsiniGetir
   });
 
   const { data: personeller } = useQuery({
@@ -43,40 +28,21 @@ export default function Appointments() {
     queryFn: islemServisi.hepsiniGetir
   });
 
-  const formReset = () => {
-    setFormData({
-      customer_id: '',
-      personel_id: '',
-      tarih: '',
-      saat: '',
-      durum: 'beklemede',
-      notlar: '',
-      islemler: []
-    });
-    setSeciliRandevu(null);
-  };
-
-  const randevuKaydet = async () => {
+  const handleRandevuSubmit = async (randevuData: any) => {
     try {
-      if (seciliRandevu) {
-        await randevuServisi.guncelle(seciliRandevu.id, {
-          ...formData,
-          personel_id: Number(formData.personel_id)
-        });
-      } else {
-        await randevuServisi.ekle({
-          ...formData,
-          personel_id: Number(formData.personel_id)
-        });
-      }
+      await randevuServisi.ekle({
+        ...randevuData,
+        durum: 'beklemede' as RandevuDurumu,
+        notlar: '',
+        islemler: [Number(randevuData.islem_id)]
+      });
       setYeniRandevuAcik(false);
-      formReset();
     } catch (error) {
       console.error('Randevu kaydedilirken hata:', error);
     }
   };
 
-  const randevuSil = async (randevu: Randevu) => {
+  const handleRandevuSil = async (randevu: Randevu) => {
     try {
       await randevuServisi.sil(randevu.id);
       setSilinecekRandevu(null);
@@ -85,51 +51,21 @@ export default function Appointments() {
     }
   };
 
-  const handleEdit = (randevu: Randevu) => {
-    setSeciliRandevu(randevu);
-    setFormData({
-      customer_id: randevu.customer_id,
-      personel_id: randevu.personel_id?.toString() || '',
-      tarih: randevu.tarih,
-      saat: randevu.saat,
-      durum: randevu.durum,
-      notlar: randevu.notlar || '',
-      islemler: randevu.islemler
-    });
-    setYeniRandevuAcik(true);
-  };
-
-  const handleStatusUpdate = async (id: number, durum: RandevuDurumu) => {
-    await randevuServisi.guncelle(id, { durum });
-  };
-
-  if (randevularYukleniyor) {
-    return <div>Yükleniyor...</div>;
-  }
-
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Randevular</h1>
         <Dialog open={yeniRandevuAcik} onOpenChange={setYeniRandevuAcik}>
           <DialogTrigger asChild>
-            <Button 
-              onClick={() => {
-                formReset();
-                setYeniRandevuAcik(true);
-              }}
-            >
+            <Button onClick={() => setYeniRandevuAcik(true)}>
               <Plus className="w-4 h-4 mr-2" />
               Yeni Randevu
             </Button>
           </DialogTrigger>
           <AppointmentForm
-            formData={formData}
-            setFormData={setFormData}
-            musteriler={musteriler || []}
+            islemler={islemler || []}
             personeller={personeller || []}
-            seciliRandevu={seciliRandevu}
-            onSubmit={randevuKaydet}
+            onSubmit={handleRandevuSubmit}
             onCancel={() => setYeniRandevuAcik(false)}
           />
         </Dialog>
@@ -140,9 +76,7 @@ export default function Appointments() {
           <AppointmentCard
             key={randevu.id}
             randevu={randevu}
-            onEdit={handleEdit}
-            onDelete={randevuSil}
-            onStatusUpdate={handleStatusUpdate}
+            onDelete={handleRandevuSil}
             silinecekRandevu={silinecekRandevu}
             setSilinecekRandevu={setSilinecekRandevu}
           />
