@@ -4,10 +4,10 @@ import { useQuery } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogTrigger } from '@/components/ui/dialog';
-import { Randevu, RandevuDurumu, randevuServisi, musteriServisi, personelServisi, islemServisi } from '@/lib/supabase';
+import { Randevu, RandevuDurumu } from '@/lib/supabase';
 import { AppointmentForm } from '@/components/appointments/AppointmentForm';
 import { AppointmentCard } from '@/components/appointments/AppointmentCard';
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 import { supabase } from '@/lib/supabase';
 
 export default function Appointments() {
@@ -17,22 +17,60 @@ export default function Appointments() {
 
   const { data: randevular, isLoading: randevularYukleniyor, refetch: randevulariYenile } = useQuery({
     queryKey: ['randevular'],
-    queryFn: randevuServisi.hepsiniGetir
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('randevular')
+        .select(`
+          *,
+          musteri:profiles(*),
+          personel:personel(*)
+        `)
+        .order('tarih', { ascending: true })
+        .order('saat', { ascending: true });
+
+      if (error) throw error;
+      return data;
+    }
   });
 
   const { data: personeller } = useQuery({
     queryKey: ['personeller'],
-    queryFn: personelServisi.hepsiniGetir
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('personel')
+        .select('*')
+        .order('ad_soyad');
+      if (error) throw error;
+      return data;
+    }
   });
 
   const { data: islemler } = useQuery({
     queryKey: ['islemler'],
-    queryFn: islemServisi.hepsiniGetir
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('islemler')
+        .select('*')
+        .order('islem_adi');
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  const { data: kategoriler } = useQuery({
+    queryKey: ['kategoriler'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('islem_kategorileri')
+        .select('*')
+        .order('sira');
+      if (error) throw error;
+      return data;
+    }
   });
 
   const handleRandevuSubmit = async (randevuData: any) => {
     try {
-      // Önce mevcut kullanıcıyı kontrol et
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         toast({
@@ -52,8 +90,27 @@ export default function Appointments() {
         islemler: [Number(randevuData.islem_id)]
       };
 
-      await randevuServisi.ekle(yeniRandevu);
-      await randevulariYenile(); // Randevu listesini güncelle
+      // Randevuyu kaydet
+      const { data: randevu, error: randevuError } = await supabase
+        .from('randevular')
+        .insert([yeniRandevu])
+        .select()
+        .single();
+
+      if (randevuError) throw randevuError;
+
+      // Bildirim oluştur
+      await supabase
+        .from('notifications')
+        .insert([{
+          user_id: user.id,
+          title: "Yeni Randevu Talebi",
+          message: "Randevu talebiniz alınmıştır. Onay bekliyor.",
+          type: "randevu_talebi",
+          related_appointment_id: randevu.id
+        }]);
+
+      await randevulariYenile();
       
       toast({
         title: "Başarılı",
@@ -73,9 +130,14 @@ export default function Appointments() {
 
   const handleRandevuSil = async (randevu: Randevu) => {
     try {
-      await randevuServisi.sil(randevu.id);
+      await supabase
+        .from('randevular')
+        .delete()
+        .eq('id', randevu.id);
+
       setSilinecekRandevu(null);
       await randevulariYenile();
+      
       toast({
         title: "Başarılı",
         description: "Randevu silindi.",
@@ -97,8 +159,28 @@ export default function Appointments() {
 
   const handleStatusUpdate = async (id: number, durum: RandevuDurumu) => {
     try {
-      await randevuServisi.guncelle(id, { durum });
+      const { data: randevu } = await supabase
+        .from('randevular')
+        .update({ durum })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (randevu) {
+        // Bildirim oluştur
+        await supabase
+          .from('notifications')
+          .insert([{
+            user_id: randevu.customer_id,
+            title: "Randevu Durumu Güncellendi",
+            message: `Randevunuz ${durum} durumuna güncellendi.`,
+            type: "randevu_guncelleme",
+            related_appointment_id: randevu.id
+          }]);
+      }
+
       await randevulariYenile();
+      
       toast({
         title: "Başarılı",
         description: "Randevu durumu güncellendi.",
@@ -108,6 +190,47 @@ export default function Appointments() {
       toast({
         title: "Hata",
         description: "Randevu durumu güncellenirken bir hata oluştu.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleCounterProposal = async (id: number, date: string, time: string) => {
+    try {
+      const { data: randevu } = await supabase
+        .from('randevular')
+        .update({
+          counter_proposal_date: date,
+          counter_proposal_time: time
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (randevu) {
+        // Bildirim oluştur
+        await supabase
+          .from('notifications')
+          .insert([{
+            user_id: randevu.customer_id,
+            title: "Alternatif Randevu Önerisi",
+            message: `Size ${date} tarihinde saat ${time} için alternatif randevu önerildi.`,
+            type: "randevu_onerisi",
+            related_appointment_id: randevu.id
+          }]);
+      }
+
+      await randevulariYenile();
+      
+      toast({
+        title: "Başarılı",
+        description: "Alternatif randevu önerisi gönderildi.",
+      });
+    } catch (error) {
+      console.error('Alternatif randevu önerisi gönderilirken hata:', error);
+      toast({
+        title: "Hata",
+        description: "Alternatif randevu önerisi gönderilirken bir hata oluştu.",
         variant: "destructive"
       });
     }
@@ -127,6 +250,7 @@ export default function Appointments() {
           <AppointmentForm
             islemler={islemler || []}
             personeller={personeller || []}
+            kategoriler={kategoriler || []}
             onSubmit={handleRandevuSubmit}
             onCancel={() => setYeniRandevuAcik(false)}
           />
@@ -141,6 +265,7 @@ export default function Appointments() {
             onEdit={handleRandevuEdit}
             onDelete={handleRandevuSil}
             onStatusUpdate={handleStatusUpdate}
+            onCounterProposal={handleCounterProposal}
             silinecekRandevu={silinecekRandevu}
             setSilinecekRandevu={setSilinecekRandevu}
           />

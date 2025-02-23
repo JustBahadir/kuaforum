@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -12,19 +13,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface AppointmentFormProps {
   islemler: any[];
   personeller: any[];
   onSubmit: (data: any) => void;
   onCancel: () => void;
+  kategoriler: any[];
 }
 
 export function AppointmentForm({
   islemler,
   personeller,
   onSubmit,
-  onCancel
+  onCancel,
+  kategoriler
 }: AppointmentFormProps) {
   const [step, setStep] = useState(1);
   const [selectedService, setSelectedService] = useState('');
@@ -33,6 +37,7 @@ export function AppointmentForm({
   const [selectedTime, setSelectedTime] = useState('');
   const [selectedServiceInfo, setSelectedServiceInfo] = useState<any>(null);
   const [selectedStaffInfo, setSelectedStaffInfo] = useState<any>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isAllSelected, setIsAllSelected] = useState(false);
 
   useEffect(() => {
@@ -82,26 +87,20 @@ export function AppointmentForm({
   };
 
   const handleSubmit = () => {
-    if (selectedService && selectedStaff && selectedDate && selectedTime) {
+    if (selectedService && selectedDate && selectedTime) {
       const randevuData = {
         islem_id: Number(selectedService),
-        personel_id: Number(selectedStaff),
+        personel_id: selectedStaff ? Number(selectedStaff) : null,
         tarih: format(selectedDate, 'yyyy-MM-dd'),
         saat: selectedTime
       };
-      console.log('Randevu verisi:', randevuData); // Debug için
       onSubmit(randevuData);
     }
   };
 
-  const handleCancel = () => {
-    setSelectedService('');
-    setSelectedStaff('');
-    setSelectedDate(undefined);
-    setSelectedTime('');
-    setStep(1);
-    onCancel();
-  };
+  const filteredServices = selectedCategory 
+    ? islemler.filter(islem => islem.kategori_id === Number(selectedCategory))
+    : [];
 
   const AppointmentSummary = () => {
     if (!selectedService && !selectedStaff && !selectedDate && !selectedTime) return null;
@@ -141,16 +140,8 @@ export function AppointmentForm({
     );
   };
 
-  useEffect(() => {
-    if (selectedService && selectedStaff && selectedDate && selectedTime) {
-      setIsAllSelected(true);
-    } else {
-      setIsAllSelected(false);
-    }
-  }, [selectedService, selectedStaff, selectedDate, selectedTime]);
-
   return (
-    <DialogContent className="max-w-lg">
+    <DialogContent className="max-w-3xl">
       <DialogHeader>
         <DialogTitle>
           {!isAllSelected ? 'Randevu Oluştur' : 'Randevu Özeti'}
@@ -175,22 +166,46 @@ export function AppointmentForm({
             </div>
             
             {step === 1 && (
-              <div className="mt-4 ml-12">
-                <Select
-                  value={selectedService}
-                  onValueChange={handleServiceSelect}
+              <div className="mt-4">
+                <Tabs
+                  value={selectedCategory || ""}
+                  onValueChange={setSelectedCategory}
+                  className="w-full"
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Hizmet seçin" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {islemler.map((islem) => (
-                      <SelectItem key={islem.id} value={islem.id.toString()}>
-                        {islem.islem_adi}
-                      </SelectItem>
+                  <TabsList className="w-full flex flex-wrap gap-2 justify-start h-auto">
+                    {kategoriler.map((kategori) => (
+                      <TabsTrigger
+                        key={kategori.id}
+                        value={kategori.id.toString()}
+                        className="px-4 py-2"
+                      >
+                        {kategori.kategori_adi}
+                      </TabsTrigger>
                     ))}
-                  </SelectContent>
-                </Select>
+                  </TabsList>
+
+                  {kategoriler.map((kategori) => (
+                    <TabsContent
+                      key={kategori.id}
+                      value={kategori.id.toString()}
+                      className="mt-4"
+                    >
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {filteredServices.map((islem) => (
+                          <Button
+                            key={islem.id}
+                            variant={selectedService === islem.id.toString() ? "default" : "outline"}
+                            className="w-full justify-between p-4 h-auto"
+                            onClick={() => handleServiceSelect(islem.id.toString())}
+                          >
+                            <span>{islem.islem_adi}</span>
+                            <span>{islem.fiyat} TL</span>
+                          </Button>
+                        ))}
+                      </div>
+                    </TabsContent>
+                  ))}
+                </Tabs>
               </div>
             )}
           </div>
@@ -205,26 +220,33 @@ export function AppointmentForm({
               >
                 2
               </div>
-              <h3 className="font-semibold">Personel Seçimi</h3>
+              <h3 className="font-semibold">Personel Seçimi (Opsiyonel)</h3>
             </div>
             
             {step === 2 && (
               <div className="mt-4 ml-12">
-                <Select
-                  value={selectedStaff}
-                  onValueChange={handleStaffSelect}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Personel seçin" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {personeller.map((personel) => (
-                      <SelectItem key={personel.id} value={personel.id.toString()}>
-                        {personel.ad_soyad}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      setSelectedStaff('');
+                      handleNextStep();
+                    }}
+                  >
+                    Farketmez
+                  </Button>
+                  {personeller.map((personel) => (
+                    <Button
+                      key={personel.id}
+                      variant={selectedStaff === personel.id.toString() ? "default" : "outline"}
+                      className="w-full"
+                      onClick={() => handleStaffSelect(personel.id.toString())}
+                    >
+                      {personel.ad_soyad}
+                    </Button>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -235,7 +257,7 @@ export function AppointmentForm({
                 className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer ${
                   step === 3 ? 'bg-primary text-primary-foreground' : 'bg-muted'
                 }`}
-                onClick={() => selectedStaff && setStep(3)}
+                onClick={() => selectedService && setStep(3)}
               >
                 3
               </div>
@@ -292,16 +314,11 @@ export function AppointmentForm({
                   Geri
                 </Button>
               )}
-              <Button variant="outline" onClick={handleCancel}>
+              <Button variant="outline" onClick={onCancel}>
                 İptal
               </Button>
             </div>
             <div className="space-x-2">
-              {step < 4 && selectedService && (
-                <Button onClick={handleNextStep}>
-                  İleri
-                </Button>
-              )}
               {step === 4 && selectedTime && (
                 <Button onClick={() => setIsAllSelected(true)}>
                   Devam Et
@@ -317,7 +334,7 @@ export function AppointmentForm({
             <Button variant="outline" onClick={() => setIsAllSelected(false)}>
               Geri
             </Button>
-            <Button variant="outline" onClick={handleCancel}>
+            <Button variant="outline" onClick={onCancel}>
               İptal
             </Button>
             <Button onClick={handleSubmit}>

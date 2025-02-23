@@ -1,17 +1,21 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { Calendar, Clock, Edit, Trash, Check, X } from 'lucide-react';
+import { Calendar, Clock, Edit, Trash, Check, X, PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Randevu, RandevuDurumu } from '@/lib/supabase';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 interface AppointmentCardProps {
   randevu: Randevu;
   onEdit: (randevu: Randevu) => void;
   onDelete: (randevu: Randevu) => void;
   onStatusUpdate: (id: number, durum: RandevuDurumu) => void;
+  onCounterProposal: (id: number, date: string, time: string) => void;
   silinecekRandevu: Randevu | null;
   setSilinecekRandevu: (randevu: Randevu | null) => void;
 }
@@ -21,9 +25,14 @@ export function AppointmentCard({
   onEdit,
   onDelete,
   onStatusUpdate,
+  onCounterProposal,
   silinecekRandevu,
   setSilinecekRandevu
 }: AppointmentCardProps) {
+  const [counterProposalOpen, setCounterProposalOpen] = useState(false);
+  const [proposedDate, setProposedDate] = useState('');
+  const [proposedTime, setProposedTime] = useState('');
+
   const durumRengi = (durum: RandevuDurumu) => {
     switch (durum) {
       case 'beklemede':
@@ -39,6 +48,12 @@ export function AppointmentCard({
     }
   };
 
+  const handleCounterProposalSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onCounterProposal(randevu.id, proposedDate, proposedTime);
+    setCounterProposalOpen(false);
+  };
+
   return (
     <div className="flex items-center justify-between p-4 bg-white rounded-lg shadow">
       <div className="flex items-center gap-4">
@@ -52,6 +67,11 @@ export function AppointmentCard({
             <Clock className="w-4 h-4 ml-2" />
             {randevu.saat}
           </div>
+          {randevu.personel && (
+            <span className="text-sm text-gray-500">
+              Personel: {randevu.personel.ad_soyad}
+            </span>
+          )}
         </div>
       </div>
 
@@ -59,6 +79,12 @@ export function AppointmentCard({
         <span className={`px-3 py-1 rounded-full text-sm ${durumRengi(randevu.durum)}`}>
           {randevu.durum}
         </span>
+
+        {randevu.counter_proposal_date && (
+          <span className="text-sm text-blue-600">
+            Önerilen: {format(new Date(randevu.counter_proposal_date), 'dd/MM/yyyy')} {randevu.counter_proposal_time}
+          </span>
+        )}
         
         <Button
           variant="ghost"
@@ -104,27 +130,52 @@ export function AppointmentCard({
         </AlertDialog>
 
         {randevu.durum === 'beklemede' && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-green-500"
-            onClick={() => onStatusUpdate(randevu.id, 'onaylandi')}
-          >
-            <Check className="w-4 h-4" />
-          </Button>
-        )}
+          <>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-green-500"
+              onClick={() => onStatusUpdate(randevu.id, 'onaylandi')}
+            >
+              <Check className="w-4 h-4" />
+            </Button>
 
-        {randevu.durum === 'beklemede' && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-red-500"
-            onClick={() => onStatusUpdate(randevu.id, 'iptal_edildi')}
-          >
-            <X className="w-4 h-4" />
-          </Button>
-        )}
-      </div>
-    </div>
-  );
-}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-red-500"
+              onClick={() => onStatusUpdate(randevu.id, 'iptal_edildi')}
+            >
+              <X className="w-4 h-4" />
+            </Button>
+
+            <Dialog open={counterProposalOpen} onOpenChange={setCounterProposalOpen}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-blue-500"
+                onClick={() => setCounterProposalOpen(true)}
+              >
+                <PlusCircle className="w-4 h-4" />
+              </Button>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Alternatif Randevu Öner</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleCounterProposalSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="date">Tarih</Label>
+                    <Input
+                      id="date"
+                      type="date"
+                      value={proposedDate}
+                      onChange={(e) => setProposedDate(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="time">Saat</Label>
+                    <Input
+                      id="time"
+                      type="time"
+                      value
