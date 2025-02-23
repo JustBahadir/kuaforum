@@ -39,13 +39,55 @@ export function AppointmentForm({
     "15:00", "15:30", "16:00", "16:30", "17:00", "17:30"
   ];
 
+  const handleNextStep = () => {
+    setStep(prev => Math.min(prev + 1, 4));
+  };
+
+  const handlePreviousStep = () => {
+    setStep(prev => Math.max(prev - 1, 1));
+  };
+
+  const handleServiceSelect = (value: string) => {
+    setSelectedService(value);
+    handleNextStep();
+  };
+
+  const handleStaffSelect = (value: string) => {
+    setSelectedStaff(value);
+    handleNextStep();
+  };
+
+  const handleDateSelect = (date: Date | undefined) => {
+    if (date) {
+      setSelectedDate(date);
+      handleNextStep();
+    }
+  };
+
+  const handleTimeSelect = (time: string) => {
+    setSelectedTime(time);
+  };
+
   const handleSubmit = () => {
-    onSubmit({
-      islem_id: selectedService,
-      personel_id: selectedStaff,
-      tarih: format(selectedDate!, 'yyyy-MM-dd'),
-      saat: selectedTime,
-    });
+    if (selectedService && selectedStaff && selectedDate && selectedTime) {
+      onSubmit({
+        islem_id: selectedService,
+        personel_id: selectedStaff,
+        tarih: format(selectedDate, 'yyyy-MM-dd'),
+        saat: selectedTime,
+      });
+    }
+  };
+
+  const handleCancel = () => {
+    // Form verilerini sıfırla
+    setSelectedService('');
+    setSelectedStaff('');
+    setSelectedDate(undefined);
+    setSelectedTime('');
+    setStep(1);
+    // İptal fonksiyonunu çağır
+    onCancel();
   };
 
   return (
@@ -61,9 +103,12 @@ export function AppointmentForm({
         {/* Adım 1: Hizmet Seçimi */}
         <div className="relative mb-8">
           <div className="flex items-center gap-4">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-              step === 1 ? 'bg-primary text-primary-foreground' : 'bg-muted'
-            }`}>
+            <div 
+              className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer ${
+                step === 1 ? 'bg-primary text-primary-foreground' : 'bg-muted'
+              }`}
+              onClick={() => setStep(1)}
+            >
               1
             </div>
             <h3 className="font-semibold">Hizmet Seçimi</h3>
@@ -73,10 +118,7 @@ export function AppointmentForm({
             <div className="mt-4 ml-12">
               <Select
                 value={selectedService}
-                onValueChange={(value) => {
-                  setSelectedService(value);
-                  setStep(2);
-                }}
+                onValueChange={handleServiceSelect}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Hizmet seçin" />
@@ -96,9 +138,12 @@ export function AppointmentForm({
         {/* Adım 2: Personel Seçimi */}
         <div className="relative mb-8">
           <div className="flex items-center gap-4">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-              step === 2 ? 'bg-primary text-primary-foreground' : 'bg-muted'
-            }`}>
+            <div 
+              className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer ${
+                step === 2 ? 'bg-primary text-primary-foreground' : 'bg-muted'
+              }`}
+              onClick={() => selectedService && setStep(2)}
+            >
               2
             </div>
             <h3 className="font-semibold">Personel Seçimi</h3>
@@ -108,10 +153,7 @@ export function AppointmentForm({
             <div className="mt-4 ml-12">
               <Select
                 value={selectedStaff}
-                onValueChange={(value) => {
-                  setSelectedStaff(value);
-                  setStep(3);
-                }}
+                onValueChange={handleStaffSelect}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Personel seçin" />
@@ -131,9 +173,12 @@ export function AppointmentForm({
         {/* Adım 3: Tarih Seçimi */}
         <div className="relative mb-8">
           <div className="flex items-center gap-4">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-              step === 3 ? 'bg-primary text-primary-foreground' : 'bg-muted'
-            }`}>
+            <div 
+              className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer ${
+                step === 3 ? 'bg-primary text-primary-foreground' : 'bg-muted'
+              }`}
+              onClick={() => selectedStaff && setStep(3)}
+            >
               3
             </div>
             <h3 className="font-semibold">Tarih Seçimi</h3>
@@ -144,10 +189,7 @@ export function AppointmentForm({
               <Calendar
                 mode="single"
                 selected={selectedDate}
-                onSelect={(date) => {
-                  setSelectedDate(date);
-                  setStep(4);
-                }}
+                onSelect={handleDateSelect}
                 locale={tr}
                 disabled={(date) => date < new Date()}
               />
@@ -158,9 +200,12 @@ export function AppointmentForm({
         {/* Adım 4: Saat Seçimi */}
         <div className="relative">
           <div className="flex items-center gap-4">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-              step === 4 ? 'bg-primary text-primary-foreground' : 'bg-muted'
-            }`}>
+            <div 
+              className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer ${
+                step === 4 ? 'bg-primary text-primary-foreground' : 'bg-muted'
+              }`}
+              onClick={() => selectedDate && setStep(4)}
+            >
               4
             </div>
             <h3 className="font-semibold">Saat Seçimi</h3>
@@ -173,7 +218,7 @@ export function AppointmentForm({
                   <Button
                     key={time}
                     variant={selectedTime === time ? "default" : "outline"}
-                    onClick={() => setSelectedTime(time)}
+                    onClick={() => handleTimeSelect(time)}
                   >
                     {time}
                   </Button>
@@ -184,16 +229,32 @@ export function AppointmentForm({
         </div>
       </div>
 
-      <div className="flex justify-end gap-2 mt-8">
-        <Button variant="outline" onClick={onCancel}>
-          İptal
-        </Button>
-        <Button 
-          onClick={handleSubmit}
-          disabled={!selectedService || !selectedStaff || !selectedDate || !selectedTime}
-        >
-          Randevu Oluştur
-        </Button>
+      <div className="flex justify-between gap-2 mt-8">
+        <div className="space-x-2">
+          {step > 1 && (
+            <Button variant="outline" onClick={handlePreviousStep}>
+              Geri
+            </Button>
+          )}
+          <Button variant="outline" onClick={handleCancel}>
+            İptal
+          </Button>
+        </div>
+        <div className="space-x-2">
+          {step < 4 && selectedService && (
+            <Button onClick={handleNextStep}>
+              İleri
+            </Button>
+          )}
+          {step === 4 && (
+            <Button 
+              onClick={handleSubmit}
+              disabled={!selectedService || !selectedStaff || !selectedDate || !selectedTime}
+            >
+              Randevu Oluştur
+            </Button>
+          )}
+        </div>
       </div>
     </DialogContent>
   );
