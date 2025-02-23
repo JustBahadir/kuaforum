@@ -51,6 +51,19 @@ export default function Appointments() {
     }
   };
 
+  const handleRandevuEdit = (randevu: Randevu) => {
+    setSeciliRandevu(randevu);
+    setYeniRandevuAcik(true);
+  };
+
+  const handleStatusUpdate = async (id: number, durum: RandevuDurumu) => {
+    try {
+      await randevuServisi.guncelle(id, { durum });
+    } catch (error) {
+      console.error('Randevu durumu güncellenirken hata:', error);
+    }
+  };
+
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex justify-between items-center">
@@ -76,7 +89,9 @@ export default function Appointments() {
           <AppointmentCard
             key={randevu.id}
             randevu={randevu}
+            onEdit={handleRandevuEdit}
             onDelete={handleRandevuSil}
+            onStatusUpdate={handleStatusUpdate}
             silinecekRandevu={silinecekRandevu}
             setSilinecekRandevu={setSilinecekRandevu}
           />
