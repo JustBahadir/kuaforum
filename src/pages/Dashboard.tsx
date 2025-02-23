@@ -1,3 +1,4 @@
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BusinessReports } from "@/components/dashboard/BusinessReports";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,15 +23,11 @@ export default function Dashboard() {
 
   return (
     <div className="container mx-auto py-6">
-      <Tabs defaultValue="reports" className="space-y-4">
+      <Tabs defaultValue="overview" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="reports">Raporlar</TabsTrigger>
           <TabsTrigger value="overview">Genel Bakış</TabsTrigger>
+          <TabsTrigger value="reports">Raporlar</TabsTrigger>
         </TabsList>
-
-        <TabsContent value="reports">
-          <BusinessReports />
-        </TabsContent>
 
         <TabsContent value="overview">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -94,6 +91,10 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="reports">
+          <BusinessReports />
         </TabsContent>
       </Tabs>
     </div>
