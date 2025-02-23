@@ -152,139 +152,137 @@ export function AppointmentForm({
   return (
     <DialogContent className="max-w-lg">
       <DialogHeader>
-        <DialogTitle>Randevu Oluştur</DialogTitle>
+        <DialogTitle>
+          {!isAllSelected ? 'Randevu Oluştur' : 'Randevu Özeti'}
+        </DialogTitle>
       </DialogHeader>
 
       {!isAllSelected ? (
-        <>
-          <AppointmentSummary />
+        <div className="relative">
+          <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-border" />
+          
+          <div className="relative mb-8">
+            <div className="flex items-center gap-4">
+              <div 
+                className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer ${
+                  step === 1 ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                }`}
+                onClick={() => setStep(1)}
+              >
+                1
+              </div>
+              <h3 className="font-semibold">Hizmet Seçimi</h3>
+            </div>
+            
+            {step === 1 && (
+              <div className="mt-4 ml-12">
+                <Select
+                  value={selectedService}
+                  onValueChange={handleServiceSelect}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Hizmet seçin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {islemler.map((islem) => (
+                      <SelectItem key={islem.id} value={islem.id.toString()}>
+                        {islem.islem_adi}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+
+          <div className="relative mb-8">
+            <div className="flex items-center gap-4">
+              <div 
+                className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer ${
+                  step === 2 ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                }`}
+                onClick={() => selectedService && setStep(2)}
+              >
+                2
+              </div>
+              <h3 className="font-semibold">Personel Seçimi</h3>
+            </div>
+            
+            {step === 2 && (
+              <div className="mt-4 ml-12">
+                <Select
+                  value={selectedStaff}
+                  onValueChange={handleStaffSelect}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Personel seçin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {personeller.map((personel) => (
+                      <SelectItem key={personel.id} value={personel.id.toString()}>
+                        {personel.ad_soyad}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+
+          <div className="relative mb-8">
+            <div className="flex items-center gap-4">
+              <div 
+                className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer ${
+                  step === 3 ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                }`}
+                onClick={() => selectedStaff && setStep(3)}
+              >
+                3
+              </div>
+              <h3 className="font-semibold">Tarih Seçimi</h3>
+            </div>
+            
+            {step === 3 && (
+              <div className="mt-4 ml-12">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={handleDateSelect}
+                  locale={tr}
+                  disabled={(date) => date < new Date()}
+                />
+              </div>
+            )}
+          </div>
 
           <div className="relative">
-            <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-border" />
+            <div className="flex items-center gap-4">
+              <div 
+                className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer ${
+                  step === 4 ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                }`}
+                onClick={() => selectedDate && setStep(4)}
+              >
+                4
+              </div>
+              <h3 className="font-semibold">Saat Seçimi</h3>
+            </div>
             
-            <div className="relative mb-8">
-              <div className="flex items-center gap-4">
-                <div 
-                  className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer ${
-                    step === 1 ? 'bg-primary text-primary-foreground' : 'bg-muted'
-                  }`}
-                  onClick={() => setStep(1)}
-                >
-                  1
+            {step === 4 && (
+              <div className="mt-4 ml-12">
+                <div className="grid grid-cols-4 gap-2">
+                  {timeSlots.map((time) => (
+                    <Button
+                      key={time}
+                      variant={selectedTime === time ? "default" : "outline"}
+                      onClick={() => handleTimeSelect(time)}
+                    >
+                      {time}
+                    </Button>
+                  ))}
                 </div>
-                <h3 className="font-semibold">Hizmet Seçimi</h3>
               </div>
-              
-              {step === 1 && (
-                <div className="mt-4 ml-12">
-                  <Select
-                    value={selectedService}
-                    onValueChange={handleServiceSelect}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Hizmet seçin" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {islemler.map((islem) => (
-                        <SelectItem key={islem.id} value={islem.id.toString()}>
-                          {islem.islem_adi}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-            </div>
-
-            <div className="relative mb-8">
-              <div className="flex items-center gap-4">
-                <div 
-                  className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer ${
-                    step === 2 ? 'bg-primary text-primary-foreground' : 'bg-muted'
-                  }`}
-                  onClick={() => selectedService && setStep(2)}
-                >
-                  2
-                </div>
-                <h3 className="font-semibold">Personel Seçimi</h3>
-              </div>
-              
-              {step === 2 && (
-                <div className="mt-4 ml-12">
-                  <Select
-                    value={selectedStaff}
-                    onValueChange={handleStaffSelect}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Personel seçin" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {personeller.map((personel) => (
-                        <SelectItem key={personel.id} value={personel.id.toString()}>
-                          {personel.ad_soyad}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-            </div>
-
-            <div className="relative mb-8">
-              <div className="flex items-center gap-4">
-                <div 
-                  className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer ${
-                    step === 3 ? 'bg-primary text-primary-foreground' : 'bg-muted'
-                  }`}
-                  onClick={() => selectedStaff && setStep(3)}
-                >
-                  3
-                </div>
-                <h3 className="font-semibold">Tarih Seçimi</h3>
-              </div>
-              
-              {step === 3 && (
-                <div className="mt-4 ml-12">
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={handleDateSelect}
-                    locale={tr}
-                    disabled={(date) => date < new Date()}
-                  />
-                </div>
-              )}
-            </div>
-
-            <div className="relative">
-              <div className="flex items-center gap-4">
-                <div 
-                  className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer ${
-                    step === 4 ? 'bg-primary text-primary-foreground' : 'bg-muted'
-                  }`}
-                  onClick={() => selectedDate && setStep(4)}
-                >
-                  4
-                </div>
-                <h3 className="font-semibold">Saat Seçimi</h3>
-              </div>
-              
-              {step === 4 && (
-                <div className="mt-4 ml-12">
-                  <div className="grid grid-cols-4 gap-2">
-                    {timeSlots.map((time) => (
-                      <Button
-                        key={time}
-                        variant={selectedTime === time ? "default" : "outline"}
-                        onClick={() => handleTimeSelect(time)}
-                      >
-                        {time}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+            )}
           </div>
 
           <div className="flex justify-between gap-2 mt-8">
@@ -304,17 +302,14 @@ export function AppointmentForm({
                   İleri
                 </Button>
               )}
-              {step === 4 && (
-                <Button 
-                  onClick={handleSubmit}
-                  disabled={!selectedService || !selectedStaff || !selectedDate || !selectedTime}
-                >
-                  Randevu Oluştur
+              {step === 4 && selectedTime && (
+                <Button onClick={() => setIsAllSelected(true)}>
+                  Devam Et
                 </Button>
               )}
             </div>
           </div>
-        </>
+        </div>
       ) : (
         <div className="space-y-6">
           <AppointmentSummary />

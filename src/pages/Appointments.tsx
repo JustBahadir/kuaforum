@@ -7,13 +7,15 @@ import { Dialog, DialogTrigger } from '@/components/ui/dialog';
 import { Randevu, RandevuDurumu, randevuServisi, musteriServisi, personelServisi, islemServisi } from '@/lib/supabase';
 import { AppointmentForm } from '@/components/appointments/AppointmentForm';
 import { AppointmentCard } from '@/components/appointments/AppointmentCard';
+import { toast } from "@/components/ui/use-toast";
+import { supabase } from '@/lib/supabase';
 
 export default function Appointments() {
   const [yeniRandevuAcik, setYeniRandevuAcik] = useState(false);
   const [seciliRandevu, setSeciliRandevu] = useState<Randevu | null>(null);
   const [silinecekRandevu, setSilinecekRandevu] = useState<Randevu | null>(null);
 
-  const { data: randevular, isLoading: randevularYukleniyor } = useQuery({
+  const { data: randevular, isLoading: randevularYukleniyor, refetch: randevulariYenile } = useQuery({
     queryKey: ['randevular'],
     queryFn: randevuServisi.hepsiniGetir
   });
@@ -30,15 +32,42 @@ export default function Appointments() {
 
   const handleRandevuSubmit = async (randevuData: any) => {
     try {
-      await randevuServisi.ekle({
+      // Önce mevcut kullanıcıyı kontrol et
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Hata",
+          description: "Randevu oluşturmak için giriş yapmanız gerekiyor.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Randevu verisini hazırla
+      const yeniRandevu = {
         ...randevuData,
+        customer_id: user.id,
         durum: 'beklemede' as RandevuDurumu,
         notlar: '',
         islemler: [Number(randevuData.islem_id)]
+      };
+
+      await randevuServisi.ekle(yeniRandevu);
+      await randevulariYenile(); // Randevu listesini güncelle
+      
+      toast({
+        title: "Başarılı",
+        description: "Randevu talebiniz alındı.",
       });
+      
       setYeniRandevuAcik(false);
     } catch (error) {
       console.error('Randevu kaydedilirken hata:', error);
+      toast({
+        title: "Hata",
+        description: "Randevu oluşturulurken bir hata oluştu.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -46,8 +75,18 @@ export default function Appointments() {
     try {
       await randevuServisi.sil(randevu.id);
       setSilinecekRandevu(null);
+      await randevulariYenile();
+      toast({
+        title: "Başarılı",
+        description: "Randevu silindi.",
+      });
     } catch (error) {
       console.error('Randevu silinirken hata:', error);
+      toast({
+        title: "Hata",
+        description: "Randevu silinirken bir hata oluştu.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -59,8 +98,18 @@ export default function Appointments() {
   const handleStatusUpdate = async (id: number, durum: RandevuDurumu) => {
     try {
       await randevuServisi.guncelle(id, { durum });
+      await randevulariYenile();
+      toast({
+        title: "Başarılı",
+        description: "Randevu durumu güncellendi.",
+      });
     } catch (error) {
       console.error('Randevu durumu güncellenirken hata:', error);
+      toast({
+        title: "Hata",
+        description: "Randevu durumu güncellenirken bir hata oluştu.",
+        variant: "destructive"
+      });
     }
   };
 
