@@ -1,4 +1,6 @@
+
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { islemServisi } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
@@ -123,6 +125,7 @@ function SortableItem({ id, islem, onEdit, onDelete }: SortableItemProps) {
 }
 
 export default function Operations() {
+  const navigate = useNavigate();
   const [isStaff, setIsStaff] = useState(false);
   const [islemAdi, setIslemAdi] = useState("");
   const [fiyat, setFiyat] = useState<number>(0);
