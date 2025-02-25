@@ -174,6 +174,7 @@ export type Database = {
         Row: {
           ad_soyad: string
           adres: string
+          auth_id: string | null
           calisma_sistemi: string
           created_at: string
           eposta: string
@@ -186,6 +187,7 @@ export type Database = {
         Insert: {
           ad_soyad: string
           adres: string
+          auth_id?: string | null
           calisma_sistemi: string
           created_at?: string
           eposta: string
@@ -198,6 +200,7 @@ export type Database = {
         Update: {
           ad_soyad?: string
           adres?: string
+          auth_id?: string | null
           calisma_sistemi?: string
           created_at?: string
           eposta?: string
@@ -274,6 +277,7 @@ export type Database = {
           id: string
           last_name: string | null
           phone: string | null
+          role: Database["public"]["Enums"]["user_role"] | null
         }
         Insert: {
           created_at?: string
@@ -281,6 +285,7 @@ export type Database = {
           id: string
           last_name?: string | null
           phone?: string | null
+          role?: Database["public"]["Enums"]["user_role"] | null
         }
         Update: {
           created_at?: string
@@ -288,6 +293,7 @@ export type Database = {
           id?: string
           last_name?: string | null
           phone?: string | null
+          role?: Database["public"]["Enums"]["user_role"] | null
         }
         Relationships: []
       }
@@ -390,7 +396,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      user_role: "customer" | "staff" | "admin"
     }
     CompositeTypes: {
       [_ in never]: never

@@ -4,6 +4,7 @@ import { BusinessReports } from "@/components/dashboard/BusinessReports";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { randevuServisi, personelServisi, islemServisi } from "@/lib/supabase";
+import { UserMenu } from "@/components/ui/UserMenu";
 
 export default function Dashboard() {
   const { data: randevular = [] } = useQuery({
@@ -23,6 +24,11 @@ export default function Dashboard() {
 
   return (
     <div className="container mx-auto py-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Panel</h1>
+        <UserMenu />
+      </div>
+
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList>
           <TabsTrigger value="overview">Genel Bakış</TabsTrigger>
