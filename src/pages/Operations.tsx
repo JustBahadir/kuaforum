@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { islemServisi } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
@@ -50,6 +49,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/lib/supabase";
 import { CSS } from '@dnd-kit/utilities';
+import { getUserRole } from "@/utils/auth";
 
 interface SortableItemProps {
   id: number;
@@ -123,6 +123,7 @@ function SortableItem({ id, islem, onEdit, onDelete }: SortableItemProps) {
 }
 
 export default function Operations() {
+  const [isStaff, setIsStaff] = useState(false);
   const [islemAdi, setIslemAdi] = useState("");
   const [fiyat, setFiyat] = useState<number>(0);
   const [puan, setPuan] = useState<number>(0);
@@ -228,6 +229,23 @@ export default function Operations() {
     }
   });
 
+  const { mutate: kategoriSil } = useMutation({
+    mutationFn: async (kategoriId: number) => {
+      const { error } = await supabase
+        .from('islem_kategorileri')
+        .delete()
+        .eq('id', kategoriId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['kategoriler'] });
+      toast({ description: "Kategori başarıyla silindi" });
+    },
+    onError: () => {
+      toast({ description: "Kategori silinirken hata oluştu", variant: "destructive" });
+    }
+  });
+
   const formuSifirla = () => {
     setIslemAdi("");
     setFiyat(0);
@@ -282,6 +300,55 @@ export default function Operations() {
       }
     }
   };
+
+  useEffect(() => {
+    const checkRole = async () => {
+      const role = await getUserRole();
+      setIsStaff(role === 'staff' || role === 'admin');
+    };
+    checkRole();
+  }, []);
+
+  if (!isStaff) {
+    return (
+      <div className="container mx-auto py-6">
+        <h1 className="text-2xl font-bold mb-6">Hizmetlerimiz</h1>
+        <div className="space-y-6">
+          {kategoriler.map((kategori) => {
+            const kategoriIslemleri = islemler.filter(
+              (islem: any) => islem.kategori_id === kategori.id
+            );
+
+            return (
+              <div key={kategori.id} className="border rounded-lg p-4 space-y-4">
+                <h2 className="text-lg font-semibold">{kategori.kategori_adi}</h2>
+                <div className="space-y-2">
+                  {kategoriIslemleri.map((islem: any) => (
+                    <div
+                      key={islem.id}
+                      className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm"
+                    >
+                      <div>
+                        <h3 className="font-medium">{islem.islem_adi}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {islem.fiyat} TL
+                        </p>
+                      </div>
+                      <Button
+                        onClick={() => navigate(`/appointments?service=${islem.id}`)}
+                      >
+                        Randevu Al
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto py-6">
@@ -404,7 +471,34 @@ export default function Operations() {
 
               return (
                 <div key={kategori.id} className="border rounded-lg p-4 space-y-4">
-                  <h2 className="text-lg font-semibold">{kategori.kategori_adi}</h2>
+                  <div className="flex justify-between items-center">
+                    <h2 className="text-lg font-semibold">{kategori.kategori_adi}</h2>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="sm" className="text-destructive">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Kategoriyi Sil</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Bu kategoriyi silmek istediğinizden emin misiniz?
+                            Bu işlem geri alınamaz.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>İptal</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => kategoriSil(kategori.id)}
+                            className="bg-destructive text-destructive-foreground"
+                          >
+                            Sil
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                   <DndContext
                     sensors={sensors}
                     collisionDetection={closestCenter}
