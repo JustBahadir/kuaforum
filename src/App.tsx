@@ -13,6 +13,7 @@ import Personnel from "./pages/Personnel";
 import Operations from "./pages/Operations";
 import Appointments from "./pages/Appointments";
 import Auth from "./pages/Auth";
+import StaffRegister from "./pages/StaffRegister";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -45,6 +46,7 @@ const App = () => {
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/staff-register" element={<StaffRegister />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/customers" element={<Customers />} />
             <Route path="/personnel" element={<Personnel />} />

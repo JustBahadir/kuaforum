@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,43 +12,30 @@ import { toast } from 'sonner';
 export default function Auth() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [verificationCode, setVerificationCode] = useState('');
-  const [showVerification, setShowVerification] = useState(false);
-  const [isStaffSignup, setIsStaffSignup] = useState(false);
-
-  const formatPhoneNumber = (phone: string) => {
-    // Telefon numarasını +90 formatına çevir
-    let cleaned = phone.replace(/\D/g, '');
-    if (cleaned.startsWith('90')) {
-      cleaned = cleaned.substring(2);
-    }
-    if (!cleaned.startsWith('5')) {
-      return phone;
-    }
-    return `+90${cleaned}`;
-  };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const formattedPhone = formatPhoneNumber(phone);
-      const { error } = await supabase.auth.signInWithOtp({
-        phone: formattedPhone,
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
         options: {
           data: {
             first_name: firstName,
             last_name: lastName,
-            role: isStaffSignup ? 'staff' : 'customer',
-          },
-        },
+            role: 'customer'
+          }
+        }
       });
+      
       if (error) throw error;
-      setShowVerification(true);
-      toast.success('Doğrulama kodu telefonunuza gönderildi.');
+      
+      toast.success('Kayıt başarılı! Giriş yapabilirsiniz.');
     } catch (error: any) {
       toast.error(error.message);
     } finally {
@@ -56,16 +43,17 @@ export default function Auth() {
     }
   };
 
-  const handleVerify = async (e: React.FormEvent) => {
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const { error } = await supabase.auth.verifyOtp({
-        phone: formatPhoneNumber(phone),
-        token: verificationCode,
-        type: 'sms',
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password
       });
+      
       if (error) throw error;
+      
       navigate('/dashboard');
       toast.success('Giriş başarılı!');
     } catch (error: any) {
@@ -81,82 +69,98 @@ export default function Auth() {
         <CardHeader>
           <CardTitle>Kuaför Randevu Sistemi</CardTitle>
           <CardDescription>
-            {showVerification 
-              ? 'Telefonunuza gönderilen kodu giriniz' 
-              : 'Randevu almak için giriş yapın veya hesap oluşturun'}
+            Randevu almak için giriş yapın veya hesap oluşturun
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {!showVerification ? (
-            <form onSubmit={handleSignUp} className="space-y-4">
-              <div>
-                <Label htmlFor="phone">Telefon Numarası</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  placeholder="5XX XXX XX XX"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="firstName">Ad</Label>
-                <Input
-                  id="firstName"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="lastName">Soyad</Label>
-                <Input
-                  id="lastName"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="isStaff"
-                  checked={isStaffSignup}
-                  onChange={(e) => setIsStaffSignup(e.target.checked)}
-                  className="rounded border-gray-300"
-                />
-                <Label htmlFor="isStaff">Personel olarak kayıt ol</Label>
-              </div>
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'İşlem yapılıyor...' : 'Devam Et'}
-              </Button>
-            </form>
-          ) : (
-            <form onSubmit={handleVerify} className="space-y-4">
-              <div>
-                <Label htmlFor="code">Doğrulama Kodu</Label>
-                <Input
-                  id="code"
-                  value={verificationCode}
-                  onChange={(e) => setVerificationCode(e.target.value)}
-                  placeholder="Doğrulama kodunu giriniz"
-                  required
-                />
-              </div>
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Doğrulanıyor...' : 'Doğrula ve Giriş Yap'}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                onClick={() => setShowVerification(false)}
-              >
-                Geri Dön
-              </Button>
-            </form>
-          )}
+          <Tabs defaultValue="login" className="space-y-4">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="login">Giriş</TabsTrigger>
+              <TabsTrigger value="register">Kayıt</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="login">
+              <form onSubmit={handleSignIn} className="space-y-4">
+                <div>
+                  <Label htmlFor="loginEmail">E-posta</Label>
+                  <Input
+                    id="loginEmail"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="loginPassword">Şifre</Label>
+                  <Input
+                    id="loginPassword"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? 'Giriş yapılıyor...' : 'Giriş Yap'}
+                </Button>
+              </form>
+            </TabsContent>
+
+            <TabsContent value="register">
+              <form onSubmit={handleSignUp} className="space-y-4">
+                <div>
+                  <Label htmlFor="email">E-posta</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="password">Şifre</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="firstName">Ad</Label>
+                  <Input
+                    id="firstName"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="lastName">Soyad</Label>
+                  <Input
+                    id="lastName"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? 'Kaydediliyor...' : 'Kayıt Ol'}
+                </Button>
+              </form>
+            </TabsContent>
+          </Tabs>
+
+          <div className="mt-6 text-center">
+            <Button variant="link" asChild>
+              <Link to="/staff-register">
+                Personel olarak kaydolmak için tıklayın
+              </Link>
+            </Button>
+          </div>
         </CardContent>
         <CardFooter className="flex justify-center text-sm text-gray-600">
           Kuaför randevu sistemi &copy; 2024
