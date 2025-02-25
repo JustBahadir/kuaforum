@@ -3,28 +3,10 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { islemServisi } from "@/lib/supabase";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Plus } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/lib/supabase";
 import { getUserRole } from "@/utils/auth";
-import { CategoryCard } from "@/components/operations/CategoryCard";
+import { ServicesContent } from "@/components/operations/ServicesContent";
 import { WorkingHours } from "@/components/operations/WorkingHours";
 import { toast } from "sonner";
 
@@ -50,7 +32,7 @@ export default function Operations() {
     checkRole();
   }, []);
 
-  const { data: kategoriler = [], isLoading: kategorilerYukleniyor } = useQuery({
+  const { data: kategoriler = [] } = useQuery({
     queryKey: ['kategoriler'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -62,7 +44,7 @@ export default function Operations() {
     }
   });
 
-  const { data: islemler = [], isLoading: islemlerYukleniyor } = useQuery({
+  const { data: islemler = [] } = useQuery({
     queryKey: ['islemler'],
     queryFn: islemServisi.hepsiniGetir
   });
@@ -135,8 +117,25 @@ export default function Operations() {
     setDialogAcik(false);
   };
 
-  const handleRandevuAl = (islemId: number) => {
-    navigate(`/appointments?service=${islemId}`);
+  const handleServiceFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const islem = {
+      islem_adi: islemAdi,
+      fiyat,
+      puan,
+      kategori_id: kategoriId
+    };
+    
+    if (duzenleId) {
+      islemGuncelle({ id: duzenleId, islem });
+    } else {
+      islemEkle(islem);
+    }
+  };
+
+  const handleCategoryFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    kategoriEkle(yeniKategoriAdi);
   };
 
   const handleSiralamaChange = async (yeniIslemler: any[]) => {
@@ -163,151 +162,41 @@ export default function Operations() {
         </TabsList>
 
         <TabsContent value="hizmetler">
-          {isStaff && (
-            <div className="flex justify-between items-center mb-6">
-              <h1 className="text-2xl font-bold">Hizmet Yönetimi</h1>
-              <div className="flex gap-2">
-                <Dialog open={kategoriDialogAcik} onOpenChange={setKategoriDialogAcik}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline">
-                      <Plus className="mr-2" />
-                      Yeni Kategori
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Yeni Kategori Ekle</DialogTitle>
-                    </DialogHeader>
-                    <form onSubmit={(e) => {
-                      e.preventDefault();
-                      kategoriEkle(yeniKategoriAdi);
-                    }}>
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="kategori_adi">Kategori Adı</Label>
-                          <Input
-                            id="kategori_adi"
-                            value={yeniKategoriAdi}
-                            onChange={(e) => setYeniKategoriAdi(e.target.value)}
-                            required
-                          />
-                        </div>
-                        <Button type="submit" className="w-full">Ekle</Button>
-                      </div>
-                    </form>
-                  </DialogContent>
-                </Dialog>
-
-                <Dialog open={dialogAcik} onOpenChange={setDialogAcik}>
-                  <DialogTrigger asChild>
-                    <Button onClick={formuSifirla}>
-                      <Plus className="mr-2" />
-                      Yeni Hizmet
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>
-                        {duzenleId ? "Hizmet Düzenle" : "Yeni Hizmet Ekle"}
-                      </DialogTitle>
-                    </DialogHeader>
-                    <form onSubmit={(e) => {
-                      e.preventDefault();
-                      const islem = {
-                        islem_adi: islemAdi,
-                        fiyat,
-                        puan,
-                        kategori_id: kategoriId
-                      };
-                      
-                      if (duzenleId) {
-                        islemGuncelle({ id: duzenleId, islem });
-                      } else {
-                        islemEkle(islem);
-                      }
-                    }} className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="kategori">Kategori</Label>
-                        <Select
-                          value={kategoriId?.toString()}
-                          onValueChange={(value) => setKategoriId(Number(value))}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Kategori seçin" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {kategoriler.map((kategori) => (
-                              <SelectItem
-                                key={kategori.id}
-                                value={kategori.id.toString()}
-                              >
-                                {kategori.kategori_adi}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="islem_adi">Hizmet Adı</Label>
-                        <Input
-                          id="islem_adi"
-                          value={islemAdi}
-                          onChange={(e) => setIslemAdi(e.target.value)}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="fiyat">Fiyat</Label>
-                        <Input
-                          id="fiyat"
-                          type="number"
-                          value={fiyat}
-                          onChange={(e) => setFiyat(Number(e.target.value))}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="puan">Puan</Label>
-                        <Input
-                          id="puan"
-                          type="number"
-                          value={puan}
-                          onChange={(e) => setPuan(Number(e.target.value))}
-                          required
-                        />
-                      </div>
-                      <Button type="submit" className="w-full">
-                        {duzenleId ? "Güncelle" : "Ekle"}
-                      </Button>
-                    </form>
-                  </DialogContent>
-                </Dialog>
-              </div>
-            </div>
-          )}
-
-          <div className="space-y-6">
-            {kategoriler.map((kategori) => (
-              <CategoryCard
-                key={kategori.id}
-                kategori={kategori}
-                islemler={islemler.filter((islem: any) => islem.kategori_id === kategori.id)}
-                isStaff={isStaff}
-                onEdit={(islem) => {
-                  setDuzenleId(islem.id);
-                  setIslemAdi(islem.islem_adi);
-                  setFiyat(islem.fiyat);
-                  setPuan(islem.puan);
-                  setKategoriId(islem.kategori_id);
-                  setDialogAcik(true);
-                }}
-                onDelete={islemSil}
-                onKategoriDelete={kategoriSil}
-                onSiralamaChange={handleSiralamaChange}
-                onRandevuAl={handleRandevuAl}
-              />
-            ))}
-          </div>
+          <ServicesContent
+            isStaff={isStaff}
+            kategoriler={kategoriler}
+            islemler={islemler}
+            dialogAcik={dialogAcik}
+            setDialogAcik={setDialogAcik}
+            kategoriDialogAcik={kategoriDialogAcik}
+            setKategoriDialogAcik={setKategoriDialogAcik}
+            yeniKategoriAdi={yeniKategoriAdi}
+            setYeniKategoriAdi={setYeniKategoriAdi}
+            islemAdi={islemAdi}
+            setIslemAdi={setIslemAdi}
+            fiyat={fiyat}
+            setFiyat={setFiyat}
+            puan={puan}
+            setPuan={setPuan}
+            kategoriId={kategoriId}
+            setKategoriId={setKategoriId}
+            duzenleId={duzenleId}
+            onServiceFormSubmit={handleServiceFormSubmit}
+            onCategoryFormSubmit={handleCategoryFormSubmit}
+            onServiceEdit={(islem) => {
+              setDuzenleId(islem.id);
+              setIslemAdi(islem.islem_adi);
+              setFiyat(islem.fiyat);
+              setPuan(islem.puan);
+              setKategoriId(islem.kategori_id);
+              setDialogAcik(true);
+            }}
+            onServiceDelete={islemSil}
+            onCategoryDelete={kategoriSil}
+            onSiralamaChange={handleSiralamaChange}
+            onRandevuAl={(islemId) => navigate(`/appointments?service=${islemId}`)}
+            formuSifirla={formuSifirla}
+          />
         </TabsContent>
 
         <TabsContent value="calisma-saatleri">
