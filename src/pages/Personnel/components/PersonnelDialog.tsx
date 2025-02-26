@@ -41,39 +41,67 @@ export function PersonnelDialog({ open, onOpenChange }: PersonnelDialogProps) {
 
   const { mutate: personelEkle, isPending: isEklemeLoading } = useMutation({
     mutationFn: async (data: Omit<Personel, 'id' | 'created_at'>) => {
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: data.eposta,
-        password: 'gecici123',
-        options: {
-          data: {
-            first_name: data.ad_soyad.split(' ')[0],
-            last_name: data.ad_soyad.split(' ').slice(1).join(' '),
-            role: 'staff'
-          }
+      try {
+        // İlk önce varolan kullanıcıyı kontrol et
+        const { data: existingUser } = await supabase
+          .from('personel')
+          .select('eposta')
+          .eq('eposta', data.eposta)
+          .single();
+
+        if (existingUser) {
+          throw new Error('Bu e-posta adresi ile kayıtlı personel bulunmaktadır');
         }
-      });
 
-      if (authError) {
-        throw new Error(authError.message);
+        // Auth kaydı oluştur
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email: data.eposta,
+          password: 'gecici123',
+          options: {
+            data: {
+              first_name: data.ad_soyad.split(' ')[0],
+              last_name: data.ad_soyad.split(' ').slice(1).join(' '),
+              role: 'staff'
+            }
+          }
+        });
+
+        if (authError) {
+          console.error('Auth Error:', authError);
+          if (authError.message.includes('already registered')) {
+            throw new Error('Bu e-posta adresi zaten kayıtlı');
+          }
+          throw authError;
+        }
+
+        if (!authData.user) {
+          throw new Error('Kullanıcı kaydı oluşturulamadı');
+        }
+
+        // Personel kaydı oluştur
+        const personelData = {
+          ...data,
+          auth_id: authData.user.id,
+          personel_no: `P${Math.floor(Math.random() * 10000)}`
+        };
+
+        const { data: personel, error: personelError } = await supabase
+          .from('personel')
+          .insert([personelData])
+          .select()
+          .single();
+
+        if (personelError) {
+          // Personel kaydı başarısız olursa auth kaydını da sil
+          await supabase.auth.admin.deleteUser(authData.user.id);
+          throw new Error('Personel kaydı oluşturulurken bir hata oluştu');
+        }
+
+        return personel;
+      } catch (error: any) {
+        console.error('Error:', error);
+        throw new Error(error.message || 'Personel kaydı sırasında bir hata oluştu');
       }
-
-      const personelData = {
-        ...data,
-        auth_id: authData.user?.id,
-        personel_no: `P${Math.floor(Math.random() * 10000)}`
-      };
-
-      const { data: personel, error: personelError } = await supabase
-        .from('personel')
-        .insert([personelData])
-        .select()
-        .single();
-
-      if (personelError) {
-        throw new Error('Personel kaydı oluşturulurken bir hata oluştu');
-      }
-
-      return personel;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['personel'] });
@@ -184,6 +212,7 @@ export function PersonnelDialog({ open, onOpenChange }: PersonnelDialogProps) {
             <div className="space-y-2">
               <Label htmlFor="calisma_sistemi">Çalışma Sistemi</Label>
               <Select
+                value={yeniPersonel.calisma_sistemi}
                 onValueChange={(value) =>
                   setYeniPersonel((prev) => ({
                     ...prev,
