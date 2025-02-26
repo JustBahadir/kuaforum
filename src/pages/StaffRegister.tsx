@@ -24,7 +24,6 @@ export default function StaffRegister() {
     e.preventDefault();
     setLoading(true);
     try {
-      // Önce auth kullanıcısını oluştur
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -37,10 +36,14 @@ export default function StaffRegister() {
         }
       });
 
-      if (authError) throw authError;
+      if (authError) {
+        if (authError.message.includes('already registered')) {
+          throw new Error('Bu e-posta adresi zaten kayıtlı');
+        }
+        throw authError;
+      }
 
       if (authData.user) {
-        // Personel tablosuna kayıt ekle
         const { error: staffError } = await supabase
           .from('personel')
           .insert([
@@ -57,13 +60,15 @@ export default function StaffRegister() {
             }
           ]);
 
-        if (staffError) throw staffError;
+        if (staffError) {
+          throw new Error('Personel kaydı oluşturulurken bir hata oluştu');
+        }
       }
 
       toast.success('Personel kaydınız başarıyla alındı. Yönetici onayı bekleniyor.');
       navigate('/auth');
     } catch (error: any) {
-      toast.error(error.message);
+      toast.error(error.message || 'Kayıt işlemi sırasında bir hata oluştu');
     } finally {
       setLoading(false);
     }
