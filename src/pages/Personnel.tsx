@@ -8,6 +8,7 @@ import {
   islemServisi,
   personelServisi 
 } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase"; // supabase client'ı ekledik
 import {
   Dialog,
   DialogContent,
@@ -19,7 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner"; // sonner'dan import ediyoruz
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import {
   Select,
@@ -72,7 +73,6 @@ export default function Personnel() {
     puan: 0,
   });
 
-  const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: islemler = [] } = useQuery({
@@ -84,10 +84,7 @@ export default function Personnel() {
     mutationFn: personelIslemleriServisi.ekle,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['personelIslemleri'] });
-      toast({
-        title: "Başarılı",
-        description: "İşlem başarıyla eklendi.",
-      });
+      toast("İşlem başarıyla eklendi.");
       setIslemDialogOpen(false);
     },
   });
@@ -159,10 +156,7 @@ export default function Personnel() {
       personelServisi.guncelle(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['personel'] });
-      toast({
-        title: "Başarılı",
-        description: "Personel başarıyla güncellendi.",
-      });
+      toast("Personel başarıyla güncellendi.");
       setPersonelDuzenle(null);
     },
   });
@@ -171,10 +165,7 @@ export default function Personnel() {
     mutationFn: (id: number) => personelServisi.sil(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['personel'] });
-      toast({
-        title: "Başarılı",
-        description: "Personel başarıyla silindi.",
-      });
+      toast("Personel başarıyla silindi.");
     },
   });
 
