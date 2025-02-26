@@ -1,18 +1,14 @@
 
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { islemServisi } from "@/lib/supabase";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/lib/supabase";
-import { getUserRole } from "@/utils/auth";
 import { ServicesContent } from "@/components/operations/ServicesContent";
 import { WorkingHours } from "@/components/operations/WorkingHours";
 import { toast } from "sonner";
 
-export default function Operations() {
-  const navigate = useNavigate();
-  const [isStaff, setIsStaff] = useState(false);
+export default function StaffOperations() {
   const [islemAdi, setIslemAdi] = useState("");
   const [fiyat, setFiyat] = useState<number>(0);
   const [puan, setPuan] = useState<number>(0);
@@ -23,14 +19,6 @@ export default function Operations() {
   const [kategoriDialogAcik, setKategoriDialogAcik] = useState(false);
 
   const queryClient = useQueryClient();
-
-  useEffect(() => {
-    const checkRole = async () => {
-      const role = await getUserRole();
-      setIsStaff(role === 'staff' || role === 'admin');
-    };
-    checkRole();
-  }, []);
 
   const { data: kategoriler = [] } = useQuery({
     queryKey: ['kategoriler'],
@@ -163,7 +151,7 @@ export default function Operations() {
 
         <TabsContent value="hizmetler">
           <ServicesContent
-            isStaff={isStaff}
+            isStaff={true}
             kategoriler={kategoriler}
             islemler={islemler}
             dialogAcik={dialogAcik}
@@ -194,13 +182,13 @@ export default function Operations() {
             onServiceDelete={islemSil}
             onCategoryDelete={kategoriSil}
             onSiralamaChange={handleSiralamaChange}
-            onRandevuAl={(islemId) => navigate(`/appointments?service=${islemId}`)}
+            onRandevuAl={() => {}}
             formuSifirla={formuSifirla}
           />
         </TabsContent>
 
         <TabsContent value="calisma-saatleri">
-          <WorkingHours isStaff={isStaff} />
+          <WorkingHours isStaff={true} />
         </TabsContent>
       </Tabs>
     </div>

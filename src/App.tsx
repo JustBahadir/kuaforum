@@ -10,7 +10,8 @@ import Landing from "./pages/Landing";
 import Dashboard from "./pages/Dashboard";
 import Customers from "./pages/Customers";
 import Personnel from "./pages/Personnel";
-import Operations from "./pages/Operations";
+import CustomerOperations from "./pages/operations/CustomerOperations";
+import StaffOperations from "./pages/operations/StaffOperations";
 import Appointments from "./pages/Appointments";
 import Auth from "./pages/Auth";
 import StaffRegister from "./pages/StaffRegister";
@@ -82,8 +83,16 @@ const App = () => {
               } 
             />
             <Route 
+              path="/operations/staff" 
+              element={
+                <StaffRoute>
+                  <StaffOperations />
+                </StaffRoute>
+              } 
+            />
+            <Route 
               path="/operations" 
-              element={session ? <Operations /> : <Navigate to="/auth" replace />} 
+              element={session ? <CustomerOperations /> : <Navigate to="/auth" replace />} 
             />
             <Route 
               path="/appointments" 
