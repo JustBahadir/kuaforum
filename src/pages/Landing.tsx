@@ -1,17 +1,28 @@
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
 import { Scissors, Search, User, Users } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import { useEffect } from "react";
 
 export default function Landing() {
   const navigate = useNavigate();
 
+  // Eğer kullanıcı oturum açmışsa dashboard'a yönlendir
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        navigate('/dashboard');
+      }
+    };
+    checkSession();
+  }, [navigate]);
+
   return (
     <div className="min-h-screen">
       <div className="container mx-auto px-4 py-8">
-        {/* Ana Grid */}
         <div className="grid md:grid-cols-2 gap-8 items-center min-h-[calc(100vh-4rem)]">
           {/* Sol Bölüm - Hizmet Açıklaması */}
           <div className="space-y-8">
@@ -54,14 +65,14 @@ export default function Landing() {
                 <Button 
                   className="flex-1 h-12" 
                   variant="outline"
-                  onClick={() => navigate("/customer-search")}
+                  onClick={() => navigate("/auth")}
                 >
                   <User className="mr-2" />
                   Müşteri Girişi
                 </Button>
                 <Button 
                   className="flex-1 h-12"
-                  onClick={() => navigate("/business-register")}
+                  onClick={() => navigate("/auth")}
                 >
                   <Users className="mr-2" />
                   Kuaför Girişi
