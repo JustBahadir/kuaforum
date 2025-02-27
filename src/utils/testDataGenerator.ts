@@ -207,4 +207,32 @@ export const generateTestData = async (): Promise<void> => {
       const randomIslem = guncelIslemler[Math.floor(Math.random() * guncelIslemler.length)];
       const randomAciklama = aciklamalar[Math.floor(Math.random() * aciklamalar.length)];
       const randomTutar = randomIslem.fiyat * (Math.random() * 0.3 + 0.9); // %90-120 arası rastgele fiyat
-      const randomMusteriId = musteriIdl
+      const randomMusteriId = musteriIdleri[Math.floor(Math.random() * musteriIdleri.length)];
+      
+      await personelIslemleriServisi.ekle({
+        personel_id: ergunId,
+        islem_id: randomIslem.id,
+        musteri_id: randomMusteriId,
+        aciklama: `${randomIslem.islem_adi} - ${randomAciklama}`,
+        tutar: parseFloat(randomTutar.toFixed(2)),
+        prim_yuzdesi: 12,
+        odenen: parseFloat((randomTutar * 0.12).toFixed(2)),
+        puan: randomIslem.puan
+      });
+    }
+    
+    toast({
+      title: "Başarılı!",
+      description: "Kategori, işlem, müşteri ve işlem kayıtları oluşturuldu.",
+    });
+    
+  } catch (error) {
+    console.error("İşlem ekleme hatası:", error);
+    toast({
+      title: "Hata!",
+      description: "İşlem girişi yapılırken bir hata oluştu.",
+      variant: "destructive",
+    });
+    throw error;
+  }
+};
