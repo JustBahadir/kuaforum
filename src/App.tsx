@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AppLayout } from "@/components/ui/app-layout";
 import Dashboard from "./pages/Dashboard";
 import Customers from "./pages/Customers";
 import Personnel from "./pages/Personnel";
@@ -22,14 +23,13 @@ const App = () => {
         <Sonner />
         <BrowserRouter>
           <Routes>
-            {/* Ana sayfa direkt olarak dashboard'a yönlendirecek */}
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/customers" element={<Customers />} />
-            <Route path="/personnel" element={<Personnel />} />
-            <Route path="/operations/staff" element={<StaffOperations />} />
-            <Route path="/operations" element={<CustomerOperations />} />
-            <Route path="/appointments" element={<Appointments />} />
+            <Route path="/dashboard" element={<AppLayout><Dashboard /></AppLayout>} />
+            <Route path="/customers" element={<AppLayout><Customers /></AppLayout>} />
+            <Route path="/personnel" element={<AppLayout><Personnel /></AppLayout>} />
+            <Route path="/operations/staff" element={<AppLayout><StaffOperations /></AppLayout>} />
+            <Route path="/operations" element={<AppLayout><CustomerOperations /></AppLayout>} />
+            <Route path="/appointments" element={<AppLayout><Appointments /></AppLayout>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

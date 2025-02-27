@@ -2,26 +2,25 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Phone } from "lucide-react";
+import { Search, Phone, Eye } from "lucide-react";
 import { musteriServisi, type Musteri } from "@/lib/supabase";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "@/components/ui/use-toast";
+import { CustomerDetails } from "./Customers/components/CustomerDetails";
 
-type ProfileWithStats = {
-  id: string;
-  first_name: string;
-  last_name: string;
-  phone: string;
-  created_at?: string;
+type ProfileWithStats = Musteri & {
   total_appointments?: number;
 }
 
 export default function Musteriler() {
   const [aramaMetni, setAramaMetni] = useState("");
+  const [selectedCustomer, setSelectedCustomer] = useState<Musteri | null>(null);
 
   const { data: musteriler = [], isLoading } = useQuery<ProfileWithStats[]>({
     queryKey: ['musteriler', aramaMetni],
-    queryFn: () => aramaMetni ? musteriServisi.ara(aramaMetni) : musteriServisi.hepsiniGetir()
+    queryFn: () => aramaMetni 
+      ? musteriServisi.ara(aramaMetni) 
+      : musteriServisi.istatistiklerGetir()
   });
 
   if (isLoading) {
@@ -69,7 +68,13 @@ export default function Musteriler() {
                     Toplam Randevu
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Toplam İşlem
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Son İşlem
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    İşlemler
                   </th>
                 </tr>
               </thead>
@@ -82,14 +87,27 @@ export default function Musteriler() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <div className="flex items-center gap-2">
                         <Phone className="w-4 h-4" />
-                        {musteri.phone}
+                        {musteri.phone || "-"}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {musteri.total_appointments || 0}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {musteri.total_services || 0}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {musteri.created_at ? new Date(musteri.created_at).toLocaleDateString('tr-TR') : '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => setSelectedCustomer(musteri)}
+                      >
+                        <Eye className="w-4 h-4 mr-1" />
+                        Detay
+                      </Button>
                     </td>
                   </tr>
                 ))}
@@ -98,6 +116,12 @@ export default function Musteriler() {
           </div>
         </div>
       </div>
+
+      <CustomerDetails 
+        open={!!selectedCustomer} 
+        onOpenChange={(open) => !open && setSelectedCustomer(null)} 
+        customer={selectedCustomer} 
+      />
     </div>
   );
 }

@@ -3,7 +3,7 @@ import { supabase } from '../client';
 import { PersonelIslemi } from '../types';
 
 export const personelIslemleriServisi = {
-  async hepsiniGetir(personelId?: number) {
+  async hepsiniGetir(personelId?: number, musteriId?: string) {
     const query = supabase
       .from('personel_islemleri')
       .select(`
@@ -15,6 +15,10 @@ export const personelIslemleriServisi = {
 
     if (personelId) {
       query.eq('personel_id', personelId);
+    }
+    
+    if (musteriId) {
+      query.eq('musteri_id', musteriId);
     }
 
     const { data, error } = await query;
