@@ -5,7 +5,7 @@ import { Users, User, Calendar, Scissors, Settings } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
-import { personelServisi, personelIslemleriServisi, islemServisi } from "@/lib/supabase";
+import { personelServisi, personelIslemleriServisi, islemServisi, kategoriServisi, supabase } from "@/lib/supabase";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -58,19 +58,126 @@ export default function Dashboard() {
         ergunId = ergunPersonel.id;
       }
       
+      // Kategori oluşturalım
+      let sacBakimKategoriId = 0;
+      let tirnaklarKategoriId = 0;
+      let ciltBakimKategoriId = 0;
+      
+      const kategoriler = await kategoriServisi.hepsiniGetir();
+      
+      // Saç Bakım kategorisi
+      const sacBakimKategori = kategoriler.find(k => k.kategori_adi.includes("SAÇ BAKIM"));
+      if (!sacBakimKategori) {
+        const yeniKategori = await kategoriServisi.ekle({ kategori_adi: "SAÇ BAKIM" });
+        sacBakimKategoriId = yeniKategori.id;
+      } else {
+        sacBakimKategoriId = sacBakimKategori.id;
+      }
+      
+      // Tırnaklar kategorisi
+      const tirnaklarKategori = kategoriler.find(k => k.kategori_adi.includes("TIRNAKLAR"));
+      if (!tirnaklarKategori) {
+        const yeniKategori = await kategoriServisi.ekle({ kategori_adi: "TIRNAKLAR" });
+        tirnaklarKategoriId = yeniKategori.id;
+      } else {
+        tirnaklarKategoriId = tirnaklarKategori.id;
+      }
+      
+      // Cilt Bakım kategorisi
+      const ciltBakimKategori = kategoriler.find(k => k.kategori_adi.includes("CİLT BAKIM"));
+      if (!ciltBakimKategori) {
+        const yeniKategori = await kategoriServisi.ekle({ kategori_adi: "CİLT BAKIM" });
+        ciltBakimKategoriId = yeniKategori.id;
+      } else {
+        ciltBakimKategoriId = ciltBakimKategori.id;
+      }
+      
       // İşlemleri getirelim
       const islemler = await islemServisi.hepsiniGetir();
       
-      // Eğer işlem yoksa bazı örnek işlemler ekleyelim
-      if (islemler.length === 0) {
-        await islemServisi.ekle({ islem_adi: "SAÇ KESİMİ", fiyat: 150, puan: 10 });
-        await islemServisi.ekle({ islem_adi: "BOYA", fiyat: 350, puan: 15 });
-        await islemServisi.ekle({ islem_adi: "MANIKÜR", fiyat: 120, puan: 8 });
-        await islemServisi.ekle({ islem_adi: "PEDIKÜR", fiyat: 150, puan: 8 });
-        await islemServisi.ekle({ islem_adi: "CİLT BAKIMI", fiyat: 250, puan: 12 });
+      // İşlemleri kategorilere göre tanımlayalım
+      const islemTanimlari = [
+        { adi: "SAÇ KESİMİ", fiyat: 150, puan: 10, kategori_id: sacBakimKategoriId },
+        { adi: "BOYA", fiyat: 350, puan: 15, kategori_id: sacBakimKategoriId },
+        { adi: "KERATIN BAKIM", fiyat: 500, puan: 20, kategori_id: sacBakimKategoriId },
+        { adi: "MANIKÜR", fiyat: 120, puan: 8, kategori_id: tirnaklarKategoriId },
+        { adi: "PEDIKÜR", fiyat: 150, puan: 8, kategori_id: tirnaklarKategoriId },
+        { adi: "PROTEZ TIRNAK", fiyat: 250, puan: 12, kategori_id: tirnaklarKategoriId },
+        { adi: "CİLT BAKIMI", fiyat: 250, puan: 12, kategori_id: ciltBakimKategoriId },
+        { adi: "YÜZ MASKESI", fiyat: 180, puan: 10, kategori_id: ciltBakimKategoriId },
+        { adi: "ANTI-AGING", fiyat: 400, puan: 18, kategori_id: ciltBakimKategoriId }
+      ];
+      
+      // İşlemlerin var olup olmadığını kontrol edelim ve ekleyelim
+      for (const islemTanimi of islemTanimlari) {
+        const mevcutIslem = islemler.find(i => i.islem_adi === islemTanimi.adi);
+        if (!mevcutIslem) {
+          await islemServisi.ekle({
+            islem_adi: islemTanimi.adi,
+            fiyat: islemTanimi.fiyat,
+            puan: islemTanimi.puan,
+            kategori_id: islemTanimi.kategori_id
+          });
+        }
       }
       
-      // Tekrar işlemleri alalım, yeni eklenmiş olanları da görelim
+      // Test müşterileri oluşturalım
+      const musteriler = [
+        { first_name: "Ayşe", last_name: "Yılmaz", phone: "05551112233" },
+        { first_name: "Mehmet", last_name: "Kaya", phone: "05552223344" },
+        { first_name: "Zeynep", last_name: "Demir", phone: "05553334455" },
+        { first_name: "Ahmet", last_name: "Şahin", phone: "05554445566" },
+        { first_name: "Fatma", last_name: "Öztürk", phone: "05555556677" }
+      ];
+      
+      // Her müşteri için bir kullanıcı oluşturalım
+      const musteriIdleri = [];
+      for (const musteri of musteriler) {
+        // Önce bu e-postayı kontrol edelim
+        const email = `${musteri.first_name.toLowerCase()}.${musteri.last_name.toLowerCase()}@example.com`;
+        const { data: mevcutKullanicilar } = await supabase.auth.signInWithPassword({
+          email,
+          password: "password123"
+        });
+        
+        if (mevcutKullanicilar?.user) {
+          // Müşteri zaten var, id'sini alalım
+          musteriIdleri.push(mevcutKullanicilar.user.id);
+        } else {
+          // Yeni müşteri oluşturalım
+          const { data: yeniKullanici, error } = await supabase.auth.signUp({
+            email,
+            password: "password123",
+            options: {
+              data: {
+                first_name: musteri.first_name,
+                last_name: musteri.last_name
+              }
+            }
+          });
+          
+          if (error) {
+            console.error("Müşteri kayıt hatası:", error);
+            continue;
+          }
+          
+          if (yeniKullanici?.user) {
+            // Profil bilgilerini güncelleyelim
+            await supabase
+              .from('profiles')
+              .update({
+                first_name: musteri.first_name,
+                last_name: musteri.last_name,
+                phone: musteri.phone
+              })
+              .eq('id', yeniKullanici.user.id);
+            
+            musteriIdleri.push(yeniKullanici.user.id);
+          }
+        }
+      }
+      
+      // Güncel işlemleri alalım
       const guncelIslemler = await islemServisi.hepsiniGetir();
       
       // Örnek açıklamalar
@@ -93,10 +200,12 @@ export default function Dashboard() {
         const randomIslem = guncelIslemler[Math.floor(Math.random() * guncelIslemler.length)];
         const randomAciklama = aciklamalar[Math.floor(Math.random() * aciklamalar.length)];
         const randomTutar = randomIslem.fiyat * (Math.random() * 0.3 + 0.9); // %90-120 arası rastgele fiyat
+        const randomMusteriId = musteriIdleri[Math.floor(Math.random() * musteriIdleri.length)];
         
         await personelIslemleriServisi.ekle({
           personel_id: nimetId,
           islem_id: randomIslem.id,
+          musteri_id: randomMusteriId,
           aciklama: `${randomIslem.islem_adi} - ${randomAciklama}`,
           tutar: parseFloat(randomTutar.toFixed(2)),
           prim_yuzdesi: 15,
@@ -110,10 +219,12 @@ export default function Dashboard() {
         const randomIslem = guncelIslemler[Math.floor(Math.random() * guncelIslemler.length)];
         const randomAciklama = aciklamalar[Math.floor(Math.random() * aciklamalar.length)];
         const randomTutar = randomIslem.fiyat * (Math.random() * 0.3 + 0.9); // %90-120 arası rastgele fiyat
+        const randomMusteriId = musteriIdleri[Math.floor(Math.random() * musteriIdleri.length)];
         
         await personelIslemleriServisi.ekle({
           personel_id: ergunId,
           islem_id: randomIslem.id,
+          musteri_id: randomMusteriId,
           aciklama: `${randomIslem.islem_adi} - ${randomAciklama}`,
           tutar: parseFloat(randomTutar.toFixed(2)),
           prim_yuzdesi: 12,
@@ -124,7 +235,7 @@ export default function Dashboard() {
       
       toast({
         title: "Başarılı!",
-        description: "Nimet ve Ergün için 10'ar işlem girişi yapıldı.",
+        description: "Kategori, işlem, müşteri ve işlem kayıtları oluşturuldu.",
       });
       
     } catch (error) {

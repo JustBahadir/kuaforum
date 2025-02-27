@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = 'https://xkbjjcizncwkrouvoujw.supabase.co';
@@ -12,6 +13,15 @@ export type Islem = {
   islem_adi: string;
   fiyat: number;
   puan: number;
+  kategori_id?: number;
+  sira?: number;
+}
+
+export type Kategori = {
+  id: number;
+  created_at?: string;
+  kategori_adi: string;
+  sira?: number;
 }
 
 export type Musteri = {
@@ -42,12 +52,14 @@ export type PersonelIslemi = {
   created_at?: string;
   personel_id: number;
   islem_id: number;
+  musteri_id?: string;
   aciklama: string;
   tutar: number;
   prim_yuzdesi: number;
   odenen: number;
   puan: number;
   islem?: Islem;
+  musteri?: Musteri;
 }
 
 export type Profile = {
@@ -91,25 +103,23 @@ export type Randevu = {
   islemler: number[];
 }
 
-// İşlemler servisi
-export const islemServisi = {
+// Kategori servisi
+export const kategoriServisi = {
   async hepsiniGetir() {
     const { data, error } = await supabase
-      .from('islemler')
+      .from('islem_kategorileri')
       .select('*')
-      .order('islem_adi');
+      .order('sira');
 
     if (error) throw error;
     return data || [];
   },
 
-  async ekle(islem: { islem_adi: string; fiyat: number; puan: number }) {
+  async ekle(kategori: { kategori_adi: string }) {
     const { data, error } = await supabase
-      .from('islemler')
+      .from('islem_kategorileri')
       .insert([{
-        islem_adi: islem.islem_adi.toUpperCase(),
-        fiyat: islem.fiyat,
-        puan: islem.puan
+        kategori_adi: kategori.kategori_adi,
       }])
       .select()
       .single();
@@ -118,13 +128,79 @@ export const islemServisi = {
     return data;
   },
 
-  async guncelle(id: number, islem: { islem_adi: string; fiyat: number; puan: number }) {
+  async guncelle(id: number, kategori: { kategori_adi: string }) {
+    const { data, error } = await supabase
+      .from('islem_kategorileri')
+      .update({
+        kategori_adi: kategori.kategori_adi,
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async sil(id: number) {
+    const { error } = await supabase
+      .from('islem_kategorileri')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+  },
+  
+  async siraGuncelle(kategoriler: Kategori[]) {
+    const updates = kategoriler.map((kategori, index) => ({
+      id: kategori.id,
+      sira: index
+    }));
+    
+    const { error } = await supabase
+      .from('islem_kategorileri')
+      .upsert(updates);
+      
+    if (error) throw error;
+  }
+};
+
+// İşlemler servisi
+export const islemServisi = {
+  async hepsiniGetir() {
+    const { data, error } = await supabase
+      .from('islemler')
+      .select('*')
+      .order('sira');
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  async ekle(islem: { islem_adi: string; fiyat: number; puan: number; kategori_id: number }) {
+    const { data, error } = await supabase
+      .from('islemler')
+      .insert([{
+        islem_adi: islem.islem_adi.toUpperCase(),
+        fiyat: islem.fiyat,
+        puan: islem.puan,
+        kategori_id: islem.kategori_id
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async guncelle(id: number, islem: { islem_adi: string; fiyat: number; puan: number; kategori_id: number }) {
     const { data, error } = await supabase
       .from('islemler')
       .update({
         islem_adi: islem.islem_adi.toUpperCase(),
         fiyat: islem.fiyat,
-        puan: islem.puan
+        puan: islem.puan,
+        kategori_id: islem.kategori_id
       })
       .eq('id', id)
       .select()
@@ -140,6 +216,19 @@ export const islemServisi = {
       .delete()
       .eq('id', id);
 
+    if (error) throw error;
+  },
+  
+  async siraGuncelle(islemler: Islem[]) {
+    const updates = islemler.map((islem, index) => ({
+      id: islem.id,
+      sira: index
+    }));
+    
+    const { error } = await supabase
+      .from('islemler')
+      .upsert(updates);
+      
     if (error) throw error;
   }
 };
@@ -159,6 +248,49 @@ export const musteriServisi = {
 
     if (error) throw error;
     return data || [];
+  },
+
+  async istatistiklerGetir() {
+    // İlk olarak tüm müşterileri alalım
+    const { data: musteriler, error: musteriError } = await supabase
+      .from('profiles')
+      .select(`
+        id,
+        first_name,
+        last_name,
+        phone,
+        created_at
+      `);
+
+    if (musteriError) throw musteriError;
+
+    // Tüm randevuları alalım
+    const { data: randevular, error: randevuError } = await supabase
+      .from('randevular')
+      .select('*');
+
+    if (randevuError) throw randevuError;
+
+    // Tüm personel işlemlerini alalım
+    const { data: islemler, error: islemError } = await supabase
+      .from('personel_islemleri')
+      .select('*');
+
+    if (islemError) throw islemError;
+
+    // Her müşteri için istatistikleri hesaplayalım
+    const sonuclar = musteriler?.map(musteri => {
+      const musteriRandevulari = randevular?.filter(r => r.customer_id === musteri.id) || [];
+      const musteriIslemleri = islemler?.filter(i => i.musteri_id === musteri.id) || [];
+      
+      return {
+        ...musteri,
+        total_appointments: musteriRandevulari.length,
+        total_services: musteriIslemleri.length
+      };
+    }) || [];
+
+    return sonuclar;
   },
 
   async ara(aramaMetni: string) {
@@ -260,7 +392,8 @@ export const personelIslemleriServisi = {
       .from('personel_islemleri')
       .select(`
         *,
-        islem:islemler(*)
+        islem:islemler(*),
+        musteri:profiles(*)
       `)
       .order('created_at', { ascending: false });
 
@@ -274,13 +407,14 @@ export const personelIslemleriServisi = {
     return data || [];
   },
 
-  async ekle(islem: Omit<PersonelIslemi, 'id' | 'created_at' | 'islem'>) {
+  async ekle(islem: Omit<PersonelIslemi, 'id' | 'created_at' | 'islem' | 'musteri'>) {
     const { data, error } = await supabase
       .from('personel_islemleri')
       .insert([islem])
       .select(`
         *,
-        islem:islemler(*)
+        islem:islemler(*),
+        musteri:profiles(*)
       `)
       .single();
 
@@ -295,7 +429,8 @@ export const personelIslemleriServisi = {
       .eq('id', id)
       .select(`
         *,
-        islem:islemler(*)
+        islem:islemler(*),
+        musteri:profiles(*)
       `)
       .single();
 
