@@ -3,11 +3,12 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { profilServisi } from "@/lib/supabase/services/profilServisi";
+import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 export default function CustomerProfile() {
   const navigate = useNavigate();
@@ -18,6 +19,8 @@ export default function CustomerProfile() {
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
   const [userId, setUserId] = useState<string | null>(null);
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   
   useEffect(() => {
     const loadProfile = async () => {
@@ -30,17 +33,32 @@ export default function CustomerProfile() {
         
         setUserId(user.id);
         
-        const profile = await profilServisi.getir();
-        if (profile) {
-          setFirstName(profile.first_name || "");
-          setLastName(profile.last_name || "");
-          setPhone(profile.phone || "");
+        // Try to get profile from service
+        try {
+          const profile = await profilServisi.getir();
+          if (profile) {
+            setFirstName(profile.first_name || "");
+            setLastName(profile.last_name || "");
+            setPhone(profile.phone || "");
+          } else {
+            // Fallback to user metadata if profile service fails
+            setFirstName(user.user_metadata?.first_name || "");
+            setLastName(user.user_metadata?.last_name || "");
+            setPhone(user.user_metadata?.phone || "");
+          }
+        } catch (error) {
+          console.error("Error loading profile data:", error);
+          // Fallback to user metadata
+          setFirstName(user.user_metadata?.first_name || "");
+          setLastName(user.user_metadata?.last_name || "");
+          setPhone(user.user_metadata?.phone || "");
         }
         
         setLoading(false);
       } catch (error) {
         console.error("Error loading profile:", error);
-        toast.error("Profil bilgileriniz yüklenirken bir hata oluştu.");
+        setErrorMessage("Profil bilgileriniz yüklenirken bir hata oluştu.");
+        setShowErrorDialog(true);
         setLoading(false);
       }
     };
@@ -65,23 +83,61 @@ export default function CustomerProfile() {
         return;
       }
       
-      // Update profile data
-      await profilServisi.guncelle({
-        first_name: firstName,
-        last_name: lastName,
-        phone: phone,
-        role: "customer"
-      });
-      
-      toast.success("Bilgileriniz başarıyla kaydedildi.");
-      
-      // Redirect to appointments page after successful profile update
-      navigate("/appointments");
+      // Try to update profile
+      try {
+        // Update profile data
+        await profilServisi.guncelle({
+          first_name: firstName,
+          last_name: lastName,
+          phone: phone,
+          role: "customer"
+        });
+        
+        toast.success("Bilgileriniz başarıyla kaydedildi.");
+        
+        // Redirect to appointments page after successful profile update
+        navigate("/appointments");
+      } catch (error: any) {
+        console.error("Error saving profile:", error);
+        
+        // If profile update fails, try to update auth user metadata directly
+        try {
+          await supabase.auth.updateUser({
+            data: {
+              first_name: firstName,
+              last_name: lastName,
+              phone: phone
+            }
+          });
+          
+          toast.success("Bilgileriniz kaydedildi, ancak bazı özellikler sınırlı olabilir.");
+          navigate("/appointments");
+        } catch (secondError) {
+          console.error("Second error during fallback:", secondError);
+          setErrorMessage("Profil bilgileriniz kaydedilemedi. Lütfen daha sonra tekrar deneyin.");
+          setShowErrorDialog(true);
+        }
+      }
     } catch (error) {
       console.error("Error saving profile:", error);
-      toast.error("Bilgileriniz kaydedilirken bir hata oluştu.");
+      setErrorMessage("Bilgileriniz kaydedilirken bir hata oluştu.");
+      setShowErrorDialog(true);
     } finally {
       setSaving(false);
+    }
+  };
+  
+  const handleSkip = () => {
+    navigate("/appointments");
+  };
+  
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      navigate("/");
+    } catch (error) {
+      console.error("Error signing out:", error);
+      toast.error("Çıkış yapılırken bir hata oluştu.");
     }
   };
   
@@ -143,7 +199,56 @@ export default function CustomerProfile() {
             </div>
           </form>
         </CardContent>
+        <CardFooter className="flex flex-col space-y-2">
+          <Button 
+            variant="outline" 
+            className="w-full" 
+            onClick={handleSkip}
+          >
+            Şimdilik Geç
+          </Button>
+          <Button 
+            variant="ghost" 
+            className="w-full text-red-500" 
+            onClick={handleLogout}
+          >
+            Çıkış Yap
+          </Button>
+        </CardFooter>
       </Card>
+
+      <AlertDialog open={showErrorDialog} onOpenChange={setShowErrorDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hata</AlertDialogTitle>
+            <AlertDialogDescription>
+              {errorMessage}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex flex-col sm:flex-row gap-2">
+            <AlertDialogAction 
+              className="w-full" 
+              onClick={() => {
+                setShowErrorDialog(false);
+              }}
+            >
+              Tamam
+            </AlertDialogAction>
+            <AlertDialogAction 
+              className="w-full" 
+              onClick={handleLogout}
+            >
+              Çıkış Yap
+            </AlertDialogAction>
+            <AlertDialogAction 
+              className="w-full" 
+              onClick={handleSkip}
+            >
+              Ana Sayfaya Git
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
