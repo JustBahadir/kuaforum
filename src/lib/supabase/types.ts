@@ -62,6 +62,7 @@ export type Profile = {
   phone: string;
   created_at?: string;
   occupation?: string;
+  role?: string; // Added role field to support different user types
 }
 
 export type Notification = {

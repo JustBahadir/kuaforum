@@ -85,7 +85,8 @@ export default function CustomerProfile() {
           first_name: userData.first_name,
           last_name: userData.last_name,
           phone: userData.phone,
-          occupation: userData.occupation
+          occupation: userData.occupation,
+          role: 'customer' // Set role to customer
         }, { onConflict: 'id' });
       
       if (error) {

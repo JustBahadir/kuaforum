@@ -27,6 +27,7 @@ export const profilServisi = {
       last_name: profile.last_name,
       phone: profile.phone,
       occupation: profile.occupation, // This field is now properly typed
+      role: profile.role // Add role field to support staff profiles
     };
 
     const { data, error } = await supabase
