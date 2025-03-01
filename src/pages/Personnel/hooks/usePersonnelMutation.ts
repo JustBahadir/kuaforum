@@ -3,12 +3,15 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Personel } from "@/lib/supabase";
 import { toast } from "sonner";
+import { profilServisi } from "@/lib/supabase/services/profilServisi";
 
 export function usePersonnelMutation(onSuccess?: () => void) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (personelData: Omit<Personel, 'id' | 'created_at'>) => {
+      console.log("Personnel mutation started with data:", personelData);
+      
       // Personel kaydını oluştur
       const { data, error } = await supabase
         .from('personel')
@@ -16,23 +19,42 @@ export function usePersonnelMutation(onSuccess?: () => void) {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Personnel insert error:", error);
+        throw error;
+      }
 
-      // Eğer auth_id belirtilmişse, personel ekleme işlemine gerek yok
+      console.log("Personnel record created:", data);
+
+      // Eğer auth_id belirtilmişse, additional auth steps are optional
       if (personelData.auth_id) {
         // Auth_id varsa, ilgili profil varsa güncelle, yoksa oluştur
         try {
-          const { data: userData } = await supabase.auth.admin.getUserById(personelData.auth_id);
-          if (userData && userData.user) {
-            // Profiles tablosunda kaydı güncelle
-            await supabase
-              .from('profiles')
-              .upsert({
-                id: personelData.auth_id,
+          // Get user information
+          const { data: userResponse } = await supabase.auth.getUser(personelData.auth_id);
+          const userData = userResponse.user;
+          
+          if (userData) {
+            console.log("Found existing user:", userData.id);
+            
+            // Update user metadata
+            await supabase.auth.admin.updateUserById(personelData.auth_id, {
+              user_metadata: { 
+                role: 'staff',
                 first_name: personelData.ad_soyad.split(' ')[0] || '',
-                last_name: personelData.ad_soyad.split(' ').slice(1).join(' ') || '',
-                role: 'staff'
-              });
+                last_name: personelData.ad_soyad.split(' ').slice(1).join(' ') || ''
+              }
+            });
+            
+            // Update profile
+            await profilServisi.createOrUpdateProfile(personelData.auth_id, {
+              first_name: personelData.ad_soyad.split(' ')[0] || '',
+              last_name: personelData.ad_soyad.split(' ').slice(1).join(' ') || '',
+              role: 'staff',
+              phone: personelData.telefon
+            });
+            
+            console.log("Updated existing user profile");
           }
         } catch (error) {
           console.error("Error updating profile for existing auth user:", error);
@@ -42,6 +64,48 @@ export function usePersonnelMutation(onSuccess?: () => void) {
       }
 
       try {
+        // Check if user already exists with this email
+        const { data: signInResult, error: signInError } = await supabase.auth.signInWithPassword({
+          email: personelData.eposta,
+          password: "password123"
+        });
+        
+        // If the user exists and we can sign in, update their data
+        if (!signInError && signInResult.user) {
+          console.log("User already exists, updating:", signInResult.user.id);
+          
+          // Update auth metadata
+          await supabase.auth.admin.updateUserById(signInResult.user.id, {
+            user_metadata: { 
+              role: 'staff',
+              first_name: personelData.ad_soyad.split(' ')[0] || '',
+              last_name: personelData.ad_soyad.split(' ').slice(1).join(' ') || ''
+            }
+          });
+          
+          // Update profile
+          await profilServisi.createOrUpdateProfile(signInResult.user.id, {
+            first_name: personelData.ad_soyad.split(' ')[0] || '',
+            last_name: personelData.ad_soyad.split(' ').slice(1).join(' ') || '',
+            role: 'staff',
+            phone: personelData.telefon
+          });
+          
+          // Update personnel record with auth_id
+          await supabase
+            .from('personel')
+            .update({ auth_id: signInResult.user.id })
+            .eq('id', data.id);
+            
+          // Sign out after the operation
+          await supabase.auth.signOut();
+          
+          return data;
+        }
+        
+        // User doesn't exist or wrong password, create new user
+        console.log("Creating new auth user for personnel");
+        
         // Auth kullanıcısı oluştur
         const { data: authData, error: authError } = await supabase.auth.admin.createUser({
           email: personelData.eposta,
@@ -57,81 +121,80 @@ export function usePersonnelMutation(onSuccess?: () => void) {
         if (authError) {
           console.error("Auth user creation error:", authError);
           
-          // Eğer bu e-posta ile bir kullanıcı zaten varsa, bulup personel ile ilişkilendir
-          const { data: usersData, error: listError } = await supabase.auth.admin.listUsers();
-          
-          if (!listError && usersData && usersData.users) {
-            // TypeScript hatalarını önlemek için güvenli şekilde tipleme
-            const users = usersData.users as Array<{
-              id?: string;
-              email?: string;
-            }>;
+          // Check if this is a "user already exists" error
+          if (authError.message.includes("already")) {
+            console.log("User might exist with a different password, searching by email");
             
-            // Kullanıcıları güvenli bir şekilde filtrele ve doğru kullanıcıyı bul
-            const matchingUser = users.find(user => {
-              return user && 
-                     typeof user === 'object' && 
-                     'email' in user && 
-                     typeof user.email === 'string' && 
-                     user.email === personelData.eposta;
-            });
-            
-            if (matchingUser && matchingUser.id) {
-              // Bulunan kullanıcı ile personeli ilişkilendir
-              const { error: updateError } = await supabase
-                .from('personel')
-                .update({ auth_id: matchingUser.id })
-                .eq('id', data.id);
+            // Try to find user with this email
+            try {
+              const { data: usersData } = await supabase.auth.admin.listUsers();
+              
+              if (usersData && usersData.users) {
+                // Find matching user by email
+                const matchingUser = usersData.users.find(user => 
+                  user && user.email === personelData.eposta
+                );
                 
-              if (updateError) throw updateError;
-              
-              // Kullanıcının rolünü personel olarak güncelle
-              await supabase.auth.admin.updateUserById(matchingUser.id, {
-                user_metadata: { 
-                  role: 'staff',
-                  first_name: personelData.ad_soyad.split(' ')[0] || '',
-                  last_name: personelData.ad_soyad.split(' ').slice(1).join(' ') || ''
+                if (matchingUser) {
+                  console.log("Found matching user:", matchingUser.id);
+                  
+                  // Update user metadata
+                  await supabase.auth.admin.updateUserById(matchingUser.id, {
+                    user_metadata: { 
+                      role: 'staff',
+                      first_name: personelData.ad_soyad.split(' ')[0] || '',
+                      last_name: personelData.ad_soyad.split(' ').slice(1).join(' ') || ''
+                    }
+                  });
+                  
+                  // Update profile
+                  await profilServisi.createOrUpdateProfile(matchingUser.id, {
+                    first_name: personelData.ad_soyad.split(' ')[0] || '',
+                    last_name: personelData.ad_soyad.split(' ').slice(1).join(' ') || '',
+                    role: 'staff',
+                    phone: personelData.telefon
+                  });
+                  
+                  // Update personnel record with auth_id
+                  await supabase
+                    .from('personel')
+                    .update({ auth_id: matchingUser.id })
+                    .eq('id', data.id);
+                    
+                  return data;
                 }
-              });
-              
-              // Kullanıcı profilini güncelle
-              await supabase
-                .from('profiles')
-                .upsert({
-                  id: matchingUser.id,
-                  first_name: personelData.ad_soyad.split(' ')[0] || '',
-                  last_name: personelData.ad_soyad.split(' ').slice(1).join(' ') || '',
-                  role: 'staff'
-                });
-            } else {
-              throw new Error("Matching user not found");
+              }
+            } catch (searchError) {
+              console.error("Error searching for user:", searchError);
             }
-          } else {
-            throw authError;
           }
-        } else if (authData && authData.user) {
-          // Yeni oluşturulan auth kullanıcısını personel ile ilişkilendir
-          const { error: updateError } = await supabase
+          
+          // If we couldn't find or create a user, return the personnel record anyway
+          console.log("Continuing without auth user connection");
+          return data;
+        }
+
+        // Successfully created auth user, now connect it
+        if (authData && authData.user) {
+          console.log("New auth user created:", authData.user.id);
+          
+          // Update personnel record with auth_id
+          await supabase
             .from('personel')
             .update({ auth_id: authData.user.id })
             .eq('id', data.id);
             
-          if (updateError) throw updateError;
-          
-          // Kullanıcı profilini oluştur veya güncelle
-          await supabase
-            .from('profiles')
-            .upsert({
-              id: authData.user.id,
-              first_name: personelData.ad_soyad.split(' ')[0] || '',
-              last_name: personelData.ad_soyad.split(' ').slice(1).join(' ') || '',
-              role: 'staff'
-            });
+          // Create profile
+          await profilServisi.createOrUpdateProfile(authData.user.id, {
+            first_name: personelData.ad_soyad.split(' ')[0] || '',
+            last_name: personelData.ad_soyad.split(' ').slice(1).join(' ') || '',
+            role: 'staff',
+            phone: personelData.telefon
+          });
         }
       } catch (error) {
         console.error("Error linking personnel to auth user:", error);
-        // Bu hata durumunda personel kaydedilmiş olacak, sadece auth bağlantısı eksik kalacak
-        // Bu hatayı göster ama işlemi iptal etme
+        // This error will not stop the process as personnel record is still created
         toast.error("Personel kaydedildi ancak giriş bilgileri oluşturulamadı");
       }
 

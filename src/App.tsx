@@ -31,9 +31,29 @@ const App = () => {
   const [profileNeedsCompletion, setProfileNeedsCompletion] = useState(false);
 
   useEffect(() => {
+    // Start by signing out any existing session to ensure clean state
+    const resetAuth = async () => {
+      try {
+        // First check if we have a session
+        const { data: sessionData } = await supabase.auth.getSession();
+        
+        // Only sign out if we have a session
+        if (sessionData.session) {
+          await supabase.auth.signOut();
+          console.log("Cleared existing session");
+        }
+      } catch (error) {
+        console.error("Error resetting auth state:", error);
+      }
+    };
+    
+    // Don't wait for this to complete, just trigger it
+    resetAuth();
+
     const checkSession = async () => {
       try {
         const { data } = await supabase.auth.getSession();
+        console.log("Initial session:", data.session?.user?.id);
         setSession(data.session);
         
         if (data.session) {
@@ -41,29 +61,35 @@ const App = () => {
             // Get user profile to determine role
             const profile = await profilServisi.getir();
             console.log("User profile:", profile);
-            setUserRole(profile?.role || null);
             
-            // Check if this is a new user that needs to complete their profile
-            const { data: userData } = await supabase.auth.getUser();
-            if (userData.user) {
-              // Check if user was created recently (last 5 minutes)
-              const createdAt = new Date(userData.user.created_at || Date.now());
-              const now = new Date();
-              const timeDiffInMinutes = (now.getTime() - createdAt.getTime()) / (1000 * 60);
-              
-              // A user is considered new if they were created in the last 5 minutes
-              const isNewlyCreated = timeDiffInMinutes < 5;
-              setIsNewUser(isNewlyCreated);
-              
-              // Only new customers need to complete their profile
-              if (isNewlyCreated && profile?.role === 'customer') {
-                // Check if profile is incomplete (missing required fields)
-                const isIncomplete = !profile.first_name || !profile.last_name || !profile.phone;
-                setProfileNeedsCompletion(isIncomplete);
-              } else {
-                // Existing users don't need to complete profile on login
-                setProfileNeedsCompletion(false);
+            if (profile) {
+              setUserRole(profile.role || null);
+            
+              // Check if this is a new user that needs to complete their profile
+              const { data: userData } = await supabase.auth.getUser();
+              if (userData.user) {
+                // Check if user was created recently (last 5 minutes)
+                const createdAt = new Date(userData.user.created_at || Date.now());
+                const now = new Date();
+                const timeDiffInMinutes = (now.getTime() - createdAt.getTime()) / (1000 * 60);
+                
+                // A user is considered new if they were created in the last 5 minutes
+                const isNewlyCreated = timeDiffInMinutes < 5;
+                setIsNewUser(isNewlyCreated);
+                
+                // Only new customers need to complete their profile
+                if (isNewlyCreated && profile.role === 'customer') {
+                  // Check if profile is incomplete (missing required fields)
+                  const isIncomplete = !profile.first_name || !profile.last_name || !profile.phone;
+                  setProfileNeedsCompletion(isIncomplete);
+                } else {
+                  // For regular sign-ins, don't force profile completion
+                  setProfileNeedsCompletion(false);
+                }
               }
+            } else {
+              console.log("No profile found for user");
+              setUserRole(null);
             }
           } catch (error) {
             console.error("Error getting user profile:", error);
@@ -84,24 +110,52 @@ const App = () => {
                 // Get user profile on auth change
                 const profile = await profilServisi.getir();
                 console.log("User profile on auth change:", profile);
-                setUserRole(profile?.role || null);
                 
-                // Handle signup event specifically
-                if (event === 'SIGNED_UP' as AuthChangeEvent) {
-                  setIsNewUser(true);
+                if (profile) {
+                  setUserRole(profile.role || null);
                   
-                  // New customers need to complete their profile
-                  if (profile?.role === 'customer') {
-                    const isIncomplete = !profile.first_name || !profile.last_name || !profile.phone;
+                  // Handle signup event specifically
+                  if (event === 'SIGNED_UP' as AuthChangeEvent) {
+                    setIsNewUser(true);
+                    
+                    // New customers need to complete their profile
+                    if (profile.role === 'customer') {
+                      const isIncomplete = !profile.first_name || !profile.last_name || !profile.phone;
+                      setProfileNeedsCompletion(isIncomplete);
+                    }
+                  } else {
+                    // For regular sign-ins, check if profile needs completion
+                    const isIncomplete = profile.role === 'customer' && 
+                                       (!profile.first_name || !profile.last_name || !profile.phone);
                     setProfileNeedsCompletion(isIncomplete);
                   }
                 } else {
-                  // For regular sign-ins, don't force profile completion
-                  setProfileNeedsCompletion(false);
+                  console.log("No profile found on auth change");
+                  
+                  // Try to create a basic profile for this user if they don't have one
+                  if (session.user) {
+                    try {
+                      const defaultRole = session.user.user_metadata?.role || 'customer';
+                      await profilServisi.createOrUpdateProfile(session.user.id, {
+                        first_name: session.user.user_metadata?.first_name || '',
+                        last_name: session.user.user_metadata?.last_name || '',
+                        role: defaultRole
+                      });
+                      
+                      setUserRole(defaultRole);
+                      
+                      if (defaultRole === 'customer') {
+                        setProfileNeedsCompletion(true);
+                      }
+                    } catch (profileError) {
+                      console.error("Error creating default profile:", profileError);
+                    }
+                  }
                 }
               } catch (error) {
                 console.error("Error getting user profile on auth change:", error);
                 setUserRole(null);
+                setProfileNeedsCompletion(false);
               }
             } else {
               setUserRole(null);
@@ -145,7 +199,7 @@ const App = () => {
     }
     
     // Only redirect new customers who need to complete their profile
-    if (userRole === 'customer' && isNewUser && profileNeedsCompletion && window.location.pathname !== '/customer-profile') {
+    if (userRole === 'customer' && profileNeedsCompletion && window.location.pathname !== '/customer-profile') {
       return <Navigate to="/customer-profile" replace />;
     }
 
@@ -188,7 +242,7 @@ const App = () => {
             <Route path="/" element={
               session ? (
                 userRole === 'customer' ? 
-                  (isNewUser && profileNeedsCompletion) ? <Navigate to="/customer-profile" replace /> : <Navigate to="/appointments" replace /> :
+                  (profileNeedsCompletion) ? <Navigate to="/customer-profile" replace /> : <Navigate to="/appointments" replace /> :
                 userRole === 'staff' ? <Navigate to="/personnel" replace /> :
                 <Navigate to="/appointments" replace />
               ) : <Dashboard />

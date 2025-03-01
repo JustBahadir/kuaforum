@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -10,6 +9,7 @@ import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { profilServisi } from "@/lib/supabase/services/profilServisi";
 import { LogIn, UserPlus, Mail, Lock, User, UserRound } from "lucide-react";
+import { AuthError } from "@supabase/supabase-js";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -40,7 +40,7 @@ export default function Dashboard() {
     if (staffLoginError) setStaffLoginError("");
   };
 
-  // Customer login handler
+  // Customer login handler with more robust error handling
   const handleCustomerLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setCustomerLoading(true);
@@ -49,7 +49,7 @@ export default function Dashboard() {
     try {
       console.log("Attempting customer login with:", customerEmail);
       
-      // First sign out if already signed in - this prevents the second login issue
+      // Always sign out first to reset the auth state
       await supabase.auth.signOut();
       
       // Sign in with email/password
@@ -60,36 +60,34 @@ export default function Dashboard() {
       
       if (error) {
         console.error("Login error:", error);
-        setCustomerLoginError(error.message);
+        
+        // Handle specific error types
+        if (error.message.includes("Invalid login credentials")) {
+          setCustomerLoginError("E-posta veya şifre hatalı.");
+        } else {
+          setCustomerLoginError(error.message);
+        }
+        
         setCustomerLoading(false);
         return;
       }
       
-      // Process login success
+      if (!data.user) {
+        setCustomerLoginError("Giriş yapılırken beklenmeyen bir hata oluştu.");
+        setCustomerLoading(false);
+        return;
+      }
+      
+      // Create profile if it doesn't exist
       try {
-        // Check if user is a customer
-        const profile = await profilServisi.getir();
-        console.log("Retrieved user profile:", profile);
+        // Attempt to create or update profile with customer role
+        const profile = await profilServisi.createOrUpdateProfile(data.user.id, {
+          first_name: data.user.user_metadata?.first_name || customerFirstName || "",
+          last_name: data.user.user_metadata?.last_name || customerLastName || "",
+          role: "customer",
+        });
         
-        if (!profile) {
-          toast.error("Kullanıcı profili bulunamadı.");
-          setCustomerLoginError("Kullanıcı profili bulunamadı.");
-          setCustomerLoading(false);
-          return;
-        }
-        
-        const role = profile.role;
-        console.log("User role:", role);
-        
-        if (role !== 'customer' && role !== null) {
-          toast.error("Bu hesap müşteri girişi için yetkili değil.");
-          
-          // Sign out the user
-          await supabase.auth.signOut();
-          setCustomerLoginError("Bu hesap müşteri girişi için yetkili değil.");
-          setCustomerLoading(false);
-          return;
-        }
+        console.log("Customer profile ensured:", profile);
         
         toast.success("Giriş başarılı! Müşteri paneline yönlendiriliyorsunuz.");
         
@@ -101,19 +99,22 @@ export default function Dashboard() {
           // Profile is incomplete, navigate to profile completion page
           navigate("/customer-profile");
         }
-      } catch (error: any) {
-        console.error("Role check error:", error);
-        setCustomerLoginError("Rol kontrolü sırasında bir hata oluştu");
+      } catch (profileError: any) {
+        console.error("Profile creation error:", profileError);
+        toast.error("Profil bilgileri alınırken hata oluştu, lütfen tekrar deneyin.");
+        setCustomerLoginError("Profil bilgileri alınamadı: " + profileError.message);
         setCustomerLoading(false);
       }
     } catch (error: any) {
       console.error("Login error:", error);
       setCustomerLoginError(error.message || "Giriş yapılırken bir hata oluştu");
       setCustomerLoading(false);
+    } finally {
+      setCustomerLoading(false);
     }
   };
 
-  // Customer registration handler
+  // Customer registration handler with better error and edge case handling
   const handleCustomerRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setCustomerLoading(true);
@@ -126,8 +127,40 @@ export default function Dashboard() {
         return;
       }
       
-      // First sign out if already signed in
+      // Sign out first to ensure clean state
       await supabase.auth.signOut();
+      
+      // First check if the user exists
+      const { data: existingUserData, error: existingUserError } = await supabase.auth.signInWithPassword({
+        email: customerEmail,
+        password: customerPassword,
+      });
+      
+      // If the user exists, log them in directly
+      if (!existingUserError && existingUserData?.user) {
+        console.log("User already exists, logging in directly");
+        
+        try {
+          // Ensure the profile is set to customer
+          await profilServisi.createOrUpdateProfile(existingUserData.user.id, {
+            first_name: customerFirstName || existingUserData.user.user_metadata?.first_name || "",
+            last_name: customerLastName || existingUserData.user.user_metadata?.last_name || "",
+            role: "customer",
+          });
+          
+          toast.success("Giriş başarılı! Müşteri paneline yönlendiriliyorsunuz.");
+          navigate("/appointments");
+          return;
+        } catch (profileError: any) {
+          console.error("Profile update error:", profileError);
+          setCustomerLoginError("Profil güncellenirken bir hata oluştu");
+          setCustomerLoading(false);
+          return;
+        }
+      }
+      
+      // User doesn't exist or password is wrong, proceed with registration
+      console.log("Creating new user:", customerEmail);
       
       // Create new user with email/password
       const { data, error } = await supabase.auth.signUp({
@@ -144,33 +177,48 @@ export default function Dashboard() {
       
       if (error) {
         console.error("Signup error:", error);
-        setCustomerLoginError(error.message);
+        
+        // Handle specific error cases
+        if (error.message.includes("already registered")) {
+          setCustomerLoginError("Bu e-posta adresi ile kayıtlı bir hesap bulunmaktadır. Lütfen giriş yapınız.");
+        } else {
+          setCustomerLoginError(error.message);
+        }
+        
         setCustomerLoading(false);
         return;
       }
       
+      if (!data.user) {
+        throw new Error("Kullanıcı oluşturulamadı");
+      }
+      
       // Create or update profile with customer role
-      await profilServisi.createOrUpdateProfile(data.user?.id || "", {
-        first_name: customerFirstName,
-        last_name: customerLastName,
-        role: "customer"
-      });
-      
-      toast.success("Kayıt başarılı! Müşteri bilgi formunu doldurmanız gerekmektedir.");
-      
-      // Redirect to customer profile form
-      navigate("/customer-profile");
-      
+      try {
+        await profilServisi.createOrUpdateProfile(data.user.id, {
+          first_name: customerFirstName,
+          last_name: customerLastName,
+          role: "customer"
+        });
+        
+        toast.success("Kayıt başarılı! Müşteri bilgi formunu doldurmanız gerekmektedir.");
+        
+        // Redirect to customer profile form
+        navigate("/customer-profile");
+      } catch (profileError: any) {
+        console.error("Profile creation error:", profileError);
+        toast.error("Profil oluşturulurken bir hata oluştu, ancak hesabınız kaydedildi.");
+        navigate("/customer-profile");
+      }
     } catch (error: any) {
       console.error("Signup error:", error);
       setCustomerLoginError(error.message || "Kayıt yapılırken bir hata oluştu");
-      setCustomerLoading(false);
     } finally {
       setCustomerLoading(false);
     }
   };
 
-  // Staff login handler
+  // Staff login handler with improved error handling
   const handleStaffLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setStaffLoading(true);
@@ -179,7 +227,7 @@ export default function Dashboard() {
     try {
       console.log("Attempting staff login with:", staffEmail);
       
-      // First sign out if already signed in - this prevents the second login issue
+      // Sign out first to ensure clean state
       await supabase.auth.signOut();
       
       // Sign in with email/password
@@ -190,7 +238,20 @@ export default function Dashboard() {
       
       if (error) {
         console.error("Staff login error:", error);
-        setStaffLoginError("Personel girişi başarısız: " + error.message);
+        
+        // Handle specific error types
+        if (error.message.includes("Invalid login credentials")) {
+          setStaffLoginError("E-posta veya şifre hatalı.");
+        } else {
+          setStaffLoginError("Personel girişi başarısız: " + error.message);
+        }
+        
+        setStaffLoading(false);
+        return;
+      }
+      
+      if (!data.user) {
+        setStaffLoginError("Giriş yapılırken beklenmeyen bir hata oluştu.");
         setStaffLoading(false);
         return;
       }
@@ -198,66 +259,65 @@ export default function Dashboard() {
       console.log("Login successful, user:", data.user);
       
       try {
-        // Check if user has staff role in profiles table
-        const profile = await profilServisi.getir();
+        // Create or update profile with staff role
+        const profile = await profilServisi.createOrUpdateProfile(data.user.id, {
+          first_name: data.user.user_metadata?.first_name || staffFirstName || "",
+          last_name: data.user.user_metadata?.last_name || staffLastName || "",
+          role: "staff"
+        });
+        
         if (!profile) {
-          toast.error("Kullanıcı profili bulunamadı.");
-          setStaffLoginError("Kullanıcı profili bulunamadı.");
-          
-          // Sign out the user
-          await supabase.auth.signOut();
-          setStaffLoading(false);
-          return;
+          throw new Error("Profil oluşturulamadı");
         }
         
-        const role = profile.role;
-        console.log("Retrieved staff role:", role);
+        console.log("Staff profile ensured:", profile);
         
-        if (role !== 'staff') {
-          toast.error("Bu hesabın personel girişi için yetkisi yok.");
-          
-          // Sign out the user
-          await supabase.auth.signOut();
-          setStaffLoginError("Bu hesap personel girişi için yetkili değil.");
-          setStaffLoading(false);
-          return;
+        // Force staff role
+        if (profile.role !== 'staff') {
+          // Update profile to make sure this user is staff
+          await profilServisi.guncelle({
+            role: 'staff'
+          });
         }
         
-        // Check if this user is linked to a personel record
-        const { data: personelData, error: personelError } = await supabase
-          .from('personel')
-          .select('*')
-          .eq('auth_id', data.user?.id)
-          .maybeSingle();
-          
-        console.log("Personnel record:", personelData);
-        
-        if (!personelData && data.user) {
-          console.log("Personnel record not found, creating one...");
-          // Create a personel record if one doesn't exist
-          const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
-          
-          const { error: createError } = await supabase
+        // Ensure personel record exists
+        try {
+          // Check if this user is linked to a personel record
+          const { data: personelData, error: personelError } = await supabase
             .from('personel')
-            .insert({
-              auth_id: data.user.id,
-              ad_soyad: fullName || 'Anonim Personel',
-              telefon: profile.phone || '',
-              eposta: data.user.email || '',
-              adres: '',
-              personel_no: `S${Math.floor(Math.random() * 9000) + 1000}`, // Generate a random staff number
-              maas: 0,
-              calisma_sistemi: 'aylik',
-              prim_yuzdesi: 0
-            });
+            .select('*')
+            .eq('auth_id', data.user.id)
+            .maybeSingle();
             
-          if (createError) {
-            console.error("Error creating personnel record:", createError);
-            toast.error("Personel kaydı oluşturulamadı: " + createError.message);
-          } else {
-            toast.success("Personel kaydınız oluşturuldu.");
+          console.log("Personnel record:", personelData);
+          
+          if (!personelData) {
+            console.log("Personnel record not found, creating one...");
+            // Create a personel record if one doesn't exist
+            const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Personel';
+            
+            const { error: createError } = await supabase
+              .from('personel')
+              .insert({
+                auth_id: data.user.id,
+                ad_soyad: fullName,
+                telefon: profile.phone || '',
+                eposta: data.user.email || '',
+                adres: '',
+                personel_no: `S${Math.floor(Math.random() * 9000) + 1000}`,
+                maas: 0,
+                calisma_sistemi: 'aylik',
+                prim_yuzdesi: 0
+              });
+              
+            if (createError) {
+              console.error("Error creating personnel record:", createError);
+              toast.error("Personel kaydı oluşturulamadı: " + createError.message);
+            } else {
+              toast.success("Personel kaydınız oluşturuldu.");
+            }
           }
-        } else if (personelError) {
+        } catch (personelError: any) {
           console.error("Personnel record error:", personelError);
           toast.error("Personel kaydınız kontrol edilirken bir hata oluştu.");
         }
@@ -266,18 +326,19 @@ export default function Dashboard() {
         navigate("/personnel");
       } catch (error: any) {
         console.error("Role check error:", error);
-        setStaffLoginError("Rol kontrolü sırasında bir hata oluştu");
+        setStaffLoginError("Rol kontrolü sırasında bir hata oluştu: " + error.message);
         setStaffLoading(false);
       }
-      
     } catch (error: any) {
       console.error("Login error:", error);
       setStaffLoginError(error.message || "Giriş yapılırken bir hata oluştu");
       setStaffLoading(false);
+    } finally {
+      setStaffLoading(false);
     }
   };
 
-  // Staff registration handler
+  // Staff registration handler with improved error handling
   const handleStaffRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setStaffLoading(true);
@@ -290,8 +351,66 @@ export default function Dashboard() {
         return;
       }
       
-      // First sign out if already signed in
+      // Sign out first to ensure clean state
       await supabase.auth.signOut();
+      
+      // First check if the user exists and try to log in
+      const { data: existingUserData, error: existingUserError } = await supabase.auth.signInWithPassword({
+        email: staffEmail,
+        password: staffPassword,
+      });
+      
+      // If the user exists, verify they are staff and log them in
+      if (!existingUserError && existingUserData?.user) {
+        console.log("User already exists, logging in directly");
+        
+        try {
+          // Update profile to ensure it's set to staff
+          await profilServisi.createOrUpdateProfile(existingUserData.user.id, {
+            first_name: staffFirstName || existingUserData.user.user_metadata?.first_name || "",
+            last_name: staffLastName || existingUserData.user.user_metadata?.last_name || "",
+            role: "staff"
+          });
+          
+          // Check if personel record exists
+          const { data: personelData } = await supabase
+            .from('personel')
+            .select('*')
+            .eq('auth_id', existingUserData.user.id)
+            .maybeSingle();
+            
+          // Create personel record if needed
+          if (!personelData) {
+            const { error: personelError } = await supabase
+              .from('personel')
+              .insert([{
+                ad_soyad: `${staffFirstName} ${staffLastName}`,
+                telefon: "",
+                eposta: staffEmail,
+                adres: "",
+                personel_no: `P${Math.floor(Math.random() * 10000)}`,
+                maas: 0,
+                calisma_sistemi: "aylik",
+                prim_yuzdesi: 0,
+                auth_id: existingUserData.user.id
+              }]);
+              
+            if (personelError) {
+              console.error("Personnel creation error:", personelError);
+              toast.error("Personel kaydı oluşturulurken bir hata oluştu.");
+            }
+          }
+          
+          toast.success("Giriş başarılı! Personel paneline yönlendiriliyorsunuz.");
+          navigate("/personnel");
+          return;
+        } catch (profileError: any) {
+          console.error("Profile update error:", profileError);
+          setStaffLoginError("Profil güncellenirken bir hata oluştu: " + profileError.message);
+          setStaffLoading(false);
+          return;
+        }
+      }
       
       // Create new user with email/password and staff role
       const { data, error } = await supabase.auth.signUp({
@@ -308,7 +427,14 @@ export default function Dashboard() {
       
       if (error) {
         console.error("Staff signup error:", error);
-        setStaffLoginError(error.message);
+        
+        // Handle specific error cases
+        if (error.message.includes("already registered")) {
+          setStaffLoginError("Bu e-posta adresi ile kayıtlı bir hesap bulunmaktadır. Lütfen farklı şifre deneyiniz veya giriş yapınız.");
+        } else {
+          setStaffLoginError(error.message);
+        }
+        
         setStaffLoading(false);
         return;
       }
