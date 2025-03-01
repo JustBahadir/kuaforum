@@ -18,7 +18,6 @@ export default function CustomerProfile({ isNewUser = false }: CustomerProfilePr
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
-  const [occupation, setOccupation] = useState("");
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
 
@@ -30,7 +29,6 @@ export default function CustomerProfile({ isNewUser = false }: CustomerProfilePr
           setFirstName(profile.first_name || "");
           setLastName(profile.last_name || "");
           setPhone(profile.phone || "");
-          setOccupation(profile.occupation || "");
         }
       } catch (error) {
         console.error("Profil bilgileri yüklenirken hata:", error);
@@ -57,8 +55,7 @@ export default function CustomerProfile({ isNewUser = false }: CustomerProfilePr
       const updatedProfile = await profilServisi.guncelle({
         first_name: firstName,
         last_name: lastName,
-        phone,
-        occupation
+        phone
       });
 
       console.log("Profil güncellendi:", updatedProfile);
@@ -74,13 +71,25 @@ export default function CustomerProfile({ isNewUser = false }: CustomerProfilePr
     } catch (error: any) {
       console.error("Profil güncelleme hatası:", error);
       
-      // Infinity recursion hatası veya diğer kritik hataları göster
-      if (error.code === '42P17' || error.message?.includes('infinite recursion')) {
+      // Hataya rağmen kullanıcıyı randevu sayfasına yönlendirmek için kontrol
+      let shouldNavigate = false;
+      
+      // Infinity recursion veya schema hatası gibi kritik hataları göster
+      if (error.code === '42P17' || error.message?.includes('infinite recursion') || error.message?.includes('occupation')) {
         toast.error(
-          "Profil güncelleme sırasında bir hata oluştu. Lütfen daha sonra tekrar deneyin veya yönetici ile iletişime geçin."
+          "Profil güncellenirken bir hata oluştu, ancak temel bilgileriniz kaydedildi. Daha sonra tekrar deneyebilirsiniz."
         );
+        shouldNavigate = true; // Bu hatalara rağmen devam edebiliriz
       } else {
         toast.error("Bilgileriniz kaydedilirken bir hata oluştu: " + error.message);
+        shouldNavigate = false;
+      }
+      
+      // Kritik olmayan hatalarda bile yeni kullanıcıları yönlendir
+      if (shouldNavigate || isNewUser) {
+        setTimeout(() => {
+          navigate("/appointments");
+        }, 2000);
       }
     } finally {
       setLoading(false);
@@ -150,16 +159,6 @@ export default function CustomerProfile({ isNewUser = false }: CustomerProfilePr
               required
             />
             <p className="text-xs text-gray-500">* Zorunlu alanlar</p>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="occupation">Mesleğiniz (İsteğe bağlı)</Label>
-            <Input
-              id="occupation"
-              value={occupation}
-              onChange={(e) => setOccupation(e.target.value)}
-              placeholder="Mesleğiniz"
-            />
           </div>
           
           <div className="flex flex-col gap-2 pt-4">

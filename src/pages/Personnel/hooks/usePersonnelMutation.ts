@@ -35,12 +35,17 @@ export function usePersonnelMutation(onSuccess?: () => void) {
 
       if (authError) {
         // Eğer bu e-posta ile bir kullanıcı zaten varsa, bulup personel ile ilişkilendir
-        const { data: users, error: listError } = await supabase.auth.admin.listUsers();
+        const { data: usersData, error: listError } = await supabase.auth.admin.listUsers();
         
-        if (!listError && users && users.users && users.users.length > 0) {
+        if (!listError && usersData && usersData.users) {
+          // TypeScript hatalarını önlemek için güvenli şekilde tipleme
+          const users = usersData.users as Array<{
+            id?: string;
+            email?: string;
+          }>;
+          
           // Kullanıcıları güvenli bir şekilde filtrele ve doğru kullanıcıyı bul
-          const matchingUser = users.users.find(user => {
-            // Kullanıcı ve email özelliğinin varlığını kontrol et
+          const matchingUser = users.find(user => {
             return user && 
                    typeof user === 'object' && 
                    'email' in user && 

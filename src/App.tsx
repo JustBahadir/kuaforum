@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -26,8 +25,8 @@ const App = () => {
   const [session, setSession] = useState<any>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [profileCompleted, setProfileCompleted] = useState(true);
   const [isNewUser, setIsNewUser] = useState(false);
+  const [profileNeedsCompletion, setProfileNeedsCompletion] = useState(false);
 
   useEffect(() => {
     const checkSession = async () => {
@@ -42,29 +41,26 @@ const App = () => {
             console.log("User profile:", profile);
             setUserRole(profile?.role || null);
             
-            // Check if profile is complete (for customers)
-            if (profile?.role === 'customer') {
-              // Kullanıcının ne zaman oluşturulduğunu kontrol et
-              const { data: userData } = await supabase.auth.getUser();
-              if (userData.user) {
-                // Kullanıcı oluşturulma zamanını kontrol et
-                const createdAt = new Date(userData.user.created_at || Date.now());
-                const now = new Date();
-                const timeDiffInMinutes = (now.getTime() - createdAt.getTime()) / (1000 * 60);
-                
-                // Eğer kullanıcı son 5 dakika içinde oluşturulduysa yeni kullanıcı kabul et
-                const isNew = timeDiffInMinutes < 5;
-                setIsNewUser(isNew);
-                
-                // Sadece yeni kullanıcılar için profil tamamlama kontrolü yap
-                if (isNew) {
-                  const isComplete = Boolean(profile.first_name && profile.last_name && profile.phone);
-                  setProfileCompleted(isComplete);
-                  console.log("Profile completed:", isComplete, "New user:", isNew);
-                } else {
-                  // Mevcut kullanıcılar için profil tamamlandı kabul et
-                  setProfileCompleted(true);
-                }
+            // Check if this is a new user that needs to complete their profile
+            const { data: userData } = await supabase.auth.getUser();
+            if (userData.user) {
+              // Check if user was created recently (last 5 minutes)
+              const createdAt = new Date(userData.user.created_at || Date.now());
+              const now = new Date();
+              const timeDiffInMinutes = (now.getTime() - createdAt.getTime()) / (1000 * 60);
+              
+              // A user is considered new if they were created in the last 5 minutes
+              const isNewlyCreated = timeDiffInMinutes < 5;
+              setIsNewUser(isNewlyCreated);
+              
+              // Only new customers need to complete their profile
+              if (isNewlyCreated && profile?.role === 'customer') {
+                // Check if profile is incomplete (missing required fields)
+                const isIncomplete = !profile.first_name || !profile.last_name || !profile.phone;
+                setProfileNeedsCompletion(isIncomplete);
+              } else {
+                // Existing users don't need to complete profile on login
+                setProfileNeedsCompletion(false);
               }
             }
           } catch (error) {
@@ -88,34 +84,18 @@ const App = () => {
                 console.log("User profile on auth change:", profile);
                 setUserRole(profile?.role || null);
                 
-                // Check if profile is complete (for customers)
-                if (profile?.role === 'customer') {
-                  // Oturum açma veya kayıt olma durumunu kontrol et
-                  if (event === 'SIGNED_IN') {
-                    // Sadece yeni kayıt olanları kontrol et
-                    const { data: userData } = await supabase.auth.getUser();
-                    if (userData.user) {
-                      const createdAt = new Date(userData.user.created_at || Date.now());
-                      const now = new Date();
-                      const timeDiffInMinutes = (now.getTime() - createdAt.getTime()) / (1000 * 60);
-                      
-                      // Yeni kullanıcı mı?
-                      const isNew = timeDiffInMinutes < 5 && event === 'SIGNED_UP';
-                      setIsNewUser(isNew);
-                      
-                      // Sadece yeni kullanıcılar için profil tamamlama kontrolü yap
-                      if (isNew) {
-                        const isComplete = Boolean(profile.first_name && profile.last_name && profile.phone);
-                        setProfileCompleted(isComplete);
-                      } else {
-                        // Mevcut kullanıcılar için profil tamamlandı kabul et
-                        setProfileCompleted(true);
-                      }
-                    }
-                  } else {
-                    // Mevcut oturum için profil tamamlandı kabul et
-                    setProfileCompleted(true);
+                // Handle signup event specifically
+                if (event === 'SIGNED_UP') {
+                  setIsNewUser(true);
+                  
+                  // New customers need to complete their profile
+                  if (profile?.role === 'customer') {
+                    const isIncomplete = !profile.first_name || !profile.last_name || !profile.phone;
+                    setProfileNeedsCompletion(isIncomplete);
                   }
+                } else {
+                  // For regular sign-ins, don't force profile completion
+                  setProfileNeedsCompletion(false);
                 }
               } catch (error) {
                 console.error("Error getting user profile on auth change:", error);
@@ -123,8 +103,8 @@ const App = () => {
               }
             } else {
               setUserRole(null);
-              setProfileCompleted(true);
               setIsNewUser(false);
+              setProfileNeedsCompletion(false);
             }
           }
         );
@@ -162,8 +142,8 @@ const App = () => {
       return handleAuthError();
     }
     
-    // Sadece yeni kayıt olan müşteriler profil sayfasına yönlendirilsin
-    if (userRole === 'customer' && isNewUser && !profileCompleted && window.location.pathname !== '/customer-profile') {
+    // Only redirect new customers who need to complete their profile
+    if (userRole === 'customer' && isNewUser && profileNeedsCompletion && window.location.pathname !== '/customer-profile') {
       return <Navigate to="/customer-profile" replace />;
     }
 
@@ -206,12 +186,13 @@ const App = () => {
             <Route path="/" element={
               session ? (
                 userRole === 'customer' ? 
-                  (isNewUser && !profileCompleted) ? <Navigate to="/customer-profile" replace /> : <Navigate to="/appointments" replace /> :
+                  (isNewUser && profileNeedsCompletion) ? <Navigate to="/customer-profile" replace /> : <Navigate to="/appointments" replace /> :
                 userRole === 'staff' ? <Navigate to="/personnel" replace /> :
-                <Navigate to="/customer-profile" replace />
+                <Navigate to="/appointments" replace />
               ) : <Dashboard />
             } />
             
+            {/* Profile completion route - accessible by all logged in users */}
             <Route path="/customer-profile" element={
               session ? <CustomerProfile isNewUser={isNewUser} /> : <Navigate to="/" replace />
             } />
