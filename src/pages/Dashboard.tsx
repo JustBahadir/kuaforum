@@ -46,6 +46,7 @@ export default function Dashboard() {
     setCustomerLoginError("");
     
     try {
+      console.log("Attempting customer login with:", customerEmail);
       // Sign in with email/password
       const { data, error } = await supabase.auth.signInWithPassword({
         email: customerEmail,
@@ -64,6 +65,7 @@ export default function Dashboard() {
         try {
           // Check if user is a customer
           const role = await profilServisi.getUserRole(data.user?.id);
+          console.log("Retrieved user role:", role);
           
           if (role !== 'customer' && role !== null) {
             toast.error("Bu hesap müşteri girişi için yetkili değil.");
@@ -77,8 +79,15 @@ export default function Dashboard() {
           
           toast.success("Giriş başarılı! Müşteri paneline yönlendiriliyorsunuz.");
           
-          // Direct user to appointments page after successful login
-          navigate("/appointments");
+          // Check if profile is complete
+          const profile = await profilServisi.getir();
+          if (profile && profile.first_name && profile.last_name && profile.phone) {
+            // Profile is complete, navigate to appointments
+            navigate("/appointments");
+          } else {
+            // Profile is incomplete, navigate to profile completion page
+            navigate("/customer-profile");
+          }
         } catch (error: any) {
           console.error("Role check error:", error);
           setCustomerLoginError("Rol kontrolü sırasında bir hata oluştu");
@@ -154,6 +163,7 @@ export default function Dashboard() {
     setStaffLoginError("");
     
     try {
+      console.log("Attempting staff login with:", staffEmail);
       // Sign in with email/password
       const { data, error } = await supabase.auth.signInWithPassword({
         email: staffEmail,
@@ -167,11 +177,14 @@ export default function Dashboard() {
         return;
       }
       
+      console.log("Login successful, user:", data.user);
+      
       // Wait a moment for auth state to update
       setTimeout(async () => {
         try {
           // Check if user has staff role in profiles table
           const role = await profilServisi.getUserRole(data.user?.id);
+          console.log("Retrieved staff role:", role);
           
           if (role !== 'staff') {
             toast.error("Bu hesabın personel girişi için yetkisi yok.");
@@ -179,6 +192,23 @@ export default function Dashboard() {
             // Sign out the user
             await supabase.auth.signOut();
             setStaffLoginError("Bu hesap personel girişi için yetkili değil.");
+            setStaffLoading(false);
+            return;
+          }
+          
+          // Check if this user is linked to a personel record
+          const { data: personelData, error: personelError } = await supabase
+            .from('personel')
+            .select('*')
+            .eq('auth_id', data.user?.id)
+            .maybeSingle();
+            
+          console.log("Personnel record:", personelData);
+          
+          if (!personelData || personelError) {
+            console.error("Personnel record error:", personelError);
+            setStaffLoginError("Personel kaydınız sistemde bulunamadı. Lütfen yönetici ile iletişime geçin.");
+            await supabase.auth.signOut();
             setStaffLoading(false);
             return;
           }
@@ -239,12 +269,40 @@ export default function Dashboard() {
           last_name: staffLastName,
           role: "staff"
         });
+        
+        // Create personel record
+        const { error: personelError } = await supabase
+          .from('personel')
+          .insert([{
+            ad_soyad: `${staffFirstName} ${staffLastName}`,
+            telefon: "",
+            eposta: staffEmail,
+            adres: "",
+            personel_no: `P${Math.floor(Math.random() * 10000)}`,
+            maas: 0,
+            calisma_sistemi: "aylik",
+            prim_yuzdesi: 0,
+            auth_id: data.user.id
+          }]);
+          
+        if (personelError) {
+          console.error("Personnel creation error:", personelError);
+          setStaffLoginError("Personel kaydı oluşturulurken bir hata oluştu: " + personelError.message);
+          setStaffLoading(false);
+          return;
+        }
       }
       
-      toast.success("Personel kaydı başarılı! Yönetici onayı gerekebilir.");
+      toast.success("Personel kaydı başarılı! Giriş yapabilirsiniz.");
       
-      // Redirect to login page
-      navigate("/");
+      // Clear registration fields and switch to login tab
+      setStaffEmail("");
+      setStaffPassword("");
+      setStaffFirstName("");
+      setStaffLastName("");
+      
+      // Set tab to login
+      document.querySelector('[data-state="inactive"][value="login"]')?.click();
       
     } catch (error: any) {
       console.error("Staff signup error:", error);

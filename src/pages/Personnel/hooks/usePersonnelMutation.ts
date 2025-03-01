@@ -2,6 +2,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Personel, supabase } from "@/lib/supabase";
 import { toast } from "sonner";
+import { profilServisi } from "@/lib/supabase/services/profilServisi";
 
 export function usePersonnelMutation(onSuccess?: () => void) {
   const queryClient = useQueryClient();
@@ -20,98 +21,62 @@ export function usePersonnelMutation(onSuccess?: () => void) {
           throw new Error('Bu e-posta adresi ile kayıtlı personel bulunmaktadır');
         }
 
-        // Check if the user already exists in auth but not in personel table
-        const { data: existingAuth, error: existingAuthError } = await supabase.auth
-          .signInWithPassword({
-            email: data.eposta,
-            password: 'password123'
-          })
-          .catch(e => {
-            console.log("Auth check error (this is expected if user doesn't exist):", e.message);
-            return { data: null, error: e };
-          });
-
-        // If user exists in auth but not in personel table
-        if (existingAuth?.user) {
-          console.log("User exists in auth but not in personel table. User:", existingAuth.user);
-          
-          const personelData = {
-            ...data,
-            auth_id: existingAuth.user.id,
-            personel_no: `P${Math.floor(Math.random() * 10000)}`
-          };
-
-          const { data: personel, error: personelError } = await supabase
-            .from('personel')
-            .insert([personelData])
-            .select()
-            .single();
-
-          if (personelError) {
-            throw new Error('Personel kaydı oluşturulurken bir hata oluştu: ' + personelError.message);
-          }
-
-          return personel;
-        }
-
-        // Create new auth user if not exists
-        const { data: authData, error: authError } = await supabase.auth.signUp({
-          email: data.eposta,
-          password: 'password123',
-          options: {
-            data: {
-              first_name: data.ad_soyad.split(' ')[0],
-              last_name: data.ad_soyad.split(' ').slice(1).join(' '),
-              role: 'staff'
-            }
+        // Try to fetch auth user by email
+        const { data: { users }, error: userFetchError } = await supabase.auth.admin.listUsers({
+          filters: {
+            email: data.eposta
           }
         });
+        
+        let authId = null;
 
-        if (authError) {
-          console.error('Auth Error:', authError);
-
-          // In case the user exists but we get an error like "already registered"
-          if (authError.message.includes('already registered')) {
-            // Try to find the user in profiles table
-            const { data: findUserData, error: findUserError } = await supabase
-              .from('profiles')
-              .select('id')
-              .filter('first_name', 'ilike', data.ad_soyad.split(' ')[0])
-              .filter('last_name', 'ilike', data.ad_soyad.split(' ').slice(1).join(' '))
-              .maybeSingle();
-
-            if (findUserError || !findUserData) {
-              throw new Error('Bu e-posta adresi zaten kayıtlı, ancak personel kaydı yapılamadı. Lütfen sistem yöneticisine başvurun.');
+        // If user exists in auth
+        if (users && users.length > 0) {
+          console.log("User exists in auth system:", users[0]);
+          authId = users[0].id;
+          
+          // Update user role to staff
+          await profilServisi.createOrUpdateProfile(authId, {
+            role: 'staff'
+          });
+        } else {
+          // Create new auth user if not exists
+          const randomPassword = `Password${Math.floor(Math.random() * 100000)}`;
+          const { data: authData, error: authError } = await supabase.auth.signUp({
+            email: data.eposta,
+            password: randomPassword,
+            options: {
+              data: {
+                first_name: data.ad_soyad.split(' ')[0],
+                last_name: data.ad_soyad.split(' ').slice(1).join(' '),
+                role: 'staff'
+              }
             }
+          });
 
-            const personelData = {
-              ...data,
-              auth_id: findUserData.id,
-              personel_no: `P${Math.floor(Math.random() * 10000)}`
-            };
-
-            const { data: personel, error: personelError } = await supabase
-              .from('personel')
-              .insert([personelData])
-              .select()
-              .single();
-
-            if (personelError) {
-              throw new Error('Personel kaydı oluşturulurken bir hata oluştu: ' + personelError.message);
-            }
-
-            return personel;
+          if (authError) {
+            console.error('Auth Error:', authError);
+            throw new Error(`Personel hesabı oluşturulurken bir hata oluştu: ${authError.message}`);
           }
-          throw authError;
+
+          if (!authData.user) {
+            throw new Error('Kullanıcı kaydı oluşturulamadı');
+          }
+          
+          authId = authData.user.id;
+          
+          // Create profile with staff role
+          await profilServisi.createOrUpdateProfile(authId, {
+            first_name: data.ad_soyad.split(' ')[0],
+            last_name: data.ad_soyad.split(' ').slice(1).join(' '),
+            role: 'staff'
+          });
         }
 
-        if (!authData.user) {
-          throw new Error('Kullanıcı kaydı oluşturulamadı');
-        }
-
+        // Create personel record with auth_id
         const personelData = {
           ...data,
-          auth_id: authData.user.id,
+          auth_id: authId,
           personel_no: `P${Math.floor(Math.random() * 10000)}`
         };
 
@@ -122,15 +87,6 @@ export function usePersonnelMutation(onSuccess?: () => void) {
           .single();
 
         if (personelError) {
-          if (authData.user) {
-            try {
-              console.log("Would delete user", authData.user.id);
-              // Uncomment to actually delete the user if personel creation fails
-              // await supabase.auth.admin.deleteUser(authData.user.id);
-            } catch (deleteError) {
-              console.error("Could not delete auth user:", deleteError);
-            }
-          }
           throw new Error('Personel kaydı oluşturulurken bir hata oluştu: ' + personelError.message);
         }
 

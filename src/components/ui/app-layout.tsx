@@ -17,6 +17,7 @@ export function AppLayout({ children, userRole }: AppLayoutProps) {
   
   // Define sidebar items based on user role
   const getNavItems = () => {
+    // Common items that both customer and staff can see
     const commonItems = [
       {
         title: "Randevular",

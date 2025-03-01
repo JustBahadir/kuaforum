@@ -26,6 +26,7 @@ const App = () => {
   const [session, setSession] = useState<any>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileCompleted, setProfileCompleted] = useState(true);
 
   useEffect(() => {
     const checkSession = async () => {
@@ -39,6 +40,13 @@ const App = () => {
             const profile = await profilServisi.getir();
             console.log("User profile:", profile);
             setUserRole(profile?.role || null);
+            
+            // Check if profile is complete (for customers)
+            if (profile?.role === 'customer') {
+              const isComplete = Boolean(profile.first_name && profile.last_name && profile.phone);
+              setProfileCompleted(isComplete);
+              console.log("Profile completed:", isComplete);
+            }
           } catch (error) {
             console.error("Error getting user profile:", error);
             setUserRole(null);
@@ -59,12 +67,20 @@ const App = () => {
                 const profile = await profilServisi.getir();
                 console.log("User profile on auth change:", profile);
                 setUserRole(profile?.role || null);
+                
+                // Check if profile is complete (for customers)
+                if (profile?.role === 'customer') {
+                  const isComplete = Boolean(profile.first_name && profile.last_name && profile.phone);
+                  setProfileCompleted(isComplete);
+                  console.log("Profile completed on auth change:", isComplete);
+                }
               } catch (error) {
                 console.error("Error getting user profile on auth change:", error);
                 setUserRole(null);
               }
             } else {
               setUserRole(null);
+              setProfileCompleted(true);
             }
           }
         );
@@ -100,6 +116,11 @@ const App = () => {
     // If user role couldn't be determined, handle as an error
     if (userRole === null) {
       return handleAuthError();
+    }
+    
+    // If customer hasn't completed their profile, redirect to profile page
+    if (userRole === 'customer' && !profileCompleted && window.location.pathname !== '/customer-profile') {
+      return <Navigate to="/customer-profile" replace />;
     }
 
     if (requiredRole && userRole !== requiredRole) {
@@ -140,7 +161,8 @@ const App = () => {
             {/* Public routes */}
             <Route path="/" element={
               session ? (
-                userRole === 'customer' ? <Navigate to="/appointments" replace /> :
+                userRole === 'customer' ? 
+                  profileCompleted ? <Navigate to="/appointments" replace /> : <Navigate to="/customer-profile" replace /> :
                 userRole === 'staff' ? <Navigate to="/personnel" replace /> :
                 <Navigate to="/customer-profile" replace />
               ) : <Dashboard />
