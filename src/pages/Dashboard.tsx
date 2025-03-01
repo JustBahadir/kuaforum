@@ -42,6 +42,23 @@ export default function Dashboard() {
         return;
       }
       
+      // Check if user is a customer
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', data.user?.id)
+        .single();
+      
+      if (profileData?.role !== 'customer' && profileData?.role !== null) {
+        toast.error("Bu hesap müşteri girişi için yetkili değil.");
+        
+        // Sign out the user
+        await supabase.auth.signOut();
+        setLoginError("Bu hesap müşteri girişi için yetkili değil.");
+        setLoading(false);
+        return;
+      }
+      
       toast.success("Giriş başarılı! Müşteri paneline yönlendiriliyorsunuz.");
       
       // Direct user to appointments page after successful login
@@ -113,33 +130,21 @@ export default function Dashboard() {
         return;
       }
       
-      // Check if user has auth record in personel table
-      const { data: personnelData, error: personnelError } = await supabase
-        .from('personel')
-        .select('*')
-        .eq('auth_id', data.user?.id)
-        .maybeSingle();
+      // Check if user has staff role in profiles table
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', data.user?.id)
+        .single();
       
-      if (personnelError) {
-        console.error("Personnel fetch error:", personnelError);
-      }
-      
-      if (!personnelData) {
-        // Try to check if user is in profiles with staff role
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', data.user?.id)
-          .maybeSingle();
+      if (profileData?.role !== 'staff') {
+        toast.error("Bu hesabın personel girişi için yetkisi yok.");
         
-        if (profileData?.role !== 'staff') {
-          toast.error("Bu hesabın personel girişi için yetkisi yok.");
-          
-          // Sign out the user
-          await supabase.auth.signOut();
-          setLoginError("Bu hesap personel girişi için yetkili değil.");
-          return;
-        }
+        // Sign out the user
+        await supabase.auth.signOut();
+        setLoginError("Bu hesap personel girişi için yetkili değil.");
+        setLoading(false);
+        return;
       }
       
       toast.success("Giriş başarılı! Personel paneline yönlendiriliyorsunuz.");
@@ -220,176 +225,111 @@ export default function Dashboard() {
           </p>
         </div>
 
-        {/* Features Section */}
+        {/* Features and Login Section */}
         <div className="grid md:grid-cols-2 gap-8 mb-10">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-2xl text-indigo-800">Müşteri Özellikleri</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2">
-                <li className="flex items-start">
-                  <span className="text-green-500 mr-2">✓</span>
-                  <span>Online randevu alma ve yönetme</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-green-500 mr-2">✓</span>
-                  <span>Kişisel bakım hizmetlerine kolay erişim</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-green-500 mr-2">✓</span>
-                  <span>Geçmiş işlemlerinizi görüntüleme</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-green-500 mr-2">✓</span>
-                  <span>Özel indirim ve kampanyalardan haberdar olma</span>
-                </li>
-              </ul>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-2xl text-indigo-800">Personel Özellikleri</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2">
-                <li className="flex items-start">
-                  <span className="text-green-500 mr-2">✓</span>
-                  <span>Tüm randevuları takvim üzerinde görüntüleme</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-green-500 mr-2">✓</span>
-                  <span>Müşteri bilgilerini ve işlem geçmişini takip etme</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-green-500 mr-2">✓</span>
-                  <span>Performans raporları ve işlem istatistikleri</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-green-500 mr-2">✓</span>
-                  <span>Hizmet ve fiyatlandırma yönetimi</span>
-                </li>
-              </ul>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Login Tabs */}
-        <div className="max-w-md mx-auto">
-          <Tabs defaultValue="customer" className="w-full" onValueChange={clearError}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="customer">Müşteri Girişi</TabsTrigger>
-              <TabsTrigger value="staff">Personel Girişi</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="customer">
-              <Tabs defaultValue="login" className="w-full" onValueChange={clearError}>
-                <TabsList className="grid w-full grid-cols-2 mb-4">
-                  <TabsTrigger value="login">Giriş Yap</TabsTrigger>
-                  <TabsTrigger value="register">Kayıt Ol</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="login">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Müşteri Girişi</CardTitle>
-                      <CardDescription>
-                        Mevcut hesabınız ile giriş yapın.
-                      </CardDescription>
-                    </CardHeader>
-                    <form onSubmit={handleCustomerLogin}>
-                      <CardContent className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="customer-email">E-posta</Label>
-                          <Input 
-                            id="customer-email" 
-                            type="email" 
-                            placeholder="ornek@mail.com" 
-                            value={email}
-                            onChange={(e) => {
-                              setEmail(e.target.value);
-                              clearError();
-                            }}
-                            required
-                          />
+          <div className="space-y-6">
+            <Card className="h-auto">
+              <CardHeader>
+                <CardTitle className="text-2xl text-indigo-800">Müşteri Özellikleri</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2">
+                  <li className="flex items-start">
+                    <span className="text-green-500 mr-2">✓</span>
+                    <span>Online randevu alma ve yönetme</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-green-500 mr-2">✓</span>
+                    <span>Kişisel bakım hizmetlerine kolay erişim</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-green-500 mr-2">✓</span>
+                    <span>Geçmiş işlemlerinizi görüntüleme</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-green-500 mr-2">✓</span>
+                    <span>Özel indirim ve kampanyalardan haberdar olma</span>
+                  </li>
+                </ul>
+              </CardContent>
+              
+              {/* Customer Login Section */}
+              <CardFooter className="flex-col">
+                <div className="w-full mb-2 border-t pt-4">
+                  <h3 className="text-lg font-semibold text-center mb-4">Müşteri Girişi</h3>
+                </div>
+                <Tabs defaultValue="login" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2 mb-4">
+                    <TabsTrigger value="login">Giriş Yap</TabsTrigger>
+                    <TabsTrigger value="register">Kayıt Ol</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="login">
+                    <form onSubmit={handleCustomerLogin} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="customer-email">E-posta</Label>
+                        <Input 
+                          id="customer-email" 
+                          type="email" 
+                          placeholder="ornek@mail.com" 
+                          value={email}
+                          onChange={(e) => {
+                            setEmail(e.target.value);
+                            clearError();
+                          }}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="customer-password">Şifre</Label>
+                        <Input 
+                          id="customer-password" 
+                          type="password" 
+                          value={password}
+                          onChange={(e) => {
+                            setPassword(e.target.value);
+                            clearError();
+                          }}
+                          required
+                        />
+                        <p className="text-xs text-gray-500">
+                          Varsayılan şifre "password123". En az 6 karakter olmalıdır.
+                        </p>
+                      </div>
+                      
+                      {loginError && (
+                        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                          <p className="text-sm">{loginError}</p>
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="customer-password">Şifre</Label>
-                          <Input 
-                            id="customer-password" 
-                            type="password" 
-                            value={password}
-                            onChange={(e) => {
-                              setPassword(e.target.value);
-                              clearError();
-                            }}
-                            required
-                          />
-                          <p className="text-xs text-gray-500">
-                            Varsayılan şifre "password123". En az 6 karakter olmalıdır.
-                          </p>
-                        </div>
-                        
-                        {loginError && (
-                          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                            <p className="text-sm">{loginError}</p>
-                          </div>
-                        )}
-                      </CardContent>
-                      <CardFooter>
-                        <Button 
-                          type="submit" 
-                          className="w-full" 
-                          disabled={loading}
-                        >
-                          {loading ? "Giriş yapılıyor..." : "Giriş Yap"}
-                        </Button>
-                      </CardFooter>
+                      )}
+                      
+                      <Button 
+                        type="submit" 
+                        className="w-full" 
+                        disabled={loading}
+                      >
+                        {loading ? "Giriş yapılıyor..." : "Giriş Yap"}
+                      </Button>
                     </form>
-                  </Card>
-                </TabsContent>
-                
-                <TabsContent value="register">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Müşteri Kaydı</CardTitle>
-                      <CardDescription>
-                        İlk kez giriş yapıyorsanız, lütfen kayıt olun.
-                      </CardDescription>
-                    </CardHeader>
-                    <form onSubmit={handleCustomerRegister}>
-                      <CardContent className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="customer-email-register">E-posta</Label>
-                          <Input 
-                            id="customer-email-register" 
-                            type="email" 
-                            placeholder="ornek@mail.com" 
-                            value={email}
-                            onChange={(e) => {
-                              setEmail(e.target.value);
-                              clearError();
-                            }}
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="customer-password-register">Şifre</Label>
-                          <Input 
-                            id="customer-password-register" 
-                            type="password" 
-                            value={password}
-                            onChange={(e) => {
-                              setPassword(e.target.value);
-                              clearError();
-                            }}
-                            required
-                          />
-                          <p className="text-xs text-gray-500">
-                            Varsayılan şifre "password123". En az 6 karakter olmalıdır.
-                          </p>
-                        </div>
+                  </TabsContent>
+                  
+                  <TabsContent value="register">
+                    <form onSubmit={handleCustomerRegister} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="customer-email-register">E-posta</Label>
+                        <Input 
+                          id="customer-email-register" 
+                          type="email" 
+                          placeholder="ornek@mail.com" 
+                          value={email}
+                          onChange={(e) => {
+                            setEmail(e.target.value);
+                            clearError();
+                          }}
+                          required
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="first-name">Adınız</Label>
                           <Input 
@@ -410,135 +350,147 @@ export default function Dashboard() {
                             required
                           />
                         </div>
-                        
-                        {loginError && (
-                          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                            <p className="text-sm">{loginError}</p>
-                          </div>
-                        )}
-                      </CardContent>
-                      <CardFooter>
-                        <Button 
-                          type="submit" 
-                          className="w-full" 
-                          disabled={loading}
-                        >
-                          {loading ? "Kaydediliyor..." : "Kayıt Ol"}
-                        </Button>
-                      </CardFooter>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="customer-password-register">Şifre</Label>
+                        <Input 
+                          id="customer-password-register" 
+                          type="password" 
+                          value={password}
+                          onChange={(e) => {
+                            setPassword(e.target.value);
+                            clearError();
+                          }}
+                          required
+                        />
+                        <p className="text-xs text-gray-500">
+                          Varsayılan şifre "password123". En az 6 karakter olmalıdır.
+                        </p>
+                      </div>
+                      
+                      {loginError && (
+                        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                          <p className="text-sm">{loginError}</p>
+                        </div>
+                      )}
+                      
+                      <Button 
+                        type="submit" 
+                        className="w-full" 
+                        disabled={loading}
+                      >
+                        {loading ? "Kaydediliyor..." : "Kayıt Ol"}
+                      </Button>
                     </form>
-                  </Card>
-                </TabsContent>
-              </Tabs>
-            </TabsContent>
-            
-            <TabsContent value="staff">
-              <Tabs defaultValue="login" className="w-full" onValueChange={clearError}>
-                <TabsList className="grid w-full grid-cols-2 mb-4">
-                  <TabsTrigger value="login">Giriş Yap</TabsTrigger>
-                  <TabsTrigger value="register">Kayıt Ol</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="login">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Personel Girişi</CardTitle>
-                      <CardDescription>
-                        Salon personeli için giriş.
-                      </CardDescription>
-                    </CardHeader>
-                    <form onSubmit={handleStaffLogin}>
-                      <CardContent className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="staff-email">E-posta</Label>
-                          <Input 
-                            id="staff-email" 
-                            type="email" 
-                            placeholder="personel@salonadi.com" 
-                            value={email}
-                            onChange={(e) => {
-                              setEmail(e.target.value);
-                              clearError();
-                            }}
-                            required
-                          />
+                  </TabsContent>
+                </Tabs>
+              </CardFooter>
+            </Card>
+          </div>
+          
+          <div className="space-y-6">
+            <Card className="h-auto">
+              <CardHeader>
+                <CardTitle className="text-2xl text-indigo-800">Personel Özellikleri</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2">
+                  <li className="flex items-start">
+                    <span className="text-green-500 mr-2">✓</span>
+                    <span>Tüm randevuları takvim üzerinde görüntüleme</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-green-500 mr-2">✓</span>
+                    <span>Müşteri bilgilerini ve işlem geçmişini takip etme</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-green-500 mr-2">✓</span>
+                    <span>Performans raporları ve işlem istatistikleri</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-green-500 mr-2">✓</span>
+                    <span>Hizmet ve fiyatlandırma yönetimi</span>
+                  </li>
+                </ul>
+              </CardContent>
+              
+              {/* Staff Login Section */}
+              <CardFooter className="flex-col">
+                <div className="w-full mb-2 border-t pt-4">
+                  <h3 className="text-lg font-semibold text-center mb-4">Personel Girişi</h3>
+                </div>
+                <Tabs defaultValue="login" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2 mb-4">
+                    <TabsTrigger value="login">Giriş Yap</TabsTrigger>
+                    <TabsTrigger value="register">Kayıt Ol</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="login">
+                    <form onSubmit={handleStaffLogin} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="staff-email">E-posta</Label>
+                        <Input 
+                          id="staff-email" 
+                          type="email" 
+                          placeholder="personel@salonadi.com" 
+                          value={email}
+                          onChange={(e) => {
+                            setEmail(e.target.value);
+                            clearError();
+                          }}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="staff-password">Şifre</Label>
+                        <Input 
+                          id="staff-password" 
+                          type="password" 
+                          value={password}
+                          onChange={(e) => {
+                            setPassword(e.target.value);
+                            clearError();
+                          }}
+                          required
+                        />
+                        <p className="text-xs text-gray-500">
+                          Varsayılan şifre "password123". En az 6 karakter olmalıdır.
+                        </p>
+                      </div>
+                      
+                      {loginError && (
+                        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                          <p className="text-sm">{loginError}</p>
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="staff-password">Şifre</Label>
-                          <Input 
-                            id="staff-password" 
-                            type="password" 
-                            value={password}
-                            onChange={(e) => {
-                              setPassword(e.target.value);
-                              clearError();
-                            }}
-                            required
-                          />
-                          <p className="text-xs text-gray-500">
-                            Varsayılan şifre "password123". En az 6 karakter olmalıdır.
-                          </p>
-                        </div>
-                        
-                        {loginError && (
-                          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                            <p className="text-sm">{loginError}</p>
-                          </div>
-                        )}
-                      </CardContent>
-                      <CardFooter>
-                        <Button 
-                          type="submit" 
-                          className="w-full" 
-                          disabled={loading}
-                        >
-                          {loading ? "Giriş yapılıyor..." : "Personel Girişi"}
-                        </Button>
-                      </CardFooter>
+                      )}
+                      
+                      <Button 
+                        type="submit" 
+                        className="w-full" 
+                        disabled={loading}
+                      >
+                        {loading ? "Giriş yapılıyor..." : "Personel Girişi"}
+                      </Button>
                     </form>
-                  </Card>
-                </TabsContent>
-                
-                <TabsContent value="register">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Personel Kaydı</CardTitle>
-                      <CardDescription>
-                        Personel olarak kaydolmak için bilgilerinizi girin.
-                      </CardDescription>
-                    </CardHeader>
-                    <form onSubmit={handleStaffRegister}>
-                      <CardContent className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="staff-email-register">E-posta</Label>
-                          <Input 
-                            id="staff-email-register" 
-                            type="email" 
-                            placeholder="personel@salonadi.com" 
-                            value={email}
-                            onChange={(e) => {
-                              setEmail(e.target.value);
-                              clearError();
-                            }}
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="staff-password-register">Şifre</Label>
-                          <Input 
-                            id="staff-password-register" 
-                            type="password" 
-                            value={password}
-                            onChange={(e) => {
-                              setPassword(e.target.value);
-                              clearError();
-                            }}
-                            required
-                          />
-                          <p className="text-xs text-gray-500">
-                            Varsayılan şifre "password123". En az 6 karakter olmalıdır.
-                          </p>
-                        </div>
+                  </TabsContent>
+                  
+                  <TabsContent value="register">
+                    <form onSubmit={handleStaffRegister} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="staff-email-register">E-posta</Label>
+                        <Input 
+                          id="staff-email-register" 
+                          type="email" 
+                          placeholder="personel@salonadi.com" 
+                          value={email}
+                          onChange={(e) => {
+                            setEmail(e.target.value);
+                            clearError();
+                          }}
+                          required
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="staff-first-name">Adınız</Label>
                           <Input 
@@ -559,31 +511,45 @@ export default function Dashboard() {
                             required
                           />
                         </div>
-                        
-                        {loginError && (
-                          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                            <p className="text-sm">{loginError}</p>
-                          </div>
-                        )}
-                      </CardContent>
-                      <CardFooter>
-                        <Button 
-                          type="submit" 
-                          className="w-full" 
-                          disabled={loading}
-                        >
-                          {loading ? "Kaydediliyor..." : "Personel Kaydı Oluştur"}
-                        </Button>
-                      </CardFooter>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="staff-password-register">Şifre</Label>
+                        <Input 
+                          id="staff-password-register" 
+                          type="password" 
+                          value={password}
+                          onChange={(e) => {
+                            setPassword(e.target.value);
+                            clearError();
+                          }}
+                          required
+                        />
+                        <p className="text-xs text-gray-500">
+                          Varsayılan şifre "password123". En az 6 karakter olmalıdır.
+                        </p>
+                      </div>
+                      
+                      {loginError && (
+                        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                          <p className="text-sm">{loginError}</p>
+                        </div>
+                      )}
+                      
+                      <Button 
+                        type="submit" 
+                        className="w-full" 
+                        disabled={loading}
+                      >
+                        {loading ? "Kaydediliyor..." : "Personel Kaydı Oluştur"}
+                      </Button>
                     </form>
-                  </Card>
-                </TabsContent>
-              </Tabs>
-            </TabsContent>
-          </Tabs>
+                  </TabsContent>
+                </Tabs>
+              </CardFooter>
+            </Card>
+          </div>
         </div>
       </div>
     </div>
   );
 }
-

@@ -22,19 +22,45 @@ const queryClient = new QueryClient();
 
 const App = () => {
   const [session, setSession] = useState<any>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const checkSession = async () => {
       const { data } = await supabase.auth.getSession();
       setSession(data.session);
+      
+      if (data.session) {
+        // Get user role from profiles
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', data.session.user.id)
+          .single();
+        
+        setUserRole(profileData?.role || null);
+      }
+      
       setLoading(false);
 
       // Listen for auth changes
       const { data: authListener } = supabase.auth.onAuthStateChange(
-        (event, session) => {
+        async (event, session) => {
           console.log("Auth state changed:", event, session?.user?.id);
           setSession(session);
+          
+          if (session) {
+            // Get user role on auth change
+            const { data: profileData } = await supabase
+              .from('profiles')
+              .select('role')
+              .eq('id', session.user.id)
+              .single();
+            
+            setUserRole(profileData?.role || null);
+          } else {
+            setUserRole(null);
+          }
         }
       );
 
@@ -56,10 +82,14 @@ const App = () => {
       return <Navigate to="/" replace />;
     }
 
-    if (requiredRole) {
-      // Check if user has the required role - this would need to be implemented
-      // For now, allowing all authenticated users
-      return <>{children}</>;
+    if (requiredRole && userRole !== requiredRole) {
+      // Redirect to appropriate page based on user role
+      if (userRole === 'customer') {
+        return <Navigate to="/appointments" replace />;
+      } else if (userRole === 'staff') {
+        return <Navigate to="/personnel" replace />;
+      }
+      return <Navigate to="/" replace />;
     }
 
     return <>{children}</>;
@@ -84,6 +114,8 @@ const App = () => {
                 <AppLayout><Dashboard /></AppLayout>
               </ProtectedRoute>
             } />
+            
+            {/* Staff-only routes */}
             <Route path="/customers" element={
               <ProtectedRoute requiredRole="staff">
                 <AppLayout><Customers /></AppLayout>
@@ -99,8 +131,10 @@ const App = () => {
                 <AppLayout><StaffOperations /></AppLayout>
               </ProtectedRoute>
             } />
+            
+            {/* Customer routes */}
             <Route path="/operations" element={
-              <ProtectedRoute>
+              <ProtectedRoute requiredRole="customer">
                 <AppLayout><CustomerOperations /></AppLayout>
               </ProtectedRoute>
             } />
