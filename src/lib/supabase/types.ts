@@ -38,6 +38,7 @@ export type Personel = {
   maas: number;
   calisma_sistemi: "haftalik" | "aylik";
   prim_yuzdesi: number;
+  auth_id?: string;
 }
 
 export type PersonelIslemi = {

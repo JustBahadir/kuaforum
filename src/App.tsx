@@ -8,6 +8,7 @@ import { AppLayout } from "@/components/ui/app-layout";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { profilServisi } from "@/lib/supabase/services/profilServisi";
+import { toast } from "sonner";
 
 // Pages
 import Dashboard from "./pages/Dashboard";
@@ -28,50 +29,63 @@ const App = () => {
 
   useEffect(() => {
     const checkSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      setSession(data.session);
-      
-      if (data.session) {
-        try {
-          // Get user profile to determine role
-          const profile = await profilServisi.getir();
-          setUserRole(profile?.role || null);
-        } catch (error) {
-          console.error("Error getting user profile:", error);
-          setUserRole(null);
-        }
-      }
-      
-      setLoading(false);
-
-      // Listen for auth changes
-      const { data: authListener } = supabase.auth.onAuthStateChange(
-        async (event, session) => {
-          console.log("Auth state changed:", event, session?.user?.id);
-          setSession(session);
-          
-          if (session) {
-            try {
-              // Get user profile on auth change
-              const profile = await profilServisi.getir();
-              setUserRole(profile?.role || null);
-            } catch (error) {
-              console.error("Error getting user profile on auth change:", error);
-              setUserRole(null);
-            }
-          } else {
+      try {
+        const { data } = await supabase.auth.getSession();
+        setSession(data.session);
+        
+        if (data.session) {
+          try {
+            // Get user profile to determine role
+            const profile = await profilServisi.getir();
+            console.log("User profile:", profile);
+            setUserRole(profile?.role || null);
+          } catch (error) {
+            console.error("Error getting user profile:", error);
             setUserRole(null);
           }
         }
-      );
+        
+        setLoading(false);
 
-      return () => {
-        authListener.subscription.unsubscribe();
-      };
+        // Listen for auth changes
+        const { data: authListener } = supabase.auth.onAuthStateChange(
+          async (event, session) => {
+            console.log("Auth state changed:", event, session?.user?.id);
+            setSession(session);
+            
+            if (session) {
+              try {
+                // Get user profile on auth change
+                const profile = await profilServisi.getir();
+                console.log("User profile on auth change:", profile);
+                setUserRole(profile?.role || null);
+              } catch (error) {
+                console.error("Error getting user profile on auth change:", error);
+                setUserRole(null);
+              }
+            } else {
+              setUserRole(null);
+            }
+          }
+        );
+
+        return () => {
+          authListener.subscription.unsubscribe();
+        };
+      } catch (error) {
+        console.error("Error checking session:", error);
+        setLoading(false);
+      }
     };
 
     checkSession();
   }, []);
+
+  const handleAuthError = () => {
+    toast.error("Oturum süreniz doldu veya bir hata oluştu. Lütfen tekrar giriş yapın.");
+    supabase.auth.signOut();
+    return <Navigate to="/" replace />;
+  };
 
   // Protected route component
   const ProtectedRoute = ({ children, requiredRole = null }: { children: React.ReactNode; requiredRole?: string | null }) => {
@@ -81,6 +95,11 @@ const App = () => {
     
     if (!session) {
       return <Navigate to="/" replace />;
+    }
+
+    // If user role couldn't be determined, handle as an error
+    if (userRole === null) {
+      return handleAuthError();
     }
 
     if (requiredRole && userRole !== requiredRole) {
@@ -96,6 +115,21 @@ const App = () => {
     return <>{children}</>;
   };
 
+  // Customer-only routes
+  const CustomerRoute = ({ children }: { children: React.ReactNode }) => {
+    return <ProtectedRoute requiredRole="customer">{children}</ProtectedRoute>;
+  };
+
+  // Staff-only routes
+  const StaffRoute = ({ children }: { children: React.ReactNode }) => {
+    return <ProtectedRoute requiredRole="staff">{children}</ProtectedRoute>;
+  };
+
+  // Custom sidebar items based on user role
+  const getCustomAppLayout = (children: React.ReactNode) => {
+    return <AppLayout userRole={userRole}>{children}</AppLayout>;
+  };
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
@@ -104,45 +138,54 @@ const App = () => {
         <BrowserRouter>
           <Routes>
             {/* Public routes */}
-            <Route path="/" element={<Dashboard />} />
+            <Route path="/" element={
+              session ? (
+                userRole === 'customer' ? <Navigate to="/appointments" replace /> :
+                userRole === 'staff' ? <Navigate to="/personnel" replace /> :
+                <Navigate to="/customer-profile" replace />
+              ) : <Dashboard />
+            } />
+            
             <Route path="/customer-profile" element={
               session ? <CustomerProfile /> : <Navigate to="/" replace />
             } />
             
-            {/* Protected routes with AppLayout */}
-            <Route path="/dashboard" element={
-              <ProtectedRoute>
-                <AppLayout><Dashboard /></AppLayout>
-              </ProtectedRoute>
+            {/* Customer-only routes */}
+            <Route path="/appointments" element={
+              <CustomerRoute>
+                {getCustomAppLayout(<Appointments />)}
+              </CustomerRoute>
+            } />
+            
+            <Route path="/operations" element={
+              <CustomerRoute>
+                {getCustomAppLayout(<CustomerOperations />)}
+              </CustomerRoute>
             } />
             
             {/* Staff-only routes */}
-            <Route path="/customers" element={
-              <ProtectedRoute requiredRole="staff">
-                <AppLayout><Customers /></AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/personnel" element={
-              <ProtectedRoute requiredRole="staff">
-                <AppLayout><Personnel /></AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/operations/staff" element={
-              <ProtectedRoute requiredRole="staff">
-                <AppLayout><StaffOperations /></AppLayout>
-              </ProtectedRoute>
+            <Route path="/dashboard" element={
+              <StaffRoute>
+                {getCustomAppLayout(<Dashboard />)}
+              </StaffRoute>
             } />
             
-            {/* Customer routes */}
-            <Route path="/operations" element={
-              <ProtectedRoute requiredRole="customer">
-                <AppLayout><CustomerOperations /></AppLayout>
-              </ProtectedRoute>
+            <Route path="/customers" element={
+              <StaffRoute>
+                {getCustomAppLayout(<Customers />)}
+              </StaffRoute>
             } />
-            <Route path="/appointments" element={
-              <ProtectedRoute>
-                <AppLayout><Appointments /></AppLayout>
-              </ProtectedRoute>
+            
+            <Route path="/personnel" element={
+              <StaffRoute>
+                {getCustomAppLayout(<Personnel />)}
+              </StaffRoute>
+            } />
+            
+            <Route path="/operations/staff" element={
+              <StaffRoute>
+                {getCustomAppLayout(<StaffOperations />)}
+              </StaffRoute>
             } />
             
             {/* Catch-all route */}

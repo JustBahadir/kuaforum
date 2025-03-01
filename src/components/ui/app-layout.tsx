@@ -1,7 +1,7 @@
 
 import { ReactNode } from "react";
 import { SidebarNav } from "./sidebar-nav";
-import { Home, Users, Calendar, Scissors, Settings, LogOut } from "lucide-react";
+import { Home, Users, Calendar, Scissors, Settings, LogOut, UserCircle } from "lucide-react";
 import { Button } from "./button";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
@@ -9,43 +9,68 @@ import { toast } from "./use-toast";
 
 interface AppLayoutProps {
   children: ReactNode;
+  userRole?: string | null;
 }
 
-export function AppLayout({ children }: AppLayoutProps) {
+export function AppLayout({ children, userRole }: AppLayoutProps) {
   const navigate = useNavigate();
   
-  const sidebarItems = [
-    {
-      title: "Ana Sayfa",
-      href: "/dashboard",
-      icon: <Home className="w-4 h-4" />
-    },
-    {
-      title: "Müşteriler",
-      href: "/customers",
-      icon: <Users className="w-4 h-4" />
-    },
-    {
-      title: "Personel",
-      href: "/personnel",
-      icon: <Users className="w-4 h-4" />
-    },
-    {
-      title: "Hizmetler",
-      href: "/operations",
-      icon: <Scissors className="w-4 h-4" />
-    },
-    {
-      title: "Randevular",
-      href: "/appointments",
-      icon: <Calendar className="w-4 h-4" />
-    },
-    {
-      title: "Ayarlar",
-      href: "/operations/staff",
-      icon: <Settings className="w-4 h-4" />
+  // Define sidebar items based on user role
+  const getNavItems = () => {
+    const commonItems = [
+      {
+        title: "Randevular",
+        href: "/appointments",
+        icon: <Calendar className="w-4 h-4" />
+      }
+    ];
+    
+    // Customer-specific sidebar items
+    if (userRole === 'customer') {
+      return [
+        ...commonItems,
+        {
+          title: "Hizmetlerimiz",
+          href: "/operations",
+          icon: <Scissors className="w-4 h-4" />
+        },
+        {
+          title: "Profilim",
+          href: "/customer-profile",
+          icon: <UserCircle className="w-4 h-4" />
+        }
+      ];
     }
-  ];
+    
+    // Staff-specific sidebar items
+    if (userRole === 'staff') {
+      return [
+        {
+          title: "Ana Sayfa",
+          href: "/dashboard",
+          icon: <Home className="w-4 h-4" />
+        },
+        ...commonItems,
+        {
+          title: "Müşteriler",
+          href: "/customers",
+          icon: <Users className="w-4 h-4" />
+        },
+        {
+          title: "Personel",
+          href: "/personnel",
+          icon: <Users className="w-4 h-4" />
+        },
+        {
+          title: "Salon Ayarları",
+          href: "/operations/staff",
+          icon: <Settings className="w-4 h-4" />
+        }
+      ];
+    }
+    
+    return commonItems;
+  };
 
   const handleSignOut = async () => {
     try {
@@ -64,6 +89,8 @@ export function AppLayout({ children }: AppLayoutProps) {
       });
     }
   };
+
+  const sidebarItems = getNavItems();
 
   return (
     <div className="flex min-h-screen bg-gray-50">

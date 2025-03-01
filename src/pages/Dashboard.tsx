@@ -16,7 +16,7 @@ export default function Dashboard() {
   // Separate state for customer login
   const [customerLoading, setCustomerLoading] = useState(false);
   const [customerEmail, setCustomerEmail] = useState("");
-  const [customerPassword, setCustomerPassword] = useState("password123");
+  const [customerPassword, setCustomerPassword] = useState("");
   const [customerFirstName, setCustomerFirstName] = useState("");
   const [customerLastName, setCustomerLastName] = useState("");
   const [customerLoginError, setCustomerLoginError] = useState("");
@@ -24,7 +24,7 @@ export default function Dashboard() {
   // Separate state for staff login
   const [staffLoading, setStaffLoading] = useState(false);
   const [staffEmail, setStaffEmail] = useState("");
-  const [staffPassword, setStaffPassword] = useState("password123");
+  const [staffPassword, setStaffPassword] = useState("");
   const [staffFirstName, setStaffFirstName] = useState("");
   const [staffLastName, setStaffLastName] = useState("");
   const [staffLoginError, setStaffLoginError] = useState("");
@@ -59,28 +59,36 @@ export default function Dashboard() {
         return;
       }
       
-      // Check if user is a customer
-      const role = await profilServisi.getUserRole(data.user?.id);
-      
-      if (role !== 'customer' && role !== null) {
-        toast.error("Bu hesap müşteri girişi için yetkili değil.");
-        
-        // Sign out the user
-        await supabase.auth.signOut();
-        setCustomerLoginError("Bu hesap müşteri girişi için yetkili değil.");
-        setCustomerLoading(false);
-        return;
-      }
-      
-      toast.success("Giriş başarılı! Müşteri paneline yönlendiriliyorsunuz.");
-      
-      // Direct user to appointments page after successful login
-      navigate("/appointments");
+      // Wait a moment for auth state to update
+      setTimeout(async () => {
+        try {
+          // Check if user is a customer
+          const role = await profilServisi.getUserRole(data.user?.id);
+          
+          if (role !== 'customer' && role !== null) {
+            toast.error("Bu hesap müşteri girişi için yetkili değil.");
+            
+            // Sign out the user
+            await supabase.auth.signOut();
+            setCustomerLoginError("Bu hesap müşteri girişi için yetkili değil.");
+            setCustomerLoading(false);
+            return;
+          }
+          
+          toast.success("Giriş başarılı! Müşteri paneline yönlendiriliyorsunuz.");
+          
+          // Direct user to appointments page after successful login
+          navigate("/appointments");
+        } catch (error: any) {
+          console.error("Role check error:", error);
+          setCustomerLoginError("Rol kontrolü sırasında bir hata oluştu");
+          setCustomerLoading(false);
+        }
+      }, 500);
       
     } catch (error: any) {
       console.error("Login error:", error);
       setCustomerLoginError(error.message || "Giriş yapılırken bir hata oluştu");
-    } finally {
       setCustomerLoading(false);
     }
   };
@@ -114,11 +122,12 @@ export default function Dashboard() {
       if (error) {
         console.error("Signup error:", error);
         setCustomerLoginError(error.message);
+        setCustomerLoading(false);
         return;
       }
       
       // Create or update profile with customer role
-      await profilServisi.createOrUpdateProfile(data.user?.id, {
+      await profilServisi.createOrUpdateProfile(data.user?.id || "", {
         first_name: customerFirstName,
         last_name: customerLastName,
         role: "customer"
@@ -132,6 +141,7 @@ export default function Dashboard() {
     } catch (error: any) {
       console.error("Signup error:", error);
       setCustomerLoginError(error.message || "Kayıt yapılırken bir hata oluştu");
+      setCustomerLoading(false);
     } finally {
       setCustomerLoading(false);
     }
@@ -144,7 +154,7 @@ export default function Dashboard() {
     setStaffLoginError("");
     
     try {
-      // Sign in with email
+      // Sign in with email/password
       const { data, error } = await supabase.auth.signInWithPassword({
         email: staffEmail,
         password: staffPassword,
@@ -153,29 +163,38 @@ export default function Dashboard() {
       if (error) {
         console.error("Staff login error:", error);
         setStaffLoginError("Personel girişi başarısız: " + error.message);
-        return;
-      }
-      
-      // Check if user has staff role in profiles table
-      const role = await profilServisi.getUserRole(data.user?.id);
-      
-      if (role !== 'staff') {
-        toast.error("Bu hesabın personel girişi için yetkisi yok.");
-        
-        // Sign out the user
-        await supabase.auth.signOut();
-        setStaffLoginError("Bu hesap personel girişi için yetkili değil.");
         setStaffLoading(false);
         return;
       }
       
-      toast.success("Giriş başarılı! Personel paneline yönlendiriliyorsunuz.");
-      navigate("/personnel");
+      // Wait a moment for auth state to update
+      setTimeout(async () => {
+        try {
+          // Check if user has staff role in profiles table
+          const role = await profilServisi.getUserRole(data.user?.id);
+          
+          if (role !== 'staff') {
+            toast.error("Bu hesabın personel girişi için yetkisi yok.");
+            
+            // Sign out the user
+            await supabase.auth.signOut();
+            setStaffLoginError("Bu hesap personel girişi için yetkili değil.");
+            setStaffLoading(false);
+            return;
+          }
+          
+          toast.success("Giriş başarılı! Personel paneline yönlendiriliyorsunuz.");
+          navigate("/personnel");
+        } catch (error: any) {
+          console.error("Role check error:", error);
+          setStaffLoginError("Rol kontrolü sırasında bir hata oluştu");
+          setStaffLoading(false);
+        }
+      }, 500);
       
     } catch (error: any) {
       console.error("Login error:", error);
       setStaffLoginError(error.message || "Giriş yapılırken bir hata oluştu");
-    } finally {
       setStaffLoading(false);
     }
   };
@@ -209,6 +228,7 @@ export default function Dashboard() {
       if (error) {
         console.error("Staff signup error:", error);
         setStaffLoginError(error.message);
+        setStaffLoading(false);
         return;
       }
       
