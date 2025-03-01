@@ -13,22 +13,32 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("123"); // Default password as requested
+  const [password, setPassword] = useState("password123"); // Default longer password
+  const [loginError, setLoginError] = useState("");
+  
+  // Clear error when tab changes or input changes
+  const clearError = () => {
+    if (loginError) setLoginError("");
+  };
 
   // Customer login handler
   const handleCustomerLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setLoginError("");
     
     try {
-      // Sign in with email
+      // First try to sign in
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       
+      // If login failed, try to sign them up
       if (error) {
-        // If user doesn't exist, sign them up
+        console.log("Login error, attempting signup:", error.message);
+        
+        // Check if it's a new user, then sign them up
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
@@ -39,7 +49,11 @@ export default function Dashboard() {
           }
         });
         
-        if (signUpError) throw signUpError;
+        if (signUpError) {
+          console.error("Signup error:", signUpError);
+          setLoginError(signUpError.message);
+          return;
+        }
         
         toast({
           title: "Yeni hesap oluşturuldu!",
@@ -69,13 +83,9 @@ export default function Dashboard() {
         navigate("/appointments");
       }
       
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login error:", error);
-      toast({
-        title: "Giriş hatası!",
-        description: "Giriş yapılırken bir hata oluştu. Lütfen tekrar deneyin.",
-        variant: "destructive",
-      });
+      setLoginError(error.message || "Giriş yapılırken bir hata oluştu");
     } finally {
       setLoading(false);
     }
@@ -85,6 +95,7 @@ export default function Dashboard() {
   const handleStaffLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setLoginError("");
     
     try {
       // Sign in with email
@@ -94,20 +105,21 @@ export default function Dashboard() {
       });
       
       if (error) {
-        toast({
-          title: "Giriş hatası!",
-          description: "Personel girişi için geçerli bir hesap gereklidir. Yöneticinize başvurun.",
-          variant: "destructive",
-        });
+        console.error("Staff login error:", error);
+        setLoginError("Personel girişi için geçerli bir hesap gereklidir. Yöneticinize başvurun.");
         return;
       }
       
       // Check if user is staff
-      const { data: profileData } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('role')
         .eq('id', data.user?.id)
-        .single();
+        .maybeSingle();
+      
+      if (profileError) {
+        console.error("Profile fetch error:", profileError);
+      }
       
       if (profileData?.role !== 'staff') {
         toast({
@@ -118,6 +130,7 @@ export default function Dashboard() {
         
         // Sign out the user
         await supabase.auth.signOut();
+        setLoginError("Bu hesap personel girişi için yetkili değil.");
         return;
       }
       
@@ -128,13 +141,9 @@ export default function Dashboard() {
       
       navigate("/personnel");
       
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login error:", error);
-      toast({
-        title: "Giriş hatası!",
-        description: "Giriş yapılırken bir hata oluştu. Lütfen tekrar deneyin.",
-        variant: "destructive",
-      });
+      setLoginError(error.message || "Giriş yapılırken bir hata oluştu");
     } finally {
       setLoading(false);
     }
@@ -208,7 +217,7 @@ export default function Dashboard() {
 
         {/* Login Tabs */}
         <div className="max-w-md mx-auto">
-          <Tabs defaultValue="customer" className="w-full">
+          <Tabs defaultValue="customer" className="w-full" onValueChange={clearError}>
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="customer">Müşteri Girişi</TabsTrigger>
               <TabsTrigger value="staff">Personel Girişi</TabsTrigger>
@@ -231,7 +240,10 @@ export default function Dashboard() {
                         type="email" 
                         placeholder="ornek@mail.com" 
                         value={email}
-                        onChange={(e) => setEmail(e.target.value)}
+                        onChange={(e) => {
+                          setEmail(e.target.value);
+                          clearError();
+                        }}
                         required
                       />
                     </div>
@@ -241,13 +253,22 @@ export default function Dashboard() {
                         id="customer-password" 
                         type="password" 
                         value={password}
-                        onChange={(e) => setPassword(e.target.value)}
+                        onChange={(e) => {
+                          setPassword(e.target.value);
+                          clearError();
+                        }}
                         required
                       />
                       <p className="text-xs text-gray-500">
-                        Şimdilik tüm şifreler "123" olarak ayarlanmıştır.
+                        Varsayılan şifre "password123" olarak ayarlanmıştır. En az 6 karakter uzunluğunda olmalıdır.
                       </p>
                     </div>
+                    
+                    {loginError && (
+                      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                        <p className="text-sm">{loginError}</p>
+                      </div>
+                    )}
                   </CardContent>
                   <CardFooter>
                     <Button 
@@ -279,7 +300,10 @@ export default function Dashboard() {
                         type="email" 
                         placeholder="personel@salonadi.com" 
                         value={email}
-                        onChange={(e) => setEmail(e.target.value)}
+                        onChange={(e) => {
+                          setEmail(e.target.value);
+                          clearError();
+                        }}
                         required
                       />
                     </div>
@@ -289,13 +313,22 @@ export default function Dashboard() {
                         id="staff-password" 
                         type="password" 
                         value={password}
-                        onChange={(e) => setPassword(e.target.value)}
+                        onChange={(e) => {
+                          setPassword(e.target.value);
+                          clearError();
+                        }}
                         required
                       />
                       <p className="text-xs text-gray-500">
-                        Şimdilik tüm şifreler "123" olarak ayarlanmıştır.
+                        Varsayılan şifre "password123" olarak ayarlanmıştır. En az 6 karakter uzunluğunda olmalıdır.
                       </p>
                     </div>
+                    
+                    {loginError && (
+                      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                        <p className="text-sm">{loginError}</p>
+                      </div>
+                    )}
                   </CardContent>
                   <CardFooter>
                     <Button 

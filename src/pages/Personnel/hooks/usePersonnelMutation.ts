@@ -21,7 +21,7 @@ export function usePersonnelMutation(onSuccess?: () => void) {
 
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email: data.eposta,
-          password: 'gecici123',
+          password: 'password123', // Longer password that meets the minimum requirements
           options: {
             data: {
               first_name: data.ad_soyad.split(' ')[0],

@@ -33,6 +33,7 @@ const App = () => {
       // Listen for auth changes
       const { data: authListener } = supabase.auth.onAuthStateChange(
         (event, session) => {
+          console.log("Auth state changed:", event, session?.user?.id);
           setSession(session);
         }
       );
@@ -73,7 +74,9 @@ const App = () => {
           <Routes>
             {/* Public routes */}
             <Route path="/" element={<Dashboard />} />
-            <Route path="/customer-profile" element={<CustomerProfile />} />
+            <Route path="/customer-profile" element={
+              session ? <CustomerProfile /> : <Navigate to="/" replace />
+            } />
             
             {/* Protected routes with AppLayout */}
             <Route path="/dashboard" element={
