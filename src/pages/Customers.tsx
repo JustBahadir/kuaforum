@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Phone, Eye } from "lucide-react";
+import { Search, Phone, Eye, UserCog } from "lucide-react";
 import { musteriServisi, type Musteri } from "@/lib/supabase";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "@/components/ui/use-toast";
@@ -23,6 +23,15 @@ export default function Musteriler() {
       : musteriServisi.istatistiklerGetir()
   });
 
+  const handleViewCustomerDetails = (musteri: Musteri) => {
+    setSelectedCustomer(musteri);
+    // Detay görüntüleme işlemi bilgilendirmesi
+    toast({
+      title: "Müşteri detayları açılıyor",
+      description: `${musteri.first_name} ${musteri.last_name} müşterisinin detayları ve tercihleri`,
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -36,6 +45,9 @@ export default function Musteriler() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Müşteriler</h1>
+          <div className="text-sm text-gray-500">
+            Müşteri detaylarını ve tercihlerini görmek için müşteri satırındaki "Detay" butonuna tıklayın.
+          </div>
         </div>
 
         {/* Arama */}
@@ -99,14 +111,15 @@ export default function Musteriler() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {musteri.created_at ? new Date(musteri.created_at).toLocaleDateString('tr-TR') : '-'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <Button 
-                        variant="ghost" 
+                        variant="default" 
                         size="sm" 
-                        onClick={() => setSelectedCustomer(musteri)}
+                        className="bg-blue-600 hover:bg-blue-700"
+                        onClick={() => handleViewCustomerDetails(musteri)}
                       >
-                        <Eye className="w-4 h-4 mr-1" />
-                        Detay
+                        <UserCog className="w-4 h-4 mr-1" />
+                        Detay ve Tercihler
                       </Button>
                     </td>
                   </tr>
