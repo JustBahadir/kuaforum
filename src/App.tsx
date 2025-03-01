@@ -9,7 +9,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { profilServisi } from "@/lib/supabase/services/profilServisi";
 import { toast } from "sonner";
-import { AuthChangeEvent } from '@supabase/supabase-js';
+import { AuthChangeEvent, Session } from '@supabase/supabase-js';
 
 // Pages
 import Dashboard from "./pages/Dashboard";
@@ -24,7 +24,7 @@ import CustomerProfile from "./pages/CustomerProfile";
 const queryClient = new QueryClient();
 
 const App = () => {
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isNewUser, setIsNewUser] = useState(false);

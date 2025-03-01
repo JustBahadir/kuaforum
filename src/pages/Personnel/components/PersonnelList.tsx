@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Personel, personelServisi } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { PersonnelDialog } from "./PersonnelDialog";
 import { PersonnelEditDialog } from "./PersonnelEditDialog";
+import { supabase } from "@/lib/supabase";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,6 +29,76 @@ export function PersonnelList() {
     queryKey: ['personel'],
     queryFn: () => personelServisi.hepsiniGetir()
   });
+
+  // Effect to check for staff users that might not be in the personel table
+  useEffect(() => {
+    const syncStaffUsers = async () => {
+      try {
+        // Get all users with staff role from profiles
+        const { data: staffProfiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('role', 'staff');
+        
+        if (profilesError) {
+          console.error("Error fetching staff profiles:", profilesError);
+          return;
+        }
+
+        if (staffProfiles && staffProfiles.length > 0) {
+          // For each staff profile, check if they exist in personel table
+          for (const profile of staffProfiles) {
+            // Check if this profile's auth_id exists in any personel record
+            const { data: existingPersonel, error: checkError } = await supabase
+              .from('personel')
+              .select('*')
+              .eq('auth_id', profile.id);
+
+            if (checkError) {
+              console.error("Error checking personel table:", checkError);
+              continue;
+            }
+
+            // If staff user doesn't exist in personel table, create a record for them
+            if (!existingPersonel || existingPersonel.length === 0) {
+              const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
+              
+              if (!fullName) {
+                console.log("Skipping profile without name information", profile.id);
+                continue;
+              }
+
+              // Create personel record
+              const { error: insertError } = await supabase
+                .from('personel')
+                .insert([{
+                  auth_id: profile.id,
+                  ad_soyad: fullName,
+                  telefon: profile.phone || '',
+                  eposta: '', // Will be filled when we get user email
+                  adres: '',
+                  personel_no: `S${Math.floor(Math.random() * 9000) + 1000}`, // Generate a random staff number
+                  maas: 0,
+                  calisma_sistemi: 'aylik',
+                  prim_yuzdesi: 0
+                }]);
+
+              if (insertError) {
+                console.error("Error creating personel record:", insertError);
+              } else {
+                // Successfully added, refresh the list
+                queryClient.invalidateQueries({ queryKey: ['personel'] });
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error syncing staff users:", error);
+      }
+    };
+
+    syncStaffUsers();
+  }, [queryClient]);
 
   const { mutate: personelSil } = useMutation({
     mutationFn: (id: number) => personelServisi.sil(id),
