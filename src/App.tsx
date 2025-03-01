@@ -87,7 +87,7 @@ const App = () => {
                 setUserRole(profile?.role || null);
                 
                 // Handle signup event specifically
-                if (event === 'SIGNED_UP') {
+                if (event === 'SIGNED_UP' as AuthChangeEvent) {
                   setIsNewUser(true);
                   
                   // New customers need to complete their profile
