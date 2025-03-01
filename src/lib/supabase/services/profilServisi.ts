@@ -207,7 +207,57 @@ export const profilServisi = {
             throw createError;
           }
           
-          data = createData;
+          // Use createData instead of reassigning data
+          const updatedData = createData;
+          
+          // If staff role, make sure there's a corresponding personel record
+          if (profile.role === 'staff' || updatedData.role === 'staff') {
+            try {
+              // Check if there's already a personel record with this auth_id
+              const { data: existingPersonel } = await supabase
+                .from('personel')
+                .select('*')
+                .eq('auth_id', user.id)
+                .maybeSingle();
+                
+              if (!existingPersonel) {
+                // Create a new personel record
+                const fullName = `${profile.first_name || updatedData.first_name || ''} ${profile.last_name || updatedData.last_name || ''}`.trim() || 'Personel';
+                
+                await supabase
+                  .from('personel')
+                  .insert({
+                    auth_id: user.id,
+                    ad_soyad: fullName,
+                    telefon: profile.phone || updatedData.phone || '',
+                    eposta: user.email || '',
+                    adres: '',
+                    personel_no: `S${Math.floor(Math.random() * 9000) + 1000}`,
+                    maas: 0,
+                    calisma_sistemi: 'aylik',
+                    prim_yuzdesi: 0
+                  });
+              } else {
+                // Update the existing personel record with the latest name and phone
+                const fullName = `${profile.first_name || updatedData.first_name || ''} ${profile.last_name || updatedData.last_name || ''}`.trim();
+                
+                if (fullName) {
+                  await supabase
+                    .from('personel')
+                    .update({
+                      ad_soyad: fullName,
+                      telefon: profile.phone || updatedData.phone || '',
+                      eposta: user.email || existingPersonel.eposta
+                    })
+                    .eq('auth_id', user.id);
+                }
+              }
+            } catch (staffErr) {
+              console.error("Error handling staff record:", staffErr);
+            }
+          }
+          
+          return updatedData;
         } catch (createErr) {
           console.error("Profile creation exception:", createErr);
           

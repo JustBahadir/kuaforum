@@ -132,7 +132,7 @@ export function usePersonnelMutation(onSuccess?: () => void) {
               if (usersData && usersData.users) {
                 // Find matching user by email
                 const matchingUser = usersData.users.find(user => 
-                  user && user.email === personelData.eposta
+                  user && user.email && user.email === personelData.eposta
                 );
                 
                 if (matchingUser) {
