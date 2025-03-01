@@ -12,33 +12,48 @@ import { supabase } from "@/lib/supabase";
 export default function Dashboard() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("password123"); // Default longer password
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [loginError, setLoginError] = useState("");
   
-  // Clear error when tab changes or input changes
-  const clearError = () => {
-    if (loginError) setLoginError("");
+  // Separate state for customer login
+  const [customerEmail, setCustomerEmail] = useState("");
+  const [customerPassword, setCustomerPassword] = useState("password123");
+  const [customerFirstName, setCustomerFirstName] = useState("");
+  const [customerLastName, setCustomerLastName] = useState("");
+  const [customerLoginError, setCustomerLoginError] = useState("");
+  
+  // Separate state for staff login
+  const [staffEmail, setStaffEmail] = useState("");
+  const [staffPassword, setStaffPassword] = useState("password123");
+  const [staffFirstName, setStaffFirstName] = useState("");
+  const [staffLastName, setStaffLastName] = useState("");
+  const [staffLoginError, setStaffLoginError] = useState("");
+  
+  // Clear error when tab changes or input changes for customer
+  const clearCustomerError = () => {
+    if (customerLoginError) setCustomerLoginError("");
+  };
+
+  // Clear error when tab changes or input changes for staff
+  const clearStaffError = () => {
+    if (staffLoginError) setStaffLoginError("");
   };
 
   // Customer login handler
   const handleCustomerLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setLoginError("");
+    setCustomerLoginError("");
     
     try {
       // Sign in with email/password
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+        email: customerEmail,
+        password: customerPassword,
       });
       
       if (error) {
         console.error("Login error:", error);
-        setLoginError(error.message);
+        setCustomerLoginError(error.message);
+        setLoading(false);
         return;
       }
       
@@ -54,7 +69,7 @@ export default function Dashboard() {
         
         // Sign out the user
         await supabase.auth.signOut();
-        setLoginError("Bu hesap müşteri girişi için yetkili değil.");
+        setCustomerLoginError("Bu hesap müşteri girişi için yetkili değil.");
         setLoading(false);
         return;
       }
@@ -66,7 +81,7 @@ export default function Dashboard() {
       
     } catch (error: any) {
       console.error("Login error:", error);
-      setLoginError(error.message || "Giriş yapılırken bir hata oluştu");
+      setCustomerLoginError(error.message || "Giriş yapılırken bir hata oluştu");
     } finally {
       setLoading(false);
     }
@@ -76,17 +91,17 @@ export default function Dashboard() {
   const handleCustomerRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setLoginError("");
+    setCustomerLoginError("");
     
     try {
       // Create new user with email/password
       const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
+        email: customerEmail,
+        password: customerPassword,
         options: {
           data: {
-            first_name: firstName,
-            last_name: lastName,
+            first_name: customerFirstName,
+            last_name: customerLastName,
             role: "customer"
           }
         }
@@ -94,7 +109,7 @@ export default function Dashboard() {
       
       if (error) {
         console.error("Signup error:", error);
-        setLoginError(error.message);
+        setCustomerLoginError(error.message);
         return;
       }
       
@@ -105,7 +120,7 @@ export default function Dashboard() {
       
     } catch (error: any) {
       console.error("Signup error:", error);
-      setLoginError(error.message || "Kayıt yapılırken bir hata oluştu");
+      setCustomerLoginError(error.message || "Kayıt yapılırken bir hata oluştu");
     } finally {
       setLoading(false);
     }
@@ -115,18 +130,18 @@ export default function Dashboard() {
   const handleStaffLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setLoginError("");
+    setStaffLoginError("");
     
     try {
       // Sign in with email
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+        email: staffEmail,
+        password: staffPassword,
       });
       
       if (error) {
         console.error("Staff login error:", error);
-        setLoginError("Personel girişi başarısız: " + error.message);
+        setStaffLoginError("Personel girişi başarısız: " + error.message);
         return;
       }
       
@@ -142,7 +157,7 @@ export default function Dashboard() {
         
         // Sign out the user
         await supabase.auth.signOut();
-        setLoginError("Bu hesap personel girişi için yetkili değil.");
+        setStaffLoginError("Bu hesap personel girişi için yetkili değil.");
         setLoading(false);
         return;
       }
@@ -152,7 +167,7 @@ export default function Dashboard() {
       
     } catch (error: any) {
       console.error("Login error:", error);
-      setLoginError(error.message || "Giriş yapılırken bir hata oluştu");
+      setStaffLoginError(error.message || "Giriş yapılırken bir hata oluştu");
     } finally {
       setLoading(false);
     }
@@ -162,17 +177,17 @@ export default function Dashboard() {
   const handleStaffRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setLoginError("");
+    setStaffLoginError("");
     
     try {
       // Create new user with email/password and staff role
       const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
+        email: staffEmail,
+        password: staffPassword,
         options: {
           data: {
-            first_name: firstName,
-            last_name: lastName,
+            first_name: staffFirstName,
+            last_name: staffLastName,
             role: "staff"
           }
         }
@@ -180,7 +195,7 @@ export default function Dashboard() {
       
       if (error) {
         console.error("Staff signup error:", error);
-        setLoginError(error.message);
+        setStaffLoginError(error.message);
         return;
       }
       
@@ -189,15 +204,15 @@ export default function Dashboard() {
         .from('profiles')
         .upsert({
           id: data.user?.id,
-          first_name: firstName,
-          last_name: lastName,
+          first_name: staffFirstName,
+          last_name: staffLastName,
           phone: "",
           role: "staff"
         });
       
       if (profileError) {
         console.error("Profile creation error:", profileError);
-        setLoginError(profileError.message);
+        setStaffLoginError(profileError.message);
         return;
       }
       
@@ -208,7 +223,7 @@ export default function Dashboard() {
       
     } catch (error: any) {
       console.error("Staff signup error:", error);
-      setLoginError(error.message || "Personel kaydı yapılırken bir hata oluştu");
+      setStaffLoginError(error.message || "Personel kaydı yapılırken bir hata oluştu");
     } finally {
       setLoading(false);
     }
@@ -225,14 +240,15 @@ export default function Dashboard() {
           </p>
         </div>
 
-        {/* Features and Login Section */}
+        {/* Features and Login Section - Redesigned with clearer separation */}
         <div className="grid md:grid-cols-2 gap-8 mb-10">
-          <div className="space-y-6">
-            <Card className="h-auto">
-              <CardHeader>
+          {/* Customer Side */}
+          <div className="border-r-0 md:border-r border-indigo-200 pr-0 md:pr-4">
+            <Card className="h-full">
+              <CardHeader className="bg-indigo-50 rounded-t-lg">
                 <CardTitle className="text-2xl text-indigo-800">Müşteri Özellikleri</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-4">
                 <ul className="space-y-2">
                   <li className="flex items-start">
                     <span className="text-green-500 mr-2">✓</span>
@@ -257,11 +273,14 @@ export default function Dashboard() {
               <CardFooter className="flex-col">
                 <div className="w-full mb-2 border-t pt-4">
                   <h3 className="text-lg font-semibold text-center mb-4">Müşteri Girişi</h3>
+                  <p className="text-sm text-center text-gray-600 mb-4">
+                    İlk kez giriş yapacaksanız "Kayıt Ol" bölümünü, hesabınız var ise "Giriş Yap" bölümünü kullanınız.
+                  </p>
                 </div>
                 <Tabs defaultValue="login" className="w-full">
                   <TabsList className="grid w-full grid-cols-2 mb-4">
-                    <TabsTrigger value="login">Giriş Yap</TabsTrigger>
-                    <TabsTrigger value="register">Kayıt Ol</TabsTrigger>
+                    <TabsTrigger value="login" onClick={clearCustomerError}>Giriş Yap</TabsTrigger>
+                    <TabsTrigger value="register" onClick={clearCustomerError}>Kayıt Ol</TabsTrigger>
                   </TabsList>
                   
                   <TabsContent value="login">
@@ -272,10 +291,10 @@ export default function Dashboard() {
                           id="customer-email" 
                           type="email" 
                           placeholder="ornek@mail.com" 
-                          value={email}
+                          value={customerEmail}
                           onChange={(e) => {
-                            setEmail(e.target.value);
-                            clearError();
+                            setCustomerEmail(e.target.value);
+                            clearCustomerError();
                           }}
                           required
                         />
@@ -285,10 +304,10 @@ export default function Dashboard() {
                         <Input 
                           id="customer-password" 
                           type="password" 
-                          value={password}
+                          value={customerPassword}
                           onChange={(e) => {
-                            setPassword(e.target.value);
-                            clearError();
+                            setCustomerPassword(e.target.value);
+                            clearCustomerError();
                           }}
                           required
                         />
@@ -297,9 +316,9 @@ export default function Dashboard() {
                         </p>
                       </div>
                       
-                      {loginError && (
+                      {customerLoginError && (
                         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                          <p className="text-sm">{loginError}</p>
+                          <p className="text-sm">{customerLoginError}</p>
                         </div>
                       )}
                       
@@ -321,32 +340,32 @@ export default function Dashboard() {
                           id="customer-email-register" 
                           type="email" 
                           placeholder="ornek@mail.com" 
-                          value={email}
+                          value={customerEmail}
                           onChange={(e) => {
-                            setEmail(e.target.value);
-                            clearError();
+                            setCustomerEmail(e.target.value);
+                            clearCustomerError();
                           }}
                           required
                         />
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="first-name">Adınız</Label>
+                          <Label htmlFor="customer-first-name">Adınız</Label>
                           <Input 
-                            id="first-name" 
+                            id="customer-first-name" 
                             type="text" 
-                            value={firstName}
-                            onChange={(e) => setFirstName(e.target.value)}
+                            value={customerFirstName}
+                            onChange={(e) => setCustomerFirstName(e.target.value)}
                             required
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="last-name">Soyadınız</Label>
+                          <Label htmlFor="customer-last-name">Soyadınız</Label>
                           <Input 
-                            id="last-name" 
+                            id="customer-last-name" 
                             type="text" 
-                            value={lastName}
-                            onChange={(e) => setLastName(e.target.value)}
+                            value={customerLastName}
+                            onChange={(e) => setCustomerLastName(e.target.value)}
                             required
                           />
                         </div>
@@ -356,10 +375,10 @@ export default function Dashboard() {
                         <Input 
                           id="customer-password-register" 
                           type="password" 
-                          value={password}
+                          value={customerPassword}
                           onChange={(e) => {
-                            setPassword(e.target.value);
-                            clearError();
+                            setCustomerPassword(e.target.value);
+                            clearCustomerError();
                           }}
                           required
                         />
@@ -368,9 +387,9 @@ export default function Dashboard() {
                         </p>
                       </div>
                       
-                      {loginError && (
+                      {customerLoginError && (
                         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                          <p className="text-sm">{loginError}</p>
+                          <p className="text-sm">{customerLoginError}</p>
                         </div>
                       )}
                       
@@ -388,12 +407,13 @@ export default function Dashboard() {
             </Card>
           </div>
           
-          <div className="space-y-6">
-            <Card className="h-auto">
-              <CardHeader>
-                <CardTitle className="text-2xl text-indigo-800">Personel Özellikleri</CardTitle>
+          {/* Staff Side */}
+          <div className="pl-0 md:pl-4">
+            <Card className="h-full">
+              <CardHeader className="bg-purple-50 rounded-t-lg">
+                <CardTitle className="text-2xl text-purple-800">Personel Özellikleri</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-4">
                 <ul className="space-y-2">
                   <li className="flex items-start">
                     <span className="text-green-500 mr-2">✓</span>
@@ -418,11 +438,14 @@ export default function Dashboard() {
               <CardFooter className="flex-col">
                 <div className="w-full mb-2 border-t pt-4">
                   <h3 className="text-lg font-semibold text-center mb-4">Personel Girişi</h3>
+                  <p className="text-sm text-center text-gray-600 mb-4">
+                    İlk kez giriş yapacaksanız "Kayıt Ol" bölümünü, hesabınız var ise "Giriş Yap" bölümünü kullanınız.
+                  </p>
                 </div>
                 <Tabs defaultValue="login" className="w-full">
                   <TabsList className="grid w-full grid-cols-2 mb-4">
-                    <TabsTrigger value="login">Giriş Yap</TabsTrigger>
-                    <TabsTrigger value="register">Kayıt Ol</TabsTrigger>
+                    <TabsTrigger value="login" onClick={clearStaffError}>Giriş Yap</TabsTrigger>
+                    <TabsTrigger value="register" onClick={clearStaffError}>Kayıt Ol</TabsTrigger>
                   </TabsList>
                   
                   <TabsContent value="login">
@@ -433,10 +456,10 @@ export default function Dashboard() {
                           id="staff-email" 
                           type="email" 
                           placeholder="personel@salonadi.com" 
-                          value={email}
+                          value={staffEmail}
                           onChange={(e) => {
-                            setEmail(e.target.value);
-                            clearError();
+                            setStaffEmail(e.target.value);
+                            clearStaffError();
                           }}
                           required
                         />
@@ -446,10 +469,10 @@ export default function Dashboard() {
                         <Input 
                           id="staff-password" 
                           type="password" 
-                          value={password}
+                          value={staffPassword}
                           onChange={(e) => {
-                            setPassword(e.target.value);
-                            clearError();
+                            setStaffPassword(e.target.value);
+                            clearStaffError();
                           }}
                           required
                         />
@@ -458,15 +481,15 @@ export default function Dashboard() {
                         </p>
                       </div>
                       
-                      {loginError && (
+                      {staffLoginError && (
                         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                          <p className="text-sm">{loginError}</p>
+                          <p className="text-sm">{staffLoginError}</p>
                         </div>
                       )}
                       
                       <Button 
                         type="submit" 
-                        className="w-full" 
+                        className="w-full bg-purple-600 hover:bg-purple-700" 
                         disabled={loading}
                       >
                         {loading ? "Giriş yapılıyor..." : "Personel Girişi"}
@@ -482,10 +505,10 @@ export default function Dashboard() {
                           id="staff-email-register" 
                           type="email" 
                           placeholder="personel@salonadi.com" 
-                          value={email}
+                          value={staffEmail}
                           onChange={(e) => {
-                            setEmail(e.target.value);
-                            clearError();
+                            setStaffEmail(e.target.value);
+                            clearStaffError();
                           }}
                           required
                         />
@@ -496,8 +519,8 @@ export default function Dashboard() {
                           <Input 
                             id="staff-first-name" 
                             type="text" 
-                            value={firstName}
-                            onChange={(e) => setFirstName(e.target.value)}
+                            value={staffFirstName}
+                            onChange={(e) => setStaffFirstName(e.target.value)}
                             required
                           />
                         </div>
@@ -506,8 +529,8 @@ export default function Dashboard() {
                           <Input 
                             id="staff-last-name" 
                             type="text" 
-                            value={lastName}
-                            onChange={(e) => setLastName(e.target.value)}
+                            value={staffLastName}
+                            onChange={(e) => setStaffLastName(e.target.value)}
                             required
                           />
                         </div>
@@ -517,10 +540,10 @@ export default function Dashboard() {
                         <Input 
                           id="staff-password-register" 
                           type="password" 
-                          value={password}
+                          value={staffPassword}
                           onChange={(e) => {
-                            setPassword(e.target.value);
-                            clearError();
+                            setStaffPassword(e.target.value);
+                            clearStaffError();
                           }}
                           required
                         />
@@ -529,15 +552,15 @@ export default function Dashboard() {
                         </p>
                       </div>
                       
-                      {loginError && (
+                      {staffLoginError && (
                         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                          <p className="text-sm">{loginError}</p>
+                          <p className="text-sm">{staffLoginError}</p>
                         </div>
                       )}
                       
                       <Button 
                         type="submit" 
-                        className="w-full" 
+                        className="w-full bg-purple-600 hover:bg-purple-700" 
                         disabled={loading}
                       >
                         {loading ? "Kaydediliyor..." : "Personel Kaydı Oluştur"}
