@@ -33,14 +33,21 @@ export function usePersonnelMutation(onSuccess?: () => void) {
         
         // Filter users on the client side with proper type checking
         if (authData?.users) {
-          // Explicitly type the user object to avoid TypeScript errors
-          foundUser = authData.users.find(user => {
-            // Check if user is valid and has an email property
-            return user && typeof user === 'object' && 'email' in user && 
-              user.email?.toLowerCase() === data.eposta.toLowerCase();
+          // Use a type assertion to help TypeScript understand what we're working with
+          const users = authData.users;
+          
+          // Find user with matching email using proper type checking
+          foundUser = users.find(user => {
+            if (user && typeof user === 'object' && user !== null) {
+              // Check if the email property exists on the user object
+              if ('email' in user && typeof user.email === 'string') {
+                return user.email.toLowerCase() === data.eposta.toLowerCase();
+              }
+            }
+            return false;
           });
           
-          if (foundUser) {
+          if (foundUser && 'id' in foundUser) {
             console.log("User exists in auth system:", foundUser);
             authId = foundUser.id;
             
