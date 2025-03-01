@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,6 +9,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { profilServisi } from "@/lib/supabase/services/profilServisi";
 import { toast } from "sonner";
+import { AuthChangeEvent } from '@supabase/supabase-js';
 
 // Pages
 import Dashboard from "./pages/Dashboard";
@@ -73,7 +75,7 @@ const App = () => {
 
         // Listen for auth changes
         const { data: authListener } = supabase.auth.onAuthStateChange(
-          async (event, session) => {
+          async (event: AuthChangeEvent, session) => {
             console.log("Auth state changed:", event, session?.user?.id);
             setSession(session);
             
