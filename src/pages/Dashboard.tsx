@@ -1,18 +1,38 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/lib/supabase";
 import { profilServisi } from "@/lib/supabase/services/profilServisi";
 import { LogIn, UserPlus, Mail, Lock, User, UserRound } from "lucide-react";
 import { AuthError } from "@supabase/supabase-js";
+import { Toaster } from "@/components/ui/toaster";
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  
+  // Check if user is already logged in
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        // User is already logged in, fetch profile to determine redirect path
+        const profile = await profilServisi.getir();
+        if (profile?.role === 'staff') {
+          navigate('/personnel');
+        } else {
+          navigate('/appointments');
+        }
+      }
+    };
+    
+    checkSession();
+  }, [navigate]);
   
   // Separate state for customer login
   const [customerLoading, setCustomerLoading] = useState(false);
@@ -85,23 +105,35 @@ export default function Dashboard() {
           first_name: data.user.user_metadata?.first_name || customerFirstName || "",
           last_name: data.user.user_metadata?.last_name || customerLastName || "",
           role: "customer",
+          phone: data.user.user_metadata?.phone || "",
         });
         
         console.log("Customer profile ensured:", profile);
         
-        toast.success("Giriş başarılı! Müşteri paneline yönlendiriliyorsunuz.");
+        toast({
+          title: "Başarılı",
+          description: "Giriş başarılı! Müşteri paneline yönlendiriliyorsunuz."
+        });
         
         // Check if profile is complete
         if (profile && profile.first_name && profile.last_name && profile.phone) {
           // Profile is complete, navigate to appointments
-          navigate("/appointments");
+          setTimeout(() => {
+            navigate("/appointments");
+          }, 100);
         } else {
           // Profile is incomplete, navigate to profile completion page
-          navigate("/customer-profile");
+          setTimeout(() => {
+            navigate("/customer-profile");
+          }, 100);
         }
       } catch (profileError: any) {
         console.error("Profile creation error:", profileError);
-        toast.error("Profil bilgileri alınırken hata oluştu, lütfen tekrar deneyin.");
+        toast({
+          title: "Uyarı",
+          description: "Profil bilgileri alınırken hata oluştu, lütfen tekrar deneyin.",
+          variant: "destructive"
+        });
         setCustomerLoginError("Profil bilgileri alınamadı: " + profileError.message);
         setCustomerLoading(false);
       }
@@ -146,10 +178,18 @@ export default function Dashboard() {
             first_name: customerFirstName || existingUserData.user.user_metadata?.first_name || "",
             last_name: customerLastName || existingUserData.user.user_metadata?.last_name || "",
             role: "customer",
+            phone: existingUserData.user.user_metadata?.phone || "",
           });
           
-          toast.success("Giriş başarılı! Müşteri paneline yönlendiriliyorsunuz.");
-          navigate("/appointments");
+          toast({
+            title: "Başarılı",
+            description: "Giriş başarılı! Müşteri paneline yönlendiriliyorsunuz."
+          });
+          
+          setTimeout(() => {
+            navigate("/appointments");
+          }, 100);
+          
           return;
         } catch (profileError: any) {
           console.error("Profile update error:", profileError);
@@ -201,14 +241,26 @@ export default function Dashboard() {
           role: "customer"
         });
         
-        toast.success("Kayıt başarılı! Müşteri bilgi formunu doldurmanız gerekmektedir.");
+        toast({
+          title: "Başarılı", 
+          description: "Kayıt başarılı! Müşteri bilgi formunu doldurmanız gerekmektedir."
+        });
         
         // Redirect to customer profile form
-        navigate("/customer-profile");
+        setTimeout(() => {
+          navigate("/customer-profile");
+        }, 100);
       } catch (profileError: any) {
         console.error("Profile creation error:", profileError);
-        toast.error("Profil oluşturulurken bir hata oluştu, ancak hesabınız kaydedildi.");
-        navigate("/customer-profile");
+        toast({
+          title: "Uyarı",
+          description: "Profil oluşturulurken bir hata oluştu, ancak hesabınız kaydedildi.",
+          variant: "destructive"
+        });
+        
+        setTimeout(() => {
+          navigate("/customer-profile");
+        }, 100);
       }
     } catch (error: any) {
       console.error("Signup error:", error);
@@ -312,18 +364,35 @@ export default function Dashboard() {
               
             if (createError) {
               console.error("Error creating personnel record:", createError);
-              toast.error("Personel kaydı oluşturulamadı: " + createError.message);
+              toast({
+                title: "Hata",
+                description: "Personel kaydı oluşturulamadı: " + createError.message,
+                variant: "destructive"
+              });
             } else {
-              toast.success("Personel kaydınız oluşturuldu.");
+              toast({
+                title: "Bilgi",
+                description: "Personel kaydınız oluşturuldu."
+              });
             }
           }
         } catch (personelError: any) {
           console.error("Personnel record error:", personelError);
-          toast.error("Personel kaydınız kontrol edilirken bir hata oluştu.");
+          toast({
+            title: "Uyarı",
+            description: "Personel kaydınız kontrol edilirken bir hata oluştu.",
+            variant: "destructive"
+          });
         }
         
-        toast.success("Giriş başarılı! Personel paneline yönlendiriliyorsunuz.");
-        navigate("/personnel");
+        toast({
+          title: "Başarılı",
+          description: "Giriş başarılı! Personel paneline yönlendiriliyorsunuz."
+        });
+        
+        setTimeout(() => {
+          navigate("/personnel");
+        }, 100);
       } catch (error: any) {
         console.error("Role check error:", error);
         setStaffLoginError("Rol kontrolü sırasında bir hata oluştu: " + error.message);
@@ -397,12 +466,23 @@ export default function Dashboard() {
               
             if (personelError) {
               console.error("Personnel creation error:", personelError);
-              toast.error("Personel kaydı oluşturulurken bir hata oluştu.");
+              toast({
+                title: "Hata",
+                description: "Personel kaydı oluşturulurken bir hata oluştu.",
+                variant: "destructive"
+              });
             }
           }
           
-          toast.success("Giriş başarılı! Personel paneline yönlendiriliyorsunuz.");
-          navigate("/personnel");
+          toast({
+            title: "Başarılı",
+            description: "Giriş başarılı! Personel paneline yönlendiriliyorsunuz."
+          });
+          
+          setTimeout(() => {
+            navigate("/personnel");
+          }, 100);
+          
           return;
         } catch (profileError: any) {
           console.error("Profile update error:", profileError);
@@ -472,7 +552,10 @@ export default function Dashboard() {
         return;
       }
       
-      toast.success("Personel kaydı başarılı! Giriş yapabilirsiniz.");
+      toast({
+        title: "Başarılı",
+        description: "Personel kaydı başarılı! Giriş yapabilirsiniz."
+      });
       
       // Clear registration fields and switch to login tab
       setStaffEmail("");
@@ -838,6 +921,7 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+      <Toaster />
     </div>
   );
 }

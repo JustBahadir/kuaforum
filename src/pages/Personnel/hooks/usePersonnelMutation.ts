@@ -2,7 +2,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Personel } from "@/lib/supabase";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/use-toast";
 import { profilServisi } from "@/lib/supabase/services/profilServisi";
 
 export function usePersonnelMutation(onSuccess?: () => void) {
@@ -130,10 +130,10 @@ export function usePersonnelMutation(onSuccess?: () => void) {
               const { data: usersData } = await supabase.auth.admin.listUsers();
               
               if (usersData && usersData.users) {
-                // Find matching user by email
-                const matchingUser = usersData.users.find(user => 
-                  user && user.email && user.email === personelData.eposta
-                );
+                // Find matching user by email - fixed the type issue
+                const matchingUser = usersData.users.find(user => {
+                  return user && user.email && user.email === personelData.eposta;
+                });
                 
                 if (matchingUser) {
                   console.log("Found matching user:", matchingUser.id);
@@ -195,19 +195,29 @@ export function usePersonnelMutation(onSuccess?: () => void) {
       } catch (error) {
         console.error("Error linking personnel to auth user:", error);
         // This error will not stop the process as personnel record is still created
-        toast.error("Personel kaydedildi ancak giriş bilgileri oluşturulamadı");
+        toast({
+          title: "Hata",
+          description: "Personel kaydedildi ancak giriş bilgileri oluşturulamadı"
+        });
       }
 
       return data;
     },
     onSuccess: () => {
-      toast.success("Personel başarıyla eklendi");
+      toast({
+        title: "Başarılı",
+        description: "Personel başarıyla eklendi"
+      });
       queryClient.invalidateQueries({ queryKey: ["personnel"] });
       if (onSuccess) onSuccess();
     },
     onError: (error) => {
       console.error("Personel ekleme hatası:", error);
-      toast.error("Personel eklenirken bir hata oluştu: " + error.message);
+      toast({
+        title: "Hata",
+        description: "Personel eklenirken bir hata oluştu: " + error.message,
+        variant: "destructive"
+      });
     }
   });
 }
