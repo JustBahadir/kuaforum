@@ -31,11 +31,14 @@ export function usePersonnelMutation(onSuccess?: () => void) {
         let authId = null;
         let foundUser = null;
         
-        // Filter users on the client side
+        // Filter users on the client side with proper type checking
         if (authData?.users) {
-          foundUser = authData.users.find(user => 
-            user.email?.toLowerCase() === data.eposta.toLowerCase()
-          );
+          // Explicitly type the user object to avoid TypeScript errors
+          foundUser = authData.users.find(user => {
+            // Check if user is valid and has an email property
+            return user && typeof user === 'object' && 'email' in user && 
+              user.email?.toLowerCase() === data.eposta.toLowerCase();
+          });
           
           if (foundUser) {
             console.log("User exists in auth system:", foundUser);
