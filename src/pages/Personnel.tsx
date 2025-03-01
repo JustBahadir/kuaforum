@@ -10,7 +10,7 @@ import { PerformanceCharts } from "./Personnel/components/PerformanceCharts";
 
 export default function Personnel() {
   const [dateRange, setDateRange] = useState({
-    from: new Date(),
+    from: new Date(new Date().setDate(new Date().getDate() - 30)), // Default to last 30 days
     to: new Date()
   });
 
@@ -25,10 +25,15 @@ export default function Personnel() {
   });
 
   const { data: islemGecmisi = [] }: UseQueryResult<PersonelIslemi[], Error> = useQuery({
-    queryKey: ['personelIslemleri'],
+    queryKey: ['personelIslemleri', dateRange.from, dateRange.to],
     queryFn: async () => {
       const data = await personelIslemleriServisi.hepsiniGetir();
-      return data;
+      // Filter by date range
+      return data.filter(islem => {
+        if (!islem.created_at) return true;
+        const islemDate = new Date(islem.created_at);
+        return islemDate >= dateRange.from && islemDate <= dateRange.to;
+      });
     }
   });
 
@@ -49,7 +54,8 @@ export default function Personnel() {
           <Card>
             <CardHeader>
               <CardTitle>İşlem Geçmişi</CardTitle>
-              <div className="flex gap-4">
+              <div className="flex gap-4 items-center">
+                <span className="text-sm text-muted-foreground">Tarih aralığı seçin:</span>
                 <DateRangePicker 
                   from={dateRange.from}
                   to={dateRange.to}
@@ -72,31 +78,39 @@ export default function Personnel() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {islemGecmisi.map((islem) => (
-                      <tr key={islem.id}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {new Date(islem.created_at!).toLocaleDateString('tr-TR')}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {personeller?.find(p => p.id === islem.personel_id)?.ad_soyad}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {islem.aciklama}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {islem.tutar} TL
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          %{islem.prim_yuzdesi}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {islem.odenen} TL
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {islem.puan}
+                    {islemGecmisi.length > 0 ? (
+                      islemGecmisi.map((islem) => (
+                        <tr key={islem.id}>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {new Date(islem.created_at!).toLocaleDateString('tr-TR')}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {personeller?.find(p => p.id === islem.personel_id)?.ad_soyad}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {islem.aciklama}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {islem.tutar} TL
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            %{islem.prim_yuzdesi}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {islem.odenen} TL
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {islem.puan}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">
+                          Seçilen tarih aralığında işlem bulunamadı
                         </td>
                       </tr>
-                    ))}
+                    )}
                   </tbody>
                 </table>
               </div>
