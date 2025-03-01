@@ -21,14 +21,16 @@ export function usePersonnelMutation(onSuccess?: () => void) {
           throw new Error('Bu e-posta adresi ile kayıtlı personel bulunmaktadır');
         }
 
-        // Try to fetch auth user by email
-        const { data: { users }, error: userFetchError } = await supabase.auth.admin.listUsers({
-          filters: {
-            email: data.eposta
-          }
+        // Try to fetch auth user by email 
+        // Instead of using filters which doesn't exist, use search term on the email field
+        const { data: authData, error: userFetchError } = await supabase.auth.admin.listUsers({
+          page: 1,
+          perPage: 1,
+          search: data.eposta
         });
         
         let authId = null;
+        const users = authData?.users || [];
 
         // If user exists in auth
         if (users && users.length > 0) {

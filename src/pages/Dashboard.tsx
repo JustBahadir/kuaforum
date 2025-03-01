@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -301,8 +300,11 @@ export default function Dashboard() {
       setStaffFirstName("");
       setStaffLastName("");
       
-      // Set tab to login
-      document.querySelector('[data-state="inactive"][value="login"]')?.click();
+      // Correctly set tab to login using HTMLElement type casting
+      const loginTab = document.querySelector('[data-state="inactive"][value="login"]');
+      if (loginTab) {
+        (loginTab as HTMLElement).click();
+      }
       
     } catch (error: any) {
       console.error("Staff signup error:", error);
