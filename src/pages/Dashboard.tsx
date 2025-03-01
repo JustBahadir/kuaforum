@@ -1,248 +1,138 @@
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, User, Calendar, Scissors, Settings } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
-import { personelServisi, personelIslemleriServisi, islemServisi, kategoriServisi, supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [selectedSection, setSelectedSection] = useState<'none' | 'customer' | 'personnel'>('none');
   const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("123"); // Default password as requested
 
-  const ekleTestVerileri = async () => {
+  // Customer login handler
+  const handleCustomerLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    
     try {
-      setLoading(true);
-      
-      // Önce mevcut personeli kontrol edelim
-      const personeller = await personelServisi.hepsiniGetir();
-      let nimetId = 0;
-      let ergunId = 0;
-      
-      // Nimet ve Ergün personelinin varlığını kontrol edelim
-      const nimetPersonel = personeller.find(p => p.ad_soyad.includes("Nimet"));
-      const ergunPersonel = personeller.find(p => p.ad_soyad.includes("Ergün"));
-      
-      // Eğer personel yoksa ekleyelim
-      if (!nimetPersonel) {
-        const yeniNimet = await personelServisi.ekle({
-          personel_no: "P001",
-          ad_soyad: "Nimet Yılmaz",
-          telefon: "05551112233",
-          eposta: "nimet@example.com",
-          adres: "İstanbul",
-          maas: 15000,
-          calisma_sistemi: "haftalik",
-          prim_yuzdesi: 15
-        });
-        nimetId = yeniNimet.id;
-      } else {
-        nimetId = nimetPersonel.id;
-      }
-      
-      if (!ergunPersonel) {
-        const yeniErgun = await personelServisi.ekle({
-          personel_no: "P002",
-          ad_soyad: "Ergün Demir",
-          telefon: "05552223344",
-          eposta: "ergun@example.com",
-          adres: "İstanbul",
-          maas: 14000,
-          calisma_sistemi: "haftalik",
-          prim_yuzdesi: 12
-        });
-        ergunId = yeniErgun.id;
-      } else {
-        ergunId = ergunPersonel.id;
-      }
-      
-      // Kategori oluşturalım
-      let sacBakimKategoriId = 0;
-      let tirnaklarKategoriId = 0;
-      let ciltBakimKategoriId = 0;
-      
-      const kategoriler = await kategoriServisi.hepsiniGetir();
-      
-      // Saç Bakım kategorisi
-      const sacBakimKategori = kategoriler.find(k => k.kategori_adi.includes("SAÇ BAKIM"));
-      if (!sacBakimKategori) {
-        const yeniKategori = await kategoriServisi.ekle({ kategori_adi: "SAÇ BAKIM" });
-        sacBakimKategoriId = yeniKategori.id;
-      } else {
-        sacBakimKategoriId = sacBakimKategori.id;
-      }
-      
-      // Tırnaklar kategorisi
-      const tirnaklarKategori = kategoriler.find(k => k.kategori_adi.includes("TIRNAKLAR"));
-      if (!tirnaklarKategori) {
-        const yeniKategori = await kategoriServisi.ekle({ kategori_adi: "TIRNAKLAR" });
-        tirnaklarKategoriId = yeniKategori.id;
-      } else {
-        tirnaklarKategoriId = tirnaklarKategori.id;
-      }
-      
-      // Cilt Bakım kategorisi
-      const ciltBakimKategori = kategoriler.find(k => k.kategori_adi.includes("CİLT BAKIM"));
-      if (!ciltBakimKategori) {
-        const yeniKategori = await kategoriServisi.ekle({ kategori_adi: "CİLT BAKIM" });
-        ciltBakimKategoriId = yeniKategori.id;
-      } else {
-        ciltBakimKategoriId = ciltBakimKategori.id;
-      }
-      
-      // İşlemleri getirelim
-      const islemler = await islemServisi.hepsiniGetir();
-      
-      // İşlemleri kategorilere göre tanımlayalım
-      const islemTanimlari = [
-        { adi: "SAÇ KESİMİ", fiyat: 150, puan: 10, kategori_id: sacBakimKategoriId },
-        { adi: "BOYA", fiyat: 350, puan: 15, kategori_id: sacBakimKategoriId },
-        { adi: "KERATIN BAKIM", fiyat: 500, puan: 20, kategori_id: sacBakimKategoriId },
-        { adi: "MANIKÜR", fiyat: 120, puan: 8, kategori_id: tirnaklarKategoriId },
-        { adi: "PEDIKÜR", fiyat: 150, puan: 8, kategori_id: tirnaklarKategoriId },
-        { adi: "PROTEZ TIRNAK", fiyat: 250, puan: 12, kategori_id: tirnaklarKategoriId },
-        { adi: "CİLT BAKIMI", fiyat: 250, puan: 12, kategori_id: ciltBakimKategoriId },
-        { adi: "YÜZ MASKESI", fiyat: 180, puan: 10, kategori_id: ciltBakimKategoriId },
-        { adi: "ANTI-AGING", fiyat: 400, puan: 18, kategori_id: ciltBakimKategoriId }
-      ];
-      
-      // İşlemlerin var olup olmadığını kontrol edelim ve ekleyelim
-      for (const islemTanimi of islemTanimlari) {
-        const mevcutIslem = islemler.find(i => i.islem_adi === islemTanimi.adi);
-        if (!mevcutIslem) {
-          await islemServisi.ekle({
-            islem_adi: islemTanimi.adi,
-            fiyat: islemTanimi.fiyat,
-            puan: islemTanimi.puan,
-            kategori_id: islemTanimi.kategori_id
-          });
-        }
-      }
-      
-      // Test müşterileri oluşturalım
-      const musteriler = [
-        { first_name: "Ayşe", last_name: "Yılmaz", phone: "05551112233" },
-        { first_name: "Mehmet", last_name: "Kaya", phone: "05552223344" },
-        { first_name: "Zeynep", last_name: "Demir", phone: "05553334455" },
-        { first_name: "Ahmet", last_name: "Şahin", phone: "05554445566" },
-        { first_name: "Fatma", last_name: "Öztürk", phone: "05555556677" }
-      ];
-      
-      // Her müşteri için bir kullanıcı oluşturalım
-      const musteriIdleri = [];
-      for (const musteri of musteriler) {
-        // Önce bu e-postayı kontrol edelim
-        const email = `${musteri.first_name.toLowerCase()}.${musteri.last_name.toLowerCase()}@example.com`;
-        const { data: mevcutKullanicilar } = await supabase.auth.signInWithPassword({
-          email,
-          password: "password123"
-        });
-        
-        if (mevcutKullanicilar?.user) {
-          // Müşteri zaten var, id'sini alalım
-          musteriIdleri.push(mevcutKullanicilar.user.id);
-        } else {
-          // Yeni müşteri oluşturalım
-          const { data: yeniKullanici, error } = await supabase.auth.signUp({
-            email,
-            password: "password123",
-            options: {
-              data: {
-                first_name: musteri.first_name,
-                last_name: musteri.last_name
-              }
-            }
-          });
-          
-          if (error) {
-            console.error("Müşteri kayıt hatası:", error);
-            continue;
-          }
-          
-          if (yeniKullanici?.user) {
-            // Profil bilgilerini güncelleyelim
-            await supabase
-              .from('profiles')
-              .update({
-                first_name: musteri.first_name,
-                last_name: musteri.last_name,
-                phone: musteri.phone
-              })
-              .eq('id', yeniKullanici.user.id);
-            
-            musteriIdleri.push(yeniKullanici.user.id);
-          }
-        }
-      }
-      
-      // Güncel işlemleri alalım
-      const guncelIslemler = await islemServisi.hepsiniGetir();
-      
-      // Örnek açıklamalar
-      const aciklamalar = [
-        "Müşteri çok memnun kaldı",
-        "Standart işlem yapıldı",
-        "Ekstra bakım yapıldı",
-        "Müşteri tekrar gelmek istedi",
-        "İndirimli işlem uygulandı",
-        "VIP müşteri işlemi",
-        "Yeni müşteri tanışma işlemi",
-        "Kombine bakım yapıldı",
-        "Özel işlem uygulandı",
-        "Acil işlem yapıldı"
-      ];
-      
-      // Her personel için 10 işlem ekleyelim
-      // Nimet için 10 işlem
-      for(let i = 0; i < 10; i++) {
-        const randomIslem = guncelIslemler[Math.floor(Math.random() * guncelIslemler.length)];
-        const randomAciklama = aciklamalar[Math.floor(Math.random() * aciklamalar.length)];
-        const randomTutar = randomIslem.fiyat * (Math.random() * 0.3 + 0.9); // %90-120 arası rastgele fiyat
-        const randomMusteriId = musteriIdleri[Math.floor(Math.random() * musteriIdleri.length)];
-        
-        await personelIslemleriServisi.ekle({
-          personel_id: nimetId,
-          islem_id: randomIslem.id,
-          musteri_id: randomMusteriId,
-          aciklama: `${randomIslem.islem_adi} - ${randomAciklama}`,
-          tutar: parseFloat(randomTutar.toFixed(2)),
-          prim_yuzdesi: 15,
-          odenen: parseFloat((randomTutar * 0.15).toFixed(2)),
-          puan: randomIslem.puan
-        });
-      }
-      
-      // Ergün için 10 işlem
-      for(let i = 0; i < 10; i++) {
-        const randomIslem = guncelIslemler[Math.floor(Math.random() * guncelIslemler.length)];
-        const randomAciklama = aciklamalar[Math.floor(Math.random() * aciklamalar.length)];
-        const randomTutar = randomIslem.fiyat * (Math.random() * 0.3 + 0.9); // %90-120 arası rastgele fiyat
-        const randomMusteriId = musteriIdleri[Math.floor(Math.random() * musteriIdleri.length)];
-        
-        await personelIslemleriServisi.ekle({
-          personel_id: ergunId,
-          islem_id: randomIslem.id,
-          musteri_id: randomMusteriId,
-          aciklama: `${randomIslem.islem_adi} - ${randomAciklama}`,
-          tutar: parseFloat(randomTutar.toFixed(2)),
-          prim_yuzdesi: 12,
-          odenen: parseFloat((randomTutar * 0.12).toFixed(2)),
-          puan: randomIslem.puan
-        });
-      }
-      
-      toast({
-        title: "Başarılı!",
-        description: "Kategori, işlem, müşteri ve işlem kayıtları oluşturuldu.",
+      // Sign in with email
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
       
-    } catch (error) {
-      console.error("İşlem ekleme hatası:", error);
+      if (error) {
+        // If user doesn't exist, sign them up
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              role: "customer"
+            }
+          }
+        });
+        
+        if (signUpError) throw signUpError;
+        
+        toast({
+          title: "Yeni hesap oluşturuldu!",
+          description: "Başarıyla kaydoldunuz. Müşteri bilgi formunu doldurmanız gerekmektedir.",
+        });
+        
+        // Redirect to customer profile form
+        navigate("/customer-profile");
+        return;
+      }
+      
       toast({
-        title: "Hata!",
-        description: "İşlem girişi yapılırken bir hata oluştu.",
+        title: "Giriş başarılı!",
+        description: "Müşteri paneline yönlendiriliyorsunuz.",
+      });
+      
+      // Check if profile is complete
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('first_name, last_name, phone, age, occupation')
+        .eq('id', data.user?.id)
+        .single();
+      
+      if (!profileData?.first_name || !profileData?.phone) {
+        navigate("/customer-profile");
+      } else {
+        navigate("/appointments");
+      }
+      
+    } catch (error) {
+      console.error("Login error:", error);
+      toast({
+        title: "Giriş hatası!",
+        description: "Giriş yapılırken bir hata oluştu. Lütfen tekrar deneyin.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Staff login handler
+  const handleStaffLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    
+    try {
+      // Sign in with email
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (error) {
+        toast({
+          title: "Giriş hatası!",
+          description: "Personel girişi için geçerli bir hesap gereklidir. Yöneticinize başvurun.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Check if user is staff
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', data.user?.id)
+        .single();
+      
+      if (profileData?.role !== 'staff') {
+        toast({
+          title: "Yetkisiz giriş!",
+          description: "Bu hesabın personel girişi için yetkisi yok.",
+          variant: "destructive",
+        });
+        
+        // Sign out the user
+        await supabase.auth.signOut();
+        return;
+      }
+      
+      toast({
+        title: "Giriş başarılı!",
+        description: "Personel paneline yönlendiriliyorsunuz.",
+      });
+      
+      navigate("/personnel");
+      
+    } catch (error) {
+      console.error("Login error:", error);
+      toast({
+        title: "Giriş hatası!",
+        description: "Giriş yapılırken bir hata oluştu. Lütfen tekrar deneyin.",
         variant: "destructive",
       });
     } finally {
@@ -251,121 +141,176 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-6xl mx-auto space-y-8">
-        {/* Admin Test */}
-        <div className="flex justify-end">
-          <Button 
-            variant="outline" 
-            onClick={ekleTestVerileri} 
-            disabled={loading}
-          >
-            {loading ? "Yükleniyor..." : "Test Verileri Ekle"}
-          </Button>
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-indigo-100 p-4 md:p-8">
+      <div className="max-w-6xl mx-auto">
+        {/* Landing Info */}
+        <div className="mb-10 text-center">
+          <h1 className="text-4xl font-bold text-indigo-900 mb-4">Salon Yönetim Sistemi</h1>
+          <p className="text-xl text-gray-700 max-w-3xl mx-auto">
+            Modern ve kullanıcı dostu salon yönetim sistemi ile hizmetlerinizi ve müşterilerinizi kolayca yönetin.
+          </p>
         </div>
-        
-        {/* Ana Seçim Butonları */}
-        {selectedSection === 'none' && (
-          <div className="grid md:grid-cols-2 gap-8">
-            {/* Müşteri Seçeneği */}
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer" 
-                  onClick={() => setSelectedSection('customer')}>
-              <CardHeader className="text-center">
-                <CardTitle className="flex items-center justify-center gap-2">
-                  <User className="h-8 w-8 text-primary" />
-                  Müşteri İşlemleri
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="text-center text-muted-foreground">
-                Randevu alma ve müşteri hizmetleri için tıklayın
-              </CardContent>
-            </Card>
 
-            {/* Personel Seçeneği */}
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer"
-                  onClick={() => setSelectedSection('personnel')}>
-              <CardHeader className="text-center">
-                <CardTitle className="flex items-center justify-center gap-2">
-                  <Users className="h-8 w-8 text-primary" />
-                  Personel İşlemleri
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="text-center text-muted-foreground">
-                Personel ve işletme yönetimi için tıklayın
-              </CardContent>
-            </Card>
-          </div>
-        )}
+        {/* Features Section */}
+        <div className="grid md:grid-cols-2 gap-8 mb-10">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-2xl text-indigo-800">Müşteri Özellikleri</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2">
+                <li className="flex items-start">
+                  <span className="text-green-500 mr-2">✓</span>
+                  <span>Online randevu alma ve yönetme</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-green-500 mr-2">✓</span>
+                  <span>Kişisel bakım hizmetlerine kolay erişim</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-green-500 mr-2">✓</span>
+                  <span>Geçmiş işlemlerinizi görüntüleme</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-green-500 mr-2">✓</span>
+                  <span>Özel indirim ve kampanyalardan haberdar olma</span>
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
 
-        {/* Müşteri Menüsü */}
-        {selectedSection === 'customer' && (
-          <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold">Müşteri İşlemleri</h2>
-              <Button variant="outline" onClick={() => setSelectedSection('none')}>
-                Geri Dön
-              </Button>
-            </div>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <Button 
-                className="h-24 text-lg"
-                onClick={() => navigate('/operations')}
-              >
-                <Scissors className="mr-2 h-6 w-6" />
-                Hizmetlerimiz
-              </Button>
-              <Button 
-                className="h-24 text-lg"
-                onClick={() => navigate('/appointments')}
-              >
-                <Calendar className="mr-2 h-6 w-6" />
-                Randevu Al
-              </Button>
-            </div>
-          </div>
-        )}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-2xl text-indigo-800">Personel Özellikleri</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2">
+                <li className="flex items-start">
+                  <span className="text-green-500 mr-2">✓</span>
+                  <span>Tüm randevuları takvim üzerinde görüntüleme</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-green-500 mr-2">✓</span>
+                  <span>Müşteri bilgilerini ve işlem geçmişini takip etme</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-green-500 mr-2">✓</span>
+                  <span>Performans raporları ve işlem istatistikleri</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-green-500 mr-2">✓</span>
+                  <span>Hizmet ve fiyatlandırma yönetimi</span>
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
+        </div>
 
-        {/* Personel Menüsü */}
-        {selectedSection === 'personnel' && (
-          <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold">Personel İşlemleri</h2>
-              <Button variant="outline" onClick={() => setSelectedSection('none')}>
-                Geri Dön
-              </Button>
-            </div>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <Button 
-                className="h-24 text-lg"
-                onClick={() => navigate('/personnel')}
-              >
-                <Users className="mr-2 h-6 w-6" />
-                Personel Yönetimi
-              </Button>
-              <Button 
-                className="h-24 text-lg"
-                onClick={() => navigate('/customers')}
-              >
-                <User className="mr-2 h-6 w-6" />
-                Müşteri Listesi
-              </Button>
-              <Button 
-                className="h-24 text-lg"
-                onClick={() => navigate('/operations/staff')}
-              >
-                <Settings className="mr-2 h-6 w-6" />
-                İşletme Ayarları
-              </Button>
-              <Button 
-                className="h-24 text-lg"
-                onClick={() => navigate('/appointments')}
-              >
-                <Calendar className="mr-2 h-6 w-6" />
-                Randevu Takvimi
-              </Button>
-            </div>
-          </div>
-        )}
+        {/* Login Tabs */}
+        <div className="max-w-md mx-auto">
+          <Tabs defaultValue="customer" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="customer">Müşteri Girişi</TabsTrigger>
+              <TabsTrigger value="staff">Personel Girişi</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="customer">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Müşteri Girişi</CardTitle>
+                  <CardDescription>
+                    Hesabınız yoksa, otomatik olarak oluşturulacaktır.
+                  </CardDescription>
+                </CardHeader>
+                <form onSubmit={handleCustomerLogin}>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="customer-email">E-posta</Label>
+                      <Input 
+                        id="customer-email" 
+                        type="email" 
+                        placeholder="ornek@mail.com" 
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="customer-password">Şifre</Label>
+                      <Input 
+                        id="customer-password" 
+                        type="password" 
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                      />
+                      <p className="text-xs text-gray-500">
+                        Şimdilik tüm şifreler "123" olarak ayarlanmıştır.
+                      </p>
+                    </div>
+                  </CardContent>
+                  <CardFooter>
+                    <Button 
+                      type="submit" 
+                      className="w-full" 
+                      disabled={loading}
+                    >
+                      {loading ? "Giriş yapılıyor..." : "Giriş Yap / Kayıt Ol"}
+                    </Button>
+                  </CardFooter>
+                </form>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="staff">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Personel Girişi</CardTitle>
+                  <CardDescription>
+                    Salon personeli için giriş. Yeni personel hesapları yönetici tarafından oluşturulur.
+                  </CardDescription>
+                </CardHeader>
+                <form onSubmit={handleStaffLogin}>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="staff-email">E-posta</Label>
+                      <Input 
+                        id="staff-email" 
+                        type="email" 
+                        placeholder="personel@salonadi.com" 
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="staff-password">Şifre</Label>
+                      <Input 
+                        id="staff-password" 
+                        type="password" 
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                      />
+                      <p className="text-xs text-gray-500">
+                        Şimdilik tüm şifreler "123" olarak ayarlanmıştır.
+                      </p>
+                    </div>
+                  </CardContent>
+                  <CardFooter>
+                    <Button 
+                      type="submit" 
+                      className="w-full" 
+                      disabled={loading}
+                    >
+                      {loading ? "Giriş yapılıyor..." : "Personel Girişi"}
+                    </Button>
+                  </CardFooter>
+                </form>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
     </div>
   );
