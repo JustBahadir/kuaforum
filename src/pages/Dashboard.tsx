@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -6,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 
 export default function Dashboard() {
@@ -55,25 +54,19 @@ export default function Dashboard() {
           return;
         }
         
-        toast({
-          title: "Yeni hesap oluşturuldu!",
-          description: "Başarıyla kaydoldunuz. Müşteri bilgi formunu doldurmanız gerekmektedir.",
-        });
+        toast.success("Yeni hesap oluşturuldu! Müşteri bilgi formunu doldurmanız gerekmektedir.");
         
         // Redirect to customer profile form
         navigate("/customer-profile");
         return;
       }
       
-      toast({
-        title: "Giriş başarılı!",
-        description: "Müşteri paneline yönlendiriliyorsunuz.",
-      });
+      toast.success("Giriş başarılı! Müşteri paneline yönlendiriliyorsunuz.");
       
       // Check if profile is complete
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('first_name, last_name, phone, age, occupation')
+        .select('first_name, last_name, phone, occupation')
         .eq('id', data.user?.id)
         .single();
       
@@ -106,39 +99,40 @@ export default function Dashboard() {
       
       if (error) {
         console.error("Staff login error:", error);
-        setLoginError("Personel girişi için geçerli bir hesap gereklidir. Yöneticinize başvurun.");
+        setLoginError("Personel girişi başarısız: " + error.message);
         return;
       }
       
-      // Check if user is staff
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', data.user?.id)
+      // Check if user has auth record in personel table
+      const { data: personnelData, error: personnelError } = await supabase
+        .from('personel')
+        .select('*')
+        .eq('auth_id', data.user?.id)
         .maybeSingle();
       
-      if (profileError) {
-        console.error("Profile fetch error:", profileError);
+      if (personnelError) {
+        console.error("Personnel fetch error:", personnelError);
       }
       
-      if (profileData?.role !== 'staff') {
-        toast({
-          title: "Yetkisiz giriş!",
-          description: "Bu hesabın personel girişi için yetkisi yok.",
-          variant: "destructive",
-        });
+      if (!personnelData) {
+        // Try to check if user is in profiles with staff role
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', data.user?.id)
+          .maybeSingle();
         
-        // Sign out the user
-        await supabase.auth.signOut();
-        setLoginError("Bu hesap personel girişi için yetkili değil.");
-        return;
+        if (profileData?.role !== 'staff') {
+          toast.error("Bu hesabın personel girişi için yetkisi yok.");
+          
+          // Sign out the user
+          await supabase.auth.signOut();
+          setLoginError("Bu hesap personel girişi için yetkili değil.");
+          return;
+        }
       }
       
-      toast({
-        title: "Giriş başarılı!",
-        description: "Personel paneline yönlendiriliyorsunuz.",
-      });
-      
+      toast.success("Giriş başarılı! Personel paneline yönlendiriliyorsunuz.");
       navigate("/personnel");
       
     } catch (error: any) {

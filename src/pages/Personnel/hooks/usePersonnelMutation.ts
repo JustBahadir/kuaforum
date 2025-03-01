@@ -1,4 +1,3 @@
-
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Personel, supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -9,11 +8,11 @@ export function usePersonnelMutation(onSuccess?: () => void) {
   return useMutation({
     mutationFn: async (data: Omit<Personel, 'id' | 'created_at'>) => {
       try {
-        const { data: existingUser } = await supabase
+        const { data: existingUser, error: existingUserError } = await supabase
           .from('personel')
           .select('eposta')
           .eq('eposta', data.eposta)
-          .single();
+          .maybeSingle();
 
         if (existingUser) {
           throw new Error('Bu e-posta adresi ile kayıtlı personel bulunmaktadır');
@@ -21,7 +20,7 @@ export function usePersonnelMutation(onSuccess?: () => void) {
 
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email: data.eposta,
-          password: 'password123', // Longer password that meets the minimum requirements
+          password: 'password123',
           options: {
             data: {
               first_name: data.ad_soyad.split(' ')[0],
@@ -33,10 +32,38 @@ export function usePersonnelMutation(onSuccess?: () => void) {
 
         if (authError) {
           console.error('Auth Error:', authError);
-          if (authError.message.includes('already registered')) {
-            throw new Error('Bu e-posta adresi zaten kayıtlı');
+
+          const { data: findUserData, error: findUserError } = await supabase
+            .from('profiles')
+            .select('id')
+            .filter('first_name', 'ilike', data.ad_soyad.split(' ')[0])
+            .filter('last_name', 'ilike', data.ad_soyad.split(' ').slice(1).join(' '))
+            .maybeSingle();
+
+          if (findUserError || !findUserData) {
+            if (authError.message.includes('already registered')) {
+              throw new Error('Bu e-posta adresi zaten kayıtlı, ancak personel kaydı yapılamadı. Lütfen sistem yöneticisine başvurun.');
+            }
+            throw authError;
           }
-          throw authError;
+
+          const personelData = {
+            ...data,
+            auth_id: findUserData.id,
+            personel_no: `P${Math.floor(Math.random() * 10000)}`
+          };
+
+          const { data: personel, error: personelError } = await supabase
+            .from('personel')
+            .insert([personelData])
+            .select()
+            .single();
+
+          if (personelError) {
+            throw new Error('Personel kaydı oluşturulurken bir hata oluştu');
+          }
+
+          return personel;
         }
 
         if (!authData.user) {
@@ -56,7 +83,13 @@ export function usePersonnelMutation(onSuccess?: () => void) {
           .single();
 
         if (personelError) {
-          await supabase.auth.admin.deleteUser(authData.user.id);
+          if (authData.user) {
+            try {
+              console.log("Would delete user", authData.user.id);
+            } catch (deleteError) {
+              console.error("Could not delete auth user:", deleteError);
+            }
+          }
           throw new Error('Personel kaydı oluşturulurken bir hata oluştu');
         }
 

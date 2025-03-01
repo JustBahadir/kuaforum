@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 
 export default function CustomerProfile() {
@@ -17,7 +17,6 @@ export default function CustomerProfile() {
     first_name: "",
     last_name: "",
     phone: "",
-    age: "",
     occupation: ""
   });
 
@@ -28,11 +27,7 @@ export default function CustomerProfile() {
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
       
       if (sessionError || !sessionData.session) {
-        toast({
-          title: "Oturum hatası!",
-          description: "Lütfen önce giriş yapın.",
-          variant: "destructive",
-        });
+        toast("Lütfen önce giriş yapın.");
         navigate("/");
         return;
       }
@@ -43,7 +38,7 @@ export default function CustomerProfile() {
       // Get existing profile data if any
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('first_name, last_name, phone, age, occupation')
+        .select('first_name, last_name, phone, occupation')
         .eq('id', userId)
         .single();
       
@@ -53,7 +48,6 @@ export default function CustomerProfile() {
           first_name: profileData.first_name || "",
           last_name: profileData.last_name || "",
           phone: profileData.phone || "",
-          age: profileData.age?.toString() || "",
           occupation: profileData.occupation || ""
         });
       }
@@ -76,11 +70,8 @@ export default function CustomerProfile() {
     try {
       // Check if all required fields are filled
       if (!userData.first_name || !userData.last_name || !userData.phone) {
-        toast({
-          title: "Eksik bilgi!",
-          description: "Lütfen gerekli tüm alanları doldurun.",
-          variant: "destructive",
-        });
+        toast("Lütfen gerekli tüm alanları doldurun.");
+        setSaving(false);
         return;
       }
       
@@ -91,28 +82,20 @@ export default function CustomerProfile() {
           first_name: userData.first_name,
           last_name: userData.last_name,
           phone: userData.phone,
-          age: userData.age ? parseInt(userData.age) : null,
           occupation: userData.occupation
         })
         .eq('id', userData.id);
       
       if (error) throw error;
       
-      toast({
-        title: "Profil kaydedildi!",
-        description: "Bilgileriniz başarıyla güncellendi.",
-      });
+      toast.success("Profil kaydedildi!");
       
       // Redirect to appointments page
       navigate("/appointments");
       
     } catch (error) {
       console.error("Profile save error:", error);
-      toast({
-        title: "Kayıt hatası!",
-        description: "Profil bilgileriniz kaydedilirken bir hata oluştu.",
-        variant: "destructive",
-      });
+      toast.error("Profil bilgileriniz kaydedilirken bir hata oluştu.");
     } finally {
       setSaving(false);
     }
@@ -178,17 +161,6 @@ export default function CustomerProfile() {
                   value={userData.phone}
                   onChange={handleInputChange}
                   required
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="age">Yaş</Label>
-                <Input
-                  id="age"
-                  name="age"
-                  type="number"
-                  value={userData.age}
-                  onChange={handleInputChange}
                 />
               </div>
               
