@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CustomerOperationsTable } from "./CustomerOperationsTable";
 import { Musteri } from "@/lib/supabase";
+import { CustomerPreferences } from "./CustomerPreferences";
 
 interface CustomerDetailsProps {
   open: boolean;
@@ -48,12 +49,16 @@ export function CustomerDetails({ open, onOpenChange, customer }: CustomerDetail
               <TabsList className="w-full">
                 <TabsTrigger value="islemler" className="flex-1">İşlem Geçmişi</TabsTrigger>
                 <TabsTrigger value="randevular" className="flex-1">Randevu Geçmişi</TabsTrigger>
+                <TabsTrigger value="tercihler" className="flex-1">Kişisel Tercihler</TabsTrigger>
               </TabsList>
               <TabsContent value="islemler" className="border rounded-md mt-4">
                 <CustomerOperationsTable customerId={customer.id} />
               </TabsContent>
               <TabsContent value="randevular" className="border rounded-md p-4 mt-4">
                 <div className="text-center py-4">Randevu geçmişi burada gösterilecek.</div>
+              </TabsContent>
+              <TabsContent value="tercihler" className="border rounded-md mt-4">
+                <CustomerPreferences customerId={customer.id} />
               </TabsContent>
             </Tabs>
           </div>
