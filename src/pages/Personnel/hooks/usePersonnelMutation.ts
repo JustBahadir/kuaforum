@@ -21,27 +21,35 @@ export function usePersonnelMutation(onSuccess?: () => void) {
           throw new Error('Bu e-posta adresi ile kayıtlı personel bulunmaktadır');
         }
 
-        // Try to fetch auth user by email 
-        // Instead of using filters which doesn't exist, use search term on the email field
+        // Try to fetch auth user by email without using search parameter
+        // We need to fetch all users and filter on the client side since the API doesn't support searching by email
         const { data: authData, error: userFetchError } = await supabase.auth.admin.listUsers({
           page: 1,
-          perPage: 1,
-          search: data.eposta
+          perPage: 100 // Fetch more to increase the chance of finding the user
         });
         
         let authId = null;
-        const users = authData?.users || [];
-
-        // If user exists in auth
-        if (users && users.length > 0) {
-          console.log("User exists in auth system:", users[0]);
-          authId = users[0].id;
+        let foundUser = null;
+        
+        // Filter users on the client side
+        if (authData?.users) {
+          foundUser = authData.users.find(user => 
+            user.email?.toLowerCase() === data.eposta.toLowerCase()
+          );
           
-          // Update user role to staff
-          await profilServisi.createOrUpdateProfile(authId, {
-            role: 'staff'
-          });
-        } else {
+          if (foundUser) {
+            console.log("User exists in auth system:", foundUser);
+            authId = foundUser.id;
+            
+            // Update user role to staff
+            await profilServisi.createOrUpdateProfile(authId, {
+              role: 'staff'
+            });
+          }
+        }
+
+        // If user doesn't exist, create a new one
+        if (!authId) {
           // Create new auth user if not exists
           const randomPassword = `Password${Math.floor(Math.random() * 100000)}`;
           const { data: authData, error: authError } = await supabase.auth.signUp({
