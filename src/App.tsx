@@ -194,9 +194,9 @@ const App = () => {
               ) : <Dashboard />
             } />
             
-            {/* Profile completion route - accessible by all logged in users */}
+            {/* Profile completion route - integrated into the main layout for better UX */}
             <Route path="/customer-profile" element={
-              session ? <CustomerProfile isNewUser={isNewUser} /> : <Navigate to="/" replace />
+              session ? getCustomAppLayout(<CustomerProfile isNewUser={isNewUser} />) : <Navigate to="/" replace />
             } />
             
             {/* Customer-only routes */}

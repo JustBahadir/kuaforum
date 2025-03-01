@@ -19,7 +19,27 @@ export function usePersonnelMutation(onSuccess?: () => void) {
       if (error) throw error;
 
       // Eğer auth_id belirtilmişse, personel ekleme işlemine gerek yok
-      if (personelData.auth_id) return data;
+      if (personelData.auth_id) {
+        // Auth_id varsa, ilgili profil varsa güncelle, yoksa oluştur
+        try {
+          const { data: userData } = await supabase.auth.admin.getUserById(personelData.auth_id);
+          if (userData && userData.user) {
+            // Profiles tablosunda kaydı güncelle
+            await supabase
+              .from('profiles')
+              .upsert({
+                id: personelData.auth_id,
+                first_name: personelData.ad_soyad.split(' ')[0] || '',
+                last_name: personelData.ad_soyad.split(' ').slice(1).join(' ') || '',
+                role: 'staff'
+              });
+          }
+        } catch (error) {
+          console.error("Error updating profile for existing auth user:", error);
+        }
+        
+        return data;
+      }
 
       try {
         // Auth kullanıcısı oluştur
@@ -67,7 +87,11 @@ export function usePersonnelMutation(onSuccess?: () => void) {
               
               // Kullanıcının rolünü personel olarak güncelle
               await supabase.auth.admin.updateUserById(matchingUser.id, {
-                user_metadata: { role: 'staff' }
+                user_metadata: { 
+                  role: 'staff',
+                  first_name: personelData.ad_soyad.split(' ')[0] || '',
+                  last_name: personelData.ad_soyad.split(' ').slice(1).join(' ') || ''
+                }
               });
               
               // Kullanıcı profilini güncelle

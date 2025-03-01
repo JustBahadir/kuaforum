@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { profilServisi } from "@/lib/supabase/services/profilServisi";
-import { supabase } from "@/lib/supabase";
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
+import { User, UserRound, Phone } from "lucide-react";
 
 interface CustomerProfileProps {
   isNewUser?: boolean;
@@ -64,9 +65,6 @@ export default function CustomerProfile({ isNewUser = false }: CustomerProfilePr
       // Yeni kullanıcılar için randevu sayfasına yönlendir
       if (isNewUser) {
         navigate("/appointments");
-      } else {
-        // Mevcut kullanıcılar için önceki sayfaya dön
-        navigate(-1);
       }
     } catch (error: any) {
       console.error("Profil güncelleme hatası:", error);
@@ -96,97 +94,96 @@ export default function CustomerProfile({ isNewUser = false }: CustomerProfilePr
     }
   };
 
-  const handleSkip = () => {
-    if (isNewUser) {
-      // Yeni kullanıcılar için direkt ana sayfaya yönlendir
-      navigate("/appointments");
-    } else {
-      // Mevcut kullanıcılar için önceki sayfaya dön
-      navigate(-1);
-    }
-  };
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate("/");
-  };
-
   if (initialLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
         <p>Profil bilgileri yükleniyor...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
-        <h1 className="text-2xl font-bold text-center mb-6">
-          {isNewUser ? "Müşteri Bilgilerinizi Tamamlayın" : "Müşteri Profili Güncelleme"}
+    <div className="container mx-auto p-6">
+      <div className="max-w-3xl mx-auto">
+        <h1 className="text-2xl font-bold mb-6">
+          {isNewUser ? "Müşteri Bilgilerinizi Tamamlayın" : "Profil Bilgilerim"}
         </h1>
         
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="firstName">Adınız *</Label>
-            <Input
-              id="firstName"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              placeholder="Adınız"
-              required
-            />
-          </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Kişisel Bilgiler</CardTitle>
+          </CardHeader>
           
-          <div className="space-y-2">
-            <Label htmlFor="lastName">Soyadınız *</Label>
-            <Input
-              id="lastName"
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-              placeholder="Soyadınız"
-              required
-            />
-          </div>
+          <CardContent>
+            <form id="profileForm" onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="firstName" className="flex items-center gap-2">
+                  <User size={16} />
+                  Adınız *
+                </Label>
+                <Input
+                  id="firstName"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  placeholder="Adınız"
+                  className="max-w-md"
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="lastName" className="flex items-center gap-2">
+                  <UserRound size={16} />
+                  Soyadınız *
+                </Label>
+                <Input
+                  id="lastName"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  placeholder="Soyadınız"
+                  className="max-w-md"
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="phone" className="flex items-center gap-2">
+                  <Phone size={16} />
+                  Telefon Numaranız *
+                </Label>
+                <Input
+                  id="phone"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="05XX XXX XX XX"
+                  className="max-w-md"
+                  required
+                />
+                <p className="text-xs text-gray-500">* Zorunlu alanlar</p>
+              </div>
+            </form>
+          </CardContent>
           
-          <div className="space-y-2">
-            <Label htmlFor="phone">Telefon Numaranız *</Label>
-            <Input
-              id="phone"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="05XX XXX XX XX"
-              required
-            />
-            <p className="text-xs text-gray-500">* Zorunlu alanlar</p>
-          </div>
-          
-          <div className="flex flex-col gap-2 pt-4">
-            <Button type="submit" disabled={loading}>
+          <CardFooter className="flex flex-col sm:flex-row gap-2 sm:justify-end">
+            <Button 
+              type="submit" 
+              form="profileForm"
+              disabled={loading}
+            >
               {loading ? "Kaydediliyor..." : "Bilgilerimi Kaydet"}
             </Button>
             
-            <div className="flex gap-2 mt-2">
+            {isNewUser && (
               <Button 
                 type="button" 
                 variant="outline" 
-                onClick={handleSkip} 
-                className="flex-1"
+                onClick={() => navigate("/appointments")}
               >
-                {isNewUser ? "Şimdilik Atla" : "Vazgeç"}
+                Şimdilik Atla
               </Button>
-              
-              <Button 
-                type="button" 
-                variant="destructive" 
-                onClick={handleLogout}
-                className="flex-1"
-              >
-                Çıkış Yap
-              </Button>
-            </div>
-          </div>
-        </form>
+            )}
+          </CardFooter>
+        </Card>
       </div>
     </div>
   );

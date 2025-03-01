@@ -21,13 +21,40 @@ export const profilServisi = {
         const role = user.user_metadata?.role || 'customer';
         console.log("Retrieved user role:", role);
         
-        return {
-          id: user.id,
-          first_name: user.user_metadata?.first_name || '',
-          last_name: user.user_metadata?.last_name || '',
-          phone: user.user_metadata?.phone || '',
-          role: role
-        };
+        // Try to create this profile in the database
+        try {
+          const defaultProfile = {
+            id: user.id,
+            first_name: user.user_metadata?.first_name || '',
+            last_name: user.user_metadata?.last_name || '',
+            phone: user.user_metadata?.phone || '',
+            role: role
+          };
+          
+          const { data: newProfile, error: createError } = await supabase
+            .from('profiles')
+            .upsert(defaultProfile)
+            .select()
+            .single();
+            
+          if (createError) {
+            console.error("Error creating profile:", createError);
+            return defaultProfile;
+          }
+          
+          return newProfile;
+        } catch (createErr) {
+          console.error("Exception in profile creation:", createErr);
+          
+          // Return the default profile if creation fails
+          return {
+            id: user.id,
+            first_name: user.user_metadata?.first_name || '',
+            last_name: user.user_metadata?.last_name || '',
+            phone: user.user_metadata?.phone || '',
+            role: role
+          };
+        }
       }
       
       // If profile is null but user exists, create a basic profile
@@ -203,9 +230,23 @@ export const profilServisi = {
         console.error("Error fetching user role:", error);
         
         // Try to get role from auth metadata
-        const { data: userData } = await supabase.auth.admin.getUserById(userId);
-        if (userData && userData.user && userData.user.user_metadata) {
-          return userData.user.user_metadata.role || 'customer';
+        try {
+          const { data: userData } = await supabase.auth.admin.getUserById(userId);
+          if (userData && userData.user && userData.user.user_metadata) {
+            return userData.user.user_metadata.role || 'customer';
+          }
+        } catch (adminError) {
+          console.error("Error getting user from admin API:", adminError);
+          
+          // Last resort: try to get user from regular getUser
+          try {
+            const { data: sessionData } = await supabase.auth.getSession();
+            if (sessionData.session?.user?.id === userId) {
+              return sessionData.session.user.user_metadata?.role || 'customer';
+            }
+          } catch (sessionError) {
+            console.error("Error getting session:", sessionError);
+          }
         }
         
         return null;
@@ -266,14 +307,30 @@ export const profilServisi = {
               .maybeSingle();
               
             // Get user email
-            const { data: userData } = await supabase.auth.admin.getUserById(userId);
-            const userEmail = userData?.user?.email || '';
+            let userEmail = '';
+            try {
+              const { data: userData } = await supabase.auth.admin.getUserById(userId);
+              userEmail = userData?.user?.email || '';
+            } catch (error) {
+              console.error("Error getting user email:", error);
+              // Try alternative method to get email
+              try {
+                const { data: users } = await supabase
+                  .from('auth.users')
+                  .select('email')
+                  .eq('id', userId)
+                  .single();
+                userEmail = users?.email || '';
+              } catch (e) {
+                console.error("Could not get user email:", e);
+              }
+            }
               
             if (!existingPersonel) {
               // Create a new personel record
               const fullName = `${profile.first_name} ${profile.last_name}`.trim();
               
-              await supabase
+              const { error: insertError } = await supabase
                 .from('personel')
                 .insert({
                   auth_id: userId,
@@ -286,12 +343,16 @@ export const profilServisi = {
                   calisma_sistemi: 'aylik',
                   prim_yuzdesi: 0
                 });
+                
+              if (insertError) {
+                console.error("Error creating personnel record:", insertError);
+              }
             } else {
               // Update the existing personel record with the latest name and phone
               const fullName = `${profile.first_name} ${profile.last_name}`.trim();
               
               if (fullName) {
-                await supabase
+                const { error: updateError } = await supabase
                   .from('personel')
                   .update({
                     ad_soyad: fullName,
@@ -299,6 +360,10 @@ export const profilServisi = {
                     eposta: userEmail || existingPersonel.eposta
                   })
                   .eq('auth_id', userId);
+                  
+                if (updateError) {
+                  console.error("Error updating personnel record:", updateError);
+                }
               }
             }
           } catch (staffErr) {
@@ -311,14 +376,18 @@ export const profilServisi = {
         // If database update fails, update auth metadata as fallback
         console.error("Using auth fallback for profile creation:", dbError);
         
-        const { data: userUpdate } = await supabase.auth.admin.updateUserById(userId, {
-          user_metadata: {
-            first_name: profile.first_name,
-            last_name: profile.last_name,
-            phone: profile.phone,
-            role: profile.role
-          }
-        });
+        try {
+          const { data: userUpdate } = await supabase.auth.admin.updateUserById(userId, {
+            user_metadata: {
+              first_name: profile.first_name,
+              last_name: profile.last_name,
+              phone: profile.phone,
+              role: profile.role
+            }
+          });
+        } catch (updateError) {
+          console.error("Error updating user metadata:", updateError);
+        }
         
         return {
           ...profile,
