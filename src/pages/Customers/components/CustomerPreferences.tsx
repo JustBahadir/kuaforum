@@ -1,10 +1,9 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Calendar as CalendarIcon, Gift, Scissors, Spray, Flame } from "lucide-react";
+import { Calendar as CalendarIcon, Gift, Scissors, Droplet, Flame } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
@@ -49,7 +48,6 @@ export function CustomerPreferences({ customerId }: CustomerPreferencesProps) {
   const [newCustomPreferenceValue, setNewCustomPreferenceValue] = useState("");
   const [isEditMode, setIsEditMode] = useState(false);
 
-  // Get customer preferences from the database
   const { data: preferences, isLoading } = useQuery({
     queryKey: ['customerPreferences', customerId],
     queryFn: async () => {
@@ -59,7 +57,7 @@ export function CustomerPreferences({ customerId }: CustomerPreferencesProps) {
         .eq('customer_id', customerId)
         .single();
       
-      if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+      if (error && error.code !== 'PGRST116') {
         throw error;
       }
       
@@ -67,11 +65,9 @@ export function CustomerPreferences({ customerId }: CustomerPreferencesProps) {
     }
   });
 
-  // Save customer preferences to the database
   const { mutate: savePreferences, isPending: isSaving } = useMutation({
     mutationFn: async (newPreferences: CustomerPreference) => {
       if (preferences?.id) {
-        // Update existing preferences
         const { data, error } = await supabase
           .from('customer_preferences')
           .update(newPreferences)
@@ -82,7 +78,6 @@ export function CustomerPreferences({ customerId }: CustomerPreferencesProps) {
         if (error) throw error;
         return data;
       } else {
-        // Insert new preferences
         const { data, error } = await supabase
           .from('customer_preferences')
           .insert([newPreferences])
@@ -111,7 +106,6 @@ export function CustomerPreferences({ customerId }: CustomerPreferencesProps) {
     }
   });
 
-  // Set form values when preferences are loaded
   useEffect(() => {
     if (preferences) {
       if (preferences.birth_date) {
@@ -183,7 +177,6 @@ export function CustomerPreferences({ customerId }: CustomerPreferencesProps) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Kişisel Bilgiler Bölümü */}
         <div className="space-y-4 border p-4 rounded-md">
           <h4 className="font-medium flex items-center">
             <CalendarIcon className="mr-2 h-4 w-4" />
@@ -260,7 +253,6 @@ export function CustomerPreferences({ customerId }: CustomerPreferencesProps) {
           </div>
         </div>
 
-        {/* Traş Tercihleri Bölümü */}
         <div className="space-y-4 border p-4 rounded-md">
           <h4 className="font-medium flex items-center">
             <Scissors className="mr-2 h-4 w-4" />
@@ -320,7 +312,6 @@ export function CustomerPreferences({ customerId }: CustomerPreferencesProps) {
         </div>
       </div>
 
-      {/* Özel Tercihler Bölümü */}
       <div className="border p-4 rounded-md">
         <h4 className="font-medium mb-4">Özel Tercihler</h4>
         
