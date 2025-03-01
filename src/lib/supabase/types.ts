@@ -1,3 +1,4 @@
+
 // Type definitions
 export type Islem = {
   id: number;
@@ -60,7 +61,7 @@ export type Profile = {
   last_name: string;
   phone: string;
   created_at?: string;
-  occupation?: string; // Occupation field
+  occupation?: string; 
   role?: string; // Role field to support different user types (customer, staff, admin)
 }
 

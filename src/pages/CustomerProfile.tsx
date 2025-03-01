@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
+import { profilServisi } from "@/lib/supabase/services/profilServisi";
 
 export default function CustomerProfile() {
   const navigate = useNavigate();
@@ -17,7 +18,8 @@ export default function CustomerProfile() {
     first_name: "",
     last_name: "",
     phone: "",
-    occupation: ""
+    occupation: "",
+    role: "customer" // Default role
   });
 
   // Fetch user data if available
@@ -33,23 +35,25 @@ export default function CustomerProfile() {
       }
       
       const userId = sessionData.session.user.id;
-      setUserData({ ...userData, id: userId });
+      setUserData(prev => ({ ...prev, id: userId }));
       
-      // Get existing profile data if any
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('first_name, last_name, phone, occupation')
-        .eq('id', userId)
-        .maybeSingle();
-      
-      if (profileData) {
-        setUserData({
-          id: userId,
-          first_name: profileData.first_name || "",
-          last_name: profileData.last_name || "",
-          phone: profileData.phone || "",
-          occupation: profileData.occupation || ""
-        });
+      try {
+        // Get existing profile data if any
+        const profileData = await profilServisi.getir();
+        
+        if (profileData) {
+          setUserData({
+            id: userId,
+            first_name: profileData.first_name || "",
+            last_name: profileData.last_name || "",
+            phone: profileData.phone || "",
+            occupation: profileData.occupation || "",
+            role: profileData.role || "customer"
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching profile:", error);
+        toast.error("Profil bilgileri alınırken bir hata oluştu.");
       }
       
       setLoading(false);
@@ -77,22 +81,14 @@ export default function CustomerProfile() {
       
       console.log("Saving profile data:", userData);
       
-      // Update profile in database - using upsert to create if doesn't exist
-      const { error } = await supabase
-        .from('profiles')
-        .upsert({
-          id: userData.id,
-          first_name: userData.first_name,
-          last_name: userData.last_name,
-          phone: userData.phone,
-          occupation: userData.occupation,
-          role: 'customer' // Set role to customer
-        }, { onConflict: 'id' });
-      
-      if (error) {
-        console.error("Profile save error:", error);
-        throw error;
-      }
+      // Use the updated profile service
+      await profilServisi.guncelle({
+        first_name: userData.first_name,
+        last_name: userData.last_name,
+        phone: userData.phone,
+        occupation: userData.occupation,
+        role: userData.role // Should be 'customer'
+      });
       
       toast.success("Profil kaydedildi!");
       

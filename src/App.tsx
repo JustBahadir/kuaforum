@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AppLayout } from "@/components/ui/app-layout";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { profilServisi } from "@/lib/supabase/services/profilServisi";
 
 // Pages
 import Dashboard from "./pages/Dashboard";
@@ -31,14 +32,14 @@ const App = () => {
       setSession(data.session);
       
       if (data.session) {
-        // Get user role from profiles
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', data.session.user.id)
-          .single();
-        
-        setUserRole(profileData?.role || null);
+        try {
+          // Get user profile to determine role
+          const profile = await profilServisi.getir();
+          setUserRole(profile?.role || null);
+        } catch (error) {
+          console.error("Error getting user profile:", error);
+          setUserRole(null);
+        }
       }
       
       setLoading(false);
@@ -50,14 +51,14 @@ const App = () => {
           setSession(session);
           
           if (session) {
-            // Get user role on auth change
-            const { data: profileData } = await supabase
-              .from('profiles')
-              .select('role')
-              .eq('id', session.user.id)
-              .single();
-            
-            setUserRole(profileData?.role || null);
+            try {
+              // Get user profile on auth change
+              const profile = await profilServisi.getir();
+              setUserRole(profile?.role || null);
+            } catch (error) {
+              console.error("Error getting user profile on auth change:", error);
+              setUserRole(null);
+            }
           } else {
             setUserRole(null);
           }

@@ -8,12 +8,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
+import { profilServisi } from "@/lib/supabase/services/profilServisi";
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
   
   // Separate state for customer login
+  const [customerLoading, setCustomerLoading] = useState(false);
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerPassword, setCustomerPassword] = useState("password123");
   const [customerFirstName, setCustomerFirstName] = useState("");
@@ -21,6 +22,7 @@ export default function Dashboard() {
   const [customerLoginError, setCustomerLoginError] = useState("");
   
   // Separate state for staff login
+  const [staffLoading, setStaffLoading] = useState(false);
   const [staffEmail, setStaffEmail] = useState("");
   const [staffPassword, setStaffPassword] = useState("password123");
   const [staffFirstName, setStaffFirstName] = useState("");
@@ -40,7 +42,7 @@ export default function Dashboard() {
   // Customer login handler
   const handleCustomerLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setCustomerLoading(true);
     setCustomerLoginError("");
     
     try {
@@ -53,24 +55,20 @@ export default function Dashboard() {
       if (error) {
         console.error("Login error:", error);
         setCustomerLoginError(error.message);
-        setLoading(false);
+        setCustomerLoading(false);
         return;
       }
       
       // Check if user is a customer
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', data.user?.id)
-        .single();
+      const role = await profilServisi.getUserRole(data.user?.id);
       
-      if (profileData?.role !== 'customer' && profileData?.role !== null) {
+      if (role !== 'customer' && role !== null) {
         toast.error("Bu hesap müşteri girişi için yetkili değil.");
         
         // Sign out the user
         await supabase.auth.signOut();
         setCustomerLoginError("Bu hesap müşteri girişi için yetkili değil.");
-        setLoading(false);
+        setCustomerLoading(false);
         return;
       }
       
@@ -83,17 +81,23 @@ export default function Dashboard() {
       console.error("Login error:", error);
       setCustomerLoginError(error.message || "Giriş yapılırken bir hata oluştu");
     } finally {
-      setLoading(false);
+      setCustomerLoading(false);
     }
   };
 
   // Customer registration handler
   const handleCustomerRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setCustomerLoading(true);
     setCustomerLoginError("");
     
     try {
+      if (!customerEmail || !customerPassword || !customerFirstName || !customerLastName) {
+        setCustomerLoginError("Lütfen tüm alanları doldurunuz");
+        setCustomerLoading(false);
+        return;
+      }
+      
       // Create new user with email/password
       const { data, error } = await supabase.auth.signUp({
         email: customerEmail,
@@ -113,6 +117,13 @@ export default function Dashboard() {
         return;
       }
       
+      // Create or update profile with customer role
+      await profilServisi.createOrUpdateProfile(data.user?.id, {
+        first_name: customerFirstName,
+        last_name: customerLastName,
+        role: "customer"
+      });
+      
       toast.success("Kayıt başarılı! Müşteri bilgi formunu doldurmanız gerekmektedir.");
       
       // Redirect to customer profile form
@@ -122,14 +133,14 @@ export default function Dashboard() {
       console.error("Signup error:", error);
       setCustomerLoginError(error.message || "Kayıt yapılırken bir hata oluştu");
     } finally {
-      setLoading(false);
+      setCustomerLoading(false);
     }
   };
 
   // Staff login handler
   const handleStaffLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setStaffLoading(true);
     setStaffLoginError("");
     
     try {
@@ -146,19 +157,15 @@ export default function Dashboard() {
       }
       
       // Check if user has staff role in profiles table
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', data.user?.id)
-        .single();
+      const role = await profilServisi.getUserRole(data.user?.id);
       
-      if (profileData?.role !== 'staff') {
+      if (role !== 'staff') {
         toast.error("Bu hesabın personel girişi için yetkisi yok.");
         
         // Sign out the user
         await supabase.auth.signOut();
         setStaffLoginError("Bu hesap personel girişi için yetkili değil.");
-        setLoading(false);
+        setStaffLoading(false);
         return;
       }
       
@@ -169,17 +176,23 @@ export default function Dashboard() {
       console.error("Login error:", error);
       setStaffLoginError(error.message || "Giriş yapılırken bir hata oluştu");
     } finally {
-      setLoading(false);
+      setStaffLoading(false);
     }
   };
 
   // Staff registration handler
   const handleStaffRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setStaffLoading(true);
     setStaffLoginError("");
     
     try {
+      if (!staffEmail || !staffPassword || !staffFirstName || !staffLastName) {
+        setStaffLoginError("Lütfen tüm alanları doldurunuz");
+        setStaffLoading(false);
+        return;
+      }
+      
       // Create new user with email/password and staff role
       const { data, error } = await supabase.auth.signUp({
         email: staffEmail,
@@ -199,21 +212,13 @@ export default function Dashboard() {
         return;
       }
       
-      // Create profile with staff role
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert({
-          id: data.user?.id,
+      // Create or update profile with staff role
+      if (data.user) {
+        await profilServisi.createOrUpdateProfile(data.user.id, {
           first_name: staffFirstName,
           last_name: staffLastName,
-          phone: "",
           role: "staff"
         });
-      
-      if (profileError) {
-        console.error("Profile creation error:", profileError);
-        setStaffLoginError(profileError.message);
-        return;
       }
       
       toast.success("Personel kaydı başarılı! Yönetici onayı gerekebilir.");
@@ -225,7 +230,7 @@ export default function Dashboard() {
       console.error("Staff signup error:", error);
       setStaffLoginError(error.message || "Personel kaydı yapılırken bir hata oluştu");
     } finally {
-      setLoading(false);
+      setStaffLoading(false);
     }
   };
 
@@ -240,7 +245,7 @@ export default function Dashboard() {
           </p>
         </div>
 
-        {/* Features and Login Section - Redesigned with clearer separation */}
+        {/* Features and Login Section - Clear separation with borders */}
         <div className="grid md:grid-cols-2 gap-8 mb-10">
           {/* Customer Side */}
           <div className="border-r-0 md:border-r border-indigo-200 pr-0 md:pr-4">
@@ -325,9 +330,9 @@ export default function Dashboard() {
                       <Button 
                         type="submit" 
                         className="w-full" 
-                        disabled={loading}
+                        disabled={customerLoading}
                       >
-                        {loading ? "Giriş yapılıyor..." : "Giriş Yap"}
+                        {customerLoading ? "Giriş yapılıyor..." : "Giriş Yap"}
                       </Button>
                     </form>
                   </TabsContent>
@@ -396,9 +401,9 @@ export default function Dashboard() {
                       <Button 
                         type="submit" 
                         className="w-full" 
-                        disabled={loading}
+                        disabled={customerLoading}
                       >
-                        {loading ? "Kaydediliyor..." : "Kayıt Ol"}
+                        {customerLoading ? "Kaydediliyor..." : "Kayıt Ol"}
                       </Button>
                     </form>
                   </TabsContent>
@@ -490,9 +495,9 @@ export default function Dashboard() {
                       <Button 
                         type="submit" 
                         className="w-full bg-purple-600 hover:bg-purple-700" 
-                        disabled={loading}
+                        disabled={staffLoading}
                       >
-                        {loading ? "Giriş yapılıyor..." : "Personel Girişi"}
+                        {staffLoading ? "Giriş yapılıyor..." : "Personel Girişi"}
                       </Button>
                     </form>
                   </TabsContent>
@@ -561,9 +566,9 @@ export default function Dashboard() {
                       <Button 
                         type="submit" 
                         className="w-full bg-purple-600 hover:bg-purple-700" 
-                        disabled={loading}
+                        disabled={staffLoading}
                       >
-                        {loading ? "Kaydediliyor..." : "Personel Kaydı Oluştur"}
+                        {staffLoading ? "Kaydediliyor..." : "Personel Kaydı Oluştur"}
                       </Button>
                     </form>
                   </TabsContent>
