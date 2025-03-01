@@ -26,7 +26,7 @@ export const profilServisi = {
       first_name: profile.first_name,
       last_name: profile.last_name,
       phone: profile.phone,
-      occupation: profile.occupation, // Added this to support the occupation field
+      occupation: profile.occupation, // This field is now properly typed
     };
 
     const { data, error } = await supabase

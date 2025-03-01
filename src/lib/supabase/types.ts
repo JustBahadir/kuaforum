@@ -61,6 +61,7 @@ export type Profile = {
   last_name: string;
   phone: string;
   created_at?: string;
+  occupation?: string;
 }
 
 export type Notification = {
