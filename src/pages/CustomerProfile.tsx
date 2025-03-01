@@ -40,7 +40,7 @@ export default function CustomerProfile() {
         .from('profiles')
         .select('first_name, last_name, phone, occupation')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
       
       if (profileData) {
         setUserData({
@@ -70,23 +70,28 @@ export default function CustomerProfile() {
     try {
       // Check if all required fields are filled
       if (!userData.first_name || !userData.last_name || !userData.phone) {
-        toast("Lütfen gerekli tüm alanları doldurun.");
+        toast.error("Lütfen gerekli tüm alanları doldurun.");
         setSaving(false);
         return;
       }
       
-      // Update profile in database
+      console.log("Saving profile data:", userData);
+      
+      // Update profile in database - using upsert to create if doesn't exist
       const { error } = await supabase
         .from('profiles')
-        .update({
+        .upsert({
+          id: userData.id,
           first_name: userData.first_name,
           last_name: userData.last_name,
           phone: userData.phone,
           occupation: userData.occupation
-        })
-        .eq('id', userData.id);
+        }, { onConflict: 'id' });
       
-      if (error) throw error;
+      if (error) {
+        console.error("Profile save error:", error);
+        throw error;
+      }
       
       toast.success("Profil kaydedildi!");
       
