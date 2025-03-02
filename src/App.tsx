@@ -8,6 +8,7 @@ import Dashboard from "./pages/Dashboard";
 import CustomerProfile from "./pages/CustomerProfile";
 import Personnel from "./pages/Personnel";
 import StaffLogin from "./pages/StaffLogin";
+import CustomerDashboard from "./pages/CustomerDashboard";
 
 const queryClient = new QueryClient();
 
@@ -22,6 +23,7 @@ function App() {
           <Route path="/staff-login" element={<StaffLogin />} />
           <Route path="/customer-profile" element={<CustomerProfile />} />
           <Route path="/personnel" element={<Personnel />} />
+          <Route path="/customer-dashboard/*" element={<CustomerDashboard />} />
         </Routes>
       </div>
       <ReactQueryDevtools initialIsOpen={false} />
