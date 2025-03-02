@@ -91,6 +91,7 @@ export default function CustomerAppointments() {
     setAppointments(prev => [...prev, appointment]);
     setDialogOpen(false);
     toast.success("Randevunuz başarıyla oluşturuldu");
+    loadAppointments(); // Reload all appointments to get the newest data
   };
   
   const handleDateSelect = (date: Date | undefined) => {
@@ -194,7 +195,7 @@ export default function CustomerAppointments() {
                 <DialogHeader>
                   <DialogTitle>Yeni Randevu Al</DialogTitle>
                   <DialogDescription>
-                    Randevu için gerekli bilgileri adım adım doldurun.
+                    Lütfen randevu detaylarını girin.
                   </DialogDescription>
                 </DialogHeader>
                 <AppointmentForm 
