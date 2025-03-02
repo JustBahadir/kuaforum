@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Plus, Scissors, Sparkles, ChevronLeft, LogOut, Home, User, Calendar } from 'lucide-react';
+import { Plus, Scissors, ChevronLeft, LogOut, Home, User, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogTrigger } from '@/components/ui/dialog';
 import { Randevu, RandevuDurumu } from '@/lib/supabase';
@@ -70,60 +70,13 @@ export default function Appointments() {
     }
   });
 
-  const handleRandevuSubmit = async (randevuData: any) => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast({
-          title: "Hata",
-          description: "Randevu oluşturmak için giriş yapmanız gerekiyor.",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      const yeniRandevu = {
-        ...randevuData,
-        customer_id: user.id,
-        durum: 'beklemede' as RandevuDurumu,
-        notlar: '',
-        islemler: [Number(randevuData.islem_id)]
-      };
-
-      const { data: randevu, error: randevuError } = await supabase
-        .from('randevular')
-        .insert([yeniRandevu])
-        .select()
-        .single();
-
-      if (randevuError) throw randevuError;
-
-      await supabase
-        .from('notifications')
-        .insert([{
-          user_id: user.id,
-          title: "Yeni Randevu Talebi",
-          message: "Randevu talebiniz alınmıştır. Onay bekliyor.",
-          type: "randevu_talebi",
-          related_appointment_id: randevu.id
-        }]);
-
-      await randevulariYenile();
-      
-      toast({
-        title: "Başarılı",
-        description: "Randevu talebiniz alındı.",
-      });
-      
-      setYeniRandevuAcik(false);
-    } catch (error) {
-      console.error('Randevu kaydedilirken hata:', error);
-      toast({
-        title: "Hata",
-        description: "Randevu oluşturulurken bir hata oluştu.",
-        variant: "destructive"
-      });
-    }
+  const handleRandevuCreated = async (randevu: Randevu) => {
+    await randevulariYenile();
+    toast({
+      title: "Başarılı",
+      description: "Randevu talebiniz alındı.",
+    });
+    setYeniRandevuAcik(false);
   };
 
   const handleRandevuSil = async (randevu: Randevu) => {
@@ -356,11 +309,7 @@ export default function Appointments() {
               </Button>
             </DialogTrigger>
             <AppointmentForm
-              islemler={islemler || []}
-              personeller={personeller || []}
-              kategoriler={kategoriler || []}
-              onSubmit={handleRandevuSubmit}
-              onCancel={() => setYeniRandevuAcik(false)}
+              onAppointmentCreated={handleRandevuCreated}
             />
           </Dialog>
         </div>
