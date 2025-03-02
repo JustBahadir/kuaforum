@@ -24,6 +24,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { AppointmentForm } from "@/components/appointments/AppointmentForm";
+import { useLocation } from "react-router-dom";
 
 export default function CustomerAppointments() {
   const [date, setDate] = useState<Date>(new Date());
@@ -31,6 +32,21 @@ export default function CustomerAppointments() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const location = useLocation();
+  
+  // Get serviceId from URL if it exists
+  const serviceId = React.useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    const service = params.get('service');
+    return service ? parseInt(service) : undefined;
+  }, [location.search]);
+  
+  useEffect(() => {
+    // If we have a service ID from the URL, open the dialog automatically
+    if (serviceId) {
+      setDialogOpen(true);
+    }
+  }, [serviceId]);
   
   const loadAppointments = async () => {
     try {
@@ -175,9 +191,6 @@ export default function CustomerAppointments() {
           </CardContent>
           <CardFooter className="flex justify-end">
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline">Yeni Randevu</Button>
-              </DialogTrigger>
               <DialogContent className="max-w-md">
                 <DialogHeader>
                   <DialogTitle>Yeni Randevu Al</DialogTitle>
@@ -188,6 +201,7 @@ export default function CustomerAppointments() {
                 <AppointmentForm 
                   onAppointmentCreated={handleAppointmentCreated}
                   initialDate={selectedDate ? format(selectedDate, 'yyyy-MM-dd') : undefined}
+                  initialServiceId={serviceId}
                 />
               </DialogContent>
             </Dialog>

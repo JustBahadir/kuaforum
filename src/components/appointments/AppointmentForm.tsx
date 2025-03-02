@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -42,6 +43,14 @@ import {
 } from "@/lib/supabase";
 import { supabase } from "@/lib/supabase/client";
 
+interface AppointmentFormProps {
+  onSubmit?: (data: AppointmentFormValues) => void;
+  isSubmitting?: boolean;
+  onAppointmentCreated?: (appointment: Randevu) => void;
+  initialDate?: string;
+  initialServiceId?: number;
+}
+
 interface AppointmentFormValues {
   category: number | null;
   services: number[];
@@ -49,13 +58,6 @@ interface AppointmentFormValues {
   time: string;
   personnel: string;
   notes: string;
-}
-
-interface AppointmentFormProps {
-  onSubmit?: (data: AppointmentFormValues) => void;
-  isSubmitting?: boolean;
-  onAppointmentCreated?: (appointment: Randevu) => void;
-  initialDate?: string;
 }
 
 const formSchema = z.object({
@@ -81,19 +83,12 @@ export function AppointmentForm({
   isSubmitting = false,
   onAppointmentCreated,
   initialDate,
+  initialServiceId,
 }: AppointmentFormProps) {
   const [selectedServices, setSelectedServices] = useState<number[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [filteredServices, setFilteredServices] = useState<Islem[]>([]);
   const [submitting, setSubmitting] = useState(false);
-
-  const form = useForm<AppointmentFormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      ...defaultValues,
-      date: initialDate ? new Date(initialDate) : null,
-    },
-  });
 
   const { data: islemlerData, isLoading: isLoadingIslemler } = useQuery({
     queryKey: ["islemler"],
@@ -115,6 +110,33 @@ export function AppointmentForm({
       return await personelServisi.hepsiniGetir();
     },
   });
+
+  const form = useForm<AppointmentFormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      ...defaultValues,
+      date: initialDate ? new Date(initialDate) : null,
+      services: initialServiceId ? [initialServiceId] : [],
+    },
+  });
+
+  // Initialize selectedServices with initialServiceId if provided
+  useEffect(() => {
+    if (initialServiceId) {
+      setSelectedServices(initialServiceId ? [initialServiceId] : []);
+    }
+  }, [initialServiceId]);
+
+  // Set category when initial service is provided
+  useEffect(() => {
+    if (initialServiceId && islemlerData) {
+      const service = islemlerData.find(islem => islem.id === initialServiceId);
+      if (service && service.kategori_id) {
+        setSelectedCategory(service.kategori_id);
+        form.setValue('category', service.kategori_id);
+      }
+    }
+  }, [initialServiceId, islemlerData, form]);
 
   useEffect(() => {
     if (selectedCategory && islemlerData) {
@@ -165,7 +187,7 @@ export function AppointmentForm({
 
       const randevuData = {
         customer_id: user.id,
-        personel_id: data.personnel ? parseInt(data.personnel) : undefined,
+        personel_id: data.personnel && data.personnel !== "" ? parseInt(data.personnel) : undefined,
         tarih: format(data.date, 'yyyy-MM-dd'),
         saat: data.time || "09:00",
         durum: "beklemede" as const,
@@ -217,7 +239,7 @@ export function AppointmentForm({
                   field.onChange(numValue);
                   setSelectedCategory(numValue);
                 }}
-                value={field.value?.toString() || ""}
+                value={field.value?.toString() || undefined}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Kategori seçin" />
@@ -237,7 +259,7 @@ export function AppointmentForm({
                       </SelectItem>
                     ))
                   ) : (
-                    <SelectItem value="empty" disabled>
+                    <SelectItem value="none" disabled>
                       Kategori bulunamadı
                     </SelectItem>
                   )}
@@ -352,12 +374,14 @@ export function AppointmentForm({
                 <SelectTrigger>
                   <SelectValue placeholder="Saat seçin" />
                 </SelectTrigger>
-                <SelectContent>
-                  {availableTimes.map((time) => (
-                    <SelectItem key={time} value={time}>
-                      {time}
-                    </SelectItem>
-                  ))}
+                <SelectContent className="max-h-60">
+                  <ScrollArea className="h-60">
+                    {availableTimes.map((time) => (
+                      <SelectItem key={time} value={time}>
+                        {time}
+                      </SelectItem>
+                    ))}
+                  </ScrollArea>
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -374,13 +398,13 @@ export function AppointmentForm({
               <FormLabel>Personel (Opsiyonel)</FormLabel>
               <Select
                 onValueChange={field.onChange}
-                value={field.value || ""}
+                value={field.value || undefined}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Personel seçin (opsiyonel)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Fark etmez</SelectItem>
+                  <SelectItem value="0">Fark etmez</SelectItem>
                   {isLoadingPersoneller ? (
                     <SelectItem value="loading" disabled>
                       Yükleniyor...
@@ -395,7 +419,7 @@ export function AppointmentForm({
                       </SelectItem>
                     ))
                   ) : (
-                    <SelectItem value="empty" disabled>
+                    <SelectItem value="none" disabled>
                       Personel bulunamadı
                     </SelectItem>
                   )}
