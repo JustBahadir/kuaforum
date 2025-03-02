@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/lib/supabase/client";
@@ -101,7 +102,8 @@ export function useCustomerAuth() {
     try {
       await supabase.auth.signOut();
       toast.success("Başarıyla çıkış yapıldı");
-      navigate("/login");
+      // Navigate to the root route instead of /login
+      navigate("/");
     } catch (error) {
       console.error("Çıkış yapılırken hata:", error);
       toast.error("Çıkış yapılırken bir hata oluştu");

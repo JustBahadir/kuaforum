@@ -23,6 +23,7 @@ function App() {
           <Route path="/staff-login" element={<StaffLogin />} />
           <Route path="/customer-profile" element={<CustomerProfile />} />
           <Route path="/personnel" element={<Personnel />} />
+          <Route path="/login" element={<Navigate to="/staff-login" />} />
           
           {/* Customer dashboard routes */}
           <Route path="/customer-dashboard/*" element={<CustomerDashboard />} />
