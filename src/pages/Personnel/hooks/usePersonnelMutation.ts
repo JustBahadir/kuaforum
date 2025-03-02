@@ -4,6 +4,7 @@ import { supabase } from "@/lib/supabase";
 import { Personel } from "@/lib/supabase";
 import { toast } from "@/components/ui/use-toast";
 import { profilServisi } from "@/lib/supabase/services/profilServisi";
+import { User } from "@supabase/supabase-js";
 
 export function usePersonnelMutation(onSuccess?: () => void) {
   const queryClient = useQueryClient();
@@ -130,10 +131,10 @@ export function usePersonnelMutation(onSuccess?: () => void) {
               const { data: usersData } = await supabase.auth.admin.listUsers();
               
               if (usersData && usersData.users) {
-                // Find matching user by email - fixed the type issue
-                const matchingUser = usersData.users.find(user => {
-                  // Make sure user exists and has an email property before comparing
-                  return user && typeof user.email === 'string' && user.email === personelData.eposta;
+                // Find matching user by email with proper type checking
+                const matchingUser = usersData.users.find((user: User | null) => {
+                  if (!user) return false;
+                  return user.email === personelData.eposta;
                 });
                 
                 if (matchingUser) {
