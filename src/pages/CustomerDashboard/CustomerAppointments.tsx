@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase/client";
 import { format, parseISO } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -9,14 +9,25 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/componen
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { AppointmentForm } from "@/components/appointments/AppointmentForm";
+import { toast } from "@/hooks/use-toast";
 
 export default function CustomerAppointments() {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [yeniRandevuAcik, setYeniRandevuAcik] = useState(false);
+  const [personeller, setPersoneller] = useState<any[]>([]);
+  const [islemler, setIslemler] = useState<any[]>([]);
+  const [kategoriler, setKategoriler] = useState<any[]>([]);
+  const navigate = useNavigate();
   
   useEffect(() => {
     fetchAppointments();
+    fetchPersoneller();
+    fetchIslemler();
+    fetchKategoriler();
   }, []);
   
   const fetchAppointments = async () => {
@@ -44,6 +55,139 @@ export default function CustomerAppointments() {
       console.error("Error in fetchAppointments:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPersoneller = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('personel')
+        .select('*')
+        .order('ad_soyad');
+      
+      if (error) {
+        console.error("Error fetching personeller:", error);
+      } else {
+        setPersoneller(data || []);
+      }
+    } catch (error) {
+      console.error("Error in fetchPersoneller:", error);
+    }
+  };
+
+  const fetchIslemler = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('islemler')
+        .select('*')
+        .order('islem_adi');
+      
+      if (error) {
+        console.error("Error fetching islemler:", error);
+      } else {
+        setIslemler(data || []);
+      }
+    } catch (error) {
+      console.error("Error in fetchIslemler:", error);
+    }
+  };
+
+  const fetchKategoriler = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('islem_kategorileri')
+        .select('*')
+        .order('sira');
+      
+      if (error) {
+        console.error("Error fetching kategoriler:", error);
+      } else {
+        setKategoriler(data || []);
+      }
+    } catch (error) {
+      console.error("Error in fetchKategoriler:", error);
+    }
+  };
+
+  const handleRandevuSubmit = async (randevuData: any) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Hata",
+          description: "Randevu oluşturmak için giriş yapmanız gerekiyor.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const yeniRandevu = {
+        ...randevuData,
+        customer_id: user.id,
+        durum: 'beklemede' as any,
+        notlar: ''
+      };
+
+      console.log("Creating appointment with data:", yeniRandevu);
+
+      const { data: randevu, error: randevuError } = await supabase
+        .from('randevular')
+        .insert([yeniRandevu])
+        .select()
+        .single();
+
+      if (randevuError) throw randevuError;
+
+      await supabase
+        .from('notifications')
+        .insert([{
+          user_id: user.id,
+          title: "Yeni Randevu Talebi",
+          message: "Randevu talebiniz alınmıştır. Onay bekliyor.",
+          type: "randevu_talebi",
+          related_appointment_id: randevu.id
+        }]);
+
+      await fetchAppointments();
+      
+      toast({
+        title: "Başarılı",
+        description: "Randevu talebiniz alındı.",
+      });
+      
+      setYeniRandevuAcik(false);
+    } catch (error) {
+      console.error('Randevu kaydedilirken hata:', error);
+      toast({
+        title: "Hata",
+        description: "Randevu oluşturulurken bir hata oluştu.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleCancelAppointment = async (appointmentId: number) => {
+    try {
+      const { error } = await supabase
+        .from('randevular')
+        .update({ durum: 'iptal_edildi' })
+        .eq('id', appointmentId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Başarılı",
+        description: "Randevunuz iptal edildi.",
+      });
+
+      fetchAppointments();
+    } catch (error) {
+      console.error('Randevu iptal edilirken hata:', error);
+      toast({
+        title: "Hata",
+        description: "Randevu iptal edilirken bir hata oluştu.",
+        variant: "destructive"
+      });
     }
   };
   
@@ -99,15 +243,19 @@ export default function CustomerAppointments() {
                   <CardContent className="flex items-center justify-center p-6">
                     <div className="text-center">
                       <p className="mb-2">Henüz randevunuz bulunmuyor.</p>
-                      <Link to="/appointments">
-                        <Button>Yeni Randevu Oluştur</Button>
-                      </Link>
+                      <Button onClick={() => setYeniRandevuAcik(true)}>
+                        Yeni Randevu Oluştur
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
               ) : (
                 filteredAppointments.map(appointment => (
-                  <AppointmentCard key={appointment.id} appointment={appointment} />
+                  <AppointmentCard 
+                    key={appointment.id} 
+                    appointment={appointment}
+                    onCancel={handleCancelAppointment}
+                  />
                 ))
               )}
             </TabsContent>
@@ -121,7 +269,11 @@ export default function CustomerAppointments() {
                 </Card>
               ) : (
                 pendingAppointments.map(appointment => (
-                  <AppointmentCard key={appointment.id} appointment={appointment} />
+                  <AppointmentCard 
+                    key={appointment.id} 
+                    appointment={appointment}
+                    onCancel={handleCancelAppointment} 
+                  />
                 ))
               )}
             </TabsContent>
@@ -135,7 +287,11 @@ export default function CustomerAppointments() {
                 </Card>
               ) : (
                 confirmedAppointments.map(appointment => (
-                  <AppointmentCard key={appointment.id} appointment={appointment} />
+                  <AppointmentCard 
+                    key={appointment.id} 
+                    appointment={appointment}
+                    onCancel={handleCancelAppointment}
+                  />
                 ))
               )}
             </TabsContent>
@@ -149,7 +305,11 @@ export default function CustomerAppointments() {
                 </Card>
               ) : (
                 completedAppointments.map(appointment => (
-                  <AppointmentCard key={appointment.id} appointment={appointment} />
+                  <AppointmentCard 
+                    key={appointment.id} 
+                    appointment={appointment}
+                    onCancel={handleCancelAppointment}
+                  />
                 ))
               )}
             </TabsContent>
@@ -181,18 +341,40 @@ export default function CustomerAppointments() {
               )}
             </CardContent>
             <CardFooter>
-              <Link to="/appointments" className="w-full">
-                <Button className="w-full">Yeni Randevu Al</Button>
-              </Link>
+              <Dialog open={yeniRandevuAcik} onOpenChange={setYeniRandevuAcik}>
+                <DialogTrigger asChild>
+                  <Button className="w-full" onClick={() => setYeniRandevuAcik(true)}>Yeni Randevu Al</Button>
+                </DialogTrigger>
+                <AppointmentForm
+                  islemler={islemler || []}
+                  personeller={personeller || []}
+                  kategoriler={kategoriler || []}
+                  initialDate={selectedDate}
+                  onSubmit={handleRandevuSubmit}
+                  onCancel={() => setYeniRandevuAcik(false)}
+                />
+              </Dialog>
             </CardFooter>
           </Card>
         </div>
       </div>
+
+      {/* Appointment Dialog outside of the Card */}
+      <Dialog open={yeniRandevuAcik} onOpenChange={setYeniRandevuAcik}>
+        <AppointmentForm
+          islemler={islemler || []}
+          personeller={personeller || []}
+          kategoriler={kategoriler || []}
+          initialDate={selectedDate}
+          onSubmit={handleRandevuSubmit}
+          onCancel={() => setYeniRandevuAcik(false)}
+        />
+      </Dialog>
     </div>
   );
 }
 
-function AppointmentCard({ appointment }: { appointment: any }) {
+function AppointmentCard({ appointment, onCancel }: { appointment: any, onCancel: (id: number) => void }) {
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '';
     try {
@@ -255,7 +437,11 @@ function AppointmentCard({ appointment }: { appointment: any }) {
       </CardContent>
       <CardFooter className="border-t pt-3 flex-col items-start">
         {appointment.durum === 'beklemede' && (
-          <Button variant="ghost" className="text-red-500 hover:text-red-700 hover:bg-red-50 p-0 h-auto">
+          <Button 
+            variant="ghost" 
+            className="text-red-500 hover:text-red-700 hover:bg-red-50 p-0 h-auto"
+            onClick={() => onCancel(appointment.id)}
+          >
             Randevuyu İptal Et
           </Button>
         )}

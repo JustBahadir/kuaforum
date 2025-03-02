@@ -21,6 +21,7 @@ interface AppointmentFormProps {
   onSubmit: (data: any) => void;
   onCancel: () => void;
   kategoriler: any[];
+  initialDate?: Date;
 }
 
 export function AppointmentForm({
@@ -28,17 +29,26 @@ export function AppointmentForm({
   personeller,
   onSubmit,
   onCancel,
-  kategoriler
+  kategoriler,
+  initialDate
 }: AppointmentFormProps) {
   const [step, setStep] = useState(1);
   const [selectedService, setSelectedService] = useState('');
   const [selectedStaff, setSelectedStaff] = useState('');
-  const [selectedDate, setSelectedDate] = useState<Date>();
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(initialDate);
   const [selectedTime, setSelectedTime] = useState('');
   const [selectedServiceInfo, setSelectedServiceInfo] = useState<any>(null);
   const [selectedStaffInfo, setSelectedStaffInfo] = useState<any>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isAllSelected, setIsAllSelected] = useState(false);
+
+  // If initialDate is provided and step is 1, move to step 3 after service selection
+  useEffect(() => {
+    if (initialDate && step === 1 && selectedService) {
+      // Skip to step 3 (date selection) which will already have the date selected
+      setStep(3);
+    }
+  }, [initialDate, selectedService, step]);
 
   useEffect(() => {
     if (selectedService) {
@@ -67,7 +77,12 @@ export function AppointmentForm({
 
   const handleServiceSelect = (value: string) => {
     setSelectedService(value);
-    handleNextStep();
+    if (initialDate) {
+      // If initial date is set, skip to step 3
+      setStep(3);
+    } else {
+      handleNextStep();
+    }
   };
 
   const handleStaffSelect = (value: string) => {
