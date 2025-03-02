@@ -29,11 +29,10 @@ export function usePersonnelMutation(onSuccess?: () => void) {
 
       // Eğer auth_id belirtilmişse, additional auth steps are optional
       if (personelData.auth_id) {
-        // Auth_id varsa, ilgili profil varsa güncelle, yoksa oluştur
         try {
           // Get user information
           const { data: userResponse } = await supabase.auth.getUser(personelData.auth_id);
-          const userData = userResponse.user;
+          const userData = userResponse?.user;
           
           if (userData) {
             console.log("Found existing user:", userData.id);
@@ -65,18 +64,46 @@ export function usePersonnelMutation(onSuccess?: () => void) {
       }
 
       try {
-        // Check if user already exists with this email
-        const { data: signInResult, error: signInError } = await supabase.auth.signInWithPassword({
-          email: personelData.eposta,
-          password: "password123"
-        });
+        // Try to find if a user with this email already exists
+        const findExistingUser = async (email: string): Promise<User | null> => {
+          try {
+            // First try simple sign in if the user exists
+            const { data: signInResult, error: signInError } = await supabase.auth.signInWithPassword({
+              email: email,
+              password: "password123"
+            });
+            
+            if (!signInError && signInResult?.user) {
+              return signInResult.user;
+            }
+            
+            // If sign in failed, try to find the user through admin API
+            const { data: usersData, error: listError } = await supabase.auth.admin.listUsers();
+            
+            if (listError || !usersData?.users) {
+              console.error("Error listing users:", listError);
+              return null;
+            }
+            
+            const matchingUser = usersData.users.find(user => 
+              user && user.email === email
+            );
+            
+            return matchingUser || null;
+          } catch (error) {
+            console.error("Error finding existing user:", error);
+            return null;
+          }
+        };
         
-        // If the user exists and we can sign in, update their data
-        if (!signInError && signInResult && signInResult.user) {
-          console.log("User already exists, updating:", signInResult.user.id);
+        // Find existing user or create new one
+        const existingUser = await findExistingUser(personelData.eposta);
+        
+        if (existingUser) {
+          console.log("User already exists:", existingUser.id);
           
           // Update auth metadata
-          await supabase.auth.admin.updateUserById(signInResult.user.id, {
+          await supabase.auth.admin.updateUserById(existingUser.id, {
             user_metadata: { 
               role: 'staff',
               first_name: personelData.ad_soyad.split(' ')[0] || '',
@@ -85,7 +112,7 @@ export function usePersonnelMutation(onSuccess?: () => void) {
           });
           
           // Update profile
-          await profilServisi.createOrUpdateProfile(signInResult.user.id, {
+          await profilServisi.createOrUpdateProfile(existingUser.id, {
             first_name: personelData.ad_soyad.split(' ')[0] || '',
             last_name: personelData.ad_soyad.split(' ').slice(1).join(' ') || '',
             role: 'staff',
@@ -95,16 +122,16 @@ export function usePersonnelMutation(onSuccess?: () => void) {
           // Update personnel record with auth_id
           await supabase
             .from('personel')
-            .update({ auth_id: signInResult.user.id })
+            .update({ auth_id: existingUser.id })
             .eq('id', data.id);
-            
+          
           // Sign out after the operation
           await supabase.auth.signOut();
           
           return data;
         }
         
-        // User doesn't exist or wrong password, create new user
+        // User doesn't exist, create new user
         console.log("Creating new auth user for personnel");
         
         // Auth kullanıcısı oluştur
@@ -121,57 +148,7 @@ export function usePersonnelMutation(onSuccess?: () => void) {
 
         if (authError) {
           console.error("Auth user creation error:", authError);
-          
-          // Check if this is a "user already exists" error
-          if (authError.message.includes("already")) {
-            console.log("User might exist with a different password, searching by email");
-            
-            // Try to find user with this email
-            try {
-              const { data: usersData } = await supabase.auth.admin.listUsers();
-              
-              if (usersData && usersData.users) {
-                // Find matching user by email with proper type checking
-                const matchingUser = usersData.users.find((user: User | null) => {
-                  if (!user) return false;
-                  return user.email === personelData.eposta;
-                });
-                
-                if (matchingUser) {
-                  console.log("Found matching user:", matchingUser.id);
-                  
-                  // Update user metadata
-                  await supabase.auth.admin.updateUserById(matchingUser.id, {
-                    user_metadata: { 
-                      role: 'staff',
-                      first_name: personelData.ad_soyad.split(' ')[0] || '',
-                      last_name: personelData.ad_soyad.split(' ').slice(1).join(' ') || ''
-                    }
-                  });
-                  
-                  // Update profile
-                  await profilServisi.createOrUpdateProfile(matchingUser.id, {
-                    first_name: personelData.ad_soyad.split(' ')[0] || '',
-                    last_name: personelData.ad_soyad.split(' ').slice(1).join(' ') || '',
-                    role: 'staff',
-                    phone: personelData.telefon
-                  });
-                  
-                  // Update personnel record with auth_id
-                  await supabase
-                    .from('personel')
-                    .update({ auth_id: matchingUser.id })
-                    .eq('id', data.id);
-                    
-                  return data;
-                }
-              }
-            } catch (searchError) {
-              console.error("Error searching for user:", searchError);
-            }
-          }
-          
-          // If we couldn't find or create a user, return the personnel record anyway
+          // If we couldn't create a user, return the personnel record anyway
           console.log("Continuing without auth user connection");
           return data;
         }
