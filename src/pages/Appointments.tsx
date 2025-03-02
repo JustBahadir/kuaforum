@@ -1,7 +1,6 @@
-
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Plus } from 'lucide-react';
+import { Plus, Scissors, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogTrigger } from '@/components/ui/dialog';
 import { Randevu, RandevuDurumu } from '@/lib/supabase';
@@ -81,7 +80,6 @@ export default function Appointments() {
         return;
       }
 
-      // Randevu verisini hazırla
       const yeniRandevu = {
         ...randevuData,
         customer_id: user.id,
@@ -90,7 +88,6 @@ export default function Appointments() {
         islemler: [Number(randevuData.islem_id)]
       };
 
-      // Randevuyu kaydet
       const { data: randevu, error: randevuError } = await supabase
         .from('randevular')
         .insert([yeniRandevu])
@@ -99,7 +96,6 @@ export default function Appointments() {
 
       if (randevuError) throw randevuError;
 
-      // Bildirim oluştur
       await supabase
         .from('notifications')
         .insert([{
@@ -167,7 +163,6 @@ export default function Appointments() {
         .single();
 
       if (randevu) {
-        // Bildirim oluştur
         await supabase
           .from('notifications')
           .insert([{
@@ -208,7 +203,6 @@ export default function Appointments() {
         .single();
 
       if (randevu) {
-        // Bildirim oluştur
         await supabase
           .from('notifications')
           .insert([{
@@ -236,15 +230,72 @@ export default function Appointments() {
     }
   };
 
+  const hairstyles = [
+    {
+      id: 1,
+      title: "Modern Kesim",
+      description: "Yüz şeklinize uygun modern saç kesimi",
+      image: "/public/lovable-uploads/3a32ddb1-9910-4566-9427-c53fddc3a8c8.png",
+      color: "bg-[#D946EF]"
+    },
+    {
+      id: 2,
+      title: "Renklendirme",
+      description: "Profesyonel saç boyama hizmetleri",
+      image: "/public/lovable-uploads/3a32ddb1-9910-4566-9427-c53fddc3a8c8.png",
+      color: "bg-[#8B5CF6]"
+    },
+    {
+      id: 3,
+      title: "Saç Bakımı",
+      description: "Saç sağlığını koruyucu bakım uygulamaları",
+      image: "/public/lovable-uploads/3a32ddb1-9910-4566-9427-c53fddc3a8c8.png",
+      color: "bg-[#F97316]"
+    },
+    {
+      id: 4,
+      title: "Özel Tasarım",
+      description: "Özel günleriniz için saç tasarımları",
+      image: "/public/lovable-uploads/3a32ddb1-9910-4566-9427-c53fddc3a8c8.png",
+      color: "bg-[#0EA5E9]"
+    }
+  ];
+
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Randevular</h1>
+    <div className="container mx-auto py-6 space-y-8">
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-600">Randevular</h1>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+        {hairstyles.map((style) => (
+          <div key={style.id} className="relative overflow-hidden rounded-xl shadow-lg group">
+            <div className={`absolute inset-0 ${style.color} opacity-80 z-10`}></div>
+            <img 
+              src={style.image} 
+              alt={style.title} 
+              className="w-full h-64 object-cover object-center transition-transform group-hover:scale-105"
+            />
+            <div className="absolute inset-0 flex flex-col justify-end p-4 text-white z-20 bg-gradient-to-t from-black/70 to-transparent">
+              <h3 className="text-xl font-bold">{style.title}</h3>
+              <p className="text-sm opacity-90">{style.description}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex justify-center mb-10">
         <Dialog open={yeniRandevuAcik} onOpenChange={setYeniRandevuAcik}>
           <DialogTrigger asChild>
-            <Button onClick={() => setYeniRandevuAcik(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Yeni Randevu
+            <Button 
+              onClick={() => setYeniRandevuAcik(true)}
+              className="bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white font-medium py-6 px-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 text-lg"
+            >
+              <div className="flex items-center gap-2">
+                <Plus className="h-5 w-5" />
+                <span>Yeni Randevu</span>
+                <Scissors className="h-5 w-5 ml-1" />
+              </div>
             </Button>
           </DialogTrigger>
           <AppointmentForm
@@ -257,20 +308,52 @@ export default function Appointments() {
         </Dialog>
       </div>
 
-      <div className="grid gap-4">
-        {randevular?.map((randevu) => (
-          <AppointmentCard
-            key={randevu.id}
-            randevu={randevu}
-            onEdit={handleRandevuEdit}
-            onDelete={handleRandevuSil}
-            onStatusUpdate={handleStatusUpdate}
-            onCounterProposal={handleCounterProposal}
-            silinecekRandevu={silinecekRandevu}
-            setSilinecekRandevu={setSilinecekRandevu}
-          />
-        ))}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10 bg-secondary/50 p-6 rounded-xl">
+        <div className="flex flex-col items-center text-center p-4">
+          <div className="w-16 h-16 rounded-full bg-purple-100 flex items-center justify-center mb-4">
+            <Scissors className="w-8 h-8 text-purple-600" />
+          </div>
+          <h3 className="text-lg font-semibold mb-2">Profesyonel Ekip</h3>
+          <p className="text-sm text-muted-foreground">Alanında uzman stilistlerle mükemmel sonuçlar</p>
+        </div>
+        <div className="flex flex-col items-center text-center p-4">
+          <div className="w-16 h-16 rounded-full bg-pink-100 flex items-center justify-center mb-4">
+            <Sparkles className="w-8 h-8 text-pink-600" />
+          </div>
+          <h3 className="text-lg font-semibold mb-2">Kaliteli Ürünler</h3>
+          <p className="text-sm text-muted-foreground">Saç sağlığını koruyan premium ürünler</p>
+        </div>
+        <div className="flex flex-col items-center text-center p-4">
+          <div className="w-16 h-16 rounded-full bg-purple-100 flex items-center justify-center mb-4">
+            <Plus className="w-8 h-8 text-purple-600" />
+          </div>
+          <h3 className="text-lg font-semibold mb-2">Kolay Randevu</h3>
+          <p className="text-sm text-muted-foreground">Birkaç tıkla randevunuzu oluşturun</p>
+        </div>
       </div>
+
+      {randevular && randevular.length > 0 ? (
+        <div className="grid gap-4">
+          <h2 className="text-xl font-semibold mb-2">Mevcut Randevular</h2>
+          {randevular?.map((randevu) => (
+            <AppointmentCard
+              key={randevu.id}
+              randevu={randevu}
+              onEdit={handleRandevuEdit}
+              onDelete={handleRandevuSil}
+              onStatusUpdate={handleStatusUpdate}
+              onCounterProposal={handleCounterProposal}
+              silinecekRandevu={silinecekRandevu}
+              setSilinecekRandevu={setSilinecekRandevu}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="text-center p-8 bg-secondary/30 rounded-xl">
+          <h2 className="text-xl font-semibold mb-2">Henüz randevunuz bulunmuyor</h2>
+          <p className="text-muted-foreground mb-4">Yukarıdaki butona tıklayarak yeni bir randevu oluşturabilirsiniz.</p>
+        </div>
+      )}
     </div>
   );
 }
