@@ -21,7 +21,6 @@ import {
   DialogDescription, 
   DialogHeader, 
   DialogTitle, 
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { AppointmentForm } from "@/components/appointments/AppointmentForm";
 import { useLocation } from "react-router-dom";
@@ -195,7 +194,7 @@ export default function CustomerAppointments() {
                 <DialogHeader>
                   <DialogTitle>Yeni Randevu Al</DialogTitle>
                   <DialogDescription>
-                    Lütfen randevu detaylarını girin.
+                    Randevu için gerekli bilgileri adım adım doldurun.
                   </DialogDescription>
                 </DialogHeader>
                 <AppointmentForm 
