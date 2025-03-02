@@ -175,7 +175,7 @@ export function AppointmentForm({ onAppointmentCreated, initialDate }: Appointme
     }
     
     return (
-      <div className="border rounded-md overflow-hidden">
+      <div className="border rounded-md overflow-hidden max-h-64 overflow-y-auto">
         <table className="w-full">
           <tbody>
             {rows.map((row, rowIndex) => (
@@ -238,7 +238,7 @@ export function AppointmentForm({ onAppointmentCreated, initialDate }: Appointme
               {filteredIslemler.length > 0 ? (
                 filteredIslemler.map((islem) => (
                   <SelectItem key={islem.id} value={islem.id.toString()}>
-                    {islem.islem_adi} - {islem.fiyat} ₺
+                    {islem.islem_adi} - {islem.fiyat} ₺ ({islem.puan} Puan)
                   </SelectItem>
                 ))
               ) : (

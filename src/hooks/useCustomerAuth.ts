@@ -3,11 +3,13 @@ import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import { getGenderTitle } from "@/lib/supabase/services/profileServices/profileTypes";
 
 export function useCustomerAuth() {
   const navigate = useNavigate();
   const location = useLocation();
   const [userName, setUserName] = useState("");
+  const [userGenderTitle, setUserGenderTitle] = useState("");
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("home");
 
@@ -41,12 +43,27 @@ export function useCustomerAuth() {
         // Get user profile info
         const { data: profile } = await supabase
           .from('profiles')
-          .select('first_name, last_name')
+          .select('first_name, last_name, gender')
           .eq('id', data.session.user.id)
           .single();
           
-        if (profile && (profile.first_name || profile.last_name)) {
-          setUserName(`${profile.first_name || ''} ${profile.last_name || ''}`.trim());
+        if (profile) {
+          const genderTitle = getGenderTitle(profile.gender);
+          setUserGenderTitle(genderTitle);
+          
+          if (profile.first_name || profile.last_name) {
+            const firstName = profile.first_name || '';
+            const lastName = profile.last_name || '';
+            const displayName = firstName ? `${firstName} ${lastName}`.trim() : lastName;
+            
+            if (displayName && genderTitle) {
+              setUserName(`${displayName} ${genderTitle}`);
+            } else {
+              setUserName(displayName || "Değerli Müşterimiz");
+            }
+          } else {
+            setUserName("Değerli Müşterimiz");
+          }
         } else {
           setUserName("Değerli Müşterimiz");
         }
@@ -97,6 +114,7 @@ export function useCustomerAuth() {
 
   return {
     userName,
+    userGenderTitle,
     loading,
     activeTab,
     handleLogout,

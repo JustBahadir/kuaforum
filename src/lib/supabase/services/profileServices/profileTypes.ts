@@ -19,3 +19,10 @@ export type ProfileServiceError = {
 
 export type Gender = 'male' | 'female' | '';
 
+export const getGenderTitle = (gender: string | undefined): string => {
+  switch(gender) {
+    case 'male': return 'Bey';
+    case 'female': return 'Hanım';
+    default: return '';
+  }
+};

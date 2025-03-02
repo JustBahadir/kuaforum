@@ -6,6 +6,7 @@ import { formatPhoneNumber } from "@/utils/phoneFormatter";
 import { ProfileDisplay } from "@/components/customer-profile/ProfileDisplay";
 import { ProfileEditForm } from "@/components/customer-profile/ProfileEditForm";
 import { profilServisi } from "@/lib/supabase/services/profilServisi";
+import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 
 export default function CustomerProfile() {
   const [profile, setProfile] = useState({
@@ -18,6 +19,7 @@ export default function CustomerProfile() {
   });
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const { refreshProfile } = useCustomerAuth();
   
   useEffect(() => {
     async function fetchProfileData() {
@@ -109,6 +111,9 @@ export default function CustomerProfile() {
       
       if (result) {
         toast.success("Profil bilgileriniz başarıyla güncellendi");
+        
+        // Refresh the header display name with gender title
+        refreshProfile();
       } else {
         toast.error("Profil bilgileri güncellenirken bir hata oluştu");
       }
