@@ -1,4 +1,3 @@
-
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Personel } from "@/lib/supabase";
@@ -102,12 +101,10 @@ async function findExistingUser(email: string): Promise<User | null> {
       return null;
     }
     
-    // Type safety: explicitly check each user object
+    // Find user with matching email - safely typed
     const matchingUser = usersData.users.find(user => {
-      if (user && typeof user === 'object' && 'email' in user) {
-        return user.email === email;
-      }
-      return false;
+      // Ensure user is properly typed before accessing properties
+      return user && typeof user.email === 'string' && user.email === email;
     });
     
     if (matchingUser) {
