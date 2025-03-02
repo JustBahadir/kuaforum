@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Lock, User } from "lucide-react";
-import { supabase } from "@/lib/supabase/client";
+import { supabase, supabaseAdmin } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -164,6 +164,142 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
     }
   };
 
+  // Development/Test login - bypasses authentication for testing
+  const handleTestLogin = async () => {
+    setLoading(true);
+    setLoginError(null);
+    
+    try {
+      // Find user by email
+      const { data: usersData, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+      
+      if (listError) {
+        console.error("Error listing users:", listError);
+        throw listError;
+      }
+      
+      // Find user with matching email
+      const testEmail = "ergun@gmail.com";
+      const user = usersData.users.find(u => u.email === testEmail);
+      
+      if (!user) {
+        setLoginError(`Test kullanıcısı bulunamadı: ${testEmail}`);
+        throw new Error(`Test kullanıcısı bulunamadı: ${testEmail}`);
+      }
+      
+      console.log("Found test user:", user.id);
+      
+      // Update user role to staff if not already
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+      
+      if (profileError) {
+        console.error("Error checking profile:", profileError);
+      }
+      
+      // Update to staff role if needed
+      if (!profileData || profileData.role !== 'staff') {
+        const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+          user.id,
+          { user_metadata: { role: 'staff' } }
+        );
+        
+        if (updateError) {
+          console.error("Error updating user metadata:", updateError);
+        }
+        
+        const { error: profileUpdateError } = await supabase
+          .from('profiles')
+          .upsert({ 
+            id: user.id, 
+            role: 'staff',
+            first_name: user.user_metadata?.first_name || 'Test',
+            last_name: user.user_metadata?.last_name || 'User'
+          });
+        
+        if (profileUpdateError) {
+          console.error("Error updating profile:", profileUpdateError);
+        }
+      }
+      
+      // Create a personnel record if it doesn't exist
+      const { data: personnelData, error: personnelError } = await supabase
+        .from('personel')
+        .select('id')
+        .eq('auth_id', user.id)
+        .maybeSingle();
+      
+      if (personnelError) {
+        console.error("Error checking personnel record:", personnelError);
+      }
+      
+      if (!personnelData) {
+        const { error: insertError } = await supabase
+          .from('personel')
+          .insert({
+            auth_id: user.id,
+            ad_soyad: `${user.user_metadata?.first_name || 'Test'} ${user.user_metadata?.last_name || 'User'}`,
+            telefon: user.phone || '',
+            eposta: user.email || '',
+            adres: '',
+            personel_no: `S${Math.floor(Math.random() * 9000) + 1000}`,
+            maas: 0,
+            calisma_sistemi: 'aylik',
+            prim_yuzdesi: 0
+          });
+        
+        if (insertError) {
+          console.error("Error creating personnel record:", insertError);
+        }
+      }
+      
+      // Set the session manually
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: testEmail,
+        password: "password123" // Default test password
+      });
+      
+      if (signInError) {
+        console.error("Error signing in test user:", signInError);
+        // If can't sign in with password, try admin override
+        try {
+          const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.admin.generateLink({
+            type: 'magiclink',
+            email: testEmail
+          });
+          
+          if (sessionError) throw sessionError;
+          
+          // Try to use the token to sign in
+          const { error: signInTokenError } = await supabase.auth.signInWithPassword({
+            email: testEmail,
+            password: "password123" // Try generic password
+          });
+          
+          if (signInTokenError) {
+            setLoginError("Test kullanıcısı için giriş yapılamadı. Lütfen admin panelinden şifreyi sıfırlayın.");
+            throw signInTokenError;
+          }
+        } catch (e) {
+          setLoginError("Test kullanıcısı için giriş yapılamadı.");
+          throw e;
+        }
+      }
+      
+      toast.success("Test kullanıcısı ile giriş başarılı!");
+      onSuccess();
+      
+    } catch (error: any) {
+      console.error("Test login error:", error);
+      toast.error("Test girişi başarısız: " + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <>
       <form onSubmit={handleLogin} className="space-y-4">
@@ -221,6 +357,22 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         >
           {loading ? "Giriş yapılıyor..." : "Giriş Yap"}
         </Button>
+        
+        {/* Test login button for development only */}
+        <div className="mt-4 pt-4 border-t border-gray-100 text-center">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={handleTestLogin}
+            className="w-full text-purple-600 border-purple-200 hover:bg-purple-50"
+            disabled={loading}
+          >
+            Test Girişi (ergun@gmail.com)
+          </Button>
+          <p className="text-xs text-gray-500 mt-2">
+            Bu buton sadece test amaçlıdır. Canlı ortamda kaldırılacaktır.
+          </p>
+        </div>
       </form>
 
       <AlertDialog open={showForgotDialog} onOpenChange={setShowForgotDialog}>
