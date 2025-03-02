@@ -44,9 +44,18 @@ export const randevuServisi = {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Kullanıcı girişi yapılmamış');
 
+    // Ensure islemler is an array even if only one service is selected
+    const islemler = Array.isArray(randevu.islemler) 
+      ? randevu.islemler 
+      : [randevu.islemler];
+
     const { data, error } = await supabase
       .from('randevular')
-      .insert([{ ...randevu, customer_id: user.id }])
+      .insert([{ 
+        ...randevu, 
+        customer_id: user.id,
+        islemler: islemler 
+      }])
       .select(`
         *,
         musteri:profiles(*),
@@ -54,7 +63,11 @@ export const randevuServisi = {
       `)
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error("Randevu eklenirken hata:", error);
+      throw error;
+    }
+    
     return data;
   },
 

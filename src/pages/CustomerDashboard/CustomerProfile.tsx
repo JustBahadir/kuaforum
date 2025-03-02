@@ -95,6 +95,14 @@ export default function CustomerProfile() {
       // Format phone number for saving - remove spaces
       const phoneForSaving = profile.phone.replace(/\s/g, '');
       
+      console.log("Updating profile with data:", {
+        first_name: profile.firstName,
+        last_name: profile.lastName,
+        phone: phoneForSaving,
+        gender: profile.gender,
+        birthdate: profile.birthdate
+      });
+      
       // Use profile service to update profile
       const result = await profilServisi.guncelle({
         first_name: profile.firstName,

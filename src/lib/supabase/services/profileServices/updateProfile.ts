@@ -43,10 +43,21 @@ export async function updateProfile(data: ProfileUpdateData): Promise<Profile | 
       }
     }
     
+    // Prepare the data to update
+    const updateData: ProfileUpdateData = {};
+    
+    // Only include fields that exist in the data object
+    if (data.first_name !== undefined) updateData.first_name = data.first_name;
+    if (data.last_name !== undefined) updateData.last_name = data.last_name;
+    if (data.phone !== undefined) updateData.phone = data.phone;
+    if (data.gender !== undefined) updateData.gender = data.gender;
+    if (data.birthdate !== undefined) updateData.birthdate = data.birthdate;
+    if (data.role !== undefined) updateData.role = data.role;
+    
     // Update profile in the database
     const { data: profile, error } = await supabase
       .from('profiles')
-      .update(data)
+      .update(updateData)
       .eq('id', userId)
       .select('*')
       .single();
@@ -115,16 +126,19 @@ export async function createOrUpdateProfile(
     // If profile exists, update it
     if (existingProfile) {
       console.log("Updating existing profile:", existingProfile.id);
+      
+      // Prepare update data
+      const updateData: Record<string, any> = {};
+      if (profileData.first_name !== undefined) updateData.first_name = profileData.first_name;
+      if (profileData.last_name !== undefined) updateData.last_name = profileData.last_name;
+      if (profileData.role !== undefined) updateData.role = profileData.role;
+      if (profileData.phone !== undefined) updateData.phone = profileData.phone;
+      if (profileData.gender !== undefined) updateData.gender = profileData.gender;
+      if (profileData.birthdate !== undefined) updateData.birthdate = profileData.birthdate;
+      
       const { data: updatedProfile, error: updateError } = await supabase
         .from('profiles')
-        .update({
-          first_name: profileData.first_name,
-          last_name: profileData.last_name,
-          role: profileData.role,
-          phone: profileData.phone,
-          gender: profileData.gender,
-          birthdate: profileData.birthdate
-        })
+        .update(updateData)
         .eq('id', userId)
         .select('*')
         .single();
