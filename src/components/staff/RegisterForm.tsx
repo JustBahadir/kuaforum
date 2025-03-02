@@ -7,6 +7,15 @@ import { Lock, Mail, Phone, User } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { z } from "zod";
+import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle 
+} from "@/components/ui/alert-dialog";
 
 interface RegisterFormProps {
   onSuccess: () => void;
@@ -28,6 +37,8 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState("");
 
   const validateForm = () => {
     try {
@@ -64,6 +75,7 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
     setLoading(true);
     
     try {
+      console.log("Registering with:", email);
       // Register user with Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -119,8 +131,8 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
         }
       }
       
-      toast.success("Kayıt başarılı! Şimdi giriş yapabilirsiniz.");
-      onSuccess();
+      setRegisteredEmail(email);
+      setShowSuccessDialog(true);
       
     } catch (error: any) {
       console.error("Kayıt hatası:", error);
@@ -135,103 +147,129 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
     }
   };
 
+  const handleSuccessDialogClose = () => {
+    setShowSuccessDialog(false);
+    onSuccess();
+  };
+
   return (
-    <form onSubmit={handleRegister} className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="firstName">Ad</Label>
-          <div className="relative">
-            <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+    <>
+      <form onSubmit={handleRegister} className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="firstName">Ad</Label>
+            <div className="relative">
+              <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <Input
+                id="firstName"
+                type="text"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                className="pl-10"
+                required
+              />
+            </div>
+            {errors.firstName && (
+              <p className="text-xs text-red-500">{errors.firstName}</p>
+            )}
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="lastName">Soyad</Label>
             <Input
-              id="firstName"
+              id="lastName"
               type="text"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              required
+            />
+            {errors.lastName && (
+              <p className="text-xs text-red-500">{errors.lastName}</p>
+            )}
+          </div>
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="email">E-posta</Label>
+          <div className="relative">
+            <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               className="pl-10"
               required
             />
           </div>
-          {errors.firstName && (
-            <p className="text-xs text-red-500">{errors.firstName}</p>
+          {errors.email && (
+            <p className="text-xs text-red-500">{errors.email}</p>
           )}
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="lastName">Soyad</Label>
-          <Input
-            id="lastName"
-            type="text"
-            value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
-            required
-          />
-          {errors.lastName && (
-            <p className="text-xs text-red-500">{errors.lastName}</p>
+          <Label htmlFor="phone">Telefon</Label>
+          <div className="relative">
+            <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+            <Input
+              id="phone"
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="pl-10"
+              required
+            />
+          </div>
+          {errors.phone && (
+            <p className="text-xs text-red-500">{errors.phone}</p>
           )}
         </div>
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="email">E-posta</Label>
-        <div className="relative">
-          <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-          <Input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="pl-10"
-            required
-          />
+        
+        <div className="space-y-2">
+          <Label htmlFor="password">Şifre</Label>
+          <div className="relative">
+            <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+            <Input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="pl-10"
+              required
+            />
+          </div>
+          {errors.password && (
+            <p className="text-xs text-red-500">{errors.password}</p>
+          )}
         </div>
-        {errors.email && (
-          <p className="text-xs text-red-500">{errors.email}</p>
-        )}
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="phone">Telefon</Label>
-        <div className="relative">
-          <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-          <Input
-            id="phone"
-            type="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            className="pl-10"
-            required
-          />
-        </div>
-        {errors.phone && (
-          <p className="text-xs text-red-500">{errors.phone}</p>
-        )}
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="password">Şifre</Label>
-        <div className="relative">
-          <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-          <Input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="pl-10"
-            required
-          />
-        </div>
-        {errors.password && (
-          <p className="text-xs text-red-500">{errors.password}</p>
-        )}
-      </div>
-      
-      <Button
-        type="submit"
-        className="w-full"
-        disabled={loading}
-      >
-        {loading ? "Kayıt yapılıyor..." : "Kayıt Ol"}
-      </Button>
-    </form>
+        
+        <Button
+          type="submit"
+          className="w-full"
+          disabled={loading}
+        >
+          {loading ? "Kayıt yapılıyor..." : "Kayıt Ol"}
+        </Button>
+      </form>
+
+      <AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Kayıt Başarılı</AlertDialogTitle>
+            <AlertDialogDescription>
+              <p>
+                {registeredEmail} e-posta adresi ile kayıt başarıyla tamamlandı. 
+                Şimdi giriş yapabilirsiniz.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={handleSuccessDialogClose}>
+              Giriş Yap
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

@@ -10,6 +10,7 @@ export function useCustomerAuth() {
   const [userName, setUserName] = useState("");
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -23,8 +24,11 @@ export function useCustomerAuth() {
       if (!user) {
         setUserName("Değerli Müşterimiz");
         setUserRole(null);
+        setIsAuthenticated(false);
         return;
       }
+
+      setIsAuthenticated(true);
       
       // Get user role
       const role = await profilServisi.getUserRole();
@@ -70,6 +74,7 @@ export function useCustomerAuth() {
     } catch (error) {
       console.error("Error refreshing profile:", error);
       setUserName("Değerli Müşterimiz");
+      setIsAuthenticated(false);
     }
   };
 
@@ -82,10 +87,12 @@ export function useCustomerAuth() {
         if (error) {
           console.error("Auth error:", error);
           toast.error("Oturum bilgileriniz alınamadı");
+          setIsAuthenticated(false);
           return;
         }
         
         if (!user) {
+          setIsAuthenticated(false);
           // Only navigate to login if we're on a protected route
           if (location.pathname.includes('/personnel') || 
               location.pathname.includes('/dashboard')) {
@@ -94,9 +101,12 @@ export function useCustomerAuth() {
           return;
         }
         
+        setIsAuthenticated(true);
+        
         // Get user role
         const role = await profilServisi.getUserRole();
         setUserRole(role);
+        console.log("User role:", role);
         
         // If user is staff but trying to access customer routes or vice versa
         if (role === 'staff' && location.pathname.includes('/customer')) {
@@ -111,6 +121,7 @@ export function useCustomerAuth() {
         await refreshProfile();
       } catch (error) {
         console.error("Error in auth check:", error);
+        setIsAuthenticated(false);
       } finally {
         setLoading(false);
       }
@@ -121,11 +132,20 @@ export function useCustomerAuth() {
     // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log("Auth state changed:", event, session ? "has session" : "no session");
         if (event === 'SIGNED_IN') {
+          setIsAuthenticated(true);
           await refreshProfile();
         } else if (event === 'SIGNED_OUT') {
           setUserName("Değerli Müşterimiz");
           setUserRole(null);
+          setIsAuthenticated(false);
+          
+          // If on a protected route, redirect to login
+          if (location.pathname.includes('/personnel') || 
+              location.pathname.includes('/dashboard')) {
+            navigate("/staff-login");
+          }
         }
       }
     );
@@ -139,6 +159,8 @@ export function useCustomerAuth() {
     try {
       await supabase.auth.signOut();
       toast.success("Başarıyla çıkış yapıldı");
+      setIsAuthenticated(false);
+      setUserRole(null);
       
       // Always navigate to the home page
       navigate("/");
@@ -154,6 +176,7 @@ export function useCustomerAuth() {
     activeTab, 
     handleLogout, 
     refreshProfile, 
-    userRole 
+    userRole,
+    isAuthenticated
   };
 }
