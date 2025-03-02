@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Lock, User } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 interface LoginFormProps {
   onSuccess: () => void;
@@ -15,6 +16,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,6 +32,24 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       
       if (error) throw error;
       
+      // Verify if user has staff role
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', data.user.id)
+        .single();
+      
+      if (profileError) {
+        console.error("Error checking user role:", profileError);
+        throw new Error("Kullanıcı bilgileri alınamadı");
+      }
+      
+      if (profileData?.role !== 'staff') {
+        // Sign out if not staff
+        await supabase.auth.signOut();
+        throw new Error("Bu giriş sadece kuaför personeli içindir. Müşteri girişi için ana sayfayı kullanın.");
+      }
+      
       toast.success("Kuaför girişi başarılı!");
       onSuccess();
       
@@ -39,6 +59,10 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleForgotPassword = () => {
+    toast("Şifre sıfırlama bağlantısı e-posta adresinize gönderilecek");
   };
 
   return (
@@ -71,6 +95,17 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
             required
           />
         </div>
+      </div>
+      
+      <div className="flex justify-end">
+        <Button 
+          type="button" 
+          variant="link" 
+          className="text-xs text-purple-600"
+          onClick={handleForgotPassword}
+        >
+          Şifremi Unuttum
+        </Button>
       </div>
       
       <Button 

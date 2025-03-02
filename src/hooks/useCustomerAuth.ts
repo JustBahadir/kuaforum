@@ -9,6 +9,7 @@ import { toast } from "sonner";
 export function useCustomerAuth() {
   const [userName, setUserName] = useState("");
   const [loading, setLoading] = useState(true);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -21,8 +22,13 @@ export function useCustomerAuth() {
       
       if (!user) {
         setUserName("Değerli Müşterimiz");
+        setUserRole(null);
         return;
       }
+      
+      // Get user role
+      const role = await profilServisi.getUserRole();
+      setUserRole(role);
       
       // First try to get name from user metadata
       if (user.user_metadata && (user.user_metadata.first_name)) {
@@ -76,27 +82,58 @@ export function useCustomerAuth() {
         if (error) {
           console.error("Auth error:", error);
           toast.error("Oturum bilgileriniz alınamadı");
-          navigate("/login");
           return;
         }
         
         if (!user) {
-          navigate("/login");
+          // Only navigate to login if we're on a protected route
+          if (location.pathname.includes('/personnel') || 
+              location.pathname.includes('/dashboard')) {
+            navigate("/staff-login");
+          }
           return;
+        }
+        
+        // Get user role
+        const role = await profilServisi.getUserRole();
+        setUserRole(role);
+        
+        // If user is staff but trying to access customer routes or vice versa
+        if (role === 'staff' && location.pathname.includes('/customer')) {
+          navigate("/personnel");
+        } else if (role === 'customer' && 
+                  (location.pathname.includes('/personnel') || 
+                   location.pathname.includes('/dashboard'))) {
+          navigate("/customer-dashboard");
         }
         
         // Get profile data
         await refreshProfile();
       } catch (error) {
         console.error("Error in auth check:", error);
-        navigate("/login");
       } finally {
         setLoading(false);
       }
     }
     
     loadUserData();
-  }, [navigate]);
+    
+    // Set up auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_IN') {
+          await refreshProfile();
+        } else if (event === 'SIGNED_OUT') {
+          setUserName("Değerli Müşterimiz");
+          setUserRole(null);
+        }
+      }
+    );
+    
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [navigate, location.pathname]);
   
   const handleLogout = async () => {
     try {
@@ -111,5 +148,12 @@ export function useCustomerAuth() {
     }
   };
   
-  return { userName, loading, activeTab, handleLogout, refreshProfile };
+  return { 
+    userName, 
+    loading, 
+    activeTab, 
+    handleLogout, 
+    refreshProfile, 
+    userRole 
+  };
 }
