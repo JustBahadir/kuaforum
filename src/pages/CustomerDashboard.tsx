@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from "react";
-import { Routes, Route, Navigate, useNavigate, Link } from "react-router-dom";
+import { Routes, Route, Navigate, useNavigate, Link, useLocation } from "react-router-dom";
 import { supabase } from "@/lib/supabase/client"; 
 import { toast } from "sonner";
 import { 
@@ -22,9 +22,26 @@ import CustomerHome from "./CustomerDashboard/CustomerHome";
 
 export default function CustomerDashboard() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [userName, setUserName] = useState("");
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("home");
+
+  // Sayfa değiştiğinde URL'e göre aktif sekmeyi güncelle
+  useEffect(() => {
+    const path = location.pathname;
+    if (path.includes('/profile')) {
+      setActiveTab("profile");
+    } else if (path.includes('/appointments')) {
+      setActiveTab("appointments");
+    } else if (path.includes('/services')) {
+      setActiveTab("services");
+    } else if (path.includes('/settings')) {
+      setActiveTab("settings");
+    } else {
+      setActiveTab("home");
+    }
+  }, [location.pathname]);
 
   useEffect(() => {
     // Check if user is authenticated
@@ -95,7 +112,6 @@ export default function CustomerDashboard() {
             <Button 
               variant={activeTab === "home" ? "default" : "ghost"} 
               className="w-full justify-start" 
-              onClick={() => setActiveTab("home")}
             >
               <Home className="mr-2 h-4 w-4" />
               Ana Sayfa
@@ -105,7 +121,6 @@ export default function CustomerDashboard() {
             <Button 
               variant={activeTab === "profile" ? "default" : "ghost"} 
               className="w-full justify-start" 
-              onClick={() => setActiveTab("profile")}
             >
               <User className="mr-2 h-4 w-4" />
               Profil Bilgilerim
@@ -115,7 +130,6 @@ export default function CustomerDashboard() {
             <Button 
               variant={activeTab === "appointments" ? "default" : "ghost"} 
               className="w-full justify-start" 
-              onClick={() => setActiveTab("appointments")}
             >
               <Calendar className="mr-2 h-4 w-4" />
               Randevularım
@@ -125,7 +139,6 @@ export default function CustomerDashboard() {
             <Button 
               variant={activeTab === "services" ? "default" : "ghost"} 
               className="w-full justify-start" 
-              onClick={() => setActiveTab("services")}
             >
               <Scissors className="mr-2 h-4 w-4" />
               Hizmetlerimiz
@@ -135,7 +148,6 @@ export default function CustomerDashboard() {
             <Button 
               variant={activeTab === "settings" ? "default" : "ghost"} 
               className="w-full justify-start" 
-              onClick={() => setActiveTab("settings")}
             >
               <Settings className="mr-2 h-4 w-4" />
               Ayarlar
@@ -167,7 +179,6 @@ export default function CustomerDashboard() {
               variant={activeTab === "home" ? "default" : "ghost"} 
               className="w-full justify-start" 
               onClick={() => {
-                setActiveTab("home");
                 document.getElementById('mobileMenu')?.classList.add('hidden');
               }}
             >
@@ -180,7 +191,6 @@ export default function CustomerDashboard() {
               variant={activeTab === "profile" ? "default" : "ghost"} 
               className="w-full justify-start" 
               onClick={() => {
-                setActiveTab("profile");
                 document.getElementById('mobileMenu')?.classList.add('hidden');
               }}
             >
@@ -193,7 +203,6 @@ export default function CustomerDashboard() {
               variant={activeTab === "appointments" ? "default" : "ghost"} 
               className="w-full justify-start" 
               onClick={() => {
-                setActiveTab("appointments");
                 document.getElementById('mobileMenu')?.classList.add('hidden');
               }}
             >
@@ -206,7 +215,6 @@ export default function CustomerDashboard() {
               variant={activeTab === "services" ? "default" : "ghost"} 
               className="w-full justify-start" 
               onClick={() => {
-                setActiveTab("services");
                 document.getElementById('mobileMenu')?.classList.add('hidden');
               }}
             >
@@ -219,7 +227,6 @@ export default function CustomerDashboard() {
               variant={activeTab === "settings" ? "default" : "ghost"} 
               className="w-full justify-start" 
               onClick={() => {
-                setActiveTab("settings");
                 document.getElementById('mobileMenu')?.classList.add('hidden');
               }}
             >

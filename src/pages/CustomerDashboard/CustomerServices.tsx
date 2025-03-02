@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/lib/supabase/client";
-import { Scissors, Clock, DollarSign } from "lucide-react";
+import { Scissors, DollarSign, Star } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -48,6 +48,23 @@ export default function CustomerServices() {
     fetchData();
   }, []);
   
+  // Puanı yıldızlara dönüştüren yardımcı fonksiyon
+  const renderStars = (points: number) => {
+    // Puan 0-5 arası olsun
+    const normalizedPoints = Math.min(5, Math.max(0, Math.floor(points / 20)));
+    
+    return (
+      <div className="flex">
+        {[...Array(5)].map((_, index) => (
+          <Star 
+            key={index} 
+            className={`h-4 w-4 ${index < normalizedPoints ? "text-yellow-500 fill-yellow-500" : "text-gray-300"}`} 
+          />
+        ))}
+      </div>
+    );
+  };
+  
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -71,7 +88,7 @@ export default function CustomerServices() {
         </Card>
       ) : (
         <Tabs defaultValue={categories[0]?.id.toString()}>
-          <TabsList className="mb-4">
+          <TabsList className="mb-4 flex overflow-x-auto pb-px" style={{ maxWidth: "100%" }}>
             {categories.map(category => (
               <TabsTrigger key={category.id} value={category.id.toString()}>
                 {category.kategori_adi}
@@ -91,7 +108,7 @@ export default function CustomerServices() {
                 services
                   .filter(service => service.kategori_id === category.id)
                   .map(service => (
-                    <Card key={service.id}>
+                    <Card key={service.id} className="overflow-hidden border-l-4 border-l-purple-500">
                       <CardHeader className="pb-2">
                         <CardTitle className="text-lg flex items-center">
                           <Scissors className="mr-2 h-5 w-5 text-purple-500" />
@@ -99,22 +116,22 @@ export default function CustomerServices() {
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="pb-3">
-                        <div className="flex flex-wrap gap-4">
+                        <div className="flex flex-wrap justify-between gap-4">
                           <div className="flex items-center">
                             <DollarSign className="h-4 w-4 text-green-600 mr-1" />
                             <span>Fiyat: {service.fiyat} TL</span>
                           </div>
                           {service.puan > 0 && (
                             <div className="flex items-center">
-                              <Clock className="h-4 w-4 text-blue-600 mr-1" />
-                              <span>Tahmini Süre: {service.puan} dk</span>
+                              {renderStars(service.puan)}
+                              <span className="ml-2 text-sm text-gray-500">{service.puan} Puan</span>
                             </div>
                           )}
                         </div>
                       </CardContent>
-                      <CardFooter className="border-t pt-3">
+                      <CardFooter className="border-t pt-3 bg-gray-50">
                         <Link to={`/appointments?service=${service.id}`} className="w-full">
-                          <Button variant="outline" className="w-full">
+                          <Button variant="outline" className="w-full border-purple-300 hover:bg-purple-50 hover:text-purple-700">
                             Bu Hizmet İçin Randevu Al
                           </Button>
                         </Link>
@@ -127,18 +144,18 @@ export default function CustomerServices() {
         </Tabs>
       )}
       
-      <Card>
+      <Card className="border-2 border-purple-500 bg-gradient-to-r from-purple-50 to-pink-50">
         <CardHeader>
-          <CardTitle>Yeni Randevu Oluştur</CardTitle>
+          <CardTitle className="text-center">Yeni Randevu Oluştur</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-gray-600">
+          <p className="text-gray-600 text-center">
             İstediğiniz hizmeti seçerek hızlıca randevu oluşturabilirsiniz.
           </p>
         </CardContent>
-        <CardFooter>
-          <Link to="/appointments" className="w-full">
-            <Button className="w-full">Randevu Oluştur</Button>
+        <CardFooter className="flex justify-center">
+          <Link to="/appointments" className="w-full max-w-xs">
+            <Button className="w-full bg-purple-700 hover:bg-purple-800">Randevu Oluştur</Button>
           </Link>
         </CardFooter>
       </Card>

@@ -1,7 +1,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import "./App.css";
 import Appointments from "./pages/Appointments";
 import Dashboard from "./pages/Dashboard";
@@ -24,6 +24,8 @@ function App() {
           <Route path="/customer-profile" element={<CustomerProfile />} />
           <Route path="/personnel" element={<Personnel />} />
           <Route path="/customer-dashboard/*" element={<CustomerDashboard />} />
+          {/* Müşteri giriş yaptığında doğrudan ana sayfaya yönlendir */}
+          <Route path="/customer-dashboard" element={<Navigate to="/customer-dashboard/" replace />} />
         </Routes>
       </div>
       <ReactQueryDevtools initialIsOpen={false} />

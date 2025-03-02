@@ -7,13 +7,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { User, Phone, Mail, Calendar } from "lucide-react";
+import { profilServisi } from "@/lib/supabase/services/profilServisi";
 
 export default function CustomerProfile() {
   const [profile, setProfile] = useState({
     firstName: "",
     lastName: "",
     phone: "",
-    email: ""
+    email: "",
+    gender: "",
+    age: ""
   });
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -42,7 +45,9 @@ export default function CustomerProfile() {
             firstName: data.first_name || "",
             lastName: data.last_name || "",
             phone: data.phone || "",
-            email: user.email || ""
+            email: user.email || "",
+            gender: "",
+            age: ""
           });
         }
       } catch (error) {
@@ -56,9 +61,30 @@ export default function CustomerProfile() {
     fetchProfileData();
   }, []);
   
+  const formatPhoneNumber = (value: string) => {
+    // Sadece rakamları al
+    const numbers = value.replace(/\D/g, '');
+    
+    // Formatlama: 05XX XXX XX XX
+    if (numbers.length <= 3) {
+      return numbers;
+    } else if (numbers.length <= 6) {
+      return `${numbers.slice(0, 3)} ${numbers.slice(3)}`;
+    } else if (numbers.length <= 8) {
+      return `${numbers.slice(0, 3)} ${numbers.slice(3, 6)} ${numbers.slice(6)}`;
+    } else {
+      return `${numbers.slice(0, 3)} ${numbers.slice(3, 6)} ${numbers.slice(6, 8)} ${numbers.slice(8, 10)}`;
+    }
+  };
+  
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setProfile(prev => ({ ...prev, [name]: value }));
+    
+    if (name === 'phone') {
+      setProfile(prev => ({ ...prev, [name]: formatPhoneNumber(value) }));
+    } else {
+      setProfile(prev => ({ ...prev, [name]: value }));
+    }
   };
   
   const handleSave = async () => {
@@ -71,21 +97,20 @@ export default function CustomerProfile() {
         return;
       }
       
-      // Update profile in database
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          first_name: profile.firstName,
-          last_name: profile.lastName,
-          phone: profile.phone
-        })
-        .eq('id', user.id);
-        
-      if (error) {
-        console.error("Error updating profile:", error);
-        toast.error("Profil bilgileri güncellenirken bir hata oluştu");
-      } else {
+      // Format phone number for saving - remove spaces
+      const phoneForSaving = profile.phone.replace(/\s/g, '');
+      
+      // Use profile service to update profile
+      const result = await profilServisi.guncelle({
+        first_name: profile.firstName,
+        last_name: profile.lastName,
+        phone: phoneForSaving,
+      });
+      
+      if (result) {
         toast.success("Profil bilgileriniz başarıyla güncellendi");
+      } else {
+        toast.error("Profil bilgileri güncellenirken bir hata oluştu");
       }
     } catch (error) {
       console.error("Error in handleSave:", error);
@@ -184,6 +209,37 @@ export default function CustomerProfile() {
             />
           </div>
           
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="gender" className="flex items-center gap-2">
+                <User size={16} />
+                Cinsiyet (Opsiyonel)
+              </Label>
+              <Input
+                id="gender"
+                name="gender"
+                value={profile.gender}
+                onChange={handleChange}
+                placeholder="Cinsiyet"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="age" className="flex items-center gap-2">
+                <Calendar size={16} />
+                Yaş (Opsiyonel)
+              </Label>
+              <Input
+                id="age"
+                name="age"
+                type="number"
+                value={profile.age}
+                onChange={handleChange}
+                placeholder="Yaşınız"
+              />
+            </div>
+          </div>
+          
           <div className="space-y-2">
             <Label htmlFor="email" className="flex items-center gap-2 opacity-70">
               <Mail size={16} />
@@ -203,6 +259,7 @@ export default function CustomerProfile() {
           <Button 
             onClick={handleSave} 
             disabled={isSaving}
+            className="bg-purple-600 hover:bg-purple-700"
           >
             {isSaving ? "Kaydediliyor..." : "Bilgilerimi Güncelle"}
           </Button>
