@@ -97,15 +97,21 @@ async function findExistingUser(email: string): Promise<User | null> {
       return null;
     }
     
-    // Find user with matching email - ensuring proper type safety
-    const matchingUser = usersData.users.find(user => {
-      // Ensure user exists and has an email property that's a string before comparison
-      return user && 
-             typeof user === 'object' && 
-             user !== null && 
-             'email' in user && 
-             typeof user.email === 'string' && 
-             user.email.toLowerCase() === email.toLowerCase();
+    // Use explicit type for users and ensure proper type checking
+    const users = usersData.users as Array<User | null>;
+    
+    // Find user with matching email using safe type checking
+    const matchingUser = users.find(user => {
+      if (!user) return false;
+      
+      // Check if user has an email property that's a string
+      if (typeof user !== 'object') return false;
+      if (!('email' in user)) return false;
+      
+      const userEmail = user.email;
+      if (typeof userEmail !== 'string') return false;
+      
+      return userEmail.toLowerCase() === email.toLowerCase();
     });
     
     if (matchingUser) {
