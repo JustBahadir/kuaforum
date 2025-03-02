@@ -2,122 +2,68 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/lib/supabase/client";
-import { toast } from "sonner";
+import { profilServisi } from "@/lib/supabase/services/profilServisi";
 import { getGenderTitle } from "@/lib/supabase/services/profileServices/profileTypes";
 
 export function useCustomerAuth() {
+  const [userName, setUserName] = useState("");
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
-  const [userName, setUserName] = useState("");
-  const [userGenderTitle, setUserGenderTitle] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("home");
 
-  // Update activeTab based on URL path
-  useEffect(() => {
-    const path = location.pathname;
-    if (path.includes('/profile')) {
-      setActiveTab("profile");
-    } else if (path.includes('/appointments')) {
-      setActiveTab("appointments");
-    } else if (path.includes('/services')) {
-      setActiveTab("services");
-    } else if (path.includes('/settings')) {
-      setActiveTab("settings");
-    } else {
-      setActiveTab("home");
-    }
-  }, [location.pathname]);
+  const activeTab = location.pathname.split("/").pop() || "";
 
-  // Function to fetch user profile data
-  const fetchProfileData = async () => {
+  // Refresh user profile data
+  const refreshProfile = async () => {
     try {
-      const { data } = await supabase.auth.getSession();
-      
-      if (!data.session) {
-        navigate("/");
-        return false;
-      }
-
-      try {
-        // Get user profile info
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('first_name, last_name, gender')
-          .eq('id', data.session.user.id)
-          .single();
-          
-        if (profile) {
-          const genderTitle = getGenderTitle(profile.gender);
-          setUserGenderTitle(genderTitle);
-          
-          if (profile.first_name || profile.last_name) {
-            const firstName = profile.first_name || '';
-            const lastName = profile.last_name || '';
-            const displayName = firstName ? `${firstName} ${lastName}`.trim() : lastName;
-            
-            if (displayName && genderTitle) {
-              setUserName(`${displayName} ${genderTitle}`);
-            } else {
-              setUserName(displayName || "Değerli Müşterimiz");
-            }
-          } else {
-            setUserName("Değerli Müşterimiz");
-          }
+      const profile = await profilServisi.getir();
+      if (profile) {
+        const fullName = `${profile.first_name || ""} ${profile.last_name || ""}`.trim();
+        const genderTitle = getGenderTitle(profile.gender);
+        
+        if (fullName && genderTitle) {
+          setUserName(`${fullName} ${genderTitle}`);
+        } else if (fullName) {
+          setUserName(fullName);
         } else {
           setUserName("Değerli Müşterimiz");
         }
+      } else {
+        setUserName("Değerli Müşterimiz");
+      }
+    } catch (error) {
+      console.error("Error refreshing profile:", error);
+    }
+  };
+
+  useEffect(() => {
+    async function loadUserData() {
+      try {
+        setLoading(true);
+        const { data: { user } } = await supabase.auth.getUser();
         
-        // If user is on appointments page directly and not within customer-dashboard, redirect them
-        if (location.pathname === "/appointments") {
-          navigate("/customer-dashboard");
+        if (!user) {
+          navigate("/login");
+          return;
         }
         
-        return true;
+        // Get profile data
+        await refreshProfile();
       } catch (error) {
-        console.error("Error fetching profile:", error);
-        return false;
+        console.error("Error in auth check:", error);
+        navigate("/login");
       } finally {
         setLoading(false);
       }
-    } catch (error) {
-      console.error("Error in fetchProfileData:", error);
-      return false;
     }
-  };
-
-  // Check authentication and fetch user profile on initial load
-  useEffect(() => {
-    fetchProfileData();
+    
+    loadUserData();
   }, [navigate]);
-
-  // Refresh profile data - Can be called after profile updates
-  const refreshProfile = async () => {
-    const success = await fetchProfileData();
-    if (success) {
-      toast.success("Profil bilgileri güncellendi");
-    }
-    return success;
-  };
-
-  // Handle logout
+  
   const handleLogout = async () => {
-    try {
-      await supabase.auth.signOut();
-      toast.success("Başarıyla çıkış yapıldı");
-      navigate("/");
-    } catch (error) {
-      console.error("Çıkış yapılırken hata:", error);
-      toast.error("Çıkış yapılırken bir hata oluştu");
-    }
+    await supabase.auth.signOut();
+    navigate("/login");
   };
-
-  return {
-    userName,
-    userGenderTitle,
-    loading,
-    activeTab,
-    handleLogout,
-    refreshProfile
-  };
+  
+  return { userName, loading, activeTab, handleLogout, refreshProfile };
 }

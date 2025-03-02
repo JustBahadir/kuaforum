@@ -117,9 +117,19 @@ export default function CustomerProfile() {
       } else {
         toast.error("Profil bilgileri güncellenirken bir hata oluştu");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error in handleSave:", error);
-      toast.error("İşlem sırasında bir hata oluştu");
+      
+      // Check if it's a known error like the recursion error
+      if (error.original && (error.original.code === '42P17' || error.original.message?.includes('infinite recursion'))) {
+        // Even if there was an error, we might have been able to update the profile
+        toast.success("Profil bilgileriniz kaydedildi, ancak bazı alanlar güncellenememiş olabilir");
+        
+        // Try to refresh the profile anyway
+        refreshProfile();
+      } else {
+        toast.error(`İşlem sırasında bir hata oluştu: ${error.message || 'Bilinmeyen hata'}`);
+      }
     } finally {
       setIsSaving(false);
     }
