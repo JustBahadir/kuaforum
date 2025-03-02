@@ -33,6 +33,7 @@ export function useCustomerAuth() {
       // Get user role
       const role = await profilServisi.getUserRole();
       setUserRole(role);
+      console.log("User role from refreshProfile:", role);
       
       // First try to get name from user metadata
       if (user.user_metadata && (user.user_metadata.first_name)) {
@@ -106,7 +107,7 @@ export function useCustomerAuth() {
         // Get user role
         const role = await profilServisi.getUserRole();
         setUserRole(role);
-        console.log("User role:", role);
+        console.log("User role from loadUserData:", role);
         
         // If user is staff but trying to access customer routes or vice versa
         if (role === 'staff' && location.pathname.includes('/customer')) {
@@ -136,6 +137,16 @@ export function useCustomerAuth() {
         if (event === 'SIGNED_IN') {
           setIsAuthenticated(true);
           await refreshProfile();
+          
+          // Check role and redirect accordingly
+          const role = await profilServisi.getUserRole();
+          if (role === 'staff' && location.pathname.includes('/staff-login')) {
+            navigate("/personnel");
+          } else if (role === 'customer' && location.pathname.includes('/staff-login')) {
+            // Staff login page but customer role - redirect to customer dashboard
+            navigate("/customer-dashboard");
+            toast.info("Müşteri hesabı ile giriş yaptınız. Personel girişi için personel hesabı kullanmalısınız.");
+          }
         } else if (event === 'SIGNED_OUT') {
           setUserName("Değerli Müşterimiz");
           setUserRole(null);

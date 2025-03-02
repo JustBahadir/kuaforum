@@ -29,11 +29,13 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
   const [showForgotDialog, setShowForgotDialog] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [resetEmailSending, setResetEmailSending] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setLoginError(null);
     
     try {
       console.log("Attempting login with:", email);
@@ -45,6 +47,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       
       if (error) {
         console.error("Login error:", error);
+        setLoginError(`Giriş hatası: ${error.message}`);
         throw error;
       }
       
@@ -57,12 +60,14 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       
       if (profileError) {
         console.error("Error checking user role:", profileError);
+        setLoginError("Kullanıcı bilgileri alınamadı");
         throw new Error("Kullanıcı bilgileri alınamadı");
       }
       
       if (profileData?.role !== 'staff') {
         // Sign out if not staff
         await supabase.auth.signOut();
+        setLoginError("Bu giriş sadece kuaför personeli içindir. Müşteri girişi için ana sayfayı kullanın.");
         throw new Error("Bu giriş sadece kuaför personeli içindir. Müşteri girişi için ana sayfayı kullanın.");
       }
       
@@ -118,8 +123,10 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       console.error("Giriş hatası:", error);
       
       if (error.message.includes("Invalid login credentials")) {
+        setLoginError("Geçersiz e-posta veya şifre. Lütfen bilgilerinizi kontrol ediniz.");
         toast.error("Geçersiz e-posta veya şifre");
       } else {
+        setLoginError(`Giriş yapılamadı: ${error.message}`);
         toast.error("Giriş yapılamadı: " + error.message);
       }
     } finally {
@@ -189,6 +196,12 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
             />
           </div>
         </div>
+        
+        {loginError && (
+          <div className="p-3 rounded-md bg-red-50 border border-red-200 text-red-700 text-sm">
+            {loginError}
+          </div>
+        )}
         
         <div className="flex justify-end">
           <Button 
