@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase/client";
-import { Scissors, DollarSign, Star } from "lucide-react";
+import { Scissors, DollarSign } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -62,23 +62,6 @@ export default function CustomerServices() {
     toast.success("Hizmet seçildi. Şimdi randevu oluşturabilirsiniz.");
   };
   
-  // Helper function to render stars based on points
-  const renderStars = (points: number) => {
-    // Normalize points to 0-5 range
-    const normalizedPoints = Math.min(5, Math.max(0, Math.floor(points / 20)));
-    
-    return (
-      <div className="flex">
-        {[...Array(5)].map((_, index) => (
-          <Star 
-            key={index} 
-            className={`h-4 w-4 ${index < normalizedPoints ? "text-yellow-500 fill-yellow-500" : "text-gray-300"}`} 
-          />
-        ))}
-      </div>
-    );
-  };
-  
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -135,12 +118,6 @@ export default function CustomerServices() {
                             <DollarSign className="h-4 w-4 text-green-600 mr-1" />
                             <span>Fiyat: {service.fiyat} TL</span>
                           </div>
-                          {service.puan > 0 && (
-                            <div className="flex items-center">
-                              {renderStars(service.puan)}
-                              <span className="ml-2 text-sm text-gray-500">{service.puan} Puan</span>
-                            </div>
-                          )}
                         </div>
                       </CardContent>
                       <CardFooter className="border-t pt-3 bg-gray-50">

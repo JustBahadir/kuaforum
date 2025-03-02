@@ -1,5 +1,5 @@
 
-import { supabase } from '../../';
+import { supabase } from '../../client';
 import { Profile } from '../../types';
 import { ProfileServiceError, ProfileUpdateData } from '../profileServices/profileTypes';
 
@@ -44,14 +44,12 @@ export async function updateProfile(data: ProfileUpdateData): Promise<Profile | 
     }
     
     // Prepare the data to update
-    const updateData: ProfileUpdateData = {};
+    const updateData: Record<string, any> = {};
     
     // Only include fields that exist in the data object
     if (data.first_name !== undefined) updateData.first_name = data.first_name;
     if (data.last_name !== undefined) updateData.last_name = data.last_name;
     if (data.phone !== undefined) updateData.phone = data.phone;
-    if (data.gender !== undefined) updateData.gender = data.gender;
-    if (data.birthdate !== undefined) updateData.birthdate = data.birthdate;
     if (data.role !== undefined) updateData.role = data.role;
     
     // Update profile in the database
@@ -88,8 +86,6 @@ export async function createOrUpdateProfile(
     last_name?: string; 
     role?: string; 
     phone?: string;
-    gender?: string;
-    birthdate?: string;
   }
 ): Promise<Profile | null> {
   try {
@@ -133,8 +129,6 @@ export async function createOrUpdateProfile(
       if (profileData.last_name !== undefined) updateData.last_name = profileData.last_name;
       if (profileData.role !== undefined) updateData.role = profileData.role;
       if (profileData.phone !== undefined) updateData.phone = profileData.phone;
-      if (profileData.gender !== undefined) updateData.gender = profileData.gender;
-      if (profileData.birthdate !== undefined) updateData.birthdate = profileData.birthdate;
       
       const { data: updatedProfile, error: updateError } = await supabase
         .from('profiles')
@@ -161,8 +155,6 @@ export async function createOrUpdateProfile(
           last_name: profileData.last_name || '',
           role: profileData.role || 'customer',
           phone: profileData.phone || '',
-          gender: profileData.gender || '',
-          birthdate: profileData.birthdate || null
         })
         .select('*')
         .single();

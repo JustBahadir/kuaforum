@@ -10,14 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "@/components/ui/select";
-import { User, Phone, Mail, Calendar, Users } from "lucide-react";
+import { User, Phone, Mail } from "lucide-react";
 
 interface ProfileEditFormProps {
   profile: {
@@ -25,8 +18,6 @@ interface ProfileEditFormProps {
     lastName: string;
     phone: string;
     email: string;
-    gender: string;
-    birthdate: string;
   };
   handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
   handleSave: () => Promise<void>;
@@ -39,18 +30,6 @@ export function ProfileEditForm({
   handleSave, 
   isSaving 
 }: ProfileEditFormProps) {
-  // Custom handler for select component
-  const handleSelectChange = (name: string, value: string) => {
-    const event = {
-      target: {
-        name,
-        value
-      }
-    } as React.ChangeEvent<HTMLSelectElement>;
-    
-    handleChange(event);
-  };
-  
   return (
     <Card>
       <CardHeader>
@@ -100,42 +79,6 @@ export function ProfileEditForm({
             placeholder="05XX XXX XX XX"
             maxLength={14}
           />
-        </div>
-        
-        <div className="grid md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="gender" className="flex items-center gap-2">
-              <Users size={16} />
-              Cinsiyet
-            </Label>
-            <Select
-              value={profile.gender}
-              onValueChange={(value) => handleSelectChange('gender', value)}
-            >
-              <SelectTrigger id="gender" className="w-full">
-                <SelectValue placeholder="Cinsiyet seçiniz" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="female">Kadın</SelectItem>
-                <SelectItem value="male">Erkek</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="birthdate" className="flex items-center gap-2">
-              <Calendar size={16} />
-              Doğum Tarihi
-            </Label>
-            <Input
-              id="birthdate"
-              name="birthdate"
-              type="date"
-              value={profile.birthdate}
-              onChange={handleChange}
-              className="w-full"
-            />
-          </div>
         </div>
         
         <div className="space-y-2">

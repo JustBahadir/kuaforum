@@ -6,16 +6,13 @@ import { formatPhoneNumber } from "@/utils/phoneFormatter";
 import { ProfileDisplay } from "@/components/customer-profile/ProfileDisplay";
 import { ProfileEditForm } from "@/components/customer-profile/ProfileEditForm";
 import { profilServisi } from "@/lib/supabase/services/profilServisi";
-import { format } from "date-fns";
 
 export default function CustomerProfile() {
   const [profile, setProfile] = useState({
     firstName: "",
     lastName: "",
     phone: "",
-    email: "",
-    gender: "",
-    birthdate: ""
+    email: ""
   });
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -32,7 +29,7 @@ export default function CustomerProfile() {
         // Get profile data
         const { data, error } = await supabase
           .from('profiles')
-          .select('first_name, last_name, phone, gender, birthdate')
+          .select('first_name, last_name, phone')
           .eq('id', user.id)
           .single();
           
@@ -42,23 +39,11 @@ export default function CustomerProfile() {
         } else if (data) {
           let formattedPhone = data.phone ? formatPhoneNumber(data.phone) : "";
           
-          // Format birthdate if exists
-          let formattedBirthdate = "";
-          if (data.birthdate) {
-            try {
-              formattedBirthdate = data.birthdate;
-            } catch (e) {
-              console.error("Error formatting birthdate:", e);
-            }
-          }
-          
           setProfile({
             firstName: data.first_name || "",
             lastName: data.last_name || "",
             phone: formattedPhone,
-            email: user.email || "",
-            gender: data.gender || "",
-            birthdate: formattedBirthdate
+            email: user.email || ""
           });
         }
       } catch (error) {
@@ -98,18 +83,14 @@ export default function CustomerProfile() {
       console.log("Updating profile with data:", {
         first_name: profile.firstName,
         last_name: profile.lastName,
-        phone: phoneForSaving,
-        gender: profile.gender,
-        birthdate: profile.birthdate
+        phone: phoneForSaving
       });
       
       // Use profile service to update profile
       const result = await profilServisi.guncelle({
         first_name: profile.firstName,
         last_name: profile.lastName,
-        phone: phoneForSaving,
-        gender: profile.gender,
-        birthdate: profile.birthdate
+        phone: phoneForSaving
       });
       
       if (result) {
