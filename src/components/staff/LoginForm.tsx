@@ -55,7 +55,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         .from('profiles')
         .select('role')
         .eq('id', data.user.id)
-        .single();
+        .maybeSingle();
       
       if (profileError) {
         console.error("Error checking user role:", profileError);
@@ -82,11 +82,12 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       
       // If personnel record doesn't exist, create one
       if (!personnelData) {
-        // Get user details
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        // Get user details from the current session
+        const user = data.user;
         
-        if (userError || !user) {
-          console.error("Error getting user details:", userError);
+        if (!user) {
+          console.error("User data is missing");
+          throw new Error("Kullanıcı bilgileri alınamadı");
         } else {
           // Create personnel record
           const firstName = user.user_metadata?.first_name || '';
@@ -163,7 +164,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
     }
   };
 
-  // Simple test login - doesn't use supabaseAdmin, just logs in with regular permissions
+  // Fixed test login that doesn't rely on admin access
   const handleTestLogin = async () => {
     setLoading(true);
     setLoginError(null);
@@ -173,13 +174,13 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       const testPassword = "password123";
       
       // First try a regular login
-      const { data, error } = await supabase.auth.signInWithPassword({
+      let { data, error } = await supabase.auth.signInWithPassword({
         email: testEmail,
         password: testPassword
       });
       
       if (error) {
-        console.log("Normal login failed, attempting to create test user via signup:", error);
+        console.log("Login failed for test user, attempting to sign up:", error);
         
         // If login fails, try to sign up the test user
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
@@ -195,8 +196,14 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         });
         
         if (signUpError) {
-          console.error("Error signing up test user:", signUpError);
-          throw new Error(`Test kullanıcısı oluşturulamadı: ${signUpError.message}`);
+          if (signUpError.message.includes("already registered")) {
+            // User exists but wrong password, try a password reset
+            toast.error("Test hesabı mevcut ama giriş yapılamadı. Yöneticinizle iletişime geçin.");
+            throw new Error("Test kullanıcısı zaten kayıtlı ama giriş yapılamıyor.");
+          } else {
+            console.error("Error signing up test user:", signUpError);
+            throw new Error(`Test kullanıcısı oluşturulamadı: ${signUpError.message}`);
+          }
         }
         
         if (!signUpData.user) {
@@ -236,57 +243,75 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
           console.error("Error creating personnel record:", personnelError);
         }
         
-        // Now try to sign in with the newly created user
-        const { error: loginError } = await supabase.auth.signInWithPassword({
+        // Try to sign in again with the newly created user
+        ({ data, error } = await supabase.auth.signInWithPassword({
           email: testEmail,
           password: testPassword
-        });
+        }));
         
-        if (loginError) {
-          throw loginError;
+        if (error) {
+          throw new Error(`Test kullanıcı girişi başarısız: ${error.message}`);
         }
-      } else {
-        // Login succeeded, check if user has staff role
-        if (data.user) {
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', data.user.id)
-            .maybeSingle();
-            
-          if (profileData?.role !== 'staff') {
-            // Update profile to staff role
-            await supabase
-              .from('profiles')
-              .upsert({
-                id: data.user.id,
-                role: 'staff'
-              });
-          }
-          
-          // Check if personnel record exists
-          const { data: personnelData } = await supabase
-            .from('personel')
-            .select('id')
-            .eq('auth_id', data.user.id)
-            .maybeSingle();
-            
-          if (!personnelData) {
-            // Create personnel record
-            await supabase
-              .from('personel')
-              .insert({
-                auth_id: data.user.id,
-                ad_soyad: "Ergun Test",
-                telefon: "555-1234",
-                eposta: testEmail,
-                adres: "Test Adres",
-                personel_no: `S${Math.floor(Math.random() * 9000) + 1000}`,
-                maas: 5000,
-                calisma_sistemi: "aylik",
-                prim_yuzdesi: 10
-              });
-          }
+      }
+      
+      if (!data.user) {
+        throw new Error("Giriş başarılı ama kullanıcı verisi alınamadı");
+      }
+      
+      // Verify if user has staff role
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', data.user.id)
+        .maybeSingle();
+      
+      if (profileError) {
+        console.error("Error checking user role:", profileError);
+      }
+      
+      // If not staff, update role to staff
+      if (!profileData || profileData.role !== 'staff') {
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .upsert({
+            id: data.user.id,
+            role: 'staff'
+          });
+        
+        if (updateError) {
+          console.error("Error updating profile role:", updateError);
+        }
+      }
+      
+      // Check if personnel record exists
+      const { data: personnelData, error: personnelError } = await supabase
+        .from('personel')
+        .select('id')
+        .eq('auth_id', data.user.id)
+        .maybeSingle();
+      
+      if (personnelError) {
+        console.error("Error checking personnel record:", personnelError);
+      }
+      
+      // If personnel record doesn't exist, create one
+      if (!personnelData) {
+        const { error: insertError } = await supabase
+          .from('personel')
+          .insert({
+            auth_id: data.user.id,
+            ad_soyad: "Ergun Test",
+            telefon: "555-1234",
+            eposta: testEmail,
+            adres: "Test Adres",
+            personel_no: `S${Math.floor(Math.random() * 9000) + 1000}`,
+            maas: 5000,
+            calisma_sistemi: "aylik",
+            prim_yuzdesi: 10
+          });
+        
+        if (insertError) {
+          console.error("Error creating personnel record:", insertError);
         }
       }
       
