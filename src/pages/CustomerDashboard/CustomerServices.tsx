@@ -1,16 +1,18 @@
 
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase/client";
 import { Scissors, DollarSign, Star } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "sonner";
 
 export default function CustomerServices() {
   const [categories, setCategories] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
   
   useEffect(() => {
     async function fetchData() {
@@ -48,9 +50,21 @@ export default function CustomerServices() {
     fetchData();
   }, []);
   
-  // Puanı yıldızlara dönüştüren yardımcı fonksiyon
+  // Function to book an appointment for a specific service
+  const bookAppointmentForService = (serviceId: number) => {
+    // Store selected service in localStorage to be used in appointments page
+    localStorage.setItem('selectedServiceId', serviceId.toString());
+    
+    // Navigate to appointments page
+    navigate('/customer-dashboard/appointments');
+    
+    // Show toast message
+    toast.success("Hizmet seçildi. Şimdi randevu oluşturabilirsiniz.");
+  };
+  
+  // Helper function to render stars based on points
   const renderStars = (points: number) => {
-    // Puan 0-5 arası olsun
+    // Normalize points to 0-5 range
     const normalizedPoints = Math.min(5, Math.max(0, Math.floor(points / 20)));
     
     return (
@@ -130,11 +144,13 @@ export default function CustomerServices() {
                         </div>
                       </CardContent>
                       <CardFooter className="border-t pt-3 bg-gray-50">
-                        <Link to="/appointments" className="w-full">
-                          <Button variant="outline" className="w-full border-purple-300 hover:bg-purple-50 hover:text-purple-700">
-                            Bu Hizmet İçin Randevu Al
-                          </Button>
-                        </Link>
+                        <Button 
+                          onClick={() => bookAppointmentForService(service.id)}
+                          variant="outline" 
+                          className="w-full border-purple-300 hover:bg-purple-50 hover:text-purple-700"
+                        >
+                          Bu Hizmet İçin Randevu Al
+                        </Button>
                       </CardFooter>
                     </Card>
                   ))
@@ -154,7 +170,7 @@ export default function CustomerServices() {
           </p>
         </CardContent>
         <CardFooter className="flex justify-center">
-          <Link to="/appointments" className="w-full max-w-xs">
+          <Link to="/customer-dashboard/appointments" className="w-full max-w-xs">
             <Button className="w-full bg-purple-700 hover:bg-purple-800">Randevu Oluştur</Button>
           </Link>
         </CardFooter>

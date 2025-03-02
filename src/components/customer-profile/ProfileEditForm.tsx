@@ -10,8 +10,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { User, Phone, Mail, Calendar } from "lucide-react";
-import { formatPhoneNumber } from "@/utils/phoneFormatter";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
+import { User, Phone, Mail, Calendar, Users } from "lucide-react";
 
 interface ProfileEditFormProps {
   profile: {
@@ -20,9 +26,9 @@ interface ProfileEditFormProps {
     phone: string;
     email: string;
     gender: string;
-    age: string;
+    birthdate: string;
   };
-  handleChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
   handleSave: () => Promise<void>;
   isSaving: boolean;
 }
@@ -33,6 +39,18 @@ export function ProfileEditForm({
   handleSave, 
   isSaving 
 }: ProfileEditFormProps) {
+  // Custom handler for select component
+  const handleSelectChange = (name: string, value: string) => {
+    const event = {
+      target: {
+        name,
+        value
+      }
+    } as React.ChangeEvent<HTMLSelectElement>;
+    
+    handleChange(event);
+  };
+  
   return (
     <Card>
       <CardHeader>
@@ -80,36 +98,42 @@ export function ProfileEditForm({
             value={profile.phone}
             onChange={handleChange}
             placeholder="05XX XXX XX XX"
+            maxLength={14}
           />
         </div>
         
         <div className="grid md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="gender" className="flex items-center gap-2">
-              <User size={16} />
-              Cinsiyet (Opsiyonel)
+              <Users size={16} />
+              Cinsiyet
             </Label>
-            <Input
-              id="gender"
-              name="gender"
+            <Select
               value={profile.gender}
-              onChange={handleChange}
-              placeholder="Cinsiyet"
-            />
+              onValueChange={(value) => handleSelectChange('gender', value)}
+            >
+              <SelectTrigger id="gender" className="w-full">
+                <SelectValue placeholder="Cinsiyet seçiniz" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="female">Kadın</SelectItem>
+                <SelectItem value="male">Erkek</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="age" className="flex items-center gap-2">
+            <Label htmlFor="birthdate" className="flex items-center gap-2">
               <Calendar size={16} />
-              Yaş (Opsiyonel)
+              Doğum Tarihi
             </Label>
             <Input
-              id="age"
-              name="age"
-              type="number"
-              value={profile.age}
+              id="birthdate"
+              name="birthdate"
+              type="date"
+              value={profile.birthdate}
               onChange={handleChange}
-              placeholder="Yaşınız"
+              className="w-full"
             />
           </div>
         </div>

@@ -76,7 +76,9 @@ export async function createOrUpdateProfile(
     first_name?: string; 
     last_name?: string; 
     role?: string; 
-    phone?: string 
+    phone?: string;
+    gender?: string;
+    birthdate?: string;
   }
 ): Promise<Profile | null> {
   try {
@@ -119,7 +121,9 @@ export async function createOrUpdateProfile(
           first_name: profileData.first_name,
           last_name: profileData.last_name,
           role: profileData.role,
-          phone: profileData.phone
+          phone: profileData.phone,
+          gender: profileData.gender,
+          birthdate: profileData.birthdate
         })
         .eq('id', userId)
         .select('*')
@@ -142,7 +146,9 @@ export async function createOrUpdateProfile(
           first_name: profileData.first_name || '',
           last_name: profileData.last_name || '',
           role: profileData.role || 'customer',
-          phone: profileData.phone || ''
+          phone: profileData.phone || '',
+          gender: profileData.gender || '',
+          birthdate: profileData.birthdate || null
         })
         .select('*')
         .single();

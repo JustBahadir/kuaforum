@@ -16,3 +16,5 @@ export type ProfileServiceError = {
   message: string;
   original?: unknown;
 };
+
+export type Gender = 'male' | 'female' | '';

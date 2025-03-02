@@ -6,6 +6,7 @@ import { formatPhoneNumber } from "@/utils/phoneFormatter";
 import { ProfileDisplay } from "@/components/customer-profile/ProfileDisplay";
 import { ProfileEditForm } from "@/components/customer-profile/ProfileEditForm";
 import { profilServisi } from "@/lib/supabase/services/profilServisi";
+import { format } from "date-fns";
 
 export default function CustomerProfile() {
   const [profile, setProfile] = useState({
@@ -14,7 +15,7 @@ export default function CustomerProfile() {
     phone: "",
     email: "",
     gender: "",
-    age: ""
+    birthdate: ""
   });
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -31,7 +32,7 @@ export default function CustomerProfile() {
         // Get profile data
         const { data, error } = await supabase
           .from('profiles')
-          .select('first_name, last_name, phone')
+          .select('first_name, last_name, phone, gender, birthdate')
           .eq('id', user.id)
           .single();
           
@@ -39,13 +40,25 @@ export default function CustomerProfile() {
           console.error("Error fetching profile:", error);
           toast.error("Profil bilgileri alınırken bir hata oluştu");
         } else if (data) {
+          let formattedPhone = data.phone ? formatPhoneNumber(data.phone) : "";
+          
+          // Format birthdate if exists
+          let formattedBirthdate = "";
+          if (data.birthdate) {
+            try {
+              formattedBirthdate = data.birthdate;
+            } catch (e) {
+              console.error("Error formatting birthdate:", e);
+            }
+          }
+          
           setProfile({
             firstName: data.first_name || "",
             lastName: data.last_name || "",
-            phone: data.phone || "",
+            phone: formattedPhone,
             email: user.email || "",
-            gender: "",
-            age: ""
+            gender: data.gender || "",
+            birthdate: formattedBirthdate
           });
         }
       } catch (error) {
@@ -59,7 +72,7 @@ export default function CustomerProfile() {
     fetchProfileData();
   }, []);
   
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     
     if (name === 'phone') {
@@ -87,6 +100,8 @@ export default function CustomerProfile() {
         first_name: profile.firstName,
         last_name: profile.lastName,
         phone: phoneForSaving,
+        gender: profile.gender,
+        birthdate: profile.birthdate
       });
       
       if (result) {

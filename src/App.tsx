@@ -19,7 +19,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/appointments" element={<Appointments />} />
+          <Route path="/appointments" element={<Navigate to="/customer-dashboard/appointments" replace />} />
           <Route path="/staff-login" element={<StaffLogin />} />
           <Route path="/customer-profile" element={<CustomerProfile />} />
           <Route path="/personnel" element={<Personnel />} />
