@@ -40,6 +40,7 @@ import {
   personelServisi, 
   randevuServisi 
 } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
 
 interface AppointmentFormValues {
   category: number | null;
