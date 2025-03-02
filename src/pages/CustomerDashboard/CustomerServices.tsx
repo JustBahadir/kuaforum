@@ -1,21 +1,22 @@
 
 import React, { useState, useEffect } from "react";
 import { islemServisi } from "@/lib/supabase/services/islemServisi";
+import { kategoriServisi } from "@/lib/supabase/services/kategoriServisi";
 import { Islem, Kategori } from "@/lib/supabase/types";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { toast } from "sonner";
 
 export default function CustomerServices() {
   const [kategoriler, setKategoriler] = useState<Kategori[]>([]);
@@ -23,58 +24,35 @@ export default function CustomerServices() {
     Record<number, Islem[]>
   >({});
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<string>();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setLoading(true);
+        
+        // Fetch all categories
+        const kategorilerData = await kategoriServisi.hepsiniGetir();
+        
+        // Sort categories by sira field
+        kategorilerData.sort((a, b) => (a.sira || 0) - (b.sira || 0));
+        
         // Fetch all services
         const islemlerData = await islemServisi.hepsiniGetir();
-        
-        // Extract unique categories from services
-        const kategorilerSet = new Set<number>();
-        const kategorilerData: Kategori[] = [];
-        
-        islemlerData.forEach(islem => {
-          if (islem.kategori_id && !kategorilerSet.has(islem.kategori_id)) {
-            kategorilerSet.add(islem.kategori_id);
-            kategorilerData.push({
-              id: islem.kategori_id,
-              kategori_adi: islem.kategori?.kategori_adi || "Kategori",
-              sira: islem.kategori?.sira || 0
-            });
-          }
-        });
-        
-        // Sort by sira field
-        kategorilerData.sort((a, b) => (a.sira || 0) - (b.sira || 0));
         
         // Group services by category
         const islemlerByKategoriData: Record<number, Islem[]> = {};
         
-        islemlerData.forEach(islem => {
-          if (islem.kategori_id) {
-            if (!islemlerByKategoriData[islem.kategori_id]) {
-              islemlerByKategoriData[islem.kategori_id] = [];
-            }
-            islemlerByKategoriData[islem.kategori_id].push(islem);
-          }
-        });
-        
-        // Sort each category's services by price
-        Object.keys(islemlerByKategoriData).forEach(kategoriId => {
-          islemlerByKategoriData[Number(kategoriId)].sort((a, b) => a.fiyat - b.fiyat);
+        kategorilerData.forEach(kategori => {
+          islemlerByKategoriData[kategori.id] = islemlerData
+            .filter(islem => islem.kategori_id === kategori.id)
+            .sort((a, b) => (a.sira || 0) - (b.sira || 0));
         });
         
         setKategoriler(kategorilerData);
         setIslemlerByKategori(islemlerByKategoriData);
-        
-        if (kategorilerData.length > 0) {
-          setActiveTab(String(kategorilerData[0].id));
-        }
-        
       } catch (error) {
         console.error("Error fetching services:", error);
+        toast.error("Hizmetler yüklenirken bir hata oluştu");
       } finally {
         setLoading(false);
       }
@@ -105,70 +83,52 @@ export default function CustomerServices() {
         </p>
       </div>
 
-      {kategoriler.length > 0 ? (
-        <Tabs
-          value={activeTab}
-          onValueChange={setActiveTab}
-          className="space-y-4"
-        >
-          <TabsList className="grid md:grid-cols-4 grid-cols-2 h-auto">
-            {kategoriler.map((kategori) => (
-              <TabsTrigger
-                key={kategori.id}
-                value={String(kategori.id)}
-                className="whitespace-normal text-center py-2"
-              >
-                {kategori.kategori_adi}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-
-          {kategoriler.map((kategori) => (
-            <TabsContent
-              key={kategori.id}
-              value={String(kategori.id)}
-              className="space-y-4"
-            >
-              <Card>
-                <CardHeader>
-                  <CardTitle>{kategori.kategori_adi}</CardTitle>
-                  <CardDescription>
-                    {kategori.kategori_adi} kategorisindeki hizmetlerimiz
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {islemlerByKategori[kategori.id]?.map((islem, index) => (
-                      <div key={islem.id}>
-                        <div className="flex justify-between items-center py-2">
-                          <div className="flex-grow">
-                            <div className="font-medium">{islem.islem_adi}</div>
-                            <div className="text-sm text-gray-500 flex items-center">
-                              <span className="mr-2">{islem.puan} puan</span>
+      <Card>
+        <CardHeader>
+          <CardTitle>Kategori ve Hizmetler</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Accordion type="single" collapsible className="space-y-2">
+            {kategoriler.length > 0 ? (
+              kategoriler.map((kategori) => (
+                <AccordionItem key={kategori.id} value={`kategori-${kategori.id}`} className="border rounded-lg overflow-hidden">
+                  <AccordionTrigger className="px-4 py-3 bg-slate-50 hover:bg-slate-100 font-medium">
+                    {kategori.kategori_adi}
+                  </AccordionTrigger>
+                  <AccordionContent className="px-4 py-2">
+                    <div className="space-y-2 py-2">
+                      {islemlerByKategori[kategori.id]?.length > 0 ? (
+                        islemlerByKategori[kategori.id].map((islem, index) => (
+                          <div key={islem.id}>
+                            <div className="flex justify-between items-center py-2">
+                              <div className="flex-grow">
+                                <div className="font-medium">{islem.islem_adi}</div>
+                                <div className="text-sm text-gray-500">
+                                  {islem.puan} puan
+                                </div>
+                              </div>
+                              <div className="font-semibold text-lg">
+                                {formatPrice(islem.fiyat)}
+                              </div>
                             </div>
+                            {index < islemlerByKategori[kategori.id].length - 1 && (
+                              <Separator className="my-2" />
+                            )}
                           </div>
-                          <div className="font-semibold text-lg">
-                            {formatPrice(islem.fiyat)}
-                          </div>
-                        </div>
-                        {index < islemlerByKategori[kategori.id].length - 1 && (
-                          <Separator className="my-2" />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          ))}
-        </Tabs>
-      ) : (
-        <Card>
-          <CardContent className="flex justify-center items-center h-32">
-            <p>Henüz hizmet kategorisi bulunmuyor.</p>
-          </CardContent>
-        </Card>
-      )}
+                        ))
+                      ) : (
+                        <div className="py-2 text-gray-500">Bu kategoride henüz hizmet bulunmuyor.</div>
+                      )}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              ))
+            ) : (
+              <div className="py-8 text-center text-gray-500">Henüz hizmet kategorisi bulunmuyor.</div>
+            )}
+          </Accordion>
+        </CardContent>
+      </Card>
     </div>
   );
 }

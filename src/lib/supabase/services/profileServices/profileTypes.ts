@@ -18,3 +18,4 @@ export type ProfileServiceError = {
 };
 
 export type Gender = 'male' | 'female' | '';
+

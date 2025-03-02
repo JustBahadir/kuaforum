@@ -26,7 +26,7 @@ export async function updateProfile(data: ProfileUpdateData): Promise<Profile | 
     // Update auth user metadata if first_name or last_name is provided
     if (data.first_name || data.last_name) {
       try {
-        const { data: user, error: userError } = await supabase.auth.updateUser({
+        const { error: userError } = await supabase.auth.updateUser({
           data: {
             first_name: data.first_name,
             last_name: data.last_name
@@ -110,14 +110,19 @@ export async function createOrUpdateProfile(
     
     // Update auth user metadata
     try {
-      await supabase.auth.admin.updateUserById(userId, {
-        user_metadata: {
+      const { error: userUpdateError } = await supabase.auth.updateUser({
+        data: {
           first_name: profileData.first_name,
           last_name: profileData.last_name,
           role: profileData.role
         }
       });
-      console.log("Updated user metadata successfully");
+      
+      if (userUpdateError) {
+        console.error("Error updating user metadata:", userUpdateError);
+      } else {
+        console.log("Updated user metadata successfully");
+      }
     } catch (error) {
       console.error("Error updating user metadata:", error);
       // Continue anyway, we'll try to update the profile

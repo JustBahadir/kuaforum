@@ -22,33 +22,35 @@ export default function CustomerProfile() {
   useEffect(() => {
     async function fetchProfileData() {
       try {
+        setLoading(true);
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!user) {
+          toast.error("Kullanıcı bilgisi bulunamadı");
+          setLoading(false);
+          return;
+        }
         
         // Get email from auth
         setProfile(prev => ({ ...prev, email: user.email || "" }));
         
         // Get profile data
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('first_name, last_name, phone, gender, birthdate')
-          .eq('id', user.id)
-          .single();
+        const profileData = await profilServisi.getir();
           
-        if (error) {
-          console.error("Error fetching profile:", error);
-          toast.error("Profil bilgileri alınırken bir hata oluştu");
-        } else if (data) {
-          let formattedPhone = data.phone ? formatPhoneNumber(data.phone) : "";
+        if (profileData) {
+          let formattedPhone = profileData.phone ? formatPhoneNumber(profileData.phone) : "";
           
           setProfile({
-            firstName: data.first_name || "",
-            lastName: data.last_name || "",
+            firstName: profileData.first_name || "",
+            lastName: profileData.last_name || "",
             phone: formattedPhone,
             email: user.email || "",
-            gender: data.gender || "",
-            birthdate: data.birthdate || ""
+            gender: profileData.gender || "",
+            birthdate: profileData.birthdate || ""
           });
+
+          console.log("Loaded profile data:", profileData);
+        } else {
+          console.warn("No profile data found");
         }
       } catch (error) {
         console.error("Error in fetchProfileData:", error);
