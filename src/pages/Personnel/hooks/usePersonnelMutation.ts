@@ -71,7 +71,7 @@ export function usePersonnelMutation(onSuccess?: () => void) {
         });
         
         // If the user exists and we can sign in, update their data
-        if (!signInError && signInResult.user) {
+        if (!signInError && signInResult && signInResult.user) {
           console.log("User already exists, updating:", signInResult.user.id);
           
           // Update auth metadata
@@ -131,9 +131,9 @@ export function usePersonnelMutation(onSuccess?: () => void) {
               
               if (usersData && usersData.users) {
                 // Find matching user by email - fixed the type issue
-                const matchingUser = usersData.users.find(user => {
-                  return user && user.email && user.email === personelData.eposta;
-                });
+                const matchingUser = usersData.users.find(user => 
+                  user && user.email === personelData.eposta
+                );
                 
                 if (matchingUser) {
                   console.log("Found matching user:", matchingUser.id);
