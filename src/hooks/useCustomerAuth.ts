@@ -27,14 +27,14 @@ export function useCustomerAuth() {
     }
   }, [location.pathname]);
 
-  // Check authentication and fetch user profile
-  useEffect(() => {
-    const checkAuth = async () => {
+  // Function to fetch user profile data
+  const fetchProfileData = async () => {
+    try {
       const { data } = await supabase.auth.getSession();
       
       if (!data.session) {
         navigate("/");
-        return;
+        return false;
       }
 
       try {
@@ -50,15 +50,32 @@ export function useCustomerAuth() {
         } else {
           setUserName("Değerli Müşterimiz");
         }
+        return true;
       } catch (error) {
         console.error("Error fetching profile:", error);
+        return false;
       } finally {
         setLoading(false);
       }
-    };
+    } catch (error) {
+      console.error("Error in fetchProfileData:", error);
+      return false;
+    }
+  };
 
-    checkAuth();
+  // Check authentication and fetch user profile on initial load
+  useEffect(() => {
+    fetchProfileData();
   }, [navigate]);
+
+  // Refresh profile data - Can be called after profile updates
+  const refreshProfile = async () => {
+    const success = await fetchProfileData();
+    if (success) {
+      toast.success("Profil bilgileri güncellendi");
+    }
+    return success;
+  };
 
   // Handle logout
   const handleLogout = async () => {
@@ -76,6 +93,7 @@ export function useCustomerAuth() {
     userName,
     loading,
     activeTab,
-    handleLogout
+    handleLogout,
+    refreshProfile
   };
 }
