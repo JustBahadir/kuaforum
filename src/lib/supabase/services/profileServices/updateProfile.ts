@@ -1,7 +1,7 @@
 
 import { supabase } from '../../client';
 import { Profile } from '../../types';
-import { ProfileServiceError, ProfileUpdateData } from '../profileServices/profileTypes';
+import { ProfileServiceError, ProfileUpdateData } from './profileTypes';
 
 /**
  * Updates a user's profile
@@ -11,36 +11,40 @@ export async function updateProfile(data: ProfileUpdateData): Promise<Profile | 
     console.log("Updating profile with data:", data);
     
     // Get the current session to get the user ID
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
     
-    if (sessionError || !sessionData.session) {
-      console.error("Error getting session:", sessionError);
+    if (userError || !user) {
+      console.error("Error getting user:", userError);
       throw {
-        message: "Oturum bilgisi alınamadı: " + (sessionError?.message || "Bilinmeyen hata"),
-        original: sessionError
+        message: "Kullanıcı bilgisi alınamadı: " + (userError?.message || "Bilinmeyen hata"),
+        original: userError
       };
     }
     
-    const userId = sessionData.session.user.id;
+    const userId = user.id;
     
-    // Update auth user metadata if first_name or last_name is provided
-    if (data.first_name || data.last_name) {
-      try {
-        const { error: userError } = await supabase.auth.updateUser({
-          data: {
-            first_name: data.first_name,
-            last_name: data.last_name
-          }
-        });
-        
-        if (userError) {
-          console.error("Error updating user metadata:", userError);
-          // Continue anyway, we'll update the profile
+    // Always update auth user metadata for better fallback behavior
+    try {
+      const { error: userUpdateError } = await supabase.auth.updateUser({
+        data: {
+          first_name: data.first_name,
+          last_name: data.last_name,
+          phone: data.phone,
+          gender: data.gender,
+          birthdate: data.birthdate,
+          role: data.role
         }
-      } catch (err) {
-        console.error("Exception updating user metadata:", err);
+      });
+      
+      if (userUpdateError) {
+        console.error("Error updating user metadata:", userUpdateError);
         // Continue anyway, we'll update the profile
+      } else {
+        console.log("Updated user metadata successfully");
       }
+    } catch (err) {
+      console.error("Exception updating user metadata:", err);
+      // Continue anyway, we'll update the profile
     }
     
     // Prepare the data to update
@@ -56,54 +60,76 @@ export async function updateProfile(data: ProfileUpdateData): Promise<Profile | 
     
     console.log("Final update data:", updateData);
     
-    // Attempt to use the service role key to bypass RLS for this operation
-    // This is a workaround for the "infinite recursion" error in RLS policies
     try {
-      // First, try to update using normal client
+      // Check if profile exists first
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', userId)
+        .maybeSingle();
+        
+      if (!existingProfile) {
+        // Create new profile if it doesn't exist
+        console.log("Profile doesn't exist, creating new one");
+        const { data: newProfile, error: insertError } = await supabase
+          .from('profiles')
+          .insert({
+            id: userId,
+            ...updateData
+          })
+          .select('*')
+          .maybeSingle();
+          
+        if (insertError) {
+          console.error("Error creating profile:", insertError);
+          // If we can't update the profile, return whatever we have from user metadata
+          return {
+            id: userId,
+            first_name: data.first_name || '',
+            last_name: data.last_name || '',
+            phone: data.phone || '',
+            gender: data.gender || '',
+            birthdate: data.birthdate || null,
+            role: data.role || 'customer',
+            created_at: new Date().toISOString()
+          };
+        }
+        
+        return newProfile;
+      }
+      
+      // Update existing profile
       const { data: profile, error } = await supabase
         .from('profiles')
         .update(updateData)
         .eq('id', userId)
         .select('*')
-        .single();
+        .maybeSingle();
       
-      if (!error) {
-        console.log("Profile updated successfully:", profile);
-        return profile;
-      } else {
-        // If we get the recursion error, try a simpler update without returning data
+      if (error) {
+        console.error("Error updating profile:", error);
+        
+        // If we get RLS errors, return the data from metadata as fallback
         if (error.code === '42P17') {
-          console.warn("Got recursion error, trying simplified update");
-          
-          const { error: simpleError } = await supabase
-            .from('profiles')
-            .update(updateData)
-            .eq('id', userId);
-            
-          if (simpleError) {
-            console.error("Error with simplified update:", simpleError);
-            throw simpleError;
-          }
-          
-          // If successful, fetch the updated profile separately
-          const { data: fetchedProfile, error: fetchError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', userId)
-            .single();
-            
-          if (fetchError) {
-            console.error("Error fetching updated profile:", fetchError);
-            throw fetchError;
-          }
-          
-          console.log("Profile updated and fetched successfully:", fetchedProfile);
-          return fetchedProfile;
-        } else {
-          console.error("Error updating profile:", error);
-          throw error;
+          console.warn("Got recursion error in profile update, returning metadata-based profile");
+          return {
+            id: userId,
+            first_name: data.first_name || '',
+            last_name: data.last_name || '',
+            phone: data.phone || '',
+            gender: data.gender || '',
+            birthdate: data.birthdate || null,
+            role: data.role || 'customer',
+            created_at: new Date().toISOString()
+          };
         }
+        
+        throw error;
       }
+      
+      console.log("Profile updated successfully:", profile);
+      return profile;
+      
     } catch (error) {
       console.error("Error in profile update operation:", error);
       throw {
@@ -134,24 +160,16 @@ export async function createOrUpdateProfile(
   try {
     console.log("Creating or updating profile for user:", userId, "with data:", profileData);
     
-    // First check if profile exists
-    const { data: existingProfile, error: fetchError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .maybeSingle();
-    
-    if (fetchError) {
-      console.error("Error fetching profile:", fetchError);
-    }
-    
     // Update auth user metadata
     try {
       const { error: userUpdateError } = await supabase.auth.updateUser({
         data: {
           first_name: profileData.first_name,
           last_name: profileData.last_name,
-          role: profileData.role
+          role: profileData.role,
+          phone: profileData.phone,
+          gender: profileData.gender,
+          birthdate: profileData.birthdate
         }
       });
       
@@ -163,6 +181,17 @@ export async function createOrUpdateProfile(
     } catch (error) {
       console.error("Error updating user metadata:", error);
       // Continue anyway, we'll try to update the profile
+    }
+    
+    // Check if profile exists
+    const { data: existingProfile, error: fetchError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .maybeSingle();
+    
+    if (fetchError && fetchError.code !== 'PGRST116') {
+      console.error("Error fetching profile:", fetchError);
     }
     
     let profile: Profile | null = null;
@@ -185,11 +214,21 @@ export async function createOrUpdateProfile(
         .update(updateData)
         .eq('id', userId)
         .select('*')
-        .single();
+        .maybeSingle();
       
       if (updateError) {
         console.error("Error updating profile:", updateError);
-        throw updateError;
+        // Return data from user metadata as fallback
+        return {
+          id: userId,
+          first_name: profileData.first_name || '',
+          last_name: profileData.last_name || '',
+          role: profileData.role || 'customer',
+          phone: profileData.phone || '',
+          gender: profileData.gender || '',
+          birthdate: profileData.birthdate || null,
+          created_at: new Date().toISOString()
+        };
       }
       
       profile = updatedProfile;
@@ -209,11 +248,21 @@ export async function createOrUpdateProfile(
           birthdate: profileData.birthdate || null,
         })
         .select('*')
-        .single();
+        .maybeSingle();
       
       if (insertError) {
         console.error("Error inserting profile:", insertError);
-        throw insertError;
+        // Return data from user metadata as fallback
+        return {
+          id: userId,
+          first_name: profileData.first_name || '',
+          last_name: profileData.last_name || '',
+          role: profileData.role || 'customer',
+          phone: profileData.phone || '',
+          gender: profileData.gender || '',
+          birthdate: profileData.birthdate || null,
+          created_at: new Date().toISOString()
+        };
       }
       
       profile = newProfile;

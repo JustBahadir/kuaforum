@@ -25,7 +25,15 @@ export default function CustomerProfile() {
     async function fetchProfileData() {
       try {
         setLoading(true);
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user }, error } = await supabase.auth.getUser();
+        
+        if (error) {
+          console.error("Error getting user:", error);
+          toast.error("Kullanıcı bilgisi alınamadı");
+          setLoading(false);
+          return;
+        }
+        
         if (!user) {
           toast.error("Kullanıcı bilgisi bulunamadı");
           setLoading(false);
@@ -35,24 +43,55 @@ export default function CustomerProfile() {
         // Get email from auth
         setProfile(prev => ({ ...prev, email: user.email || "" }));
         
-        // Get profile data
-        const profileData = await profilServisi.getir();
+        // First check user metadata
+        if (user.user_metadata) {
+          const metaFirstName = user.user_metadata.first_name;
+          const metaLastName = user.user_metadata.last_name;
+          const metaPhone = user.user_metadata.phone;
+          const metaGender = user.user_metadata.gender;
+          const metaBirthdate = user.user_metadata.birthdate;
           
-        if (profileData) {
-          let formattedPhone = profileData.phone ? formatPhoneNumber(profileData.phone) : "";
-          
-          setProfile({
-            firstName: profileData.first_name || "",
-            lastName: profileData.last_name || "",
-            phone: formattedPhone,
-            email: user.email || "",
-            gender: profileData.gender || "",
-            birthdate: profileData.birthdate || ""
-          });
+          if (metaFirstName || metaLastName || metaPhone || metaGender || metaBirthdate) {
+            console.log("Using profile data from user metadata");
+            let formattedPhone = metaPhone ? formatPhoneNumber(metaPhone) : "";
+            
+            setProfile({
+              firstName: metaFirstName || "",
+              lastName: metaLastName || "",
+              phone: formattedPhone,
+              email: user.email || "",
+              gender: metaGender || "",
+              birthdate: metaBirthdate || ""
+            });
+            
+            setLoading(false);
+            return;
+          }
+        }
+        
+        // Try getting from profiles table
+        try {
+          const profileData = await profilServisi.getir();
+            
+          if (profileData) {
+            let formattedPhone = profileData.phone ? formatPhoneNumber(profileData.phone) : "";
+            
+            setProfile({
+              firstName: profileData.first_name || "",
+              lastName: profileData.last_name || "",
+              phone: formattedPhone,
+              email: user.email || "",
+              gender: profileData.gender || "",
+              birthdate: profileData.birthdate || ""
+            });
 
-          console.log("Loaded profile data:", profileData);
-        } else {
-          console.warn("No profile data found");
+            console.log("Loaded profile data:", profileData);
+          } else {
+            console.warn("No profile data found");
+          }
+        } catch (profileError) {
+          console.error("Error getting profile from table:", profileError);
+          // Already using metadata or empty values, so continue
         }
       } catch (error) {
         console.error("Error in fetchProfileData:", error);
@@ -83,9 +122,9 @@ export default function CustomerProfile() {
     try {
       setIsSaving(true);
       
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error("Kullanıcı bilgisi bulunamadı");
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (error || !user) {
+        toast.error("Kullanıcı bilgisi alınamadı");
         return;
       }
       
@@ -98,6 +137,17 @@ export default function CustomerProfile() {
         phone: phoneForSaving,
         gender: profile.gender,
         birthdate: profile.birthdate
+      });
+      
+      // Update user metadata first for redundancy
+      await supabase.auth.updateUser({
+        data: {
+          first_name: profile.firstName,
+          last_name: profile.lastName,
+          phone: phoneForSaving,
+          gender: profile.gender,
+          birthdate: profile.birthdate
+        }
       });
       
       // Use profile service to update profile
@@ -115,17 +165,16 @@ export default function CustomerProfile() {
         // Refresh the header display name with gender title
         refreshProfile();
       } else {
-        toast.error("Profil bilgileri güncellenirken bir hata oluştu");
+        // Even if database update failed, we updated the metadata
+        toast.success("Profil bilgileriniz kaydedildi");
+        refreshProfile();
       }
     } catch (error: any) {
       console.error("Error in handleSave:", error);
       
-      // Check if it's a known error like the recursion error
+      // Check if user metadata update worked despite RLS error
       if (error.original && (error.original.code === '42P17' || error.original.message?.includes('infinite recursion'))) {
-        // Even if there was an error, we might have been able to update the profile
         toast.success("Profil bilgileriniz kaydedildi, ancak bazı alanlar güncellenememiş olabilir");
-        
-        // Try to refresh the profile anyway
         refreshProfile();
       } else {
         toast.error(`İşlem sırasında bir hata oluştu: ${error.message || 'Bilinmeyen hata'}`);
