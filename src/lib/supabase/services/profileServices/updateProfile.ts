@@ -1,207 +1,167 @@
-import { supabase } from '../../client';
+
+import { supabase } from '../../';
 import { Profile } from '../../types';
-import { ProfileUpdateData } from './profileTypes';
-import { createProfileViaRPC } from './createProfile';
-import { handleStaffRecordSync } from './staffProfileSync';
+import { ProfileServiceError, ProfileUpdateData } from '../profileServices/profileTypes';
 
 /**
- * Updates a user's profile in the database
+ * Updates a user's profile
  */
-export async function updateProfile(profile: ProfileUpdateData): Promise<Profile> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Kullanıcı girişi yapılmamış');
-
+export async function updateProfile(data: ProfileUpdateData): Promise<Profile | null> {
   try {
-    // Make sure we're only updating fields that exist in the profiles table
-    const updateData = {
-      first_name: profile.first_name,
-      last_name: profile.last_name,
-      phone: profile.phone,
-      role: profile.role
-    };
-
-    // Also update the auth metadata to keep it in sync
-    await supabase.auth.updateUser({
-      data: {
-        first_name: profile.first_name,
-        last_name: profile.last_name,
-        phone: profile.phone,
-        role: profile.role || 'customer'
-      }
-    });
-
-    const { data, error } = await supabase
-      .from('profiles')
-      .update(updateData)
-      .eq('id', user.id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Profile update error:", error);
-      
-      // Try creating the profile if update fails
+    console.log("Updating profile with data:", data);
+    
+    // Get the current session to get the user ID
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError || !sessionData.session) {
+      console.error("Error getting session:", sessionError);
+      throw {
+        message: "Oturum bilgisi alınamadı: " + (sessionError?.message || "Bilinmeyen hata"),
+        original: sessionError
+      };
+    }
+    
+    const userId = sessionData.session.user.id;
+    
+    // Update auth user metadata if first_name or last_name is provided
+    if (data.first_name || data.last_name) {
       try {
-        const { data: createData, error: createError } = await supabase
-          .from('profiles')
-          .insert({
-            id: user.id,
-            ...updateData
-          })
-          .select()
-          .single();
-          
-        if (createError) {
-          console.error("Profile creation error:", createError);
-          throw createError;
+        const { data: user, error: userError } = await supabase.auth.updateUser({
+          data: {
+            first_name: data.first_name,
+            last_name: data.last_name
+          }
+        });
+        
+        if (userError) {
+          console.error("Error updating user metadata:", userError);
+          // Continue anyway, we'll update the profile
         }
-        
-        // If staff role, sync with personnel record
-        if (profile.role === 'staff' || createData.role === 'staff') {
-          await handleStaffRecordSync(user.id, createData);
-        }
-        
-        return createData;
-      } catch (createErr) {
-        console.error("Profile creation exception:", createErr);
-        
-        // Return constructed profile object as fallback
-        return {
-          id: user.id,
-          ...updateData,
-          created_at: new Date().toISOString()
-        };
+      } catch (err) {
+        console.error("Exception updating user metadata:", err);
+        // Continue anyway, we'll update the profile
       }
     }
     
-    // If staff role, sync with personnel record
-    if (profile.role === 'staff' || data.role === 'staff') {
-      await handleStaffRecordSync(user.id, data);
+    // Update profile in the database
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .update(data)
+      .eq('id', userId)
+      .select('*')
+      .single();
+    
+    if (error) {
+      console.error("Error updating profile:", error);
+      throw {
+        message: "Profil güncellenirken bir hata oluştu: " + error.message,
+        original: error
+      };
     }
     
-    return data;
-  } catch (error: any) {
-    console.error("Error in profile update:", error);
-    
-    // Return constructed profile object as fallback
-    return {
-      id: user.id,
-      first_name: profile.first_name,
-      last_name: profile.last_name,
-      phone: profile.phone,
-      role: profile.role || 'customer',
-      created_at: new Date().toISOString()
-    };
+    console.log("Profile updated successfully:", profile);
+    return profile;
+  } catch (error) {
+    console.error("Error in updateProfile:", error);
+    throw error as ProfileServiceError;
   }
 }
 
 /**
- * Create or update a profile for a specific user ID
+ * Creates or updates a user profile
  */
-export async function createOrUpdateProfile(userId: string, profileData: ProfileUpdateData): Promise<Profile> {
-  if (!userId) throw new Error('Kullanıcı ID bilgisi eksik');
-  
+export async function createOrUpdateProfile(
+  userId: string, 
+  profileData: { 
+    first_name?: string; 
+    last_name?: string; 
+    role?: string; 
+    phone?: string 
+  }
+): Promise<Profile | null> {
   try {
-    // First try to get the existing profile, if any
+    console.log("Creating or updating profile for user:", userId, "with data:", profileData);
+    
+    // First check if profile exists
     const { data: existingProfile, error: fetchError } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', userId)
       .maybeSingle();
-      
-    // Update auth metadata first as this won't be affected by RLS
+    
+    if (fetchError) {
+      console.error("Error fetching profile:", fetchError);
+    }
+    
+    // Update auth user metadata
     try {
       await supabase.auth.admin.updateUserById(userId, {
         user_metadata: {
           first_name: profileData.first_name,
           last_name: profileData.last_name,
-          phone: profileData.phone,
-          role: profileData.role || 'customer'
+          role: profileData.role
         }
       });
-    } catch (adminError) {
-      console.error("Admin user update error:", adminError);
+      console.log("Updated user metadata successfully");
+    } catch (error) {
+      console.error("Error updating user metadata:", error);
+      // Continue anyway, we'll try to update the profile
+    }
+    
+    let profile: Profile | null = null;
+    
+    // If profile exists, update it
+    if (existingProfile) {
+      console.log("Updating existing profile:", existingProfile.id);
+      const { data: updatedProfile, error: updateError } = await supabase
+        .from('profiles')
+        .update({
+          first_name: profileData.first_name,
+          last_name: profileData.last_name,
+          role: profileData.role,
+          phone: profileData.phone
+        })
+        .eq('id', userId)
+        .select('*')
+        .single();
       
-      // Try standard metadata update as fallback
-      try {
-        const { data: sessionData } = await supabase.auth.getSession();
-        if (sessionData.session?.user?.id === userId) {
-          await supabase.auth.updateUser({
-            data: {
-              first_name: profileData.first_name,
-              last_name: profileData.last_name,
-              phone: profileData.phone,
-              role: profileData.role || 'customer'
-            }
-          });
-        }
-      } catch (updateError) {
-        console.error("User metadata update error:", updateError);
+      if (updateError) {
+        console.error("Error updating profile:", updateError);
+        throw updateError;
       }
-    }
-    
-    // Construct the profile data
-    const profile = {
-      id: userId,
-      first_name: profileData.first_name || existingProfile?.first_name || '',
-      last_name: profileData.last_name || existingProfile?.last_name || '',
-      phone: profileData.phone || existingProfile?.phone || '',
-      role: profileData.role || existingProfile?.role || 'customer'
-    };
-    
-    // Try to update profile with RPC call first to bypass RLS
-    try {
-      await createProfileViaRPC({
-        user_id: userId,
-        user_first_name: profile.first_name,
-        user_last_name: profile.last_name,
-        user_phone: profile.phone,
-        user_role: profile.role
-      });
-    } catch (rpcError) {
-      console.error("RPC error:", rpcError);
       
-      // Try standard upsert as fallback
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .upsert(profile)
-          .select()
-          .single();
-          
-        if (error) {
-          console.error("Profile upsert error:", error);
-          throw error;
-        }
-      } catch (upsertError) {
-        console.error("Profile upsert exception:", upsertError);
+      profile = updatedProfile;
+      console.log("Profile updated successfully:", profile);
+    } else {
+      // If profile doesn't exist, create it
+      console.log("Creating new profile for user:", userId);
+      const { data: newProfile, error: insertError } = await supabase
+        .from('profiles')
+        .insert({
+          id: userId,
+          first_name: profileData.first_name || '',
+          last_name: profileData.last_name || '',
+          role: profileData.role || 'customer',
+          phone: profileData.phone || ''
+        })
+        .select('*')
+        .single();
+      
+      if (insertError) {
+        console.error("Error inserting profile:", insertError);
+        throw insertError;
       }
-    }
-    
-    // If staff role, sync with personnel record
-    if (profile.role === 'staff') {
-      await handleStaffRecordSync(userId, profile);
-    }
-    
-    // Re-fetch the profile to return the current state
-    const { data: updatedProfile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .maybeSingle();
       
-    return updatedProfile || profile;
+      profile = newProfile;
+      console.log("Profile created successfully:", profile);
+    }
+    
+    return profile;
   } catch (error) {
-    console.error("Exception in createOrUpdateProfile:", error);
-    
-    // Return the profile object as a fallback
-    return {
-      id: userId,
-      first_name: profileData.first_name || '',
-      last_name: profileData.last_name || '',
-      phone: profileData.phone || '',
-      role: profileData.role || 'customer',
-      created_at: new Date().toISOString()
+    console.error("Error in createOrUpdateProfile:", error);
+    throw {
+      message: "Profil oluşturulurken veya güncellenirken bir hata oluştu",
+      original: error
     };
   }
 }

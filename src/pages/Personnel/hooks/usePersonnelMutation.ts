@@ -1,3 +1,4 @@
+
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Personel } from "@/lib/supabase";
@@ -7,11 +8,6 @@ import { User } from "@supabase/supabase-js";
 
 // Type definitions for clarity
 type PersonelData = Omit<Personel, 'id' | 'created_at'>;
-type AuthUserMetadata = {
-  role: string;
-  first_name: string;
-  last_name: string;
-};
 type ProfileData = {
   first_name: string;
   last_name: string;
@@ -101,11 +97,10 @@ async function findExistingUser(email: string): Promise<User | null> {
       return null;
     }
     
-    // Find user with matching email - safely typed
-    const matchingUser = usersData.users.find(user => {
-      // Ensure user is properly typed before accessing properties
-      return user && typeof user.email === 'string' && user.email === email;
-    });
+    // Find user with matching email - ensuring proper type safety
+    const matchingUser = usersData.users.find(user => 
+      user && typeof user.email === 'string' && user.email.toLowerCase() === email.toLowerCase()
+    );
     
     if (matchingUser) {
       console.log("Found user via admin API:", matchingUser.id);
