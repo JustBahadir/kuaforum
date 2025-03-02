@@ -1,6 +1,6 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseAdmin } from "@/lib/supabase/client";
 import { Personel } from "@/lib/supabase";
 import { toast } from "@/components/ui/use-toast";
 import { profilServisi } from "@/lib/supabase/services/profilServisi";
@@ -49,8 +49,8 @@ async function updateExistingUser(userId: string, personelData: PersonelData): P
     const lastName = nameParts.slice(1).join(' ') || '';
     
     try {
-      // Update user metadata - now using service_role key
-      const { error: metadataError } = await supabase.auth.admin.updateUserById(userId, {
+      // Update user metadata - using admin client
+      const { error: metadataError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
         user_metadata: { 
           role: 'staff',
           first_name: firstName,
@@ -67,7 +67,7 @@ async function updateExistingUser(userId: string, personelData: PersonelData): P
       console.error("Failed to update user metadata:", metadataError);
     }
     
-    // Update profile using service_role key
+    // Update profile using service_role key via profile service
     try {
       await profilServisi.createOrUpdateProfile(userId, {
         first_name: firstName,
@@ -92,7 +92,7 @@ async function findExistingUser(email: string): Promise<User | null> {
     console.log("Searching for existing user with email:", email);
     
     // Use admin api with service_role key to list users
-    const { data: usersData, error: listError } = await supabase.auth.admin.listUsers();
+    const { data: usersData, error: listError } = await supabaseAdmin.auth.admin.listUsers();
     
     if (listError || !usersData?.users) {
       console.error("Error listing users:", listError);
@@ -147,7 +147,7 @@ async function createAuthUser(email: string, nameData: { firstName: string; last
   try {
     console.log("Creating new auth user with email:", email);
     
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: email,
       password: "password123",
       email_confirm: true,
