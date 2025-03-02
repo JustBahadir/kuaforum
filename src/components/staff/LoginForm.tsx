@@ -243,7 +243,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
             auth_id: user.id,
             ad_soyad: `${user.user_metadata?.first_name || 'Test'} ${user.user_metadata?.last_name || 'User'}`,
             telefon: user.phone || '',
-            eposta: user.email || '',
+            eposta: testEmail,
             adres: '',
             personel_no: `S${Math.floor(Math.random() * 9000) + 1000}`,
             maas: 0,
