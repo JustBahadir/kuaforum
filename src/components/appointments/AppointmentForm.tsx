@@ -88,6 +88,13 @@ export function AppointmentForm({ onAppointmentCreated, initialDate }: Appointme
         return;
       }
       
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Randevu oluşturmak için giriş yapmanız gerekiyor");
+        return;
+      }
+      
       console.log("Creating appointment with data:", {
         islemler: [selectedIslem],
         personel_id: isPersonelRequestChecked ? null : selectedPersonel,
@@ -95,6 +102,7 @@ export function AppointmentForm({ onAppointmentCreated, initialDate }: Appointme
         saat: time,
         durum: "beklemede",
         notlar: notes,
+        customer_id: user.id  // Add the customer_id field
       });
       
       // Create appointment
@@ -105,6 +113,7 @@ export function AppointmentForm({ onAppointmentCreated, initialDate }: Appointme
         saat: time,
         durum: "beklemede",
         notlar: notes,
+        customer_id: user.id  // Add the customer_id field
       });
       
       // Notify parent component

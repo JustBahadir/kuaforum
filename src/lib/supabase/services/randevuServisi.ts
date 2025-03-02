@@ -41,8 +41,10 @@ export const randevuServisi = {
   },
 
   async ekle(randevu: Omit<Randevu, 'id' | 'created_at' | 'musteri' | 'personel'>) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Kullanıcı girişi yapılmamış');
+    // Ensure customer_id is provided
+    if (!randevu.customer_id) {
+      throw new Error('customer_id is required');
+    }
 
     // Ensure islemler is an array even if only one service is selected
     const islemler = Array.isArray(randevu.islemler) 
@@ -53,7 +55,6 @@ export const randevuServisi = {
       .from('randevular')
       .insert([{ 
         ...randevu, 
-        customer_id: user.id,
         islemler: islemler 
       }])
       .select(`
