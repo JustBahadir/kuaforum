@@ -122,7 +122,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
     } catch (error: any) {
       console.error("Giriş hatası:", error);
       
-      if (error.message.includes("Invalid login credentials")) {
+      if (error.message && error.message.includes("Invalid login credentials")) {
         setLoginError("Geçersiz e-posta veya şifre. Lütfen bilgilerinizi kontrol ediniz.");
         toast.error("Geçersiz e-posta veya şifre");
       } else {
@@ -170,122 +170,76 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
     setLoginError(null);
     
     try {
-      // Find user by email
-      const { data: usersData, error: listError } = await supabaseAdmin.auth.admin.listUsers();
-      
-      if (listError) {
-        console.error("Error listing users:", listError);
-        throw listError;
-      }
-      
-      // Find user with matching email
       const testEmail = "ergun@gmail.com";
-      const user = usersData.users.find(u => u.email === testEmail);
+      const testPassword = "password123";
       
-      if (!user) {
-        setLoginError(`Test kullanıcısı bulunamadı: ${testEmail}`);
-        throw new Error(`Test kullanıcısı bulunamadı: ${testEmail}`);
-      }
-      
-      console.log("Found test user:", user.id);
-      
-      // Update user role to staff if not already
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single();
-      
-      if (profileError) {
-        console.error("Error checking profile:", profileError);
-      }
-      
-      // Update to staff role if needed
-      if (!profileData || profileData.role !== 'staff') {
-        const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
-          user.id,
-          { user_metadata: { role: 'staff' } }
-        );
-        
-        if (updateError) {
-          console.error("Error updating user metadata:", updateError);
-        }
-        
-        const { error: profileUpdateError } = await supabase
-          .from('profiles')
-          .upsert({ 
-            id: user.id, 
-            role: 'staff',
-            first_name: user.user_metadata?.first_name || 'Test',
-            last_name: user.user_metadata?.last_name || 'User'
-          });
-        
-        if (profileUpdateError) {
-          console.error("Error updating profile:", profileUpdateError);
-        }
-      }
-      
-      // Create a personnel record if it doesn't exist
-      const { data: personnelData, error: personnelError } = await supabase
-        .from('personel')
-        .select('id')
-        .eq('auth_id', user.id)
-        .maybeSingle();
-      
-      if (personnelError) {
-        console.error("Error checking personnel record:", personnelError);
-      }
-      
-      if (!personnelData) {
-        const { error: insertError } = await supabase
-          .from('personel')
-          .insert({
-            auth_id: user.id,
-            ad_soyad: `${user.user_metadata?.first_name || 'Test'} ${user.user_metadata?.last_name || 'User'}`,
-            telefon: user.phone || '',
-            eposta: testEmail,
-            adres: '',
-            personel_no: `S${Math.floor(Math.random() * 9000) + 1000}`,
-            maas: 0,
-            calisma_sistemi: 'aylik',
-            prim_yuzdesi: 0
-          });
-        
-        if (insertError) {
-          console.error("Error creating personnel record:", insertError);
-        }
-      }
-      
-      // Set the session manually
-      const { error: signInError } = await supabase.auth.signInWithPassword({
+      // First try normal login
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: testEmail,
-        password: "password123" // Default test password
+        password: testPassword
       });
       
-      if (signInError) {
-        console.error("Error signing in test user:", signInError);
-        // If can't sign in with password, try admin override
-        try {
-          const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.admin.generateLink({
-            type: 'magiclink',
-            email: testEmail
-          });
-          
-          if (sessionError) throw sessionError;
-          
-          // Try to use the token to sign in
-          const { error: signInTokenError } = await supabase.auth.signInWithPassword({
-            email: testEmail,
-            password: "password123" // Try generic password
-          });
-          
-          if (signInTokenError) {
-            setLoginError("Test kullanıcısı için giriş yapılamadı. Lütfen admin panelinden şifreyi sıfırlayın.");
-            throw signInTokenError;
+      if (error) {
+        console.log("Normal login failed, attempting to create test user:", error);
+        
+        // Try to create the user if it doesn't exist
+        const { data: signUpData, error: signUpError } = await supabaseAdmin.auth.admin.createUser({
+          email: testEmail,
+          password: testPassword,
+          email_confirm: true,
+          user_metadata: {
+            first_name: "Ergun",
+            last_name: "Test",
+            role: "staff"
           }
-        } catch (e) {
-          setLoginError("Test kullanıcısı için giriş yapılamadı.");
-          throw e;
+        });
+        
+        if (signUpError) {
+          console.error("Error creating test user:", signUpError);
+          throw new Error(`Test kullanıcısı oluşturulamadı: ${signUpError.message}`);
+        }
+        
+        // Set user as staff in profiles table
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .upsert({
+            id: signUpData.user.id,
+            first_name: "Ergun",
+            last_name: "Test",
+            role: "staff"
+          });
+        
+        if (profileError) {
+          console.error("Error updating profile:", profileError);
+        }
+        
+        // Create personnel record
+        const { error: personnelError } = await supabase
+          .from('personel')
+          .upsert({
+            auth_id: signUpData.user.id,
+            ad_soyad: "Ergun Test",
+            telefon: "555-1234",
+            eposta: testEmail,
+            adres: "Test Adres",
+            personel_no: `S${Math.floor(Math.random() * 9000) + 1000}`,
+            maas: 5000,
+            calisma_sistemi: "aylik",
+            prim_yuzdesi: 10
+          });
+        
+        if (personnelError) {
+          console.error("Error creating personnel record:", personnelError);
+        }
+        
+        // Try to sign in with the newly created user
+        const { error: loginError } = await supabase.auth.signInWithPassword({
+          email: testEmail,
+          password: testPassword
+        });
+        
+        if (loginError) {
+          throw loginError;
         }
       }
       
@@ -294,6 +248,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       
     } catch (error: any) {
       console.error("Test login error:", error);
+      setLoginError(`Test girişi başarısız: ${error.message}`);
       toast.error("Test girişi başarısız: " + error.message);
     } finally {
       setLoading(false);
