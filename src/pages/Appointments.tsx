@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Plus, Scissors, Sparkles } from 'lucide-react';
+import { Plus, Scissors, Sparkles, ChevronLeft, LogOut, Home, User, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogTrigger } from '@/components/ui/dialog';
 import { Randevu, RandevuDurumu } from '@/lib/supabase';
@@ -8,11 +8,13 @@ import { AppointmentForm } from '@/components/appointments/AppointmentForm';
 import { AppointmentCard } from '@/components/appointments/AppointmentCard';
 import { toast } from "@/hooks/use-toast";
 import { supabase } from '@/lib/supabase';
+import { Link, useNavigate } from 'react-router-dom';
 
 export default function Appointments() {
   const [yeniRandevuAcik, setYeniRandevuAcik] = useState(false);
   const [seciliRandevu, setSeciliRandevu] = useState<Randevu | null>(null);
   const [silinecekRandevu, setSilinecekRandevu] = useState<Randevu | null>(null);
+  const navigate = useNavigate();
 
   const { data: randevular, isLoading: randevularYukleniyor, refetch: randevulariYenile } = useQuery({
     queryKey: ['randevular'],
@@ -230,6 +232,24 @@ export default function Appointments() {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      toast({
+        title: "Başarılı",
+        description: "Başarıyla çıkış yapıldı",
+      });
+      navigate("/");
+    } catch (error) {
+      console.error("Çıkış yapılırken hata:", error);
+      toast({
+        title: "Hata",
+        description: "Çıkış yapılırken bir hata oluştu.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const hairstyles = [
     {
       id: 1,
@@ -263,97 +283,141 @@ export default function Appointments() {
 
   return (
     <div className="container mx-auto py-6 space-y-8">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-600">Randevular</h1>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-        {hairstyles.map((style) => (
-          <div key={style.id} className="relative overflow-hidden rounded-xl shadow-lg group">
-            <div className={`absolute inset-0 ${style.color} opacity-80 z-10`}></div>
-            <img 
-              src={style.image} 
-              alt={style.title} 
-              className="w-full h-64 object-cover object-center transition-transform group-hover:scale-105"
-            />
-            <div className="absolute inset-0 flex flex-col justify-end p-4 text-white z-20 bg-gradient-to-t from-black/70 to-transparent">
-              <h3 className="text-xl font-bold">{style.title}</h3>
-              <p className="text-sm opacity-90">{style.description}</p>
-            </div>
+      {/* Navigation Bar */}
+      <div className="fixed top-0 left-0 right-0 bg-white shadow-md z-50 p-4">
+        <div className="container mx-auto flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <Link to="/customer-dashboard">
+              <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                <ChevronLeft className="h-4 w-4" />
+                Ana Sayfaya Dön
+              </Button>
+            </Link>
           </div>
-        ))}
-      </div>
-
-      <div className="flex justify-center mb-10">
-        <Dialog open={yeniRandevuAcik} onOpenChange={setYeniRandevuAcik}>
-          <DialogTrigger asChild>
+          <h1 className="text-xl font-bold text-purple-700">Kuaför Randevu</h1>
+          <div className="flex items-center gap-2">
             <Button 
-              onClick={() => setYeniRandevuAcik(true)}
-              className="bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white font-medium py-6 px-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 text-lg"
+              variant="ghost" 
+              size="sm" 
+              onClick={() => navigate('/customer-dashboard/profile')}
+              className="hidden md:flex items-center gap-1"
             >
-              <div className="flex items-center gap-2">
-                <Plus className="h-5 w-5" />
-                <span>Yeni Randevu</span>
-                <Scissors className="h-5 w-5 ml-1" />
-              </div>
+              <User className="h-4 w-4" />
+              Profilim
             </Button>
-          </DialogTrigger>
-          <AppointmentForm
-            islemler={islemler || []}
-            personeller={personeller || []}
-            kategoriler={kategoriler || []}
-            onSubmit={handleRandevuSubmit}
-            onCancel={() => setYeniRandevuAcik(false)}
-          />
-        </Dialog>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10 bg-secondary/50 p-6 rounded-xl">
-        <div className="flex flex-col items-center text-center p-4">
-          <div className="w-16 h-16 rounded-full bg-purple-100 flex items-center justify-center mb-4">
-            <Scissors className="w-8 h-8 text-purple-600" />
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleLogout}
+              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+            >
+              <LogOut className="h-4 w-4" />
+              <span className="hidden md:inline ml-1">Çıkış Yap</span>
+            </Button>
           </div>
-          <h3 className="text-lg font-semibold mb-2">Profesyonel Ekip</h3>
-          <p className="text-sm text-muted-foreground">Alanında uzman stilistlerle mükemmel sonuçlar</p>
-        </div>
-        <div className="flex flex-col items-center text-center p-4">
-          <div className="w-16 h-16 rounded-full bg-pink-100 flex items-center justify-center mb-4">
-            <Sparkles className="w-8 h-8 text-pink-600" />
-          </div>
-          <h3 className="text-lg font-semibold mb-2">Kaliteli Ürünler</h3>
-          <p className="text-sm text-muted-foreground">Saç sağlığını koruyan premium ürünler</p>
-        </div>
-        <div className="flex flex-col items-center text-center p-4">
-          <div className="w-16 h-16 rounded-full bg-purple-100 flex items-center justify-center mb-4">
-            <Plus className="w-8 h-8 text-purple-600" />
-          </div>
-          <h3 className="text-lg font-semibold mb-2">Kolay Randevu</h3>
-          <p className="text-sm text-muted-foreground">Birkaç tıkla randevunuzu oluşturun</p>
         </div>
       </div>
 
-      {randevular && randevular.length > 0 ? (
-        <div className="grid gap-4">
-          <h2 className="text-xl font-semibold mb-2">Mevcut Randevular</h2>
-          {randevular?.map((randevu) => (
-            <AppointmentCard
-              key={randevu.id}
-              randevu={randevu}
-              onEdit={handleRandevuEdit}
-              onDelete={handleRandevuSil}
-              onStatusUpdate={handleStatusUpdate}
-              onCounterProposal={handleCounterProposal}
-              silinecekRandevu={silinecekRandevu}
-              setSilinecekRandevu={setSilinecekRandevu}
-            />
+      {/* Main Content - with top padding for the fixed navbar */}
+      <div className="pt-16">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-600">Randevular</h1>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+          {hairstyles.map((style) => (
+            <div key={style.id} className="relative overflow-hidden rounded-xl shadow-lg group">
+              <div className={`absolute inset-0 ${style.color} opacity-80 z-10`}></div>
+              <img 
+                src={style.image} 
+                alt={style.title} 
+                className="w-full h-64 object-cover object-center transition-transform group-hover:scale-105"
+              />
+              <div className="absolute inset-0 flex flex-col justify-end p-4 text-white z-20 bg-gradient-to-t from-black/70 to-transparent">
+                <h3 className="text-xl font-bold">{style.title}</h3>
+                <p className="text-sm opacity-90">{style.description}</p>
+              </div>
+            </div>
           ))}
         </div>
-      ) : (
-        <div className="text-center p-8 bg-secondary/30 rounded-xl">
-          <h2 className="text-xl font-semibold mb-2">Henüz randevunuz bulunmuyor</h2>
-          <p className="text-muted-foreground mb-4">Yukarıdaki butona tıklayarak yeni bir randevu oluşturabilirsiniz.</p>
+
+        <div className="flex justify-center mb-10">
+          <Dialog open={yeniRandevuAcik} onOpenChange={setYeniRandevuAcik}>
+            <DialogTrigger asChild>
+              <Button 
+                onClick={() => setYeniRandevuAcik(true)}
+                className="bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white font-medium py-6 px-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 text-lg"
+              >
+                <div className="flex items-center gap-2">
+                  <Plus className="h-5 w-5" />
+                  <span>Yeni Randevu</span>
+                  <Scissors className="h-5 w-5 ml-1" />
+                </div>
+              </Button>
+            </DialogTrigger>
+            <AppointmentForm
+              islemler={islemler || []}
+              personeller={personeller || []}
+              kategoriler={kategoriler || []}
+              onSubmit={handleRandevuSubmit}
+              onCancel={() => setYeniRandevuAcik(false)}
+            />
+          </Dialog>
         </div>
-      )}
+
+        {/* Bottom navigation buttons for mobile */}
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg md:hidden p-2 flex justify-around z-50">
+          <Link to="/customer-dashboard">
+            <Button variant="ghost" className="flex flex-col items-center text-xs p-2">
+              <Home className="h-5 w-5" />
+              Ana Sayfa
+            </Button>
+          </Link>
+          <Button variant="ghost" className="flex flex-col items-center text-xs p-2">
+            <Calendar className="h-5 w-5" />
+            Randevular
+          </Button>
+          <Link to="/customer-dashboard/profile">
+            <Button variant="ghost" className="flex flex-col items-center text-xs p-2">
+              <User className="h-5 w-5" />
+              Profil
+            </Button>
+          </Link>
+          <Button 
+            variant="ghost" 
+            className="flex flex-col items-center text-xs p-2 text-red-500" 
+            onClick={handleLogout}
+          >
+            <LogOut className="h-5 w-5" />
+            Çıkış
+          </Button>
+        </div>
+
+        <div className="grid gap-4 mb-20 md:mb-4">
+          {randevular && randevular.length > 0 ? (
+            <div className="grid gap-4">
+              <h2 className="text-xl font-semibold mb-2">Mevcut Randevular</h2>
+              {randevular?.map((randevu) => (
+                <AppointmentCard
+                  key={randevu.id}
+                  randevu={randevu}
+                  onEdit={handleRandevuEdit}
+                  onDelete={handleRandevuSil}
+                  onStatusUpdate={handleStatusUpdate}
+                  onCounterProposal={handleCounterProposal}
+                  silinecekRandevu={silinecekRandevu}
+                  setSilinecekRandevu={setSilinecekRandevu}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center p-8 bg-secondary/30 rounded-xl">
+              <h2 className="text-xl font-semibold mb-2">Henüz randevunuz bulunmuyor</h2>
+              <p className="text-muted-foreground mb-4">Yukarıdaki butona tıklayarak yeni bir randevu oluşturabilirsiniz.</p>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
