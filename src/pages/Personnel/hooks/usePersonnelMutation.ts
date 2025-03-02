@@ -48,24 +48,37 @@ async function updateExistingUser(userId: string, personelData: PersonelData): P
     const firstName = nameParts[0] || '';
     const lastName = nameParts.slice(1).join(' ') || '';
     
-    // Update user metadata
-    await supabase.auth.admin.updateUserById(userId, {
-      user_metadata: { 
-        role: 'staff',
-        first_name: firstName,
-        last_name: lastName
+    try {
+      // Update user metadata - now using service_role key
+      const { error: metadataError } = await supabase.auth.admin.updateUserById(userId, {
+        user_metadata: { 
+          role: 'staff',
+          first_name: firstName,
+          last_name: lastName
+        }
+      });
+      
+      if (metadataError) {
+        console.error("Error updating user metadata:", metadataError);
+      } else {
+        console.log("Updated user metadata successfully");
       }
-    });
+    } catch (metadataError) {
+      console.error("Failed to update user metadata:", metadataError);
+    }
     
-    // Update profile
-    await profilServisi.createOrUpdateProfile(userId, {
-      first_name: firstName,
-      last_name: lastName,
-      role: 'staff',
-      phone: personelData.telefon
-    });
-    
-    console.log("Updated existing user profile");
+    // Update profile using service_role key
+    try {
+      await profilServisi.createOrUpdateProfile(userId, {
+        first_name: firstName,
+        last_name: lastName,
+        role: 'staff',
+        phone: personelData.telefon
+      });
+      console.log("Updated existing user profile");
+    } catch (profileError) {
+      console.error("Error updating profile:", profileError);
+    }
   } catch (error) {
     console.error("Error updating profile for existing auth user:", error);
   }
@@ -78,18 +91,7 @@ async function findExistingUser(email: string): Promise<User | null> {
   try {
     console.log("Searching for existing user with email:", email);
     
-    // First try simple sign in if the user exists
-    const { data: signInResult, error: signInError } = await supabase.auth.signInWithPassword({
-      email: email,
-      password: "password123"
-    });
-    
-    if (!signInError && signInResult?.user) {
-      console.log("Found user via sign in:", signInResult.user.id);
-      return signInResult.user;
-    }
-    
-    // If sign in failed, try to find the user through admin API
+    // Use admin api with service_role key to list users
     const { data: usersData, error: listError } = await supabase.auth.admin.listUsers();
     
     if (listError || !usersData?.users) {
@@ -97,21 +99,16 @@ async function findExistingUser(email: string): Promise<User | null> {
       return null;
     }
     
-    // Use explicit type for users and ensure proper type checking
-    const users = usersData.users as Array<User | null>;
+    // Type assertion to ensure proper type checking
+    const users = usersData.users as User[];
     
-    // Find user with matching email using safe type checking
+    // Find user with matching email using explicit type checking
     const matchingUser = users.find(user => {
       if (!user) return false;
       
-      // Check if user has an email property that's a string
-      if (typeof user !== 'object') return false;
-      if (!('email' in user)) return false;
-      
-      const userEmail = user.email;
-      if (typeof userEmail !== 'string') return false;
-      
-      return userEmail.toLowerCase() === email.toLowerCase();
+      // Since we've asserted the type above, User should have email property
+      return typeof user.email === 'string' && 
+             user.email.toLowerCase() === email.toLowerCase();
     });
     
     if (matchingUser) {
@@ -197,8 +194,6 @@ async function connectPersonelToAuthUser(personelData: PersonelData, personelId:
       // Update personnel record with auth_id
       await updatePersonelWithAuthId(personelId, existingUser.id);
       
-      // Sign out after the operation
-      await supabase.auth.signOut();
       return;
     }
     
