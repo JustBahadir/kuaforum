@@ -59,9 +59,9 @@ interface AppointmentFormProps {
 }
 
 const formSchema = z.object({
-  category: z.number().optional(),
+  category: z.number().nullable(),
   services: z.array(z.number()),
-  date: z.date().optional(),
+  date: z.date().nullable(),
   time: z.string().optional(),
   personnel: z.string().optional(),
   notes: z.string().optional(),
@@ -196,25 +196,9 @@ export function AppointmentForm({
   };
 
   const availableTimes = [
-    "09:00",
-    "09:30",
-    "10:00",
-    "10:30",
-    "11:00",
-    "11:30",
-    "12:00",
-    "12:30",
-    "13:00",
-    "13:30",
-    "14:00",
-    "14:30",
-    "15:00",
-    "15:30",
-    "16:00",
-    "16:30",
-    "17:00",
-    "17:30",
-    "18:00",
+    "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", 
+    "12:00", "12:30", "13:00", "13:30", "14:00", "14:30",
+    "15:00", "15:30", "16:00", "16:30", "17:00", "17:30", "18:00"
   ];
 
   return (
@@ -361,41 +345,21 @@ export function AppointmentForm({
           render={({ field }) => (
             <FormItem>
               <FormLabel>Saat</FormLabel>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <FormControl>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "pl-3 text-left font-normal",
-                        !field.value && "text-muted-foreground"
-                      )}
-                    >
-                      {field.value || "Saat seçin"}
-                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                    </Button>
-                  </FormControl>
-                </PopoverTrigger>
-                <PopoverContent className="w-[200px] p-0" align="start">
-                  <ScrollArea className="h-60 w-full">
-                    <div className="grid grid-cols-2 gap-2 p-2">
-                      {availableTimes.map((time) => (
-                        <Button
-                          key={time}
-                          variant={field.value === time ? "default" : "outline"}
-                          className="h-8 w-full"
-                          onClick={() => {
-                            field.onChange(time);
-                          }}
-                          type="button"
-                        >
-                          {time}
-                        </Button>
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </PopoverContent>
-              </Popover>
+              <Select
+                onValueChange={field.onChange}
+                value={field.value || "09:00"}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Saat seçin" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableTimes.map((time) => (
+                    <SelectItem key={time} value={time}>
+                      {time}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}

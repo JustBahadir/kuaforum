@@ -1,8 +1,9 @@
+
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Plus, Scissors, ChevronLeft, LogOut, Home, User, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Randevu, RandevuDurumu } from '@/lib/supabase';
 import { AppointmentForm } from '@/components/appointments/AppointmentForm';
 import { AppointmentCard } from '@/components/appointments/AppointmentCard';
@@ -306,9 +307,14 @@ export default function Appointments() {
                 </div>
               </Button>
             </DialogTrigger>
-            <AppointmentForm
-              onAppointmentCreated={handleRandevuCreated}
-            />
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Yeni Randevu Al</DialogTitle>
+              </DialogHeader>
+              <AppointmentForm
+                onAppointmentCreated={handleRandevuCreated}
+              />
+            </DialogContent>
           </Dialog>
         </div>
 

@@ -24,24 +24,19 @@ export async function getProfile(): Promise<Profile | null> {
         .maybeSingle();
       
       if (error) {
-        // If we still get recursion error, try using the admin client or service role
         console.error("Error fetching profile with normal query:", error);
         
-        // Try a simpler query as a workaround
-        if (error.code === '42P17') {
-          console.log("Detected recursion error, trying simpler query approach");
-          return {
-            id: user.id,
-            first_name: user.user_metadata?.first_name || '',
-            last_name: user.user_metadata?.last_name || '',
-            role: user.user_metadata?.role || 'customer',
-            phone: user.user_metadata?.phone || '',
-            gender: user.user_metadata?.gender || '',
-            birthdate: user.user_metadata?.birthdate || null,
-            created_at: new Date().toISOString()
-          };
-        }
-        return null;
+        // Use user metadata as fallback
+        return {
+          id: user.id,
+          first_name: user.user_metadata?.first_name || '',
+          last_name: user.user_metadata?.last_name || '',
+          role: user.user_metadata?.role || 'customer',
+          phone: user.user_metadata?.phone || '',
+          gender: user.user_metadata?.gender || '',
+          birthdate: user.user_metadata?.birthdate || null,
+          created_at: new Date().toISOString()
+        };
       }
       
       // If profile is null, create a default one from user metadata

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/lib/supabase/client";
@@ -25,19 +24,17 @@ export function useCustomerAuth() {
       }
       
       // First try to get name from user metadata
-      if (user.user_metadata && (user.user_metadata.first_name || user.user_metadata.last_name)) {
+      if (user.user_metadata && (user.user_metadata.first_name)) {
         const metaFirstName = user.user_metadata.first_name || '';
-        const metaLastName = user.user_metadata.last_name || '';
         const metaGender = user.user_metadata.gender || '';
         
-        const fullName = `${metaFirstName} ${metaLastName}`.trim();
         const genderTitle = getGenderTitle(metaGender);
         
-        if (fullName && genderTitle) {
-          setUserName(`${fullName} ${genderTitle}`);
+        if (metaFirstName && genderTitle) {
+          setUserName(`${metaFirstName} ${genderTitle}`);
           return;
-        } else if (fullName) {
-          setUserName(fullName);
+        } else if (metaFirstName) {
+          setUserName(metaFirstName);
           return;
         }
       }
@@ -46,13 +43,13 @@ export function useCustomerAuth() {
       try {
         const profile = await profilServisi.getir();
         if (profile) {
-          const fullName = `${profile.first_name || ""} ${profile.last_name || ""}`.trim();
+          const firstName = profile.first_name || "";
           const genderTitle = getGenderTitle(profile.gender);
           
-          if (fullName && genderTitle) {
-            setUserName(`${fullName} ${genderTitle}`);
-          } else if (fullName) {
-            setUserName(fullName);
+          if (firstName && genderTitle) {
+            setUserName(`${firstName} ${genderTitle}`);
+          } else if (firstName) {
+            setUserName(firstName);
           } else {
             setUserName("Değerli Müşterimiz");
           }
