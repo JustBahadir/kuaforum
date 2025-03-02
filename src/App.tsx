@@ -25,7 +25,7 @@ function App() {
           <Route path="/personnel" element={<Personnel />} />
           
           {/* Customer dashboard routes */}
-          <Route path="/customer-dashboard" element={<Navigate to="/customer-dashboard/" replace />} />
+          <Route path="/customer-dashboard" element={<CustomerDashboard />} />
           <Route path="/customer-dashboard/*" element={<CustomerDashboard />} />
         </Routes>
       </div>

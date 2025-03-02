@@ -51,9 +51,8 @@ export function useCustomerAuth() {
           setUserName("Değerli Müşterimiz");
         }
         
-        // Bu kısmı ekleyelim - Kullanıcı appointments sayfasındaysa ve oturum açması yeni olarak algılanıyorsa
-        // customer dashboard ana sayfasına yönlendir
-        if (location.pathname === "/appointments" && !location.pathname.includes("/customer-dashboard")) {
+        // If user is on appointments page directly and not within customer-dashboard, redirect them
+        if (location.pathname === "/appointments") {
           navigate("/customer-dashboard");
         }
         

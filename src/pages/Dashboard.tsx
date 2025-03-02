@@ -28,7 +28,7 @@ export default function Dashboard() {
         if (profile?.role === 'staff') {
           navigate('/personnel');
         } else {
-          navigate('/appointments');
+          navigate('/customer-dashboard');
         }
       }
     };
@@ -90,7 +90,7 @@ export default function Dashboard() {
         
         toast({
           title: "Başarılı",
-          description: "Giriş başarılı! Randevularınıza yönlendiriliyorsunuz."
+          description: "Giriş başarılı! Müşteri sayfanıza yönlendiriliyorsunuz."
         });
         
         // Save auth in browser if remember me is checked
@@ -102,7 +102,7 @@ export default function Dashboard() {
         if (profile?.role === 'staff') {
           setTimeout(() => navigate("/personnel"), 500);
         } else {
-          setTimeout(() => navigate("/appointments"), 500);
+          setTimeout(() => navigate("/customer-dashboard"), 500);
         }
       } catch (profileError: any) {
         console.error("Profile fetch error:", profileError);
@@ -181,12 +181,12 @@ export default function Dashboard() {
         
         toast({
           title: "Başarılı", 
-          description: "Kayıt başarılı! Randevularınıza yönlendiriliyorsunuz."
+          description: "Kayıt başarılı! Müşteri sayfanıza yönlendiriliyorsunuz."
         });
         
-        // Navigate to appointments page
+        // Navigate to customer dashboard page
         setTimeout(() => {
-          navigate("/appointments");
+          navigate("/customer-dashboard");
         }, 500);
       } catch (profileError: any) {
         console.error("Profile creation error:", profileError);
