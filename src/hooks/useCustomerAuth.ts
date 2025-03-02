@@ -51,11 +51,6 @@ export function useCustomerAuth() {
           setUserName("Değerli Müşterimiz");
         }
         
-        // Redirect to customer homepage instead of appointments
-        if (location.pathname === "/customer-dashboard/appointments" && activeTab !== "home") {
-          navigate("/customer-dashboard");
-        }
-        
         return true;
       } catch (error) {
         console.error("Error fetching profile:", error);

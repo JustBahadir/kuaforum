@@ -130,7 +130,7 @@ export default function CustomerServices() {
                         </div>
                       </CardContent>
                       <CardFooter className="border-t pt-3 bg-gray-50">
-                        <Link to={`/appointments?service=${service.id}`} className="w-full">
+                        <Link to="/appointments" className="w-full">
                           <Button variant="outline" className="w-full border-purple-300 hover:bg-purple-50 hover:text-purple-700">
                             Bu Hizmet İçin Randevu Al
                           </Button>

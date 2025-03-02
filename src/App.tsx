@@ -23,9 +23,10 @@ function App() {
           <Route path="/staff-login" element={<StaffLogin />} />
           <Route path="/customer-profile" element={<CustomerProfile />} />
           <Route path="/personnel" element={<Personnel />} />
-          <Route path="/customer-dashboard/*" element={<CustomerDashboard />} />
-          {/* Müşteri giriş yaptığında doğrudan ana sayfaya yönlendir */}
+          
+          {/* Customer dashboard routes */}
           <Route path="/customer-dashboard" element={<Navigate to="/customer-dashboard/" replace />} />
+          <Route path="/customer-dashboard/*" element={<CustomerDashboard />} />
         </Routes>
       </div>
       <ReactQueryDevtools initialIsOpen={false} />
