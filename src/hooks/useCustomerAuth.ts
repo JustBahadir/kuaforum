@@ -102,7 +102,8 @@ export function useCustomerAuth() {
     try {
       await supabase.auth.signOut();
       toast.success("Başarıyla çıkış yapıldı");
-      // Navigate to the root route instead of /login
+      
+      // Always navigate to the home page
       navigate("/");
     } catch (error) {
       console.error("Çıkış yapılırken hata:", error);

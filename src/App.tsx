@@ -17,15 +17,18 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <div className="App">
         <Routes>
+          {/* Public routes */}
           <Route path="/" element={<Dashboard />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/appointments" element={<Appointments />} />
           <Route path="/staff-login" element={<StaffLogin />} />
-          <Route path="/customer-profile" element={<CustomerProfile />} />
-          <Route path="/personnel" element={<Personnel />} />
           <Route path="/login" element={<Navigate to="/staff-login" />} />
           
-          {/* Customer dashboard routes */}
+          {/* Staff routes */}
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/appointments" element={<Appointments />} />
+          <Route path="/personnel" element={<Personnel />} />
+          
+          {/* Customer routes */}
+          <Route path="/customer-profile" element={<CustomerProfile />} />
           <Route path="/customer-dashboard/*" element={<CustomerDashboard />} />
         </Routes>
       </div>
