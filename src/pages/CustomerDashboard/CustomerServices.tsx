@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { islemServisi } from "@/lib/supabase/services/islemServisi";
 import { kategoriServisi } from "@/lib/supabase/services/kategoriServisi";
 import { Islem, Kategori } from "@/lib/supabase/types";
+import { useNavigate } from "react-router-dom";
 import {
   Card,
   CardContent,
@@ -10,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
 import {
   Accordion,
   AccordionContent,
@@ -17,6 +19,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { toast } from "sonner";
+import { Calendar } from "lucide-react";
 
 export default function CustomerServices() {
   const [kategoriler, setKategoriler] = useState<Kategori[]>([]);
@@ -24,6 +27,7 @@ export default function CustomerServices() {
     Record<number, Islem[]>
   >({});
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -65,6 +69,11 @@ export default function CustomerServices() {
   const formatPrice = (price: number) => {
     return `${price.toLocaleString('tr-TR')} ₺`;
   };
+  
+  // Navigate to appointments page with selected service
+  const handleRandevuAl = (islemId: number) => {
+    navigate(`/customer-dashboard/appointments?service=${islemId}`);
+  };
 
   if (loading) {
     return (
@@ -100,15 +109,24 @@ export default function CustomerServices() {
                       {islemlerByKategori[kategori.id]?.length > 0 ? (
                         islemlerByKategori[kategori.id].map((islem, index) => (
                           <div key={islem.id}>
-                            <div className="flex justify-between items-center py-2">
-                              <div className="flex-grow">
+                            <div className="flex justify-between items-center py-3">
+                              <div className="w-1/3">
                                 <div className="font-medium">{islem.islem_adi}</div>
+                              </div>
+                              <div className="w-1/3 text-center">
                                 <div className="text-sm text-gray-500">
-                                  {islem.puan} puan
+                                  {islem.puan} puan | {formatPrice(islem.fiyat)}
                                 </div>
                               </div>
-                              <div className="font-semibold text-lg">
-                                {formatPrice(islem.fiyat)}
+                              <div className="w-1/3 flex justify-end">
+                                <Button 
+                                  onClick={() => handleRandevuAl(islem.id)}
+                                  size="sm" 
+                                  className="flex items-center gap-1"
+                                >
+                                  <Calendar className="h-4 w-4" />
+                                  Randevu Al
+                                </Button>
                               </div>
                             </div>
                             {index < islemlerByKategori[kategori.id].length - 1 && (
