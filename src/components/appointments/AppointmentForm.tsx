@@ -13,11 +13,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/lib/supabase/client";
-import { Islem, Personel, Randevu } from "@/lib/supabase/types";
+import { Islem, Personel, Randevu, Kategori } from "@/lib/supabase/types";
 import { islemServisi } from "@/lib/supabase/services/islemServisi";
 import { randevuServisi } from "@/lib/supabase/services/randevuServisi";
 import { personelServisi } from "@/lib/supabase/services/personelServisi";
+import { kategoriServisi } from "@/lib/supabase/services/kategoriServisi";
 import { toast } from "sonner";
+import { ChevronDown } from "lucide-react";
 
 interface AppointmentFormProps {
   onAppointmentCreated: (appointment: Randevu) => void;
@@ -27,18 +29,26 @@ interface AppointmentFormProps {
 export function AppointmentForm({ onAppointmentCreated, initialDate }: AppointmentFormProps) {
   const [loading, setLoading] = useState(false);
   const [islemler, setIslemler] = useState<Islem[]>([]);
+  const [kategoriler, setKategoriler] = useState<Kategori[]>([]);
   const [personeller, setPersoneller] = useState<Personel[]>([]);
+  const [selectedKategori, setSelectedKategori] = useState<number | null>(null);
+  const [filteredIslemler, setFilteredIslemler] = useState<Islem[]>([]);
   const [selectedIslem, setSelectedIslem] = useState<number | null>(null);
   const [selectedPersonel, setSelectedPersonel] = useState<number | null>(null);
   const [date, setDate] = useState(initialDate || "");
   const [time, setTime] = useState("09:00");
   const [notes, setNotes] = useState("");
   const [isPersonelRequestChecked, setIsPersonelRequestChecked] = useState(false);
+  const [showTimeTable, setShowTimeTable] = useState(false);
 
-  // Load services and personnel on component mount
+  // Load services, categories and personnel on component mount
   useEffect(() => {
     const loadData = async () => {
       try {
+        // Load categories
+        const kategorilerData = await kategoriServisi.hepsiniGetir();
+        setKategoriler(kategorilerData);
+        
         // Load services
         const islemlerData = await islemServisi.hepsiniGetir();
         setIslemler(islemlerData);
@@ -55,8 +65,20 @@ export function AppointmentForm({ onAppointmentCreated, initialDate }: Appointme
     loadData();
   }, []);
 
+  // Filter services by selected category
+  useEffect(() => {
+    if (selectedKategori) {
+      const filtered = islemler.filter(islem => islem.kategori_id === selectedKategori);
+      setFilteredIslemler(filtered);
+      setSelectedIslem(null); // Reset selected service when category changes
+    } else {
+      setFilteredIslemler([]);
+    }
+  }, [selectedKategori, islemler]);
+
   // Reset form
   const resetForm = () => {
+    setSelectedKategori(null);
     setSelectedIslem(null);
     setSelectedPersonel(null);
     setDate(initialDate || "");
@@ -102,7 +124,7 @@ export function AppointmentForm({ onAppointmentCreated, initialDate }: Appointme
         saat: time,
         durum: "beklemede",
         notlar: notes,
-        customer_id: user.id  // Add the customer_id field
+        customer_id: user.id
       });
       
       // Create appointment
@@ -113,7 +135,7 @@ export function AppointmentForm({ onAppointmentCreated, initialDate }: Appointme
         saat: time,
         durum: "beklemede",
         notlar: notes,
-        customer_id: user.id  // Add the customer_id field
+        customer_id: user.id
       });
       
       // Notify parent component
@@ -128,9 +150,11 @@ export function AppointmentForm({ onAppointmentCreated, initialDate }: Appointme
     }
   };
 
-  // Generate available time slots (every 30 minutes from 9 AM to 6 PM)
-  const generateTimeSlots = () => {
-    const slots = [];
+  // Generate time table (9 AM to 6 PM in 30 minute intervals)
+  const generateTimeTable = () => {
+    const timeSlots = [];
+    const hoursPerRow = 4; // 4 time slots per row
+    
     for (let hour = 9; hour <= 18; hour++) {
       for (let minute of [0, 30]) {
         if (hour === 18 && minute === 30) continue; // Skip 18:30 as the last appointment is at 18:00
@@ -139,36 +163,93 @@ export function AppointmentForm({ onAppointmentCreated, initialDate }: Appointme
         const formattedMinute = String(minute).padStart(2, "0");
         const timeValue = `${formattedHour}:${formattedMinute}`;
         
-        slots.push(
-          <SelectItem key={timeValue} value={timeValue}>
-            {timeValue}
-          </SelectItem>
-        );
+        timeSlots.push(timeValue);
       }
     }
-    return slots;
+    
+    // Create rows with 4 time slots each
+    const rows = [];
+    for (let i = 0; i < timeSlots.length; i += hoursPerRow) {
+      const rowSlots = timeSlots.slice(i, i + hoursPerRow);
+      rows.push(rowSlots);
+    }
+    
+    return (
+      <div className="border rounded-md overflow-hidden">
+        <table className="w-full">
+          <tbody>
+            {rows.map((row, rowIndex) => (
+              <tr key={rowIndex} className={rowIndex % 2 === 0 ? "bg-gray-50" : ""}>
+                {row.map((timeSlot) => (
+                  <td key={timeSlot} className="p-1">
+                    <Button
+                      type="button"
+                      variant={time === timeSlot ? "default" : "outline"}
+                      className={`w-full text-sm h-9 ${time === timeSlot ? "bg-purple-600 hover:bg-purple-700" : ""}`}
+                      onClick={() => {
+                        setTime(timeSlot);
+                        setShowTimeTable(false);
+                      }}
+                    >
+                      {timeSlot}
+                    </Button>
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="service">Hizmet Seçin*</Label>
+        <Label htmlFor="category">Kategori Seçin*</Label>
         <Select
-          value={selectedIslem?.toString() || ""}
-          onValueChange={(value) => setSelectedIslem(Number(value))}
+          value={selectedKategori?.toString() || ""}
+          onValueChange={(value) => setSelectedKategori(Number(value))}
         >
-          <SelectTrigger id="service">
-            <SelectValue placeholder="Hizmet seçin" />
+          <SelectTrigger id="category">
+            <SelectValue placeholder="Kategori seçin" />
           </SelectTrigger>
           <SelectContent>
-            {islemler.map((islem) => (
-              <SelectItem key={islem.id} value={islem.id.toString()}>
-                {islem.islem_adi} - {islem.fiyat} ₺
+            {kategoriler.map((kategori) => (
+              <SelectItem key={kategori.id} value={kategori.id.toString()}>
+                {kategori.kategori_adi}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
+      
+      {selectedKategori && (
+        <div className="space-y-2">
+          <Label htmlFor="service">Hizmet Seçin*</Label>
+          <Select
+            value={selectedIslem?.toString() || ""}
+            onValueChange={(value) => setSelectedIslem(Number(value))}
+          >
+            <SelectTrigger id="service">
+              <SelectValue placeholder="Hizmet seçin" />
+            </SelectTrigger>
+            <SelectContent>
+              {filteredIslemler.length > 0 ? (
+                filteredIslemler.map((islem) => (
+                  <SelectItem key={islem.id} value={islem.id.toString()}>
+                    {islem.islem_adi} - {islem.fiyat} ₺
+                  </SelectItem>
+                ))
+              ) : (
+                <SelectItem value="no-service" disabled>
+                  Bu kategoride hizmet bulunamadı
+                </SelectItem>
+              )}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
       
       <div className="space-y-2">
         <div className="flex items-center space-x-2">
@@ -226,17 +307,23 @@ export function AppointmentForm({ onAppointmentCreated, initialDate }: Appointme
         
         <div className="space-y-2">
           <Label htmlFor="time">Saat*</Label>
-          <Select
-            value={time}
-            onValueChange={setTime}
-          >
-            <SelectTrigger id="time">
-              <SelectValue placeholder="Saat seçin" />
-            </SelectTrigger>
-            <SelectContent>
-              {generateTimeSlots()}
-            </SelectContent>
-          </Select>
+          <div className="relative">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full flex justify-between items-center"
+              onClick={() => setShowTimeTable(!showTimeTable)}
+            >
+              <span>{time}</span>
+              <ChevronDown className="h-4 w-4" />
+            </Button>
+            
+            {showTimeTable && (
+              <div className="absolute z-50 mt-1 w-full bg-white shadow-lg rounded-md border">
+                {generateTimeTable()}
+              </div>
+            )}
+          </div>
         </div>
       </div>
       
