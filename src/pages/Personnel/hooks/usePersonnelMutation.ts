@@ -131,9 +131,10 @@ export function usePersonnelMutation(onSuccess?: () => void) {
               
               if (usersData && usersData.users) {
                 // Find matching user by email - fixed the type issue
-                const matchingUser = usersData.users.find(user => 
-                  user && user.email === personelData.eposta
-                );
+                const matchingUser = usersData.users.find(user => {
+                  // Make sure user exists and has an email property before comparing
+                  return user && typeof user.email === 'string' && user.email === personelData.eposta;
+                });
                 
                 if (matchingUser) {
                   console.log("Found matching user:", matchingUser.id);
