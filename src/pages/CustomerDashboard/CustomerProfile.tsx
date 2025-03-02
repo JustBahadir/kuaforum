@@ -12,7 +12,9 @@ export default function CustomerProfile() {
     firstName: "",
     lastName: "",
     phone: "",
-    email: ""
+    email: "",
+    gender: "",
+    birthdate: ""
   });
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -29,7 +31,7 @@ export default function CustomerProfile() {
         // Get profile data
         const { data, error } = await supabase
           .from('profiles')
-          .select('first_name, last_name, phone')
+          .select('first_name, last_name, phone, gender, birthdate')
           .eq('id', user.id)
           .single();
           
@@ -43,7 +45,9 @@ export default function CustomerProfile() {
             firstName: data.first_name || "",
             lastName: data.last_name || "",
             phone: formattedPhone,
-            email: user.email || ""
+            email: user.email || "",
+            gender: data.gender || "",
+            birthdate: data.birthdate || ""
           });
         }
       } catch (error) {
@@ -67,6 +71,10 @@ export default function CustomerProfile() {
     }
   };
   
+  const handleSelectChange = (name: string, value: string) => {
+    setProfile(prev => ({ ...prev, [name]: value }));
+  };
+  
   const handleSave = async () => {
     try {
       setIsSaving(true);
@@ -83,14 +91,18 @@ export default function CustomerProfile() {
       console.log("Updating profile with data:", {
         first_name: profile.firstName,
         last_name: profile.lastName,
-        phone: phoneForSaving
+        phone: phoneForSaving,
+        gender: profile.gender,
+        birthdate: profile.birthdate
       });
       
       // Use profile service to update profile
       const result = await profilServisi.guncelle({
         first_name: profile.firstName,
         last_name: profile.lastName,
-        phone: phoneForSaving
+        phone: phoneForSaving,
+        gender: profile.gender,
+        birthdate: profile.birthdate
       });
       
       if (result) {
@@ -126,11 +138,14 @@ export default function CustomerProfile() {
         lastName={profile.lastName}
         email={profile.email}
         phone={profile.phone}
+        gender={profile.gender}
+        birthdate={profile.birthdate}
       />
       
       <ProfileEditForm
         profile={profile}
         handleChange={handleChange}
+        handleSelectChange={handleSelectChange}
         handleSave={handleSave}
         isSaving={isSaving}
       />

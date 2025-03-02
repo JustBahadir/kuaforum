@@ -1,10 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
-import { DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
-import { tr } from 'date-fns/locale';
-import { format } from "date-fns";
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -12,352 +8,242 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { supabase } from "@/lib/supabase/client";
+import { Islem, Personel, Randevu } from "@/lib/supabase/types";
+import { islemServisi } from "@/lib/supabase/services/islemServisi";
+import { randevuServisi } from "@/lib/supabase/services/randevuServisi";
+import { personelServisi } from "@/lib/supabase/services/personelServisi";
+import { toast } from "sonner";
 
 interface AppointmentFormProps {
-  islemler: any[];
-  personeller: any[];
-  onSubmit: (data: any) => void;
-  onCancel: () => void;
-  kategoriler: any[];
-  initialDate?: Date;
+  onAppointmentCreated: (appointment: Randevu) => void;
+  initialDate?: string;
 }
 
-export function AppointmentForm({
-  islemler,
-  personeller,
-  onSubmit,
-  onCancel,
-  kategoriler,
-  initialDate
-}: AppointmentFormProps) {
-  const [step, setStep] = useState(1);
-  const [selectedService, setSelectedService] = useState('');
-  const [selectedStaff, setSelectedStaff] = useState('');
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(initialDate);
-  const [selectedTime, setSelectedTime] = useState('');
-  const [selectedServiceInfo, setSelectedServiceInfo] = useState<any>(null);
-  const [selectedStaffInfo, setSelectedStaffInfo] = useState<any>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [isAllSelected, setIsAllSelected] = useState(false);
+export function AppointmentForm({ onAppointmentCreated, initialDate }: AppointmentFormProps) {
+  const [loading, setLoading] = useState(false);
+  const [islemler, setIslemler] = useState<Islem[]>([]);
+  const [personeller, setPersoneller] = useState<Personel[]>([]);
+  const [selectedIslem, setSelectedIslem] = useState<number | null>(null);
+  const [selectedPersonel, setSelectedPersonel] = useState<number | null>(null);
+  const [date, setDate] = useState(initialDate || "");
+  const [time, setTime] = useState("09:00");
+  const [notes, setNotes] = useState("");
+  const [isPersonelRequestChecked, setIsPersonelRequestChecked] = useState(false);
 
-  // If initialDate is provided and step is 1, move to step 3 after service selection
+  // Load services and personnel on component mount
   useEffect(() => {
-    if (initialDate && step === 1 && selectedService) {
-      // Skip to step 3 (date selection) which will already have the date selected
-      setStep(3);
+    const loadData = async () => {
+      try {
+        // Load services
+        const islemlerData = await islemServisi.hepsiniGetir();
+        setIslemler(islemlerData);
+        
+        // Load personnel
+        const personellerData = await personelServisi.hepsiniGetir();
+        setPersoneller(personellerData);
+      } catch (error) {
+        console.error("Error loading data:", error);
+        toast.error("Veriler yüklenirken bir hata oluştu");
+      }
+    };
+    
+    loadData();
+  }, []);
+
+  // Reset form
+  const resetForm = () => {
+    setSelectedIslem(null);
+    setSelectedPersonel(null);
+    setDate(initialDate || "");
+    setTime("09:00");
+    setNotes("");
+    setIsPersonelRequestChecked(false);
+  };
+
+  // Handle form submission
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      setLoading(true);
+      
+      // Validate form
+      if (!selectedIslem) {
+        toast.error("Lütfen bir hizmet seçin");
+        return;
+      }
+      
+      if (!date) {
+        toast.error("Lütfen tarih seçin");
+        return;
+      }
+      
+      if (!time) {
+        toast.error("Lütfen saat seçin");
+        return;
+      }
+      
+      console.log("Creating appointment with data:", {
+        islemler: [selectedIslem],
+        personel_id: isPersonelRequestChecked ? null : selectedPersonel,
+        tarih: date,
+        saat: time,
+        durum: "beklemede",
+        notlar: notes,
+      });
+      
+      // Create appointment
+      const appointment = await randevuServisi.ekle({
+        islemler: [selectedIslem],
+        personel_id: isPersonelRequestChecked ? null : selectedPersonel,
+        tarih: date,
+        saat: time,
+        durum: "beklemede",
+        notlar: notes,
+      });
+      
+      // Notify parent component
+      onAppointmentCreated(appointment);
+      resetForm();
+      
+    } catch (error) {
+      console.error("Randevu kaydedilirken hata:", error);
+      toast.error("Randevu oluşturulurken bir hata oluştu");
+    } finally {
+      setLoading(false);
     }
-  }, [initialDate, selectedService, step]);
+  };
 
-  useEffect(() => {
-    if (selectedService) {
-      const service = islemler.find(i => i.id.toString() === selectedService);
-      setSelectedServiceInfo(service);
+  // Generate available time slots (every 30 minutes from 9 AM to 6 PM)
+  const generateTimeSlots = () => {
+    const slots = [];
+    for (let hour = 9; hour <= 18; hour++) {
+      for (let minute of [0, 30]) {
+        if (hour === 18 && minute === 30) continue; // Skip 18:30 as the last appointment is at 18:00
+        
+        const formattedHour = String(hour).padStart(2, "0");
+        const formattedMinute = String(minute).padStart(2, "0");
+        const timeValue = `${formattedHour}:${formattedMinute}`;
+        
+        slots.push(
+          <SelectItem key={timeValue} value={timeValue}>
+            {timeValue}
+          </SelectItem>
+        );
+      }
     }
-    if (selectedStaff) {
-      const staff = personeller.find(p => p.id.toString() === selectedStaff);
-      setSelectedStaffInfo(staff);
-    }
-  }, [selectedService, selectedStaff, islemler, personeller]);
-
-  const timeSlots = [
-    "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
-    "12:00", "12:30", "13:00", "13:30", "14:00", "14:30",
-    "15:00", "15:30", "16:00", "16:30", "17:00", "17:30"
-  ];
-
-  const handleNextStep = () => {
-    setStep(prev => Math.min(prev + 1, 4));
-  };
-
-  const handlePreviousStep = () => {
-    setStep(prev => Math.max(prev - 1, 1));
-  };
-
-  const handleServiceSelect = (value: string) => {
-    setSelectedService(value);
-    if (initialDate) {
-      // If initial date is set, skip to step 3
-      setStep(3);
-    } else {
-      handleNextStep();
-    }
-  };
-
-  const handleStaffSelect = (value: string) => {
-    setSelectedStaff(value);
-    handleNextStep();
-  };
-
-  const handleDateSelect = (date: Date | undefined) => {
-    if (date) {
-      setSelectedDate(date);
-      handleNextStep();
-    }
-  };
-
-  const handleTimeSelect = (time: string) => {
-    setSelectedTime(time);
-  };
-
-  const handleSubmit = () => {
-    if (selectedService && selectedDate && selectedTime) {
-      const randevuData = {
-        islem_id: Number(selectedService),
-        personel_id: selectedStaff ? Number(selectedStaff) : null,
-        tarih: format(selectedDate, 'yyyy-MM-dd'),
-        saat: selectedTime
-      };
-      onSubmit(randevuData);
-    }
-  };
-
-  const filteredServices = selectedCategory 
-    ? islemler.filter(islem => islem.kategori_id === Number(selectedCategory))
-    : [];
-
-  const AppointmentSummary = () => {
-    if (!selectedService && !selectedStaff && !selectedDate && !selectedTime) return null;
-
-    return (
-      <Card className="mt-4 mb-6">
-        <CardContent className="pt-6">
-          <h4 className="text-sm font-semibold mb-2">Randevu Özeti</h4>
-          <div className="space-y-2 text-sm">
-            {selectedServiceInfo && (
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Hizmet:</span>
-                <span className="font-medium">{selectedServiceInfo.islem_adi}</span>
-              </div>
-            )}
-            {selectedStaffInfo && (
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Personel:</span>
-                <span className="font-medium">{selectedStaffInfo.ad_soyad}</span>
-              </div>
-            )}
-            {selectedDate && (
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Tarih:</span>
-                <span className="font-medium">{format(selectedDate, 'dd/MM/yyyy')}</span>
-              </div>
-            )}
-            {selectedTime && (
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Saat:</span>
-                <span className="font-medium">{selectedTime}</span>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-    );
+    return slots;
   };
 
   return (
-    <DialogContent className="max-w-3xl">
-      <DialogHeader>
-        <DialogTitle>
-          {!isAllSelected ? 'Randevu Oluştur' : 'Randevu Özeti'}
-        </DialogTitle>
-      </DialogHeader>
-
-      {!isAllSelected ? (
-        <div className="relative">
-          <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-border" />
-          
-          <div className="relative mb-8">
-            <div className="flex items-center gap-4">
-              <div 
-                className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer ${
-                  step === 1 ? 'bg-primary text-primary-foreground' : 'bg-muted'
-                }`}
-                onClick={() => setStep(1)}
-              >
-                1
-              </div>
-              <h3 className="font-semibold">Hizmet Seçimi</h3>
-            </div>
-            
-            {step === 1 && (
-              <div className="mt-4">
-                <Tabs
-                  value={selectedCategory || ""}
-                  onValueChange={setSelectedCategory}
-                  className="w-full"
-                >
-                  <TabsList className="w-full flex flex-wrap gap-2 justify-start h-auto">
-                    {kategoriler.map((kategori) => (
-                      <TabsTrigger
-                        key={kategori.id}
-                        value={kategori.id.toString()}
-                        className="px-4 py-2"
-                      >
-                        {kategori.kategori_adi}
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
-
-                  {kategoriler.map((kategori) => (
-                    <TabsContent
-                      key={kategori.id}
-                      value={kategori.id.toString()}
-                      className="mt-4"
-                    >
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {filteredServices.map((islem) => (
-                          <Button
-                            key={islem.id}
-                            variant={selectedService === islem.id.toString() ? "default" : "outline"}
-                            className="w-full justify-between p-4 h-auto"
-                            onClick={() => handleServiceSelect(islem.id.toString())}
-                          >
-                            <span>{islem.islem_adi}</span>
-                            <span>{islem.fiyat} TL</span>
-                          </Button>
-                        ))}
-                      </div>
-                    </TabsContent>
-                  ))}
-                </Tabs>
-              </div>
-            )}
-          </div>
-
-          <div className="relative mb-8">
-            <div className="flex items-center gap-4">
-              <div 
-                className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer ${
-                  step === 2 ? 'bg-primary text-primary-foreground' : 'bg-muted'
-                }`}
-                onClick={() => selectedService && setStep(2)}
-              >
-                2
-              </div>
-              <h3 className="font-semibold">Personel Seçimi (Opsiyonel)</h3>
-            </div>
-            
-            {step === 2 && (
-              <div className="mt-4 ml-12">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => {
-                      setSelectedStaff('');
-                      handleNextStep();
-                    }}
-                  >
-                    Farketmez
-                  </Button>
-                  {personeller.map((personel) => (
-                    <Button
-                      key={personel.id}
-                      variant={selectedStaff === personel.id.toString() ? "default" : "outline"}
-                      className="w-full"
-                      onClick={() => handleStaffSelect(personel.id.toString())}
-                    >
-                      {personel.ad_soyad}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="relative mb-8">
-            <div className="flex items-center gap-4">
-              <div 
-                className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer ${
-                  step === 3 ? 'bg-primary text-primary-foreground' : 'bg-muted'
-                }`}
-                onClick={() => selectedService && setStep(3)}
-              >
-                3
-              </div>
-              <h3 className="font-semibold">Tarih Seçimi</h3>
-            </div>
-            
-            {step === 3 && (
-              <div className="mt-4 ml-12">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={handleDateSelect}
-                  locale={tr}
-                  disabled={(date) => date < new Date()}
-                />
-              </div>
-            )}
-          </div>
-
-          <div className="relative">
-            <div className="flex items-center gap-4">
-              <div 
-                className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer ${
-                  step === 4 ? 'bg-primary text-primary-foreground' : 'bg-muted'
-                }`}
-                onClick={() => selectedDate && setStep(4)}
-              >
-                4
-              </div>
-              <h3 className="font-semibold">Saat Seçimi</h3>
-            </div>
-            
-            {step === 4 && (
-              <div className="mt-4 ml-12">
-                <div className="grid grid-cols-4 gap-2">
-                  {timeSlots.map((time) => (
-                    <Button
-                      key={time}
-                      variant={selectedTime === time ? "default" : "outline"}
-                      onClick={() => handleTimeSelect(time)}
-                    >
-                      {time}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="flex justify-between gap-2 mt-8">
-            <div className="space-x-2">
-              {step > 1 && (
-                <Button variant="outline" onClick={handlePreviousStep}>
-                  Geri
-                </Button>
-              )}
-              <Button variant="outline" onClick={onCancel}>
-                İptal
-              </Button>
-            </div>
-            <div className="space-x-2">
-              {step === 4 && selectedTime && (
-                <Button onClick={() => setIsAllSelected(true)}>
-                  Devam Et
-                </Button>
-              )}
-            </div>
-          </div>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="service">Hizmet Seçin*</Label>
+        <Select
+          value={selectedIslem?.toString() || ""}
+          onValueChange={(value) => setSelectedIslem(Number(value))}
+        >
+          <SelectTrigger id="service">
+            <SelectValue placeholder="Hizmet seçin" />
+          </SelectTrigger>
+          <SelectContent>
+            {islemler.map((islem) => (
+              <SelectItem key={islem.id} value={islem.id.toString()}>
+                {islem.islem_adi} - {islem.fiyat} ₺
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      
+      <div className="space-y-2">
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="request-personnel"
+            checked={isPersonelRequestChecked}
+            onCheckedChange={(checked) => {
+              setIsPersonelRequestChecked(checked === true);
+              if (checked) {
+                setSelectedPersonel(null);
+              }
+            }}
+          />
+          <label
+            htmlFor="request-personnel"
+            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+          >
+            Personel atamasını salona bırak
+          </label>
         </div>
-      ) : (
-        <div className="space-y-6">
-          <AppointmentSummary />
-          <div className="flex justify-center gap-4">
-            <Button variant="outline" onClick={() => setIsAllSelected(false)}>
-              Geri
-            </Button>
-            <Button variant="outline" onClick={onCancel}>
-              İptal
-            </Button>
-            <Button onClick={handleSubmit}>
-              Onayla
-            </Button>
-          </div>
+      </div>
+      
+      {!isPersonelRequestChecked && (
+        <div className="space-y-2">
+          <Label htmlFor="personnel">Personel Seçin</Label>
+          <Select
+            value={selectedPersonel?.toString() || ""}
+            onValueChange={(value) => setSelectedPersonel(Number(value))}
+          >
+            <SelectTrigger id="personnel">
+              <SelectValue placeholder="Personel seçin" />
+            </SelectTrigger>
+            <SelectContent>
+              {personeller.map((personel) => (
+                <SelectItem key={personel.id} value={personel.id.toString()}>
+                  {personel.ad_soyad}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       )}
-    </DialogContent>
+      
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="date">Tarih*</Label>
+          <Input
+            id="date"
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            required
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="time">Saat*</Label>
+          <Select
+            value={time}
+            onValueChange={setTime}
+          >
+            <SelectTrigger id="time">
+              <SelectValue placeholder="Saat seçin" />
+            </SelectTrigger>
+            <SelectContent>
+              {generateTimeSlots()}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="notes">Notlar</Label>
+        <Textarea
+          id="notes"
+          placeholder="Randevu ile ilgili eklemek istediğiniz notlar"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+        />
+      </div>
+      
+      <Button type="submit" disabled={loading} className="w-full">
+        {loading ? "Kaydediliyor..." : "Randevu Oluştur"}
+      </Button>
+    </form>
   );
 }

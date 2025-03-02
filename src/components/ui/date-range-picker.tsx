@@ -74,8 +74,10 @@ export function DateRangePicker({
                 });
               }
             }}
+            weekStartsOn={1} // Set week starts on Monday (1) instead of Sunday (0)
             numberOfMonths={2}
             locale={tr}
+            className="rounded-md border"
           />
         </PopoverContent>
       </Popover>
