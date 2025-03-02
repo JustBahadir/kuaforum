@@ -32,8 +32,14 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useQuery } from "@tanstack/react-query";
-import { Islem, Kategori, Personel } from "@/lib/supabase";
+import { Islem, Kategori, Personel, Randevu } from "@/lib/supabase/types";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { 
+  islemServisi, 
+  kategoriServisi, 
+  personelServisi, 
+  randevuServisi 
+} from "@/lib/supabase";
 
 interface AppointmentFormValues {
   category: number | null;
@@ -42,6 +48,13 @@ interface AppointmentFormValues {
   time: string;
   personnel: string;
   notes: string;
+}
+
+interface AppointmentFormProps {
+  onSubmit?: (data: AppointmentFormValues) => void;
+  isSubmitting?: boolean;
+  onAppointmentCreated?: (appointment: Randevu) => void;
+  initialDate?: string;
 }
 
 const formSchema = z.object({
@@ -64,41 +77,41 @@ const defaultValues = {
 
 export function AppointmentForm({
   onSubmit,
-  isSubmitting,
-}: {
-  onSubmit: (data: AppointmentFormValues) => void;
-  isSubmitting: boolean;
-}) {
+  isSubmitting = false,
+  onAppointmentCreated,
+  initialDate,
+}: AppointmentFormProps) {
   const [selectedServices, setSelectedServices] = useState<number[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [filteredServices, setFilteredServices] = useState<Islem[]>([]);
+  const [submitting, setSubmitting] = useState(false);
 
   const form = useForm<AppointmentFormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues,
+    defaultValues: {
+      ...defaultValues,
+      date: initialDate ? new Date(initialDate) : null,
+    },
   });
 
   const { data: islemlerData, isLoading: isLoadingIslemler } = useQuery({
     queryKey: ["islemler"],
     queryFn: async () => {
-      const { data } = await islemServisi.hepsiniGetir();
-      return data;
+      return await islemServisi.hepsiniGetir();
     },
   });
 
   const { data: kategorilerData, isLoading: isLoadingKategoriler } = useQuery({
     queryKey: ["kategoriler"],
     queryFn: async () => {
-      const { data } = await kategoriServisi.hepsiniGetir();
-      return data;
+      return await kategoriServisi.hepsiniGetir();
     },
   });
 
   const { data: personellerData, isLoading: isLoadingPersoneller } = useQuery({
     queryKey: ["personeller"],
     queryFn: async () => {
-      const { data } = await personelServisi.hepsiniGetir();
-      return data;
+      return await personelServisi.hepsiniGetir();
     },
   });
 
@@ -119,6 +132,66 @@ export function AppointmentForm({
       : [...selectedServices, serviceId];
     setSelectedServices(newServices);
     field.onChange(newServices);
+  };
+
+  const handleFormSubmit = async (data: AppointmentFormValues) => {
+    if (!data.date) {
+      toast.error("Lütfen bir tarih seçin");
+      return;
+    }
+
+    if (data.services.length === 0) {
+      toast.error("Lütfen en az bir hizmet seçin");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+
+      // If the external onSubmit is provided, use it
+      if (onSubmit) {
+        onSubmit(data);
+        return;
+      }
+
+      // Otherwise, handle the submission ourselves
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast.error("Oturum açmanız gerekiyor");
+        return;
+      }
+
+      const randevuData = {
+        customer_id: user.id,
+        personel_id: data.personnel ? parseInt(data.personnel) : undefined,
+        tarih: format(data.date, 'yyyy-MM-dd'),
+        saat: data.time || "09:00",
+        durum: "beklemede" as const,
+        notlar: data.notes,
+        islemler: data.services,
+      };
+
+      const newRandevu = await randevuServisi.ekle(randevuData);
+      
+      toast.success("Randevunuz başarıyla oluşturuldu");
+      
+      // If onAppointmentCreated callback is provided, call it with the new appointment
+      if (onAppointmentCreated) {
+        onAppointmentCreated(newRandevu);
+      }
+      
+      // Reset the form
+      form.reset(defaultValues);
+      setSelectedServices([]);
+      setSelectedCategory(null);
+      
+    } catch (error) {
+      console.error("Randevu oluşturulurken hata:", error);
+      toast.error("Randevu oluşturulurken bir hata oluştu");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const availableTimes = [
@@ -145,7 +218,7 @@ export function AppointmentForm({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-8">
         {/* Service Categories Selection */}
         <FormField
           control={form.control}
@@ -155,10 +228,11 @@ export function AppointmentForm({
               <FormLabel>Hizmet Kategorisi</FormLabel>
               <Select
                 onValueChange={(value) => {
-                  field.onChange(value);
-                  setSelectedCategory(parseInt(value));
+                  const numValue = parseInt(value);
+                  field.onChange(numValue);
+                  setSelectedCategory(numValue);
                 }}
-                value={field.value}
+                value={field.value?.toString() || ""}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Kategori seçin" />
@@ -267,7 +341,7 @@ export function AppointmentForm({
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
-                    selected={field.value}
+                    selected={field.value || undefined}
                     onSelect={field.onChange}
                     disabled={(date) => date < new Date()}
                     initialFocus
@@ -301,18 +375,18 @@ export function AppointmentForm({
                     </Button>
                   </FormControl>
                 </PopoverTrigger>
-                <PopoverContent className="w-fit p-0" align="start">
-                  <ScrollArea className="h-[300px] w-[280px]">
-                    <div className="grid grid-cols-3 gap-2 p-4">
+                <PopoverContent className="w-[200px] p-0" align="start">
+                  <ScrollArea className="h-60 w-full">
+                    <div className="grid grid-cols-2 gap-2 p-2">
                       {availableTimes.map((time) => (
                         <Button
                           key={time}
                           variant={field.value === time ? "default" : "outline"}
-                          className="h-9"
+                          className="h-8 w-full"
                           onClick={() => {
                             field.onChange(time);
-                            document.getElementById("time-popover-close")?.click();
                           }}
+                          type="button"
                         >
                           {time}
                         </Button>
@@ -389,8 +463,8 @@ export function AppointmentForm({
           )}
         />
 
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Randevu oluşturuluyor..." : "Randevu Oluştur"}
+        <Button type="submit" disabled={isSubmitting || submitting}>
+          {isSubmitting || submitting ? "Randevu oluşturuluyor..." : "Randevu Oluştur"}
         </Button>
       </form>
     </Form>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -32,7 +31,6 @@ export default function CustomerAppointments() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   
-  // Function to load appointments
   const loadAppointments = async () => {
     try {
       setLoading(true);
@@ -46,22 +44,18 @@ export default function CustomerAppointments() {
     }
   };
   
-  // Load appointments on initial render
   useEffect(() => {
     loadAppointments();
   }, []);
   
-  // Format date for display
   const formatAppointmentDate = (date: string) => {
     return format(parseISO(date), "d MMMM yyyy", { locale: tr });
   };
   
-  // Format time for display
   const formatAppointmentTime = (time: string) => {
     return time.substring(0, 5);
   };
   
-  // Get status text and color based on appointment status
   const getStatusInfo = (status: string) => {
     switch (status) {
       case "beklemede":
@@ -77,14 +71,12 @@ export default function CustomerAppointments() {
     }
   };
   
-  // Handle appointment creation success
   const handleAppointmentCreated = (appointment: Randevu) => {
     setAppointments(prev => [...prev, appointment]);
     setDialogOpen(false);
     toast.success("Randevunuz başarıyla oluşturuldu");
   };
   
-  // Handle calendar date selection
   const handleDateSelect = (date: Date | undefined) => {
     if (date) {
       setSelectedDate(date);
@@ -92,7 +84,6 @@ export default function CustomerAppointments() {
     }
   };
   
-  // Filter appointments for the selected day
   const appointmentsForSelectedDay = appointments.filter(appointment => {
     if (!date) return false;
     const appointmentDate = parseISO(appointment.tarih);
@@ -219,7 +210,6 @@ export default function CustomerAppointments() {
             <div className="space-y-4">
               {appointments
                 .sort((a, b) => {
-                  // Sort by date (latest first)
                   const dateA = new Date(`${a.tarih}T${a.saat}`);
                   const dateB = new Date(`${b.tarih}T${b.saat}`);
                   return dateB.getTime() - dateA.getTime();

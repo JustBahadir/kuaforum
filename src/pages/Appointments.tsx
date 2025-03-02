@@ -6,7 +6,7 @@ import { Dialog, DialogTrigger } from '@/components/ui/dialog';
 import { Randevu, RandevuDurumu } from '@/lib/supabase';
 import { AppointmentForm } from '@/components/appointments/AppointmentForm';
 import { AppointmentCard } from '@/components/appointments/AppointmentCard';
-import { toast } from "@/hooks/use-toast";
+import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -236,7 +236,6 @@ export default function Appointments() {
 
   return (
     <div className="container mx-auto py-6 space-y-8">
-      {/* Navigation Bar */}
       <div className="fixed top-0 left-0 right-0 bg-white shadow-md z-50 p-4">
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center gap-4">
@@ -271,7 +270,6 @@ export default function Appointments() {
         </div>
       </div>
 
-      {/* Main Content - with top padding for the fixed navbar */}
       <div className="pt-16">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-600">Randevular</h1>
@@ -314,7 +312,6 @@ export default function Appointments() {
           </Dialog>
         </div>
 
-        {/* Bottom navigation buttons for mobile */}
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg md:hidden p-2 flex justify-around z-50">
           <Link to="/customer-dashboard">
             <Button variant="ghost" className="flex flex-col items-center text-xs p-2">
