@@ -1,46 +1,55 @@
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { User, Users } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Users, Calendar, Scissors, UserCog } from "lucide-react";
+import { Link } from "react-router-dom";
 
-type MainMenuOptionsProps = {
-  onSelectCustomer: () => void;
-  onSelectPersonnel: () => void;
-};
-
-export const MainMenuOptions = ({ onSelectCustomer, onSelectPersonnel }: MainMenuOptionsProps) => {
+export function MainMenuOptions() {
   return (
-    <div className="grid md:grid-cols-2 gap-8">
-      {/* Müşteri Seçeneği */}
-      <Card 
-        className="hover:shadow-lg transition-shadow cursor-pointer" 
-        onClick={onSelectCustomer}
-      >
-        <CardHeader className="text-center">
-          <CardTitle className="flex items-center justify-center gap-2">
-            <User className="h-8 w-8 text-primary" />
-            Müşteri İşlemleri
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="text-center text-muted-foreground">
-          Randevu alma ve müşteri hizmetleri için tıklayın
-        </CardContent>
-      </Card>
+    <div className="space-y-6">
+      <h1 className="text-3xl font-bold tracking-tight">Hoş Geldiniz</h1>
+      
+      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Müşteriler */}
+        <Link to="/customers">
+          <Card className="p-6 hover:shadow-md transition-shadow cursor-pointer">
+            <div className="flex flex-col items-center gap-4">
+              <Users className="h-8 w-8 text-purple-600" />
+              <h3 className="text-lg font-medium">Müşteriler</h3>
+            </div>
+          </Card>
+        </Link>
 
-      {/* Personel Seçeneği */}
-      <Card 
-        className="hover:shadow-lg transition-shadow cursor-pointer"
-        onClick={onSelectPersonnel}
-      >
-        <CardHeader className="text-center">
-          <CardTitle className="flex items-center justify-center gap-2">
-            <Users className="h-8 w-8 text-primary" />
-            Personel İşlemleri
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="text-center text-muted-foreground">
-          Personel ve işletme yönetimi için tıklayın
-        </CardContent>
-      </Card>
+        {/* Randevular */}
+        <Link to="/appointments">
+          <Card className="p-6 hover:shadow-md transition-shadow cursor-pointer">
+            <div className="flex flex-col items-center gap-4">
+              <Calendar className="h-8 w-8 text-purple-600" />
+              <h3 className="text-lg font-medium">Randevular</h3>
+            </div>
+          </Card>
+        </Link>
+
+        {/* Personel */}
+        <Link to="/personnel">
+          <Card className="p-6 hover:shadow-md transition-shadow cursor-pointer">
+            <div className="flex flex-col items-center gap-4">
+              <UserCog className="h-8 w-8 text-purple-600" />
+              <h3 className="text-lg font-medium">Personel</h3>
+            </div>
+          </Card>
+        </Link>
+
+        {/* Hizmetler */}
+        <Link to="/services">
+          <Card className="p-6 hover:shadow-md transition-shadow cursor-pointer">
+            <div className="flex flex-col items-center gap-4">
+              <Scissors className="h-8 w-8 text-purple-600" />
+              <h3 className="text-lg font-medium">Hizmetler</h3>
+            </div>
+          </Card>
+        </Link>
+      </div>
     </div>
   );
-};
+}

@@ -9,6 +9,8 @@ import CustomerProfile from "./pages/CustomerProfile";
 import Personnel from "./pages/Personnel";
 import StaffLogin from "./pages/StaffLogin";
 import CustomerDashboard from "./pages/CustomerDashboard";
+import Services from "./pages/Services";
+import Customers from "./pages/Customers";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +28,8 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/appointments" element={<Appointments />} />
           <Route path="/personnel" element={<Personnel />} />
+          <Route path="/services" element={<Services />} />
+          <Route path="/customers" element={<Customers />} />
           
           {/* Customer routes */}
           <Route path="/customer-profile" element={<CustomerProfile />} />

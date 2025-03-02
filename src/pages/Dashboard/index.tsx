@@ -1,37 +1,23 @@
 
-import { useState } from "react";
-import { TestDataButton } from "./components/TestDataButton";
+import { StaffLayout } from "@/components/ui/staff-layout";
 import { MainMenuOptions } from "./components/MainMenuOptions";
 import { CustomerMenu } from "./components/CustomerMenu";
 import { PersonnelMenu } from "./components/PersonnelMenu";
+import { TestDataButton } from "./components/TestDataButton";
 
-export default function Dashboard() {
-  const [selectedSection, setSelectedSection] = useState<'none' | 'customer' | 'personnel'>('none');
-
+export default function DashboardPage() {
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-6xl mx-auto space-y-8">
-        {/* Admin Test Button */}
-        <TestDataButton />
+    <StaffLayout>
+      <div className="space-y-8">
+        <MainMenuOptions />
         
-        {/* Menu Selection Logic */}
-        {selectedSection === 'none' && (
-          <MainMenuOptions 
-            onSelectCustomer={() => setSelectedSection('customer')}
-            onSelectPersonnel={() => setSelectedSection('personnel')}
-          />
-        )}
-
-        {/* Customer Menu */}
-        {selectedSection === 'customer' && (
-          <CustomerMenu onBackClick={() => setSelectedSection('none')} />
-        )}
-
-        {/* Personnel Menu */}
-        {selectedSection === 'personnel' && (
-          <PersonnelMenu onBackClick={() => setSelectedSection('none')} />
-        )}
+        <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
+          <CustomerMenu />
+          <PersonnelMenu />
+        </div>
+        
+        <TestDataButton />
       </div>
-    </div>
+    </StaffLayout>
   );
 }
