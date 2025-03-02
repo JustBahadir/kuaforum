@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Lock, User } from "lucide-react";
-import { supabase, supabaseAdmin } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -47,7 +47,6 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       
       if (error) {
         console.error("Login error:", error);
-        setLoginError(`Giriş hatası: ${error.message}`);
         throw error;
       }
       
@@ -60,7 +59,6 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       
       if (profileError) {
         console.error("Error checking user role:", profileError);
-        setLoginError("Kullanıcı bilgileri alınamadı");
         throw new Error("Kullanıcı bilgileri alınamadı");
       }
       
@@ -95,6 +93,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
           const lastName = user.user_metadata?.last_name || '';
           const fullName = `${firstName} ${lastName}`;
           const phone = user.user_metadata?.phone || '';
+          const userEmail = user.email || '';
           
           const { error: insertError } = await supabase
             .from('personel')
@@ -102,7 +101,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
               auth_id: user.id,
               ad_soyad: fullName,
               telefon: phone,
-              eposta: email,
+              eposta: userEmail,
               adres: '',
               personel_no: `S${Math.floor(Math.random() * 9000) + 1000}`,
               maas: 0,
@@ -164,7 +163,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
     }
   };
 
-  // Development/Test login - bypasses authentication for testing
+  // Simple test login - doesn't use supabaseAdmin, just logs in with regular permissions
   const handleTestLogin = async () => {
     setLoading(true);
     setLoginError(null);
@@ -173,30 +172,35 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       const testEmail = "ergun@gmail.com";
       const testPassword = "password123";
       
-      // First try normal login
+      // First try a regular login
       const { data, error } = await supabase.auth.signInWithPassword({
         email: testEmail,
         password: testPassword
       });
       
       if (error) {
-        console.log("Normal login failed, attempting to create test user:", error);
+        console.log("Normal login failed, attempting to create test user via signup:", error);
         
-        // Try to create the user if it doesn't exist
-        const { data: signUpData, error: signUpError } = await supabaseAdmin.auth.admin.createUser({
+        // If login fails, try to sign up the test user
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email: testEmail,
           password: testPassword,
-          email_confirm: true,
-          user_metadata: {
-            first_name: "Ergun",
-            last_name: "Test",
-            role: "staff"
+          options: {
+            data: {
+              first_name: "Ergun",
+              last_name: "Test",
+              role: "staff"
+            }
           }
         });
         
         if (signUpError) {
-          console.error("Error creating test user:", signUpError);
+          console.error("Error signing up test user:", signUpError);
           throw new Error(`Test kullanıcısı oluşturulamadı: ${signUpError.message}`);
+        }
+        
+        if (!signUpData.user) {
+          throw new Error("Test kullanıcısı oluşturuldu ancak kullanıcı verisi alınamadı");
         }
         
         // Set user as staff in profiles table
@@ -206,7 +210,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
             id: signUpData.user.id,
             first_name: "Ergun",
             last_name: "Test",
-            role: "staff"
+            role: "staff" 
           });
         
         if (profileError) {
@@ -232,7 +236,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
           console.error("Error creating personnel record:", personnelError);
         }
         
-        // Try to sign in with the newly created user
+        // Now try to sign in with the newly created user
         const { error: loginError } = await supabase.auth.signInWithPassword({
           email: testEmail,
           password: testPassword
@@ -240,6 +244,49 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         
         if (loginError) {
           throw loginError;
+        }
+      } else {
+        // Login succeeded, check if user has staff role
+        if (data.user) {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', data.user.id)
+            .maybeSingle();
+            
+          if (profileData?.role !== 'staff') {
+            // Update profile to staff role
+            await supabase
+              .from('profiles')
+              .upsert({
+                id: data.user.id,
+                role: 'staff'
+              });
+          }
+          
+          // Check if personnel record exists
+          const { data: personnelData } = await supabase
+            .from('personel')
+            .select('id')
+            .eq('auth_id', data.user.id)
+            .maybeSingle();
+            
+          if (!personnelData) {
+            // Create personnel record
+            await supabase
+              .from('personel')
+              .insert({
+                auth_id: data.user.id,
+                ad_soyad: "Ergun Test",
+                telefon: "555-1234",
+                eposta: testEmail,
+                adres: "Test Adres",
+                personel_no: `S${Math.floor(Math.random() * 9000) + 1000}`,
+                maas: 5000,
+                calisma_sistemi: "aylik",
+                prim_yuzdesi: 10
+              });
+          }
         }
       }
       
