@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -305,6 +304,7 @@ export default function Services() {
                     onSiralamaChange={onSiralamaChange}
                     onRandevuAl={onRandevuAl}
                     formuSifirla={formuSifirla}
+                    dukkanId={dukkanId}
                   />
                 )}
               </CardContent>

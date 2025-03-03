@@ -120,4 +120,5 @@ export type CalismaSaati = {
   acilis: string;
   kapanis: string;
   kapali: boolean;
+  dukkan_id?: number; // Add dukkan_id to support shop-specific working hours
 }

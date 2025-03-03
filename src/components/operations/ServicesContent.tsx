@@ -37,6 +37,7 @@ interface ServicesContentProps {
   onSiralamaChange: (items: any[]) => void;
   onRandevuAl: (islemId: number) => void;
   formuSifirla: () => void;
+  dukkanId?: number | null;
 }
 
 export function ServicesContent({
@@ -66,6 +67,7 @@ export function ServicesContent({
   onSiralamaChange,
   onRandevuAl,
   formuSifirla,
+  dukkanId,
 }: ServicesContentProps) {
   return (
     <>
@@ -127,7 +129,7 @@ export function ServicesContent({
             <AccordionTrigger className="text-xl font-semibold">Çalışma Saatleri</AccordionTrigger>
             <AccordionContent>
               <div className="pt-4">
-                <WorkingHoursForm />
+                <WorkingHoursForm dukkanId={dukkanId} />
               </div>
             </AccordionContent>
           </AccordionItem>

@@ -46,9 +46,10 @@ const profileFormSchema = z.object({
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
 export default function StaffProfile() {
-  const { user, userName, refreshProfile } = useCustomerAuth();
+  const { userName, refreshProfile, isAuthenticated } = useCustomerAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -62,19 +63,33 @@ export default function StaffProfile() {
     },
   });
 
+  // Get current user id when component mounts
   useEffect(() => {
-    if (user?.id) {
-      loadUserProfile();
-    }
-  }, [user?.id]);
+    const getUserId = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          setUserId(user.id);
+          loadUserProfile(user.id);
+        }
+      } catch (error) {
+        console.error("User ID alınırken hata:", error);
+        toast.error("Kullanıcı bilgileri alınamadı");
+      }
+    };
 
-  const loadUserProfile = async () => {
+    if (isAuthenticated) {
+      getUserId();
+    }
+  }, [isAuthenticated]);
+
+  const loadUserProfile = async (id: string) => {
     try {
       setLoading(true);
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
-        .eq("id", user?.id)
+        .eq("id", id)
         .single();
 
       if (error) {
@@ -98,7 +113,7 @@ export default function StaffProfile() {
   };
 
   const onSubmit = async (data: ProfileFormValues) => {
-    if (!user?.id) return;
+    if (!userId) return;
 
     try {
       setSaving(true);
@@ -111,7 +126,7 @@ export default function StaffProfile() {
           gender: data.gender,
           birthdate: data.birthdate,
         })
-        .eq("id", user.id);
+        .eq("id", userId);
 
       if (error) {
         throw error;
