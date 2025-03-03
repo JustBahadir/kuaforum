@@ -28,6 +28,11 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
   const [resetEmail, setResetEmail] = useState("");
   const [resetLoading, setResetLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
+  
+  // For development - user cleanup
+  const [showCleanupDialog, setShowCleanupDialog] = useState(false);
+  const [emailToDelete, setEmailToDelete] = useState("");
+  const [cleanupLoading, setCleanupLoading] = useState(false);
 
   // Login function
   const handleLogin = async (e: React.FormEvent) => {
@@ -54,11 +59,8 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
     } catch (error: any) {
       console.error("Giriş hatası:", error);
       
-      if (error.message?.includes("Invalid login credentials")) {
-        setLoginError("Geçersiz e-posta veya şifre");
-      } else {
-        setLoginError("Giriş yapılamadı: " + error.message);
-      }
+      // Use the custom error message if available
+      setLoginError(error.message || "Giriş yapılamadı. Lütfen bilgilerinizi kontrol edin.");
     } finally {
       setLoading(false);
     }
@@ -81,6 +83,31 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       toast.error("Şifre sıfırlama işlemi başarısız: " + error.message);
     } finally {
       setResetLoading(false);
+    }
+  };
+  
+  // Delete user function (development only)
+  const handleDeleteUser = async () => {
+    if (!emailToDelete) {
+      toast.error("Lütfen silmek istediğiniz e-posta adresini girin");
+      return;
+    }
+    
+    setCleanupLoading(true);
+    
+    try {
+      const result = await authenticationService.deleteUserByEmail(emailToDelete);
+      if (result.success) {
+        toast.success(result.message);
+        setShowCleanupDialog(false);
+        setEmailToDelete("");
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error: any) {
+      toast.error("Kullanıcı silme işlemi başarısız: " + error.message);
+    } finally {
+      setCleanupLoading(false);
     }
   };
 
@@ -124,7 +151,16 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
           </div>
         </div>
         
-        <div className="flex justify-end items-center">
+        <div className="flex justify-between items-center">
+          <Button 
+            type="button" 
+            variant="link" 
+            className="text-xs text-purple-600"
+            onClick={() => setShowCleanupDialog(true)}
+          >
+            Hesap Temizle (DEV)
+          </Button>
+          
           <Button 
             type="button" 
             variant="link" 
@@ -180,6 +216,48 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
               disabled={resetLoading}
             >
               {resetLoading ? "Gönderiliyor..." : "Sıfırlama Bağlantısı Gönder"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* User Cleanup Dialog (Development Only) */}
+      <Dialog open={showCleanupDialog} onOpenChange={setShowCleanupDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Kullanıcı Temizle (Geliştirici Modu)</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Bu işlem, belirtilen e-posta adresine sahip kullanıcıyı tamamen silecektir. Bu işlem geri alınamaz!
+            </p>
+            <div className="space-y-2">
+              <Label htmlFor="delete-email">E-posta</Label>
+              <Input
+                id="delete-email"
+                type="email"
+                value={emailToDelete}
+                onChange={(e) => setEmailToDelete(e.target.value)}
+                placeholder="silinecek@email.com"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowCleanupDialog(false)}
+              disabled={cleanupLoading}
+            >
+              İptal
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleDeleteUser}
+              disabled={cleanupLoading}
+            >
+              {cleanupLoading ? "Siliniyor..." : "Kullanıcıyı Sil"}
             </Button>
           </DialogFooter>
         </DialogContent>

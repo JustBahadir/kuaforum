@@ -18,6 +18,9 @@ export const authenticationService = {
       
       if (error) {
         console.error("Giriş hatası:", error);
+        if (error.message.includes("Invalid login credentials")) {
+          throw new Error("Geçersiz e-posta veya şifre. Lütfen bilgilerinizi kontrol edin.");
+        }
         throw error;
       }
       
@@ -33,16 +36,8 @@ export const authenticationService = {
    */
   signUp: async (email: string, password: string, metadata: any) => {
     try {
-      // Check if user already exists
-      const { data: existingUser } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('email', email)
-        .single();
-
-      if (existingUser) {
-        return { user: null, error: { message: "Bu e-posta adresi zaten kayıtlı. Lütfen giriş yapın." } };
-      }
+      // We're no longer checking for existing users here as we'll handle this via 
+      // the Supabase Auth API response instead
 
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -54,6 +49,11 @@ export const authenticationService = {
       
       if (error) {
         console.error("Kayıt hatası:", error);
+        
+        if (error.message.includes("User already registered")) {
+          return { user: null, error: { message: "Bu e-posta adresi zaten kayıtlı. Lütfen giriş yapın veya farklı bir e-posta kullanın." } };
+        }
+        
         return { user: null, error };
       }
       
@@ -135,5 +135,59 @@ export const authenticationService = {
    */
   onAuthStateChange: (callback) => {
     return supabase.auth.onAuthStateChange(callback);
+  },
+  
+  /**
+   * Delete a user by email (Admin function)
+   * Only to be used for development and testing purposes
+   */
+  deleteUserByEmail: async (email: string) => {
+    try {
+      // First, get the user by email
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', email)
+        .single();
+        
+      if (error) {
+        if (error.message.includes('No rows found')) {
+          // Try to find user in auth.users instead (this requires admin privileges)
+          const { error: adminError } = await supabase.rpc('delete_user_by_email', { 
+            email_to_delete: email 
+          });
+          
+          if (adminError) {
+            console.error("Kullanıcı silinemedi:", adminError);
+            throw adminError;
+          }
+          
+          return { success: true, message: `${email} silindi.` };
+        }
+        
+        console.error("Kullanıcı aranırken hata:", error);
+        throw error;
+      }
+      
+      if (data) {
+        // User found, now delete from auth
+        const userId = data.id;
+        const { error: deleteError } = await supabase.rpc('delete_user', { 
+          user_id: userId 
+        });
+        
+        if (deleteError) {
+          console.error("Kullanıcı silinemedi:", deleteError);
+          throw deleteError;
+        }
+        
+        return { success: true, message: `${email} silindi.` };
+      }
+      
+      return { success: false, message: "Kullanıcı bulunamadı." };
+    } catch (error) {
+      console.error("Kullanıcı silme hatası:", error);
+      throw error;
+    }
   }
 };
