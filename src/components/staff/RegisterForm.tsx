@@ -9,6 +9,8 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { authService } from "@/lib/auth/authService";
 import { dukkanServisi } from "@/lib/supabase/services/dukkanServisi";
+import { AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   AlertDialog, 
   AlertDialogAction, 
@@ -55,11 +57,13 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
   const [verifiedShopName, setVerifiedShopName] = useState("");
   const [verifiedShopId, setVerifiedShopId] = useState<number | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [globalError, setGlobalError] = useState<string | null>(null);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState("");
   const [generatedShopCode, setGeneratedShopCode] = useState("");
 
   const validateForm = () => {
+    setGlobalError(null);
     try {
       staffSchema.parse({
         firstName,
@@ -134,6 +138,7 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
     }
     
     setLoading(true);
+    setGlobalError(null);
     
     try {
       console.log("Registering with:", email, "as", role);
@@ -220,19 +225,23 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
 
         if (personelError) {
           console.error("Error creating personnel record:", personelError);
-          // Continue anyway since user and profile were created
+          throw new Error("Personel kaydı oluşturulurken bir hata oluştu");
         }
+        
+        setRegisteredEmail(email);
+        setShowSuccessDialog(true);
+      } else {
+        throw new Error("Kullanıcı oluşturulamadı, lütfen daha sonra tekrar deneyin");
       }
-      
-      setRegisteredEmail(email);
-      setShowSuccessDialog(true);
       
     } catch (error: any) {
       console.error("Kayıt hatası:", error);
       
       if (error.message.includes("already registered")) {
+        setGlobalError("Bu e-posta adresi zaten kayıtlı.");
         toast.error("Bu e-posta adresi zaten kayıtlı.");
       } else {
+        setGlobalError(error.message || "Kayıt işlemi sırasında bir hata oluştu");
         toast.error("Kayıt yapılamadı: " + error.message);
       }
     } finally {
@@ -248,6 +257,13 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
   return (
     <>
       <form onSubmit={handleRegister} className="space-y-4">
+        {globalError && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{globalError}</AlertDescription>
+          </Alert>
+        )}
+        
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="firstName">Ad</Label>

@@ -15,6 +15,8 @@ import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { authService } from "@/lib/auth/authService";
 import { toast } from "sonner";
 import { dukkanServisi } from "@/lib/supabase/services/dukkanServisi";
+import { AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface PersonnelFormProps {
   onSubmit: (data: Omit<Personel, 'id' | 'created_at'>) => void;
@@ -39,6 +41,7 @@ export function PersonnelForm({ onSubmit, isLoading }: PersonnelFormProps) {
   const [dukkanKodu, setDukkanKodu] = useState("");
   const [dogrulamaYapiliyor, setDogrulamaYapiliyor] = useState(false);
   const [dogrulanmisDukkan, setDogrulanmisDukkan] = useState<{id: number, ad: string} | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
   
   // Update dukkan_id when it changes in auth context
   useEffect(() => {
@@ -58,6 +61,8 @@ export function PersonnelForm({ onSubmit, isLoading }: PersonnelFormProps) {
     }
     
     setDogrulamaYapiliyor(true);
+    setFormError(null);
+    
     try {
       const dukkan = await authService.verifyShopCode(dukkanKodu);
       
@@ -71,17 +76,76 @@ export function PersonnelForm({ onSubmit, isLoading }: PersonnelFormProps) {
       } else {
         setDogrulanmisDukkan(null);
         toast.error("Geçersiz dükkan kodu");
+        setFormError("Girdiğiniz dükkan kodu sistemde bulunamadı. Lütfen kodu kontrol edip tekrar deneyiniz.");
       }
     } catch (error) {
       console.error("Dükkan kodu doğrulama hatası:", error);
       toast.error("Dükkan kodu doğrulanırken bir hata oluştu");
+      setFormError("Dükkan kodu doğrulanırken bir hata oluştu. Lütfen daha sonra tekrar deneyiniz.");
     } finally {
       setDogrulamaYapiliyor(false);
     }
   };
 
+  const validateFormFields = () => {
+    // Reset form error
+    setFormError(null);
+    
+    // Admin form validation
+    if (userRole === 'admin') {
+      if (!dukkanId) {
+        setFormError("Personel eklemek için bir dükkana bağlı olmanız gerekmektedir.");
+        return false;
+      }
+      
+      if (!yeniPersonel.ad_soyad) {
+        setFormError("Ad Soyad alanı gereklidir.");
+        return false;
+      }
+      
+      if (!yeniPersonel.telefon) {
+        setFormError("Telefon alanı gereklidir.");
+        return false;
+      }
+      
+      if (!yeniPersonel.eposta) {
+        setFormError("E-posta alanı gereklidir.");
+        return false;
+      }
+    } 
+    // Staff form validation
+    else {
+      if (!dogrulanmisDukkan) {
+        setFormError("Lütfen önce dükkan kodunu doğrulayın.");
+        return false;
+      }
+      
+      if (!yeniPersonel.ad_soyad) {
+        setFormError("Ad Soyad alanı gereklidir.");
+        return false;
+      }
+      
+      if (!yeniPersonel.telefon) {
+        setFormError("Telefon alanı gereklidir.");
+        return false;
+      }
+      
+      if (!yeniPersonel.eposta) {
+        setFormError("E-posta alanı gereklidir.");
+        return false;
+      }
+    }
+    
+    return true;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate form fields
+    if (!validateFormFields()) {
+      return;
+    }
     
     // For admin adding staff to their own shop
     if (userRole === 'admin') {
@@ -92,7 +156,7 @@ export function PersonnelForm({ onSubmit, isLoading }: PersonnelFormProps) {
       };
       
       if (!personelData.dukkan_id) {
-        toast.error("Personel eklemek için bir dükkana bağlı olmanız gerekmektedir.");
+        setFormError("Personel eklemek için bir dükkana bağlı olmanız gerekmektedir.");
         return;
       }
       
@@ -102,7 +166,7 @@ export function PersonnelForm({ onSubmit, isLoading }: PersonnelFormProps) {
     
     // For staff joining via invitation
     if (!dogrulanmisDukkan) {
-      toast.error("Lütfen önce dükkan kodunu doğrulayın");
+      setFormError("Lütfen önce dükkan kodunu doğrulayın");
       return;
     }
     
@@ -120,6 +184,13 @@ export function PersonnelForm({ onSubmit, isLoading }: PersonnelFormProps) {
     // Admin adding personnel to their shop
     return (
       <form onSubmit={handleSubmit} className="space-y-4">
+        {formError && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{formError}</AlertDescription>
+          </Alert>
+        )}
+        
         <div className="space-y-2">
           <Label htmlFor="ad_soyad">Ad Soyad</Label>
           <Input
@@ -242,6 +313,13 @@ export function PersonnelForm({ onSubmit, isLoading }: PersonnelFormProps) {
     // Personnel joining via invitation
     return (
       <form onSubmit={handleSubmit} className="space-y-4">
+        {formError && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{formError}</AlertDescription>
+          </Alert>
+        )}
+        
         <div className="space-y-2 mb-6">
           <Label htmlFor="dukkan_kodu">Dükkan Kodu</Label>
           <div className="flex space-x-2">
@@ -256,7 +334,7 @@ export function PersonnelForm({ onSubmit, isLoading }: PersonnelFormProps) {
             <Button 
               type="button" 
               onClick={handleVerifyShopCode} 
-              disabled={dogrulamaYapiliyor || !!dogrulanmisDukkan}
+              disabled={dogrulamaYapiliyor || !!dogrulanmisDukkan || !dukkanKodu}
               variant="outline"
             >
               {dogrulamaYapiliyor ? "..." : "Doğrula"}
@@ -329,7 +407,11 @@ export function PersonnelForm({ onSubmit, isLoading }: PersonnelFormProps) {
                 required
               />
             </div>
-            <Button type="submit" disabled={isLoading} className="w-full">
+            <Button 
+              type="submit" 
+              disabled={isLoading} 
+              className="w-full"
+            >
               {isLoading ? "Kaydediliyor..." : "Personel Kaydı Oluştur"}
             </Button>
           </>
