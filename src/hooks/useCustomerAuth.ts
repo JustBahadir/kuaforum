@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/lib/supabase/client";
 import { profilServisi } from "@/lib/supabase/services/profilServisi";
+import { dukkanServisi } from "@/lib/supabase/services/dukkanServisi";
 import { getGenderTitle } from "@/lib/supabase/services/profileServices/profileTypes";
 import { toast } from "sonner";
 
@@ -11,6 +12,7 @@ export function useCustomerAuth() {
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [dukkanId, setDukkanId] = useState<number | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -25,6 +27,7 @@ export function useCustomerAuth() {
         setUserName("Değerli Müşterimiz");
         setUserRole(null);
         setIsAuthenticated(false);
+        setDukkanId(null);
         return;
       }
 
@@ -34,6 +37,18 @@ export function useCustomerAuth() {
       const role = await profilServisi.getUserRole();
       setUserRole(role);
       console.log("User role from refreshProfile:", role);
+      
+      // If admin, get shop ID
+      if (role === 'admin') {
+        try {
+          const dukkan = await dukkanServisi.kullanicininDukkani(user.id);
+          if (dukkan) {
+            setDukkanId(dukkan.id);
+          }
+        } catch (error) {
+          console.error("Dükkan bilgisi alınamadı:", error);
+        }
+      }
       
       // First try to get name from user metadata
       if (user.user_metadata && (user.user_metadata.first_name)) {
@@ -76,6 +91,7 @@ export function useCustomerAuth() {
       console.error("Error refreshing profile:", error);
       setUserName("Değerli Müşterimiz");
       setIsAuthenticated(false);
+      setDukkanId(null);
     }
   };
 
@@ -109,8 +125,20 @@ export function useCustomerAuth() {
         setUserRole(role);
         console.log("User role from loadUserData:", role);
         
+        // If admin, get shop ID
+        if (role === 'admin') {
+          try {
+            const dukkan = await dukkanServisi.kullanicininDukkani(user.id);
+            if (dukkan) {
+              setDukkanId(dukkan.id);
+            }
+          } catch (error) {
+            console.error("Dükkan bilgisi alınamadı:", error);
+          }
+        }
+        
         // If user is staff but trying to access customer routes or vice versa
-        if (role === 'staff' && location.pathname.includes('/customer')) {
+        if ((role === 'staff' || role === 'admin') && location.pathname.includes('/customer')) {
           navigate("/personnel");
         } else if (role === 'customer' && 
                   (location.pathname.includes('/personnel') || 
@@ -140,7 +168,7 @@ export function useCustomerAuth() {
           
           // Check role and redirect accordingly
           const role = await profilServisi.getUserRole();
-          if (role === 'staff' && location.pathname.includes('/staff-login')) {
+          if ((role === 'staff' || role === 'admin') && location.pathname.includes('/staff-login')) {
             navigate("/personnel");
           } else if (role === 'customer' && location.pathname.includes('/staff-login')) {
             // Staff login page but customer role - redirect to customer dashboard
@@ -151,6 +179,7 @@ export function useCustomerAuth() {
           setUserName("Değerli Müşterimiz");
           setUserRole(null);
           setIsAuthenticated(false);
+          setDukkanId(null);
           
           // If on a protected route, redirect to login
           if (location.pathname.includes('/personnel') || 
@@ -172,6 +201,7 @@ export function useCustomerAuth() {
       toast.success("Başarıyla çıkış yapıldı");
       setIsAuthenticated(false);
       setUserRole(null);
+      setDukkanId(null);
       
       // Always navigate to the home page
       navigate("/");
@@ -188,6 +218,7 @@ export function useCustomerAuth() {
     handleLogout, 
     refreshProfile, 
     userRole,
-    isAuthenticated
+    isAuthenticated,
+    dukkanId
   };
 }

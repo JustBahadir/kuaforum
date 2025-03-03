@@ -17,6 +17,17 @@ export type Kategori = {
   sira?: number;
 }
 
+export type Dukkan = {
+  id: number;
+  created_at?: string;
+  ad: string;
+  adres?: string;
+  telefon?: string;
+  sahibi_id: string;
+  logo_url?: string;
+  active: boolean;
+}
+
 export type Musteri = {
   id: string;
   first_name: string;
@@ -39,6 +50,8 @@ export type Personel = {
   calisma_sistemi: "haftalik" | "aylik";
   prim_yuzdesi: number;
   auth_id?: string;
+  dukkan_id?: number;
+  dukkan?: Dukkan;
 }
 
 export type PersonelIslemi = {
@@ -99,4 +112,6 @@ export type Randevu = {
   musteri?: Profile;
   personel?: Personel;
   islemler: number[];
+  dukkan_id?: number;
 }
+

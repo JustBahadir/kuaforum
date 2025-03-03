@@ -1,68 +1,84 @@
-
-import { LogOut, User } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/lib/supabase';
-import { useState, useEffect } from 'react';
-import { toast } from 'sonner';
+import { BellRing, LogOut, Settings, User as UserIcon, Store } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuGroup, 
+  DropdownMenuItem, 
+  DropdownMenuLabel, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useCustomerAuth } from "@/hooks/useCustomerAuth";
+import { Link } from "react-router-dom";
 
 export function UserMenu() {
-  const navigate = useNavigate();
-  const [userDetails, setUserDetails] = useState<any>(null);
-
-  useEffect(() => {
-    const loadUserDetails = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-        setUserDetails(data);
-      }
-    };
-    loadUserDetails();
-  }, []);
-
-  const handleLogout = async () => {
-    try {
-      await supabase.auth.signOut();
-      navigate('/auth');
-      toast.success('Oturum kapatıldı');
-    } catch (error) {
-      toast.error('Oturum kapatılırken bir hata oluştu');
-    }
-  };
-
-  if (!userDetails) return null;
-
+  const { userName, handleLogout, userRole } = useCustomerAuth();
+  
+  const initials = userName
+    .split(' ')
+    .map(name => name[0])
+    .join('')
+    .substring(0, 2)
+    .toUpperCase();
+  
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon">
-          <User className="h-5 w-5" />
+        <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+          <Avatar>
+            <AvatarFallback>{initials}</AvatarFallback>
+          </Avatar>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
+      <DropdownMenuContent className="w-56" align="end">
         <DropdownMenuLabel>
-          {userDetails.first_name} {userDetails.last_name}
-        </DropdownMenuLabel>
-        <DropdownMenuLabel className="text-sm text-muted-foreground">
-          {userDetails.role === 'staff' ? 'Personel' : 'Müşteri'}
+          <div className="flex flex-col space-y-1">
+            <p className="text-sm font-medium leading-none">{userName}</p>
+            <p className="text-xs leading-none text-muted-foreground">
+              {userRole === 'admin' ? 'Dükkan Sahibi' : userRole === 'staff' ? 'Personel' : 'Müşteri'}
+            </p>
+          </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleLogout}>
+        <DropdownMenuGroup>
+          {userRole === 'customer' && (
+            <DropdownMenuItem asChild>
+              <Link to="/customer-profile" className="flex cursor-pointer">
+                <UserIcon className="mr-2 h-4 w-4" />
+                Hesabım
+              </Link>
+            </DropdownMenuItem>
+          )}
+          
+          {userRole === 'admin' && (
+            <DropdownMenuItem asChild>
+              <Link to="/settings" className="flex cursor-pointer">
+                <Store className="mr-2 h-4 w-4" />
+                Dükkan Ayarları
+              </Link>
+            </DropdownMenuItem>
+          )}
+          
+          <DropdownMenuItem asChild>
+            <Link to="/settings" className="flex cursor-pointer">
+              <Settings className="mr-2 h-4 w-4" />
+              Ayarlar
+            </Link>
+          </DropdownMenuItem>
+          
+          <DropdownMenuItem asChild>
+            <Link to="/notifications" className="flex cursor-pointer">
+              <BellRing className="mr-2 h-4 w-4" />
+              Bildirimler
+            </Link>
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={handleLogout} className="text-red-600">
           <LogOut className="mr-2 h-4 w-4" />
-          Oturumu Kapat
+          Çıkış Yap
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

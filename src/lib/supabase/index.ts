@@ -14,3 +14,5 @@ export { personelIslemleriServisi } from './services/personelIslemleriServisi';
 export { profilServisi } from './services/profilServisi';
 export { bildirimServisi } from './services/bildirimServisi';
 export { randevuServisi } from './services/randevuServisi';
+export { dukkanServisi } from './services/dukkanServisi';
+

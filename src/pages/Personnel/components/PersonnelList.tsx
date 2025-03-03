@@ -1,190 +1,157 @@
-
-import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Personel, personelServisi } from "@/lib/supabase";
-import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import { personelServisi } from "@/lib/supabase";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Eye, Edit, Trash, Plus } from "lucide-react";
 import { PersonnelDialog } from "./PersonnelDialog";
 import { PersonnelEditDialog } from "./PersonnelEditDialog";
-import { supabase } from "@/lib/supabase";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { useCustomerAuth } from "@/hooks/useCustomerAuth";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 export function PersonnelList() {
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [personelDuzenle, setPersonelDuzenle] = useState<Personel | null>(null);
-  const queryClient = useQueryClient();
+  const { userRole } = useCustomerAuth();
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedPersonel, setSelectedPersonel] = useState<number | null>(null);
 
-  const { data: personeller = [], isLoading } = useQuery({
+  const { data: personeller = [], isLoading, error } = useQuery({
     queryKey: ['personel'],
     queryFn: () => personelServisi.hepsiniGetir()
   });
+  
+  const handleOpenEditDialog = (personelId: number) => {
+    setSelectedPersonel(personelId);
+    setEditDialogOpen(true);
+  };
 
-  // Effect to check for staff users that might not be in the personel table
-  useEffect(() => {
-    const syncStaffUsers = async () => {
-      try {
-        // Get all users with staff role from profiles
-        const { data: staffProfiles, error: profilesError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('role', 'staff');
-        
-        if (profilesError) {
-          console.error("Error fetching staff profiles:", profilesError);
-          return;
-        }
+  const handleCloseEditDialog = () => {
+    setSelectedPersonel(null);
+    setEditDialogOpen(false);
+  };
 
-        if (staffProfiles && staffProfiles.length > 0) {
-          // For each staff profile, check if they exist in personel table
-          for (const profile of staffProfiles) {
-            // Check if this profile's auth_id exists in any personel record
-            const { data: existingPersonel, error: checkError } = await supabase
-              .from('personel')
-              .select('*')
-              .eq('auth_id', profile.id);
+  if (error) {
+    return (
+      <Alert variant="destructive" className="mb-4">
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>
+          Personel verisi alınamadı: {(error as Error).message}
+        </AlertDescription>
+      </Alert>
+    );
+  }
 
-            if (checkError) {
-              console.error("Error checking personel table:", checkError);
-              continue;
-            }
-
-            // If staff user doesn't exist in personel table, create a record for them
-            if (!existingPersonel || existingPersonel.length === 0) {
-              const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
-              
-              if (!fullName) {
-                console.log("Skipping profile without name information", profile.id);
-                continue;
-              }
-
-              // Create personel record
-              const { error: insertError } = await supabase
-                .from('personel')
-                .insert([{
-                  auth_id: profile.id,
-                  ad_soyad: fullName,
-                  telefon: profile.phone || '',
-                  eposta: '', // Will be filled when we get user email
-                  adres: '',
-                  personel_no: `S${Math.floor(Math.random() * 9000) + 1000}`, // Generate a random staff number
-                  maas: 0,
-                  calisma_sistemi: 'aylik',
-                  prim_yuzdesi: 0
-                }]);
-
-              if (insertError) {
-                console.error("Error creating personel record:", insertError);
-              } else {
-                // Successfully added, refresh the list
-                queryClient.invalidateQueries({ queryKey: ['personel'] });
-              }
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Error syncing staff users:", error);
-      }
-    };
-
-    syncStaffUsers();
-  }, [queryClient]);
-
-  const { mutate: personelSil } = useMutation({
-    mutationFn: (id: number) => personelServisi.sil(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['personel'] });
-      toast.success("Personel başarıyla silindi.");
-    },
-  });
-
-  if (isLoading) {
-    return <div>Yükleniyor...</div>;
+  if (userRole !== 'admin') {
+    return (
+      <Alert variant="destructive" className="mb-4">
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>
+          Bu sayfaya erişim yetkiniz bulunmamaktadır. Yalnızca yöneticiler personel yönetimi yapabilir.
+        </AlertDescription>
+      </Alert>
+    );
   }
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Personel Yönetimi</h1>
-        <Button onClick={() => setIsDialogOpen(true)}>
-          <Plus className="mr-2" />
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle>Personel Listesi</CardTitle>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => setAddDialogOpen(true)}
+        >
+          <Plus className="h-4 w-4 mr-2" />
           Yeni Personel Ekle
         </Button>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {personeller.map((personel) => (
-          <div
-            key={personel.id}
-            className="p-4 border rounded-lg shadow-sm hover:shadow-md transition-shadow"
-          >
-            <div className="flex items-start justify-between">
-              <div>
-                <h3 className="font-medium">{personel.ad_soyad}</h3>
-                <p className="text-sm text-muted-foreground">
-                  Telefon: {personel.telefon} | E-posta: {personel.eposta}
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setPersonelDuzenle(personel)}
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="ghost" size="icon" className="text-destructive">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Personeli Sil</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Bu personeli silmek istediğinizden emin misiniz?
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>İptal</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => personelSil(personel.id)}
-                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      >
-                        Sil
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            </div>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="flex justify-center p-4">
+            <span className="loading loading-spinner"></span>
           </div>
-        ))}
-      </div>
-
-      <PersonnelDialog
-        open={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
-      />
-
-      {personelDuzenle && (
-        <PersonnelEditDialog
-          personel={personelDuzenle}
-          open={!!personelDuzenle}
-          onOpenChange={(open) => !open && setPersonelDuzenle(null)}
+        ) : personeller.length === 0 ? (
+          <div className="text-center p-4 text-muted-foreground">
+            Kayıtlı personel bulunmamaktadır.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {personeller.map((personel) => (
+              <Card key={personel.id} className="overflow-hidden">
+                <CardContent className="p-0">
+                  <div className="p-6">
+                    <div className="flex items-center gap-4">
+                      <Avatar>
+                        <AvatarFallback>
+                          {personel.ad_soyad.split(' ').map(name => name[0]).join('').substring(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <h3 className="text-lg font-medium">{personel.ad_soyad}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {personel.personel_no}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-4 space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Telefon:</span>
+                        <span>{personel.telefon}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">E-posta:</span>
+                        <span className="truncate max-w-[150px]">{personel.eposta}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Prim:</span>
+                        <span>%{personel.prim_yuzdesi}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Çalışma:</span>
+                        <span>{personel.calisma_sistemi === 'haftalik' ? 'Haftalık' : 'Aylık'}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex border-t divide-x">
+                    <Button variant="ghost" className="flex-1 rounded-none" title="Detaylar">
+                      <Eye className="h-4 w-4 mr-2" />
+                      <span className="sr-only sm:not-sr-only sm:text-xs">Detaylar</span>
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      className="flex-1 rounded-none" 
+                      title="Düzenle"
+                      onClick={() => handleOpenEditDialog(personel.id)}
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      <span className="sr-only sm:not-sr-only sm:text-xs">Düzenle</span>
+                    </Button>
+                    <Button variant="ghost" className="flex-1 rounded-none text-destructive" title="Sil">
+                      <Trash className="h-4 w-4 mr-2" />
+                      <span className="sr-only sm:not-sr-only sm:text-xs">Sil</span>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+        
+        <PersonnelDialog 
+          open={addDialogOpen} 
+          onOpenChange={setAddDialogOpen} 
         />
-      )}
-    </div>
+        
+        {selectedPersonel && (
+          <PersonnelEditDialog 
+            open={editDialogOpen} 
+            onOpenChange={handleCloseEditDialog}
+            personelId={selectedPersonel}
+          />
+        )}
+      </CardContent>
+    </Card>
   );
 }
