@@ -18,9 +18,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useEffect } from "react";
 
 interface RegisterFormProps {
   onSuccess: () => void;
+}
+
+// Turkey cities and districts data
+interface District {
+  name: string;
+  value: string;
+}
+
+interface City {
+  name: string;
+  value: string;
+  districts: District[];
 }
 
 const staffSchema = z.object({
@@ -48,10 +61,93 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
   const [shopName, setShopName] = useState("");
   const [shopAddress, setShopAddress] = useState("");
   const [shopPhone, setShopPhone] = useState("");
-  const [city, setCity] = useState("İstanbul");
+  const [city, setCity] = useState("");
   const [district, setDistrict] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [globalError, setGlobalError] = useState<string | null>(null);
+  const [cities, setCities] = useState<City[]>([]);
+  const [districts, setDistricts] = useState<District[]>([]);
+
+  // Fetch Turkey cities and districts
+  useEffect(() => {
+    const fetchCitiesData = async () => {
+      try {
+        // This is a placeholder URL - you should replace with a real API
+        const response = await fetch('https://raw.githubusercontent.com/volkansenturk/turkiye-iller-ilceler/master/data/il-ilce.json');
+        if (!response.ok) {
+          throw new Error('Failed to fetch cities data');
+        }
+        
+        const data = await response.json();
+        
+        // Transform the data into the format we need
+        const formattedCities = Object.keys(data).map(cityName => {
+          return {
+            name: cityName,
+            value: cityName.toLowerCase(),
+            districts: data[cityName].map((districtName: string) => ({
+              name: districtName,
+              value: districtName.toLowerCase()
+            }))
+          };
+        });
+        
+        setCities(formattedCities);
+      } catch (error) {
+        console.error('Error fetching cities data:', error);
+        // Fallback with some major cities
+        setCities([
+          {
+            name: "İstanbul",
+            value: "istanbul",
+            districts: [
+              { name: "Kadıköy", value: "kadikoy" },
+              { name: "Beşiktaş", value: "besiktas" },
+              { name: "Şişli", value: "sisli" },
+              { name: "Üsküdar", value: "uskudar" },
+              { name: "Maltepe", value: "maltepe" }
+            ]
+          },
+          {
+            name: "Ankara",
+            value: "ankara",
+            districts: [
+              { name: "Çankaya", value: "cankaya" },
+              { name: "Keçiören", value: "kecioren" },
+              { name: "Yenimahalle", value: "yenimahalle" }
+            ]
+          },
+          {
+            name: "İzmir",
+            value: "izmir",
+            districts: [
+              { name: "Konak", value: "konak" },
+              { name: "Karşıyaka", value: "karsiyaka" },
+              { name: "Bornova", value: "bornova" }
+            ]
+          }
+        ]);
+      }
+    };
+
+    fetchCitiesData();
+  }, []);
+
+  // Update districts when city is selected
+  useEffect(() => {
+    if (city) {
+      const cityData = cities.find(c => c.value === city);
+      if (cityData) {
+        setDistricts(cityData.districts);
+      } else {
+        setDistricts([]);
+      }
+      // Reset selected district when city changes
+      setDistrict("");
+    } else {
+      setDistricts([]);
+    }
+  }, [city, cities]);
 
   const validateForm = () => {
     setGlobalError(null);
@@ -95,7 +191,7 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
     setShopName("");
     setShopAddress("");
     setShopPhone("");
-    setCity("İstanbul");
+    setCity("");
     setDistrict("");
     setErrors({});
     setGlobalError(null);
@@ -108,9 +204,16 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
       return;
     }
 
-    if (role === "admin" && !shopName) {
-      setErrors({ shopName: "Dükkan adı gereklidir" });
-      return;
+    if (role === "admin") {
+      if (!shopName) {
+        setErrors({ shopName: "Dükkan adı gereklidir" });
+        return;
+      }
+      
+      if (!city) {
+        setErrors({ city: "İl seçimi gereklidir" });
+        return;
+      }
     }
     
     setLoading(true);
@@ -154,9 +257,11 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
       // Eğer admin ise ve dükkan adı belirtilmişse dükkan oluştur
       if (role === "admin" && shopName && user) {
         try {
+          const shopAddress = district ? `${district}, ${city}` : city;
+          
           const dukkan = await dukkanServisi.ekle({
             ad: shopName,
-            adres: shopAddress || `${district}, ${city}`,
+            adres: shopAddress || "",
             telefon: shopPhone || phone,
             sahibi_id: user.id,
             kod: shopCode || authService.generateShopCode(shopName),
@@ -171,7 +276,7 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
             personel_no: authService.generateShopCode(`${firstName}${lastName}`),
             telefon: phone,
             eposta: email,
-            adres: shopAddress || `${district}, ${city}`,
+            adres: shopAddress || "",
             maas: 0, // Dükkan sahibi için maaş 0 olarak ayarlanabilir
             calisma_sistemi: "haftalik",
             prim_yuzdesi: 100, // Dükkan sahibi kendi primini alır
@@ -321,43 +426,50 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
             )}
           </div>
           
-          <div className="space-y-2">
-            <Label htmlFor="shopAddress">Dükkan Adresi</Label>
-            <div className="relative">
-              <MapPin className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-              <Input
-                id="shopAddress"
-                type="text"
-                value={shopAddress}
-                onChange={(e) => setShopAddress(e.target.value)}
-                className="pl-10"
-                placeholder="Dükkanınızın adresini giriniz"
-              />
-            </div>
-          </div>
-          
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="city">İl</Label>
-              <Input
-                id="city"
-                type="text"
+              <Select
                 value={city}
-                onChange={(e) => setCity(e.target.value)}
-                placeholder="İl"
-                defaultValue="İstanbul"
-              />
+                onValueChange={setCity}
+              >
+                <SelectTrigger id="city">
+                  <SelectValue placeholder="İl seçin" />
+                </SelectTrigger>
+                <SelectContent>
+                  {cities.map((cityItem) => (
+                    <SelectItem key={cityItem.value} value={cityItem.value}>
+                      {cityItem.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.city && (
+                <p className="text-xs text-red-500">{errors.city}</p>
+              )}
             </div>
             
             <div className="space-y-2">
               <Label htmlFor="district">İlçe</Label>
-              <Input
-                id="district"
-                type="text"
+              <Select
                 value={district}
-                onChange={(e) => setDistrict(e.target.value)}
-                placeholder="İlçe"
-              />
+                onValueChange={setDistrict}
+                disabled={!city}
+              >
+                <SelectTrigger id="district">
+                  <SelectValue placeholder={city ? "İlçe seçin" : "Önce il seçin"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {districts.map((districtItem) => (
+                    <SelectItem key={districtItem.value} value={districtItem.value}>
+                      {districtItem.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.district && (
+                <p className="text-xs text-red-500">{errors.district}</p>
+              )}
             </div>
           </div>
           

@@ -70,7 +70,7 @@ export const getRedirectPath = (
 ): string => {
   if (!isAuthenticated) {
     // If not authenticated and trying to access a secured route, redirect to login
-    if (currentPath.includes('personnel') || currentPath.includes('dashboard')) {
+    if (currentPath.includes('personnel') || currentPath.includes('staff')) {
       return "/staff-login";
     } else if (currentPath.includes('customer')) {
       return "/login";

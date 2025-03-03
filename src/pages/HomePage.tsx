@@ -1,13 +1,12 @@
 
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useCustomerAuth } from '@/hooks/useCustomerAuth';
 import { 
   CalendarCheck, 
   Scissors, 
   Users, 
-  Home, 
   Search,
   Store,
   Clock,
@@ -21,13 +20,125 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import { toast } from "sonner";
+
+// Turkey cities and districts data
+interface District {
+  name: string;
+  value: string;
+}
+
+interface City {
+  name: string;
+  value: string;
+  districts: District[];
+}
 
 export default function HomePage() {
   const { isAuthenticated, userRole } = useCustomerAuth();
   const [selectedCity, setSelectedCity] = useState<string>("");
   const [selectedDistrict, setSelectedDistrict] = useState<string>("");
+  const [cities, setCities] = useState<City[]>([]);
+  const [districts, setDistricts] = useState<District[]>([]);
+  const navigate = useNavigate();
+  
+  // Fetch Turkey cities and districts
+  useEffect(() => {
+    const fetchCitiesData = async () => {
+      try {
+        // This is a placeholder URL - you should replace with a real API or source
+        const response = await fetch('https://raw.githubusercontent.com/volkansenturk/turkiye-iller-ilceler/master/data/il-ilce.json');
+        if (!response.ok) {
+          throw new Error('Failed to fetch cities data');
+        }
+        
+        const data = await response.json();
+        
+        // Transform the data into the format we need
+        const formattedCities = Object.keys(data).map(cityName => {
+          return {
+            name: cityName,
+            value: cityName.toLowerCase(),
+            districts: data[cityName].map((districtName: string) => ({
+              name: districtName,
+              value: districtName.toLowerCase()
+            }))
+          };
+        });
+        
+        setCities(formattedCities);
+      } catch (error) {
+        console.error('Error fetching cities data:', error);
+        // Fallback with some major cities
+        setCities([
+          {
+            name: "İstanbul",
+            value: "istanbul",
+            districts: [
+              { name: "Kadıköy", value: "kadikoy" },
+              { name: "Beşiktaş", value: "besiktas" },
+              { name: "Şişli", value: "sisli" },
+              { name: "Üsküdar", value: "uskudar" },
+              { name: "Maltepe", value: "maltepe" }
+            ]
+          },
+          {
+            name: "Ankara",
+            value: "ankara",
+            districts: [
+              { name: "Çankaya", value: "cankaya" },
+              { name: "Keçiören", value: "kecioren" },
+              { name: "Yenimahalle", value: "yenimahalle" }
+            ]
+          },
+          {
+            name: "İzmir",
+            value: "izmir",
+            districts: [
+              { name: "Konak", value: "konak" },
+              { name: "Karşıyaka", value: "karsiyaka" },
+              { name: "Bornova", value: "bornova" }
+            ]
+          },
+          {
+            name: "Bursa",
+            value: "bursa",
+            districts: [
+              { name: "Nilüfer", value: "nilufer" },
+              { name: "Osmangazi", value: "osmangazi" }
+            ]
+          },
+          {
+            name: "Antalya",
+            value: "antalya",
+            districts: [
+              { name: "Muratpaşa", value: "muratpasa" },
+              { name: "Konyaaltı", value: "konyaalti" }
+            ]
+          }
+        ]);
+      }
+    };
+
+    fetchCitiesData();
+  }, []);
+
+  // Update districts when city is selected
+  useEffect(() => {
+    if (selectedCity) {
+      const cityData = cities.find(city => city.value === selectedCity);
+      if (cityData) {
+        setDistricts(cityData.districts);
+      } else {
+        setDistricts([]);
+      }
+      // Reset selected district when city changes
+      setSelectedDistrict("");
+    } else {
+      setDistricts([]);
+    }
+  }, [selectedCity, cities]);
   
   const getRedirectPath = () => {
     if (!isAuthenticated) return "/login";
@@ -42,10 +153,15 @@ export default function HomePage() {
   };
 
   const handleSearch = () => {
+    if (!selectedCity) {
+      toast.error("Lütfen bir il seçin");
+      return;
+    }
+    
     console.log("Searching for salons in:", selectedCity, selectedDistrict);
     // In a real implementation, this would search for salons in the selected location
     // For now, we'll just redirect to the login page
-    window.location.href = "/login";
+    navigate("/login");
   };
   
   return (
@@ -95,27 +211,31 @@ export default function HomePage() {
                         <SelectValue placeholder="İl seçin" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="istanbul">İstanbul</SelectItem>
-                        <SelectItem value="ankara">Ankara</SelectItem>
-                        <SelectItem value="izmir">İzmir</SelectItem>
-                        <SelectItem value="bursa">Bursa</SelectItem>
-                        <SelectItem value="antalya">Antalya</SelectItem>
+                        {cities.map((city) => (
+                          <SelectItem key={city.value} value={city.value}>
+                            {city.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
                   
                   <div className="space-y-2">
                     <Label htmlFor="district">İlçe</Label>
-                    <Select onValueChange={setSelectedDistrict} value={selectedDistrict}>
+                    <Select 
+                      onValueChange={setSelectedDistrict} 
+                      value={selectedDistrict}
+                      disabled={!selectedCity}
+                    >
                       <SelectTrigger id="district">
-                        <SelectValue placeholder="İlçe seçin" />
+                        <SelectValue placeholder={selectedCity ? "İlçe seçin" : "Önce il seçin"} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="kadikoy">Kadıköy</SelectItem>
-                        <SelectItem value="besiktas">Beşiktaş</SelectItem>
-                        <SelectItem value="sisli">Şişli</SelectItem>
-                        <SelectItem value="uskudar">Üsküdar</SelectItem>
-                        <SelectItem value="maltepe">Maltepe</SelectItem>
+                        {districts.map((district) => (
+                          <SelectItem key={district.value} value={district.value}>
+                            {district.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
