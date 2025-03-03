@@ -6,8 +6,6 @@ import { Label } from "@/components/ui/label";
 import { Lock, User } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
-import { dukkanServisi } from "@/lib/supabase/services/dukkanServisi";
 import { 
   AlertDialog, 
   AlertDialogAction, 
@@ -31,9 +29,8 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
   const [resetEmail, setResetEmail] = useState("");
   const [resetEmailSending, setResetEmailSending] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
-  const navigate = useNavigate();
 
-  // Simplified login function - focus on reliability and error handling
+  // Standard login function
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
@@ -114,150 +111,24 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
     }
   };
 
-  // Test login function - completely rewritten to be simpler and more reliable
-  const handleTestLogin = async () => {
-    setLoading(true);
-    setLoginError(null);
-    
-    const TEST_EMAIL = "test@example.com";
-    const TEST_PASSWORD = "123456789";
-    
-    try {
-      // First, try to sign in
-      let { data, error } = await supabase.auth.signInWithPassword({
-        email: TEST_EMAIL,
-        password: TEST_PASSWORD
-      });
-      
-      // If login failed, try to create the test user
-      if (error) {
-        console.log("Test login failed, creating test user:", error.message);
-        
-        // Sign up with test email and password
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email: TEST_EMAIL,
-          password: TEST_PASSWORD,
-          options: {
-            data: {
-              first_name: "Test",
-              last_name: "User",
-              role: "admin"
-            }
-          }
-        });
-        
-        if (signUpError) {
-          if (signUpError.message.includes("already registered")) {
-            // If user is registered but password doesn't match, show error
-            setLoginError("Test hesabı mevcut ama şifre uyuşmuyor. Lütfen test kullanıcısı şifresi olarak '123456789' kullanın.");
-            toast.error("Test hesabı mevcut ama şifre uyuşmuyor. Şifre: 123456789");
-            setLoading(false);
-            return;
-          } else {
-            throw new Error(`Test kullanıcısı oluşturulamadı: ${signUpError.message}`);
-          }
-        }
-        
-        if (!signUpData.user) {
-          throw new Error("Test kullanıcısı oluşturuldu ancak kullanıcı verisi alınamadı");
-        }
-        
-        // Set user as admin in profiles table
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .upsert({
-            id: signUpData.user.id,
-            first_name: "Test",
-            last_name: "User",
-            role: "admin" 
-          });
-        
-        if (profileError) {
-          console.error("Error updating profile:", profileError);
-        }
-        
-        // Create a test shop for the user
-        const { data: shopData, error: shopError } = await supabase
-          .from('dukkanlar')
-          .insert({
-            ad: "Test Kuaför",
-            sahibi_id: signUpData.user.id,
-            kod: "test-kuafor-123"
-          })
-          .select()
-          .single();
-            
-        if (shopError) {
-          console.error("Error creating test shop:", shopError);
-        }
-        
-        // Try to sign in again with the newly created user
-        ({ data, error } = await supabase.auth.signInWithPassword({
-          email: TEST_EMAIL,
-          password: TEST_PASSWORD
-        }));
-        
-        if (error) {
-          throw new Error(`Test kullanıcı girişi başarısız: ${error.message}`);
-        }
-      }
-      
-      if (!data || !data.user) {
-        throw new Error("Giriş başarılı ama kullanıcı verisi alınamadı");
-      }
-      
-      toast.success("Test kullanıcısı ile giriş başarılı!");
-      onSuccess();
-      
-    } catch (error: any) {
-      console.error("Test login error:", error);
-      setLoginError(`Test girişi başarısız: ${error.message}`);
-      toast.error("Test girişi başarısız: " + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Direct login without password for development
-  const handleDevLogin = async () => {
+  // Function to delete an existing account (for testing purposes)
+  const handleDeleteAccount = async () => {
     if (!email) {
-      toast.error("Lütfen e-posta adresinizi girin");
+      toast.error("Lütfen silmek istediğiniz hesabın e-posta adresini girin");
       return;
     }
     
     setLoading(true);
-    setLoginError(null);
     
     try {
-      // Generate a magic link
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          shouldCreateUser: false,
-        }
-      });
-      
-      if (error) {
-        if (error.message.includes("Email not confirmed")) {
-          toast.error("Bu e-posta hesabı onaylanmamış. Lütfen e-postanızı kontrol edin.");
-          setLoginError("Bu e-posta hesabı onaylanmamış. Lütfen e-postanızı kontrol edin.");
-        } else if (error.message.includes("User not found")) {
-          toast.error("Bu e-posta ile kayıtlı kullanıcı bulunamadı.");
-          setLoginError("Bu e-posta ile kayıtlı kullanıcı bulunamadı. Lütfen kayıt olun.");
-        } else {
-          toast.error(`Giriş hatası: ${error.message}`);
-          setLoginError(`Giriş hatası: ${error.message}`);
-        }
-        setLoading(false);
-        return;
-      }
-      
-      toast.success("Giriş bağlantısı e-postanıza gönderildi. Lütfen e-postanızı kontrol edin.");
-      setLoginError(null);
+      // This operation requires admin rights and would typically be done
+      // through a server-side function in a production environment
+      toast.info("Bu işlem normal şartlarda yönetici panelinden yapılmalıdır.");
+      toast.error("Bu işlem API erişimi nedeniyle doğrudan uygulamadan yapılamaz.");
+      toast.info("Supabase panelinden kullanıcıyı silip yeniden kayıt olabilirsiniz.");
     } catch (error: any) {
-      console.error("Dev login error:", error);
-      setLoginError(`Giriş hatası: ${error.message}`);
-      toast.error("Giriş hatası: " + error.message);
+      console.error("Account deletion error:", error);
+      toast.error("Hesap silme hatası: " + error.message);
     } finally {
       setLoading(false);
     }
@@ -320,32 +191,20 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         >
           {loading ? "Giriş yapılıyor..." : "Giriş Yap"}
         </Button>
-
-        <div className="text-center mt-2">
-          <Button 
-            type="button" 
-            variant="link" 
-            onClick={handleDevLogin}
-            className="text-xs text-purple-600"
-            disabled={loading || !email}
-          >
-            Şifresiz Giriş (Geliştirici Modu)
-          </Button>
-        </div>
         
-        {/* Test login button for development only */}
         <div className="mt-4 pt-4 border-t border-gray-100 text-center">
           <Button 
             type="button" 
             variant="outline" 
-            onClick={handleTestLogin}
-            className="w-full text-purple-600 border-purple-200 hover:bg-purple-50"
-            disabled={loading}
+            onClick={handleDeleteAccount}
+            className="w-full text-red-600 border-red-200 hover:bg-red-50"
+            disabled={loading || !email}
           >
-            Test Girişi (Şifre: 123456789)
+            Bu Hesabı Sil
           </Button>
           <p className="text-xs text-gray-500 mt-2">
-            Bu buton sadece test amaçlıdır. Canlı ortamda kaldırılacaktır.
+            Bu buton hesabınızı silmenize yardımcı olur.
+            Dikkat: Bu işlem geri alınamaz!
           </p>
         </div>
       </form>

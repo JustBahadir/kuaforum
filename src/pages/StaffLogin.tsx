@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,27 +13,28 @@ export default function StaffLogin() {
   const [loading, setLoading] = useState(false);
 
   // Check for any pending password resets or email confirmations
-  useState(() => {
+  useEffect(() => {
     const checkHash = async () => {
-      const hash = window.location.hash;
-      if (hash && hash.includes("type=recovery")) {
-        // Handle password reset
-        const { data, error } = await supabase.auth.getSessionFromUrl();
-        if (error) {
-          toast.error("Şifre sıfırlama bağlantısı geçersiz: " + error.message);
-        } else if (data.session) {
-          toast.success("Şifre başarıyla değiştirildi");
-          navigate("/personnel");
+      try {
+        const hash = window.location.hash;
+        
+        // Handle password reset or email confirmation
+        if (hash && (hash.includes("type=recovery") || hash.includes("type=signup"))) {
+          const { data, error } = await supabase.auth.getSession();
+          
+          if (error) {
+            toast.error("Bağlantı geçersiz: " + error.message);
+          } else if (data.session) {
+            if (hash.includes("type=recovery")) {
+              toast.success("Şifre başarıyla değiştirildi");
+            } else {
+              toast.success("E-posta adresiniz doğrulandı");
+            }
+            navigate("/personnel");
+          }
         }
-      } else if (hash && hash.includes("type=signup")) {
-        // Handle email confirmation
-        const { data, error } = await supabase.auth.getSessionFromUrl();
-        if (error) {
-          toast.error("E-posta doğrulama bağlantısı geçersiz: " + error.message);
-        } else if (data.session) {
-          toast.success("E-posta adresiniz doğrulandı");
-          navigate("/personnel");
-        }
+      } catch (error) {
+        console.error("Hash check error:", error);
       }
     };
     
