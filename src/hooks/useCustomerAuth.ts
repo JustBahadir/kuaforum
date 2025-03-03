@@ -14,7 +14,8 @@ export function useCustomerAuth() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [dukkanId, setDukkanId] = useState<number | null>(null);
   const [dukkanAdi, setDukkanAdi] = useState<string | null>(null);
-  const [initialLoadDone, setInitialLoadDone] = useState(false); // Ekledik
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
+  const [authCheckInProgress, setAuthCheckInProgress] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -46,8 +47,6 @@ export function useCustomerAuth() {
           setDukkanAdi(userShop.ad);
         } else if (location.pathname.includes('/personnel')) {
           toast.error("Dükkan bilgileriniz bulunamadı. Lütfen yönetici ile iletişime geçin.");
-          navigate("/");
-          return;
         }
       } else if (role === 'staff') {
         const staffShop = await dukkanServisi.personelAuthIdDukkani(user.id);
@@ -56,8 +55,6 @@ export function useCustomerAuth() {
           setDukkanAdi(staffShop.ad);
         } else if (location.pathname.includes('/personnel')) {
           toast.error("Dükkan bilgileriniz bulunamadı. Lütfen yönetici ile iletişime geçin.");
-          navigate("/");
-          return;
         }
       }
       
@@ -74,83 +71,61 @@ export function useCustomerAuth() {
 
   // Ana useEffect hook'unu, sonsuz döngüyü önleyecek şekilde düzenliyoruz
   useEffect(() => {
-    async function loadUserData() {
+    // Eğer auth check zaten devam ediyorsa, çift kontrolü önle
+    if (authCheckInProgress) return;
+    
+    async function checkAuthStatus() {
       if (initialLoadDone) return; // Bir kez çalıştır, sonra çık
       
       try {
         setLoading(true);
+        setAuthCheckInProgress(true);
         
-        try {
-          const user = await authService.getCurrentUser();
+        const user = await authService.getCurrentUser();
+        console.log("Current user check result:", user ? "User found" : "No user");
+        
+        if (!user) {
+          setIsAuthenticated(false);
+          setUserRole(null);
           
-          if (!user) {
-            setIsAuthenticated(false);
-            
-            // Ana sayfada veya login sayfalarında ise yönlendirme yapma
-            if (location.pathname === "/" || 
-                location.pathname === "/login" || 
-                location.pathname === "/staff-login") {
-              // Yalnızca bu sayfaları yüklemeye devam et
-            } else if (shouldRedirect(false, null, location.pathname)) {
-              navigate("/");
-            }
-            
-            setInitialLoadDone(true);
-            setLoading(false);
-            return;
+          // Ana sayfada veya login sayfalarında ise yönlendirme yapma
+          if (location.pathname === "/" || 
+              location.pathname === "/login" || 
+              location.pathname === "/staff-login") {
+            console.log("On public page, not redirecting");
+          } else {
+            console.log("Not authenticated, redirecting to home");
+            navigate("/");
           }
-          
+        } else {
           setIsAuthenticated(true);
           
           const role = await profileService.getUserRole();
           setUserRole(role);
-          console.log("User role from loadUserData:", role);
-          
-          if (role === 'admin') {
-            const userShop = await dukkanServisi.kullanicininDukkani(user.id);
-            if (userShop) {
-              setDukkanId(userShop.id);
-              setDukkanAdi(userShop.ad);
-            } else if (location.pathname.includes('/personnel')) {
-              toast.error("Dükkan bilgileriniz bulunamadı. Lütfen yönetici ile iletişime geçin.");
-              navigate("/");
-              setInitialLoadDone(true);
-              setLoading(false);
-              return;
-            }
-          } else if (role === 'staff') {
-            const staffShop = await dukkanServisi.personelAuthIdDukkani(user.id);
-            if (staffShop) {
-              setDukkanId(staffShop.id);
-              setDukkanAdi(staffShop.ad);
-            } else if (location.pathname.includes('/personnel')) {
-              toast.error("Dükkan bilgileriniz bulunamadı. Lütfen yönetici ile iletişime geçin.");
-              navigate("/");
-              setInitialLoadDone(true);
-              setLoading(false);
-              return;
-            }
-          }
+          console.log("User role determined:", role);
           
           // Bu kontrolü bir kez yapıyoruz, ama sonsuz döngü oluşmayacak şekilde
           if (shouldRedirect(true, role, location.pathname)) {
             const redirectPath = getRedirectPath(true, role, location.pathname);
+            console.log(`Redirecting from ${location.pathname} to ${redirectPath}`);
             navigate(redirectPath);
+          } else {
+            console.log("No redirection needed");
           }
           
           await refreshProfile();
-        } catch (error) {
-          console.error("Error in auth check:", error);
-          setIsAuthenticated(false);
-          navigate("/");
         }
+      } catch (error) {
+        console.error("Error in auth check:", error);
+        setIsAuthenticated(false);
       } finally {
         setInitialLoadDone(true);
+        setAuthCheckInProgress(false);
         setLoading(false);
       }
     }
     
-    loadUserData();
+    checkAuthStatus();
     
     // Auth state change listener'ı tek seferlik işlemden ayırıyoruz
     const { data } = authService.onAuthStateChange(
@@ -176,7 +151,10 @@ export function useCustomerAuth() {
           setDukkanId(null);
           setDukkanAdi(null);
           
-          navigate("/");
+          // Çıkış yapıldığında ana sayfaya yönlendir
+          if (location.pathname !== "/") {
+            navigate("/");
+          }
         }
       }
     );
@@ -184,7 +162,7 @@ export function useCustomerAuth() {
     return () => {
       data.subscription.unsubscribe();
     };
-  }, [navigate, location.pathname, initialLoadDone]); // initialLoadDone bağımlılığını ekledik
+  }, [navigate, location.pathname, initialLoadDone, authCheckInProgress]);
   
   const handleLogout = async () => {
     try {
@@ -196,6 +174,10 @@ export function useCustomerAuth() {
       setDukkanId(null);
       setDukkanAdi(null);
       
+      // Oturum kapatıldığında initialLoadDone değerini sıfırla
+      // böylece yeniden giriş yapıldığında kontroller tekrar yapılır
+      setInitialLoadDone(false);
+      
       navigate("/");
       console.log("Ana sayfaya yönlendirildi");
     } catch (error) {
@@ -203,11 +185,34 @@ export function useCustomerAuth() {
     }
   };
   
+  // Oturumu sıfırlama fonksiyonu ekleyelim
+  const resetSession = async () => {
+    try {
+      await authService.signOut();
+      localStorage.clear(); // Tüm yerel depolamayı temizle
+      sessionStorage.clear(); // Tüm oturum depolamasını temizle
+      
+      // State'i sıfırla
+      setIsAuthenticated(false);
+      setUserRole(null);
+      setDukkanId(null);
+      setDukkanAdi(null);
+      setUserName("Değerli Müşterimiz");
+      setInitialLoadDone(false);
+      
+      // Sayfayı yenile - son çare olarak
+      window.location.href = '/';
+    } catch (error) {
+      console.error("Oturum sıfırlanırken hata:", error);
+    }
+  };
+  
   return { 
     userName, 
     loading, 
     activeTab, 
-    handleLogout, 
+    handleLogout,
+    resetSession, // Yeni fonksiyonu dışa aktarıyoruz
     refreshProfile, 
     userRole,
     isAuthenticated,

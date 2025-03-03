@@ -13,6 +13,7 @@ export const shouldRedirect = (
     pathname === "/login" || 
     pathname === "/staff-login"
   ) {
+    console.log("Public page access allowed");
     return false;
   }
 
@@ -22,9 +23,9 @@ export const shouldRedirect = (
     if (
       pathname !== "/" && 
       pathname !== "/login" && 
-      pathname !== "/staff-login" &&
-      !pathname.startsWith("/customer-dashboard")
+      pathname !== "/staff-login"
     ) {
+      console.log("Not authenticated, redirecting from:", pathname);
       return true;
     }
     return false;
@@ -34,6 +35,7 @@ export const shouldRedirect = (
   if ((userRole === 'staff' || userRole === 'admin') && 
       pathname.includes('/customer') && 
       !pathname.includes('/customers')) { // Önemli değişiklik: /customers yolunu koruyoruz
+    console.log("Staff/admin trying to access customer page:", pathname);
     return true;
   } 
   
@@ -43,9 +45,11 @@ export const shouldRedirect = (
        pathname.includes('/shop-statistics') ||
        pathname.includes('/services') ||
        pathname.includes('/appointments') && !pathname.includes('/customer-dashboard'))) {
+    console.log("Customer trying to access staff page:", pathname);
     return true;
   }
 
+  console.log("No redirect needed for:", pathname, "Role:", userRole);
   return false;
 };
 
