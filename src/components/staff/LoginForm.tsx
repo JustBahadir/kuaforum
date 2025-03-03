@@ -29,6 +29,8 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
   const [resetEmail, setResetEmail] = useState("");
   const [resetEmailSending, setResetEmailSending] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [showAuthResponse, setShowAuthResponse] = useState(false);
+  const [authResponseData, setAuthResponseData] = useState<any>(null);
 
   // Standard login function
   const handleLogin = async (e: React.FormEvent) => {
@@ -50,10 +52,13 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         password
       });
       
+      // Save response for debugging
+      setAuthResponseData({ data, error });
+      
       if (error) {
         console.error("Login error:", error);
         if (error.message.includes("Invalid login credentials")) {
-          setLoginError("Geçersiz e-posta veya şifre. Lütfen bilgilerinizi kontrol ediniz.");
+          setLoginError("Geçersiz e-posta veya şifre. Lütfen bilgilerinizi kontrol ediniz. Eğer şifrenizi hatırlamıyorsanız 'Şifremi Unuttum' butonunu kullanabilirsiniz.");
           toast.error("Geçersiz e-posta veya şifre");
         } else {
           setLoginError(`Giriş yapılamadı: ${error.message}`);
@@ -74,6 +79,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       console.error("Giriş hatası:", error);
       setLoginError(`Giriş yapılamadı: ${error.message}`);
       toast.error("Giriş yapılamadı: " + error.message);
+      setAuthResponseData({ error });
     } finally {
       setLoading(false);
     }
@@ -108,29 +114,6 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       toast.error("Şifre sıfırlama e-postası gönderilemedi: " + error.message);
     } finally {
       setResetEmailSending(false);
-    }
-  };
-
-  // Function to delete an existing account (for testing purposes)
-  const handleDeleteAccount = async () => {
-    if (!email) {
-      toast.error("Lütfen silmek istediğiniz hesabın e-posta adresini girin");
-      return;
-    }
-    
-    setLoading(true);
-    
-    try {
-      // This operation requires admin rights and would typically be done
-      // through a server-side function in a production environment
-      toast.info("Bu işlem normal şartlarda yönetici panelinden yapılmalıdır.");
-      toast.error("Bu işlem API erişimi nedeniyle doğrudan uygulamadan yapılamaz.");
-      toast.info("Supabase panelinden kullanıcıyı silip yeniden kayıt olabilirsiniz.");
-    } catch (error: any) {
-      console.error("Account deletion error:", error);
-      toast.error("Hesap silme hatası: " + error.message);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -170,6 +153,17 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         {loginError && (
           <div className="p-3 rounded-md bg-red-50 border border-red-200 text-red-700 text-sm">
             {loginError}
+            <div className="mt-2 flex justify-end">
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="sm" 
+                className="text-xs"
+                onClick={() => setShowAuthResponse(true)}
+              >
+                Detayları Göster
+              </Button>
+            </div>
           </div>
         )}
         
@@ -191,22 +185,6 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         >
           {loading ? "Giriş yapılıyor..." : "Giriş Yap"}
         </Button>
-        
-        <div className="mt-4 pt-4 border-t border-gray-100 text-center">
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={handleDeleteAccount}
-            className="w-full text-red-600 border-red-200 hover:bg-red-50"
-            disabled={loading || !email}
-          >
-            Bu Hesabı Sil
-          </Button>
-          <p className="text-xs text-gray-500 mt-2">
-            Bu buton hesabınızı silmenize yardımcı olur.
-            Dikkat: Bu işlem geri alınamaz!
-          </p>
-        </div>
       </form>
 
       <AlertDialog open={showForgotDialog} onOpenChange={setShowForgotDialog}>
@@ -238,6 +216,22 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
             >
               {resetEmailSending ? "Gönderiliyor..." : "Gönder"}
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+      <AlertDialog open={showAuthResponse} onOpenChange={setShowAuthResponse}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Auth Yanıt Detayları</AlertDialogTitle>
+            <AlertDialogDescription>
+              <div className="bg-gray-100 p-3 rounded text-xs font-mono overflow-auto max-h-64">
+                {JSON.stringify(authResponseData, null, 2)}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction>Kapat</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
