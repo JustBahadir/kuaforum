@@ -105,14 +105,20 @@ export function useCustomerAuth() {
           console.error("Auth error:", error);
           toast.error("Oturum bilgileriniz alınamadı");
           setIsAuthenticated(false);
+          setLoading(false);
           return;
         }
         
         if (!user) {
           setIsAuthenticated(false);
-          // Only navigate to login if we're on a protected route
-          if (location.pathname.includes('/personnel') || 
-              location.pathname.includes('/dashboard')) {
+          setLoading(false);
+          // Ana sayfaya ve login sayfalarına her zaman erişime izin ver
+          if (location.pathname !== "/" && 
+              location.pathname !== "/login" && 
+              location.pathname !== "/staff-login" &&
+              !location.pathname.startsWith("/customer-dashboard") &&
+              (location.pathname.includes('/personnel') || 
+               location.pathname.includes('/dashboard'))) {
             navigate("/staff-login");
           }
           return;
@@ -137,7 +143,7 @@ export function useCustomerAuth() {
           }
         }
         
-        // If user is staff but trying to access customer routes or vice versa
+        // Kullanıcı rolünü kontrol et, ancak ana sayfaya ve müşteri sayfalarına erişime izin ver
         if ((role === 'staff' || role === 'admin') && location.pathname.includes('/customer')) {
           navigate("/personnel");
         } else if (role === 'customer' && 
@@ -181,10 +187,11 @@ export function useCustomerAuth() {
           setIsAuthenticated(false);
           setDukkanId(null);
           
-          // If on a protected route, redirect to login
-          if (location.pathname.includes('/personnel') || 
-              location.pathname.includes('/dashboard')) {
-            navigate("/staff-login");
+          // Oturumu kapattıktan sonra ana sayfaya yönlendir
+          if (location.pathname !== "/" && 
+              location.pathname !== "/login" && 
+              location.pathname !== "/staff-login") {
+            navigate("/");
           }
         }
       }
