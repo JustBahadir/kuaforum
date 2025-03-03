@@ -1,9 +1,11 @@
 
 import React from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Users, Calendar, UserCog, Scissors, Home } from "lucide-react";
+import { Users, Calendar, UserCog, Scissors, Home, LogOut } from "lucide-react";
+import { authService } from "@/lib/auth/authService";
+import { toast } from "sonner";
 
 interface SidebarNavProps extends React.HTMLAttributes<HTMLDivElement> {
   items: {
@@ -15,6 +17,18 @@ interface SidebarNavProps extends React.HTMLAttributes<HTMLDivElement> {
 
 export function StaffLayoutSidebar({ className, items, ...props }: SidebarNavProps) {
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      await authService.signOut();
+      navigate('/');
+      toast.success("Başarıyla çıkış yapıldı");
+    } catch (error) {
+      console.error("Çıkış yapılırken hata:", error);
+      toast.error("Çıkış yapılırken bir hata oluştu");
+    }
+  };
 
   return (
     <div className="h-screen w-[250px] border-r bg-gray-50 flex flex-col">
@@ -43,7 +57,19 @@ export function StaffLayoutSidebar({ className, items, ...props }: SidebarNavPro
         </nav>
       </div>
       
-      <div className="mt-auto p-4 text-xs text-gray-500 border-t">
+      {/* Çıkış butonu */}
+      <div className="py-4 px-3 mt-auto">
+        <Button 
+          variant="ghost" 
+          className="w-full justify-start text-red-500 hover:bg-red-50 hover:text-red-700"
+          onClick={handleLogout}
+        >
+          <LogOut className="mr-2 h-5 w-5" />
+          Çıkış Yap
+        </Button>
+      </div>
+      
+      <div className="p-4 text-xs text-gray-500 border-t">
         v1.0.0
       </div>
     </div>

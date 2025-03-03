@@ -63,9 +63,9 @@ export function useCustomerAuth() {
           if (!user) {
             setIsAuthenticated(false);
             
-            // Check if current route should redirect
+            // Gerektiğinde ana sayfaya yönlendirme
             if (shouldRedirect(false, null, location.pathname)) {
-              navigate("/staff-login");
+              navigate("/");
             }
             return;
           }
@@ -91,6 +91,8 @@ export function useCustomerAuth() {
         } catch (error) {
           console.error("Error in auth check:", error);
           setIsAuthenticated(false);
+          // Herhangi bir hata durumunda en azından ana sayfaya yönlendir
+          navigate("/");
         }
       } finally {
         setLoading(false);
@@ -102,7 +104,9 @@ export function useCustomerAuth() {
     // Set up auth state change listener
     const subscription = authService.onAuthStateChange(
       async (event, session) => {
+        console.log("Auth state changed event:", event);
         if (event === 'SIGNED_IN') {
+          console.log("SIGNED_IN event detected");
           setIsAuthenticated(true);
           await refreshProfile();
           
@@ -116,17 +120,14 @@ export function useCustomerAuth() {
             toast.info("Müşteri hesabı ile giriş yaptınız. Personel girişi için personel hesabı kullanmalısınız.");
           }
         } else if (event === 'SIGNED_OUT') {
+          console.log("SIGNED_OUT event detected");
           setUserName("Değerli Müşterimiz");
           setUserRole(null);
           setIsAuthenticated(false);
           setDukkanId(null);
           
           // Oturumu kapattıktan sonra ana sayfaya yönlendir
-          if (location.pathname !== "/" && 
-              location.pathname !== "/login" && 
-              location.pathname !== "/staff-login") {
-            navigate("/");
-          }
+          navigate("/");
         }
       }
     );
@@ -138,13 +139,16 @@ export function useCustomerAuth() {
   
   const handleLogout = async () => {
     try {
+      console.log("Çıkış yapılıyor...");
       await authService.signOut();
+      console.log("Çıkış başarılı, state güncelleniyor...");
       setIsAuthenticated(false);
       setUserRole(null);
       setDukkanId(null);
       
       // Always navigate to the home page
       navigate("/");
+      console.log("Ana sayfaya yönlendirildi");
     } catch (error) {
       console.error("Çıkış yapılırken hata:", error);
     }

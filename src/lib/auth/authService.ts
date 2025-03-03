@@ -13,7 +13,7 @@ export const authService = {
     const { data, error } = await supabase.auth.getUser();
     if (error) {
       console.error("Auth error:", error);
-      throw error;
+      return null;
     }
     return data.user;
   },
@@ -23,8 +23,14 @@ export const authService = {
    */
   signOut: async () => {
     try {
-      await supabase.auth.signOut();
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error("Çıkış yapılırken hata:", error);
+        toast.error("Çıkış yapılırken bir hata oluştu");
+        throw error;
+      }
       toast.success("Başarıyla çıkış yapıldı");
+      console.log("Çıkış başarılı");
       return true;
     } catch (error) {
       console.error("Çıkış yapılırken hata:", error);
