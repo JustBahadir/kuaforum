@@ -7,6 +7,7 @@ import { Lock, User } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { dukkanServisi } from "@/lib/supabase/services/dukkanServisi";
 import { 
   AlertDialog, 
   AlertDialogAction, 
@@ -73,11 +74,32 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         throw new Error("Kullanıcı bilgileri alınamadı");
       }
       
-      // If user is not staff, sign out
-      if (profileData?.role !== 'staff') {
+      // If user is not staff or admin, sign out
+      if (profileData?.role !== 'staff' && profileData?.role !== 'admin') {
         await supabase.auth.signOut();
         setLoginError("Bu giriş sadece kuaför personeli içindir. Müşteri girişi için ana sayfayı kullanın.");
         throw new Error("Bu giriş sadece kuaför personeli içindir. Müşteri girişi için ana sayfayı kullanın.");
+      }
+      
+      // Verify if user has an associated shop
+      const shop = await dukkanServisi.personelAuthIdDukkani(data.user.id);
+      
+      if (!shop) {
+        console.error("No shop associated with user");
+        // If admin, they should have a shop
+        if (profileData?.role === 'admin') {
+          const ownerShop = await dukkanServisi.kullanicininDukkani(data.user.id);
+          if (!ownerShop) {
+            await supabase.auth.signOut();
+            setLoginError("Hesabınıza bağlı bir dükkan bulunamadı. Lütfen yönetici ile iletişime geçin.");
+            throw new Error("Hesabınıza bağlı bir dükkan bulunamadı");
+          }
+        } else {
+          // Staff should have a shop assigned
+          await supabase.auth.signOut();
+          setLoginError("Hesabınıza bağlı bir dükkan bulunamadı. Lütfen yönetici ile iletişime geçin.");
+          throw new Error("Hesabınıza bağlı bir dükkan bulunamadı");
+        }
       }
       
       // Check if personnel record exists
@@ -100,23 +122,30 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         const phone = data.user.user_metadata?.phone || '';
         const userEmail = data.user.email || '';
         
-        const { error: insertError } = await supabase
-          .from('personel')
-          .insert({
-            auth_id: data.user.id,
-            ad_soyad: fullName,
-            telefon: phone,
-            eposta: userEmail,
-            adres: '',
-            personel_no: `S${Math.floor(Math.random() * 9000) + 1000}`,
-            maas: 0,
-            calisma_sistemi: 'aylik',
-            prim_yuzdesi: 0
-          });
-          
-        if (insertError) {
-          console.error("Error creating personnel record:", insertError);
-          // Continue anyway, we'll let the user in
+        // Get shop ID
+        const userShop = await dukkanServisi.kullanicininDukkani(data.user.id);
+        const shopId = userShop?.id;
+        
+        if (shopId) {
+          const { error: insertError } = await supabase
+            .from('personel')
+            .insert({
+              auth_id: data.user.id,
+              ad_soyad: fullName,
+              telefon: phone,
+              eposta: userEmail,
+              adres: '',
+              personel_no: `S${Math.floor(Math.random() * 9000) + 1000}`,
+              maas: 0,
+              calisma_sistemi: 'aylik',
+              prim_yuzdesi: 0,
+              dukkan_id: shopId
+            });
+            
+          if (insertError) {
+            console.error("Error creating personnel record:", insertError);
+            // Continue anyway, we'll let the user in
+          }
         }
       }
       
@@ -231,6 +260,22 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
             // Continue anyway
           }
           
+          // Create a test shop for the user
+          const { data: shopData, error: shopError } = await supabase
+            .from('dukkanlar')
+            .insert({
+              ad: "Test Kuaför",
+              sahibi_id: signUpData.user.id,
+              kod: "test-kuafor-123"
+            })
+            .select()
+            .single();
+            
+          if (shopError) {
+            console.error("Error creating test shop:", shopError);
+            // Continue anyway
+          }
+          
           // Try to sign in again with the newly created user
           ({ data, error } = await supabase.auth.signInWithPassword({
             email: TEST_EMAIL,
@@ -239,6 +284,29 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
           
           if (error) {
             throw new Error(`Test kullanıcı girişi başarısız: ${error.message}`);
+          }
+          
+          if (shopData) {
+            // Create personnel record
+            const { error: personnelError } = await supabase
+              .from('personel')
+              .insert({
+                auth_id: signUpData.user.id,
+                ad_soyad: "Test User",
+                telefon: "555-1234",
+                eposta: TEST_EMAIL,
+                adres: "Test Adres",
+                personel_no: `S${Math.floor(Math.random() * 9000) + 1000}`,
+                maas: 5000,
+                calisma_sistemi: "aylik",
+                prim_yuzdesi: 10,
+                dukkan_id: shopData.id
+              });
+              
+            if (personnelError) {
+              console.error("Error creating personnel record:", personnelError);
+              // Continue anyway
+            }
           }
         } else {
           throw error;
@@ -249,47 +317,50 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         throw new Error("Giriş başarılı ama kullanıcı verisi alınamadı");
       }
       
-      // Ensure user has staff role
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', data.user.id)
-        .maybeSingle();
-      
-      // If not staff, update role to staff
-      if (!profileData || profileData.role !== 'staff') {
-        await supabase
-          .from('profiles')
-          .upsert({
-            id: data.user.id,
-            role: 'staff',
-            first_name: "Test",
-            last_name: "User"
-          });
-      }
-      
-      // Check if personnel record exists
-      const { data: personnelData } = await supabase
-        .from('personel')
-        .select('id')
-        .eq('auth_id', data.user.id)
-        .maybeSingle();
-      
-      // If personnel record doesn't exist, create one
-      if (!personnelData) {
-        await supabase
-          .from('personel')
-          .insert({
-            auth_id: data.user.id,
-            ad_soyad: "Test User",
-            telefon: "555-1234",
-            eposta: TEST_EMAIL,
-            adres: "Test Adres",
-            personel_no: `S${Math.floor(Math.random() * 9000) + 1000}`,
-            maas: 5000,
-            calisma_sistemi: "aylik",
-            prim_yuzdesi: 10
-          });
+      // Ensure user has shop association
+      const shop = await dukkanServisi.personelAuthIdDukkani(data.user.id);
+      if (!shop) {
+        // Try to get shop as owner
+        const ownerShop = await dukkanServisi.kullanicininDukkani(data.user.id);
+        
+        if (!ownerShop) {
+          // Create a test shop for the user
+          const { data: shopData, error: shopError } = await supabase
+            .from('dukkanlar')
+            .insert({
+              ad: "Test Kuaför",
+              sahibi_id: data.user.id,
+              kod: "test-kuafor-123"
+            })
+            .select()
+            .single();
+            
+          if (shopError) {
+            console.error("Error creating test shop:", shopError);
+            // Continue anyway
+          } else {
+            // Create personnel record
+            const { error: personnelError } = await supabase
+              .from('personel')
+              .insert({
+                auth_id: data.user.id,
+                ad_soyad: "Test User",
+                telefon: "555-1234",
+                eposta: TEST_EMAIL,
+                adres: "Test Adres",
+                personel_no: `S${Math.floor(Math.random() * 9000) + 1000}`,
+                maas: 5000,
+                calisma_sistemi: "aylik",
+                prim_yuzdesi: 10,
+                dukkan_id: shopData.id
+              });
+              
+            if (personnelError) {
+              console.error("Error creating personnel record:", personnelError);
+              // Continue anyway
+            }
+          }
+        }
       }
       
       toast.success("Test kullanıcısı ile giriş başarılı!");

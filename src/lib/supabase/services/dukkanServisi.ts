@@ -38,6 +38,24 @@ async function getir(id: number): Promise<Dukkan | null> {
 }
 
 /**
+ * Dükkanı kod ile getir
+ */
+async function getirByKod(kod: string): Promise<Dukkan | null> {
+  const { data, error } = await supabase
+    .from('dukkanlar')
+    .select('*')
+    .eq('kod', kod)
+    .single();
+
+  if (error && error.code !== 'PGRST116') { // PGRST116: No rows found
+    console.error("Dükkan kod ile getirme hatası:", error);
+    throw error;
+  }
+
+  return data || null;
+}
+
+/**
  * Kullanıcı ID'sine göre dükkanı getirir (dükkan sahibi)
  */
 async function kullanicininDukkani(userId: string): Promise<Dukkan | null> {
@@ -71,6 +89,28 @@ async function personelDukkani(personelId: number): Promise<Dukkan | null> {
   }
 
   if (!personel.dukkan_id) {
+    return null;
+  }
+
+  return await getir(personel.dukkan_id);
+}
+
+/**
+ * Personelin auth_id'sine göre dükkanı getirir
+ */
+async function personelAuthIdDukkani(authId: string): Promise<Dukkan | null> {
+  const { data: personel, error: personelError } = await supabase
+    .from('personel')
+    .select('dukkan_id')
+    .eq('auth_id', authId)
+    .single();
+
+  if (personelError) {
+    console.error("Personel dükkan ID getirme hatası:", personelError);
+    return null;
+  }
+
+  if (!personel?.dukkan_id) {
     return null;
   }
 
@@ -133,8 +173,10 @@ async function sil(id: number): Promise<void> {
 export const dukkanServisi = {
   hepsiniGetir,
   getir,
+  getirByKod,
   kullanicininDukkani,
   personelDukkani,
+  personelAuthIdDukkani,
   ekle,
   guncelle,
   sil

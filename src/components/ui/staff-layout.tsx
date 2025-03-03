@@ -3,9 +3,10 @@ import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Users, Calendar, UserCog, Scissors, Home, LogOut } from "lucide-react";
+import { Users, Calendar, UserCog, Scissors, Home, LogOut, Store } from "lucide-react";
 import { authService } from "@/lib/auth/authService";
 import { toast } from "sonner";
+import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 
 interface SidebarNavProps extends React.HTMLAttributes<HTMLDivElement> {
   items: {
@@ -18,6 +19,7 @@ interface SidebarNavProps extends React.HTMLAttributes<HTMLDivElement> {
 export function StaffLayoutSidebar({ className, items, ...props }: SidebarNavProps) {
   const location = useLocation();
   const navigate = useNavigate();
+  const { dukkanAdi } = useCustomerAuth();
 
   const handleLogout = async () => {
     try {
@@ -34,6 +36,12 @@ export function StaffLayoutSidebar({ className, items, ...props }: SidebarNavPro
     <div className="h-screen w-[250px] border-r bg-gray-50 flex flex-col">
       <div className="py-6 px-5 border-b">
         <h2 className="text-xl font-bold text-purple-800">Kuaför Pro</h2>
+        {dukkanAdi && (
+          <div className="flex items-center mt-2 text-sm text-gray-600">
+            <Store className="h-4 w-4 mr-1" />
+            <span className="truncate">{dukkanAdi}</span>
+          </div>
+        )}
       </div>
       
       <div className="py-4 px-3">

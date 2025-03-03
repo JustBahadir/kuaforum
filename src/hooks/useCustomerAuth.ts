@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { authService } from "@/lib/auth/authService";
 import { profileService } from "@/lib/auth/profileService";
+import { dukkanServisi } from "@/lib/supabase/services/dukkanServisi";
 import { shouldRedirect, getRedirectPath } from "@/lib/auth/routeProtection";
 import { toast } from "sonner";
 
@@ -12,6 +13,7 @@ export function useCustomerAuth() {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [dukkanId, setDukkanId] = useState<number | null>(null);
+  const [dukkanAdi, setDukkanAdi] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -27,6 +29,7 @@ export function useCustomerAuth() {
         setUserRole(null);
         setIsAuthenticated(false);
         setDukkanId(null);
+        setDukkanAdi(null);
         return;
       }
 
@@ -37,9 +40,22 @@ export function useCustomerAuth() {
       setUserRole(role);
       console.log("User role from refreshProfile:", role);
       
-      // Get shop ID if admin
-      const shopId = await profileService.getUserShopId(user.id, role || '');
-      setDukkanId(shopId);
+      // Get shop ID and name based on role
+      if (role === 'admin') {
+        // If admin, get the shop they own
+        const userShop = await dukkanServisi.kullanicininDukkani(user.id);
+        if (userShop) {
+          setDukkanId(userShop.id);
+          setDukkanAdi(userShop.ad);
+        }
+      } else if (role === 'staff') {
+        // If staff, get shop from personnel record
+        const staffShop = await dukkanServisi.personelAuthIdDukkani(user.id);
+        if (staffShop) {
+          setDukkanId(staffShop.id);
+          setDukkanAdi(staffShop.ad);
+        }
+      }
       
       // Get formatted user name
       const name = await profileService.getUserNameWithTitle();
@@ -49,6 +65,7 @@ export function useCustomerAuth() {
       setUserName("Değerli Müşterimiz");
       setIsAuthenticated(false);
       setDukkanId(null);
+      setDukkanAdi(null);
     }
   };
 
@@ -77,9 +94,32 @@ export function useCustomerAuth() {
           setUserRole(role);
           console.log("User role from loadUserData:", role);
           
-          // Get shop ID if admin
-          const shopId = await profileService.getUserShopId(user.id, role || '');
-          setDukkanId(shopId);
+          // Get shop info based on role
+          if (role === 'admin') {
+            // If admin, get the shop they own
+            const userShop = await dukkanServisi.kullanicininDukkani(user.id);
+            if (userShop) {
+              setDukkanId(userShop.id);
+              setDukkanAdi(userShop.ad);
+            } else if (location.pathname.includes('/personnel')) {
+              // Admin without shop shouldn't access personnel pages
+              toast.error("Dükkan bilgileriniz bulunamadı. Lütfen yönetici ile iletişime geçin.");
+              navigate("/");
+              return;
+            }
+          } else if (role === 'staff') {
+            // If staff, get shop from personnel record
+            const staffShop = await dukkanServisi.personelAuthIdDukkani(user.id);
+            if (staffShop) {
+              setDukkanId(staffShop.id);
+              setDukkanAdi(staffShop.ad);
+            } else if (location.pathname.includes('/personnel')) {
+              // Staff without shop shouldn't access personnel pages
+              toast.error("Dükkan bilgileriniz bulunamadı. Lütfen yönetici ile iletişime geçin.");
+              navigate("/");
+              return;
+            }
+          }
           
           // Check if current route needs redirect based on role
           if (shouldRedirect(true, role, location.pathname)) {
@@ -125,6 +165,7 @@ export function useCustomerAuth() {
           setUserRole(null);
           setIsAuthenticated(false);
           setDukkanId(null);
+          setDukkanAdi(null);
           
           // Oturumu kapattıktan sonra ana sayfaya yönlendir
           navigate("/");
@@ -145,6 +186,7 @@ export function useCustomerAuth() {
       setIsAuthenticated(false);
       setUserRole(null);
       setDukkanId(null);
+      setDukkanAdi(null);
       
       // Always navigate to the home page
       navigate("/");
@@ -162,6 +204,7 @@ export function useCustomerAuth() {
     refreshProfile, 
     userRole,
     isAuthenticated,
-    dukkanId
+    dukkanId,
+    dukkanAdi
   };
 }

@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Personel } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 
 interface PersonnelFormProps {
   onSubmit: (data: Omit<Personel, 'id' | 'created_at'>) => void;
@@ -18,6 +19,7 @@ interface PersonnelFormProps {
 }
 
 export function PersonnelForm({ onSubmit, isLoading }: PersonnelFormProps) {
+  const { dukkanId } = useCustomerAuth();
   const [yeniPersonel, setYeniPersonel] = useState<Omit<Personel, 'id' | 'created_at'>>({
     ad_soyad: "",
     telefon: "",
@@ -26,12 +28,28 @@ export function PersonnelForm({ onSubmit, isLoading }: PersonnelFormProps) {
     personel_no: "",
     maas: 0,
     calisma_sistemi: "aylik",
-    prim_yuzdesi: 0
+    prim_yuzdesi: 0,
+    dukkan_id: dukkanId || undefined
   });
+
+  // Update dukkan_id when it changes in auth context
+  useEffect(() => {
+    if (dukkanId) {
+      setYeniPersonel(prev => ({
+        ...prev,
+        dukkan_id: dukkanId
+      }));
+    }
+  }, [dukkanId]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(yeniPersonel);
+    // Ensure dukkan_id is set
+    const personelData = {
+      ...yeniPersonel,
+      dukkan_id: dukkanId || undefined
+    };
+    onSubmit(personelData);
   };
 
   return (
@@ -144,9 +162,14 @@ export function PersonnelForm({ onSubmit, isLoading }: PersonnelFormProps) {
           required
         />
       </div>
-      <Button type="submit" disabled={isLoading} className="w-full">
+      <Button type="submit" disabled={isLoading || !dukkanId} className="w-full">
         {isLoading ? "Ekleniyor..." : "Personel Ekle"}
       </Button>
+      {!dukkanId && (
+        <p className="text-xs text-red-500 text-center">
+          Personel eklemek için bir dükkana bağlı olmanız gerekmektedir.
+        </p>
+      )}
     </form>
   );
 }

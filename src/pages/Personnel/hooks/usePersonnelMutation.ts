@@ -5,6 +5,7 @@ import { Personel } from "@/lib/supabase";
 import { toast } from "@/components/ui/use-toast";
 import { profilServisi } from "@/lib/supabase/services/profilServisi";
 import { User } from "@supabase/supabase-js";
+import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 
 // Type definitions for clarity
 type PersonelData = Omit<Personel, 'id' | 'created_at'>;
@@ -143,7 +144,7 @@ async function updatePersonelWithAuthId(personelId: number, authId: string): Pro
 /**
  * Creates a new auth user for the personnel
  */
-async function createAuthUser(email: string, nameData: { firstName: string; lastName: string }): Promise<User | null> {
+async function createAuthUser(email: string, nameData: { firstName: string; lastName: string }, dukkanId: number | null): Promise<User | null> {
   try {
     console.log("Creating new auth user with email:", email);
     
@@ -154,7 +155,8 @@ async function createAuthUser(email: string, nameData: { firstName: string; last
       user_metadata: {
         first_name: nameData.firstName,
         last_name: nameData.lastName,
-        role: 'staff'
+        role: 'staff',
+        dukkan_id: dukkanId
       }
     });
 
@@ -198,7 +200,7 @@ async function connectPersonelToAuthUser(personelData: PersonelData, personelId:
     }
     
     // Create new auth user
-    const newUser = await createAuthUser(personelData.eposta, { firstName, lastName });
+    const newUser = await createAuthUser(personelData.eposta, { firstName, lastName }, personelData.dukkan_id || null);
     
     if (newUser) {
       // Update personnel record with auth_id
@@ -223,22 +225,33 @@ async function connectPersonelToAuthUser(personelData: PersonelData, personelId:
 
 export function usePersonnelMutation(onSuccess?: () => void) {
   const queryClient = useQueryClient();
+  const { dukkanId } = useCustomerAuth();
 
   return useMutation({
     mutationFn: async (personelData: PersonelData) => {
       console.log("Personnel mutation started with data:", personelData);
       
+      // Ensure personnel is associated with the current shop
+      const dataWithShop = {
+        ...personelData,
+        dukkan_id: dukkanId || personelData.dukkan_id
+      };
+      
+      if (!dataWithShop.dukkan_id) {
+        throw new Error("Personel kaydı için dükkan ID gereklidir.");
+      }
+      
       // Create personnel record
-      const personelRecord = await createPersonelRecord(personelData);
+      const personelRecord = await createPersonelRecord(dataWithShop);
 
       // If auth_id is already specified, just update that user's info
       if (personelData.auth_id) {
-        await updateExistingUser(personelData.auth_id, personelData);
+        await updateExistingUser(personelData.auth_id, dataWithShop);
         return personelRecord;
       }
 
       // Connect to auth user (find existing or create new)
-      await connectPersonelToAuthUser(personelData, personelRecord.id);
+      await connectPersonelToAuthUser(dataWithShop, personelRecord.id);
 
       return personelRecord;
     },
