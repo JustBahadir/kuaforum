@@ -153,7 +153,7 @@ export function PersonnelList() {
           <PersonnelEditDialog 
             open={editDialogOpen} 
             onOpenChange={handleCloseEditDialog}
-            personel={selectedPersonel}
+            personelId={selectedPersonel}
           />
         )}
       </CardContent>
