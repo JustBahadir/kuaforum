@@ -1,120 +1,36 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Lock, User } from "lucide-react";
-import { supabase } from "@/lib/supabase/client";
-import { toast } from "sonner";
-import { 
-  AlertDialog, 
-  AlertDialogAction, 
-  AlertDialogContent, 
-  AlertDialogDescription, 
-  AlertDialogFooter, 
-  AlertDialogHeader, 
-  AlertDialogTitle,
-  AlertDialogCancel  
-} from "@/components/ui/alert-dialog";
+import { useLoginForm } from "@/hooks/useLoginForm";
+import { ForgotPasswordDialog } from "./ForgotPasswordDialog";
+import { AuthResponseDialog } from "./AuthResponseDialog";
 
 interface LoginFormProps {
   onSuccess: () => void;
 }
 
 export function LoginForm({ onSuccess }: LoginFormProps) {
-  const [loading, setLoading] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const {
+    email,
+    setEmail,
+    password,
+    setPassword,
+    loading,
+    loginError,
+    authResponseData,
+    handleLogin,
+    handleSendResetEmail
+  } = useLoginForm({ onSuccess });
+
   const [showForgotDialog, setShowForgotDialog] = useState(false);
-  const [resetEmail, setResetEmail] = useState("");
-  const [resetEmailSending, setResetEmailSending] = useState(false);
-  const [loginError, setLoginError] = useState<string | null>(null);
   const [showAuthResponse, setShowAuthResponse] = useState(false);
-  const [authResponseData, setAuthResponseData] = useState<any>(null);
-
-  // Standard login function
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !password) {
-      toast.error("Lütfen e-posta ve şifre girin");
-      return;
-    }
-
-    setLoading(true);
-    setLoginError(null);
-    
-    try {
-      console.log("Attempting login with:", email);
-      
-      // Doğrudan Supabase auth ile oturum açma işlemini gerçekleştir
-      // Önceki profile kontrolünü kaldırdık, bu UUID hatası veriyordu
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-      
-      // Save response for debugging
-      setAuthResponseData({ data, error });
-      
-      if (error) {
-        console.error("Login error:", error);
-        if (error.message.includes("Invalid login credentials")) {
-          setLoginError("Geçersiz e-posta veya şifre. Lütfen bilgilerinizi kontrol ediniz. Eğer şifrenizi hatırlamıyorsanız 'Şifremi Unuttum' butonunu kullanabilirsiniz.");
-          toast.error("Geçersiz e-posta veya şifre");
-        } else {
-          setLoginError(`Giriş yapılamadı: ${error.message}`);
-          toast.error("Giriş yapılamadı: " + error.message);
-        }
-        setLoading(false);
-        return;
-      }
-
-      if (!data.user) {
-        throw new Error("Kullanıcı verisi alınamadı");
-      }
-      
-      toast.success("Giriş başarılı!");
-      onSuccess();
-      
-    } catch (error: any) {
-      console.error("Giriş hatası:", error);
-      setLoginError(`Giri�� yapılamadı: ${error.message}`);
-      toast.error("Giriş yapılamadı: " + error.message);
-      setAuthResponseData({ error });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Forgot password handler
   const handleForgotPassword = () => {
-    setResetEmail(email);
     setShowForgotDialog(true);
-  };
-
-  // Send password reset email
-  const handleSendResetEmail = async () => {
-    if (!resetEmail) {
-      toast.error("Lütfen e-posta adresinizi girin");
-      return;
-    }
-    
-    setResetEmailSending(true);
-    
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
-        redirectTo: `${window.location.origin}/staff-login`,
-      });
-      
-      if (error) throw error;
-      
-      toast.success("Şifre sıfırlama bağlantısı e-posta adresinize gönderildi");
-      setShowForgotDialog(false);
-    } catch (error: any) {
-      console.error("Password reset error:", error);
-      toast.error("Şifre sıfırlama e-postası gönderilemedi: " + error.message);
-    } finally {
-      setResetEmailSending(false);
-    }
   };
 
   return (
@@ -188,55 +104,19 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       </form>
 
       {/* Forgot Password Dialog */}
-      <AlertDialog open={showForgotDialog} onOpenChange={setShowForgotDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Şifre Sıfırlama</AlertDialogTitle>
-            <AlertDialogDescription>
-              <p className="mb-4">
-                Şifrenizi sıfırlamak için e-posta adresinizi girin. 
-                Şifre sıfırlama bağlantısı gönderilecektir.
-              </p>
-              <div className="space-y-2">
-                <Label htmlFor="reset-email">E-posta</Label>
-                <Input 
-                  id="reset-email" 
-                  type="email" 
-                  value={resetEmail}
-                  onChange={(e) => setResetEmail(e.target.value)}
-                  required
-                />
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>İptal</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleSendResetEmail}
-              disabled={resetEmailSending}
-            >
-              {resetEmailSending ? "Gönderiliyor..." : "Gönder"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ForgotPasswordDialog
+        open={showForgotDialog}
+        onOpenChange={setShowForgotDialog}
+        defaultEmail={email}
+        onSendReset={handleSendResetEmail}
+      />
       
       {/* Auth Response Details Dialog */}
-      <AlertDialog open={showAuthResponse} onOpenChange={setShowAuthResponse}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Auth Yanıt Detayları</AlertDialogTitle>
-            <AlertDialogDescription>
-              <div className="bg-gray-100 p-3 rounded text-xs font-mono overflow-auto max-h-64">
-                {JSON.stringify(authResponseData, null, 2)}
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction>Kapat</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <AuthResponseDialog
+        open={showAuthResponse}
+        onOpenChange={setShowAuthResponse}
+        responseData={authResponseData}
+      />
     </>
   );
 }
