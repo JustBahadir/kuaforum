@@ -14,6 +14,7 @@ export function useCustomerAuth() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [dukkanId, setDukkanId] = useState<number | null>(null);
   const [dukkanAdi, setDukkanAdi] = useState<string | null>(null);
+  const [initialLoadDone, setInitialLoadDone] = useState(false); // Ekledik
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -71,8 +72,11 @@ export function useCustomerAuth() {
     }
   };
 
+  // Ana useEffect hook'unu, sonsuz döngüyü önleyecek şekilde düzenliyoruz
   useEffect(() => {
     async function loadUserData() {
+      if (initialLoadDone) return; // Bir kez çalıştır, sonra çık
+      
       try {
         setLoading(true);
         
@@ -82,9 +86,17 @@ export function useCustomerAuth() {
           if (!user) {
             setIsAuthenticated(false);
             
-            if (shouldRedirect(false, null, location.pathname)) {
+            // Ana sayfada veya login sayfalarında ise yönlendirme yapma
+            if (location.pathname === "/" || 
+                location.pathname === "/login" || 
+                location.pathname === "/staff-login") {
+              // Yalnızca bu sayfaları yüklemeye devam et
+            } else if (shouldRedirect(false, null, location.pathname)) {
               navigate("/");
             }
+            
+            setInitialLoadDone(true);
+            setLoading(false);
             return;
           }
           
@@ -102,6 +114,8 @@ export function useCustomerAuth() {
             } else if (location.pathname.includes('/personnel')) {
               toast.error("Dükkan bilgileriniz bulunamadı. Lütfen yönetici ile iletişime geçin.");
               navigate("/");
+              setInitialLoadDone(true);
+              setLoading(false);
               return;
             }
           } else if (role === 'staff') {
@@ -112,12 +126,16 @@ export function useCustomerAuth() {
             } else if (location.pathname.includes('/personnel')) {
               toast.error("Dükkan bilgileriniz bulunamadı. Lütfen yönetici ile iletişime geçin.");
               navigate("/");
+              setInitialLoadDone(true);
+              setLoading(false);
               return;
             }
           }
           
+          // Bu kontrolü bir kez yapıyoruz, ama sonsuz döngü oluşmayacak şekilde
           if (shouldRedirect(true, role, location.pathname)) {
-            navigate(getRedirectPath(true, role, location.pathname));
+            const redirectPath = getRedirectPath(true, role, location.pathname);
+            navigate(redirectPath);
           }
           
           await refreshProfile();
@@ -127,12 +145,14 @@ export function useCustomerAuth() {
           navigate("/");
         }
       } finally {
+        setInitialLoadDone(true);
         setLoading(false);
       }
     }
     
     loadUserData();
     
+    // Auth state change listener'ı tek seferlik işlemden ayırıyoruz
     const { data } = authService.onAuthStateChange(
       async (event, session) => {
         console.log("Auth state changed event:", event);
@@ -164,7 +184,7 @@ export function useCustomerAuth() {
     return () => {
       data.subscription.unsubscribe();
     };
-  }, [navigate, location.pathname]);
+  }, [navigate, location.pathname, initialLoadDone]); // initialLoadDone bağımlılığını ekledik
   
   const handleLogout = async () => {
     try {

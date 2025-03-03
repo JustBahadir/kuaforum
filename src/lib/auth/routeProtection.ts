@@ -30,15 +30,19 @@ export const shouldRedirect = (
     return false;
   }
 
-  // Check user role for redirects
+  // Check user role for redirects - personel sayfasındaki yönlendirmeyi düzeltiyoruz
   if ((userRole === 'staff' || userRole === 'admin') && 
-      pathname.includes('/customer')) {
+      pathname.includes('/customer') && 
+      !pathname.includes('/customers')) { // Önemli değişiklik: /customers yolunu koruyoruz
     return true;
   } 
   
   if (userRole === 'customer' && 
       (pathname.includes('/personnel') || 
-       pathname.includes('/dashboard'))) {
+       pathname.includes('/dashboard') ||
+       pathname.includes('/shop-statistics') ||
+       pathname.includes('/services') ||
+       pathname.includes('/appointments') && !pathname.includes('/customer-dashboard'))) {
     return true;
   }
 
@@ -58,13 +62,17 @@ export const getRedirectPath = (
   }
   
   if ((userRole === 'staff' || userRole === 'admin') && 
-      currentPath.includes('/customer')) {
+      currentPath.includes('/customer') &&
+      !currentPath.includes('/customers')) { // Önemli değişiklik: /customers yolunu koruyoruz
     return "/personnel";
   }
   
   if (userRole === 'customer' && 
       (currentPath.includes('/personnel') || 
-       currentPath.includes('/dashboard'))) {
+       currentPath.includes('/dashboard') ||
+       currentPath.includes('/shop-statistics') ||
+       currentPath.includes('/services') ||
+       currentPath.includes('/appointments') && !currentPath.includes('/customer-dashboard'))) {
     return "/customer-dashboard";
   }
   
