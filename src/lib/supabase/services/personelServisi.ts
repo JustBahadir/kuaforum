@@ -16,6 +16,20 @@ export const personelServisi = {
     return data || [];
   },
 
+  async getirById(id: number) {
+    const { data, error } = await supabase
+      .from('personel')
+      .select(`
+        *,
+        dukkan:dukkanlar(*)
+      `)
+      .eq('id', id)
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
   async ekle(personel: Omit<Personel, 'id' | 'created_at' | 'dukkan'>) {
     const { data, error } = await supabase
       .from('personel')
