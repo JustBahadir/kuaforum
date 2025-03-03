@@ -41,20 +41,34 @@ export function useCustomerAuth() {
       console.log("User role from refreshProfile:", role);
       
       if (role === 'admin') {
-        const userShop = await dukkanServisi.kullanicininDukkani(user.id);
-        if (userShop) {
-          setDukkanId(userShop.id);
-          setDukkanAdi(userShop.ad);
-        } else if (location.pathname.includes('/personnel')) {
-          toast.error("Dükkan bilgileriniz bulunamadı. Lütfen yönetici ile iletişime geçin.");
+        try {
+          const userShop = await dukkanServisi.kullanicininDukkani(user.id);
+          if (userShop) {
+            setDukkanId(userShop.id);
+            setDukkanAdi(userShop.ad);
+          } else if (location.pathname.includes('/personnel') || location.pathname.includes('/appointments')) {
+            // Önce toast göster, sonra dükkan oluşturma sayfasına yönlendir
+            toast.error("Dükkan bilgileriniz bulunamadı. Lütfen dükkan bilgilerinizi oluşturun.");
+            
+            // Kısa bir gecikme ekleyelim ki toast görülebilsin
+            setTimeout(() => {
+              navigate("/create-shop");
+            }, 2000);
+          }
+        } catch (error) {
+          console.error("Dükkan bilgisi alınırken hata:", error);
         }
       } else if (role === 'staff') {
-        const staffShop = await dukkanServisi.personelAuthIdDukkani(user.id);
-        if (staffShop) {
-          setDukkanId(staffShop.id);
-          setDukkanAdi(staffShop.ad);
-        } else if (location.pathname.includes('/personnel')) {
-          toast.error("Dükkan bilgileriniz bulunamadı. Lütfen yönetici ile iletişime geçin.");
+        try {
+          const staffShop = await dukkanServisi.personelAuthIdDukkani(user.id);
+          if (staffShop) {
+            setDukkanId(staffShop.id);
+            setDukkanAdi(staffShop.ad);
+          } else if (location.pathname.includes('/personnel')) {
+            toast.error("Dükkan bilgileriniz bulunamadı. Lütfen yönetici ile iletişime geçin.");
+          }
+        } catch (error) {
+          console.error("Personel dükkan bilgisi alınırken hata:", error);
         }
       }
       
@@ -212,7 +226,7 @@ export function useCustomerAuth() {
     loading, 
     activeTab, 
     handleLogout,
-    resetSession, // Yeni fonksiyonu dışa aktarıyoruz
+    resetSession,
     refreshProfile, 
     userRole,
     isAuthenticated,

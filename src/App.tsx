@@ -15,6 +15,7 @@ import StaffProfile from "./pages/StaffProfile";
 import ShopStatistics from "./pages/ShopStatistics";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import HomePage from "./pages/HomePage";
+import CreateShop from "./pages/CreateShop";
 import { useEffect } from "react";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { shouldRedirect, getRedirectPath } from "@/lib/auth/routeProtection";
@@ -45,6 +46,7 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/staff-login" element={<StaffLogin />} />
+          <Route path="/create-shop" element={<CreateShop />} />
           
           {/* Customer Routes */}
           <Route path="/customer-dashboard" element={<CustomerDashboard />}>
