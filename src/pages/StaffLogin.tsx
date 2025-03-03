@@ -1,12 +1,44 @@
 
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { StaffCardHeader } from "@/components/staff/StaffCardHeader";
 import { LoginTabs } from "@/components/staff/LoginTabs";
+import { toast } from "sonner";
+import { supabase } from "@/lib/supabase/client";
 
 export default function StaffLogin() {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+
+  // Check for any pending password resets or email confirmations
+  useState(() => {
+    const checkHash = async () => {
+      const hash = window.location.hash;
+      if (hash && hash.includes("type=recovery")) {
+        // Handle password reset
+        const { data, error } = await supabase.auth.getSessionFromUrl();
+        if (error) {
+          toast.error("Şifre sıfırlama bağlantısı geçersiz: " + error.message);
+        } else if (data.session) {
+          toast.success("Şifre başarıyla değiştirildi");
+          navigate("/personnel");
+        }
+      } else if (hash && hash.includes("type=signup")) {
+        // Handle email confirmation
+        const { data, error } = await supabase.auth.getSessionFromUrl();
+        if (error) {
+          toast.error("E-posta doğrulama bağlantısı geçersiz: " + error.message);
+        } else if (data.session) {
+          toast.success("E-posta adresiniz doğrulandı");
+          navigate("/personnel");
+        }
+      }
+    };
+    
+    checkHash();
+  }, [navigate]);
 
   const handleLoginSuccess = () => {
     // Redirect to personnel page
