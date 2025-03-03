@@ -21,6 +21,24 @@ export const randevuServisi = {
     return data || [];
   },
 
+  async dukkanRandevulariniGetir(dukkanId: number) {
+    if (!dukkanId) return [];
+
+    const { data, error } = await supabase
+      .from('randevular')
+      .select(`
+        *,
+        musteri:profiles(*),
+        personel:personel(*)
+      `)
+      .eq('dukkan_id', dukkanId)
+      .order('tarih', { ascending: true })
+      .order('saat', { ascending: true });
+
+    if (error) throw error;
+    return data || [];
+  },
+
   async kendiRandevulariniGetir() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return [];

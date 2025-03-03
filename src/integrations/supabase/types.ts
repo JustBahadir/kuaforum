@@ -33,6 +33,42 @@ export type Database = {
         }
         Relationships: []
       }
+      dukkanlar: {
+        Row: {
+          active: boolean | null
+          ad: string
+          adres: string | null
+          created_at: string
+          id: number
+          kod: string
+          logo_url: string | null
+          sahibi_id: string
+          telefon: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          ad: string
+          adres?: string | null
+          created_at?: string
+          id?: number
+          kod: string
+          logo_url?: string | null
+          sahibi_id: string
+          telefon?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          ad?: string
+          adres?: string | null
+          created_at?: string
+          id?: number
+          kod?: string
+          logo_url?: string | null
+          sahibi_id?: string
+          telefon?: string | null
+        }
+        Relationships: []
+      }
       islem_kategorileri: {
         Row: {
           created_at: string
@@ -177,6 +213,7 @@ export type Database = {
           auth_id: string | null
           calisma_sistemi: string
           created_at: string
+          dukkan_id: number | null
           eposta: string
           id: number
           maas: number
@@ -190,6 +227,7 @@ export type Database = {
           auth_id?: string | null
           calisma_sistemi: string
           created_at?: string
+          dukkan_id?: number | null
           eposta: string
           id?: number
           maas: number
@@ -203,6 +241,7 @@ export type Database = {
           auth_id?: string | null
           calisma_sistemi?: string
           created_at?: string
+          dukkan_id?: number | null
           eposta?: string
           id?: number
           maas?: number
@@ -210,7 +249,15 @@ export type Database = {
           prim_yuzdesi?: number
           telefon?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "personel_dukkan_id_fkey"
+            columns: ["dukkan_id"]
+            isOneToOne: false
+            referencedRelation: "dukkanlar"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       personel_islemleri: {
         Row: {
@@ -311,6 +358,7 @@ export type Database = {
           created_at: string
           customer_accepted: boolean | null
           customer_id: string | null
+          dukkan_id: number | null
           durum: string
           id: number
           islemler: number[] | null
@@ -327,6 +375,7 @@ export type Database = {
           created_at?: string
           customer_accepted?: boolean | null
           customer_id?: string | null
+          dukkan_id?: number | null
           durum?: string
           id?: number
           islemler?: number[] | null
@@ -343,6 +392,7 @@ export type Database = {
           created_at?: string
           customer_accepted?: boolean | null
           customer_id?: string | null
+          dukkan_id?: number | null
           durum?: string
           id?: number
           islemler?: number[] | null
@@ -358,6 +408,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "randevular_dukkan_id_fkey"
+            columns: ["dukkan_id"]
+            isOneToOne: false
+            referencedRelation: "dukkanlar"
             referencedColumns: ["id"]
           },
           {
