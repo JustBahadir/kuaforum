@@ -4,33 +4,75 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Lock, User } from "lucide-react";
-import { useLoginForm } from "@/hooks/useLoginForm";
-import { ForgotPasswordDialog } from "./ForgotPasswordDialog";
-import { AuthResponseDialog } from "./AuthResponseDialog";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import { authService } from "@/lib/auth/authService";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 interface LoginFormProps {
   onSuccess: () => void;
 }
 
 export function LoginForm({ onSuccess }: LoginFormProps) {
-  const {
-    email,
-    setEmail,
-    password,
-    setPassword,
-    loading,
-    loginError,
-    authResponseData,
-    handleLogin,
-    handleSendResetEmail
-  } = useLoginForm({ onSuccess });
-
+  const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showForgotDialog, setShowForgotDialog] = useState(false);
-  const [showAuthResponse, setShowAuthResponse] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
 
-  // Forgot password handler
-  const handleForgotPassword = () => {
-    setShowForgotDialog(true);
+  // Login function
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) {
+      toast.error("Lütfen e-posta ve şifre girin");
+      return;
+    }
+
+    setLoading(true);
+    
+    try {
+      console.log("Giriş yapılıyor:", email);
+      await authService.signIn(email, password);
+      toast.success("Giriş başarılı!");
+      onSuccess();
+    } catch (error: any) {
+      console.error("Giriş hatası:", error);
+      
+      if (error.message?.includes("Invalid login credentials")) {
+        toast.error("Geçersiz e-posta veya şifre");
+      } else {
+        toast.error("Giriş yapılamadı: " + error.message);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Reset password function
+  const handleResetPassword = async () => {
+    if (!resetEmail) {
+      toast.error("Lütfen e-posta adresinizi girin");
+      return;
+    }
+    
+    setResetLoading(true);
+    
+    try {
+      await authService.resetPassword(resetEmail);
+      toast.success("Şifre sıfırlama bağlantısı e-posta adresinize gönderildi");
+      setShowForgotDialog(false);
+    } catch (error: any) {
+      toast.error("Şifre sıfırlama işlemi başarısız: " + error.message);
+    } finally {
+      setResetLoading(false);
+    }
   };
 
   return (
@@ -66,29 +108,12 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
           </div>
         </div>
         
-        {loginError && (
-          <div className="p-3 rounded-md bg-red-50 border border-red-200 text-red-700 text-sm">
-            {loginError}
-            <div className="mt-2 flex justify-end">
-              <Button 
-                type="button" 
-                variant="outline" 
-                size="sm" 
-                className="text-xs"
-                onClick={() => setShowAuthResponse(true)}
-              >
-                Detayları Göster
-              </Button>
-            </div>
-          </div>
-        )}
-        
         <div className="flex justify-end items-center">
           <Button 
             type="button" 
             variant="link" 
             className="text-xs text-purple-600"
-            onClick={handleForgotPassword}
+            onClick={() => setShowForgotDialog(true)}
           >
             Şifremi Unuttum
           </Button>
@@ -104,19 +129,45 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       </form>
 
       {/* Forgot Password Dialog */}
-      <ForgotPasswordDialog
-        open={showForgotDialog}
-        onOpenChange={setShowForgotDialog}
-        defaultEmail={email}
-        onSendReset={handleSendResetEmail}
-      />
-      
-      {/* Auth Response Details Dialog */}
-      <AuthResponseDialog
-        open={showAuthResponse}
-        onOpenChange={setShowAuthResponse}
-        responseData={authResponseData}
-      />
+      <Dialog open={showForgotDialog} onOpenChange={setShowForgotDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Şifremi Unuttum</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Şifrenizi sıfırlamak için e-posta adresinizi girin. Size bir sıfırlama bağlantısı göndereceğiz.
+            </p>
+            <div className="space-y-2">
+              <Label htmlFor="reset-email">E-posta</Label>
+              <Input
+                id="reset-email"
+                type="email"
+                value={resetEmail}
+                onChange={(e) => setResetEmail(e.target.value)}
+                placeholder="ornek@email.com"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowForgotDialog(false)}
+              disabled={resetLoading}
+            >
+              İptal
+            </Button>
+            <Button
+              type="button"
+              onClick={handleResetPassword}
+              disabled={resetLoading}
+            >
+              {resetLoading ? "Gönderiliyor..." : "Sıfırlama Bağlantısı Gönder"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

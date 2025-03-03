@@ -1,5 +1,4 @@
 
-import { userService } from './services/userService';
 import { authenticationService } from './services/authenticationService';
 import { shopService } from './services/shopService';
 
@@ -7,14 +6,13 @@ import { shopService } from './services/shopService';
  * Service to handle authentication-related operations
  */
 export const authService = {
-  // User operations
-  getCurrentUser: userService.getCurrentUser,
-  findUserByEmail: userService.findUserByEmail,
-  deleteUserByEmail: userService.deleteUserByEmail,
-  onAuthStateChange: userService.onAuthStateChange,
-  
   // Authentication operations
+  signIn: authenticationService.signIn,
+  signUp: authenticationService.signUp,
   signOut: authenticationService.signOut,
+  resetPassword: authenticationService.resetPassword,
+  getSession: authenticationService.getSession,
+  getCurrentUser: authenticationService.getCurrentUser,
   
   // Shop operations
   generateShopCode: shopService.generateShopCode,

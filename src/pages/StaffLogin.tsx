@@ -15,10 +15,7 @@ import { authService } from "@/lib/auth/authService";
 export default function StaffLogin() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [emailToDelete, setEmailToDelete] = useState("");
-  const [deleteStatus, setDeleteStatus] = useState("");
-
+  
   // Check for any pending password resets or email confirmations
   useEffect(() => {
     const checkHash = async () => {
@@ -46,47 +43,17 @@ export default function StaffLogin() {
     };
     
     checkHash();
-  }, [navigate]);
 
-  // Direct account deletion without email verification
-  const handleDeleteAccount = async () => {
-    if (!emailToDelete) {
-      toast.error("Lütfen silmek istediğiniz hesabın e-posta adresini girin");
-      return;
-    }
-
-    setLoading(true);
-    setDeleteStatus("İşlem başlatıldı...");
-
-    try {
-      console.log("Silme işlemi başlatıldı:", emailToDelete);
-      
-      // Önce kullanıcının var olduğunu kontrol et
-      const user = await authService.findUserByEmail(emailToDelete);
-      
-      if (!user) {
-        setDeleteStatus("Bu e-posta ile kayıtlı bir kullanıcı bulunamadı!");
-        toast.error("Bu e-posta ile kayıtlı bir kullanıcı bulunamadı!");
-        setLoading(false);
-        return;
+    // Check if user is already logged in
+    const checkAuth = async () => {
+      const session = await authService.getSession();
+      if (session) {
+        navigate("/personnel");
       }
-      
-      // Use the deleteUserByEmail function from authService
-      await authService.deleteUserByEmail(emailToDelete);
-      
-      setDeleteStatus("Hesap başarıyla silindi!");
-      toast.success("Hesap başarıyla silindi. Şimdi yeniden kayıt olabilirsiniz.");
-      setShowDeleteDialog(false);
-      setEmailToDelete("");
-      
-    } catch (error: any) {
-      console.error("Hesap silme hatası:", error);
-      setDeleteStatus(`Hata: ${error.message}`);
-      toast.error("Bir hata oluştu: " + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+
+    checkAuth();
+  }, [navigate]);
 
   const handleLoginSuccess = () => {
     // Redirect to personnel page
@@ -95,12 +62,6 @@ export default function StaffLogin() {
 
   const handleBackClick = () => {
     navigate("/");
-  };
-
-  const handleCancelDelete = () => {
-    setShowDeleteDialog(false);
-    setEmailToDelete("");
-    setDeleteStatus("");
   };
 
   return (
@@ -118,63 +79,9 @@ export default function StaffLogin() {
             >
               Ana Sayfaya Dön
             </Button>
-            
-            <div className="pt-4 border-t border-gray-200 mt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setShowDeleteDialog(true)}
-                className="text-red-600 border-red-200 hover:bg-red-50 text-xs"
-                size="sm"
-              >
-                Hesap Sıfırlama Ekranı
-              </Button>
-            </div>
           </div>
         </CardContent>
       </Card>
-
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              Hesap Silme
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              <p className="mb-4 text-red-600 font-semibold">
-                DİKKAT: Bu işlem geri alınamaz! Hesabınız kalıcı olarak silinecektir.
-              </p>
-              <div className="space-y-2 mb-4">
-                <Label htmlFor="delete-email">Silmek istediğiniz e-posta</Label>
-                <Input 
-                  id="delete-email" 
-                  type="email" 
-                  value={emailToDelete}
-                  onChange={(e) => setEmailToDelete(e.target.value)}
-                  placeholder="silinecek@email.com"
-                  required
-                />
-              </div>
-              
-              {deleteStatus && (
-                <div className={`p-2 rounded ${deleteStatus.includes("Hata") ? "bg-red-50 text-red-700" : "bg-blue-50 text-blue-700"}`}>
-                  {deleteStatus}
-                </div>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={handleCancelDelete}>İptal</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleDeleteAccount}
-              className="bg-red-600 hover:bg-red-700"
-              disabled={loading || !emailToDelete}
-            >
-              {loading ? "İşlem yapılıyor..." : "Hesabı Sil"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
