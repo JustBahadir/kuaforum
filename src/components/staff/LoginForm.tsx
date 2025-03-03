@@ -46,6 +46,17 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
     try {
       console.log("Attempting login with:", email);
       
+      // Check if user exists first
+      const { data: userData, error: userError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', email)
+        .maybeSingle();
+        
+      if (userError) {
+        console.log("User lookup error:", userError);
+      }
+      
       // Sign in with email and password
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -53,7 +64,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       });
       
       // Save response for debugging
-      setAuthResponseData({ data, error });
+      setAuthResponseData({ data, error, userLookup: { userData, userError } });
       
       if (error) {
         console.error("Login error:", error);

@@ -1,5 +1,5 @@
 
-import { supabase } from "@/lib/supabase/client";
+import { supabase, supabaseAdmin } from "@/lib/supabase/client";
 import { toast } from "sonner";
 
 /**
@@ -91,11 +91,12 @@ export const authService = {
       // Define proper type for user data
       interface User {
         id: string;
-        email?: string;
+        email: string;
         // Include other properties as needed
       }
       
-      const { data, error } = await supabase.auth.admin.listUsers();
+      // We need to use supabaseAdmin for this operation
+      const { data, error } = await supabaseAdmin.auth.admin.listUsers();
       
       if (error) {
         console.error("Error listing users:", error);
@@ -106,7 +107,7 @@ export const authService = {
       const users = data?.users as User[] || [];
       
       const user = users.find(user => 
-        user.email?.toLowerCase() === email.toLowerCase()
+        user.email && user.email.toLowerCase() === email.toLowerCase()
       );
       
       return user || null;
@@ -128,11 +129,31 @@ export const authService = {
         throw new Error("Bu e-posta adresiyle kayıtlı kullanıcı bulunamadı.");
       }
       
-      // Delete the user
-      const { error } = await supabase.auth.admin.deleteUser(user.id);
+      // Delete the user using supabaseAdmin
+      const { error } = await supabaseAdmin.auth.admin.deleteUser(user.id);
       
       if (error) {
+        console.error("User deletion error:", error);
         throw error;
+      }
+      
+      // Also clean up related records in the database
+      try {
+        // Remove from profiles table
+        await supabase.from('profiles').delete().eq('id', user.id);
+        
+        // Try to find and remove personnel records
+        const { data: personelData } = await supabase
+          .from('personel')
+          .select('id')
+          .eq('auth_id', user.id);
+          
+        if (personelData && personelData.length > 0) {
+          await supabase.from('personel').delete().eq('auth_id', user.id);
+        }
+      } catch (cleanupError) {
+        console.error("Related records cleanup error:", cleanupError);
+        // We don't throw here as the user is already deleted from auth
       }
       
       return true;
