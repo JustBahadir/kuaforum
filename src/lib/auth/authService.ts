@@ -2,6 +2,18 @@
 import { supabase, supabaseAdmin } from "@/lib/supabase/client";
 import { toast } from "sonner";
 
+// Supabase Admin API kullanıcı tipini tanımlayalım
+interface SupabaseAdminUser {
+  id: string;
+  email?: string;
+  phone?: string;
+  created_at?: string;
+  last_sign_in_at?: string;
+  app_metadata?: any;
+  user_metadata?: any;
+  identities?: any[];
+}
+
 /**
  * Service to handle authentication-related operations
  */
@@ -110,7 +122,7 @@ export const authService = {
       // E-posta ile eşleşen kullanıcıyı bul
       const user = authUsers.users.find(u => 
         u.email && u.email.toLowerCase() === email.toLowerCase()
-      );
+      ) as SupabaseAdminUser | undefined;
       
       if (user) {
         console.log("Kullanıcı bulundu:", user.id);
