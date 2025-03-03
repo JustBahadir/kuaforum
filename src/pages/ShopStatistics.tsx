@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,7 +15,9 @@ export default function ShopStatistics() {
   
   const { data: islemler = [], isLoading } = useQuery({
     queryKey: ['personel-islemleri'],
-    queryFn: personelIslemleriServisi.hepsiniGetir,
+    queryFn: async () => {
+      return await personelIslemleriServisi.hepsiniGetir();
+    },
     enabled: !!dukkanId
   });
 
