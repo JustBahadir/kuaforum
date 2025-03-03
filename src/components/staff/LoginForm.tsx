@@ -4,9 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Lock, User } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { authService } from "@/lib/auth/authService";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -26,12 +27,15 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
   const [showForgotDialog, setShowForgotDialog] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [resetLoading, setResetLoading] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
 
   // Login function
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoginError(null);
+    
     if (!email || !password) {
-      toast.error("Lütfen e-posta ve şifre girin");
+      setLoginError("Lütfen e-posta ve şifre girin");
       return;
     }
 
@@ -39,16 +43,21 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
     
     try {
       console.log("Giriş yapılıyor:", email);
-      await authService.signIn(email, password);
-      toast.success("Giriş başarılı!");
-      onSuccess();
+      const { user, session } = await authService.signIn(email, password);
+      
+      if (user && session) {
+        toast.success("Giriş başarılı!");
+        onSuccess();
+      } else {
+        setLoginError("Giriş yapılamadı. Lütfen bilgilerinizi kontrol edin.");
+      }
     } catch (error: any) {
       console.error("Giriş hatası:", error);
       
       if (error.message?.includes("Invalid login credentials")) {
-        toast.error("Geçersiz e-posta veya şifre");
+        setLoginError("Geçersiz e-posta veya şifre");
       } else {
-        toast.error("Giriş yapılamadı: " + error.message);
+        setLoginError("Giriş yapılamadı: " + error.message);
       }
     } finally {
       setLoading(false);
@@ -78,6 +87,13 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
   return (
     <>
       <form onSubmit={handleLogin} className="space-y-4">
+        {loginError && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{loginError}</AlertDescription>
+          </Alert>
+        )}
+
         <div className="space-y-2">
           <Label htmlFor="staff-email">E-posta</Label>
           <div className="relative">

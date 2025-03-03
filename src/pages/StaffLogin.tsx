@@ -12,10 +12,12 @@ import { authService } from "@/lib/auth/authService";
 export default function StaffLogin() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [processingAuth, setProcessingAuth] = useState(false);
   
   // Check for any pending password resets or email confirmations
   useEffect(() => {
     const checkHash = async () => {
+      setProcessingAuth(true);
       try {
         const hash = window.location.hash;
         
@@ -36,6 +38,8 @@ export default function StaffLogin() {
         }
       } catch (error) {
         console.error("Hash check error:", error);
+      } finally {
+        setProcessingAuth(false);
       }
     };
     
@@ -43,9 +47,16 @@ export default function StaffLogin() {
 
     // Check if user is already logged in
     const checkAuth = async () => {
-      const session = await authService.getSession();
-      if (session) {
-        navigate("/personnel");
+      setProcessingAuth(true);
+      try {
+        const session = await authService.getSession();
+        if (session) {
+          navigate("/personnel");
+        }
+      } catch (error) {
+        console.error("Auth check error:", error);
+      } finally {
+        setProcessingAuth(false);
       }
     };
 
@@ -60,6 +71,22 @@ export default function StaffLogin() {
   const handleBackClick = () => {
     navigate("/");
   };
+
+  if (processingAuth) {
+    return (
+      <div className="min-h-screen bg-gradient-to-r from-purple-50 to-pink-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md shadow-xl border-0">
+          <StaffCardHeader onBack={handleBackClick} />
+          <CardContent className="p-6 text-center">
+            <div className="flex flex-col items-center justify-center h-40">
+              <div className="w-12 h-12 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin mb-4"></div>
+              <p className="text-gray-600">Kimlik doğrulama işlemi sürüyor...</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-r from-purple-50 to-pink-50 flex items-center justify-center p-4">

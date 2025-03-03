@@ -71,6 +71,18 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
     }
   };
 
+  const clearForm = () => {
+    setFirstName("");
+    setLastName("");
+    setEmail("");
+    setPhone("");
+    setPassword("password123");
+    setRole("staff");
+    setShopName("");
+    setErrors({});
+    setGlobalError(null);
+  };
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -97,7 +109,7 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
       }
       
       // Register user with Supabase Auth
-      await authService.signUp(
+      const { user, error } = await authService.signUp(
         email,
         password,
         {
@@ -111,18 +123,26 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
         }
       );
       
+      if (error) {
+        if (error.message?.includes("already registered")) {
+          setGlobalError("Bu e-posta adresi zaten kayıtlı. Lütfen giriş yapın veya farklı bir e-posta adresi kullanın.");
+        } else {
+          setGlobalError(error.message || "Kayıt işlemi sırasında bir hata oluştu");
+        }
+        return;
+      }
+      
       toast.success("Kayıt başarılı! Şimdi giriş yapabilirsiniz.");
+      clearForm();
       onSuccess();
       
     } catch (error: any) {
       console.error("Kayıt hatası:", error);
       
-      if (error.message?.includes("already registered")) {
-        setGlobalError("Bu e-posta adresi zaten kayıtlı.");
-        toast.error("Bu e-posta adresi zaten kayıtlı.");
+      if (error.message?.includes("already registered") || error.message?.includes("User already registered")) {
+        setGlobalError("Bu e-posta adresi zaten kayıtlı. Lütfen giriş yapın veya farklı bir e-posta adresi kullanın.");
       } else {
         setGlobalError(error.message || "Kayıt işlemi sırasında bir hata oluştu");
-        toast.error("Kayıt yapılamadı: " + error.message);
       }
     } finally {
       setLoading(false);

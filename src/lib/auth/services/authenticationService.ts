@@ -18,11 +18,9 @@ export const authenticationService = {
       
       if (error) {
         console.error("Giriş hatası:", error);
-        toast.error("Giriş yapılamadı: " + error.message);
         throw error;
       }
       
-      toast.success("Başarıyla giriş yapıldı");
       return data;
     } catch (error) {
       console.error("Giriş yapılırken hata:", error);
@@ -45,15 +43,13 @@ export const authenticationService = {
       
       if (error) {
         console.error("Kayıt hatası:", error);
-        toast.error("Kayıt yapılamadı: " + error.message);
-        throw error;
+        return { user: null, error };
       }
       
-      toast.success("Kayıt başarılı! E-posta adresinize gönderilen linke tıklayarak hesabınızı doğrulayabilirsiniz.");
-      return data;
-    } catch (error) {
+      return { user: data.user, error: null };
+    } catch (error: any) {
       console.error("Kayıt yapılırken hata:", error);
-      throw error;
+      return { user: null, error };
     }
   },
 
@@ -89,11 +85,9 @@ export const authenticationService = {
       
       if (error) {
         console.error("Şifre sıfırlama hatası:", error);
-        toast.error("Şifre sıfırlama işlemi başarısız: " + error.message);
         throw error;
       }
       
-      toast.success("Şifre sıfırlama bağlantısı e-posta adresinize gönderildi");
       return true;
     } catch (error) {
       console.error("Şifre sıfırlarken hata:", error);
