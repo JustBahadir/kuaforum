@@ -1,3 +1,4 @@
+
 // Type definitions
 export type Islem = {
   id: number;
@@ -25,6 +26,7 @@ export type Dukkan = {
   sahibi_id: string;
   logo_url?: string;
   active: boolean;
+  kod?: string;
 }
 
 export type Musteri = {

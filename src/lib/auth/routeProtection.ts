@@ -69,27 +69,54 @@ export const getRedirectPath = (
   currentPath: string
 ): string => {
   if (!isAuthenticated) {
-    return "/staff-login";
+    // If not authenticated and trying to access a secured route, redirect to login
+    if (currentPath.includes('personnel') || currentPath.includes('dashboard')) {
+      return "/staff-login";
+    } else if (currentPath.includes('customer')) {
+      return "/login";
+    }
+    return "/";
   }
   
   // Admin için yönlendirme gerekmez
   if (userRole === 'admin') {
-    return "/personnel";
+    // Eğer anasayfada ise ve giriş yapmışsa, dashboard'a yönlendir
+    if (currentPath === "/") {
+      return "/personnel";
+    }
+    return currentPath;
   }
   
-  if (userRole === 'staff' && 
-      currentPath.includes('/customer') &&
-      !currentPath.includes('/customers')) {
-    return "/personnel";
+  if (userRole === 'staff') {
+    // Staff is trying to access customer pages
+    if (currentPath.includes('/customer/') && !currentPath.includes('/customers')) {
+      return "/personnel";
+    }
+    
+    // If staff is at the root, redirect to personnel page
+    if (currentPath === "/") {
+      return "/personnel";
+    }
+    
+    return currentPath;
   }
   
-  if (userRole === 'customer' && 
-      (currentPath.includes('/personnel') || 
-       currentPath.includes('/dashboard') ||
-       currentPath.includes('/shop-statistics') ||
-       currentPath.includes('/services') ||
-       currentPath.includes('/appointments') && !currentPath.includes('/customer-dashboard'))) {
-    return "/customer-dashboard";
+  if (userRole === 'customer') {
+    // Customer is trying to access staff pages
+    if (currentPath.includes('/personnel') || 
+        currentPath.includes('/dashboard') ||
+        currentPath.includes('/shop-statistics') ||
+        currentPath.includes('/services') ||
+        (currentPath.includes('/appointments') && !currentPath.includes('/customer-dashboard'))) {
+      return "/customer-dashboard";
+    }
+    
+    // If customer is at the root, redirect to customer dashboard
+    if (currentPath === "/") {
+      return "/customer-dashboard";
+    }
+    
+    return currentPath;
   }
   
   return "/";

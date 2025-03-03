@@ -1,5 +1,5 @@
+
 import { useState, useEffect } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ServicesContent } from "@/components/operations/ServicesContent";
 import { StaffLayout } from "@/components/ui/staff-layout";
@@ -9,11 +9,7 @@ import { islemServisi } from "@/lib/supabase/services/islemServisi";
 import { toast } from "@/components/ui/use-toast";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
-import { WorkingHoursForm } from "@/components/operations/WorkingHoursForm";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
+import { AlertCircle, Loader2 } from "lucide-react";
 
 export default function Services() {
   const { userRole, dukkanId } = useCustomerAuth();
@@ -124,6 +120,18 @@ export default function Services() {
       toast({ title: "Hata", description: "Sıralama güncellenirken bir hata oluştu", variant: "destructive" });
     }
   });
+  
+  const updateCategoryOrderMutation = useMutation({
+    mutationFn: kategoriServisi.siraGuncelle,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['kategoriler'] });
+      toast({ title: "Bilgi", description: "Kategori sıralaması güncellendi" });
+    },
+    onError: (error) => {
+      console.error("Kategori sıralaması güncellenirken hata:", error);
+      toast({ title: "Hata", description: "Kategori sıralaması güncellenirken bir hata oluştu", variant: "destructive" });
+    }
+  });
 
   // Event handlers
   const onServiceFormSubmit = (e: React.FormEvent) => {
@@ -229,6 +237,19 @@ export default function Services() {
     
     updateOrderMutation.mutate(items);
   };
+  
+  const onCategoryOrderChange = (items: any[]) => {
+    if (!isAdmin) {
+      toast({ 
+        title: "Yetki Hatası", 
+        description: "Bu işlemi gerçekleştirmek için yönetici yetkilerine sahip olmalısınız", 
+        variant: "destructive" 
+      });
+      return;
+    }
+    
+    updateCategoryOrderMutation.mutate(items);
+  };
 
   const onRandevuAl = (islemId: number) => {
     // Will be implemented when appointment functionality is ready
@@ -248,7 +269,8 @@ export default function Services() {
       <StaffLayout>
         <div className="container mx-auto py-6">
           <div className="flex justify-center items-center h-64">
-            <div className="w-12 h-12 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <span className="ml-2">Yükleniyor...</span>
           </div>
         </div>
       </StaffLayout>
@@ -258,79 +280,56 @@ export default function Services() {
   return (
     <StaffLayout>
       <div className="container mx-auto py-6">
-        <Tabs defaultValue="services" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="services">Hizmetler</TabsTrigger>
-            <TabsTrigger value="working-hours">Çalışma Saatleri</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="services">
-            <Card>
-              <CardHeader>
-                <CardTitle>Hizmetler</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {!kategoriler || kategoriler.length === 0 && isAdmin ? (
-                  <div className="text-center p-8">
-                    <h3 className="text-lg font-medium mb-2">Henüz kategori eklenmemiş</h3>
-                    <p className="text-gray-500 mb-4">Hizmet eklemek için önce kategori oluşturmalısınız.</p>
-                    <Button onClick={() => setKategoriDialogAcik(true)}>Kategori Ekle</Button>
-                  </div>
-                ) : (
-                  <ServicesContent 
-                    isStaff={isStaff}
-                    kategoriler={kategoriler}
-                    islemler={islemler}
-                    dialogAcik={dialogAcik}
-                    setDialogAcik={setDialogAcik}
-                    kategoriDialogAcik={kategoriDialogAcik}
-                    setKategoriDialogAcik={setKategoriDialogAcik}
-                    yeniKategoriAdi={yeniKategoriAdi}
-                    setYeniKategoriAdi={setYeniKategoriAdi}
-                    islemAdi={islemAdi}
-                    setIslemAdi={setIslemAdi}
-                    fiyat={fiyat}
-                    setFiyat={setFiyat}
-                    puan={puan}
-                    setPuan={setPuan}
-                    kategoriId={kategoriId}
-                    setKategoriId={setKategoriId}
-                    duzenleId={duzenleId}
-                    onServiceFormSubmit={onServiceFormSubmit}
-                    onCategoryFormSubmit={onCategoryFormSubmit}
-                    onServiceEdit={onServiceEdit}
-                    onServiceDelete={onServiceDelete}
-                    onCategoryDelete={onCategoryDelete}
-                    onSiralamaChange={onSiralamaChange}
-                    onRandevuAl={onRandevuAl}
-                    formuSifirla={formuSifirla}
-                    dukkanId={dukkanId}
-                  />
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="working-hours">
-            <Card>
-              <CardHeader>
-                <CardTitle>Çalışma Saatleri</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {!isAdmin ? (
-                  <Alert variant="destructive" className="mb-4">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      Çalışma saatleri yönetimi için yönetici yetkilerine sahip olmalısınız.
-                    </AlertDescription>
-                  </Alert>
-                ) : (
-                  <WorkingHoursForm dukkanId={dukkanId} />
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+        <Card>
+          <CardHeader>
+            <CardTitle>Hizmetler</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {!kategoriler || kategoriler.length === 0 && isAdmin ? (
+              <div className="text-center p-8">
+                <h3 className="text-lg font-medium mb-2">Henüz kategori eklenmemiş</h3>
+                <p className="text-gray-500 mb-4">Hizmet eklemek için önce kategori oluşturmalısınız.</p>
+                <button 
+                  onClick={() => setKategoriDialogAcik(true)}
+                  className="bg-primary text-primary-foreground px-4 py-2 rounded hover:bg-primary/90"
+                >
+                  Kategori Ekle
+                </button>
+              </div>
+            ) : (
+              <ServicesContent 
+                isStaff={isStaff}
+                kategoriler={kategoriler}
+                islemler={islemler}
+                dialogAcik={dialogAcik}
+                setDialogAcik={setDialogAcik}
+                kategoriDialogAcik={kategoriDialogAcik}
+                setKategoriDialogAcik={setKategoriDialogAcik}
+                yeniKategoriAdi={yeniKategoriAdi}
+                setYeniKategoriAdi={setYeniKategoriAdi}
+                islemAdi={islemAdi}
+                setIslemAdi={setIslemAdi}
+                fiyat={fiyat}
+                setFiyat={setFiyat}
+                puan={puan}
+                setPuan={setPuan}
+                kategoriId={kategoriId}
+                setKategoriId={setKategoriId}
+                duzenleId={duzenleId}
+                onServiceFormSubmit={onServiceFormSubmit}
+                onCategoryFormSubmit={onCategoryFormSubmit}
+                onServiceEdit={onServiceEdit}
+                onServiceDelete={onServiceDelete}
+                onCategoryDelete={onCategoryDelete}
+                onSiralamaChange={onSiralamaChange}
+                onCategoryOrderChange={onCategoryOrderChange}
+                onRandevuAl={onRandevuAl}
+                formuSifirla={formuSifirla}
+                dukkanId={dukkanId}
+              />
+            )}
+          </CardContent>
+        </Card>
       </div>
     </StaffLayout>
   );

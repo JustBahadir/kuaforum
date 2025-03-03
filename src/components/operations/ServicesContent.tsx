@@ -1,14 +1,16 @@
-
 import { CategoryCard } from "./CategoryCard";
 import { ServiceForm } from "./ServiceForm";
 import { CategoryForm } from "./CategoryForm";
-import { WorkingHoursForm } from "./WorkingHoursForm";
 import { 
   Accordion, 
   AccordionContent, 
   AccordionItem, 
   AccordionTrigger 
 } from "@/components/ui/accordion";
+import { useState } from "react";
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
+import { SortableCategory } from "./SortableCategory";
 
 interface ServicesContentProps {
   isStaff: boolean;
@@ -35,6 +37,7 @@ interface ServicesContentProps {
   onServiceDelete: (islem: any) => void;
   onCategoryDelete: (kategoriId: number) => void;
   onSiralamaChange: (items: any[]) => void;
+  onCategoryOrderChange?: (items: any[]) => void;
   onRandevuAl: (islemId: number) => void;
   formuSifirla: () => void;
   dukkanId?: number | null;
@@ -65,10 +68,46 @@ export function ServicesContent({
   onServiceDelete,
   onCategoryDelete,
   onSiralamaChange,
+  onCategoryOrderChange,
   onRandevuAl,
   formuSifirla,
   dukkanId,
 }: ServicesContentProps) {
+  const [openCategories, setOpenCategories] = useState<string[]>([]);
+  
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+  
+  const handleCategoryToggle = (value: string) => {
+    setOpenCategories(prev => {
+      if (prev.includes(value)) {
+        return [];
+      }
+      return [value];
+    });
+  };
+  
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (over && active.id !== over.id) {
+      const oldIndex = kategoriler.findIndex(k => k.id === active.id);
+      const newIndex = kategoriler.findIndex(k => k.id === over.id);
+      
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const newKategoriler = arrayMove(kategoriler, oldIndex, newIndex);
+        
+        if (onCategoryOrderChange) {
+          onCategoryOrderChange(newKategoriler);
+        }
+      }
+    }
+  };
+
   return (
     <>
       {isStaff && (
@@ -102,39 +141,41 @@ export function ServicesContent({
         </div>
       )}
 
-      <Accordion type="multiple" defaultValue={["services", "workinghours"]} className="w-full space-y-6">
-        <AccordionItem value="services" className="border rounded-lg p-4">
-          <AccordionTrigger className="text-xl font-semibold">Hizmetler</AccordionTrigger>
-          <AccordionContent>
-            <div className="space-y-6 pt-4">
+      <div className="space-y-6 pt-4">
+        <DndContext 
+          sensors={sensors} 
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext 
+            items={kategoriler.map(k => k.id)} 
+            strategy={verticalListSortingStrategy}
+          >
+            <Accordion 
+              type="single" 
+              collapsible 
+              className="w-full space-y-4"
+              value={openCategories.length > 0 ? openCategories[0] : undefined}
+              onValueChange={handleCategoryToggle}
+            >
               {kategoriler.map((kategori) => (
-                <CategoryCard
+                <SortableCategory
                   key={kategori.id}
+                  id={kategori.id}
                   kategori={kategori}
                   islemler={islemler.filter((islem: any) => islem.kategori_id === kategori.id)}
                   isStaff={isStaff}
-                  onEdit={onServiceEdit}
-                  onDelete={onServiceDelete}
-                  onKategoriDelete={onCategoryDelete}
+                  onServiceEdit={onServiceEdit}
+                  onServiceDelete={onServiceDelete}
+                  onCategoryDelete={onCategoryDelete}
                   onSiralamaChange={onSiralamaChange}
                   onRandevuAl={onRandevuAl}
                 />
               ))}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-        
-        {isStaff && (
-          <AccordionItem value="workinghours" className="border rounded-lg p-4">
-            <AccordionTrigger className="text-xl font-semibold">Çalışma Saatleri</AccordionTrigger>
-            <AccordionContent>
-              <div className="pt-4">
-                <WorkingHoursForm dukkanId={dukkanId} />
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-        )}
-      </Accordion>
+            </Accordion>
+          </SortableContext>
+        </DndContext>
+      </div>
     </>
   );
 }
