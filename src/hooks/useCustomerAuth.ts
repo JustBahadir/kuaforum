@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { authService } from "@/lib/auth/authService";
@@ -132,7 +133,7 @@ export function useCustomerAuth() {
     
     loadUserData();
     
-    const { data: subscription } = authService.onAuthStateChange(
+    const { data } = authService.onAuthStateChange(
       async (event, session) => {
         console.log("Auth state changed event:", event);
         if (event === 'SIGNED_IN') {
@@ -161,7 +162,7 @@ export function useCustomerAuth() {
     );
     
     return () => {
-      subscription.unsubscribe();
+      data.subscription.unsubscribe();
     };
   }, [navigate, location.pathname]);
   

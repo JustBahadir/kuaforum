@@ -7,9 +7,6 @@ import { StaffCardHeader } from "@/components/staff/StaffCardHeader";
 import { LoginTabs } from "@/components/staff/LoginTabs";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { authService } from "@/lib/auth/authService";
 
 export default function StaffLogin() {
