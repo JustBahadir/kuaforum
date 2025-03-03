@@ -3,12 +3,13 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Lock, Mail, Phone, User, Store } from "lucide-react";
+import { Lock, Mail, Phone, User, Store, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { authService } from "@/lib/auth/authService";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { dukkanServisi } from "@/lib/supabase/services/dukkanServisi";
 import { 
   Select,
   SelectContent,
@@ -29,6 +30,10 @@ const staffSchema = z.object({
   password: z.string().min(6, "Şifre en az 6 karakter olmalıdır"),
   role: z.enum(["staff", "admin"]),
   shopName: z.string().optional(),
+  shopAddress: z.string().optional(),
+  shopPhone: z.string().optional(),
+  city: z.string().optional(),
+  district: z.string().optional(),
 });
 
 export function RegisterForm({ onSuccess }: RegisterFormProps) {
@@ -40,6 +45,10 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
   const [password, setPassword] = useState("password123"); // Default password
   const [role, setRole] = useState<"staff" | "admin">("staff");
   const [shopName, setShopName] = useState("");
+  const [shopAddress, setShopAddress] = useState("");
+  const [shopPhone, setShopPhone] = useState("");
+  const [city, setCity] = useState("İstanbul");
+  const [district, setDistrict] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [globalError, setGlobalError] = useState<string | null>(null);
 
@@ -54,6 +63,10 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
         password,
         role,
         shopName: role === "admin" ? shopName : undefined,
+        shopAddress: role === "admin" ? shopAddress : undefined,
+        shopPhone: role === "admin" ? shopPhone : undefined,
+        city: role === "admin" ? city : undefined,
+        district: role === "admin" ? district : undefined,
       });
       setErrors({});
       return true;
@@ -79,6 +92,10 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
     setPassword("password123");
     setRole("staff");
     setShopName("");
+    setShopAddress("");
+    setShopPhone("");
+    setCity("İstanbul");
+    setDistrict("");
     setErrors({});
     setGlobalError(null);
   };
@@ -130,6 +147,25 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
           setGlobalError(error.message || "Kayıt işlemi sırasında bir hata oluştu");
         }
         return;
+      }
+      
+      // Eğer admin ise ve dükkan adı belirtilmişse dükkan oluştur
+      if (role === "admin" && shopName && user) {
+        try {
+          await dukkanServisi.ekle({
+            ad: shopName,
+            adres: shopAddress || `${district}, ${city}`,
+            telefon: shopPhone || phone,
+            sahibi_id: user.id,
+            kod: shopCode || authService.generateShopCode(shopName),
+            active: true
+          });
+          
+          toast.success("Dükkanınız başarıyla oluşturuldu!");
+        } catch (dukkanError: any) {
+          console.error("Dükkan oluşturma hatası:", dukkanError);
+          toast.error("Dükkan oluşturulurken bir hata oluştu: " + (dukkanError.message || "Bilinmeyen bir hata"));
+        }
       }
       
       toast.success("Kayıt başarılı! Şimdi giriş yapabilirsiniz.");
@@ -247,24 +283,81 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
       </div>
 
       {role === "admin" && (
-        <div className="space-y-2">
-          <Label htmlFor="shopName">Dükkan Adı</Label>
-          <div className="relative">
-            <Store className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-            <Input
-              id="shopName"
-              type="text"
-              value={shopName}
-              onChange={(e) => setShopName(e.target.value)}
-              className="pl-10"
-              placeholder="Dükkanınızın adını giriniz"
-              required
-            />
+        <>
+          <div className="space-y-2">
+            <Label htmlFor="shopName">Dükkan Adı</Label>
+            <div className="relative">
+              <Store className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <Input
+                id="shopName"
+                type="text"
+                value={shopName}
+                onChange={(e) => setShopName(e.target.value)}
+                className="pl-10"
+                placeholder="Dükkanınızın adını giriniz"
+                required
+              />
+            </div>
+            {errors.shopName && (
+              <p className="text-xs text-red-500">{errors.shopName}</p>
+            )}
           </div>
-          {errors.shopName && (
-            <p className="text-xs text-red-500">{errors.shopName}</p>
-          )}
-        </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="shopAddress">Dükkan Adresi</Label>
+            <div className="relative">
+              <MapPin className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <Input
+                id="shopAddress"
+                type="text"
+                value={shopAddress}
+                onChange={(e) => setShopAddress(e.target.value)}
+                className="pl-10"
+                placeholder="Dükkanınızın adresini giriniz"
+              />
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="city">İl</Label>
+              <Input
+                id="city"
+                type="text"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                placeholder="İl"
+                defaultValue="İstanbul"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="district">İlçe</Label>
+              <Input
+                id="district"
+                type="text"
+                value={district}
+                onChange={(e) => setDistrict(e.target.value)}
+                placeholder="İlçe"
+              />
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="shopPhone">Dükkan Telefonu</Label>
+            <div className="relative">
+              <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <Input
+                id="shopPhone"
+                type="tel"
+                value={shopPhone}
+                onChange={(e) => setShopPhone(e.target.value)}
+                className="pl-10"
+                placeholder="Dükkanınızın telefon numarası (isteğe bağlı)"
+              />
+            </div>
+          </div>
+        </>
       )}
       
       <div className="space-y-2">

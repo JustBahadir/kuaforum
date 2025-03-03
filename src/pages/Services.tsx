@@ -11,12 +11,16 @@ import { toast } from "@/components/ui/use-toast";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { WorkingHoursForm } from "@/components/operations/WorkingHoursForm";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 export default function Services() {
-  const { userRole } = useCustomerAuth();
+  const { userRole, dukkanId } = useCustomerAuth();
   const isAdmin = userRole === 'admin';
   const queryClient = useQueryClient();
-  const [isStaff, setIsStaff] = useState(true); // For now, let's assume the user is staff
+  const [isStaff, setIsStaff] = useState(true);
   
   // State for service management
   const [dialogAcik, setDialogAcik] = useState(false);
@@ -34,12 +38,12 @@ export default function Services() {
   }, [userRole]);
 
   // Fetch categories and services
-  const { data: kategoriler = [] } = useQuery({
+  const { data: kategoriler = [], isLoading: kategoriYukleniyor } = useQuery({
     queryKey: ['kategoriler'],
     queryFn: kategoriServisi.hepsiniGetir
   });
 
-  const { data: islemler = [] } = useQuery({
+  const { data: islemler = [], isLoading: islemlerYukleniyor } = useQuery({
     queryKey: ['islemler'],
     queryFn: islemServisi.hepsiniGetir
   });
@@ -240,13 +244,24 @@ export default function Services() {
     setDuzenleId(null);
   };
 
+  if (kategoriYukleniyor || islemlerYukleniyor) {
+    return (
+      <StaffLayout>
+        <div className="container mx-auto py-6">
+          <div className="flex justify-center items-center h-64">
+            <div className="w-12 h-12 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
+          </div>
+        </div>
+      </StaffLayout>
+    );
+  }
+
   return (
     <StaffLayout>
       <div className="container mx-auto py-6">
         <Tabs defaultValue="services" className="space-y-4">
           <TabsList>
             <TabsTrigger value="services">Hizmetler</TabsTrigger>
-            <TabsTrigger value="categories">Kategoriler</TabsTrigger>
             <TabsTrigger value="working-hours">Çalışma Saatleri</TabsTrigger>
           </TabsList>
 
@@ -256,53 +271,42 @@ export default function Services() {
                 <CardTitle>Hizmetler</CardTitle>
               </CardHeader>
               <CardContent>
-                <ServicesContent 
-                  isStaff={isStaff}
-                  kategoriler={kategoriler}
-                  islemler={islemler}
-                  dialogAcik={dialogAcik}
-                  setDialogAcik={setDialogAcik}
-                  kategoriDialogAcik={kategoriDialogAcik}
-                  setKategoriDialogAcik={setKategoriDialogAcik}
-                  yeniKategoriAdi={yeniKategoriAdi}
-                  setYeniKategoriAdi={setYeniKategoriAdi}
-                  islemAdi={islemAdi}
-                  setIslemAdi={setIslemAdi}
-                  fiyat={fiyat}
-                  setFiyat={setFiyat}
-                  puan={puan}
-                  setPuan={setPuan}
-                  kategoriId={kategoriId}
-                  setKategoriId={setKategoriId}
-                  duzenleId={duzenleId}
-                  onServiceFormSubmit={onServiceFormSubmit}
-                  onCategoryFormSubmit={onCategoryFormSubmit}
-                  onServiceEdit={onServiceEdit}
-                  onServiceDelete={onServiceDelete}
-                  onCategoryDelete={onCategoryDelete}
-                  onSiralamaChange={onSiralamaChange}
-                  onRandevuAl={onRandevuAl}
-                  formuSifirla={formuSifirla}
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="categories">
-            <Card>
-              <CardHeader>
-                <CardTitle>Kategoriler</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {!isAdmin && (
-                  <Alert variant="destructive" className="mb-4">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      Kategori yönetimi için yönetici yetkilerine sahip olmalısınız.
-                    </AlertDescription>
-                  </Alert>
+                {!kategoriler || kategoriler.length === 0 && isAdmin ? (
+                  <div className="text-center p-8">
+                    <h3 className="text-lg font-medium mb-2">Henüz kategori eklenmemiş</h3>
+                    <p className="text-gray-500 mb-4">Hizmet eklemek için önce kategori oluşturmalısınız.</p>
+                    <Button onClick={() => setKategoriDialogAcik(true)}>Kategori Ekle</Button>
+                  </div>
+                ) : (
+                  <ServicesContent 
+                    isStaff={isStaff}
+                    kategoriler={kategoriler}
+                    islemler={islemler}
+                    dialogAcik={dialogAcik}
+                    setDialogAcik={setDialogAcik}
+                    kategoriDialogAcik={kategoriDialogAcik}
+                    setKategoriDialogAcik={setKategoriDialogAcik}
+                    yeniKategoriAdi={yeniKategoriAdi}
+                    setYeniKategoriAdi={setYeniKategoriAdi}
+                    islemAdi={islemAdi}
+                    setIslemAdi={setIslemAdi}
+                    fiyat={fiyat}
+                    setFiyat={setFiyat}
+                    puan={puan}
+                    setPuan={setPuan}
+                    kategoriId={kategoriId}
+                    setKategoriId={setKategoriId}
+                    duzenleId={duzenleId}
+                    onServiceFormSubmit={onServiceFormSubmit}
+                    onCategoryFormSubmit={onCategoryFormSubmit}
+                    onServiceEdit={onServiceEdit}
+                    onServiceDelete={onServiceDelete}
+                    onCategoryDelete={onCategoryDelete}
+                    onSiralamaChange={onSiralamaChange}
+                    onRandevuAl={onRandevuAl}
+                    formuSifirla={formuSifirla}
+                  />
                 )}
-                {/* Kategori içeriği burada olacak */}
               </CardContent>
             </Card>
           </TabsContent>
@@ -313,15 +317,16 @@ export default function Services() {
                 <CardTitle>Çalışma Saatleri</CardTitle>
               </CardHeader>
               <CardContent>
-                {!isAdmin && (
+                {!isAdmin ? (
                   <Alert variant="destructive" className="mb-4">
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
                       Çalışma saatleri yönetimi için yönetici yetkilerine sahip olmalısınız.
                     </AlertDescription>
                   </Alert>
+                ) : (
+                  <WorkingHoursForm dukkanId={dukkanId} />
                 )}
-                {/* Çalışma saatleri içeriği burada olacak */}
               </CardContent>
             </Card>
           </TabsContent>

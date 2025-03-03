@@ -12,6 +12,7 @@ import CustomerDashboard from "./pages/CustomerDashboard";
 import Services from "./pages/Services";
 import Customers from "./pages/Customers";
 import ShopStatistics from "./pages/ShopStatistics";
+import StaffProfile from "./pages/StaffProfile";
 import { useCustomerAuth } from "./hooks/useCustomerAuth";
 
 const queryClient = new QueryClient();
@@ -52,6 +53,14 @@ function AppRoutes() {
         element={
           isAuthenticated 
             ? <Personnel /> 
+            : <Navigate to="/staff-login" />
+        } 
+      />
+      <Route 
+        path="/staff-profile" 
+        element={
+          isAuthenticated && (userRole === 'staff' || userRole === 'admin')
+            ? <StaffProfile /> 
             : <Navigate to="/staff-login" />
         } 
       />

@@ -31,14 +31,21 @@ export const shouldRedirect = (
     return false;
   }
 
-  // Check user role for redirects - personel sayfasındaki yönlendirmeyi düzeltiyoruz
-  if ((userRole === 'staff' || userRole === 'admin') && 
+  // Admin kullanıcılarının her sayfaya erişimine izin verelim
+  if (userRole === 'admin') {
+    console.log("Admin user, no redirect needed");
+    return false;
+  }
+
+  // Staff için sadece müşteri-spesifik sayfaları engelle
+  if (userRole === 'staff' && 
       pathname.includes('/customer') && 
-      !pathname.includes('/customers')) { // Önemli değişiklik: /customers yolunu koruyoruz
-    console.log("Staff/admin trying to access customer page:", pathname);
+      !pathname.includes('/customers')) {
+    console.log("Staff trying to access customer page:", pathname);
     return true;
   } 
   
+  // Müşteriler için personel sayfalarını engelle
   if (userRole === 'customer' && 
       (pathname.includes('/personnel') || 
        pathname.includes('/dashboard') ||
@@ -65,9 +72,14 @@ export const getRedirectPath = (
     return "/staff-login";
   }
   
-  if ((userRole === 'staff' || userRole === 'admin') && 
+  // Admin için yönlendirme gerekmez
+  if (userRole === 'admin') {
+    return "/personnel";
+  }
+  
+  if (userRole === 'staff' && 
       currentPath.includes('/customer') &&
-      !currentPath.includes('/customers')) { // Önemli değişiklik: /customers yolunu koruyoruz
+      !currentPath.includes('/customers')) {
     return "/personnel";
   }
   
