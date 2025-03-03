@@ -5,10 +5,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { StaffCardHeader } from "@/components/staff/StaffCardHeader";
 import { LoginTabs } from "@/components/staff/LoginTabs";
 import { toast } from "sonner";
-import { supabase, supabaseAdmin } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase/client";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { authService } from "@/lib/auth/authService";
 
 export default function StaffLogin() {
   const navigate = useNavigate();
@@ -59,35 +60,9 @@ export default function StaffLogin() {
     try {
       console.log("Silme işlemi başlatıldı:", emailToDelete);
       
-      // First, find the user by email
-      const { data: usersData, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+      // Use the deleteUserByEmail function from authService
+      await authService.deleteUserByEmail(emailToDelete);
       
-      if (listError) {
-        console.error("Kullanıcı listesi alınamadı:", listError);
-        throw new Error("Kullanıcı listesi alınamadı: " + listError.message);
-      }
-      
-      // Find the user with the matching email
-      const userToDelete = usersData?.users?.find(user => 
-        user.email?.toLowerCase() === emailToDelete.toLowerCase()
-      );
-      
-      if (!userToDelete) {
-        throw new Error("Bu e-posta adresiyle kayıtlı kullanıcı bulunamadı.");
-      }
-      
-      console.log("Silinecek kullanıcı bulundu:", userToDelete.id);
-      
-      // Now delete the user using the admin client with the user ID
-      const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(
-        userToDelete.id
-      );
-
-      if (deleteError) {
-        console.error("Hesap silme hatası:", deleteError);
-        throw new Error("Hesap silinirken bir hata oluştu: " + deleteError.message);
-      }
-
       setDeleteStatus("Hesap başarıyla silindi!");
       toast.success("Hesap başarıyla silindi. Şimdi yeniden kayıt olabilirsiniz.");
       setShowDeleteDialog(false);

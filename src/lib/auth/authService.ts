@@ -1,3 +1,4 @@
+
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
 
@@ -87,6 +88,13 @@ export const authService = {
    */
   findUserByEmail: async (email: string) => {
     try {
+      // Define proper type for user data
+      interface User {
+        id: string;
+        email?: string;
+        // Include other properties as needed
+      }
+      
       const { data, error } = await supabase.auth.admin.listUsers();
       
       if (error) {
@@ -94,7 +102,10 @@ export const authService = {
         return null;
       }
       
-      const user = data?.users?.find(user => 
+      // Properly type the users array
+      const users = data?.users as User[] || [];
+      
+      const user = users.find(user => 
         user.email?.toLowerCase() === email.toLowerCase()
       );
       
@@ -102,6 +113,32 @@ export const authService = {
     } catch (error) {
       console.error("Error finding user:", error);
       return null;
+    }
+  },
+  
+  /**
+   * Delete a user account by email
+   */
+  deleteUserByEmail: async (email: string) => {
+    try {
+      // First, find the user by email
+      const user = await authService.findUserByEmail(email);
+      
+      if (!user) {
+        throw new Error("Bu e-posta adresiyle kayıtlı kullanıcı bulunamadı.");
+      }
+      
+      // Delete the user
+      const { error } = await supabase.auth.admin.deleteUser(user.id);
+      
+      if (error) {
+        throw error;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error("Hesap silme hatası:", error);
+      throw error;
     }
   },
 };
