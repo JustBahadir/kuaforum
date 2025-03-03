@@ -1,17 +1,8 @@
 
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { useCustomerAuth } from '@/hooks/useCustomerAuth';
-import { 
-  CalendarCheck, 
-  Scissors, 
-  Users, 
-  Search,
-  Store,
-  Clock,
-  MapPin
-} from 'lucide-react';
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { 
   Select,
   SelectContent,
@@ -20,34 +11,33 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
-import { toast } from "sonner";
-
-// Turkey cities and districts data
-interface District {
-  name: string;
-  value: string;
-}
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardFooter, 
+  CardHeader, 
+  CardTitle 
+} from "@/components/ui/card";
+import { Scissors, Calendar, Users, Settings, BarChart3 } from "lucide-react";
 
 interface City {
   name: string;
   value: string;
-  districts: District[];
+  districts: { name: string; value: string }[];
 }
 
 export default function HomePage() {
-  const { isAuthenticated, userRole } = useCustomerAuth();
-  const [selectedCity, setSelectedCity] = useState<string>("");
-  const [selectedDistrict, setSelectedDistrict] = useState<string>("");
-  const [cities, setCities] = useState<City[]>([]);
-  const [districts, setDistricts] = useState<District[]>([]);
   const navigate = useNavigate();
-  
+  const [selectedCity, setSelectedCity] = useState("");
+  const [selectedDistrict, setSelectedDistrict] = useState("");
+  const [cities, setCities] = useState<City[]>([]);
+  const [districts, setDistricts] = useState<{name: string, value: string}[]>([]);
+
   // Fetch Turkey cities and districts
   useEffect(() => {
     const fetchCitiesData = async () => {
       try {
-        // This is a placeholder URL - you should replace with a real API or source
         const response = await fetch('https://raw.githubusercontent.com/volkansenturk/turkiye-iller-ilceler/master/data/il-ilce.json');
         if (!response.ok) {
           throw new Error('Failed to fetch cities data');
@@ -100,22 +90,6 @@ export default function HomePage() {
               { name: "Karşıyaka", value: "karsiyaka" },
               { name: "Bornova", value: "bornova" }
             ]
-          },
-          {
-            name: "Bursa",
-            value: "bursa",
-            districts: [
-              { name: "Nilüfer", value: "nilufer" },
-              { name: "Osmangazi", value: "osmangazi" }
-            ]
-          },
-          {
-            name: "Antalya",
-            value: "antalya",
-            districts: [
-              { name: "Muratpaşa", value: "muratpasa" },
-              { name: "Konyaaltı", value: "konyaalti" }
-            ]
           }
         ]);
       }
@@ -127,86 +101,60 @@ export default function HomePage() {
   // Update districts when city is selected
   useEffect(() => {
     if (selectedCity) {
-      const cityData = cities.find(city => city.value === selectedCity);
-      if (cityData) {
-        setDistricts(cityData.districts);
+      const selectedCityData = cities.find(city => city.value === selectedCity);
+      if (selectedCityData) {
+        setDistricts(selectedCityData.districts);
       } else {
         setDistricts([]);
       }
-      // Reset selected district when city changes
       setSelectedDistrict("");
     } else {
       setDistricts([]);
+      setSelectedDistrict("");
     }
   }, [selectedCity, cities]);
-  
-  const getRedirectPath = () => {
-    if (!isAuthenticated) return "/login";
-    
-    if (userRole === 'admin' || userRole === 'staff') {
-      return "/personnel";
-    } else if (userRole === 'customer') {
-      return "/customer-dashboard";
-    }
-    
-    return "/login";
-  };
 
-  const handleSearch = () => {
+  const handleFindSalons = () => {
     if (!selectedCity) {
-      toast.error("Lütfen bir il seçin");
+      alert("Lütfen bir il seçin");
       return;
     }
     
-    console.log("Searching for salons in:", selectedCity, selectedDistrict);
-    // In a real implementation, this would search for salons in the selected location
-    // For now, we'll just redirect to the login page
+    // In a real app, this would navigate to search results
+    // For now, we'll navigate to the login page
     navigate("/login");
   };
-  
+
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Header */}
-      <header className="bg-primary text-primary-foreground py-4">
-        <div className="container mx-auto px-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Kuaför Sistemi</h1>
-          <div className="space-x-2">
-            {isAuthenticated ? (
-              <Link to={getRedirectPath()}>
-                <Button variant="outline">Panele Git</Button>
-              </Link>
-            ) : (
-              <>
-                <Link to="/login">
-                  <Button variant="outline">Müşteri Girişi</Button>
-                </Link>
-                <Link to="/staff-login">
-                  <Button variant="outline">Personel Girişi</Button>
-                </Link>
-              </>
-            )}
-          </div>
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
+      {/* Hero Section */}
+      <header className="bg-gradient-to-r from-purple-700 to-blue-600 text-white py-16 px-4">
+        <div className="container mx-auto text-center">
+          <h1 className="text-4xl md:text-5xl font-bold mb-4">Kuaför Randevu Sistemi</h1>
+          <p className="text-xl md:text-2xl mb-8">İster müşteri ister salon sahibi olun, size özel çözümlerimiz var</p>
         </div>
       </header>
-      
-      {/* Main Split Layout */}
-      <div className="flex flex-col md:flex-row flex-grow">
-        {/* Customer Section (65%) */}
-        <section className="w-full md:w-[65%] bg-slate-50 p-6 md:p-10">
-          <div className="max-w-3xl mx-auto">
-            <h2 className="text-3xl font-bold mb-6">Kuaför Randevunuzu Kolayca Alın</h2>
-            <p className="text-lg mb-8">
-              Şehrinizde bulunan tüm kuaförleri keşfedin, randevunuzu hızlıca alın ve zaman kazanın.
-            </p>
-            
-            {/* Location Search */}
-            <Card className="mb-10">
-              <CardContent className="pt-6">
-                <h3 className="text-xl font-semibold mb-4">Kuaför Bul</h3>
-                <div className="grid gap-4 md:grid-cols-2 mb-4">
+
+      {/* Main Content */}
+      <main className="container mx-auto px-4 py-12">
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* Customer Section (65%) */}
+          <div className="lg:w-[65%]">
+            <Card className="shadow-lg border-t-4 border-t-blue-500 h-full">
+              <CardHeader>
+                <CardTitle className="text-2xl text-blue-700">Müşteriler İçin</CardTitle>
+                <CardDescription>
+                  En sevdiğiniz kuaförlerden kolayca randevu alın
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="city">İl</Label>
-                    <Select onValueChange={setSelectedCity} value={selectedCity}>
+                    <Select
+                      value={selectedCity}
+                      onValueChange={setSelectedCity}
+                    >
                       <SelectTrigger id="city">
                         <SelectValue placeholder="İl seçin" />
                       </SelectTrigger>
@@ -222,9 +170,9 @@ export default function HomePage() {
                   
                   <div className="space-y-2">
                     <Label htmlFor="district">İlçe</Label>
-                    <Select 
-                      onValueChange={setSelectedDistrict} 
+                    <Select
                       value={selectedDistrict}
+                      onValueChange={setSelectedDistrict}
                       disabled={!selectedCity}
                     >
                       <SelectTrigger id="district">
@@ -240,125 +188,104 @@ export default function HomePage() {
                     </Select>
                   </div>
                 </div>
-                <Button onClick={handleSearch} className="w-full">
-                  <Search className="mr-2 h-4 w-4" /> Kuaför Ara
+
+                <Button 
+                  className="w-full"
+                  onClick={handleFindSalons}
+                >
+                  Salonları Bul
                 </Button>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+                  <div className="bg-blue-50 p-4 rounded-lg flex items-start space-x-3">
+                    <Calendar className="text-blue-500 shrink-0 mt-1" />
+                    <div>
+                      <h3 className="font-medium text-gray-900">Kolay Randevu</h3>
+                      <p className="text-sm text-gray-600">Sevdiğiniz kuaförlerden birkaç tıkla randevu alın</p>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-blue-50 p-4 rounded-lg flex items-start space-x-3">
+                    <Scissors className="text-blue-500 shrink-0 mt-1" />
+                    <div>
+                      <h3 className="font-medium text-gray-900">Kişiselleştirilmiş Hizmet</h3>
+                      <p className="text-sm text-gray-600">Tercih ettiğiniz hizmetleri ve uzmanları kaydedin</p>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
+              <CardFooter className="flex flex-col md:flex-row gap-4 justify-between border-t pt-6">
+                <Link to="/login" className="w-full md:w-auto">
+                  <Button variant="outline" className="w-full">Giriş Yap</Button>
+                </Link>
+                <Link to="/login" className="w-full md:w-auto">
+                  <Button className="w-full">Randevu Al</Button>
+                </Link>
+              </CardFooter>
             </Card>
-            
-            {/* Features */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
-              <div className="bg-white p-6 rounded-lg shadow-sm flex items-start">
-                <div className="mr-4">
-                  <CalendarCheck className="h-8 w-8 text-primary" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold mb-2">Kolay Randevu</h3>
-                  <p className="text-muted-foreground">Dilediğiniz kuaför ile anında randevu alın, zamanınızı verimli kullanın.</p>
-                </div>
-              </div>
-              
-              <div className="bg-white p-6 rounded-lg shadow-sm flex items-start">
-                <div className="mr-4">
-                  <Clock className="h-8 w-8 text-primary" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold mb-2">Zaman Kazanın</h3>
-                  <p className="text-muted-foreground">Sıra beklemeden, önceden randevu alarak kuaförünüze gidebilirsiniz.</p>
-                </div>
-              </div>
-              
-              <div className="bg-white p-6 rounded-lg shadow-sm flex items-start">
-                <div className="mr-4">
-                  <MapPin className="h-8 w-8 text-primary" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold mb-2">Size Yakın Kuaförler</h3>
-                  <p className="text-muted-foreground">Konumunuza en yakın kuaförleri bulun ve randevunuzu oluşturun.</p>
-                </div>
-              </div>
-              
-              <div className="bg-white p-6 rounded-lg shadow-sm flex items-start">
-                <div className="mr-4">
-                  <Scissors className="h-8 w-8 text-primary" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold mb-2">Kaliteli Hizmet</h3>
-                  <p className="text-muted-foreground">Yüzlerce profesyonel kuaför arasından seçim yapın.</p>
-                </div>
-              </div>
-            </div>
-            
-            {/* CTA */}
-            <div className="text-center">
-              <Link to="/login">
-                <Button size="lg" className="px-8">Hemen Randevu Al</Button>
-              </Link>
-            </div>
           </div>
-        </section>
-        
-        {/* Shop Owner Section (35%) */}
-        <section className="w-full md:w-[35%] bg-primary/5 p-6 md:p-10">
-          <div className="max-w-lg mx-auto">
-            <h2 className="text-2xl font-bold mb-6">Kuaför Salonu Sahipleri</h2>
-            <p className="text-lg mb-8">
-              İşletmenizi dijitalleştirin, müşteri ve randevu yönetimini kolaylaştırın.
-            </p>
-            
-            {/* Features */}
-            <div className="space-y-4 mb-8">
-              <div className="bg-white p-4 rounded-lg shadow-sm flex items-start">
-                <div className="mr-3">
-                  <Store className="h-6 w-6 text-primary" />
+
+          {/* Salon Owner Section (35%) */}
+          <div className="lg:w-[35%]">
+            <Card className="shadow-lg border-t-4 border-t-purple-500 h-full">
+              <CardHeader>
+                <CardTitle className="text-2xl text-purple-700">Salon Sahipleri İçin</CardTitle>
+                <CardDescription>
+                  İşletmenizi daha verimli yönetin
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <div className="bg-purple-50 p-4 rounded-lg flex items-start space-x-3">
+                    <Calendar className="text-purple-500 shrink-0 mt-1" />
+                    <div>
+                      <h3 className="font-medium text-gray-900">Randevu Yönetimi</h3>
+                      <p className="text-sm text-gray-600">Randevuları tek bir yerden yönetin</p>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-purple-50 p-4 rounded-lg flex items-start space-x-3">
+                    <Users className="text-purple-500 shrink-0 mt-1" />
+                    <div>
+                      <h3 className="font-medium text-gray-900">Müşteri Yönetimi</h3>
+                      <p className="text-sm text-gray-600">Müşteri bilgilerini saklayın ve analiz edin</p>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-purple-50 p-4 rounded-lg flex items-start space-x-3">
+                    <Settings className="text-purple-500 shrink-0 mt-1" />
+                    <div>
+                      <h3 className="font-medium text-gray-900">Hizmet Yönetimi</h3>
+                      <p className="text-sm text-gray-600">Hizmetlerinizi ve fiyatlarınızı kolayca güncelleyin</p>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-purple-50 p-4 rounded-lg flex items-start space-x-3">
+                    <BarChart3 className="text-purple-500 shrink-0 mt-1" />
+                    <div>
+                      <h3 className="font-medium text-gray-900">İstatistikler</h3>
+                      <p className="text-sm text-gray-600">Salonunuzun performansını takip edin</p>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-base font-semibold mb-1">Dükkan Yönetimi</h3>
-                  <p className="text-sm text-muted-foreground">Dükkanınızı dijital olarak yönetin, istatistikleri görüntüleyin.</p>
-                </div>
-              </div>
-              
-              <div className="bg-white p-4 rounded-lg shadow-sm flex items-start">
-                <div className="mr-3">
-                  <Users className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <h3 className="text-base font-semibold mb-1">Personel Takibi</h3>
-                  <p className="text-sm text-muted-foreground">Çalışanlarınızın performansını ve randevularını takip edin.</p>
-                </div>
-              </div>
-              
-              <div className="bg-white p-4 rounded-lg shadow-sm flex items-start">
-                <div className="mr-3">
-                  <CalendarCheck className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <h3 className="text-base font-semibold mb-1">Randevu Sistemi</h3>
-                  <p className="text-sm text-muted-foreground">Randevuları otomatik olarak alın ve yönetin.</p>
-                </div>
-              </div>
-            </div>
-            
-            {/* CTA */}
-            <div className="space-y-4">
-              <Link to="/staff-login" className="block">
-                <Button variant="default" className="w-full">Giriş Yap</Button>
-              </Link>
-              <p className="text-center text-sm text-muted-foreground">
-                Henüz üye değil misiniz?
-              </p>
-              <Link to="/staff-login" className="block">
-                <Button variant="outline" className="w-full">Hemen Kaydolun</Button>
-              </Link>
-            </div>
+              </CardContent>
+              <CardFooter className="flex flex-col md:flex-row gap-4 justify-between border-t pt-6">
+                <Link to="/staff-login" className="w-full md:w-auto">
+                  <Button variant="outline" className="w-full">Giriş Yap</Button>
+                </Link>
+                <Link to="/staff-login" className="w-full md:w-auto">
+                  <Button className="w-full">Hemen Kaydolun</Button>
+                </Link>
+              </CardFooter>
+            </Card>
           </div>
-        </section>
-      </div>
-      
+        </div>
+      </main>
+
       {/* Footer */}
-      <footer className="bg-muted py-8">
-        <div className="container mx-auto px-4 text-center">
-          <p className="text-muted-foreground">© 2023 Kuaför Yönetim Sistemi. Tüm hakları saklıdır.</p>
+      <footer className="bg-gray-800 text-white py-8 px-4 mt-12">
+        <div className="container mx-auto text-center">
+          <p>&copy; {new Date().getFullYear()} Kuaför Randevu Sistemi. Tüm hakları saklıdır.</p>
         </div>
       </footer>
     </div>
