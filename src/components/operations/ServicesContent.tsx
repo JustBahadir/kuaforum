@@ -2,6 +2,13 @@
 import { CategoryCard } from "./CategoryCard";
 import { ServiceForm } from "./ServiceForm";
 import { CategoryForm } from "./CategoryForm";
+import { WorkingHoursForm } from "./WorkingHoursForm";
+import { 
+  Accordion, 
+  AccordionContent, 
+  AccordionItem, 
+  AccordionTrigger 
+} from "@/components/ui/accordion";
 
 interface ServicesContentProps {
   isStaff: boolean;
@@ -93,21 +100,39 @@ export function ServicesContent({
         </div>
       )}
 
-      <div className="space-y-6">
-        {kategoriler.map((kategori) => (
-          <CategoryCard
-            key={kategori.id}
-            kategori={kategori}
-            islemler={islemler.filter((islem: any) => islem.kategori_id === kategori.id)}
-            isStaff={isStaff}
-            onEdit={onServiceEdit}
-            onDelete={onServiceDelete}
-            onKategoriDelete={onCategoryDelete}
-            onSiralamaChange={onSiralamaChange}
-            onRandevuAl={onRandevuAl}
-          />
-        ))}
-      </div>
+      <Accordion type="multiple" defaultValue={["services", "workinghours"]} className="w-full space-y-6">
+        <AccordionItem value="services" className="border rounded-lg p-4">
+          <AccordionTrigger className="text-xl font-semibold">Hizmetler</AccordionTrigger>
+          <AccordionContent>
+            <div className="space-y-6 pt-4">
+              {kategoriler.map((kategori) => (
+                <CategoryCard
+                  key={kategori.id}
+                  kategori={kategori}
+                  islemler={islemler.filter((islem: any) => islem.kategori_id === kategori.id)}
+                  isStaff={isStaff}
+                  onEdit={onServiceEdit}
+                  onDelete={onServiceDelete}
+                  onKategoriDelete={onCategoryDelete}
+                  onSiralamaChange={onSiralamaChange}
+                  onRandevuAl={onRandevuAl}
+                />
+              ))}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+        
+        {isStaff && (
+          <AccordionItem value="workinghours" className="border rounded-lg p-4">
+            <AccordionTrigger className="text-xl font-semibold">Çalışma Saatleri</AccordionTrigger>
+            <AccordionContent>
+              <div className="pt-4">
+                <WorkingHoursForm />
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        )}
+      </Accordion>
     </>
   );
 }

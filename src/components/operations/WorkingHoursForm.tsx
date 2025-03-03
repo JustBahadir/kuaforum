@@ -1,13 +1,37 @@
 
 import { useState, useEffect } from "react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { supabase } from "@/lib/supabase/client";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
+import { supabase } from "@/lib/supabase/client";
+import { Loader2 } from "lucide-react";
+
+const DAYS = [
+  { value: "Pazartesi", label: "Pazartesi" },
+  { value: "Salı", label: "Salı" },
+  { value: "Çarşamba", label: "Çarşamba" },
+  { value: "Perşembe", label: "Perşembe" },
+  { value: "Cuma", label: "Cuma" },
+  { value: "Cumartesi", label: "Cumartesi" },
+  { value: "Pazar", label: "Pazar" },
+];
+
+const HOURS = Array(14).fill(0).map((_, i) => {
+  const hour = i + 8; // 8'den 21'e kadar
+  return { 
+    value: `${hour.toString().padStart(2, '0')}:00`, 
+    label: `${hour.toString().padStart(2, '0')}:00` 
+  };
+});
 
 interface WorkingHour {
   id?: number;
@@ -15,35 +39,17 @@ interface WorkingHour {
   acilis: string;
   kapanis: string;
   kapali: boolean;
-  dukkan_id?: number;
 }
 
-const gunler = [
-  { id: 1, name: "Pazartesi" },
-  { id: 2, name: "Salı" },
-  { id: 3, name: "Çarşamba" },
-  { id: 4, name: "Perşembe" },
-  { id: 5, name: "Cuma" },
-  { id: 6, name: "Cumartesi" },
-  { id: 7, name: "Pazar" },
-];
-
-interface WorkingHoursFormProps {
-  dukkanId: number | null;
-}
-
-export function WorkingHoursForm({ dukkanId }: WorkingHoursFormProps) {
-  const [workingHours, setWorkingHours] = useState<WorkingHour[]>([]);
+export function WorkingHoursForm() {
+  const { dukkanId } = useCustomerAuth();
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const { userRole } = useCustomerAuth();
+  const [savingDay, setSavingDay] = useState<string | null>(null);
+  const [workingHours, setWorkingHours] = useState<WorkingHour[]>([]);
 
   useEffect(() => {
     if (dukkanId) {
       loadWorkingHours();
-    } else {
-      initializeDefaultHours();
-      setLoading(false);
     }
   }, [dukkanId]);
 
@@ -53,154 +59,191 @@ export function WorkingHoursForm({ dukkanId }: WorkingHoursFormProps) {
       const { data, error } = await supabase
         .from('calisma_saatleri')
         .select('*')
-        .eq('dukkan_id', dukkanId)
         .order('id');
 
       if (error) throw error;
 
-      if (data && data.length > 0) {
-        // Format time values for input
-        const formattedData = data.map(hour => ({
-          ...hour,
-          acilis: hour.acilis ? hour.acilis.substring(0, 5) : '09:00',
-          kapanis: hour.kapanis ? hour.kapanis.substring(0, 5) : '18:00',
+      if (data.length === 0) {
+        // Eğer veri yoksa, varsayılan çalışma saatlerini oluştur
+        const defaultHours: WorkingHour[] = DAYS.map(day => ({
+          gun: day.value,
+          acilis: "09:00",
+          kapanis: "18:00",
+          kapali: day.value === "Pazar", // Pazar günü varsayılan olarak kapalı
         }));
-        setWorkingHours(formattedData);
+        setWorkingHours(defaultHours);
+        
+        // Varsayılan saatleri veritabanına kaydet
+        for (const hour of defaultHours) {
+          await saveWorkingHour(hour);
+        }
       } else {
-        initializeDefaultHours();
+        setWorkingHours(data);
       }
     } catch (error) {
       console.error("Çalışma saatleri yüklenirken hata:", error);
       toast.error("Çalışma saatleri yüklenirken bir hata oluştu");
-      initializeDefaultHours();
     } finally {
       setLoading(false);
     }
   };
 
-  const initializeDefaultHours = () => {
-    const defaultHours = gunler.map(gun => ({
-      gun: gun.name,
-      acilis: '09:00',
-      kapanis: '18:00',
-      kapali: gun.id === 7, // Pazar günü varsayılan olarak kapalı
-      dukkan_id: dukkanId
-    }));
-    setWorkingHours(defaultHours);
-  };
-
-  const handleHourChange = (index: number, field: keyof WorkingHour, value: string | boolean) => {
-    const updatedHours = [...workingHours];
-    updatedHours[index] = {
-      ...updatedHours[index],
-      [field]: value
-    };
-    setWorkingHours(updatedHours);
-  };
-
-  const handleSave = async () => {
-    if (!dukkanId) {
-      toast.error("Dükkan ID bulunamadı. Lütfen önce dükkan oluşturun.");
-      return;
-    }
-
+  const saveWorkingHour = async (dayData: WorkingHour) => {
+    if (!dukkanId) return;
+    
     try {
-      setSaving(true);
+      setSavingDay(dayData.gun);
       
-      // Önce mevcut kayıtları siliyoruz (yeniden oluşturmak için)
-      await supabase
+      const { data, error } = await supabase
         .from('calisma_saatleri')
-        .delete()
-        .eq('dukkan_id', dukkanId);
-      
-      // Şimdi güncel saatleri ekliyoruz
-      const hoursWithDukkanId = workingHours.map(hour => ({
-        ...hour,
-        dukkan_id: dukkanId
-      }));
-      
-      const { error } = await supabase
-        .from('calisma_saatleri')
-        .insert(hoursWithDukkanId);
+        .upsert({
+          ...dayData,
+          id: dayData.id, // Eğer id varsa güncelle, yoksa yeni ekle
+        })
+        .select()
+        .single();
       
       if (error) throw error;
       
-      toast.success("Çalışma saatleri başarıyla kaydedildi");
+      // Güncellenmiş saatleri state'e yansıt
+      setWorkingHours(prev => 
+        prev.map(item => 
+          item.gun === dayData.gun ? { ...item, id: data.id } : item
+        )
+      );
+      
+      toast.success(`${dayData.gun} günü çalışma saatleri güncellendi`);
     } catch (error) {
       console.error("Çalışma saatleri kaydedilirken hata:", error);
-      toast.error("Çalışma saatleri kaydedilirken bir hata oluştu");
+      toast.error(`${dayData.gun} günü çalışma saatleri kaydedilirken bir hata oluştu`);
     } finally {
-      setSaving(false);
+      setSavingDay(null);
+    }
+  };
+
+  const handleChangeOpen = (day: string, value: boolean) => {
+    const updatedHours = workingHours.map(item => {
+      if (item.gun === day) {
+        return { ...item, kapali: value };
+      }
+      return item;
+    });
+    setWorkingHours(updatedHours);
+    
+    const dayData = updatedHours.find(item => item.gun === day);
+    if (dayData) {
+      saveWorkingHour(dayData);
+    }
+  };
+
+  const handleChangeTime = (day: string, field: 'acilis' | 'kapanis', value: string) => {
+    const updatedHours = workingHours.map(item => {
+      if (item.gun === day) {
+        return { ...item, [field]: value };
+      }
+      return item;
+    });
+    setWorkingHours(updatedHours);
+    
+    const dayData = updatedHours.find(item => item.gun === day);
+    if (dayData) {
+      saveWorkingHour(dayData);
     }
   };
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-48">
-        <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
+      <div className="flex justify-center items-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2">Çalışma saatleri yükleniyor...</span>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4">
-        {workingHours.map((hour, index) => (
-          <Card key={index} className={hour.kapali ? "opacity-60" : ""}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-medium">{hour.gun}</h3>
-                    <div className="flex items-center space-x-2">
-                      <Switch 
-                        id={`status-${index}`}
-                        checked={!hour.kapali}
-                        onCheckedChange={(checked) => handleHourChange(index, 'kapali', !checked)}
-                        disabled={userRole !== 'admin'}
-                      />
-                      <Label htmlFor={`status-${index}`}>{hour.kapali ? "Kapalı" : "Açık"}</Label>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor={`acilis-${index}`}>Açılış Saati</Label>
-                      <Input 
-                        id={`acilis-${index}`} 
-                        type="time" 
-                        value={hour.acilis}
-                        onChange={(e) => handleHourChange(index, 'acilis', e.target.value)}
-                        disabled={hour.kapali || userRole !== 'admin'}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor={`kapanis-${index}`}>Kapanış Saati</Label>
-                      <Input 
-                        id={`kapanis-${index}`} 
-                        type="time" 
-                        value={hour.kapanis}
-                        onChange={(e) => handleHourChange(index, 'kapanis', e.target.value)}
-                        disabled={hour.kapali || userRole !== 'admin'}
-                      />
-                    </div>
-                  </div>
-                </div>
+      <div className="grid gap-6">
+        {DAYS.map((day) => {
+          const dayData = workingHours.find(item => item.gun === day.value) || {
+            gun: day.value,
+            acilis: "09:00",
+            kapanis: "18:00",
+            kapali: false
+          };
+          
+          const isSaving = savingDay === day.value;
+          
+          return (
+            <div key={day.value} className="flex items-center justify-between p-4 border rounded-lg">
+              <div className="flex-1">
+                <h3 className="font-medium">{day.label}</h3>
               </div>
-            </CardContent>
-          </Card>
-        ))}
+              
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <Label htmlFor={`closed-${day.value}`} className="text-sm whitespace-nowrap">
+                    Kapalı
+                  </Label>
+                  <Switch
+                    id={`closed-${day.value}`}
+                    checked={dayData.kapali}
+                    onCheckedChange={(checked) => handleChangeOpen(day.value, checked)}
+                    disabled={isSaving}
+                  />
+                </div>
+                
+                {!dayData.kapali && (
+                  <>
+                    <div className="w-24">
+                      <Select
+                        value={dayData.acilis}
+                        onValueChange={(value) => handleChangeTime(day.value, 'acilis', value)}
+                        disabled={dayData.kapali || isSaving}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Açılış" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {HOURS.map((hour) => (
+                            <SelectItem key={`open-${day.value}-${hour.value}`} value={hour.value}>
+                              {hour.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <span className="text-sm">-</span>
+                    
+                    <div className="w-24">
+                      <Select
+                        value={dayData.kapanis}
+                        onValueChange={(value) => handleChangeTime(day.value, 'kapanis', value)}
+                        disabled={dayData.kapali || isSaving}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Kapanış" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {HOURS.map((hour) => (
+                            <SelectItem key={`close-${day.value}-${hour.value}`} value={hour.value}>
+                              {hour.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </>
+                )}
+                
+                {isSaving && (
+                  <Loader2 className="h-4 w-4 animate-spin text-primary ml-2" />
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
-      
-      {userRole === 'admin' && (
-        <Button 
-          onClick={handleSave} 
-          className="w-full" 
-          disabled={saving}
-        >
-          {saving ? "Kaydediliyor..." : "Çalışma Saatlerini Kaydet"}
-        </Button>
-      )}
     </div>
   );
 }

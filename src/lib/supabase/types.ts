@@ -1,4 +1,3 @@
-
 // Type definitions
 export type Islem = {
   id: number;
@@ -113,4 +112,12 @@ export type Randevu = {
   personel?: Personel;
   islemler: number[];
   dukkan_id?: number;
+}
+
+export type CalismaSaati = {
+  id?: number;
+  gun: string;
+  acilis: string;
+  kapanis: string;
+  kapali: boolean;
 }

@@ -10,6 +10,7 @@ import { authService } from "@/lib/auth/authService";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { dukkanServisi } from "@/lib/supabase/services/dukkanServisi";
+import { personelServisi } from "@/lib/supabase/services/personelServisi";
 import { 
   Select,
   SelectContent,
@@ -120,6 +121,7 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
       
       // Generate shop code for admin
       let shopCode: string | null = null;
+      let dukkanId: number | null = null;
       
       if (role === "admin") {
         shopCode = authService.generateShopCode(shopName);
@@ -152,7 +154,7 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
       // Eğer admin ise ve dükkan adı belirtilmişse dükkan oluştur
       if (role === "admin" && shopName && user) {
         try {
-          await dukkanServisi.ekle({
+          const dukkan = await dukkanServisi.ekle({
             ad: shopName,
             adres: shopAddress || `${district}, ${city}`,
             telefon: shopPhone || phone,
@@ -160,6 +162,22 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
             kod: shopCode || authService.generateShopCode(shopName),
             active: true
           } as any); // Using type assertion to bypass type checking for now
+          
+          dukkanId = dukkan.id;
+          
+          // Dükkan sahibini aynı zamanda personel olarak da ekleyelim
+          await personelServisi.ekle({
+            ad_soyad: `${firstName} ${lastName}`,
+            personel_no: authService.generateShopCode(`${firstName}${lastName}`),
+            telefon: phone,
+            eposta: email,
+            adres: shopAddress || `${district}, ${city}`,
+            maas: 0, // Dükkan sahibi için maaş 0 olarak ayarlanabilir
+            calisma_sistemi: "haftalik",
+            prim_yuzdesi: 100, // Dükkan sahibi kendi primini alır
+            auth_id: user.id,
+            dukkan_id: dukkanId
+          });
           
           toast.success("Dükkanınız başarıyla oluşturuldu!");
         } catch (dukkanError: any) {

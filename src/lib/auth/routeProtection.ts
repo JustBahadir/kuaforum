@@ -39,7 +39,7 @@ export const shouldRedirect = (
 
   // Staff için sadece müşteri-spesifik sayfaları engelle
   if (userRole === 'staff' && 
-      pathname.includes('/customer') && 
+      pathname.includes('/customer/') && 
       !pathname.includes('/customers')) {
     console.log("Staff trying to access customer page:", pathname);
     return true;

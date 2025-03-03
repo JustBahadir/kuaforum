@@ -1,18 +1,14 @@
 
-// Export client
-export { supabase } from './client';
-
-// Export types
+// Hizmetleri export et
+export * from './client';
 export * from './types';
-
-// Export services
-export { kategoriServisi } from './services/kategoriServisi';
 export { islemServisi } from './services/islemServisi';
+export { kategoriServisi } from './services/kategoriServisi';
 export { musteriServisi } from './services/musteriServisi';
 export { personelServisi } from './services/personelServisi';
 export { personelIslemleriServisi } from './services/personelIslemleriServisi';
-export { profilServisi } from './services/profilServisi';
-export { bildirimServisi } from './services/bildirimServisi';
 export { randevuServisi } from './services/randevuServisi';
 export { dukkanServisi } from './services/dukkanServisi';
-
+export { bildirimServisi } from './services/bildirimServisi';
+export { calismaSaatleriServisi } from './services/calismaSaatleriServisi';
+export { profilServisi } from './services/profilServisi';
