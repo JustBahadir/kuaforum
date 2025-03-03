@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Lock, User } from "lucide-react";
+import { Lock, User, Trash2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { authenticationService } from "@/lib/auth/services/authenticationService";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -29,10 +29,11 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
   const [resetLoading, setResetLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   
-  // For development - user cleanup
+  // Kullanıcı temizleme (geliştirici modu)
   const [showCleanupDialog, setShowCleanupDialog] = useState(false);
   const [emailToDelete, setEmailToDelete] = useState("");
   const [cleanupLoading, setCleanupLoading] = useState(false);
+  const [cleanupSuccess, setCleanupSuccess] = useState(false);
 
   // Login function
   const handleLogin = async (e: React.FormEvent) => {
@@ -94,12 +95,14 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
     }
     
     setCleanupLoading(true);
+    setCleanupSuccess(false);
     
     try {
       const result = await authenticationService.deleteUserByEmail(emailToDelete);
       if (result.success) {
         toast.success(result.message);
-        setShowCleanupDialog(false);
+        setCleanupSuccess(true);
+        // Form temizliği
         setEmailToDelete("");
       } else {
         toast.error(result.message);
@@ -154,10 +157,12 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         <div className="flex justify-between items-center">
           <Button 
             type="button" 
-            variant="link" 
-            className="text-xs text-purple-600"
+            variant="destructive"
+            size="sm"
+            className="flex items-center gap-1 text-xs"
             onClick={() => setShowCleanupDialog(true)}
           >
+            <Trash2 size={14} />
             Hesap Temizle (DEV)
           </Button>
           
@@ -222,17 +227,35 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       </Dialog>
       
       {/* User Cleanup Dialog (Development Only) */}
-      <Dialog open={showCleanupDialog} onOpenChange={setShowCleanupDialog}>
+      <Dialog open={showCleanupDialog} onOpenChange={(open) => {
+        setShowCleanupDialog(open);
+        if (!open) setCleanupSuccess(false);
+      }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Kullanıcı Temizle (Geliştirici Modu)</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Trash2 className="text-red-500" size={18} />
+              Kullanıcı Temizle (Geliştirici Modu)
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <p className="text-sm text-muted-foreground">
-              Bu işlem, belirtilen e-posta adresine sahip kullanıcıyı tamamen silecektir. Bu işlem geri alınamaz!
-            </p>
+            {cleanupSuccess ? (
+              <Alert>
+                <AlertCircle className="h-4 w-4 text-green-500" />
+                <AlertDescription className="text-green-600">
+                  Kullanıcı başarıyla silindi. Artık yeni kayıt yapabilirsiniz.
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-5 w-5" />
+                <AlertDescription className="font-medium">
+                  Bu işlem, belirtilen e-posta adresine sahip kullanıcıyı tamamen silecektir. Bu işlem geri alınamaz!
+                </AlertDescription>
+              </Alert>
+            )}
             <div className="space-y-2">
-              <Label htmlFor="delete-email">E-posta</Label>
+              <Label htmlFor="delete-email">Silmek İstediğiniz E-posta</Label>
               <Input
                 id="delete-email"
                 type="email"
@@ -240,13 +263,19 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
                 onChange={(e) => setEmailToDelete(e.target.value)}
                 placeholder="silinecek@email.com"
               />
+              <p className="text-xs text-gray-500">
+                Örnek: ergun@gmail.com, nimet@gmail.com
+              </p>
             </div>
           </div>
           <DialogFooter>
             <Button
               type="button"
               variant="outline"
-              onClick={() => setShowCleanupDialog(false)}
+              onClick={() => {
+                setShowCleanupDialog(false);
+                setCleanupSuccess(false);
+              }}
               disabled={cleanupLoading}
             >
               İptal
@@ -255,7 +284,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
               type="button"
               variant="destructive"
               onClick={handleDeleteUser}
-              disabled={cleanupLoading}
+              disabled={cleanupLoading || cleanupSuccess}
             >
               {cleanupLoading ? "Siliniyor..." : "Kullanıcıyı Sil"}
             </Button>

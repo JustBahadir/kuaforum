@@ -143,51 +143,37 @@ export const authenticationService = {
    */
   deleteUserByEmail: async (email: string) => {
     try {
-      // First, get the user by email
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('email', email)
-        .single();
-        
+      // Daha güçlü bir silme işlemi için doğrudan RPC çağrısı kullanıyoruz
+      const { data, error } = await supabase.rpc('completely_delete_user', { 
+        target_email: email 
+      });
+      
       if (error) {
-        if (error.message.includes('No rows found')) {
-          // Try to find user in auth.users instead (this requires admin privileges)
-          const { error: adminError } = await supabase.rpc('delete_user_by_email', { 
-            email_to_delete: email 
+        console.error("Kullanıcı silme hatası (RPC):", error);
+        
+        // Alternatif yöntem olarak doğrudan auth.users tablosundan silmeyi deneyelim
+        try {
+          // Kullanıcıyı auth tablosundan silme
+          const { error: deleteError } = await supabase.functions.invoke("delete-user", {
+            body: { email }
           });
           
-          if (adminError) {
-            console.error("Kullanıcı silinemedi:", adminError);
-            throw adminError;
+          if (deleteError) {
+            console.error("Alternatif silme işlemi başarısız:", deleteError);
+            throw new Error(`Kullanıcı silinemedi: ${deleteError.message}`);
           }
           
-          return { success: true, message: `${email} silindi.` };
+          return { success: true, message: `${email} başarıyla silindi.` };
+        } catch (alternativeError) {
+          console.error("Alternatif silme hatası:", alternativeError);
+          throw alternativeError;
         }
-        
-        console.error("Kullanıcı aranırken hata:", error);
-        throw error;
       }
       
-      if (data) {
-        // User found, now delete from auth
-        const userId = data.id;
-        const { error: deleteError } = await supabase.rpc('delete_user', { 
-          user_id: userId 
-        });
-        
-        if (deleteError) {
-          console.error("Kullanıcı silinemedi:", deleteError);
-          throw deleteError;
-        }
-        
-        return { success: true, message: `${email} silindi.` };
-      }
-      
-      return { success: false, message: "Kullanıcı bulunamadı." };
-    } catch (error) {
-      console.error("Kullanıcı silme hatası:", error);
-      throw error;
+      return { success: true, message: `${email} başarıyla silindi.` };
+    } catch (error: any) {
+      console.error("Kullanıcı silme işlemi hatası:", error);
+      throw new Error(`Kullanıcı silme hatası: ${error.message}`);
     }
   }
 };
