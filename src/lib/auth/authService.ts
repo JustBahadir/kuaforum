@@ -120,7 +120,7 @@ export const authService = {
       console.log(`${authUsers.users.length} kullanıcı bulundu, aranan e-posta: ${email}`);
       
       // E-posta ile eşleşen kullanıcıyı bul
-      const user = authUsers.users.find(u => 
+      const user = authUsers.users.find((u: any) => 
         u.email && u.email.toLowerCase() === email.toLowerCase()
       ) as SupabaseAdminUser | undefined;
       
