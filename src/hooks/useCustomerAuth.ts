@@ -1,10 +1,9 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { supabase } from "@/lib/supabase/client";
-import { profilServisi } from "@/lib/supabase/services/profilServisi";
-import { dukkanServisi } from "@/lib/supabase/services/dukkanServisi";
-import { getGenderTitle } from "@/lib/supabase/services/profileServices/profileTypes";
+import { authService } from "@/lib/auth/authService";
+import { profileService } from "@/lib/auth/profileService";
+import { shouldRedirect, getRedirectPath } from "@/lib/auth/routeProtection";
 import { toast } from "sonner";
 
 export function useCustomerAuth() {
@@ -21,7 +20,7 @@ export function useCustomerAuth() {
   // Refresh user profile data
   const refreshProfile = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await authService.getCurrentUser();
       
       if (!user) {
         setUserName("Değerli Müşterimiz");
@@ -34,59 +33,17 @@ export function useCustomerAuth() {
       setIsAuthenticated(true);
       
       // Get user role
-      const role = await profilServisi.getUserRole();
+      const role = await profileService.getUserRole();
       setUserRole(role);
       console.log("User role from refreshProfile:", role);
       
-      // If admin, get shop ID
-      if (role === 'admin') {
-        try {
-          const dukkan = await dukkanServisi.kullanicininDukkani(user.id);
-          if (dukkan) {
-            setDukkanId(dukkan.id);
-          }
-        } catch (error) {
-          console.error("Dükkan bilgisi alınamadı:", error);
-        }
-      }
+      // Get shop ID if admin
+      const shopId = await profileService.getUserShopId(user.id, role || '');
+      setDukkanId(shopId);
       
-      // First try to get name from user metadata
-      if (user.user_metadata && (user.user_metadata.first_name)) {
-        const metaFirstName = user.user_metadata.first_name || '';
-        const metaGender = user.user_metadata.gender || '';
-        
-        const genderTitle = getGenderTitle(metaGender);
-        
-        if (metaFirstName && genderTitle) {
-          setUserName(`${metaFirstName} ${genderTitle}`);
-          return;
-        } else if (metaFirstName) {
-          setUserName(metaFirstName);
-          return;
-        }
-      }
-      
-      // If metadata doesn't have the name, try from profile table
-      try {
-        const profile = await profilServisi.getir();
-        if (profile) {
-          const firstName = profile.first_name || "";
-          const genderTitle = getGenderTitle(profile.gender);
-          
-          if (firstName && genderTitle) {
-            setUserName(`${firstName} ${genderTitle}`);
-          } else if (firstName) {
-            setUserName(firstName);
-          } else {
-            setUserName("Değerli Müşterimiz");
-          }
-        } else {
-          setUserName("Değerli Müşterimiz");
-        }
-      } catch (profileError) {
-        console.error("Error getting profile:", profileError);
-        setUserName("Değerli Müşterimiz");
-      }
+      // Get formatted user name
+      const name = await profileService.getUserNameWithTitle();
+      setUserName(name);
     } catch (error) {
       console.error("Error refreshing profile:", error);
       setUserName("Değerli Müşterimiz");
@@ -99,64 +56,42 @@ export function useCustomerAuth() {
     async function loadUserData() {
       try {
         setLoading(true);
-        const { data: { user }, error } = await supabase.auth.getUser();
         
-        if (error) {
-          console.error("Auth error:", error);
-          toast.error("Oturum bilgileriniz alınamadı");
-          setIsAuthenticated(false);
-          setLoading(false);
-          return;
-        }
-        
-        if (!user) {
-          setIsAuthenticated(false);
-          setLoading(false);
-          // Ana sayfaya ve login sayfalarına her zaman erişime izin ver
-          if (location.pathname !== "/" && 
-              location.pathname !== "/login" && 
-              location.pathname !== "/staff-login" &&
-              !location.pathname.startsWith("/customer-dashboard") &&
-              (location.pathname.includes('/personnel') || 
-               location.pathname.includes('/dashboard'))) {
-            navigate("/staff-login");
-          }
-          return;
-        }
-        
-        setIsAuthenticated(true);
-        
-        // Get user role
-        const role = await profilServisi.getUserRole();
-        setUserRole(role);
-        console.log("User role from loadUserData:", role);
-        
-        // If admin, get shop ID
-        if (role === 'admin') {
-          try {
-            const dukkan = await dukkanServisi.kullanicininDukkani(user.id);
-            if (dukkan) {
-              setDukkanId(dukkan.id);
+        try {
+          const user = await authService.getCurrentUser();
+          
+          if (!user) {
+            setIsAuthenticated(false);
+            
+            // Check if current route should redirect
+            if (shouldRedirect(false, null, location.pathname)) {
+              navigate("/staff-login");
             }
-          } catch (error) {
-            console.error("Dükkan bilgisi alınamadı:", error);
+            return;
           }
+          
+          setIsAuthenticated(true);
+          
+          // Get user role
+          const role = await profileService.getUserRole();
+          setUserRole(role);
+          console.log("User role from loadUserData:", role);
+          
+          // Get shop ID if admin
+          const shopId = await profileService.getUserShopId(user.id, role || '');
+          setDukkanId(shopId);
+          
+          // Check if current route needs redirect based on role
+          if (shouldRedirect(true, role, location.pathname)) {
+            navigate(getRedirectPath(true, role, location.pathname));
+          }
+          
+          // Get formatted user name
+          await refreshProfile();
+        } catch (error) {
+          console.error("Error in auth check:", error);
+          setIsAuthenticated(false);
         }
-        
-        // Kullanıcı rolünü kontrol et, ancak ana sayfaya ve müşteri sayfalarına erişime izin ver
-        if ((role === 'staff' || role === 'admin') && location.pathname.includes('/customer')) {
-          navigate("/personnel");
-        } else if (role === 'customer' && 
-                  (location.pathname.includes('/personnel') || 
-                   location.pathname.includes('/dashboard'))) {
-          navigate("/customer-dashboard");
-        }
-        
-        // Get profile data
-        await refreshProfile();
-      } catch (error) {
-        console.error("Error in auth check:", error);
-        setIsAuthenticated(false);
       } finally {
         setLoading(false);
       }
@@ -165,15 +100,14 @@ export function useCustomerAuth() {
     loadUserData();
     
     // Set up auth state change listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    const subscription = authService.onAuthStateChange(
       async (event, session) => {
-        console.log("Auth state changed:", event, session ? "has session" : "no session");
         if (event === 'SIGNED_IN') {
           setIsAuthenticated(true);
           await refreshProfile();
           
           // Check role and redirect accordingly
-          const role = await profilServisi.getUserRole();
+          const role = await profileService.getUserRole();
           if ((role === 'staff' || role === 'admin') && location.pathname.includes('/staff-login')) {
             navigate("/personnel");
           } else if (role === 'customer' && location.pathname.includes('/staff-login')) {
@@ -204,8 +138,7 @@ export function useCustomerAuth() {
   
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
-      toast.success("Başarıyla çıkış yapıldı");
+      await authService.signOut();
       setIsAuthenticated(false);
       setUserRole(null);
       setDukkanId(null);
@@ -214,7 +147,6 @@ export function useCustomerAuth() {
       navigate("/");
     } catch (error) {
       console.error("Çıkış yapılırken hata:", error);
-      toast.error("Çıkış yapılırken bir hata oluştu");
     }
   };
   
