@@ -6,30 +6,39 @@ export const personelServisi = {
   async hepsiniGetir() {
     const { data, error } = await supabase
       .from('personel')
-      .select('*')
+      .select(`
+        *,
+        dukkan:dukkanlar(*)
+      `)
       .order('ad_soyad');
 
     if (error) throw error;
     return data || [];
   },
 
-  async ekle(personel: Omit<Personel, 'id' | 'created_at'>) {
+  async ekle(personel: Omit<Personel, 'id' | 'created_at' | 'dukkan'>) {
     const { data, error } = await supabase
       .from('personel')
       .insert([personel])
-      .select()
+      .select(`
+        *,
+        dukkan:dukkanlar(*)
+      `)
       .single();
 
     if (error) throw error;
     return data;
   },
 
-  async guncelle(id: number, personel: Partial<Personel>) {
+  async guncelle(id: number, personel: Partial<Omit<Personel, 'dukkan'>>) {
     const { data, error } = await supabase
       .from('personel')
       .update(personel)
       .eq('id', id)
-      .select()
+      .select(`
+        *,
+        dukkan:dukkanlar(*)
+      `)
       .single();
 
     if (error) throw error;

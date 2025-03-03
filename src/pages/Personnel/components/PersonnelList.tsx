@@ -1,3 +1,4 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { personelServisi } from "@/lib/supabase";
 import { useState } from "react";
@@ -112,6 +113,10 @@ export function PersonnelList() {
                         <span className="text-muted-foreground">Çalışma:</span>
                         <span>{personel.calisma_sistemi === 'haftalik' ? 'Haftalık' : 'Aylık'}</span>
                       </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Dükkan:</span>
+                        <span>{personel.dukkan?.ad || 'Atanmamış'}</span>
+                      </div>
                     </div>
                   </div>
                   <div className="flex border-t divide-x">
@@ -148,7 +153,7 @@ export function PersonnelList() {
           <PersonnelEditDialog 
             open={editDialogOpen} 
             onOpenChange={handleCloseEditDialog}
-            personelId={selectedPersonel}
+            personel={selectedPersonel}
           />
         )}
       </CardContent>

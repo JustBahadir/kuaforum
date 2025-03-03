@@ -114,4 +114,3 @@ export type Randevu = {
   islemler: number[];
   dukkan_id?: number;
 }
-
