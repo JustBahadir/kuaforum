@@ -88,31 +88,39 @@ export const authService = {
    */
   findUserByEmail: async (email: string) => {
     try {
-      // Define proper type for user data
-      interface User {
-        id: string;
-        email: string;
-        // Include other properties as needed
-      }
+      // Doğrudan e-posta ile kullanıcı bulma
+      console.log("E-posta ile kullanıcı aranıyor:", email);
       
-      // We need to use supabaseAdmin for this operation
-      const { data, error } = await supabaseAdmin.auth.admin.listUsers();
+      // Kullanıcıyı auth tablosunda ara
+      const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers();
       
-      if (error) {
-        console.error("Error listing users:", error);
+      if (authError) {
+        console.error("Kullanıcı listesi alınırken hata:", authError);
         return null;
       }
       
-      // Properly type the users array
-      const users = data?.users as User[] || [];
+      if (!authUsers || !authUsers.users || authUsers.users.length === 0) {
+        console.log("Kullanıcı listesi boş");
+        return null;
+      }
       
-      const user = users.find(user => 
-        user.email && user.email.toLowerCase() === email.toLowerCase()
+      // Kullanıcıları kontrol et
+      console.log(`${authUsers.users.length} kullanıcı bulundu, aranan e-posta: ${email}`);
+      
+      // E-posta ile eşleşen kullanıcıyı bul
+      const user = authUsers.users.find(u => 
+        u.email && u.email.toLowerCase() === email.toLowerCase()
       );
       
-      return user || null;
+      if (user) {
+        console.log("Kullanıcı bulundu:", user.id);
+        return user;
+      } else {
+        console.log("Bu e-posta ile eşleşen kullanıcı bulunamadı");
+        return null;
+      }
     } catch (error) {
-      console.error("Error finding user:", error);
+      console.error("Kullanıcı arama hatası:", error);
       return null;
     }
   },
@@ -122,40 +130,93 @@ export const authService = {
    */
   deleteUserByEmail: async (email: string) => {
     try {
-      // First, find the user by email
+      console.log("Silme işlemi başlatıldı:", email);
+      
+      // Önce e-posta ile kullanıcıyı bul
       const user = await authService.findUserByEmail(email);
       
       if (!user) {
+        console.log("Kullanıcı bulunamadı:", email);
         throw new Error("Bu e-posta adresiyle kayıtlı kullanıcı bulunamadı.");
       }
       
-      // Delete the user using supabaseAdmin
-      const { error } = await supabaseAdmin.auth.admin.deleteUser(user.id);
+      console.log("Silinecek kullanıcı:", user.id);
       
-      if (error) {
-        console.error("User deletion error:", error);
-        throw error;
-      }
-      
-      // Also clean up related records in the database
       try {
-        // Remove from profiles table
-        await supabase.from('profiles').delete().eq('id', user.id);
+        // Önce ilişkili kayıtları temizle
+        console.log("İlişkili kayıtlar temizleniyor...");
         
-        // Try to find and remove personnel records
-        const { data: personelData } = await supabase
+        // Profiles tablosundan sil
+        const { error: profileDeleteError } = await supabase
+          .from('profiles')
+          .delete()
+          .eq('id', user.id);
+        
+        if (profileDeleteError) {
+          console.log("Profil silme hatası:", profileDeleteError);
+        }
+        
+        // Personel kayıtlarını bul ve sil
+        const { data: personelData, error: personelFindError } = await supabase
           .from('personel')
-          .select('id')
+          .select('id, dukkan_id')
           .eq('auth_id', user.id);
           
+        if (personelFindError) {
+          console.log("Personel bulma hatası:", personelFindError);
+        }
+        
         if (personelData && personelData.length > 0) {
-          await supabase.from('personel').delete().eq('auth_id', user.id);
+          console.log("Silinecek personel kayıtları:", personelData);
+          
+          // Personel dükkan sahibi ise, dükkana bağlı tüm personelleri de sil
+          for (const personel of personelData) {
+            if (personel.dukkan_id) {
+              const { data: shopData, error: shopError } = await supabase
+                .from('dukkanlar')
+                .select('sahibi_id')
+                .eq('id', personel.dukkan_id)
+                .single();
+              
+              if (!shopError && shopData && shopData.sahibi_id === user.id) {
+                console.log("Kullanıcı dükkan sahibi, ilişkili personeller siliniyor...");
+                
+                // Dükkandaki tüm personelleri sil
+                await supabase
+                  .from('personel')
+                  .delete()
+                  .eq('dukkan_id', personel.dukkan_id);
+                  
+                // Dükkanı sil
+                await supabase
+                  .from('dukkanlar')
+                  .delete()
+                  .eq('id', personel.dukkan_id);
+              }
+            }
+            
+            // Bu personeli sil
+            await supabase
+              .from('personel')
+              .delete()
+              .eq('id', personel.id);
+          }
         }
       } catch (cleanupError) {
-        console.error("Related records cleanup error:", cleanupError);
-        // We don't throw here as the user is already deleted from auth
+        console.error("İlişkili kayıtlar temizlenirken hata:", cleanupError);
+        // Burada hata fırlatmıyoruz çünkü auth kullanıcısını silmeye devam etmek istiyoruz
       }
       
+      // SupabaseAdmin ile kullanıcıyı sil
+      console.log("Auth kullanıcısı siliniyor...");
+      const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(user.id);
+      
+      if (deleteError) {
+        console.error("Kullanıcı silme hatası:", deleteError);
+        throw deleteError;
+      }
+      
+      console.log("Kullanıcı başarıyla silindi");
       return true;
     } catch (error) {
       console.error("Hesap silme hatası:", error);
