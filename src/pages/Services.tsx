@@ -8,8 +8,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { kategoriServisi } from "@/lib/supabase/services/kategoriServisi";
 import { islemServisi } from "@/lib/supabase/services/islemServisi";
 import { toast } from "@/components/ui/use-toast";
+import { useCustomerAuth } from "@/hooks/useCustomerAuth";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 export default function Services() {
+  const { userRole } = useCustomerAuth();
+  const isAdmin = userRole === 'admin';
   const queryClient = useQueryClient();
   const [isStaff, setIsStaff] = useState(true); // For now, let's assume the user is staff
   
@@ -23,6 +28,11 @@ export default function Services() {
   const [kategoriId, setKategoriId] = useState<number | null>(null);
   const [duzenleId, setDuzenleId] = useState<number | null>(null);
 
+  // Update staff status based on user role
+  useEffect(() => {
+    setIsStaff(userRole === 'staff' || userRole === 'admin');
+  }, [userRole]);
+
   // Fetch categories and services
   const { data: kategoriler = [] } = useQuery({
     queryKey: ['kategoriler'],
@@ -34,7 +44,7 @@ export default function Services() {
     queryFn: islemServisi.hepsiniGetir
   });
 
-  // Mutations for CRUD operations
+  // Mutations for CRUD operations - only available for admin
   const createServiceMutation = useMutation({
     mutationFn: islemServisi.ekle,
     onSuccess: () => {
@@ -115,6 +125,15 @@ export default function Services() {
   // Event handlers
   const onServiceFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isAdmin) {
+      toast({ 
+        title: "Yetki Hatası", 
+        description: "Bu işlemi gerçekleştirmek için yönetici yetkilerine sahip olmalısınız", 
+        variant: "destructive" 
+      });
+      return;
+    }
+    
     if (!islemAdi || !kategoriId) return;
     
     const islemData = {
@@ -133,12 +152,30 @@ export default function Services() {
 
   const onCategoryFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isAdmin) {
+      toast({ 
+        title: "Yetki Hatası", 
+        description: "Bu işlemi gerçekleştirmek için yönetici yetkilerine sahip olmalısınız", 
+        variant: "destructive" 
+      });
+      return;
+    }
+    
     if (!yeniKategoriAdi) return;
     
     createCategoryMutation.mutate({ kategori_adi: yeniKategoriAdi });
   };
 
   const onServiceEdit = (islem: any) => {
+    if (!isAdmin) {
+      toast({ 
+        title: "Yetki Hatası", 
+        description: "Bu işlemi gerçekleştirmek için yönetici yetkilerine sahip olmalısınız", 
+        variant: "destructive" 
+      });
+      return;
+    }
+    
     setIslemAdi(islem.islem_adi);
     setFiyat(islem.fiyat);
     setPuan(islem.puan);
@@ -148,18 +185,45 @@ export default function Services() {
   };
 
   const onServiceDelete = (islem: any) => {
+    if (!isAdmin) {
+      toast({ 
+        title: "Yetki Hatası", 
+        description: "Bu işlemi gerçekleştirmek için yönetici yetkilerine sahip olmalısınız", 
+        variant: "destructive" 
+      });
+      return;
+    }
+    
     if (window.confirm(`"${islem.islem_adi}" işlemini silmek istediğinize emin misiniz?`)) {
       deleteServiceMutation.mutate(islem.id);
     }
   };
 
   const onCategoryDelete = (kategoriId: number) => {
+    if (!isAdmin) {
+      toast({ 
+        title: "Yetki Hatası", 
+        description: "Bu işlemi gerçekleştirmek için yönetici yetkilerine sahip olmalısınız", 
+        variant: "destructive" 
+      });
+      return;
+    }
+    
     if (window.confirm("Bu kategoriyi silmek istediğinize emin misiniz?")) {
       deleteCategoryMutation.mutate(kategoriId);
     }
   };
 
   const onSiralamaChange = (items: any[]) => {
+    if (!isAdmin) {
+      toast({ 
+        title: "Yetki Hatası", 
+        description: "Bu işlemi gerçekleştirmek için yönetici yetkilerine sahip olmalısınız", 
+        variant: "destructive" 
+      });
+      return;
+    }
+    
     updateOrderMutation.mutate(items);
   };
 
@@ -230,6 +294,14 @@ export default function Services() {
                 <CardTitle>Kategoriler</CardTitle>
               </CardHeader>
               <CardContent>
+                {!isAdmin && (
+                  <Alert variant="destructive" className="mb-4">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      Kategori yönetimi için yönetici yetkilerine sahip olmalısınız.
+                    </AlertDescription>
+                  </Alert>
+                )}
                 {/* Kategori içeriği burada olacak */}
               </CardContent>
             </Card>
@@ -241,6 +313,14 @@ export default function Services() {
                 <CardTitle>Çalışma Saatleri</CardTitle>
               </CardHeader>
               <CardContent>
+                {!isAdmin && (
+                  <Alert variant="destructive" className="mb-4">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      Çalışma saatleri yönetimi için yönetici yetkilerine sahip olmalısınız.
+                    </AlertDescription>
+                  </Alert>
+                )}
                 {/* Çalışma saatleri içeriği burada olacak */}
               </CardContent>
             </Card>

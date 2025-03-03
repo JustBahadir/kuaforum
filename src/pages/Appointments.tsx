@@ -1,7 +1,11 @@
+
 import React from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
+import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 
 export default function Appointments() {
+  const { userRole } = useCustomerAuth();
+  
   return (
     <StaffLayout>
       <div className="container mx-auto">
@@ -9,7 +13,7 @@ export default function Appointments() {
         
         {/* Appointment content goes here */}
         <div className="bg-white p-6 rounded-lg shadow">
-          <p>Randevu içeriği buraya gelecek</p>
+          <p>Bu bölümde, {userRole === 'admin' ? 'tüm personelin' : 'kendinize ait'} randevuları yönetebilirsiniz.</p>
         </div>
       </div>
     </StaffLayout>

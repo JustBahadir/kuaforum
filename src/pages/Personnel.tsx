@@ -8,8 +8,13 @@ import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { PersonnelList } from "./Personnel/components/PersonnelList";
 import { PerformanceCharts } from "./Personnel/components/PerformanceCharts";
 import { StaffLayout } from "@/components/ui/staff-layout";
+import { useCustomerAuth } from "@/hooks/useCustomerAuth";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 export default function Personnel() {
+  const { userRole } = useCustomerAuth();
+  const isAdmin = userRole === 'admin';
   const [dateRange, setDateRange] = useState({
     from: new Date(new Date().setDate(new Date().getDate() - 30)), // Default to last 30 days
     to: new Date()
@@ -37,6 +42,19 @@ export default function Personnel() {
       });
     }
   });
+
+  if (!isAdmin) {
+    return (
+      <StaffLayout>
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Bu sayfaya erişim yetkiniz bulunmamaktadır. Yalnızca yöneticiler personel yönetimi yapabilir.
+          </AlertDescription>
+        </Alert>
+      </StaffLayout>
+    );
+  }
 
   return (
     <StaffLayout>
