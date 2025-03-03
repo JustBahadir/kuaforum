@@ -7,7 +7,7 @@ import { StaffCardHeader } from "@/components/staff/StaffCardHeader";
 import { LoginTabs } from "@/components/staff/LoginTabs";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
-import { authService } from "@/lib/auth/authService";
+import { authenticationService } from "@/lib/auth/services/authenticationService";
 
 export default function StaffLogin() {
   const navigate = useNavigate();
@@ -49,7 +49,7 @@ export default function StaffLogin() {
     const checkAuth = async () => {
       setProcessingAuth(true);
       try {
-        const session = await authService.getSession();
+        const session = await authenticationService.getSession();
         if (session) {
           navigate("/personnel");
         }

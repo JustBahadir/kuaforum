@@ -3,8 +3,8 @@ import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Users, Calendar, UserCog, Scissors, Home, LogOut, Store } from "lucide-react";
-import { authService } from "@/lib/auth/authService";
+import { Users, Calendar, UserCog, Scissors, Home, LogOut, Store, LineChart } from "lucide-react";
+import { authenticationService } from "@/lib/auth/services/authenticationService";
 import { toast } from "sonner";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 
@@ -23,7 +23,7 @@ export function StaffLayoutSidebar({ className, items, ...props }: SidebarNavPro
 
   const handleLogout = async () => {
     try {
-      await authService.signOut();
+      await authenticationService.signOut();
       navigate('/');
       toast.success("Başarıyla çıkış yapıldı");
     } catch (error) {
@@ -96,8 +96,8 @@ export function StaffLayout({ children }: StaffLayoutProps) {
       icon: <Home className="h-5 w-5" />,
     },
     {
-      title: "Müşteriler",
-      href: "/customers",
+      title: "Personel İşlemleri",
+      href: "/personnel",
       icon: <Users className="h-5 w-5" />,
     },
     {
@@ -106,9 +106,9 @@ export function StaffLayout({ children }: StaffLayoutProps) {
       icon: <Calendar className="h-5 w-5" />,
     },
     {
-      title: "Personel",
-      href: "/personnel",
-      icon: <UserCog className="h-5 w-5" />,
+      title: "Dükkan İstatistikleri",
+      href: "/shop-statistics",
+      icon: <LineChart className="h-5 w-5" />,
     },
     {
       title: "Hizmetler",

@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Lock, User } from "lucide-react";
 import { toast } from "sonner";
-import { authService } from "@/lib/auth/authService";
+import { authenticationService } from "@/lib/auth/services/authenticationService";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import {
@@ -43,7 +43,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
     
     try {
       console.log("Giriş yapılıyor:", email);
-      const { user, session } = await authService.signIn(email, password);
+      const { user, session } = await authenticationService.signIn(email, password);
       
       if (user && session) {
         toast.success("Giriş başarılı!");
@@ -74,7 +74,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
     setResetLoading(true);
     
     try {
-      await authService.resetPassword(resetEmail);
+      await authenticationService.resetPassword(resetEmail);
       toast.success("Şifre sıfırlama bağlantısı e-posta adresinize gönderildi");
       setShowForgotDialog(false);
     } catch (error: any) {

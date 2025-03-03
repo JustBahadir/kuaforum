@@ -33,6 +33,17 @@ export const authenticationService = {
    */
   signUp: async (email: string, password: string, metadata: any) => {
     try {
+      // Check if user already exists
+      const { data: existingUser } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', email)
+        .single();
+
+      if (existingUser) {
+        return { user: null, error: { message: "Bu e-posta adresi zaten kayıtlı. Lütfen giriş yapın." } };
+      }
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -117,5 +128,12 @@ export const authenticationService = {
       return null;
     }
     return data.user;
+  },
+
+  /**
+   * Listen for authentication state changes
+   */
+  onAuthStateChange: (callback) => {
+    return supabase.auth.onAuthStateChange(callback);
   }
 };
