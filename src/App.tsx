@@ -1,8 +1,8 @@
 
 import { Route, Routes, Navigate, useNavigate } from "react-router-dom";
 import { Toaster } from "sonner";
-import Login from "@/pages/Login";
 import CustomerDashboard from "@/pages/CustomerDashboard";
+import Login from "@/pages/Login";
 import CustomerAppointments from "@/pages/CustomerDashboard/CustomerAppointments";
 import CustomerServices from "@/pages/CustomerDashboard/CustomerServices";
 import CustomerProfile from "@/pages/CustomerDashboard/CustomerProfile";
