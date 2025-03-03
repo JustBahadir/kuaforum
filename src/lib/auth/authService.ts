@@ -1,4 +1,3 @@
-
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
 
@@ -55,14 +54,12 @@ export const authService = {
    * Create a unique shop code based on shop name
    */
   generateShopCode: (shopName: string) => {
-    // Normalize the shop name: lowercase, remove special chars, replace spaces with hyphens
     const normalizedName = shopName
       .toLowerCase()
       .replace(/[^\w\s]/gi, '')
       .replace(/\s+/g, '-')
-      .substring(0, 20); // Limit length
+      .substring(0, 20);
     
-    // Add random suffix to prevent collisions
     const randomSuffix = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
     
     return `${normalizedName}-${randomSuffix}`;
@@ -83,5 +80,28 @@ export const authService = {
     }
     
     return data;
-  }
+  },
+  
+  /**
+   * Find a user by email address
+   */
+  findUserByEmail: async (email: string) => {
+    try {
+      const { data, error } = await supabase.auth.admin.listUsers();
+      
+      if (error) {
+        console.error("Error listing users:", error);
+        return null;
+      }
+      
+      const user = data?.users?.find(user => 
+        user.email?.toLowerCase() === email.toLowerCase()
+      );
+      
+      return user || null;
+    } catch (error) {
+      console.error("Error finding user:", error);
+      return null;
+    }
+  },
 };

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -10,7 +9,6 @@ import { supabase, supabaseAdmin } from "@/lib/supabase/client";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { DialogDescription } from "@/components/ui/dialog";
 
 export default function StaffLogin() {
   const navigate = useNavigate();
@@ -18,8 +16,6 @@ export default function StaffLogin() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [emailToDelete, setEmailToDelete] = useState("");
   const [deleteStatus, setDeleteStatus] = useState("");
-  const [verifyStep, setVerifyStep] = useState(false);
-  const [verificationCode, setVerificationCode] = useState("");
 
   // Check for any pending password resets or email confirmations
   useEffect(() => {
@@ -50,50 +46,10 @@ export default function StaffLogin() {
     checkHash();
   }, [navigate]);
 
-  // Request verification code to delete account
-  const requestVerificationCode = async () => {
+  // Direct account deletion without email verification
+  const handleDeleteAccount = async () => {
     if (!emailToDelete) {
       toast.error("Lütfen silmek istediğiniz hesabın e-posta adresini girin");
-      return;
-    }
-
-    setLoading(true);
-    setDeleteStatus("Doğrulama kodu gönderiliyor...");
-
-    try {
-      // Send a one-time password to the user's email
-      const { error } = await supabase.auth.signInWithOtp({
-        email: emailToDelete,
-      });
-
-      if (error) {
-        setDeleteStatus(`Doğrulama kodu gönderilemedi: ${error.message}`);
-        toast.error("Doğrulama kodu gönderilemedi: " + error.message);
-        setLoading(false);
-        return;
-      }
-
-      setVerifyStep(true);
-      setDeleteStatus("Doğrulama kodu e-posta adresinize gönderildi. Lütfen kontrol ediniz.");
-      toast.success("Doğrulama kodu e-posta adresinize gönderildi");
-    } catch (error: any) {
-      console.error("Kod gönderim hatası:", error);
-      setDeleteStatus(`Beklenmeyen hata: ${error.message}`);
-      toast.error("Bir hata oluştu: " + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Handle account deletion (Admin function)
-  const handleAdminDeleteAccount = async () => {
-    if (!emailToDelete) {
-      toast.error("Lütfen silmek istediğiniz hesabın e-posta adresini girin");
-      return;
-    }
-
-    if (verifyStep && !verificationCode) {
-      toast.error("Lütfen e-posta adresinize gönderilen doğrulama kodunu girin");
       return;
     }
 
@@ -101,53 +57,45 @@ export default function StaffLogin() {
     setDeleteStatus("İşlem başlatıldı...");
 
     try {
-      if (verifyStep) {
-        // First, verify the code and sign in the user
-        const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
-          email: emailToDelete,
-          token: verificationCode,
-          type: 'email'
-        });
-
-        if (verifyError) {
-          setDeleteStatus(`Doğrulama hatası: ${verifyError.message}`);
-          toast.error("Doğrulama başarısız: " + verifyError.message);
-          setLoading(false);
-          return;
-        }
-
-        if (!verifyData.user) {
-          setDeleteStatus("Doğrulama başarısız. Geçersiz kod.");
-          toast.error("Doğrulama başarısız. Geçersiz kod.");
-          setLoading(false);
-          return;
-        }
-
-        // Now delete the user using the admin client with the verified user ID
-        const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(
-          verifyData.user.id
-        );
-
-        if (deleteError) {
-          console.error("Hesap silme hatası:", deleteError);
-          setDeleteStatus(`Hesap silme hatası: ${deleteError.message}`);
-          toast.error("Hesap silinemedi: " + deleteError.message);
-          setLoading(false);
-          return;
-        }
-
-        setDeleteStatus("Hesap başarıyla silindi!");
-        toast.success("Hesap başarıyla silindi. Şimdi yeniden kayıt olabilirsiniz.");
-        setShowDeleteDialog(false);
-        setVerifyStep(false);
-        setVerificationCode("");
-      } else {
-        // Request verification code first
-        await requestVerificationCode();
+      console.log("Silme işlemi başlatıldı:", emailToDelete);
+      
+      // First, find the user by email
+      const { data: usersData, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+      
+      if (listError) {
+        console.error("Kullanıcı listesi alınamadı:", listError);
+        throw new Error("Kullanıcı listesi alınamadı: " + listError.message);
       }
+      
+      // Find the user with the matching email
+      const userToDelete = usersData?.users?.find(user => 
+        user.email?.toLowerCase() === emailToDelete.toLowerCase()
+      );
+      
+      if (!userToDelete) {
+        throw new Error("Bu e-posta adresiyle kayıtlı kullanıcı bulunamadı.");
+      }
+      
+      console.log("Silinecek kullanıcı bulundu:", userToDelete.id);
+      
+      // Now delete the user using the admin client with the user ID
+      const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(
+        userToDelete.id
+      );
+
+      if (deleteError) {
+        console.error("Hesap silme hatası:", deleteError);
+        throw new Error("Hesap silinirken bir hata oluştu: " + deleteError.message);
+      }
+
+      setDeleteStatus("Hesap başarıyla silindi!");
+      toast.success("Hesap başarıyla silindi. Şimdi yeniden kayıt olabilirsiniz.");
+      setShowDeleteDialog(false);
+      setEmailToDelete("");
+      
     } catch (error: any) {
       console.error("Hesap silme hatası:", error);
-      setDeleteStatus(`Beklenmeyen hata: ${error.message}`);
+      setDeleteStatus(`Hata: ${error.message}`);
       toast.error("Bir hata oluştu: " + error.message);
     } finally {
       setLoading(false);
@@ -165,8 +113,7 @@ export default function StaffLogin() {
 
   const handleCancelDelete = () => {
     setShowDeleteDialog(false);
-    setVerifyStep(false);
-    setVerificationCode("");
+    setEmailToDelete("");
     setDeleteStatus("");
   };
 
@@ -205,48 +152,26 @@ export default function StaffLogin() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {verifyStep ? "E-posta Doğrulama" : "Hesap Silme"}
+              Hesap Silme
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {!verifyStep ? (
-                <>
-                  <p className="mb-4 text-red-600 font-semibold">
-                    DİKKAT: Bu işlem geri alınamaz! Hesabınız kalıcı olarak silinecektir.
-                  </p>
-                  <div className="space-y-2 mb-4">
-                    <Label htmlFor="delete-email">Silmek istediğiniz e-posta</Label>
-                    <Input 
-                      id="delete-email" 
-                      type="email" 
-                      value={emailToDelete}
-                      onChange={(e) => setEmailToDelete(e.target.value)}
-                      placeholder="silinecek@email.com"
-                      required
-                    />
-                  </div>
-                </>
-              ) : (
-                <>
-                  <p className="mb-4">
-                    <span className="font-medium">{emailToDelete}</span> adresine bir doğrulama kodu gönderdik. 
-                    Lütfen e-postanızı kontrol edin ve aşağıya gelen kodu girin.
-                  </p>
-                  <div className="space-y-2 mb-4">
-                    <Label htmlFor="verification-code">Doğrulama Kodu</Label>
-                    <Input 
-                      id="verification-code" 
-                      type="text" 
-                      value={verificationCode}
-                      onChange={(e) => setVerificationCode(e.target.value)}
-                      placeholder="123456"
-                      required
-                    />
-                  </div>
-                </>
-              )}
+              <p className="mb-4 text-red-600 font-semibold">
+                DİKKAT: Bu işlem geri alınamaz! Hesabınız kalıcı olarak silinecektir.
+              </p>
+              <div className="space-y-2 mb-4">
+                <Label htmlFor="delete-email">Silmek istediğiniz e-posta</Label>
+                <Input 
+                  id="delete-email" 
+                  type="email" 
+                  value={emailToDelete}
+                  onChange={(e) => setEmailToDelete(e.target.value)}
+                  placeholder="silinecek@email.com"
+                  required
+                />
+              </div>
               
               {deleteStatus && (
-                <div className={`p-2 rounded ${deleteStatus.includes("hatası") || deleteStatus.includes("beklenmeyen") ? "bg-red-50 text-red-700" : "bg-blue-50 text-blue-700"}`}>
+                <div className={`p-2 rounded ${deleteStatus.includes("Hata") ? "bg-red-50 text-red-700" : "bg-blue-50 text-blue-700"}`}>
                   {deleteStatus}
                 </div>
               )}
@@ -255,11 +180,11 @@ export default function StaffLogin() {
           <AlertDialogFooter>
             <AlertDialogCancel onClick={handleCancelDelete}>İptal</AlertDialogCancel>
             <AlertDialogAction 
-              onClick={handleAdminDeleteAccount}
+              onClick={handleDeleteAccount}
               className="bg-red-600 hover:bg-red-700"
-              disabled={loading || !emailToDelete || (verifyStep && !verificationCode)}
+              disabled={loading || !emailToDelete}
             >
-              {loading ? "İşlem yapılıyor..." : verifyStep ? "Doğrula ve Hesabı Sil" : "Doğrulama Kodu Gönder"}
+              {loading ? "İşlem yapılıyor..." : "Hesabı Sil"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

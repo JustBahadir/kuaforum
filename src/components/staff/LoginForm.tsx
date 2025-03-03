@@ -31,11 +31,6 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [showAuthResponse, setShowAuthResponse] = useState(false);
   const [authResponseData, setAuthResponseData] = useState<any>(null);
-  const [showPasswordlessDialog, setShowPasswordlessDialog] = useState(false);
-  const [passwordlessEmail, setPasswordlessEmail] = useState("");
-  const [passwordlessCode, setPasswordlessCode] = useState("");
-  const [passwordlessStep, setPasswordlessStep] = useState<"email" | "code">("email");
-  const [passwordlessSending, setPasswordlessSending] = useState(false);
 
   // Standard login function
   const handleLogin = async (e: React.FormEvent) => {
@@ -63,7 +58,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       if (error) {
         console.error("Login error:", error);
         if (error.message.includes("Invalid login credentials")) {
-          setLoginError("Geçersiz e-posta veya şifre. Lütfen bilgilerinizi kontrol ediniz. Eğer şifrenizi hatırlamıyorsanız 'Şifremi Unuttum' butonunu kullanabilirsiniz veya 'Şifresiz Giriş' yapabilirsiniz.");
+          setLoginError("Geçersiz e-posta veya şifre. Lütfen bilgilerinizi kontrol ediniz. Eğer şifrenizi hatırlamıyorsanız 'Şifremi Unuttum' butonunu kullanabilirsiniz.");
           toast.error("Geçersiz e-posta veya şifre");
         } else {
           setLoginError(`Giriş yapılamadı: ${error.message}`);
@@ -122,80 +117,6 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
     }
   };
 
-  // Passwordless login - send code
-  const handleSendPasswordlessCode = async () => {
-    if (!passwordlessEmail) {
-      toast.error("Lütfen e-posta adresinizi girin");
-      return;
-    }
-
-    setPasswordlessSending(true);
-    
-    try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email: passwordlessEmail,
-        options: {
-          emailRedirectTo: `${window.location.origin}/staff-login`
-        }
-      });
-      
-      if (error) throw error;
-      
-      toast.success("Giriş kodu e-posta adresinize gönderildi");
-      setPasswordlessStep("code");
-    } catch (error: any) {
-      console.error("Passwordless login error:", error);
-      toast.error("Giriş kodu gönderilemedi: " + error.message);
-    } finally {
-      setPasswordlessSending(false);
-    }
-  };
-
-  // Passwordless login - verify code
-  const handleVerifyPasswordlessCode = async () => {
-    if (!passwordlessCode) {
-      toast.error("Lütfen giriş kodunu girin");
-      return;
-    }
-
-    setPasswordlessSending(true);
-    
-    try {
-      const { data, error } = await supabase.auth.verifyOtp({
-        email: passwordlessEmail,
-        token: passwordlessCode,
-        type: 'email'
-      });
-      
-      if (error) throw error;
-      
-      if (data.user) {
-        toast.success("Giriş başarılı!");
-        setShowPasswordlessDialog(false);
-        onSuccess();
-      } else {
-        throw new Error("Kullanıcı verisi alınamadı");
-      }
-    } catch (error: any) {
-      console.error("Verify OTP error:", error);
-      toast.error("Giriş kodu doğrulanamadı: " + error.message);
-      setAuthResponseData({ error });
-    } finally {
-      setPasswordlessSending(false);
-    }
-  };
-
-  const resetPasswordlessForm = () => {
-    setPasswordlessStep("email");
-    setPasswordlessEmail("");
-    setPasswordlessCode("");
-  };
-
-  const openPasswordlessLogin = () => {
-    resetPasswordlessForm();
-    setShowPasswordlessDialog(true);
-  };
-
   return (
     <>
       <form onSubmit={handleLogin} className="space-y-4">
@@ -246,16 +167,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
           </div>
         )}
         
-        <div className="flex justify-between items-center">
-          <Button 
-            type="button" 
-            variant="link" 
-            className="text-xs text-purple-600"
-            onClick={openPasswordlessLogin}
-          >
-            Şifresiz Giriş
-          </Button>
-          
+        <div className="flex justify-end items-center">
           <Button 
             type="button" 
             variant="link" 
@@ -304,71 +216,6 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
               disabled={resetEmailSending}
             >
               {resetEmailSending ? "Gönderiliyor..." : "Gönder"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      
-      {/* Passwordless Login Dialog */}
-      <AlertDialog open={showPasswordlessDialog} onOpenChange={setShowPasswordlessDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Şifresiz Giriş</AlertDialogTitle>
-            <AlertDialogDescription>
-              {passwordlessStep === "email" ? (
-                <>
-                  <p className="mb-4">
-                    Şifresiz giriş yapmak için e-posta adresinizi girin.
-                    Size bir giriş kodu göndereceğiz.
-                  </p>
-                  <div className="space-y-2">
-                    <Label htmlFor="passwordless-email">E-posta</Label>
-                    <Input 
-                      id="passwordless-email" 
-                      type="email" 
-                      value={passwordlessEmail}
-                      onChange={(e) => setPasswordlessEmail(e.target.value)}
-                      required
-                    />
-                  </div>
-                </>
-              ) : (
-                <>
-                  <p className="mb-4">
-                    <span className="font-medium">{passwordlessEmail}</span> adresine bir giriş kodu gönderdik.
-                    Lütfen e-postanızı kontrol edin ve aşağıya gelen kodu girin.
-                  </p>
-                  <div className="space-y-2">
-                    <Label htmlFor="passwordless-code">Giriş Kodu</Label>
-                    <Input 
-                      id="passwordless-code" 
-                      type="text" 
-                      value={passwordlessCode}
-                      onChange={(e) => setPasswordlessCode(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <Button 
-                    type="button" 
-                    variant="link" 
-                    className="text-xs mt-2 px-0"
-                    onClick={resetPasswordlessForm}
-                  >
-                    E-posta adresini değiştir
-                  </Button>
-                </>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>İptal</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={passwordlessStep === "email" ? handleSendPasswordlessCode : handleVerifyPasswordlessCode}
-              disabled={passwordlessSending}
-            >
-              {passwordlessSending 
-                ? (passwordlessStep === "email" ? "Gönderiliyor..." : "Doğrulanıyor...") 
-                : (passwordlessStep === "email" ? "Kod Gönder" : "Giriş Yap")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
