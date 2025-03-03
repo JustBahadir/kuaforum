@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { authService } from "@/lib/auth/authService";
@@ -19,7 +18,6 @@ export function useCustomerAuth() {
 
   const activeTab = location.pathname.split("/").pop() || "";
 
-  // Refresh user profile data
   const refreshProfile = async () => {
     try {
       const user = await authService.getCurrentUser();
@@ -35,29 +33,32 @@ export function useCustomerAuth() {
 
       setIsAuthenticated(true);
       
-      // Get user role
       const role = await profileService.getUserRole();
       setUserRole(role);
       console.log("User role from refreshProfile:", role);
       
-      // Get shop ID and name based on role
       if (role === 'admin') {
-        // If admin, get the shop they own
         const userShop = await dukkanServisi.kullanicininDukkani(user.id);
         if (userShop) {
           setDukkanId(userShop.id);
           setDukkanAdi(userShop.ad);
+        } else if (location.pathname.includes('/personnel')) {
+          toast.error("Dükkan bilgileriniz bulunamadı. Lütfen yönetici ile iletişime geçin.");
+          navigate("/");
+          return;
         }
       } else if (role === 'staff') {
-        // If staff, get shop from personnel record
         const staffShop = await dukkanServisi.personelAuthIdDukkani(user.id);
         if (staffShop) {
           setDukkanId(staffShop.id);
           setDukkanAdi(staffShop.ad);
+        } else if (location.pathname.includes('/personnel')) {
+          toast.error("Dükkan bilgileriniz bulunamadı. Lütfen yönetici ile iletişime geçin.");
+          navigate("/");
+          return;
         }
       }
       
-      // Get formatted user name
       const name = await profileService.getUserNameWithTitle();
       setUserName(name);
     } catch (error) {
@@ -80,7 +81,6 @@ export function useCustomerAuth() {
           if (!user) {
             setIsAuthenticated(false);
             
-            // Gerektiğinde ana sayfaya yönlendirme
             if (shouldRedirect(false, null, location.pathname)) {
               navigate("/");
             }
@@ -89,49 +89,40 @@ export function useCustomerAuth() {
           
           setIsAuthenticated(true);
           
-          // Get user role
           const role = await profileService.getUserRole();
           setUserRole(role);
           console.log("User role from loadUserData:", role);
           
-          // Get shop info based on role
           if (role === 'admin') {
-            // If admin, get the shop they own
             const userShop = await dukkanServisi.kullanicininDukkani(user.id);
             if (userShop) {
               setDukkanId(userShop.id);
               setDukkanAdi(userShop.ad);
             } else if (location.pathname.includes('/personnel')) {
-              // Admin without shop shouldn't access personnel pages
               toast.error("Dükkan bilgileriniz bulunamadı. Lütfen yönetici ile iletişime geçin.");
               navigate("/");
               return;
             }
           } else if (role === 'staff') {
-            // If staff, get shop from personnel record
             const staffShop = await dukkanServisi.personelAuthIdDukkani(user.id);
             if (staffShop) {
               setDukkanId(staffShop.id);
               setDukkanAdi(staffShop.ad);
             } else if (location.pathname.includes('/personnel')) {
-              // Staff without shop shouldn't access personnel pages
               toast.error("Dükkan bilgileriniz bulunamadı. Lütfen yönetici ile iletişime geçin.");
               navigate("/");
               return;
             }
           }
           
-          // Check if current route needs redirect based on role
           if (shouldRedirect(true, role, location.pathname)) {
             navigate(getRedirectPath(true, role, location.pathname));
           }
           
-          // Get formatted user name
           await refreshProfile();
         } catch (error) {
           console.error("Error in auth check:", error);
           setIsAuthenticated(false);
-          // Herhangi bir hata durumunda en azından ana sayfaya yönlendir
           navigate("/");
         }
       } finally {
@@ -141,8 +132,7 @@ export function useCustomerAuth() {
     
     loadUserData();
     
-    // Set up auth state change listener
-    const subscription = authService.onAuthStateChange(
+    const { data: subscription } = authService.onAuthStateChange(
       async (event, session) => {
         console.log("Auth state changed event:", event);
         if (event === 'SIGNED_IN') {
@@ -150,12 +140,10 @@ export function useCustomerAuth() {
           setIsAuthenticated(true);
           await refreshProfile();
           
-          // Check role and redirect accordingly
           const role = await profileService.getUserRole();
           if ((role === 'staff' || role === 'admin') && location.pathname.includes('/staff-login')) {
             navigate("/personnel");
           } else if (role === 'customer' && location.pathname.includes('/staff-login')) {
-            // Staff login page but customer role - redirect to customer dashboard
             navigate("/customer-dashboard");
             toast.info("Müşteri hesabı ile giriş yaptınız. Personel girişi için personel hesabı kullanmalısınız.");
           }
@@ -167,7 +155,6 @@ export function useCustomerAuth() {
           setDukkanId(null);
           setDukkanAdi(null);
           
-          // Oturumu kapattıktan sonra ana sayfaya yönlendir
           navigate("/");
         }
       }
@@ -188,7 +175,6 @@ export function useCustomerAuth() {
       setDukkanId(null);
       setDukkanAdi(null);
       
-      // Always navigate to the home page
       navigate("/");
       console.log("Ana sayfaya yönlendirildi");
     } catch (error) {
