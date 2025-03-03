@@ -98,7 +98,7 @@ export const authService = {
   /**
    * Find a user by email address
    */
-  findUserByEmail: async (email: string) => {
+  findUserByEmail: async (email: string): Promise<SupabaseAdminUser | null> => {
     try {
       // Doğrudan e-posta ile kullanıcı bulma
       console.log("E-posta ile kullanıcı aranıyor:", email);

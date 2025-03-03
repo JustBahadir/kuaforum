@@ -61,6 +61,16 @@ export default function StaffLogin() {
     try {
       console.log("Silme işlemi başlatıldı:", emailToDelete);
       
+      // Önce kullanıcının var olduğunu kontrol et
+      const user = await authService.findUserByEmail(emailToDelete);
+      
+      if (!user) {
+        setDeleteStatus("Bu e-posta ile kayıtlı bir kullanıcı bulunamadı!");
+        toast.error("Bu e-posta ile kayıtlı bir kullanıcı bulunamadı!");
+        setLoading(false);
+        return;
+      }
+      
       // Use the deleteUserByEmail function from authService
       await authService.deleteUserByEmail(emailToDelete);
       

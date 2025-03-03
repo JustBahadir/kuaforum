@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,25 +45,15 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
     try {
       console.log("Attempting login with:", email);
       
-      // Check if user exists first
-      const { data: userData, error: userError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', email)
-        .maybeSingle();
-        
-      if (userError) {
-        console.log("User lookup error:", userError);
-      }
-      
-      // Sign in with email and password
+      // Doğrudan Supabase auth ile oturum açma işlemini gerçekleştir
+      // Önceki profile kontrolünü kaldırdık, bu UUID hatası veriyordu
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
       
       // Save response for debugging
-      setAuthResponseData({ data, error, userLookup: { userData, userError } });
+      setAuthResponseData({ data, error });
       
       if (error) {
         console.error("Login error:", error);
@@ -88,7 +77,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       
     } catch (error: any) {
       console.error("Giriş hatası:", error);
-      setLoginError(`Giriş yapılamadı: ${error.message}`);
+      setLoginError(`Giri�� yapılamadı: ${error.message}`);
       toast.error("Giriş yapılamadı: " + error.message);
       setAuthResponseData({ error });
     } finally {
