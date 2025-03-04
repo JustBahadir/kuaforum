@@ -172,7 +172,10 @@ export function ServicesContent({
             <div className="flex gap-2">
               <Button 
                 variant="outline" 
-                onClick={() => setDialogAcik(true)}
+                onClick={() => {
+                  formuSifirla();
+                  setDialogAcik(true);
+                }}
               >
                 <Plus className="mr-2 h-4 w-4" />
                 Hizmet Ekle

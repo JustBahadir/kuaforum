@@ -111,7 +111,8 @@ export const islemServisi = {
         sira: index,
         islem_adi: islem.islem_adi,
         fiyat: islem.fiyat,
-        puan: islem.puan
+        puan: islem.puan,
+        kategori_id: islem.kategori_id
       }));
 
       const { data, error } = await supabase

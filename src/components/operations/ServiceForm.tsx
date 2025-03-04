@@ -14,9 +14,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus } from "lucide-react";
 
 interface ServiceFormProps {
   isOpen: boolean;
@@ -55,12 +53,6 @@ export function ServiceForm({
 }: ServiceFormProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogTrigger asChild>
-        <Button onClick={onReset}>
-          <Plus className="mr-2" />
-          Yeni Hizmet
-        </Button>
-      </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>

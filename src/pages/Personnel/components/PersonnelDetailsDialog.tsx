@@ -36,14 +36,14 @@ export function PersonnelDetailsDialog({
 
   const { data: personel, isLoading, error } = useQuery({
     queryKey: ["personel", personelId],
-    queryFn: () => personelServisi.getirById(personelId),
-    enabled: !!personelId && open
+    queryFn: () => personelId > 0 ? personelServisi.getirById(personelId) : null,
+    enabled: !!personelId && open && personelId > 0
   });
 
   const { data: islemler = [], isLoading: islemleriYukluyor } = useQuery({
     queryKey: ["personel-islemleri", personelId],
     queryFn: () => personelIslemleriServisi.personelIslemleriGetir(personelId),
-    enabled: !!personelId && open
+    enabled: !!personelId && open && personelId > 0
   });
 
   const copyToClipboard = (text: string) => {

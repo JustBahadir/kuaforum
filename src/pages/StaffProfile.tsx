@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { User, Phone, Mail, Calendar, MapPin, CreditCard } from "lucide-react";
+import { User, Phone, Mail, Calendar, MapPin, CreditCard, Camera } from "lucide-react";
 import { FileUpload } from "@/components/ui/file-upload";
 
 const StaffProfile = () => {
@@ -204,12 +205,28 @@ const StaffProfile = () => {
           </CardHeader>
           <CardContent>
             <form id="profileForm" onSubmit={handleSubmit} className="space-y-6">
-              <div className="flex flex-col items-center justify-center mb-4">
-                <div className="w-32 h-32 mb-4">
+              <div className="flex flex-col md:flex-row justify-between items-start mb-6">
+                <div className="flex-1">
+                  <h3 className="text-lg font-medium mb-2">Profil Fotoğrafı</h3>
+                  <p className="text-sm text-gray-500 mb-4">
+                    PNG, JPG, GIF dosyası yükleyin (max 5MB)
+                  </p>
+                  <Button 
+                    variant="outline"
+                    type="button"
+                    className="mb-4 flex items-center gap-2"
+                    onClick={() => document.getElementById('avatar-upload-trigger')?.click()}
+                  >
+                    <Camera size={16} />
+                    Fotoğraf Değiştir
+                  </Button>
+                </div>
+                <div className="w-32 h-32 flex-shrink-0 relative rounded-full overflow-hidden border">
                   <FileUpload
+                    id="avatar-upload-trigger"
                     onUploadComplete={handleAvatarUpload}
                     currentImageUrl={formData.avatarUrl}
-                    label="Profil Fotoğrafı Yükle"
+                    label=""
                     bucketName="photos"
                     folderPath="avatars"
                   />
