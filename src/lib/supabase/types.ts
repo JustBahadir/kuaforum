@@ -1,3 +1,4 @@
+
 // Type definitions
 export type Islem = {
   id: number;
@@ -45,7 +46,7 @@ export type Musteri = {
 export type Personel = {
   id: number;
   created_at?: string;
-  personel_no: string;
+  personel_no?: string;
   ad_soyad: string;
   telefon: string;
   eposta: string;
@@ -56,6 +57,8 @@ export type Personel = {
   auth_id?: string;
   dukkan_id?: number;
   dukkan?: Dukkan;
+  avatar_url?: string;
+  cinsiyet?: "erkek" | "kadın";
 }
 
 export type PersonelIslemi = {
@@ -81,7 +84,7 @@ export type Profile = {
   created_at?: string;
   occupation?: string; 
   role?: string; // Role field to support different user types (customer, staff, admin)
-  gender?: string; // Gender field
+  gender?: "erkek" | "kadın"; // Gender field with only male/female options
   birthdate?: string; // Birthdate field
   avatar_url?: string; // Avatar URL field
 }

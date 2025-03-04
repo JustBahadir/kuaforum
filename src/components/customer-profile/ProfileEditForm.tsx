@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { User, Phone, Mail, Calendar, Users } from "lucide-react";
+import { User, Phone, Mail, Calendar } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { FileUpload } from "@/components/ui/file-upload";
 
 interface ProfileEditFormProps {
   profile: {
@@ -27,9 +28,11 @@ interface ProfileEditFormProps {
     email: string;
     gender: string;
     birthdate: string;
+    avatar_url?: string;
   };
   handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
   handleSelectChange: (name: string, value: string) => void;
+  handleAvatarUpload: (url: string) => void;
   handleSave: () => Promise<void>;
   isSaving: boolean;
 }
@@ -38,6 +41,7 @@ export function ProfileEditForm({
   profile, 
   handleChange, 
   handleSelectChange,
+  handleAvatarUpload,
   handleSave, 
   isSaving 
 }: ProfileEditFormProps) {
@@ -46,7 +50,20 @@ export function ProfileEditForm({
       <CardHeader>
         <CardTitle>Profili Düzenle</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-6">
+        {/* Avatar Upload Section */}
+        <div className="flex flex-col items-center justify-center mb-4">
+          <div className="w-32 h-32 mb-4">
+            <FileUpload
+              onUploadComplete={handleAvatarUpload}
+              currentImageUrl={profile.avatar_url}
+              label="Profil Fotoğrafı Yükle"
+              bucketName="photos"
+              folderPath="avatars"
+            />
+          </div>
+        </div>
+        
         <div className="grid md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="firstName" className="flex items-center gap-2">
@@ -95,7 +112,7 @@ export function ProfileEditForm({
         <div className="grid md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="gender" className="flex items-center gap-2">
-              <Users size={16} />
+              <User size={16} />
               Cinsiyet
             </Label>
             <Select
@@ -106,8 +123,8 @@ export function ProfileEditForm({
                 <SelectValue placeholder="Cinsiyet seçin" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="male">Erkek</SelectItem>
-                <SelectItem value="female">Kadın</SelectItem>
+                <SelectItem value="erkek">Erkek</SelectItem>
+                <SelectItem value="kadın">Kadın</SelectItem>
               </SelectContent>
             </Select>
           </div>

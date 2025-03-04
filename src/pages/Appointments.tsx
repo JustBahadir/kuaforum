@@ -15,11 +15,35 @@ import { AppointmentForm } from "@/components/appointments/AppointmentForm";
 import { randevuServisi } from "@/lib/supabase/services/randevuServisi";
 import { Randevu } from "@/lib/supabase/types";
 import { Loader2, Plus, Calendar as CalendarIcon } from "lucide-react";
+import { supabase } from "@/lib/supabase/client";
+import { personelServisi } from "@/lib/supabase";
 
 export default function Appointments() {
-  const { dukkanId } = useCustomerAuth();
+  const { dukkanId, userRole } = useCustomerAuth();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [currentPersonelId, setCurrentPersonelId] = useState<number | null>(null);
+  
+  // Get current user
+  const { data: currentUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: async () => {
+      const { data } = await supabase.auth.getUser();
+      return data.user;
+    }
+  });
+
+  // Get current user's personnel record if they are staff
+  const { data: currentPersonel } = useQuery({
+    queryKey: ['currentPersonel', currentUser?.id],
+    queryFn: () => personelServisi.getirByAuthId(currentUser?.id || ""),
+    enabled: !!currentUser?.id && userRole === 'staff',
+    onSuccess: (data) => {
+      if (data) {
+        setCurrentPersonelId(data.id);
+      }
+    }
+  });
   
   const { data: appointments = [], isLoading, refetch } = useQuery({
     queryKey: ['dukkan-randevular', dukkanId],
@@ -62,6 +86,15 @@ export default function Appointments() {
     }
   };
   
+  // Personelin kendisine ait randevular için stil
+  const getAppointmentContainerStyle = (appointment: Randevu) => {
+    // If personel_id matches current personel, highlight it
+    if (currentPersonelId && appointment.personel_id === currentPersonelId) {
+      return "flex border-2 border-purple-400 p-4 rounded-lg bg-purple-50";
+    }
+    return "flex border p-4 rounded-lg";
+  };
+  
   // Gün bloğunda gösterilecek randevu sayısı
   const getAppointmentsForDay = (date: Date) => {
     return appointments.filter(appointment => {
@@ -75,6 +108,14 @@ export default function Appointments() {
     toast.success("Randevu başarıyla oluşturuldu");
     refetch();
     setAddDialogOpen(false);
+  };
+  
+  // Personelin kendisine ait randevular için renk ve işaretleme
+  const getAppointmentCardStyle = (appointment: Randevu) => {
+    if (currentPersonelId && appointment.personel_id === currentPersonelId) {
+      return `mb-1 p-1 text-xs rounded border-2 border-purple-400 ${getStatusStyle(appointment.durum)} bg-opacity-70`;
+    }
+    return `mb-1 p-1 text-xs rounded ${getStatusStyle(appointment.durum)}`;
   };
   
   return (
@@ -133,7 +174,7 @@ export default function Appointments() {
                 ) : selectedDayAppointments.length > 0 ? (
                   <div className="space-y-4">
                     {selectedDayAppointments.map((appointment) => (
-                      <div key={appointment.id} className="flex border p-4 rounded-lg">
+                      <div key={appointment.id} className={getAppointmentContainerStyle(appointment)}>
                         <div className="w-20 text-center font-medium">
                           {appointment.saat.substring(0, 5)}
                         </div>
@@ -239,7 +280,7 @@ export default function Appointments() {
                               dayAppointments.map((appointment) => (
                                 <div 
                                   key={appointment.id} 
-                                  className={`mb-1 p-1 text-xs rounded ${getStatusStyle(appointment.durum)}`}
+                                  className={getAppointmentCardStyle(appointment)}
                                 >
                                   <p className="font-bold">{appointment.saat.substring(0, 5)}</p>
                                   <p>{appointment.musteri?.first_name} {appointment.musteri?.last_name}</p>
@@ -289,25 +330,27 @@ export default function Appointments() {
                     ) : selectedDayAppointments.length > 0 ? (
                       <div className="space-y-4">
                         {selectedDayAppointments.map((appointment) => (
-                          <div key={appointment.id} className="border p-4 rounded-lg">
-                            <div className="flex justify-between">
-                              <div>
-                                <p className="font-medium text-lg">
-                                  {appointment.saat.substring(0, 5)} - {appointment.musteri?.first_name} {appointment.musteri?.last_name}
-                                </p>
-                                <p className="text-sm text-gray-500">
-                                  {appointment.personel?.ad_soyad || "Personel atanmadı"}
-                                </p>
+                          <div key={appointment.id} className={getAppointmentContainerStyle(appointment)}>
+                            <div className="flex-1">
+                              <div className="flex justify-between">
+                                <div>
+                                  <p className="font-medium text-lg">
+                                    {appointment.saat.substring(0, 5)} - {appointment.musteri?.first_name} {appointment.musteri?.last_name}
+                                  </p>
+                                  <p className="text-sm text-gray-500">
+                                    {appointment.personel?.ad_soyad || "Personel atanmadı"}
+                                  </p>
+                                </div>
+                                <span className={`text-xs px-2 py-1 rounded ${getStatusStyle(appointment.durum)}`}>
+                                  {appointment.durum}
+                                </span>
                               </div>
-                              <span className={`text-xs px-2 py-1 rounded ${getStatusStyle(appointment.durum)}`}>
-                                {appointment.durum}
-                              </span>
+                              {appointment.notlar && (
+                                <p className="mt-2 text-sm">
+                                  <span className="font-medium">Not:</span> {appointment.notlar}
+                                </p>
+                              )}
                             </div>
-                            {appointment.notlar && (
-                              <p className="mt-2 text-sm">
-                                <span className="font-medium">Not:</span> {appointment.notlar}
-                              </p>
-                            )}
                           </div>
                         ))}
                       </div>

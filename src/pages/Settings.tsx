@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -7,16 +7,46 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { toast } from "sonner";
+import { Sun, Moon, Bell, Mail, Phone } from "lucide-react";
+import { useTheme } from "next-themes";
 
 export default function Settings() {
   const { resetSession } = useCustomerAuth();
+  const { theme, setTheme } = useTheme();
+  
+  const [mounted, setMounted] = useState(false);
   const [notifications, setNotifications] = useState(true);
-  const [emailUpdates, setEmailUpdates] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
+  const [emailNotifications, setEmailNotifications] = useState(true);
+  const [smsNotifications, setSmsNotifications] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  
+  // Wait for component to mount to access localStorage/theme
+  useEffect(() => {
+    setMounted(true);
+    // Initialize dark mode state
+    setIsDarkMode(theme === 'dark');
+  }, [theme]);
+  
+  const handleDarkModeToggle = (checked: boolean) => {
+    setIsDarkMode(checked);
+    setTheme(checked ? 'dark' : 'light');
+  };
   
   const handleSaveSettings = () => {
+    // Save settings to localStorage
+    localStorage.setItem('appSettings', JSON.stringify({
+      notifications,
+      emailNotifications,
+      smsNotifications
+    }));
+    
     toast.success("Ayarlar kaydedildi");
   };
+  
+  if (!mounted) {
+    // Avoid hydration mismatch by only rendering when mounted
+    return null;
+  }
   
   return (
     <StaffLayout>
@@ -33,11 +63,16 @@ export default function Settings() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="notifications">Bildirimler</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Uygulama içi bildirimleri aktifleştir
-                  </p>
+                <div className="space-y-0.5 flex items-center gap-2">
+                  <div className="bg-purple-100 text-purple-600 p-2 rounded-md">
+                    <Bell className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <Label htmlFor="notifications">Bildirimler</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Uygulama içi bildirimleri aktifleştir
+                    </p>
+                  </div>
                 </div>
                 <Switch
                   id="notifications"
@@ -47,30 +82,59 @@ export default function Settings() {
               </div>
               
               <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="emailUpdates">E-posta Bildirimleri</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Güncellemeler ve yeni özellikler hakkında e-posta al
-                  </p>
+                <div className="space-y-0.5 flex items-center gap-2">
+                  <div className="bg-blue-100 text-blue-600 p-2 rounded-md">
+                    <Mail className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <Label htmlFor="emailNotifications">E-posta Bildirimleri</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Randevu ve güncellemeler için e-posta bildirimleri al
+                    </p>
+                  </div>
                 </div>
                 <Switch
-                  id="emailUpdates"
-                  checked={emailUpdates}
-                  onCheckedChange={setEmailUpdates}
+                  id="emailNotifications"
+                  checked={emailNotifications}
+                  onCheckedChange={setEmailNotifications}
                 />
               </div>
               
               <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="darkMode">Koyu Tema</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Uygulamayı koyu tema ile görüntüle
-                  </p>
+                <div className="space-y-0.5 flex items-center gap-2">
+                  <div className="bg-green-100 text-green-600 p-2 rounded-md">
+                    <Phone className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <Label htmlFor="smsNotifications">SMS Bildirimleri</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Randevu hatırlatmaları için SMS bildirimleri al
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  id="smsNotifications"
+                  checked={smsNotifications}
+                  onCheckedChange={setSmsNotifications}
+                />
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5 flex items-center gap-2">
+                  <div className="bg-amber-100 text-amber-600 p-2 rounded-md">
+                    {isDarkMode ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+                  </div>
+                  <div>
+                    <Label htmlFor="darkMode">Koyu Tema</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Uygulamayı koyu tema ile görüntüle
+                    </p>
+                  </div>
                 </div>
                 <Switch
                   id="darkMode"
-                  checked={darkMode}
-                  onCheckedChange={setDarkMode}
+                  checked={isDarkMode}
+                  onCheckedChange={handleDarkModeToggle}
                 />
               </div>
               
