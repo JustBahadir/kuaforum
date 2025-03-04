@@ -60,6 +60,22 @@ export const dukkanServisi = {
     return data;
   },
   
+  async getirByKod(kod: string) {
+    const { data, error } = await supabase
+      .from('dukkanlar')
+      .select('*')
+      .eq('kod', kod)
+      .eq('active', true)
+      .single();
+    
+    if (error) {
+      console.error("Dükkan kodu ile getirme hatası:", error);
+      return null;
+    }
+    
+    return data;
+  },
+  
   async hepsiniGetir() {
     const { data, error } = await supabase
       .from('dukkanlar')
@@ -86,6 +102,10 @@ export const dukkanServisi = {
     }
     
     return data;
+  },
+  
+  async ekle(dukkan: Omit<Dukkan, 'id' | 'created_at'>) {
+    return this.dukkanEkle(dukkan);
   },
 
   async dukkaniGuncelle(dukkanId: number, guncellemeler: Partial<Dukkan>) {

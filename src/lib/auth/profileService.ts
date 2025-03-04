@@ -3,6 +3,7 @@ import { profilServisi } from "@/lib/supabase/services/profilServisi";
 import { dukkanServisi } from "@/lib/supabase/services/dukkanServisi";
 import { getGenderTitle } from "@/lib/supabase/services/profileServices/profileTypes";
 import { supabase } from "@/lib/supabase/client";
+import { Profile } from "@/lib/supabase/types";
 
 /**
  * Service to handle user profile operations
@@ -83,5 +84,19 @@ export const profileService = {
    */
   getUserRole: async (): Promise<string | null> => {
     return await profilServisi.getUserRole();
+  },
+  
+  /**
+   * Get user profile
+   */
+  getUserProfile: async (): Promise<Profile | null> => {
+    return await profilServisi.getir();
+  },
+  
+  /**
+   * Update user profile
+   */
+  updateUserProfile: async (data: Partial<Profile>): Promise<Profile | null> => {
+    return await profilServisi.guncelle(data);
   }
 };
