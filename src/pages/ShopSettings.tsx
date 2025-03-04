@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { dukkanServisi } from "@/lib/supabase";
 import { StaffLayout } from "@/components/ui/staff-layout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Copy, MapPin } from "lucide-react";
@@ -87,13 +87,14 @@ export default function ShopSettings() {
         throw err;
       }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['dukkan', dukkanId] });
       toast.success("Dükkan açık adresi güncellendi");
+      setFullAddress(data.acik_adres || "");
     },
     onError: (error) => {
       console.error("Açık adres güncelleme hatası:", error);
-      toast.error(`Açık adres güncellenirken bir hata oluştu: ${error instanceof Error ? error.message : String(error)}`);
+      toast.error(`Açık adres güncellenirken bir hata oluştu: ${error instanceof Error ? error.message : "Bilinmeyen hata"}`);
     }
   });
 

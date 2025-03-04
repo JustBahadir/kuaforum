@@ -35,6 +35,7 @@ export type Database = {
       }
       dukkanlar: {
         Row: {
+          acik_adres: string | null
           active: boolean | null
           ad: string
           adres: string | null
@@ -46,6 +47,7 @@ export type Database = {
           telefon: string | null
         }
         Insert: {
+          acik_adres?: string | null
           active?: boolean | null
           ad: string
           adres?: string | null
@@ -57,6 +59,7 @@ export type Database = {
           telefon?: string | null
         }
         Update: {
+          acik_adres?: string | null
           active?: boolean | null
           ad?: string
           adres?: string | null

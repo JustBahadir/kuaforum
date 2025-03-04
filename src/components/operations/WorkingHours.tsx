@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -14,6 +13,7 @@ interface WorkingHoursProps {
   onChange?: (index: number, field: keyof CalismaSaati, value: any) => void;
 }
 
+// Correct day order in Turkish
 const gunSirasi = {
   "pazartesi": 1,
   "sali": 2,
@@ -52,6 +52,7 @@ export function WorkingHours({ isStaff = true, gunler = [], onChange }: WorkingH
     enabled: gunler.length === 0
   });
 
+  // Properly sort the days from Monday to Sunday
   const calismaSaatleri = [...(gunler.length > 0 ? gunler : fetchedCalismaSaatleri)]
     .sort((a, b) => {
       const aIndex = gunSirasi[a.gun as keyof typeof gunSirasi] || 99;

@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,7 +23,6 @@ export default function ShopHomePage() {
   const [error, setError] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
-  // Fetch shop data
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -37,7 +35,6 @@ export default function ShopHomePage() {
             throw new Error("Kullanıcı bulunamadı");
           }
           
-          // Try to get dukkan from userId
           const dukkan = await dukkanServisi.kullanicininDukkani(user.id);
           if (!dukkan) {
             setError("Dükkan bulunamadı. Lütfen önce dükkan bilgilerinizi oluşturun.");
@@ -47,7 +44,6 @@ export default function ShopHomePage() {
           
           setDukkanData(dukkan);
         } else {
-          // We have a dukkanId, use getirById
           const dukkan = await dukkanServisi.getirById(dukkanId);
           if (!dukkan) {
             setError("Dükkan bilgileri alınamadı.");
@@ -81,7 +77,6 @@ export default function ShopHomePage() {
           
         if (error) throw error;
         
-        // Get profiles for all personnel to get avatar_url
         if (data && data.length > 0) {
           for (const personel of data) {
             if (personel.auth_id) {
@@ -117,7 +112,6 @@ export default function ShopHomePage() {
           
         if (error) throw error;
         
-        // Sort days properly
         const gunSirasi = {
           "pazartesi": 1,
           "sali": 2,
@@ -166,9 +160,9 @@ export default function ShopHomePage() {
 
   const formatTime = (time: string | null) => {
     if (!time) return "Kapalı";
-    return time.substring(0, 5); // Extract HH:MM from time string
+    return time.substring(0, 5);
   };
-  
+
   const openInMaps = () => {
     if (!dukkanData?.acik_adres) {
       toast.error("Haritada göstermek için bir açık adres girilmelidir");
@@ -228,7 +222,6 @@ export default function ShopHomePage() {
   return (
     <StaffLayout>
       <div className="container mx-auto px-4 py-6">
-        {/* Hero Section with Shop Name and Logo */}
         <div className="bg-gradient-to-r from-purple-100 to-pink-100 rounded-xl p-6 mb-8">
           <div className="flex flex-col md:flex-row items-center gap-6">
             <div className="relative group">
@@ -276,18 +269,15 @@ export default function ShopHomePage() {
           </div>
         </div>
         
-        {/* Main Content Area */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Left Column - Contact Info and Hours */}
           <div className="md:col-span-1 space-y-6">
-            {/* Contact Info Card */}
             <Card>
               <CardHeader>
                 <CardTitle>İletişim Bilgileri</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <MapPin className="h-5 w-5 text-purple-600 flex-shrink-0" />
+                <div className="flex items-start gap-3">
+                  <MapPin className="h-5 w-5 text-purple-600 flex-shrink-0 mt-0.5" />
                   <div>
                     <div>{dukkanData.adres || "Adres bilgisi bulunmuyor"}</div>
                     {dukkanData.acik_adres && (
@@ -319,7 +309,6 @@ export default function ShopHomePage() {
               </CardContent>
             </Card>
             
-            {/* Working Hours Card */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Çalışma Saatleri</CardTitle>
@@ -359,9 +348,7 @@ export default function ShopHomePage() {
             </Card>
           </div>
           
-          {/* Middle and Right Columns - Gallery and Staff */}
           <div className="md:col-span-2 space-y-6">
-            {/* Gallery Card */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Dükkan Galerisi</CardTitle>
@@ -385,7 +372,6 @@ export default function ShopHomePage() {
               </CardContent>
             </Card>
             
-            {/* Staff Card */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Uzman Personeller</CardTitle>
@@ -430,7 +416,6 @@ export default function ShopHomePage() {
               </CardContent>
             </Card>
             
-            {/* Services Preview (This could link to a full services page) */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Sunulan Hizmetler</CardTitle>

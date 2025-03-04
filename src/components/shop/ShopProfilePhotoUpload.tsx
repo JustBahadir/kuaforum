@@ -1,10 +1,10 @@
-
 import { useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { nanoid } from 'nanoid';
 import { toast } from "sonner";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { authService } from "@/lib/auth/authService";
 
 interface ShopProfilePhotoUploadProps {
   children: React.ReactNode;
@@ -43,7 +43,6 @@ export function ShopProfilePhotoUpload({
       return;
     }
 
-    // File size check (5MB)
     if (file.size > 5 * 1024 * 1024) {
       toast.error('Dosya boyutu 5MB\'ı geçemez');
       return;
@@ -52,12 +51,10 @@ export function ShopProfilePhotoUpload({
     try {
       setIsUploading(true);
       
-      // Generate a unique file name
       const fileExt = file.name.split('.').pop();
       const bucketName = galleryMode ? 'shop-photos' : 'photos';
       const filePath = `shops/${dukkanId}/${nanoid()}.${fileExt}`;
       
-      // Upload the file to Supabase storage
       const { data, error } = await supabase.storage
         .from(bucketName)
         .upload(filePath, file, {
@@ -77,7 +74,6 @@ export function ShopProfilePhotoUpload({
         return;
       }
       
-      // Get the public URL
       const { data: publicUrl } = supabase.storage
         .from(bucketName)
         .getPublicUrl(data.path);
@@ -86,7 +82,6 @@ export function ShopProfilePhotoUpload({
         onSuccess(publicUrl.publicUrl);
         toast.success('Galeri fotoğrafı başarıyla yüklendi');
       } else {
-        // Update shop's logo_url
         const { error: updateError } = await supabase
           .from('dukkanlar')
           .update({ logo_url: publicUrl.publicUrl })
@@ -112,7 +107,6 @@ export function ShopProfilePhotoUpload({
   const handleRemovePhoto = async () => {
     try {
       if (galleryMode) {
-        // Removing gallery photo will be handled in the gallery component
         return;
       }
       
