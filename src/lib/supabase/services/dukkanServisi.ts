@@ -60,6 +60,11 @@ export const dukkanServisi = {
     return data;
   },
   
+  // Add alias for getirById to be accessible as getir
+  async getir(dukkanId: number) {
+    return this.getirById(dukkanId);
+  },
+  
   async getirByKod(kod: string) {
     const { data, error } = await supabase
       .from('dukkanlar')
@@ -121,6 +126,11 @@ export const dukkanServisi = {
     }
     
     return data;
+  },
+  
+  // Add alias for dukkaniGuncelle to be accessible as guncelle
+  async guncelle(dukkanId: number, guncellemeler: Partial<Dukkan>) {
+    return this.dukkaniGuncelle(dukkanId, guncellemeler);
   },
   
   async dukkanSil(dukkanId: number) {
