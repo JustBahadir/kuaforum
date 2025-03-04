@@ -7,6 +7,7 @@ import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { personelIslemleriServisi, islemServisi, personelServisi } from "@/lib/supabase";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { PersonelIslemi } from "@/lib/supabase/types";
+import { supabase } from "@/lib/supabase/client"; // Import supabase client
 
 export default function OperationsHistory() {
   const { userRole } = useCustomerAuth();

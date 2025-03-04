@@ -27,6 +27,9 @@ export type Dukkan = {
   logo_url?: string;
   active: boolean;
   kod?: string;
+  email?: string;
+  aciklama?: string;
+  calisma_saatleri?: string;
 }
 
 export type Musteri = {

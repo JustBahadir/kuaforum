@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { personelServisi } from "@/lib/supabase/services/personelServisi";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Dukkan } from "@/lib/supabase/types";
 
 export default function ShopHomePage() {
   const { dukkanId, dukkanAdi, userRole } = useCustomerAuth();
