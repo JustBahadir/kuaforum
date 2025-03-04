@@ -141,28 +141,35 @@ export function PersonnelList() {
                       </Avatar>
                       <div>
                         <h3 className="text-lg font-medium">{personel.ad_soyad}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {personel.personel_no}
-                        </p>
+                        {/* Only show personnel number to admin users */}
+                        {userRole === 'admin' && (
+                          <p className="text-sm text-muted-foreground">
+                            {personel.personel_no}
+                          </p>
+                        )}
                       </div>
                     </div>
                     <div className="mt-4 space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Telefon:</span>
-                        <span>{personel.telefon}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">E-posta:</span>
-                        <span className="truncate max-w-[150px]">{personel.eposta}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Prim:</span>
-                        <span>%{personel.prim_yuzdesi}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Çalışma:</span>
-                        <span>{personel.calisma_sistemi === 'haftalik' ? 'Haftalık' : 'Aylık'}</span>
-                      </div>
+                      {userRole === 'admin' && (
+                        <>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Telefon:</span>
+                            <span>{personel.telefon}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">E-posta:</span>
+                            <span className="truncate max-w-[150px]">{personel.eposta}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Prim:</span>
+                            <span>%{personel.prim_yuzdesi}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Çalışma:</span>
+                            <span>{personel.calisma_sistemi === 'haftalik' ? 'Haftalık' : 'Aylık'}</span>
+                          </div>
+                        </>
+                      )}
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Dükkan:</span>
                         <span>{personel.dukkan?.ad || 'Atanmamış'}</span>
@@ -179,15 +186,17 @@ export function PersonnelList() {
                       <Eye className="h-4 w-4 mr-2" />
                       <span className="sr-only sm:not-sr-only sm:text-xs">Detaylar</span>
                     </Button>
-                    <Button 
-                      variant="ghost" 
-                      className="flex-1 rounded-none text-destructive" 
-                      title="Sil"
-                      onClick={() => handleOpenDeleteDialog(personel.id)}
-                    >
-                      <Trash className="h-4 w-4 mr-2" />
-                      <span className="sr-only sm:not-sr-only sm:text-xs">Sil</span>
-                    </Button>
+                    {userRole === 'admin' && (
+                      <Button 
+                        variant="ghost" 
+                        className="flex-1 rounded-none text-destructive" 
+                        title="Sil"
+                        onClick={() => handleOpenDeleteDialog(personel.id)}
+                      >
+                        <Trash className="h-4 w-4 mr-2" />
+                        <span className="sr-only sm:not-sr-only sm:text-xs">Sil</span>
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>

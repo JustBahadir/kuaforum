@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { nanoid } from 'nanoid';
@@ -13,6 +14,7 @@ interface ShopProfilePhotoUploadProps {
   onSuccess: (url: string) => void;
   currentImageUrl?: string;
   className?: string;
+  updateUserProfile?: boolean;
 }
 
 export function ShopProfilePhotoUpload({ 
@@ -21,7 +23,8 @@ export function ShopProfilePhotoUpload({
   galleryMode = false,
   onSuccess,
   currentImageUrl,
-  className
+  className,
+  updateUserProfile = true
 }: ShopProfilePhotoUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
 
@@ -82,6 +85,7 @@ export function ShopProfilePhotoUpload({
         onSuccess(publicUrl.publicUrl);
         toast.success('Galeri fotoğrafı başarıyla yüklendi');
       } else {
+        // Update shop logo
         const { error: updateError } = await supabase
           .from('dukkanlar')
           .update({ logo_url: publicUrl.publicUrl })
@@ -91,6 +95,22 @@ export function ShopProfilePhotoUpload({
           console.error('Dükkan logo güncellenemedi:', updateError);
           toast.error('Dükkan logosu güncellenemedi: ' + updateError.message);
           return;
+        }
+
+        // Also update user profile avatar if needed
+        if (updateUserProfile) {
+          try {
+            const user = await authService.getCurrentUser();
+            if (user) {
+              await supabase
+                .from('profiles')
+                .update({ avatar_url: publicUrl.publicUrl })
+                .eq('id', user.id);
+            }
+          } catch (err) {
+            console.error('Profil avatar güncellenemedi:', err);
+            // Don't show error toast here since the shop logo was still updated
+          }
         }
         
         onSuccess(publicUrl.publicUrl);
@@ -119,6 +139,22 @@ export function ShopProfilePhotoUpload({
         console.error('Dükkan logo silinirken hata:', updateError);
         toast.error('Dükkan logosu silinemedi: ' + updateError.message);
         return;
+      }
+
+      // Also update user profile avatar if needed
+      if (updateUserProfile) {
+        try {
+          const user = await authService.getCurrentUser();
+          if (user) {
+            await supabase
+              .from('profiles')
+              .update({ avatar_url: null })
+              .eq('id', user.id);
+          }
+        } catch (err) {
+          console.error('Profil avatar silinirken hata:', err);
+          // Don't show error toast here since the shop logo was still removed
+        }
       }
       
       onSuccess('');

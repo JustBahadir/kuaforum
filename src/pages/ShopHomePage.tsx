@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -107,8 +108,7 @@ export default function ShopHomePage() {
       try {
         const { data, error } = await supabase
           .from('calisma_saatleri')
-          .select('*')
-          .order('gun', { ascending: true });
+          .select('*');
           
         if (error) throw error;
         
@@ -403,6 +403,7 @@ export default function ShopHomePage() {
                         </Avatar>
                         <div>
                           <h3 className="font-medium">{personel.ad_soyad}</h3>
+                          {/* Only show phone numbers to admins */}
                           {userRole === 'admin' && personel.telefon && (
                             <p className="text-sm text-muted-foreground">
                               {formatPhoneNumber(personel.telefon)}
