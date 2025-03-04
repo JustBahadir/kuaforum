@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import {
   DropdownMenu,
@@ -27,7 +28,6 @@ interface GreetingProps {
 
 export function Greeting({ userName, loading, activeTab, handleLogout, refreshProfile, userRole, isAuthenticated, dukkanId, dukkanAdi }: GreetingProps) {
   const [displayName, setDisplayName] = useState(userName || "Değerli Müşterimiz");
-  const { signOut } = useCustomerAuth();
 
   useEffect(() => {
     refreshProfile();
@@ -51,7 +51,7 @@ export function Greeting({ userName, loading, activeTab, handleLogout, refreshPr
   }, [userName, loading]);
 
   const handleSignOut = async () => {
-    await signOut();
+    // Use handleLogout which is passed as a prop, not signOut
     handleLogout();
   };
 
