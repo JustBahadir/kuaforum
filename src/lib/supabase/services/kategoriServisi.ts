@@ -66,16 +66,19 @@ export const kategoriServisi = {
     if (error) throw error;
   },
   
-  async siraGuncelle(kategoriler: Kategori[]): Promise<void> {
+  async siraGuncelle(kategoriler: Kategori[]): Promise<Kategori[]> {
     // Update each category with its new position
-    const updates = kategoriler.map((kategori, index) => {
-      return supabase
-        .from('islem_kategorileri')
-        .update({ sira: index })
-        .eq('id', kategori.id);
-    });
+    const updates = kategoriler.map((kategori, index) => ({
+      id: kategori.id,
+      sira: index
+    }));
     
-    // Wait for all updates to complete
-    await Promise.all(updates);
+    const { data, error } = await supabase
+      .from('islem_kategorileri')
+      .upsert(updates)
+      .select();
+      
+    if (error) throw error;
+    return data || [];
   },
 };

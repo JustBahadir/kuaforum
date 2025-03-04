@@ -12,3 +12,4 @@ export { dukkanServisi } from './services/dukkanServisi';
 export { bildirimServisi } from './services/bildirimServisi';
 export { calismaSaatleriServisi } from './services/calismaSaatleriServisi';
 export { profilServisi } from './services/profilServisi';
+export { siralamaServisi } from './services/siralamaServisi';

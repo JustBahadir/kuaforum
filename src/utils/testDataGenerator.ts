@@ -1,288 +1,232 @@
 
-// Update imports
 import { supabase } from "@/lib/supabase/client";
-import { islemServisi, kategoriServisi, musteriServisi, personelServisi, personelIslemleriServisi, dukkanServisi } from "@/lib/supabase";
 import { faker } from '@faker-js/faker';
+import { 
+  Dukkan, 
+  Islem, 
+  Kategori, 
+  Musteri, 
+  Personel 
+} from "@/lib/supabase/types";
 import { toast } from "sonner";
 
-// Set the faker locale to Turkish
-// Use the correct method to set locale for Faker v9
-faker.setLocale('tr');
+// Set the faker locale 
+// Using a workaround for the Faker v9 API
+const setFakerLocale = () => {
+  // @ts-ignore - Faker has changed its API, but we need to make it work
+  if (typeof faker.locale === 'function') {
+    // @ts-ignore
+    faker.locale('tr');
+  }
+}
+
+setFakerLocale();
 
 const generateDukkan = async () => {
   try {
-    // Check if a store already exists
-    const { data: existingDukkanlar, error: existingDukkanlarError } = await supabase
+    const dukkan: Partial<Dukkan> = {
+      ad: faker.company.name(),
+      telefon: faker.phone.number(),
+      adres: faker.location.streetAddress({ useFullAddress: true }),
+      kod: faker.string.alphanumeric(6).toUpperCase(),
+      logo_url: faker.image.url({ width: 200, height: 200 }),
+    };
+
+    const { data, error } = await supabase
       .from('dukkanlar')
-      .select('*');
+      .insert([dukkan])
+      .select()
+      .single();
 
-    if (existingDukkanlarError) {
-      throw new Error(existingDukkanlarError.message);
-    }
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error("Error creating shop:", error);
+    throw error;
+  }
+};
 
-    if (existingDukkanlar && existingDukkanlar.length > 0) {
-      console.log("Zaten bir dükkan var, yeni dükkan oluşturulmayacak.");
-      return;
-    }
+const generateKategoriler = async () => {
+  try {
+    const categories = [
+      "Saç Bakım",
+      "Cilt Bakım",
+      "Tırnak Bakım",
+      "Makyaj",
+      "Masaj",
+    ];
 
-    // Get the current user's ID
-    const { data: { user } } = await supabase.auth.getUser();
+    const kategoriler = categories.map((kategori_adi, index) => ({
+      kategori_adi,
+      sira: index,
+    }));
 
-    if (!user) {
-      throw new Error("Kullanıcı oturumu bulunamadı.");
-    }
-
-    // Create a new store
-    const { data: newDukkan, error: newDukkanError } = await supabase
-      .from('dukkanlar')
-      .insert([
-        {
-          ad: faker.company.name(),
-          telefon: faker.phone.number(),
-          adres: faker.location.streetAddress(),
-          acik_adres: faker.location.streetAddress(true),
-          sahibi_id: user.id,
-          kod: faker.string.alpha({ length: 6, casing: 'upper' }),
-          logo_url: faker.image.url({ width: 640, height: 480 })
-        }
-      ])
+    const { data, error } = await supabase
+      .from('islem_kategorileri')
+      .insert(kategoriler)
       .select();
 
-    if (newDukkanError) {
-      throw new Error(newDukkanError.message);
-    }
-
-    console.log("Dükkan başarıyla oluşturuldu:", newDukkan);
+    if (error) throw error;
+    return data;
   } catch (error) {
-    console.error("Dükkan oluşturulurken hata:", error);
+    console.error("Error creating categories:", error);
     throw error;
   }
 };
 
-const generateKategoriler = async (count = 5) => {
+const generateIslemler = async (kategoriler: Kategori[]) => {
   try {
-    // Check if categories already exist
-    const { data: existingKategoriler, error: existingKategorilerError } = await supabase
-      .from('islem_kategorileri')
-      .select('*');
+    const sacBakimKategori = kategoriler.find(k => k.kategori_adi === "Saç Bakım");
+    const ciltBakimKategori = kategoriler.find(k => k.kategori_adi === "Cilt Bakım");
+    const tirnakBakimKategori = kategoriler.find(k => k.kategori_adi === "Tırnak Bakım");
+    const makyajKategori = kategoriler.find(k => k.kategori_adi === "Makyaj");
+    const masajKategori = kategoriler.find(k => k.kategori_adi === "Masaj");
 
-    if (existingKategorilerError) {
-      throw new Error(existingKategorilerError.message);
-    }
+    const sacIslemleri = [
+      { islem_adi: "Saç Kesimi", fiyat: 150, puan: 10, kategori_id: sacBakimKategori?.id, sira: 0 },
+      { islem_adi: "Saç Boyama", fiyat: 250, puan: 15, kategori_id: sacBakimKategori?.id, sira: 1 },
+      { islem_adi: "Fön", fiyat: 100, puan: 5, kategori_id: sacBakimKategori?.id, sira: 2 },
+      { islem_adi: "Keratin Bakımı", fiyat: 350, puan: 20, kategori_id: sacBakimKategori?.id, sira: 3 },
+    ];
 
-    if (existingKategoriler && existingKategoriler.length > 0) {
-      console.log("Zaten kategoriler var, yeni kategori oluşturulmayacak.");
-      return;
-    }
+    const ciltIslemleri = [
+      { islem_adi: "Cilt Temizliği", fiyat: 200, puan: 12, kategori_id: ciltBakimKategori?.id, sira: 0 },
+      { islem_adi: "Yüz Maskesi", fiyat: 150, puan: 8, kategori_id: ciltBakimKategori?.id, sira: 1 },
+      { islem_adi: "Anti-Aging Bakım", fiyat: 350, puan: 18, kategori_id: ciltBakimKategori?.id, sira: 2 },
+    ];
 
-    // Generate random categories
-    for (let i = 0; i < count; i++) {
-      await kategoriServisi.ekle({
-        kategori_adi: faker.commerce.department(),
-        sira: i
-      });
-    }
+    const tirnakIslemleri = [
+      { islem_adi: "Manikür", fiyat: 120, puan: 7, kategori_id: tirnakBakimKategori?.id, sira: 0 },
+      { islem_adi: "Pedikür", fiyat: 150, puan: 8, kategori_id: tirnakBakimKategori?.id, sira: 1 },
+      { islem_adi: "Protez Tırnak", fiyat: 250, puan: 12, kategori_id: tirnakBakimKategori?.id, sira: 2 },
+    ];
 
-    console.log(`${count} kategori başarıyla oluşturuldu`);
+    const makyajIslemleri = [
+      { islem_adi: "Gündüz Makyajı", fiyat: 180, puan: 10, kategori_id: makyajKategori?.id, sira: 0 },
+      { islem_adi: "Gece Makyajı", fiyat: 250, puan: 15, kategori_id: makyajKategori?.id, sira: 1 },
+      { islem_adi: "Gelin Makyajı", fiyat: 500, puan: 25, kategori_id: makyajKategori?.id, sira: 2 },
+    ];
+
+    const masajIslemleri = [
+      { islem_adi: "Klasik Masaj", fiyat: 250, puan: 15, kategori_id: masajKategori?.id, sira: 0 },
+      { islem_adi: "Aromaterapi", fiyat: 300, puan: 18, kategori_id: masajKategori?.id, sira: 1 },
+      { islem_adi: "Sıcak Taş Masajı", fiyat: 350, puan: 20, kategori_id: masajKategori?.id, sira: 2 },
+    ];
+
+    const allIslemler = [
+      ...sacIslemleri,
+      ...ciltIslemleri,
+      ...tirnakIslemleri,
+      ...makyajIslemleri,
+      ...masajIslemleri,
+    ];
+
+    const { data, error } = await supabase
+      .from('islemler')
+      .insert(allIslemler)
+      .select();
+
+    if (error) throw error;
+    return data;
   } catch (error) {
-    console.error("Kategoriler oluşturulurken hata:", error);
+    console.error("Error creating services:", error);
     throw error;
   }
 };
 
-const generateIslemler = async (count = 50) => {
+const generatePersonel = async (dukkanId: number) => {
   try {
-    const personelList = await personelServisi.hepsiniGetir();
-    if (!personelList.length) {
-      throw new Error("Personel bulunamadı");
-    }
+    const personeller: Partial<Personel>[] = [];
 
-    const islemList = await islemServisi.hepsiniGetir();
-    if (!islemList.length) {
-      throw new Error("İşlem bulunamadı");
-    }
+    for (let i = 0; i < 5; i++) {
+      const firstName = faker.person.firstName();
+      const lastName = faker.person.lastName();
 
-    // Generate random islemler
-    for (let i = 0; i < count; i++) {
-      const randomPersonel = personelList[Math.floor(Math.random() * personelList.length)];
-      const randomIslem = islemList[Math.floor(Math.random() * islemList.length)];
-      
-      const randomDate = faker.date.between({
-        from: '2023-01-01',
-        to: new Date()
-      });
-
-      const tutar = randomIslem.fiyat;
-      const prim_yuzdesi = randomPersonel.prim_yuzdesi;
-      const odenen = Math.round(tutar * (prim_yuzdesi / 100));
-
-      await personelIslemleriServisi.ekle({
-        personel_id: randomPersonel.id,
-        islem_id: randomIslem.id,
-        tutar: tutar,
-        odenen: odenen,
-        prim_yuzdesi: prim_yuzdesi,
-        puan: randomIslem.puan,
-        aciklama: randomIslem.islem_adi
+      personeller.push({
+        ad_soyad: `${firstName} ${lastName}`,
+        telefon: faker.phone.number(),
+        eposta: faker.internet.email({ firstName, lastName }),
+        adres: faker.location.streetAddress({ useFullAddress: true }),
+        personel_no: `P${faker.string.numeric(4)}`,
+        maas: faker.number.int({ min: 10000, max: 20000 }),
+        calisma_sistemi: faker.helpers.arrayElement(["haftalik", "aylik"]) as "haftalik" | "aylik",
+        prim_yuzdesi: faker.number.int({ min: 5, max: 15 }),
+        dukkan_id: dukkanId,
       });
     }
 
-    console.log(`${count} işlem başarıyla oluşturuldu`);
-    return true;
-  } catch (error) {
-    console.error("İşlemler oluşturulurken hata:", error);
-    throw error;
-  }
-};
-
-const generatePersonel = async (count = 10) => {
-  try {
-    // Check if personnel already exists
-    const { data: existingPersonel, error: existingPersonelError } = await supabase
+    const { data, error } = await supabase
       .from('personel')
-      .select('*');
+      .insert(personeller)
+      .select();
 
-    if (existingPersonelError) {
-      throw new Error(existingPersonelError.message);
-    }
-
-    if (existingPersonel && existingPersonel.length > 0) {
-      console.log("Zaten personel var, yeni personel oluşturulmayacak.");
-      return;
-    }
-
-    // Get the first store
-    const { data: dukkanlar, error: dukkanlarError } = await supabase
-      .from('dukkanlar')
-      .select('*')
-      .limit(1);
-
-    if (dukkanlarError) {
-      throw new Error(dukkanlarError.message);
-    }
-
-    if (!dukkanlar || dukkanlar.length === 0) {
-      throw new Error("Dükkan bulunamadı, önce dükkan oluşturun.");
-    }
-
-    const dukkan = dukkanlar[0];
-
-    // Generate random personnel
-    for (let i = 0; i < count; i++) {
-      await personelServisi.ekle({
-        ad_soyad: faker.person.fullName(),
-        telefon: faker.phone.number(),
-        eposta: faker.internet.email(),
-        adres: faker.location.streetAddress(),
-        personel_no: faker.string.alphanumeric(8),
-        maas: faker.number.int({ min: 5000, max: 20000 }),
-        calisma_sistemi: faker.helpers.arrayElement(['haftalik', 'aylik']),
-        prim_yuzdesi: faker.number.int({ min: 1, max: 10 }),
-        dukkan_id: dukkan.id
-      });
-    }
-
-    console.log(`${count} personel başarıyla oluşturuldu`);
+    if (error) throw error;
+    return data;
   } catch (error) {
-    console.error("Personel oluşturulurken hata:", error);
+    console.error("Error creating personnel:", error);
     throw error;
   }
 };
 
-const generateMusteri = async (count = 20) => {
+const generateMusteriler = async () => {
   try {
-    // Check if customers already exist
-    const { data: existingMusteriler, error: existingMusterilerError } = await supabase
+    const musteriler: Partial<Musteri>[] = [];
+
+    for (let i = 0; i < 10; i++) {
+      const firstName = faker.person.firstName();
+      const lastName = faker.person.lastName();
+
+      musteriler.push({
+        ad_soyad: `${firstName} ${lastName}`,
+        telefon: faker.phone.number(),
+        eposta: faker.internet.email({ firstName, lastName }),
+        adres: faker.location.streetAddress({ useFullAddress: true }),
+        musteri_no: `M${faker.string.numeric(4)}`,
+      });
+    }
+
+    const { data, error } = await supabase
       .from('musteriler')
-      .select('*');
+      .insert(musteriler)
+      .select();
 
-    if (existingMusterilerError) {
-      throw new Error(existingMusterilerError.message);
-    }
-
-    if (existingMusteriler && existingMusteriler.length > 0) {
-      console.log("Zaten müşteriler var, yeni müşteri oluşturulmayacak.");
-      return;
-    }
-
-    // Generate random customers
-    for (let i = 0; i < count; i++) {
-      await musteriServisi.ekle({
-        ad_soyad: faker.person.fullName(),
-        telefon: faker.phone.number(),
-        eposta: faker.internet.email(),
-        adres: faker.location.streetAddress(),
-        musteri_no: faker.string.alphanumeric(8)
-      });
-    }
-
-    console.log(`${count} müşteri başarıyla oluşturuldu`);
+    if (error) throw error;
+    return data;
   } catch (error) {
-    console.error("Müşteriler oluşturulurken hata:", error);
+    console.error("Error creating customers:", error);
     throw error;
   }
 };
 
-const generateIslemForEachPersonel = async () => {
+const generateRandomData = async () => {
   try {
-    const personelList = await personelServisi.hepsiniGetir();
-    if (!personelList.length) {
-      throw new Error("Personel bulunamadı");
-    }
+    const dukkan = await generateDukkan();
+    const kategoriler = await generateKategoriler();
+    const islemler = await generateIslemler(kategoriler);
+    const personeller = await generatePersonel(dukkan.id);
+    const musteriler = await generateMusteriler();
 
-    const islemList = await islemServisi.hepsiniGetir();
-    if (!islemList.length) {
-      throw new Error("İşlem bulunamadı");
-    }
-
-    for (const personel of personelList) {
-      const randomIslem = islemList[Math.floor(Math.random() * islemList.length)];
-      
-      const tutar = randomIslem.fiyat;
-      const prim_yuzdesi = personel.prim_yuzdesi;
-      const odenen = Math.round(tutar * (prim_yuzdesi / 100));
-
-      await personelIslemleriServisi.ekle({
-        personel_id: personel.id,
-        islem_id: randomIslem.id,
-        tutar: tutar,
-        odenen: odenen,
-        prim_yuzdesi: prim_yuzdesi,
-        puan: randomIslem.puan,
-        aciklama: randomIslem.islem_adi
-      });
-    }
-
-    console.log(`Her personel için bir işlem başarıyla oluşturuldu`);
-    return true;
+    return {
+      dukkan,
+      kategoriler,
+      islemler,
+      personeller,
+      musteriler,
+    };
   } catch (error) {
-    console.error("İşlemler oluşturulurken hata:", error);
+    console.error("Error generating test data:", error);
     throw error;
   }
 };
 
-const generateAll = async () => {
+// Main export function
+export const generateTestData = async () => {
   try {
-    await generateDukkan();
-    await generateKategoriler();
-    await generatePersonel();
-    await generateMusteri();
-    await generateIslemForEachPersonel();
+    toast.loading("Test verileri oluşturuluyor...");
+    await generateRandomData();
     toast.success("Test verileri başarıyla oluşturuldu");
   } catch (error) {
-    console.error("Test verileri oluşturulurken hata:", error);
-    toast.error("Test verileri oluşturulurken bir hata oluştu");
+    console.error("Error:", error);
+    toast.error("Test verileri oluşturulurken hata oluştu");
   }
-};
-
-// Export all functions including generateAll as generateTestData for backward compatibility
-export { 
-  generateAll as generateTestData, 
-  generateAll, 
-  generateDukkan, 
-  generateKategoriler, 
-  generatePersonel, 
-  generateMusteri, 
-  generateIslemler, 
-  generateIslemForEachPersonel 
 };

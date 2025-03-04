@@ -1,9 +1,8 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { islemServisi } from "@/lib/supabase";
+import { kategoriServisi, islemServisi } from "@/lib/supabase";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { supabase } from "@/lib/supabase";
 import { ServicesContent } from "@/components/operations/ServicesContent";
 import { WorkingHours } from "@/components/operations/WorkingHours";
 import { toast } from "sonner";
@@ -22,14 +21,7 @@ export default function StaffOperations() {
 
   const { data: kategoriler = [] } = useQuery({
     queryKey: ['kategoriler'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('islem_kategorileri')
-        .select('*')
-        .order('sira');
-      if (error) throw error;
-      return data;
-    }
+    queryFn: kategoriServisi.hepsiniGetir
   });
 
   const { data: islemler = [] } = useQuery({
@@ -66,13 +58,7 @@ export default function StaffOperations() {
 
   const { mutate: kategoriEkle } = useMutation({
     mutationFn: async (kategoriAdi: string) => {
-      const { data, error } = await supabase
-        .from('islem_kategorileri')
-        .insert([{ kategori_adi: kategoriAdi }])
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
+      return kategoriServisi.ekle({ kategori_adi: kategoriAdi });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['kategoriler'] });
@@ -83,16 +69,18 @@ export default function StaffOperations() {
   });
 
   const { mutate: kategoriSil } = useMutation({
-    mutationFn: async (kategoriId: number) => {
-      const { error } = await supabase
-        .from('islem_kategorileri')
-        .delete()
-        .eq('id', kategoriId);
-      if (error) throw error;
-    },
+    mutationFn: kategoriServisi.sil,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['kategoriler'] });
       toast.success("Kategori başarıyla silindi");
+    }
+  });
+
+  const { mutate: kategoriSiralamaGuncelle } = useMutation({
+    mutationFn: kategoriServisi.siraGuncelle,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['kategoriler'] });
+      toast.success("Kategori sıralaması güncellendi");
     }
   });
 
@@ -128,17 +116,16 @@ export default function StaffOperations() {
 
   const handleSiralamaChange = async (yeniIslemler: any[]) => {
     try {
-      for (let i = 0; i < yeniIslemler.length; i++) {
-        await supabase
-          .from('islemler')
-          .update({ sira: i })
-          .eq('id', yeniIslemler[i].id);
-      }
+      await islemServisi.siraGuncelle(yeniIslemler);
       queryClient.invalidateQueries({ queryKey: ['islemler'] });
       toast.success("Sıralama güncellendi");
     } catch (error) {
       toast.error("Sıralama güncellenirken hata oluştu");
     }
+  };
+
+  const handleCategoryOrderChange = (yeniKategoriler: any[]) => {
+    kategoriSiralamaGuncelle(yeniKategoriler);
   };
 
   return (
@@ -182,6 +169,7 @@ export default function StaffOperations() {
             onServiceDelete={islemSil}
             onCategoryDelete={kategoriSil}
             onSiralamaChange={handleSiralamaChange}
+            onCategoryOrderChange={handleCategoryOrderChange}
             onRandevuAl={() => {}}
             formuSifirla={formuSifirla}
           />
