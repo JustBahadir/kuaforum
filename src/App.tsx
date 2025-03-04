@@ -62,6 +62,15 @@ function App() {
               <Route path="/admin/shop-settings" element={<ShopSettings />} />
               <Route path="/admin/operations-history" element={<OperationsHistory />} />
               <Route path="/admin/operations" element={<StaffOperations />} />
+              
+              {/* Personnel shortcuts */}
+              <Route path="/personnel" element={<Personnel />} />
+              <Route path="/shop-home" element={<ShopHomePage />} />
+              <Route path="/shop-settings" element={<ShopSettings />} />
+              <Route path="/shop-statistics" element={<ShopStatistics />} />
+              <Route path="/operations-history" element={<OperationsHistory />} />
+              <Route path="/staff-profile" element={<StaffProfile />} />
+              <Route path="/staff-login" element={<StaffLogin />} />
 
               {/* Customer routes */}
               <Route path="/login" element={<CustomerAuth />} />
