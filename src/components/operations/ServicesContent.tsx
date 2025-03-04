@@ -169,6 +169,14 @@ export function ServicesContent({
             </div>
             
             <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setKategoriDialogAcik(true)}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Kategori Ekle
+              </Button>
+              
               <CategoryForm 
                 isOpen={kategoriDialogAcik}
                 onOpenChange={setKategoriDialogAcik}
@@ -235,6 +243,7 @@ export function ServicesContent({
                   onCategoryEdit={onCategoryEdit}
                   onSiralamaChange={onSiralamaChange}
                   onRandevuAl={onRandevuAl}
+                  puanlamaAktif={puanlamaAktif}
                 />
               ))}
             </Accordion>

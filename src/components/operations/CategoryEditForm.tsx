@@ -7,6 +7,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 
 interface CategoryEditFormProps {
@@ -29,6 +31,9 @@ export function CategoryEditForm({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Kategori Düzenle</DialogTitle>
+          <DialogDescription>
+            Kategori adını değiştirmek için aşağıdaki formu kullanın.
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={onSubmit}>
           <div className="space-y-4">
@@ -41,7 +46,12 @@ export function CategoryEditForm({
                 required
               />
             </div>
-            <Button type="submit" className="w-full">Güncelle</Button>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                İptal
+              </Button>
+              <Button type="submit">Güncelle</Button>
+            </DialogFooter>
           </div>
         </form>
       </DialogContent>

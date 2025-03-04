@@ -88,7 +88,10 @@ export const islemServisi = {
         .delete()
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('İşlem silme hatası (detaylı):', error);
+        throw error;
+      }
       return { success: true };
     } catch (error) {
       console.error('İşlem silme hatası:', error);
@@ -110,7 +113,7 @@ export const islemServisi = {
 
       const { data, error } = await supabase
         .from('islemler')
-        .upsert(updates)
+        .upsert(updates, { onConflict: 'id' })
         .select();
 
       if (error) throw error;

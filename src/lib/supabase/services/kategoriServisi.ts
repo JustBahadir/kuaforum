@@ -93,7 +93,7 @@ export const kategoriServisi = {
       
       const { data, error } = await supabase
         .from('islem_kategorileri')
-        .upsert(updates)
+        .upsert(updates, { onConflict: 'id' })
         .select();
         
       if (error) throw error;

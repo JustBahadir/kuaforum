@@ -43,7 +43,7 @@ export default function StaffOperations() {
     },
     onError: (error) => {
       console.error("İşlem eklenirken hata:", error);
-      toast.error("İşlem eklenirken hata oluştu");
+      toast.error("İşlem eklenirken hata oluştu: " + (error.message || "Bilinmeyen hata"));
     }
   });
 
@@ -57,7 +57,7 @@ export default function StaffOperations() {
     },
     onError: (error) => {
       console.error("İşlem güncellenirken hata:", error);
-      toast.error("İşlem güncellenirken hata oluştu");
+      toast.error("İşlem güncellenirken hata oluştu: " + (error.message || "Bilinmeyen hata"));
     }
   });
 
@@ -69,7 +69,7 @@ export default function StaffOperations() {
     },
     onError: (error) => {
       console.error("İşlem silinirken hata:", error);
-      toast.error("İşlem silinirken hata oluştu");
+      toast.error("İşlem silinirken hata oluştu: " + (error.message || "Bilinmeyen hata"));
     }
   });
 
@@ -85,7 +85,7 @@ export default function StaffOperations() {
     },
     onError: (error) => {
       console.error("Kategori eklenirken hata:", error);
-      toast.error("Kategori eklenirken hata oluştu");
+      toast.error("Kategori eklenirken hata oluştu: " + (error.message || "Bilinmeyen hata"));
     }
   });
 
@@ -101,7 +101,7 @@ export default function StaffOperations() {
     },
     onError: (error) => {
       console.error("Kategori güncellenirken hata:", error);
-      toast.error("Kategori güncellenirken hata oluştu");
+      toast.error("Kategori güncellenirken hata oluştu: " + (error.message || "Bilinmeyen hata"));
     }
   });
 
@@ -113,7 +113,7 @@ export default function StaffOperations() {
     },
     onError: (error) => {
       console.error("Kategori silinirken hata:", error);
-      toast.error("Kategori silinirken hata oluştu");
+      toast.error("Kategori silinirken hata oluştu: " + (error.message || "Bilinmeyen hata"));
     }
   });
 
@@ -125,7 +125,7 @@ export default function StaffOperations() {
     },
     onError: (error) => {
       console.error("İşlem sıralaması güncellenirken hata:", error);
-      toast.error("İşlem sıralaması güncellenirken hata oluştu");
+      toast.error("İşlem sıralaması güncellenirken hata oluştu: " + (error.message || "Bilinmeyen hata"));
     }
   });
 
@@ -137,7 +137,7 @@ export default function StaffOperations() {
     },
     onError: (error) => {
       console.error("Kategori sıralaması güncellenirken hata:", error);
-      toast.error("Kategori sıralaması güncellenirken hata oluştu");
+      toast.error("Kategori sıralaması güncellenirken hata oluştu: " + (error.message || "Bilinmeyen hata"));
     }
   });
 
@@ -239,10 +239,10 @@ export default function StaffOperations() {
               onCategoryEditFormSubmit={handleCategoryEditFormSubmit}
               onServiceEdit={(islem) => {
                 setDuzenleId(islem.id);
-                setIslemAdi(islem.islem_adi);
-                setFiyat(islem.fiyat);
-                setPuan(islem.puan);
-                setKategoriId(islem.kategori_id);
+                setIslemAdi(islem.islem_adi || "");
+                setFiyat(islem.fiyat || 0);
+                setPuan(islem.puan || 0);
+                setKategoriId(islem.kategori_id || null);
                 setDialogAcik(true);
               }}
               onServiceDelete={islemSil}

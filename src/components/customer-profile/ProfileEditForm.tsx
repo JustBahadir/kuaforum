@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { User, Phone, Mail, Calendar } from "lucide-react";
+import { User, Phone, Mail, Calendar, Copy } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FileUpload } from "@/components/ui/file-upload";
+import { toast } from "sonner";
 
 export interface ProfileEditFormProps {
   profile: {
@@ -29,6 +30,8 @@ export interface ProfileEditFormProps {
     gender: "erkek" | "kadın" | null;
     birthdate: string;
     avatarUrl?: string;
+    iban?: string;
+    role?: string;
   };
   handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
   handleSelectChange: (name: string, value: string) => void;
@@ -47,22 +50,36 @@ export function ProfileEditForm({
   isSaving,
   isUploading
 }: ProfileEditFormProps) {
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success("Kopyalandı");
+  };
+  
+  const isAdmin = profile.role === 'admin';
+  const isStaff = profile.role === 'staff';
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Profili Düzenle</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Avatar Upload Section */}
-        <div className="flex flex-col items-center justify-center mb-4">
-          <div className="w-32 h-32 mb-4">
+        {/* Avatar Upload Section - Repositioned to be horizontal */}
+        <div className="flex items-center gap-4 mb-4">
+          <div className="w-32 h-32 flex-shrink-0">
             <FileUpload
               onUploadComplete={handleAvatarUpload}
               currentImageUrl={profile.avatarUrl}
-              label="Profil Fotoğrafı Yükle"
+              label=""
               bucketName="photos"
               folderPath="avatars"
             />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-lg font-medium mb-2">Profil Fotoğrafı</h3>
+            <p className="text-sm text-gray-500">
+              PNG, JPG, GIF dosyası yükleyin (max 5MB)
+            </p>
           </div>
         </div>
         
@@ -145,6 +162,37 @@ export function ProfileEditForm({
             />
           </div>
         </div>
+        
+        {/* Only show IBAN for staff profiles, not for admin/shop owner */}
+        {isStaff && (
+          <div className="space-y-2">
+            <Label htmlFor="iban" className="flex items-center gap-2">
+              <Mail size={16} />
+              IBAN
+            </Label>
+            <div className="flex">
+              <Input
+                id="iban"
+                name="iban"
+                value={profile.iban || ""}
+                onChange={handleChange}
+                placeholder="TRXX XXXX XXXX XXXX XXXX XX"
+                className="flex-1"
+              />
+              {profile.iban && (
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => copyToClipboard(profile.iban || "")}
+                  className="ml-2"
+                >
+                  <Copy size={16} />
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
         
         <div className="space-y-2">
           <Label htmlFor="email" className="flex items-center gap-2 opacity-70">

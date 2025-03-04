@@ -16,6 +16,7 @@ interface WorkingHoursProps {
 
 export function WorkingHours({ isStaff = true, gunler = [], onChange }: WorkingHoursProps) {
   const [editing, setEditing] = useState<number | null>(null);
+  const [tempChanges, setTempChanges] = useState<Record<number, Partial<CalismaSaati>>>({});
   const queryClient = useQueryClient();
 
   // If gunler are provided from props, use them, otherwise fetch from API
@@ -46,26 +47,61 @@ export function WorkingHours({ isStaff = true, gunler = [], onChange }: WorkingH
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['calisma_saatleri'] });
       toast.success('Çalışma saati güncellendi');
-      setEditing(null);
     },
     onError: () => {
       toast.error('Güncelleme sırasında bir hata oluştu');
     }
   });
 
-  const handleUpdate = (id: number, updates: any) => {
+  const startEditing = (id: number) => {
+    setEditing(id);
+    setTempChanges(prev => ({
+      ...prev,
+      [id]: {}
+    }));
+  };
+
+  const handleTempChange = (id: number, field: keyof CalismaSaati, value: any) => {
+    setTempChanges(prev => ({
+      ...prev,
+      [id]: {
+        ...prev[id],
+        [field]: value
+      }
+    }));
+  };
+
+  const saveChanges = (id: number) => {
     if (onChange) {
       // If using parent component's state management
       const index = calismaSaatleri.findIndex(s => s.id === id);
-      if (index !== -1) {
-        Object.keys(updates).forEach(key => {
-          onChange(index, key as keyof CalismaSaati, updates[key]);
+      if (index !== -1 && tempChanges[id]) {
+        Object.keys(tempChanges[id]).forEach(key => {
+          onChange(index, key as keyof CalismaSaati, tempChanges[id][key as keyof CalismaSaati]);
         });
       }
     } else {
       // If using direct DB update
-      saatGuncelle({ id, updates });
+      if (tempChanges[id] && Object.keys(tempChanges[id]).length > 0) {
+        saatGuncelle({ id, updates: tempChanges[id] });
+      }
     }
+    
+    setEditing(null);
+    setTempChanges(prev => {
+      const updated = {...prev};
+      delete updated[id];
+      return updated;
+    });
+  };
+
+  const cancelEditing = (id: number) => {
+    setEditing(null);
+    setTempChanges(prev => {
+      const updated = {...prev};
+      delete updated[id];
+      return updated;
+    });
   };
 
   return (
@@ -91,7 +127,7 @@ export function WorkingHours({ isStaff = true, gunler = [], onChange }: WorkingH
                   <Input
                     type="time"
                     defaultValue={saat.acilis}
-                    onChange={(e) => handleUpdate(saat.id || index, { acilis: e.target.value })}
+                    onChange={(e) => handleTempChange(saat.id || index, 'acilis', e.target.value)}
                   />
                 ) : (
                   saat.kapali ? "-" : saat.acilis
@@ -102,7 +138,7 @@ export function WorkingHours({ isStaff = true, gunler = [], onChange }: WorkingH
                   <Input
                     type="time"
                     defaultValue={saat.kapanis}
-                    onChange={(e) => handleUpdate(saat.id || index, { kapanis: e.target.value })}
+                    onChange={(e) => handleTempChange(saat.id || index, 'kapanis', e.target.value)}
                   />
                 ) : (
                   saat.kapali ? "-" : saat.kapanis
@@ -110,22 +146,53 @@ export function WorkingHours({ isStaff = true, gunler = [], onChange }: WorkingH
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                 {isStaff ? (
-                  <Switch
-                    checked={!saat.kapali}
-                    onCheckedChange={(checked) => handleUpdate(saat.id || index, { kapali: !checked })}
-                  />
+                  editing === (saat.id || index) ? (
+                    <Switch
+                      checked={!((tempChanges[saat.id || index]?.kapali !== undefined) 
+                        ? tempChanges[saat.id || index].kapali 
+                        : saat.kapali)}
+                      onCheckedChange={(checked) => handleTempChange(saat.id || index, 'kapali', !checked)}
+                    />
+                  ) : (
+                    <Switch
+                      checked={!saat.kapali}
+                      onCheckedChange={(checked) => {
+                        handleTempChange(saat.id || index, 'kapali', !checked);
+                        saveChanges(saat.id || index);
+                      }}
+                    />
+                  )
                 ) : (
                   saat.kapali ? "Kapalı" : "Açık"
                 )}
               </td>
               {isStaff && (
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  <Button
-                    variant="ghost"
-                    onClick={() => setEditing(editing === (saat.id || index) ? null : (saat.id || index))}
-                  >
-                    {editing === (saat.id || index) ? 'Kaydet' : 'Düzenle'}
-                  </Button>
+                  {editing === (saat.id || index) ? (
+                    <div className="flex gap-2">
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => saveChanges(saat.id || index)}
+                      >
+                        Kaydet
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => cancelEditing(saat.id || index)}
+                      >
+                        İptal
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      onClick={() => startEditing(saat.id || index)}
+                    >
+                      Düzenle
+                    </Button>
+                  )}
                 </td>
               )}
             </tr>

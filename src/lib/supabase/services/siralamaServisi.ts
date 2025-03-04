@@ -13,10 +13,13 @@ export const siralamaServisi = {
     try {
       const { data, error } = await supabase
         .from('islem_kategorileri')
-        .upsert(updates)
+        .upsert(updates, { onConflict: 'id' })
         .select();
         
-      if (error) throw error;
+      if (error) {
+        console.error('Kategori sıra güncelleme hatası (detaylı):', error);
+        throw error;
+      }
       return data || [];
     } catch (error) {
       console.error('Kategori sıra güncelleme hatası:', error);
@@ -34,10 +37,13 @@ export const siralamaServisi = {
     try {
       const { data, error } = await supabase
         .from('islemler')
-        .upsert(updates)
+        .upsert(updates, { onConflict: 'id' })
         .select();
         
-      if (error) throw error;
+      if (error) {
+        console.error('İşlem sıra güncelleme hatası (detaylı):', error);
+        throw error;
+      }
       return data || [];
     } catch (error) {
       console.error('İşlem sıra güncelleme hatası:', error);
