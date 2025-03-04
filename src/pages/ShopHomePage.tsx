@@ -4,7 +4,7 @@ import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 export default function ShopHomePage() {
   const { refreshProfile } = useCustomerAuth();
   
-  // Fix the refreshUserProfile function to not pass any arguments
+  // Fix the refreshUserProfile function to call refreshProfile
   const refreshUserProfile = () => {
     refreshProfile();
   };
