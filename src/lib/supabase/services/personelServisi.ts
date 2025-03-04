@@ -30,6 +30,25 @@ export const personelServisi = {
     return data;
   },
 
+  async getirByAuthId(authId: string) {
+    const { data, error } = await supabase
+      .from('personel')
+      .select(`
+        *,
+        dukkan:dukkanlar(*)
+      `)
+      .eq('auth_id', authId)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return null; // No records found
+      }
+      throw error;
+    }
+    return data;
+  },
+
   async ekle(personel: Omit<Personel, 'id' | 'created_at' | 'dukkan'>) {
     const { data, error } = await supabase
       .from('personel')
@@ -60,6 +79,14 @@ export const personelServisi = {
   },
 
   async sil(id: number) {
+    // First check if this personnel has an auth_id
+    const { data: personel } = await supabase
+      .from('personel')
+      .select('auth_id, eposta')
+      .eq('id', id)
+      .single();
+
+    // Delete related operations first
     const { error: islemSilmeHatasi } = await supabase
       .from('personel_islemleri')
       .delete()
@@ -67,11 +94,27 @@ export const personelServisi = {
 
     if (islemSilmeHatasi) throw islemSilmeHatasi;
 
+    // Delete the personnel record
     const { error } = await supabase
       .from('personel')
       .delete()
       .eq('id', id);
 
     if (error) throw error;
+
+    // If personnel had an auth account, try to delete that too
+    if (personel?.auth_id || personel?.eposta) {
+      try {
+        // Try to delete auth user if there's an associated email
+        if (personel.eposta) {
+          await supabase.functions.invoke('delete-user', {
+            body: { email: personel.eposta }
+          });
+        }
+      } catch (authDeleteError) {
+        console.error("Error deleting auth user:", authDeleteError);
+        // We don't throw here since the personnel record is already deleted
+      }
+    }
   }
 };

@@ -13,6 +13,7 @@ import Services from "@/pages/Services";
 import StaffLogin from "./pages/StaffLogin";
 import StaffProfile from "./pages/StaffProfile";
 import ShopStatistics from "./pages/ShopStatistics";
+import ShopSettings from "./pages/ShopSettings";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import HomePage from "./pages/HomePage";
 import CreateShop from "./pages/CreateShop";
@@ -61,8 +62,10 @@ function App() {
           <Route path="/personnel" element={<Personnel />} />
           <Route path="/appointments" element={<Appointments />} />
           <Route path="/services" element={<Services />} />
+          <Route path="/shop-settings" element={<ShopSettings />} />
           <Route path="/staff-profile" element={<StaffProfile />} />
           <Route path="/shop-statistics" element={<ShopStatistics />} />
+          <Route path="/settings" element={<StaffProfile />} /> {/* For now, redirect settings to profile */}
           
           {/* Redirect unknown paths */}
           <Route path="*" element={<Navigate to="/" replace />} />

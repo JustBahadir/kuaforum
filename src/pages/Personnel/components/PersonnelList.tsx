@@ -1,5 +1,5 @@
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { personelServisi } from "@/lib/supabase";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -11,12 +11,27 @@ import { PersonnelEditDialog } from "./PersonnelEditDialog";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export function PersonnelList() {
   const { userRole } = useCustomerAuth();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedPersonel, setSelectedPersonel] = useState<number | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [personelToDelete, setPersonelToDelete] = useState<number | null>(null);
+
+  const queryClient = useQueryClient();
 
   const { data: personeller = [], isLoading, error } = useQuery({
     queryKey: ['personel'],
@@ -31,6 +46,30 @@ export function PersonnelList() {
   const handleCloseEditDialog = () => {
     setSelectedPersonel(null);
     setEditDialogOpen(false);
+  };
+
+  const deletePersonelMutation = useMutation({
+    mutationFn: (id: number) => personelServisi.sil(id),
+    onSuccess: () => {
+      toast.success("Personel başarıyla silindi");
+      queryClient.invalidateQueries({ queryKey: ['personel'] });
+      setDeleteDialogOpen(false);
+      setPersonelToDelete(null);
+    },
+    onError: (error) => {
+      toast.error(`Silme işlemi başarısız: ${error.message}`);
+    }
+  });
+
+  const handleOpenDeleteDialog = (personelId: number) => {
+    setPersonelToDelete(personelId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeletePersonel = () => {
+    if (personelToDelete) {
+      deletePersonelMutation.mutate(personelToDelete);
+    }
   };
 
   if (error) {
@@ -71,7 +110,7 @@ export function PersonnelList() {
       <CardContent>
         {isLoading ? (
           <div className="flex justify-center p-4">
-            <span className="loading loading-spinner"></span>
+            <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
           </div>
         ) : personeller.length === 0 ? (
           <div className="text-center p-4 text-muted-foreground">
@@ -133,7 +172,12 @@ export function PersonnelList() {
                       <Edit className="h-4 w-4 mr-2" />
                       <span className="sr-only sm:not-sr-only sm:text-xs">Düzenle</span>
                     </Button>
-                    <Button variant="ghost" className="flex-1 rounded-none text-destructive" title="Sil">
+                    <Button 
+                      variant="ghost" 
+                      className="flex-1 rounded-none text-destructive" 
+                      title="Sil"
+                      onClick={() => handleOpenDeleteDialog(personel.id)}
+                    >
                       <Trash className="h-4 w-4 mr-2" />
                       <span className="sr-only sm:not-sr-only sm:text-xs">Sil</span>
                     </Button>
@@ -156,6 +200,27 @@ export function PersonnelList() {
             personelId={selectedPersonel}
           />
         )}
+
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Personel Silme</AlertDialogTitle>
+              <AlertDialogDescription>
+                Bu personeli silmek istediğinize emin misiniz? Bu işlem geri alınamaz.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>İptal</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleDeletePersonel}
+                disabled={deletePersonelMutation.isPending}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {deletePersonelMutation.isPending ? 'Siliniyor...' : 'Evet, Sil'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardContent>
     </Card>
   );

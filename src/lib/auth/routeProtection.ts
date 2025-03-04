@@ -7,7 +7,7 @@ export const shouldRedirect = (
   userRole: string | null,
   pathname: string
 ): boolean => {
-  // Ana sayfaya ve login sayfalarına her zaman erişime izin ver
+  // Public pages that anyone can access
   if (
     pathname === "/" || 
     pathname === "/login" || 
@@ -31,28 +31,45 @@ export const shouldRedirect = (
     return false;
   }
 
-  // Admin kullanıcılarının her sayfaya erişimine izin verelim
+  // Admin users have full access
   if (userRole === 'admin') {
+    // If admin is on the homepage, redirect to personnel page
+    if (pathname === "/") {
+      console.log("Admin on homepage, redirecting to personnel page");
+      return true;
+    }
     console.log("Admin user, no redirect needed");
     return false;
   }
 
-  // Staff için sadece müşteri-spesifik sayfaları engelle
+  // Staff can't access customer-specific pages
   if (userRole === 'staff' && 
-      pathname.includes('/customer/') && 
-      !pathname.includes('/customers')) {
+      pathname.includes('/customer-dashboard')) {
     console.log("Staff trying to access customer page:", pathname);
     return true;
   } 
   
-  // Müşteriler için personel sayfalarını engelle
+  // Staff on homepage should be redirected to their staff pages
+  if (userRole === 'staff' && pathname === "/") {
+    console.log("Staff on homepage, redirecting to personnel page");
+    return true;
+  }
+  
+  // Customers can't access staff pages
   if (userRole === 'customer' && 
       (pathname.includes('/personnel') || 
-       pathname.includes('/dashboard') ||
+       pathname.includes('/shop-settings') ||
        pathname.includes('/shop-statistics') ||
        pathname.includes('/services') ||
-       pathname.includes('/appointments') && !pathname.includes('/customer-dashboard'))) {
+       pathname.includes('/appointments') && !pathname.includes('/customer-dashboard') ||
+       pathname.includes('/staff-profile'))) {
     console.log("Customer trying to access staff page:", pathname);
+    return true;
+  }
+
+  // Customer on homepage should be redirected to customer dashboard
+  if (userRole === 'customer' && pathname === "/") {
+    console.log("Customer on homepage, redirecting to customer dashboard");
     return true;
   }
 
@@ -70,7 +87,9 @@ export const getRedirectPath = (
 ): string => {
   if (!isAuthenticated) {
     // If not authenticated and trying to access a secured route, redirect to login
-    if (currentPath.includes('personnel') || currentPath.includes('staff')) {
+    if (currentPath.includes('personnel') || 
+        currentPath.includes('staff') || 
+        currentPath.includes('shop-')) {
       return "/staff-login";
     } else if (currentPath.includes('customer')) {
       return "/login";
@@ -78,46 +97,39 @@ export const getRedirectPath = (
     return "/";
   }
   
-  // Admin için yönlendirme gerekmez
-  if (userRole === 'admin') {
-    // Eğer anasayfada ise ve giriş yapmışsa, dashboard'a yönlendir
-    if (currentPath === "/") {
-      return "/personnel";
-    }
-    return currentPath;
+  // Admin redirect to personnel page from homepage
+  if (userRole === 'admin' && currentPath === "/") {
+    return "/personnel";
   }
   
+  // Staff redirect to personnel page from homepage
   if (userRole === 'staff') {
-    // Staff is trying to access customer pages
-    if (currentPath.includes('/customer/') && !currentPath.includes('/customers')) {
-      return "/personnel";
-    }
-    
-    // If staff is at the root, redirect to personnel page
     if (currentPath === "/") {
       return "/personnel";
     }
     
-    return currentPath;
+    // Staff trying to access customer-specific pages
+    if (currentPath.includes('/customer-dashboard')) {
+      return "/personnel";
+    }
   }
   
   if (userRole === 'customer') {
-    // Customer is trying to access staff pages
+    // Customer trying to access staff pages
     if (currentPath.includes('/personnel') || 
-        currentPath.includes('/dashboard') ||
+        currentPath.includes('/shop-settings') ||
         currentPath.includes('/shop-statistics') ||
         currentPath.includes('/services') ||
-        (currentPath.includes('/appointments') && !currentPath.includes('/customer-dashboard'))) {
+        (currentPath.includes('/appointments') && !currentPath.includes('/customer-dashboard')) ||
+        currentPath.includes('/staff-profile')) {
       return "/customer-dashboard";
     }
     
-    // If customer is at the root, redirect to customer dashboard
+    // Customer at homepage
     if (currentPath === "/") {
       return "/customer-dashboard";
     }
-    
-    return currentPath;
   }
   
-  return "/";
+  return currentPath;
 };
