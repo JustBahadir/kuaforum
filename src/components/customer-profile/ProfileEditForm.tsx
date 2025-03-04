@@ -1,3 +1,4 @@
+
 import React from "react";
 import { 
   Card, 
@@ -46,11 +47,6 @@ export function ProfileEditForm({
   isSaving,
   isUploading
 }: ProfileEditFormProps) {
-  const handleFileUploadComplete = async (file: File) => {
-    const fileUrl = URL.createObjectURL(file);
-    handleAvatarUpload(fileUrl);
-  };
-
   return (
     <Card>
       <CardHeader>
@@ -168,7 +164,7 @@ export function ProfileEditForm({
       <CardFooter className="justify-end">
         <Button 
           onClick={handleSave} 
-          disabled={isSaving}
+          disabled={isSaving || isUploading}
           className="bg-purple-600 hover:bg-purple-700"
         >
           {isSaving ? "Kaydediliyor..." : "Bilgilerimi Güncelle"}

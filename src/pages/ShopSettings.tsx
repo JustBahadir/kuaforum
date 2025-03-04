@@ -19,6 +19,7 @@ export default function ShopSettings() {
   const [shopCode, setShopCode] = useState<string>("");
   const [copied, setCopied] = useState(false);
   const [address, setAddress] = useState("");
+  const [fullAddress, setFullAddress] = useState("");
   const queryClient = useQueryClient();
 
   const { data: dukkan, isLoading, error } = useQuery({
@@ -30,7 +31,10 @@ export default function ShopSettings() {
   useEffect(() => {
     if (dukkan) {
       setShopCode(dukkan.kod);
+      // İl/ilçe bilgisini adres olarak atama
       setAddress(dukkan.adres || "");
+      // Açık adres bilgisini fullAddress olarak atama
+      setFullAddress(dukkan.acik_adres || "");
     }
   }, [dukkan]);
 
@@ -61,37 +65,37 @@ export default function ShopSettings() {
       }
     } catch (error) {
       toast.error("Kod oluşturulurken bir hata oluştu");
-      console.error("Error generating shop code:", error);
+      console.error("Kod oluşturma hatası:", error);
     }
   };
 
   const updateShopAddress = useMutation({
-    mutationFn: (newAddress: string) => {
+    mutationFn: (newFullAddress: string) => {
       return dukkanServisi.dukkaniGuncelle(dukkanId!, {
-        adres: newAddress
+        acik_adres: newFullAddress
       });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dukkan', dukkanId] });
-      toast.success("Dükkan adresi güncellendi");
+      toast.success("Dükkan açık adresi güncellendi");
     },
     onError: (error) => {
-      toast.error("Adres güncellenirken bir hata oluştu");
-      console.error("Error updating address:", error);
+      toast.error("Açık adres güncellenirken bir hata oluştu");
+      console.error("Adres güncelleme hatası:", error);
     }
   });
 
   const handleAddressUpdate = () => {
-    updateShopAddress.mutate(address);
+    updateShopAddress.mutate(fullAddress);
   };
 
   const openInMaps = () => {
-    if (!address) {
-      toast.error("Haritada göstermek için bir adres girilmelidir");
+    if (!fullAddress) {
+      toast.error("Haritada göstermek için bir açık adres girilmelidir");
       return;
     }
     
-    const encodedAddress = encodeURIComponent(address);
+    const encodedAddress = encodeURIComponent(fullAddress);
     window.open(`https://www.google.com/maps/search/?api=1&query=${encodedAddress}`, '_blank');
   };
 
@@ -142,11 +146,22 @@ export default function ShopSettings() {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="shopAddress">Dükkan Adresi</Label>
-                    <Textarea 
+                    <Label htmlFor="shopAddress">İl/İlçe Bilgisi</Label>
+                    <Input 
                       id="shopAddress" 
                       value={address} 
-                      onChange={(e) => setAddress(e.target.value)}
+                      readOnly
+                      className="bg-gray-50"
+                    />
+                    <p className="text-xs text-gray-500">Bu bilgi kayıt esnasında alınmıştır ve değiştirilemez.</p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="shopFullAddress">Dükkan Açık Adresi</Label>
+                    <Textarea 
+                      id="shopFullAddress" 
+                      value={fullAddress} 
+                      onChange={(e) => setFullAddress(e.target.value)}
                       placeholder="Dükkanınızın açık adresini giriniz"
                       rows={3}
                     />
@@ -154,7 +169,7 @@ export default function ShopSettings() {
                   
                   <div className="flex gap-2">
                     <Button className="flex-1" onClick={handleAddressUpdate}>
-                      Adresi Kaydet
+                      Açık Adresi Kaydet
                     </Button>
                     <Button variant="outline" onClick={openInMaps} className="flex items-center gap-2">
                       <MapPin size={16} />

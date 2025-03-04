@@ -8,13 +8,13 @@ import { ProfileServiceError, ProfileUpdateData, ProfileCreationParams } from '.
  */
 export async function updateProfile(data: ProfileUpdateData): Promise<Profile | null> {
   try {
-    console.log("Updating profile with data:", data);
+    console.log("Profil güncelleniyor:", data);
     
     // Get the current session to get the user ID
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
     if (userError || !user) {
-      console.error("Error getting user:", userError);
+      console.error("Kullanıcı bilgisi alınamadı:", userError);
       throw {
         message: "Kullanıcı bilgisi alınamadı: " + (userError?.message || "Bilinmeyen hata"),
         original: userError
@@ -32,18 +32,21 @@ export async function updateProfile(data: ProfileUpdateData): Promise<Profile | 
           phone: data.phone,
           gender: data.gender || null,
           birthdate: data.birthdate,
-          role: data.role
+          role: data.role,
+          avatar_url: data.avatar_url,
+          address: data.address,
+          iban: data.iban
         }
       });
       
       if (userUpdateError) {
-        console.error("Error updating user metadata:", userUpdateError);
+        console.error("Kullanıcı metadata güncellenirken hata:", userUpdateError);
         // Continue anyway, we'll update the profile
       } else {
-        console.log("Updated user metadata successfully");
+        console.log("Kullanıcı metadata başarıyla güncellendi");
       }
     } catch (err) {
-      console.error("Exception updating user metadata:", err);
+      console.error("Kullanıcı metadata güncellenirken istisna:", err);
       // Continue anyway, we'll update the profile
     }
     
@@ -57,8 +60,11 @@ export async function updateProfile(data: ProfileUpdateData): Promise<Profile | 
     if (data.role !== undefined) updateData.role = data.role;
     if (data.gender !== undefined) updateData.gender = data.gender || null;
     if (data.birthdate !== undefined) updateData.birthdate = data.birthdate;
+    if (data.avatar_url !== undefined) updateData.avatar_url = data.avatar_url;
+    if (data.address !== undefined) updateData.address = data.address;
+    if (data.iban !== undefined) updateData.iban = data.iban;
     
-    console.log("Final update data:", updateData);
+    console.log("Son güncelleme verisi:", updateData);
     
     try {
       // Check if profile exists first
@@ -70,7 +76,7 @@ export async function updateProfile(data: ProfileUpdateData): Promise<Profile | 
         
       if (!existingProfile) {
         // Create new profile if it doesn't exist
-        console.log("Profile doesn't exist, creating new one");
+        console.log("Profil mevcut değil, yeni profil oluşturuluyor");
         const { data: newProfile, error: insertError } = await supabase
           .from('profiles')
           .insert({
@@ -81,7 +87,7 @@ export async function updateProfile(data: ProfileUpdateData): Promise<Profile | 
           .maybeSingle();
           
         if (insertError) {
-          console.error("Error creating profile:", insertError);
+          console.error("Profil oluşturulurken hata:", insertError);
           // If we can't update the profile, return whatever we have from user metadata
           return {
             id: userId,
@@ -90,6 +96,9 @@ export async function updateProfile(data: ProfileUpdateData): Promise<Profile | 
             phone: data.phone || '',
             gender: data.gender || null,
             birthdate: data.birthdate || null,
+            avatar_url: data.avatar_url || '',
+            address: data.address || '',
+            iban: data.iban || '',
             role: data.role || 'customer',
             created_at: new Date().toISOString()
           };
@@ -107,11 +116,11 @@ export async function updateProfile(data: ProfileUpdateData): Promise<Profile | 
         .maybeSingle();
       
       if (error) {
-        console.error("Error updating profile:", error);
+        console.error("Profil güncellenirken hata:", error);
         
         // If we get RLS errors, return the data from metadata as fallback
         if (error.code === '42P17') {
-          console.warn("Got recursion error in profile update, returning metadata-based profile");
+          console.warn("Profil güncellemede özyineleme hatası, metadata tabanlı profil döndürülüyor");
           return {
             id: userId,
             first_name: data.first_name || '',
@@ -119,6 +128,9 @@ export async function updateProfile(data: ProfileUpdateData): Promise<Profile | 
             phone: data.phone || '',
             gender: data.gender || null,
             birthdate: data.birthdate || null,
+            avatar_url: data.avatar_url || '',
+            address: data.address || '',
+            iban: data.iban || '',
             role: data.role || 'customer',
             created_at: new Date().toISOString()
           };
@@ -127,18 +139,18 @@ export async function updateProfile(data: ProfileUpdateData): Promise<Profile | 
         throw error;
       }
       
-      console.log("Profile updated successfully:", profile);
+      console.log("Profil başarıyla güncellendi:", profile);
       return profile;
       
     } catch (error) {
-      console.error("Error in profile update operation:", error);
+      console.error("Profil güncelleme işleminde hata:", error);
       throw {
         message: "Profil güncellenirken bir hata oluştu: " + (error as any).message,
         original: error
       };
     }
   } catch (error) {
-    console.error("Error in updateProfile:", error);
+    console.error("updateProfile fonksiyonunda hata:", error);
     throw error as ProfileServiceError;
   }
 }
@@ -151,7 +163,7 @@ export async function createOrUpdateProfile(
   profileData: ProfileCreationParams
 ): Promise<Profile | null> {
   try {
-    console.log("Creating or updating profile for user:", userId, "with data:", profileData);
+    console.log("Kullanıcı için profil oluşturuluyor veya güncelleniyor:", userId, "veri:", profileData);
     
     // Update auth user metadata
     try {
@@ -162,17 +174,20 @@ export async function createOrUpdateProfile(
           role: profileData.role,
           phone: profileData.phone,
           gender: profileData.gender || null,
-          birthdate: profileData.birthdate
+          birthdate: profileData.birthdate,
+          avatar_url: profileData.avatar_url,
+          address: profileData.address,
+          iban: profileData.iban
         }
       });
       
       if (userUpdateError) {
-        console.error("Error updating user metadata:", userUpdateError);
+        console.error("Kullanıcı metadata güncellenirken hata:", userUpdateError);
       } else {
-        console.log("Updated user metadata successfully");
+        console.log("Kullanıcı metadata başarıyla güncellendi");
       }
     } catch (error) {
-      console.error("Error updating user metadata:", error);
+      console.error("Kullanıcı metadata güncellenirken hata:", error);
       // Continue anyway, we'll try to update the profile
     }
     
@@ -184,14 +199,14 @@ export async function createOrUpdateProfile(
       .maybeSingle();
     
     if (fetchError && fetchError.code !== 'PGRST116') {
-      console.error("Error fetching profile:", fetchError);
+      console.error("Profil alınırken hata:", fetchError);
     }
     
     let profile: Profile | null = null;
     
     // If profile exists, update it
     if (existingProfile) {
-      console.log("Updating existing profile:", existingProfile.id);
+      console.log("Mevcut profil güncelleniyor:", existingProfile.id);
       
       // Prepare update data
       const updateData: Record<string, any> = {};
@@ -201,6 +216,9 @@ export async function createOrUpdateProfile(
       if (profileData.phone !== undefined) updateData.phone = profileData.phone;
       if (profileData.gender !== undefined) updateData.gender = profileData.gender || null;
       if (profileData.birthdate !== undefined) updateData.birthdate = profileData.birthdate;
+      if (profileData.avatar_url !== undefined) updateData.avatar_url = profileData.avatar_url;
+      if (profileData.address !== undefined) updateData.address = profileData.address;
+      if (profileData.iban !== undefined) updateData.iban = profileData.iban;
       
       const { data: updatedProfile, error: updateError } = await supabase
         .from('profiles')
@@ -210,7 +228,7 @@ export async function createOrUpdateProfile(
         .maybeSingle();
       
       if (updateError) {
-        console.error("Error updating profile:", updateError);
+        console.error("Profil güncellenirken hata:", updateError);
         // Return data from user metadata as fallback
         return {
           id: userId,
@@ -220,15 +238,18 @@ export async function createOrUpdateProfile(
           phone: profileData.phone || '',
           gender: profileData.gender || null,
           birthdate: profileData.birthdate || null,
+          avatar_url: profileData.avatar_url || '',
+          address: profileData.address || '',
+          iban: profileData.iban || '',
           created_at: new Date().toISOString()
         };
       }
       
       profile = updatedProfile;
-      console.log("Profile updated successfully:", profile);
+      console.log("Profil başarıyla güncellendi:", profile);
     } else {
       // If profile doesn't exist, create it
-      console.log("Creating new profile for user:", userId);
+      console.log("Kullanıcı için yeni profil oluşturuluyor:", userId);
       const { data: newProfile, error: insertError } = await supabase
         .from('profiles')
         .insert({
@@ -239,12 +260,15 @@ export async function createOrUpdateProfile(
           phone: profileData.phone || '',
           gender: profileData.gender || null,
           birthdate: profileData.birthdate || null,
+          avatar_url: profileData.avatar_url || '',
+          address: profileData.address || '',
+          iban: profileData.iban || '',
         })
         .select('*')
         .maybeSingle();
       
       if (insertError) {
-        console.error("Error inserting profile:", insertError);
+        console.error("Profil eklenirken hata:", insertError);
         // Return data from user metadata as fallback
         return {
           id: userId,
@@ -254,17 +278,20 @@ export async function createOrUpdateProfile(
           phone: profileData.phone || '',
           gender: profileData.gender || null,
           birthdate: profileData.birthdate || null,
+          avatar_url: profileData.avatar_url || '',
+          address: profileData.address || '',
+          iban: profileData.iban || '',
           created_at: new Date().toISOString()
         };
       }
       
       profile = newProfile;
-      console.log("Profile created successfully:", profile);
+      console.log("Profil başarıyla oluşturuldu:", profile);
     }
     
     return profile;
   } catch (error) {
-    console.error("Error in createOrUpdateProfile:", error);
+    console.error("createOrUpdateProfile fonksiyonunda hata:", error);
     throw {
       message: "Profil oluşturulurken veya güncellenirken bir hata oluştu",
       original: error

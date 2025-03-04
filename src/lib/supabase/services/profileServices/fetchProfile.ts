@@ -11,7 +11,7 @@ export async function getProfile(): Promise<Profile | null> {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
     if (userError || !user) {
-      console.error("Error getting user:", userError);
+      console.error("Kullanıcı bilgisi alınamadı:", userError);
       return null;
     }
     
@@ -19,12 +19,12 @@ export async function getProfile(): Promise<Profile | null> {
       // Get the profile from the database with simplified query to avoid RLS recursion
       const { data: profile, error } = await supabase
         .from('profiles')
-        .select('id, first_name, last_name, phone, gender, birthdate, role, created_at')
+        .select('id, first_name, last_name, phone, gender, birthdate, role, created_at, avatar_url')
         .eq('id', user.id)
         .maybeSingle();
       
       if (error) {
-        console.error("Error fetching profile with normal query:", error);
+        console.error("Profil bilgileri normal sorgu ile alınamadı:", error);
         
         // Use user metadata as fallback
         return {
@@ -35,6 +35,7 @@ export async function getProfile(): Promise<Profile | null> {
           phone: user.user_metadata?.phone || '',
           gender: user.user_metadata?.gender || '',
           birthdate: user.user_metadata?.birthdate || null,
+          avatar_url: user.user_metadata?.avatar_url || '',
           created_at: new Date().toISOString()
         };
       }
@@ -49,13 +50,14 @@ export async function getProfile(): Promise<Profile | null> {
           phone: user.user_metadata?.phone || '',
           gender: user.user_metadata?.gender || '',
           birthdate: user.user_metadata?.birthdate || null,
+          avatar_url: user.user_metadata?.avatar_url || '',
           created_at: new Date().toISOString()
         };
       }
       
       return profile;
     } catch (err) {
-      console.error("Exception in profile fetch:", err);
+      console.error("Profil getirme işleminde hata:", err);
       
       // Fallback to user_metadata if available
       return {
@@ -66,11 +68,12 @@ export async function getProfile(): Promise<Profile | null> {
         phone: user.user_metadata?.phone || '',
         gender: user.user_metadata?.gender || '',
         birthdate: user.user_metadata?.birthdate || null,
+        avatar_url: user.user_metadata?.avatar_url || '',
         created_at: new Date().toISOString()
       };
     }
   } catch (err) {
-    console.error("Exception in getProfile:", err);
+    console.error("getProfile fonksiyonunda hata:", err);
     return null;
   }
 }
@@ -83,7 +86,7 @@ export async function getUserRole(): Promise<string | null> {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
     if (userError || !user) {
-      console.error("Error getting user for role:", userError);
+      console.error("Rol için kullanıcı bilgisi alınamadı:", userError);
       return null;
     }
     
@@ -96,7 +99,7 @@ export async function getUserRole(): Promise<string | null> {
     const profile = await getProfile();
     return profile?.role || 'customer';
   } catch (err) {
-    console.error("Error in getUserRole:", err);
+    console.error("getUserRole fonksiyonunda hata:", err);
     return null;
   }
 }

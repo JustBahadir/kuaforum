@@ -7,6 +7,8 @@ export interface ProfileUpdateData {
   gender?: "erkek" | "kadın" | null;
   birthdate?: string;
   avatar_url?: string;
+  address?: string;
+  iban?: string;
 }
 
 export interface ProfileServiceError {
@@ -21,6 +23,9 @@ export interface ProfileCreationParams {
   phone?: string;
   gender?: "erkek" | "kadın" | null;
   birthdate?: string;
+  avatar_url?: string;
+  address?: string;
+  iban?: string;
   // Fields used by RPC functions
   user_id?: string;
   user_first_name?: string;

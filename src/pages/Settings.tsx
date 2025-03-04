@@ -25,6 +25,19 @@ export default function Settings() {
     setMounted(true);
     // Initialize dark mode state
     setIsDarkMode(theme === 'dark');
+    
+    // Try to get stored settings
+    try {
+      const storedSettings = localStorage.getItem('appSettings');
+      if (storedSettings) {
+        const parsedSettings = JSON.parse(storedSettings);
+        setNotifications(parsedSettings.notifications ?? true);
+        setEmailNotifications(parsedSettings.emailNotifications ?? true);
+        setSmsNotifications(parsedSettings.smsNotifications ?? false);
+      }
+    } catch (error) {
+      console.error("Ayarlar yüklenirken hata:", error);
+    }
   }, [theme]);
   
   const handleDarkModeToggle = (checked: boolean) => {
@@ -34,13 +47,18 @@ export default function Settings() {
   
   const handleSaveSettings = () => {
     // Save settings to localStorage
-    localStorage.setItem('appSettings', JSON.stringify({
-      notifications,
-      emailNotifications,
-      smsNotifications
-    }));
-    
-    toast.success("Ayarlar kaydedildi");
+    try {
+      localStorage.setItem('appSettings', JSON.stringify({
+        notifications,
+        emailNotifications,
+        smsNotifications
+      }));
+      
+      toast.success("Ayarlar başarıyla kaydedildi");
+    } catch (error) {
+      console.error("Ayarlar kaydedilirken hata:", error);
+      toast.error("Ayarlar kaydedilirken bir hata oluştu");
+    }
   };
   
   if (!mounted) {

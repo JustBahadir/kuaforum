@@ -80,6 +80,7 @@ function App() {
               <Route path="/staff-profile" element={<StaffProfile />} />
               <Route path="/staff-login" element={<StaffLogin />} />
               <Route path="/customers" element={<Customers />} />
+              <Route path="/settings" element={<Settings />} />
               
               {/* Public Routes */}
               <Route path="/services" element={<CustomerOperations />} />
