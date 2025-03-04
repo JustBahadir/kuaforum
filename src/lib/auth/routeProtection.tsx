@@ -1,46 +1,41 @@
 
-import React, { useEffect, useState, createContext, useContext } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { authService } from "./authService";
-import { profileService } from "./profileService";
-import { shouldRedirect, getRedirectPath } from "./routeProtection";
+import React, { ReactNode, useEffect, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { supabase } from '@/lib/supabase/client';
+import { shouldRedirect, getRedirectPath } from './routeProtection'; 
+import { profileService } from './profileService';
 
-// Context for route protection
-const RouteProtectionContext = createContext({
-  isAuthenticated: false,
-  userRole: null as string | null,
-  loading: true,
-});
+interface RouteProtectionProps {
+  children: ReactNode;
+}
 
-// Hook to use route protection context
-export const useRouteProtection = () => useContext(RouteProtectionContext);
-
-// Route protection provider component
-export function RouteProtectionProvider({ children }: { children: React.ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userRole, setUserRole] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+export function RouteProtection({ children }: RouteProtectionProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
   useEffect(() => {
-    const checkAuthStatus = async () => {
-      setLoading(true);
+    const checkAuth = async () => {
       try {
-        const user = await authService.getCurrentUser();
+        setIsLoading(true);
+        const { data } = await supabase.auth.getSession();
+        const session = data.session;
         
-        if (user) {
-          setIsAuthenticated(true);
+        setIsAuthenticated(!!session);
+        
+        if (session) {
           const role = await profileService.getUserRole();
           setUserRole(role);
           
+          // Check if redirect is needed
           if (shouldRedirect(true, role, location.pathname)) {
             const redirectPath = getRedirectPath(true, role, location.pathname);
             navigate(redirectPath);
           }
         } else {
-          setIsAuthenticated(false);
-          
+          // Not authenticated
           if (shouldRedirect(false, null, location.pathname)) {
             const redirectPath = getRedirectPath(false, null, location.pathname);
             navigate(redirectPath);
@@ -48,38 +43,42 @@ export function RouteProtectionProvider({ children }: { children: React.ReactNod
         }
       } catch (error) {
         console.error("Auth check error:", error);
-        setIsAuthenticated(false);
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     };
+
+    checkAuth();
     
-    checkAuthStatus();
-    
-    // Set up auth state change listener
-    const { data } = authService.onAuthStateChange(async (event) => {
-      if (event === 'SIGNED_IN') {
-        setIsAuthenticated(true);
+    // Subscribe to auth changes
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      setIsAuthenticated(!!session);
+      
+      if (session) {
         const role = await profileService.getUserRole();
         setUserRole(role);
-      } else if (event === 'SIGNED_OUT') {
-        setIsAuthenticated(false);
-        setUserRole(null);
         
-        if (location.pathname !== '/') {
-          navigate('/');
+        // Check if redirect is needed on auth state change
+        if (shouldRedirect(true, role, location.pathname)) {
+          const redirectPath = getRedirectPath(true, role, location.pathname);
+          navigate(redirectPath);
+        }
+      } else {
+        if (shouldRedirect(false, null, location.pathname)) {
+          const redirectPath = getRedirectPath(false, null, location.pathname);
+          navigate(redirectPath);
         }
       }
     });
-    
+
     return () => {
-      data.subscription.unsubscribe();
+      authListener.subscription.unsubscribe();
     };
-  }, [location.pathname, navigate]);
-  
-  return (
-    <RouteProtectionContext.Provider value={{ isAuthenticated, userRole, loading }}>
-      {children}
-    </RouteProtectionContext.Provider>
-  );
+  }, [navigate, location.pathname]);
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center h-screen">Yükleniyor...</div>;
+  }
+
+  return <>{children}</>;
 }

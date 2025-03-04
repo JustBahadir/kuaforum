@@ -1,4 +1,3 @@
-
 import React from "react";
 import { 
   Card, 
@@ -32,7 +31,7 @@ export interface ProfileEditFormProps {
   };
   handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
   handleSelectChange: (name: string, value: string) => void;
-  handleAvatarUpload: (file: File) => Promise<void>;
+  handleAvatarUpload: (url: string) => void;
   handleSave: () => Promise<void>;
   isSaving: boolean;
   isUploading: boolean;
@@ -47,6 +46,11 @@ export function ProfileEditForm({
   isSaving,
   isUploading
 }: ProfileEditFormProps) {
+  const handleFileUploadComplete = async (file: File) => {
+    const fileUrl = URL.createObjectURL(file);
+    handleAvatarUpload(fileUrl);
+  };
+
   return (
     <Card>
       <CardHeader>

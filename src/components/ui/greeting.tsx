@@ -1,35 +1,104 @@
-
 import { useEffect, useState } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button";
+import { LogOut } from "lucide-react";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { profileService } from "@/lib/auth/profileService";
 
-export function Greeting() {
-  const { userName, userRole } = useCustomerAuth();
-  const [title, setTitle] = useState<string>("");
+interface GreetingProps {
+  userName: string;
+  loading: boolean;
+  activeTab: string;
+  handleLogout: () => void;
+  refreshProfile: () => void;
+  userRole: string | null;
+  isAuthenticated: boolean;
+  dukkanId: number | null;
+  dukkanAdi: string | null;
+}
+
+export function Greeting({ userName, loading, activeTab, handleLogout, refreshProfile, userRole, isAuthenticated, dukkanId, dukkanAdi }: GreetingProps) {
+  const [displayName, setDisplayName] = useState(userName || "Değerli Müşterimiz");
+  const { signOut } = useCustomerAuth();
 
   useEffect(() => {
-    async function loadGenderTitle() {
-      try {
-        const titleValue = await profileService.getGenderSpecificTitle();
-        setTitle(titleValue);
-      } catch (error) {
-        console.error("Error loading gender title:", error);
-      }
-    }
+    refreshProfile();
+  }, [refreshProfile]);
 
-    loadGenderTitle();
-  }, []);
+  // Use profileService.getUserNameWithTitle instead of getGenderSpecificTitle
+  const fetchUserName = async () => {
+    try {
+      const name = await profileService.getUserNameWithTitle();
+      setDisplayName(name);
+    } catch (error) {
+      console.error("Error fetching user name:", error);
+      setDisplayName(userName || "Değerli Müşterimiz");
+    }
+  };
+
+  useEffect(() => {
+    if (!loading) {
+      fetchUserName();
+    }
+  }, [userName, loading]);
+
+  const handleSignOut = async () => {
+    await signOut();
+    handleLogout();
+  };
+
+  const initials = displayName
+    .split(" ")
+    .map((name) => name[0])
+    .join("")
+    .toUpperCase();
 
   return (
-    <div className="flex items-center space-x-2">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">
-          {title ? `${title} ${userName}` : userName}
-        </h1>
-        <p className="text-muted-foreground">
-          {userRole === 'staff' ? 'Personel' : userRole === 'admin' ? 'Dükkan Sahibi' : 'Müşteri'} paneline hoş geldiniz.
-        </p>
-      </div>
-    </div>
-  );
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+          <Avatar className="h-8 w-8">
+            <AvatarImage src="/images/avatars/01.png" alt={displayName} />
+            <AvatarFallback>{initials}</AvatarFallback>
+          </Avatar>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="w-56" align="end" forceMount>
+        <DropdownMenuLabel>Hesabım</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => {
+          if (userRole === 'admin' || userRole === 'staff') {
+            window.location.href = '/admin/profile';
+          } else {
+            window.location.href = '/profile';
+          }
+        }}>Profil</DropdownMenuItem>
+        {userRole === 'admin' && dukkanId && (
+          <DropdownMenuItem onClick={() => { window.location.href = '/admin/shop-settings' }}>
+            Dükkan Ayarları
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuItem onClick={() => {
+          if (userRole === 'admin' || userRole === 'staff') {
+            window.location.href = '/admin/settings';
+          } else {
+            window.location.href = '/account';
+          }
+        }}>Ayarlar</DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={handleSignOut}>
+          <LogOut className="mr-2 h-4 w-4" />
+          <span>Çıkış</span>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
 }

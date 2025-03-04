@@ -21,6 +21,12 @@ export interface ProfileCreationParams {
   phone?: string;
   gender?: "erkek" | "kadın" | null;
   birthdate?: string;
+  // Fields used by RPC functions
+  user_id?: string;
+  user_first_name?: string;
+  user_last_name?: string;
+  user_phone?: string;
+  user_role?: string;
 }
 
 export function getGenderTitle(gender?: string | null): string {

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
@@ -42,10 +41,8 @@ export default function CustomerProfile() {
           return;
         }
         
-        // Get email from auth
         setProfile(prev => ({ ...prev, email: user.email || "" }));
         
-        // First check user metadata
         if (user.user_metadata) {
           const metaFirstName = user.user_metadata.first_name;
           const metaLastName = user.user_metadata.last_name;
@@ -73,7 +70,6 @@ export default function CustomerProfile() {
           }
         }
         
-        // Try getting from profiles table
         try {
           const profileData = await profilServisi.getir();
             
@@ -96,7 +92,6 @@ export default function CustomerProfile() {
           }
         } catch (profileError) {
           console.error("Error getting profile from table:", profileError);
-          // Already using metadata or empty values, so continue
         }
       } catch (error) {
         console.error("Error in fetchProfileData:", error);
@@ -130,60 +125,18 @@ export default function CustomerProfile() {
     }
   };
   
-  const handleAvatarUpload = async (file: File) => {
+  const handleAvatarUpload = async (url: string) => {
     try {
       setIsUploading(true);
       
-      // Check if the file is an image
-      if (!file.type.startsWith('image/')) {
-        toast.error("Lütfen bir resim dosyası seçin");
-        return;
-      }
+      setProfile(prev => ({ ...prev, avatarUrl: url }));
       
-      // Check file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error("Dosya boyutu 5MB'den küçük olmalıdır");
-        return;
-      }
-      
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error("Kullanıcı bulunamadı");
-        return;
-      }
-      
-      // Create a unique filename
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
-      
-      // Upload to Supabase storage
-      const { error: uploadError } = await supabase.storage
-        .from('photos')
-        .upload(filePath, file);
-        
-      if (uploadError) {
-        console.error('Error uploading avatar:', uploadError);
-        toast.error("Profil fotoğrafı yüklenirken bir hata oluştu");
-        return;
-      }
-      
-      // Get the public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('photos')
-        .getPublicUrl(filePath);
-        
-      // Update profile with avatar URL
-      setProfile(prev => ({ ...prev, avatarUrl: publicUrl }));
-      
-      // Update user metadata
       await supabase.auth.updateUser({
-        data: { avatar_url: publicUrl }
+        data: { avatar_url: url }
       });
       
-      // Update profile in database
       await profilServisi.guncelle({
-        avatar_url: publicUrl
+        avatar_url: url
       });
       
       toast.success("Profil fotoğrafı başarıyla güncellendi");
@@ -207,7 +160,6 @@ export default function CustomerProfile() {
         return;
       }
       
-      // Format phone number for saving - remove spaces
       const phoneForSaving = profile.phone.replace(/\s/g, '');
       
       console.log("Updating profile with data:", {
@@ -219,7 +171,6 @@ export default function CustomerProfile() {
         avatar_url: profile.avatarUrl
       });
       
-      // Update user metadata first for redundancy
       await supabase.auth.updateUser({
         data: {
           first_name: profile.firstName,
@@ -231,7 +182,6 @@ export default function CustomerProfile() {
         }
       });
       
-      // Use profile service to update profile
       const result = await profilServisi.guncelle({
         first_name: profile.firstName,
         last_name: profile.lastName,
@@ -243,18 +193,14 @@ export default function CustomerProfile() {
       
       if (result) {
         toast.success("Profil bilgileriniz başarıyla güncellendi");
-        
-        // Refresh the header display name with gender title
         refreshProfile();
       } else {
-        // Even if database update failed, we updated the metadata
         toast.success("Profil bilgileriniz kaydedildi");
         refreshProfile();
       }
     } catch (error: any) {
       console.error("Error in handleSave:", error);
       
-      // Check if user metadata update worked despite RLS error
       if (error.original && (error.original.code === '42P17' || error.original.message?.includes('infinite recursion'))) {
         toast.success("Profil bilgileriniz kaydedildi, ancak bazı alanlar güncellenememiş olabilir");
         refreshProfile();

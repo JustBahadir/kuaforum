@@ -67,9 +67,18 @@ export async function createDefaultProfile(user: any): Promise<Profile> {
  */
 export async function createProfileViaRPC(params: ProfileCreationParams): Promise<Profile | null> {
   try {
+    // Create RPC parameters from ProfileCreationParams
+    const rpcParams = {
+      user_id: params.user_id || '',
+      user_first_name: params.user_first_name || params.first_name || '',
+      user_last_name: params.user_last_name || params.last_name || '',
+      user_phone: params.user_phone || params.phone || '',
+      user_role: params.user_role || params.role || 'customer'
+    };
+    
     const { data: rpcResult, error: rpcError } = await supabase.rpc(
       'create_profile_for_user',
-      params
+      rpcParams
     );
     
     if (rpcError) {
@@ -81,15 +90,15 @@ export async function createProfileViaRPC(params: ProfileCreationParams): Promis
     const { data: newProfile } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', params.user_id)
+      .eq('id', rpcParams.user_id)
       .maybeSingle();
       
     return newProfile || {
-      id: params.user_id,
-      first_name: params.user_first_name,
-      last_name: params.user_last_name,
-      phone: params.user_phone,
-      role: params.user_role,
+      id: rpcParams.user_id,
+      first_name: rpcParams.user_first_name,
+      last_name: rpcParams.user_last_name,
+      phone: rpcParams.user_phone,
+      role: rpcParams.user_role,
       created_at: new Date().toISOString()
     };
   } catch (error) {

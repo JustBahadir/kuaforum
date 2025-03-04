@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
 
 interface FileUploadProps {
+  // Changed to accept string URLs rather than File objects
   onUploadComplete: (url: string) => void;
   currentImageUrl?: string;
   label?: string;
@@ -60,7 +61,7 @@ export function FileUpload({
       // Update preview
       setPreviewUrl(publicUrl);
       
-      // Call callback with the URL
+      // Call callback with the URL instead of the file
       onUploadComplete(publicUrl);
       
       toast.success("Dosya başarıyla yüklendi");

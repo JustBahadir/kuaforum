@@ -2,7 +2,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import { RouteProtectionProvider } from "./lib/auth/routeProtection";
+import { RouteProtection } from "./lib/auth/routeProtection";
 import { Toaster } from "@/components/ui/sonner";
 import StaffLogin from "./pages/StaffLogin";
 import StaffRegister from "./pages/StaffRegister";
@@ -40,7 +40,7 @@ function App() {
     <ThemeProvider defaultTheme="light">
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
-          <RouteProtectionProvider>
+          <RouteProtection>
             <Routes>
               {/* Staff routes */}
               <Route path="/admin" element={<StaffLogin />} />
@@ -67,7 +67,7 @@ function App() {
               <Route path="/" element={<CustomerOperations />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
-          </RouteProtectionProvider>
+          </RouteProtection>
         </BrowserRouter>
         <ReactQueryDevtools />
         <Toaster />
