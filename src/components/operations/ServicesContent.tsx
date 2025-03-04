@@ -190,39 +190,39 @@ export function ServicesContent({
                 <Plus className="mr-2 h-4 w-4" />
                 Kategori Ekle
               </Button>
-              
-              <CategoryForm 
-                isOpen={kategoriDialogAcik}
-                onOpenChange={setKategoriDialogAcik}
-                kategoriAdi={yeniKategoriAdi}
-                setKategoriAdi={setYeniKategoriAdi}
-                onSubmit={onCategoryFormSubmit}
-              />
-              <CategoryEditForm
-                isOpen={kategoriDuzenleDialogAcik}
-                onOpenChange={setKategoriDuzenleDialogAcik}
-                kategoriAdi={duzenleKategoriAdi}
-                setKategoriAdi={setDuzenleKategoriAdi}
-                onSubmit={onCategoryEditFormSubmit}
-              />
-              <ServiceForm
-                isOpen={dialogAcik}
-                onOpenChange={setDialogAcik}
-                kategoriler={kategoriler}
-                islemAdi={islemAdi}
-                setIslemAdi={setIslemAdi}
-                fiyat={fiyat}
-                setFiyat={setFiyat}
-                puan={puan}
-                setPuan={setPuan}
-                kategoriId={kategoriId}
-                setKategoriId={setKategoriId}
-                duzenleId={duzenleId}
-                onSubmit={onServiceFormSubmit}
-                onReset={formuSifirla}
-                puanlamaAktif={puanlamaAktif}
-              />
             </div>
+            
+            <CategoryForm 
+              isOpen={kategoriDialogAcik}
+              onOpenChange={setKategoriDialogAcik}
+              kategoriAdi={yeniKategoriAdi}
+              setKategoriAdi={setYeniKategoriAdi}
+              onSubmit={onCategoryFormSubmit}
+            />
+            <CategoryEditForm
+              isOpen={kategoriDuzenleDialogAcik}
+              onOpenChange={setKategoriDuzenleDialogAcik}
+              kategoriAdi={duzenleKategoriAdi}
+              setKategoriAdi={setDuzenleKategoriAdi}
+              onSubmit={onCategoryEditFormSubmit}
+            />
+            <ServiceForm
+              isOpen={dialogAcik}
+              onOpenChange={setDialogAcik}
+              kategoriler={kategoriler}
+              islemAdi={islemAdi}
+              setIslemAdi={setIslemAdi}
+              fiyat={fiyat}
+              setFiyat={setFiyat}
+              puan={puan}
+              setPuan={setPuan}
+              kategoriId={kategoriId}
+              setKategoriId={setKategoriId}
+              duzenleId={duzenleId}
+              onSubmit={onServiceFormSubmit}
+              onReset={formuSifirla}
+              puanlamaAktif={puanlamaAktif}
+            />
           </div>
         </div>
       )}

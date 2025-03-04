@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export function PersonnelList() {
-  const { userRole } = useCustomerAuth();
+  const { userRole, refreshProfile } = useCustomerAuth();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedPersonel, setSelectedPersonel] = useState<number | null>(null);
@@ -35,7 +35,11 @@ export function PersonnelList() {
 
   const { data: personeller = [], isLoading, error } = useQuery({
     queryKey: ['personel'],
-    queryFn: () => personelServisi.hepsiniGetir()
+    queryFn: () => personelServisi.hepsiniGetir(),
+    retry: 1,
+    onError: (error) => {
+      console.error("Personel verisi alınırken hata:", error);
+    }
   });
   
   const handleOpenDetailsDialog = (personelId: number) => {
@@ -57,7 +61,7 @@ export function PersonnelList() {
       setPersonelToDelete(null);
     },
     onError: (error) => {
-      toast.error(`Silme işlemi başarısız: ${error.message}`);
+      toast.error(`Silme işlemi başarısız: ${error instanceof Error ? error.message : String(error)}`);
     }
   });
 
@@ -72,12 +76,17 @@ export function PersonnelList() {
     }
   };
 
+  // Force refresh profile to get latest userRole if there was an error
+  if (error) {
+    refreshProfile().catch(console.error);
+  }
+
   if (error) {
     return (
       <Alert variant="destructive" className="mb-4">
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          Personel verisi alınamadı: {(error as Error).message}
+          Personel verisi alınamadı: {error instanceof Error ? error.message : String(error)}
         </AlertDescription>
       </Alert>
     );

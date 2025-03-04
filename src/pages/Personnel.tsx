@@ -12,23 +12,32 @@ import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { Navigate } from "react-router-dom";
+import { useEffect } from "react";
 
 export default function Personnel() {
-  const { userRole } = useCustomerAuth();
-  const isAdmin = userRole === 'admin';
+  const { userRole, refreshProfile } = useCustomerAuth();
   const [dateRange, setDateRange] = useState({
     from: new Date(new Date().setDate(new Date().getDate() - 30)), // Default to last 30 days
     to: new Date()
   });
 
+  // Force refresh user role when component mounts to ensure we have the latest role
+  useEffect(() => {
+    refreshProfile().catch(console.error);
+  }, []);
+
   const { data: islemler = [] } = useQuery({
     queryKey: ['islemler'],
-    queryFn: islemServisi.hepsiniGetir
+    queryFn: islemServisi.hepsiniGetir,
+    retry: 1,
+    enabled: userRole === 'admin' // Only fetch if admin
   });
 
   const { data: personeller = [] } = useQuery({
     queryKey: ['personel'],
-    queryFn: () => personelServisi.hepsiniGetir()
+    queryFn: () => personelServisi.hepsiniGetir(),
+    retry: 1,
+    enabled: userRole === 'admin' // Only fetch if admin
   });
 
   const { data: islemGecmisi = [] }: UseQueryResult<PersonelIslemi[], Error> = useQuery({
@@ -41,15 +50,31 @@ export default function Personnel() {
         const islemDate = new Date(islem.created_at);
         return islemDate >= dateRange.from && islemDate <= dateRange.to;
       });
-    }
+    },
+    retry: 1,
+    enabled: userRole === 'admin' // Only fetch if admin
   });
 
-  // Redirect staff to shop-home page
+  // If user is not admin, redirect them to a more appropriate page
   if (userRole === 'staff') {
     return <Navigate to="/shop-home" replace />;
+  } else if (userRole === 'customer') {
+    return <Navigate to="/customer-dashboard" replace />;
+  } 
+  
+  // If still loading role, show loading state
+  if (!userRole) {
+    return (
+      <StaffLayout>
+        <div className="flex justify-center p-12">
+          <div className="w-10 h-10 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
+        </div>
+      </StaffLayout>
+    );
   }
 
-  if (!isAdmin) {
+  // Final check if user is not admin after loading
+  if (userRole !== 'admin') {
     return (
       <StaffLayout>
         <Alert variant="destructive" className="mb-4">

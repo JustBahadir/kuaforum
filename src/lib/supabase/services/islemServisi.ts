@@ -56,8 +56,14 @@ export const islemServisi = {
     }
   },
 
+  // This is causing the error - use ekle directly, don't try to reference this.ekle
   async islemEkle(islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) {
-    return this.ekle(islem);
+    try {
+      return await this.ekle(islem);
+    } catch (error) {
+      console.error('İşlem ekleme hatası (islemEkle):', error);
+      throw error;
+    }
   },
 
   async guncelle(id: number, islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) {
@@ -78,7 +84,12 @@ export const islemServisi = {
   },
 
   async islemGuncelle(id: number, islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) {
-    return this.guncelle(id, islem);
+    try {
+      return await this.guncelle(id, islem);
+    } catch (error) {
+      console.error('İşlem güncelleme hatası (islemGuncelle):', error);
+      throw error;
+    }
   },
 
   async sil(id: number) {
@@ -100,7 +111,12 @@ export const islemServisi = {
   },
 
   async islemSil(id: number) {
-    return this.sil(id);
+    try {
+      return await this.sil(id);
+    } catch (error) {
+      console.error('İşlem silme hatası (islemSil):', error);
+      throw error;
+    }
   },
 
   async siraGuncelle(islemler: Islem[]) {
