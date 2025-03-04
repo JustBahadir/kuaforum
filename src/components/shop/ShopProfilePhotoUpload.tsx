@@ -61,7 +61,11 @@ export function ShopProfilePhotoUpload({
       
       if (error) {
         console.error('Yükleme hatası:', error);
-        toast.error(`Yükleme hatası: ${error.message}`);
+        if (error.message.includes('Bucket not found')) {
+          toast.error('Depolama alanı bulunamadı. Lütfen sistem yöneticisiyle iletişime geçin.');
+        } else {
+          toast.error(`Yükleme hatası: ${error.message}`);
+        }
         return;
       }
       
@@ -72,6 +76,7 @@ export function ShopProfilePhotoUpload({
       
       if (galleryMode) {
         onSuccess(publicUrl.publicUrl);
+        toast.success('Galeri fotoğrafı başarıyla yüklendi');
       } else {
         // Update shop's logo_url
         const { error: updateError } = await supabase
@@ -81,7 +86,7 @@ export function ShopProfilePhotoUpload({
         
         if (updateError) {
           console.error('Dükkan logo güncellenemedi:', updateError);
-          toast.error('Dükkan logosu güncellenemedi');
+          toast.error('Dükkan logosu güncellenemedi: ' + updateError.message);
           return;
         }
         
@@ -90,7 +95,7 @@ export function ShopProfilePhotoUpload({
       }
     } catch (error) {
       console.error('Yükleme işlemi sırasında hata:', error);
-      toast.error('Fotoğraf yüklenirken bir hata oluştu');
+      toast.error('Fotoğraf yüklenirken bir hata oluştu: ' + (error instanceof Error ? error.message : String(error)));
     } finally {
       setIsUploading(false);
     }

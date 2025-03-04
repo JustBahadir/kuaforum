@@ -6,6 +6,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
+import { toast } from "sonner";
 
 interface ShopGalleryProps {
   dukkanId: number;
@@ -25,7 +26,12 @@ export function ShopGallery({ dukkanId }: ShopGalleryProps) {
             sortBy: { column: 'created_at', order: 'desc' },
           });
         
-        if (error) throw error;
+        if (error) {
+          if (error.message.includes('bucket not found')) {
+            throw new Error('Depolama alanı bulunamadı. Lütfen sistem yöneticisiyle iletişime geçin.');
+          }
+          throw error;
+        }
         
         // Get public URLs for all photos
         const photoUrls = await Promise.all(
@@ -58,14 +64,19 @@ export function ShopGallery({ dukkanId }: ShopGalleryProps) {
         .from('shop-photos')
         .remove([path]);
       
-      if (error) throw error;
+      if (error) {
+        toast.error(`Fotoğraf silinirken hata: ${error.message}`);
+        throw error;
+      }
       
       // Close the dialog and refetch photos
       setSelectedImage(null);
+      toast.success("Fotoğraf başarıyla silindi");
       // Refetch photos
       document.location.reload();
     } catch (error) {
       console.error("Fotoğraf silinirken hata:", error);
+      toast.error(`Fotoğraf silinirken hata: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`);
     }
   };
 
@@ -80,7 +91,7 @@ export function ShopGallery({ dukkanId }: ShopGalleryProps) {
   if (error) {
     return (
       <div className="text-center p-8 text-red-500">
-        Galeri yüklenirken bir hata oluştu.
+        Galeri yüklenirken bir hata oluştu: {error instanceof Error ? error.message : 'Bilinmeyen hata'}
       </div>
     );
   }
@@ -95,7 +106,7 @@ export function ShopGallery({ dukkanId }: ShopGalleryProps) {
 
   return (
     <>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         {photos.map((photo, index) => (
           <div 
             key={index} 
@@ -104,7 +115,7 @@ export function ShopGallery({ dukkanId }: ShopGalleryProps) {
           >
             <img 
               src={photo.url} 
-              alt={`Gallery Photo ${index + 1}`} 
+              alt={`Galeri Fotoğrafı ${index + 1}`} 
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
             />
           </div>
@@ -116,7 +127,7 @@ export function ShopGallery({ dukkanId }: ShopGalleryProps) {
           <div className="relative">
             <img 
               src={selectedImage || ''} 
-              alt="Selected gallery photo" 
+              alt="Seçilen galeri fotoğrafı" 
               className="w-full h-auto max-h-[80vh] object-contain"
             />
             <Button 

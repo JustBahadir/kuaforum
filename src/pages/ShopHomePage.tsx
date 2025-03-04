@@ -6,8 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { authService } from "@/lib/auth/authService";
 import { dukkanServisi } from "@/lib/supabase";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Camera, MapPin, Phone, Clock, Edit, ImagePlus, PlusCircle } from "lucide-react";
+import { MapPin, Phone, Clock, Edit, ImagePlus, PlusCircle, Camera, Star } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ShopGallery } from "@/components/shop/ShopGallery";
@@ -19,7 +18,6 @@ import { AlertCircle } from "lucide-react";
 
 export default function ShopHomePage() {
   const { dukkanId, userRole } = useCustomerAuth();
-  const [isEditing, setIsEditing] = useState(false);
   const [dukkanData, setDukkanData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -116,7 +114,6 @@ export default function ShopHomePage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dukkan'] });
       toast.success("Dükkan bilgileri güncellendi");
-      setIsEditing(false);
     },
     onError: (error) => {
       toast.error(`Güncelleme hatası: ${error instanceof Error ? error.message : String(error)}`);
@@ -187,60 +184,122 @@ export default function ShopHomePage() {
   return (
     <StaffLayout>
       <div className="container mx-auto px-4 py-6">
-        <div className="flex flex-col md:flex-row items-start gap-6 mb-8">
-          <div className="relative group">
-            <Avatar className="h-32 w-32 rounded-lg border-2 border-purple-200">
-              <AvatarImage src={dukkanData.logo_url || ''} alt={dukkanData.ad} />
-              <AvatarFallback className="text-2xl bg-purple-100 text-purple-600">
-                {dukkanData.ad?.substring(0, 2).toUpperCase() || "KU"}
-              </AvatarFallback>
-            </Avatar>
-            
-            {userRole === 'admin' && (
-              <ShopProfilePhotoUpload 
-                dukkanId={dukkanData.id} 
-                onSuccess={(url) => {
-                  setDukkanData(prev => ({...prev, logo_url: url}));
-                  queryClient.invalidateQueries({ queryKey: ['dukkan'] });
-                }}
-              >
-                <div className="absolute bottom-2 right-2 p-1 bg-white rounded-full shadow cursor-pointer">
-                  <Camera className="h-5 w-5 text-purple-600" />
-                </div>
-              </ShopProfilePhotoUpload>
-            )}
-          </div>
-          
-          <div className="flex-1">
-            <div className="flex justify-between items-start">
-              <div>
-                <h1 className="text-3xl font-bold">{dukkanData.ad}</h1>
-                <p className="text-gray-600">{dukkanData.adres}</p>
-              </div>
+        {/* Hero Section with Shop Name and Logo */}
+        <div className="bg-gradient-to-r from-purple-100 to-pink-100 rounded-xl p-6 mb-8">
+          <div className="flex flex-col md:flex-row items-center gap-6">
+            <div className="relative group">
+              <Avatar className="h-32 w-32 rounded-lg border-2 border-purple-200">
+                <AvatarImage src={dukkanData.logo_url || ''} alt={dukkanData.ad} />
+                <AvatarFallback className="text-2xl bg-purple-100 text-purple-600">
+                  {dukkanData.ad?.substring(0, 2).toUpperCase() || "KU"}
+                </AvatarFallback>
+              </Avatar>
               
               {userRole === 'admin' && (
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => window.location.href = "/shop-settings"}
+                <ShopProfilePhotoUpload 
+                  dukkanId={dukkanData.id} 
+                  onSuccess={(url) => {
+                    setDukkanData(prev => ({...prev, logo_url: url}));
+                    queryClient.invalidateQueries({ queryKey: ['dukkan'] });
+                  }}
                 >
-                  <Edit className="h-4 w-4 mr-2" />
-                  Dükkan Bilgilerini Düzenle
-                </Button>
+                  <div className="absolute bottom-2 right-2 p-1 bg-white rounded-full shadow cursor-pointer">
+                    <Camera className="h-5 w-5 text-purple-600" />
+                  </div>
+                </ShopProfilePhotoUpload>
+              )}
+            </div>
+            
+            <div className="flex-1 text-center md:text-left">
+              <h1 className="text-3xl font-bold text-gray-800">{dukkanData.ad}</h1>
+              <div className="flex items-center justify-center md:justify-start mt-2 mb-4">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star key={star} className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+                ))}
+                <span className="ml-2 text-sm text-gray-600">5.0 (24 değerlendirme)</span>
+              </div>
+              <p className="text-gray-600">{dukkanData.adres}</p>
+              
+              {userRole === 'admin' && (
+                <div className="mt-4">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => window.location.href = "/shop-settings"}
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Dükkan Bilgilerini Düzenle
+                  </Button>
+                </div>
               )}
             </div>
           </div>
         </div>
         
-        <Tabs defaultValue="gallery" className="w-full">
-          <TabsList>
-            <TabsTrigger value="gallery">Galeri</TabsTrigger>
-            <TabsTrigger value="contact">İletişim Bilgileri</TabsTrigger>
-            <TabsTrigger value="staff">Personeller</TabsTrigger>
-            <TabsTrigger value="hours">Çalışma Saatleri</TabsTrigger>
-          </TabsList>
+        {/* Main Content Area */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Left Column - Contact Info and Hours */}
+          <div className="md:col-span-1 space-y-6">
+            {/* Contact Info Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle>İletişim Bilgileri</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <MapPin className="h-5 w-5 text-purple-600" />
+                  <span>{dukkanData.adres || "Adres bilgisi bulunmuyor"}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Phone className="h-5 w-5 text-purple-600" />
+                  <span>{dukkanData.telefon || "Telefon bilgisi bulunmuyor"}</span>
+                </div>
+              </CardContent>
+            </Card>
+            
+            {/* Working Hours Card */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>Çalışma Saatleri</CardTitle>
+                {userRole === 'admin' && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => window.location.href = "/admin/operations"}
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Düzenle
+                  </Button>
+                )}
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {calisma_saatleri.length === 0 ? (
+                    <div className="text-center py-4 text-gray-500">
+                      Çalışma saati bilgisi bulunmuyor.
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {calisma_saatleri.map((saat: any) => (
+                        <div key={saat.gun} className="flex justify-between py-2 border-b">
+                          <span className="font-medium">{gunIsimleri[saat.gun] || saat.gun}</span>
+                          <span>
+                            {saat.kapali 
+                              ? "Kapalı" 
+                              : `${formatTime(saat.acilis)} - ${formatTime(saat.kapanis)}`}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
           
-          <TabsContent value="gallery" className="mt-6">
+          {/* Middle and Right Columns - Gallery and Staff */}
+          <div className="md:col-span-2 space-y-6">
+            {/* Gallery Card */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Dükkan Galerisi</CardTitle>
@@ -263,30 +322,11 @@ export default function ShopHomePage() {
                 <ShopGallery dukkanId={dukkanData.id} />
               </CardContent>
             </Card>
-          </TabsContent>
-          
-          <TabsContent value="contact" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>İletişim Bilgileri</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <MapPin className="h-5 w-5 text-purple-600" />
-                  <span>{dukkanData.adres || "Adres bilgisi bulunmuyor"}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Phone className="h-5 w-5 text-purple-600" />
-                  <span>{dukkanData.telefon || "Telefon bilgisi bulunmuyor"}</span>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="staff" className="mt-6">
+            
+            {/* Staff Card */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Personeller</CardTitle>
+                <CardTitle>Uzman Personeller</CardTitle>
                 {userRole === 'admin' && (
                   <Button 
                     variant="outline" 
@@ -300,74 +340,57 @@ export default function ShopHomePage() {
               </CardHeader>
               <CardContent>
                 {personelListesi.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
+                  <div className="text-center py-6 text-gray-500">
                     Henüz personel bulunmuyor.
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {personelListesi.map((personel: any) => (
-                      <Card key={personel.id} className="overflow-hidden">
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-4">
-                            <Avatar>
-                              <AvatarFallback>
-                                {personel.ad_soyad.split(' ').map((name: string) => name[0]).join('').substring(0, 2).toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <h3 className="font-medium">{personel.ad_soyad}</h3>
-                              <p className="text-sm text-muted-foreground">{personel.telefon}</p>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
+                      <div key={personel.id} className="flex items-center gap-4 bg-gray-50 p-4 rounded-lg">
+                        <Avatar>
+                          <AvatarFallback className="bg-purple-100 text-purple-600">
+                            {personel.ad_soyad.split(' ').map((name: string) => name[0]).join('').substring(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <h3 className="font-medium">{personel.ad_soyad}</h3>
+                          <p className="text-sm text-muted-foreground">{personel.telefon}</p>
+                        </div>
+                      </div>
                     ))}
                   </div>
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
-          
-          <TabsContent value="hours" className="mt-6">
+            
+            {/* Services Preview (This could link to a full services page) */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Çalışma Saatleri</CardTitle>
-                {userRole === 'admin' && (
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => window.location.href = "/admin/operations"}
-                  >
-                    <Edit className="h-4 w-4 mr-2" />
-                    Saatleri Düzenle
-                  </Button>
-                )}
+                <CardTitle>Sunulan Hizmetler</CardTitle>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => window.location.href = "/services"}
+                >
+                  Tüm Hizmetleri Gör
+                </Button>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {calisma_saatleri.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                      Çalışma saati bilgisi bulunmuyor.
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {calisma_saatleri.map((saat: any) => (
-                        <div key={saat.gun} className="flex justify-between py-2 border-b">
-                          <span className="font-medium">{gunIsimleri[saat.gun] || saat.gun}</span>
-                          <span>
-                            {saat.kapali 
-                              ? "Kapalı" 
-                              : `${formatTime(saat.acilis)} - ${formatTime(saat.kapanis)}`}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                <div className="text-center py-6">
+                  <p className="text-gray-500 mb-4">
+                    Saç kesimi, boya, bakım ve daha fazlası için randevu alın.
+                  </p>
+                  <Button 
+                    className="bg-purple-600 hover:bg-purple-700"
+                    onClick={() => window.location.href = "/appointments"}
+                  >
+                    Hemen Randevu Al
+                  </Button>
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
-        </Tabs>
+          </div>
+        </div>
       </div>
     </StaffLayout>
   );
