@@ -6,7 +6,7 @@ import { faker } from '@faker-js/faker';
 import { toast } from "sonner";
 
 // Set the faker locale to Turkish
-faker.locale = 'tr';
+faker.setDefaultLocale('tr');
 
 const generateDukkan = async () => {
   try {
@@ -42,7 +42,7 @@ const generateDukkan = async () => {
           acik_adres: faker.location.streetAddress(true),
           sahibi_id: user.id,
           kod: faker.string.alpha({ length: 6, casing: 'upper' }),
-          logo_url: faker.image.url({ width: 640, height: 480, category: 'business' })
+          logo_url: faker.image.url({ width: 640, height: 480 })
         }
       ])
       .select();
