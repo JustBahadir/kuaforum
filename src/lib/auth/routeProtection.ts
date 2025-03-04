@@ -37,15 +37,15 @@ export const shouldRedirect = (
 
   // Admin users have full access to admin pages
   if (userRole === 'admin') {
-    // If admin is on the homepage, redirect to admin dashboard
-    if (pathname === "/") {
-      console.log("Admin ana sayfada, admin paneline yönlendiriliyor");
+    // If admin is on customer dashboard, redirect to admin dashboard
+    if (pathname.includes('/customer-dashboard')) {
+      console.log("Admin müşteri sayfasına erişmeye çalışıyor:", pathname);
       return true;
     }
     
-    // Admin trying to access customer pages
-    if (pathname.includes('/customer-dashboard')) {
-      console.log("Admin müşteri sayfasına erişmeye çalışıyor:", pathname);
+    // Admin on homepage should be redirected to shop-home
+    if (pathname === "/") {
+      console.log("Admin ana sayfada, dükkan ana sayfasına yönlendiriliyor");
       return true;
     }
     
@@ -60,9 +60,9 @@ export const shouldRedirect = (
     return true;
   } 
   
-  // Staff on homepage should be redirected to their admin dashboard
+  // Staff on homepage should be redirected to shop-home
   if (userRole === 'staff' && pathname === "/") {
-    console.log("Personel ana sayfada, admin paneline yönlendiriliyor");
+    console.log("Personel ana sayfada, dükkan ana sayfasına yönlendiriliyor");
     return true;
   }
   
@@ -122,20 +122,27 @@ export const getRedirectPath = (
     return "/login"; // Default to login page for unauthenticated users
   }
   
-  // Admin redirect to admin dashboard from homepage
-  if (userRole === 'admin' && currentPath === "/") {
-    return "/admin/dashboard";
+  // Admin redirect based on path
+  if (userRole === 'admin') {
+    if (currentPath === "/") {
+      return "/shop-home";
+    }
+    
+    // Admin trying to access customer-specific pages
+    if (currentPath.includes('/customer-dashboard')) {
+      return "/shop-home";
+    }
   }
   
-  // Staff redirect to admin dashboard from homepage or trying to access /personnel directly
+  // Staff redirect based on path
   if (userRole === 'staff') {
     if (currentPath === "/" || currentPath === "/personnel") {
-      return "/admin/dashboard";
+      return "/shop-home";
     }
     
     // Staff trying to access customer-specific pages
     if (currentPath.includes('/customer-dashboard')) {
-      return "/admin/dashboard";
+      return "/shop-home";
     }
   }
   

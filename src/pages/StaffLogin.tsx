@@ -30,7 +30,7 @@ export default function StaffLogin() {
       toast.success("Oturum ve önbellek temizlendi, sayfa yenileniyor...");
       
       setTimeout(() => {
-        window.location.href = '/staff-login';
+        window.location.href = '/admin';
       }, 1000);
       
     } catch (error) {
@@ -60,7 +60,7 @@ export default function StaffLogin() {
             } else {
               toast.success("E-posta adresiniz doğrulandı");
             }
-            navigate("/personnel");
+            navigate("/shop-home");
           }
         }
       } catch (error) {
@@ -83,7 +83,7 @@ export default function StaffLogin() {
             const metadata = data.user.user_metadata;
             // Check if user has staff or admin role
             if (metadata && (metadata.role === 'staff' || metadata.role === 'admin')) {
-              navigate("/admin/dashboard");
+              navigate("/shop-home");
             } else {
               // User is not staff or admin, sign them out
               await supabase.auth.signOut();
@@ -102,8 +102,8 @@ export default function StaffLogin() {
   }, [navigate]);
 
   const handleLoginSuccess = () => {
-    // Redirect to personnel page
-    navigate("/admin/dashboard");
+    // Redirect to shop home page
+    navigate("/shop-home");
   };
 
   const handleBackClick = () => {
