@@ -59,6 +59,15 @@ export const shouldRedirect = (
     return true;
   }
   
+  // Staff attempting to access shop-home without authentication
+  if (!isAuthenticated && 
+      (pathname === "/shop-home" || 
+       pathname === "/shop-settings" || 
+       pathname === "/personnel")) {
+    console.log("Kimlik doğrulaması yapılmamış kullanıcı personel sayfasına erişmeye çalışıyor:", pathname);
+    return true;
+  }
+  
   // Customers can't access staff pages
   if (userRole === 'customer' && 
       (pathname.includes('/admin') || 
@@ -93,14 +102,17 @@ export const getRedirectPath = (
 ): string => {
   if (!isAuthenticated) {
     // If not authenticated and trying to access a secured route, redirect to login
-    if (currentPath.includes('admin')) {
+    if (currentPath.includes('admin') || currentPath === "/admin/dashboard") {
       return "/admin";
     } else if (currentPath.includes('customer-dashboard')) {
       return "/login";
-    } else if (currentPath === "/personnel") {
+    } else if (currentPath === "/personnel" || 
+              currentPath === "/shop-home" || 
+              currentPath === "/shop-settings" ||
+              currentPath === "/shop-statistics") {
       return "/admin";
     }
-    return "/";
+    return "/login"; // Default to login page for unauthenticated users
   }
   
   // Admin redirect to admin dashboard from homepage

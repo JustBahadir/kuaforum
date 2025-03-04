@@ -23,8 +23,7 @@ export default function HomePage() {
       return;
     }
     
-    // In a real app, this would navigate to search results
-    // For now, we'll navigate to the login page
+    // Direct users to the login page to access salon listings
     navigate("/login");
   };
 
