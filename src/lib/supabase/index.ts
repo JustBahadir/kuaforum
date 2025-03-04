@@ -3,7 +3,7 @@
 export * from './client';
 export * from './types';
 export { islemServisi } from './services/islemServisi';
-export { kategoriServisi } from './services/kategoriServisi';
+export { kategoriServisi as islemKategoriServisi } from './services/kategoriServisi';
 export { musteriServisi } from './services/musteriServisi';
 export { personelServisi } from './services/personelServisi';
 export { personelIslemleriServisi } from './services/personelIslemleriServisi';

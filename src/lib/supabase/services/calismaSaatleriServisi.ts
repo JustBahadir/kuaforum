@@ -1,4 +1,3 @@
-
 import { supabase } from '../client';
 import { CalismaSaati } from '../types';
 
@@ -7,41 +6,29 @@ export const calismaSaatleriServisi = {
     const { data, error } = await supabase
       .from('calisma_saatleri')
       .select('*')
-      .order('id');
+      .order('gun', { ascending: true });
 
     if (error) throw error;
     return data || [];
   },
-
-  async ekle(calismaSaati: Omit<CalismaSaati, 'id'>) {
+  
+  async gunleriGetir() {
     const { data, error } = await supabase
       .from('calisma_saatleri')
-      .insert([calismaSaati])
-      .select()
-      .single();
+      .select('gun')
+      .order('gun', { ascending: true });
 
     if (error) throw error;
-    return data;
+    return data || [];
   },
-
-  async guncelle(id: number, calismaSaati: Partial<CalismaSaati>) {
+  
+  async guncelle(saatler: CalismaSaati[]) {
     const { data, error } = await supabase
       .from('calisma_saatleri')
-      .update(calismaSaati)
-      .eq('id', id)
-      .select()
-      .single();
+      .upsert(saatler)
+      .select();
 
     if (error) throw error;
-    return data;
-  },
-
-  async sil(id: number) {
-    const { error } = await supabase
-      .from('calisma_saatleri')
-      .delete()
-      .eq('id', id);
-
-    if (error) throw error;
+    return data || [];
   }
 };

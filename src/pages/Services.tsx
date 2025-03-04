@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { StaffLayout } from "@/components/ui/staff-layout";
@@ -53,7 +52,6 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 
-// Türkçe para formatı
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('tr-TR', {
     style: 'currency',
@@ -90,7 +88,6 @@ export default function Services() {
     puan: ""
   });
 
-  // İşlemleri ve kategorileri getir
   const { data: islemler = [], isLoading: islemlerLoading } = useQuery({
     queryKey: ['islemler'],
     queryFn: islemServisi.hepsiniGetir
@@ -101,9 +98,8 @@ export default function Services() {
     queryFn: islemKategoriServisi.hepsiniGetir
   });
 
-  // İşlem ekleme mutasyonu
   const { mutate: addService, isPending: isAddingService } = useMutation({
-    mutationFn: (service: any) => islemServisi.islemEkle(service),
+    mutationFn: (service: any) => islemServisi.ekle(service),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['islemler'] });
       setIsAddDialogOpen(false);
@@ -121,7 +117,6 @@ export default function Services() {
     }
   });
   
-  // Kategori ekleme mutasyonu
   const { mutate: addCategory, isPending: isAddingCategory } = useMutation({
     mutationFn: (category: any) => islemKategoriServisi.kategoriEkle(category),
     onSuccess: () => {
@@ -139,10 +134,9 @@ export default function Services() {
     }
   });
   
-  // İşlem güncelleme mutasyonu
   const { mutate: updateService, isPending: isUpdatingService } = useMutation({
     mutationFn: ({ id, service }: { id: number; service: any }) => 
-      islemServisi.islemGuncelle(id, service),
+      islemServisi.guncelle(id, service),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['islemler'] });
       setIsEditDialogOpen(false);
@@ -154,9 +148,8 @@ export default function Services() {
     }
   });
   
-  // İşlem silme mutasyonu
   const { mutate: deleteService, isPending: isDeletingService } = useMutation({
-    mutationFn: (id: number) => islemServisi.islemSil(id),
+    mutationFn: (id: number) => islemServisi.sil(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['islemler'] });
       setIsDeleteDialogOpen(false);
@@ -169,7 +162,6 @@ export default function Services() {
   });
 
   const handleAddService = () => {
-    // Fiyat ve puan değerlerini sayıya çevir
     const serviceToAdd = {
       islem_adi: newService.islem_adi,
       fiyat: parseFloat(newService.fiyat),
@@ -224,20 +216,20 @@ export default function Services() {
 
   const isLoading = islemlerLoading || kategorilerLoading;
 
-  // Kategoriye göre işlemleri grupla
   const groupedServices: Record<string, any[]> = {};
   
-  if (islemler.length > 0) {
-    // Önce "Kategorisiz" grup oluştur
+  if (islemler && islemler.length > 0) {
     groupedServices["Kategorisiz"] = [];
     
-    // Kategorilere göre grupla
     islemler.forEach(islem => {
-      const kategori = islem.kategori_id 
-        ? kategoriler.find(k => k.id === islem.kategori_id)?.kategori_adi 
-        : "Kategorisiz";
+      let kategoriAdi = "Kategorisiz";
       
-      const kategoriAdi = kategori || "Kategorisiz";
+      if (islem.kategori_id && kategoriler && Array.isArray(kategoriler)) {
+        const kategori = kategoriler.find(k => k.id === islem.kategori_id);
+        if (kategori) {
+          kategoriAdi = kategori.kategori_adi;
+        }
+      }
       
       if (!groupedServices[kategoriAdi]) {
         groupedServices[kategoriAdi] = [];
@@ -287,7 +279,6 @@ export default function Services() {
         ) : (
           <div className="space-y-6">
             {Object.keys(groupedServices).sort((a, b) => {
-              // "Kategorisiz" her zaman en sona
               if (a === "Kategorisiz") return 1;
               if (b === "Kategorisiz") return -1;
               return a.localeCompare(b);
@@ -349,7 +340,6 @@ export default function Services() {
           </div>
         )}
         
-        {/* Hizmet Ekleme Dialog */}
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogContent>
             <DialogHeader>
@@ -426,7 +416,6 @@ export default function Services() {
           </DialogContent>
         </Dialog>
         
-        {/* Kategori Ekleme Dialog */}
         <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
           <DialogContent>
             <DialogHeader>
@@ -470,7 +459,6 @@ export default function Services() {
           </DialogContent>
         </Dialog>
         
-        {/* Hizmet Düzenleme Dialog */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogContent>
             <DialogHeader>
@@ -543,7 +531,6 @@ export default function Services() {
           </DialogContent>
         </Dialog>
         
-        {/* Hizmet Silme Dialog */}
         <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <DialogContent>
             <DialogHeader>

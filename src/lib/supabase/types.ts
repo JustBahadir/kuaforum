@@ -8,7 +8,7 @@ export interface Profile {
   role: string;
   created_at: string;
   phone?: string;
-  gender?: string | null;
+  gender?: "erkek" | "kadın" | null;
   birthdate?: string | null;
   avatar_url?: string;
   address?: string;
@@ -83,6 +83,10 @@ export interface Musteri {
   adres: string;
   musteri_no: string;
   created_at: string;
+  first_name?: string;
+  last_name?: string;
+  phone?: string;
+  total_services?: number;
 }
 
 export interface Randevu {
@@ -101,6 +105,8 @@ export interface Randevu {
   customer_accepted?: boolean;
   counter_proposal_date?: string;
   counter_proposal_time?: string;
+  musteri?: Profile;
+  personel?: Personel;
 }
 
 export interface ResponseError {
@@ -127,3 +133,13 @@ export interface Notification {
   type: string;
   created_at: string;
 }
+
+export interface CalismaSaati {
+  id: number;
+  gun: string;
+  acilis?: string;
+  kapanis?: string;
+  kapali?: boolean;
+}
+
+export type RandevuDurumu = "beklemede" | "onaylandi" | "iptal_edildi" | "tamamlandi";

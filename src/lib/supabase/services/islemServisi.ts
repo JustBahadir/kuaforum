@@ -1,26 +1,22 @@
 
 import { supabase } from '../client';
+import { Islem } from '../types';
 
 export const islemServisi = {
   async hepsiniGetir() {
     const { data, error } = await supabase
       .from('islemler')
       .select('*')
-      .order('sira');
+      .order('sira', { ascending: true });
 
     if (error) throw error;
     return data || [];
   },
 
-  async ekle(islem: { islem_adi: string; fiyat: number; puan: number; kategori_id: number }) {
+  async islemEkle(islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) {
     const { data, error } = await supabase
       .from('islemler')
-      .insert([{
-        islem_adi: islem.islem_adi.toUpperCase(),
-        fiyat: islem.fiyat,
-        puan: islem.puan,
-        kategori_id: islem.kategori_id
-      }])
+      .insert([islem])
       .select()
       .single();
 
@@ -28,15 +24,14 @@ export const islemServisi = {
     return data;
   },
 
-  async guncelle(id: number, islem: { islem_adi: string; fiyat: number; puan: number; kategori_id: number }) {
+  async ekle(islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) {
+    return this.islemEkle(islem);
+  },
+
+  async islemGuncelle(id: number, islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) {
     const { data, error } = await supabase
       .from('islemler')
-      .update({
-        islem_adi: islem.islem_adi.toUpperCase(),
-        fiyat: islem.fiyat,
-        puan: islem.puan,
-        kategori_id: islem.kategori_id
-      })
+      .update(islem)
       .eq('id', id)
       .select()
       .single();
@@ -45,25 +40,37 @@ export const islemServisi = {
     return data;
   },
 
-  async sil(id: number) {
+  async guncelle(id: number, islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) {
+    return this.islemGuncelle(id, islem);
+  },
+
+  async islemSil(id: number) {
     const { error } = await supabase
       .from('islemler')
       .delete()
       .eq('id', id);
 
     if (error) throw error;
+    return { success: true };
   },
-  
-  async siraGuncelle(islemler: any[]) {
+
+  async sil(id: number) {
+    return this.islemSil(id);
+  },
+
+  async siraGuncelle(islemler: Islem[]) {
+    // Update each item with its new position
     const updates = islemler.map((islem, index) => ({
       id: islem.id,
       sira: index
     }));
-    
-    const { error } = await supabase
+
+    const { data, error } = await supabase
       .from('islemler')
-      .upsert(updates);
-      
+      .upsert(updates)
+      .select();
+
     if (error) throw error;
+    return data || [];
   }
 };

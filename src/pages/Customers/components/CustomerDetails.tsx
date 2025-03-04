@@ -25,11 +25,11 @@ export function CustomerDetails({ open, onOpenChange, customer }: CustomerDetail
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <h3 className="text-sm font-medium text-gray-500">AD SOYAD</h3>
-                <p className="mt-1 text-base">{customer.first_name} {customer.last_name}</p>
+                <p className="mt-1 text-base">{customer.first_name || customer.ad_soyad}</p>
               </div>
               <div>
                 <h3 className="text-sm font-medium text-gray-500">TELEFON</h3>
-                <p className="mt-1 text-base">{customer.phone || '-'}</p>
+                <p className="mt-1 text-base">{customer.phone || customer.telefon || '-'}</p>
               </div>
               <div>
                 <h3 className="text-sm font-medium text-gray-500">KAYIT TARİHİ</h3>
@@ -52,13 +52,13 @@ export function CustomerDetails({ open, onOpenChange, customer }: CustomerDetail
                 <TabsTrigger value="tercihler" className="flex-1">Kişisel Tercihler</TabsTrigger>
               </TabsList>
               <TabsContent value="islemler" className="border rounded-md mt-4">
-                <CustomerOperationsTable customerId={customer.id} />
+                <CustomerOperationsTable customerId={String(customer.id)} />
               </TabsContent>
               <TabsContent value="randevular" className="border rounded-md p-4 mt-4">
                 <div className="text-center py-4">Randevu geçmişi burada gösterilecek.</div>
               </TabsContent>
               <TabsContent value="tercihler" className="border rounded-md mt-4">
-                <CustomerPreferences customerId={customer.id} />
+                <CustomerPreferences customerId={String(customer.id)} />
               </TabsContent>
             </Tabs>
           </div>

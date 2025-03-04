@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Button } from "@/components/ui/button";
@@ -21,7 +20,7 @@ import {
 import { User, Phone, Mail, Calendar, MapPin, CreditCard } from "lucide-react";
 import { FileUpload } from "@/components/ui/file-upload";
 
-export default function StaffProfile() {
+const StaffProfile = () => {
   const { refreshProfile } = useCustomerAuth();
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -31,9 +30,9 @@ export default function StaffProfile() {
     firstName: "",
     lastName: "",
     phone: "",
-    gender: null as "erkek" | "kadın" | null,
-    birthdate: "",
     email: "",
+    gender: null as ("erkek" | "kadın" | null),
+    birthdate: "",
     address: "",
     iban: "",
     avatarUrl: ""
@@ -49,10 +48,8 @@ export default function StaffProfile() {
           return;
         }
 
-        // Get email from auth
         setFormData(prev => ({ ...prev, email: user.email || "" }));
 
-        // First check user metadata
         if (user.user_metadata) {
           const metaFirstName = user.user_metadata.first_name;
           const metaLastName = user.user_metadata.last_name;
@@ -125,7 +122,14 @@ export default function StaffProfile() {
       [name]: value === "" ? null : value
     }));
   };
-  
+
+  const handleGenderChange = (value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      gender: value as "erkek" | "kadın" | null,
+    }));
+  };
+
   const handleAvatarUpload = async (url: string) => {
     try {
       setIsUploading(true);
@@ -156,7 +160,6 @@ export default function StaffProfile() {
     setIsSaving(true);
 
     try {
-      // Format phone number for saving - remove spaces
       const phoneForSaving = formData.phone.replace(/\s/g, '');
 
       await profilServisi.guncelle({
@@ -201,7 +204,6 @@ export default function StaffProfile() {
           </CardHeader>
           <CardContent>
             <form id="profileForm" onSubmit={handleSubmit} className="space-y-6">
-              {/* Avatar Upload Section */}
               <div className="flex flex-col items-center justify-center mb-4">
                 <div className="w-32 h-32 mb-4">
                   <FileUpload
@@ -353,4 +355,6 @@ export default function StaffProfile() {
       </div>
     </StaffLayout>
   );
-}
+};
+
+export default StaffProfile;

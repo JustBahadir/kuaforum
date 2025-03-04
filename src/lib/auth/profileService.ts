@@ -4,6 +4,7 @@ import { dukkanServisi } from "@/lib/supabase/services/dukkanServisi";
 import { getGenderTitle } from "@/lib/supabase/services/profileServices/profileTypes";
 import { supabase } from "@/lib/supabase/client";
 import { Profile } from "@/lib/supabase/types";
+import { ProfileUpdateData } from "@/lib/supabase/services/profileServices/profileTypes";
 
 /**
  * Service to handle user profile operations
@@ -97,6 +98,19 @@ export const profileService = {
    * Update user profile
    */
   updateUserProfile: async (data: Partial<Profile>): Promise<Profile | null> => {
-    return await profilServisi.guncelle(data);
+    // Convert data to ProfileUpdateData
+    const updateData: ProfileUpdateData = {
+      first_name: data.first_name,
+      last_name: data.last_name,
+      phone: data.phone,
+      role: data.role,
+      gender: data.gender as "erkek" | "kadın" | null,
+      birthdate: data.birthdate,
+      avatar_url: data.avatar_url,
+      address: data.address,
+      iban: data.iban
+    };
+    
+    return await profilServisi.guncelle(updateData);
   }
 };

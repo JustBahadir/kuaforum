@@ -1,103 +1,68 @@
-
-import { supabase } from "@/lib/supabase/client";
-import type { Personel } from "@/lib/supabase/types";
+import { supabase } from '../client';
+import { Personel } from '../types';
 
 export const personelServisi = {
-  hepsiniGetir: async () => {
+  async hepsiniGetir() {
     const { data, error } = await supabase
       .from('personel')
-      .select(`
-        *,
-        dukkan:dukkan_id(id, ad)
-      `)
-      .order('id', { ascending: true });
-    
-    if (error) {
-      console.error("Personel listesi alınamadı:", error);
-      throw error;
-    }
-    
+      .select('*');
+
+    if (error) throw error;
     return data || [];
   },
-  
-  getirById: async (id: number) => {
+
+  async getirById(id: number) {
     const { data, error } = await supabase
       .from('personel')
-      .select(`
-        *,
-        dukkan:dukkan_id(id, ad)
-      `)
+      .select('*, dukkan(*)')
       .eq('id', id)
       .single();
-    
-    if (error) {
-      console.error(`Personel (id=${id}) alınamadı:`, error);
-      throw error;
-    }
-    
+
+    if (error) throw error;
     return data;
   },
-  
-  getirByAuthId: async (authId: string) => {
+
+  async getirByAuthId(authId: string) {
+    // Get personnel by auth ID
     const { data, error } = await supabase
       .from('personel')
-      .select(`
-        *,
-        dukkan:dukkan_id(id, ad)
-      `)
+      .select('*, dukkan(*)')
       .eq('auth_id', authId)
-      .single();
-    
-    if (error) {
-      console.error(`Personel (auth_id=${authId}) alınamadı:`, error);
-      throw error;
-    }
-    
+      .maybeSingle();
+
+    if (error) throw error;
     return data;
   },
-  
-  ekle: async (personel: Omit<Personel, 'id' | 'created_at'>) => {
+
+  async ekle(personel: Omit<Personel, "id" | "created_at">) {
     const { data, error } = await supabase
       .from('personel')
       .insert([personel])
       .select()
       .single();
-    
-    if (error) {
-      console.error("Personel eklenemedi:", error);
-      throw error;
-    }
-    
+
+    if (error) throw error;
     return data;
   },
-  
-  guncelle: async (id: number, personel: Partial<Personel>) => {
+
+  async guncelle(id: number, personel: Partial<Personel>) {
     const { data, error } = await supabase
       .from('personel')
       .update(personel)
       .eq('id', id)
       .select()
       .single();
-    
-    if (error) {
-      console.error(`Personel (id=${id}) güncellenemedi:`, error);
-      throw error;
-    }
-    
+
+    if (error) throw error;
     return data;
   },
-  
-  sil: async (id: number) => {
+
+  async sil(id: number) {
     const { error } = await supabase
       .from('personel')
       .delete()
       .eq('id', id);
-    
-    if (error) {
-      console.error(`Personel (id=${id}) silinemedi:`, error);
-      throw error;
-    }
-    
-    return true;
+
+    if (error) throw error;
   }
 };

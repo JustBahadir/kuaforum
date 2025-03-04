@@ -1,56 +1,45 @@
 
-import { supabase } from "../client";
+import { supabase } from '../client';
+import { PersonelIslemi } from '../types';
 
 export const personelIslemleriServisi = {
-  personelIslemleriGetir: async (personelId: number) => {
+  async personelIslemleriGetir(personelId: number) {
     const { data, error } = await supabase
       .from('personel_islemleri')
       .select(`
         *,
-        personel:personel_id(id, ad_soyad),
-        islem:islem_id(id, islem_adi, fiyat)
+        islem:islemler(*),
+        personel:personel(*)
       `)
       .eq('personel_id', personelId)
       .order('created_at', { ascending: false });
-    
-    if (error) {
-      console.error("Personel işlemleri alınamadı:", error);
-      throw error;
-    }
-    
+
+    if (error) throw error;
     return data || [];
   },
   
-  hepsiniGetir: async () => {
+  async hepsiniGetir() {
     const { data, error } = await supabase
       .from('personel_islemleri')
       .select(`
         *,
-        personel:personel_id(id, ad_soyad),
-        islem:islem_id(id, islem_adi, fiyat)
+        islem:islemler(*),
+        personel:personel(*)
       `)
       .order('created_at', { ascending: false });
-    
-    if (error) {
-      console.error("Tüm personel işlemleri alınamadı:", error);
-      throw error;
-    }
-    
+
+    if (error) throw error;
     return data || [];
   },
   
-  ekle: async (islemData: any) => {
+  async ekle(islem: Omit<PersonelIslemi, "id" | "created_at">) {
     const { data, error } = await supabase
       .from('personel_islemleri')
-      .insert([islemData])
+      .insert([islem])
       .select()
       .single();
-    
-    if (error) {
-      console.error("Personel işlemi eklenemedi:", error);
-      throw error;
-    }
-    
+
+    if (error) throw error;
     return data;
   }
 };
