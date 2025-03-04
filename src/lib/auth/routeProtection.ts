@@ -12,7 +12,8 @@ export const shouldRedirect = (
     pathname === "/" || 
     pathname === "/login" || 
     pathname === "/admin" ||
-    pathname === "/services"
+    pathname === "/services" ||
+    pathname === "/appointments"  // Adding appointments to public routes
   ) {
     console.log("Public page access allowed");
     return false;
@@ -25,7 +26,8 @@ export const shouldRedirect = (
       pathname !== "/" && 
       pathname !== "/login" && 
       pathname !== "/admin" &&
-      pathname !== "/services"
+      pathname !== "/services" &&
+      pathname !== "/appointments"  // Adding appointments to allowed routes
     ) {
       console.log("Not authenticated, redirecting from:", pathname);
       return true;

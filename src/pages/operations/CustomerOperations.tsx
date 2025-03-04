@@ -41,12 +41,20 @@ export default function CustomerOperations() {
     <div className="container mx-auto py-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Hizmetlerimiz</h1>
-        <Button 
-          onClick={() => navigate("/customer-dashboard")}
-          variant="outline"
-        >
-          Müşteri Paneline Git
-        </Button>
+        <div className="space-x-2">
+          <Button 
+            onClick={() => navigate("/customer-dashboard")}
+            variant="outline"
+          >
+            Müşteri Paneline Git
+          </Button>
+          <Button 
+            onClick={() => navigate("/appointments")}
+            variant="default"
+          >
+            Randevu Sayfasına Git
+          </Button>
+        </div>
       </div>
 
       {kategoriler.length === 0 ? (
