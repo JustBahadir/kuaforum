@@ -205,8 +205,9 @@ const StaffProfile = () => {
           </CardHeader>
           <CardContent>
             <form id="profileForm" onSubmit={handleSubmit} className="space-y-6">
-              <div className="flex flex-col md:flex-row justify-between items-start mb-6">
-                <div className="flex-1">
+              {/* Avatar Upload Section - Photo on right side now */}
+              <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-6">
+                <div className="flex-1 order-2 md:order-1">
                   <h3 className="text-lg font-medium mb-2">Profil Fotoğrafı</h3>
                   <p className="text-sm text-gray-500 mb-4">
                     PNG, JPG, GIF dosyası yükleyin (max 5MB)
@@ -214,14 +215,14 @@ const StaffProfile = () => {
                   <Button 
                     variant="outline"
                     type="button"
-                    className="mb-4 flex items-center gap-2"
+                    className="flex items-center gap-2"
                     onClick={() => document.getElementById('avatar-upload-trigger')?.click()}
                   >
                     <Camera size={16} />
                     Fotoğraf Değiştir
                   </Button>
                 </div>
-                <div className="w-32 h-32 flex-shrink-0 relative rounded-full overflow-hidden border">
+                <div className="w-32 h-32 flex-shrink-0 relative rounded-full overflow-hidden border order-1 md:order-2">
                   <FileUpload
                     id="avatar-upload-trigger"
                     onUploadComplete={handleAvatarUpload}

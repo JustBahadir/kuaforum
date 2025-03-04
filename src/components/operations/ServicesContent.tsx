@@ -159,10 +159,12 @@ export function ServicesContent({
                       <span className="sr-only">Puanlama Sistemi Bilgisi</span>
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent className="max-w-xs">
+                  <TooltipContent className="max-w-xs p-4">
                     <p>
-                      Puanlama sistemi, müşterileri ve personeli ödüllendirmek için kullanılan bir sistemdir.
-                      Aktif edildiğinde, hizmetlere puan ataması yapabilirsiniz.
+                      Puanlama sayesinde sizin belirleyeceğiniz sayıda puana ulaşan müşterilerinize indirim, 
+                      hediye veya sizin seçeceğiniz bir ödül sistemi olarak kullanmak için ekledik. 
+                      Aynı şekilde bunu personellerinize prim vermek için de kullanabilirsiniz.
+                      Bu sistemin kullanımı tamamen sizin tercihlerinize bağlıdır.
                     </p>
                   </TooltipContent>
                 </Tooltip>

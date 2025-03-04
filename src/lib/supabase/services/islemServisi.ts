@@ -18,7 +18,7 @@ export const islemServisi = {
     }
   },
 
-  async islemEkle(islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) {
+  async ekle(islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) {
     try {
       // Get the max sira value for the category
       const query = supabase
@@ -56,11 +56,11 @@ export const islemServisi = {
     }
   },
 
-  async ekle(islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) {
-    return this.islemEkle(islem);
+  async islemEkle(islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) {
+    return this.ekle(islem);
   },
 
-  async islemGuncelle(id: number, islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) {
+  async guncelle(id: number, islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) {
     try {
       const { data, error } = await supabase
         .from('islemler')
@@ -77,11 +77,11 @@ export const islemServisi = {
     }
   },
 
-  async guncelle(id: number, islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) {
-    return this.islemGuncelle(id, islem);
+  async islemGuncelle(id: number, islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) {
+    return this.guncelle(id, islem);
   },
 
-  async islemSil(id: number) {
+  async sil(id: number) {
     try {
       const { error } = await supabase
         .from('islemler')
@@ -99,8 +99,8 @@ export const islemServisi = {
     }
   },
 
-  async sil(id: number) {
-    return this.islemSil(id);
+  async islemSil(id: number) {
+    return this.sil(id);
   },
 
   async siraGuncelle(islemler: Islem[]) {
