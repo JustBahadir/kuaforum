@@ -66,13 +66,14 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
   const [globalError, setGlobalError] = useState<string | null>(null);
   const [cities, setCities] = useState<City[]>([]);
   const [districts, setDistricts] = useState<District[]>([]);
+  const [dukkanKodu, setDukkanKodu] = useState("");
 
   // Fetch Turkey cities and districts
   useEffect(() => {
     const fetchCitiesData = async () => {
       try {
         // This is a placeholder URL - you should replace with a real API
-        const response = await fetch('https://raw.githubusercontent.com/volkansenturk/turkiye-iller-ilceler/master/data/il-ilce.json');
+        const response = await fetch('https://turkiyeapi.cyclic.app/api/v1/provinces');
         if (!response.ok) {
           throw new Error('Failed to fetch cities data');
         }
@@ -80,13 +81,13 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
         const data = await response.json();
         
         // Transform the data into the format we need
-        const formattedCities = Object.keys(data).map(cityName => {
+        const formattedCities = data.data.map((city: any) => {
           return {
-            name: cityName,
-            value: cityName.toLowerCase(),
-            districts: data[cityName].map((districtName: string) => ({
-              name: districtName,
-              value: districtName.toLowerCase()
+            name: city.name,
+            value: city.id.toString(),
+            districts: city.districts.map((district: any) => ({
+              name: district.name,
+              value: district.id.toString()
             }))
           };
         });
@@ -192,6 +193,7 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
     setShopPhone("");
     setCity("");
     setDistrict("");
+    setDukkanKodu("");
     setErrors({});
     setGlobalError(null);
   };
@@ -213,6 +215,9 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
         setErrors({ city: "İl seçimi gereklidir" });
         return;
       }
+    } else if (role === "staff" && !dukkanKodu) {
+      setErrors({ dukkanKodu: "Dükkan kodu gereklidir" });
+      return;
     }
     
     setLoading(true);
@@ -256,7 +261,12 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
       // Eğer admin ise ve dükkan adı belirtilmişse dükkan oluştur
       if (role === "admin" && shopName && user) {
         try {
-          const shopAddress = district ? `${district}, ${city}` : city;
+          const cityInfo = cities.find(c => c.value === city);
+          const districtInfo = districts.find(d => d.value === district);
+          
+          const shopAddress = districtInfo && cityInfo
+            ? `${districtInfo.name}, ${cityInfo.name}`
+            : city;
           
           const dukkan = await dukkanServisi.ekle({
             ad: shopName,
@@ -288,6 +298,35 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
           console.error("Dükkan oluşturma hatası:", dukkanError);
           toast.error("Dükkan oluşturulurken bir hata oluştu: " + (dukkanError.message || "Bilinmeyen bir hata"));
         }
+      } else if (role === "staff" && dukkanKodu && user) {
+        // Personel dükkan kodunu doğrulama
+        try {
+          const dukkan = await dukkanServisi.getirByKod(dukkanKodu);
+          
+          if (!dukkan) {
+            setGlobalError("Geçersiz dükkan kodu. Lütfen dükkan yöneticinizden doğru kodu alınız.");
+            return;
+          }
+          
+          // Personeli dükkan ile ilişkilendir
+          await personelServisi.ekle({
+            ad_soyad: `${firstName} ${lastName}`,
+            personel_no: authService.generateShopCode(`${firstName}${lastName}`),
+            telefon: phone,
+            eposta: email,
+            adres: "",
+            maas: 0, // Maaş bilgisi dükkan sahibi tarafından sonradan ayarlanacak
+            calisma_sistemi: "haftalik",
+            prim_yuzdesi: 50, // Varsayılan prim yüzdesi
+            auth_id: user.id,
+            dukkan_id: dukkan.id
+          });
+          
+          toast.success(`${dukkan.ad} dükkanına personel olarak kaydınız oluşturuldu!`);
+        } catch (personelError: any) {
+          console.error("Personel ekleme hatası:", personelError);
+          toast.error("Personel kaydı oluşturulurken bir hata oluştu: " + (personelError.message || "Bilinmeyen bir hata"));
+        }
       }
       
       toast.success("Kayıt başarılı! Şimdi giriş yapabilirsiniz.");
@@ -315,6 +354,24 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
           <AlertDescription>{globalError}</AlertDescription>
         </Alert>
       )}
+      
+      <div className="space-y-2">
+        <Label htmlFor="role">Kayıt Türü</Label>
+        <Select
+          value={role}
+          onValueChange={(value: "staff" | "admin") => {
+            setRole(value);
+          }}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Kayıt türü seçin" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="admin">Dükkan Sahibi</SelectItem>
+            <SelectItem value="staff">Personel</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
       
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
@@ -385,24 +442,30 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
           <p className="text-xs text-red-500">{errors.phone}</p>
         )}
       </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="role">Kayıt Türü</Label>
-        <Select
-          value={role}
-          onValueChange={(value: "staff" | "admin") => {
-            setRole(value);
-          }}
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Kayıt türü seçin" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="staff">Personel</SelectItem>
-            <SelectItem value="admin">Dükkan Sahibi</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      
+      {role === "staff" && (
+        <div className="space-y-2">
+          <Label htmlFor="dukkanKodu">Dükkan Kodu</Label>
+          <div className="relative">
+            <Store className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+            <Input
+              id="dukkanKodu"
+              type="text"
+              value={dukkanKodu}
+              onChange={(e) => setDukkanKodu(e.target.value)}
+              className="pl-10"
+              placeholder="Dükkan yöneticisinden alınan kod"
+              required
+            />
+          </div>
+          {errors.dukkanKodu && (
+            <p className="text-xs text-red-500">{errors.dukkanKodu}</p>
+          )}
+          <p className="text-xs text-gray-500">
+            Personel kaydı için dükkan yöneticinizden alacağınız dükkan kodunu giriniz.
+          </p>
+        </div>
+      )}
 
       {role === "admin" && (
         <>
