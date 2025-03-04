@@ -11,7 +11,8 @@ import {
   User, 
   Store, 
   LogOut,
-  FileText
+  FileText,
+  UserCircle
 } from "lucide-react";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { buttonVariants } from "@/components/ui/button";
@@ -51,6 +52,7 @@ export function StaffSidebar() {
     { href: "/personnel", title: "Personel İşlemleri", icon: <Users size={18} />, roles: ["admin"] },
     { href: "/appointments", title: "Randevular", icon: <Calendar size={18} />, roles: ["admin", "staff"] },
     { href: "/services", title: "Hizmet Yönetimi", icon: <Scissors size={18} />, roles: ["admin"] },
+    { href: "/customers", title: "Müşteriler", icon: <UserCircle size={18} />, roles: ["admin", "staff"] },
     { href: "/shop-settings", title: "Dükkan Ayarları", icon: <Store size={18} />, roles: ["admin"] },
     { href: "/shop-statistics", title: "Dükkan İstatistikleri", icon: <BarChart2 size={18} />, roles: ["admin"] },
     { href: "/operations-history", title: "İşlem Geçmişi", icon: <FileText size={18} />, roles: ["admin", "staff"] },

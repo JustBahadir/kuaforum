@@ -79,6 +79,7 @@ function App() {
               <Route path="/operations-history" element={<OperationsHistory />} />
               <Route path="/staff-profile" element={<StaffProfile />} />
               <Route path="/staff-login" element={<StaffLogin />} />
+              <Route path="/customers" element={<Customers />} />
               
               {/* Public Routes */}
               <Route path="/services" element={<CustomerOperations />} />

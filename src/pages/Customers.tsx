@@ -1,140 +1,64 @@
 
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { StaffLayout } from "@/components/ui/staff-layout";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Phone, Eye, UserCog } from "lucide-react";
-import { musteriServisi, type Musteri } from "@/lib/supabase";
-import { useQuery } from "@tanstack/react-query";
-import { toast } from "@/components/ui/use-toast";
-import { CustomerDetails } from "./Customers/components/CustomerDetails";
+import { Search, UserPlus, Phone, Mail, Calendar } from "lucide-react";
+import { CustomerList } from "./Customers/components/CustomerList";
+import { musteriServisi } from "@/lib/supabase/services/musteriServisi";
 
-type ProfileWithStats = Musteri & {
-  total_appointments?: number;
-}
-
-export default function Musteriler() {
-  const [aramaMetni, setAramaMetni] = useState("");
-  const [selectedCustomer, setSelectedCustomer] = useState<Musteri | null>(null);
-
-  const { data: musteriler = [], isLoading } = useQuery<ProfileWithStats[]>({
-    queryKey: ['musteriler', aramaMetni],
-    queryFn: () => aramaMetni 
-      ? musteriServisi.ara(aramaMetni) 
-      : musteriServisi.istatistiklerGetir()
+export default function Customers() {
+  const [searchText, setSearchText] = useState("");
+  
+  const { data: customers = [], isLoading, error } = useQuery({
+    queryKey: ['musteriler'],
+    queryFn: () => musteriServisi.hepsiniGetir()
   });
 
-  const handleViewCustomerDetails = (musteri: Musteri) => {
-    setSelectedCustomer(musteri);
-    // Detay görüntüleme işlemi bilgilendirmesi
-    toast({
-      title: "Müşteri detayları açılıyor",
-      description: `${musteri.first_name} ${musteri.last_name} müşterisinin detayları ve tercihleri`,
-    });
-  };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-500">Yükleniyor...</div>
-      </div>
-    );
-  }
+  const filteredCustomers = searchText
+    ? customers.filter(customer => 
+        `${customer.first_name} ${customer.last_name}`.toLowerCase().includes(searchText.toLowerCase()) ||
+        (customer.phone && customer.phone.includes(searchText))
+      )
+    : customers;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Müşteriler</h1>
-          <div className="text-sm text-gray-500">
-            Müşteri detaylarını ve tercihlerini görmek için müşteri satırındaki "Detay" butonuna tıklayın.
-          </div>
-        </div>
-
-        {/* Arama */}
-        <div className="mb-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <Input
-              type="search"
-              placeholder="Müşteri Ara..."
-              className="pl-10"
-              value={aramaMetni}
-              onChange={(e) => setAramaMetni(e.target.value)}
-            />
-          </div>
-        </div>
-
-        {/* Müşteri Listesi */}
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Ad Soyad
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    İletişim
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Toplam Randevu
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Toplam İşlem
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Son İşlem
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    İşlemler
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {musteriler.map((musteri) => (
-                  <tr key={musteri.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {`${musteri.first_name} ${musteri.last_name}`}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div className="flex items-center gap-2">
-                        <Phone className="w-4 h-4" />
-                        {musteri.phone || "-"}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {musteri.total_appointments || 0}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {musteri.total_services || 0}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {musteri.created_at ? new Date(musteri.created_at).toLocaleDateString('tr-TR') : '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <Button 
-                        variant="default" 
-                        size="sm" 
-                        className="bg-blue-600 hover:bg-blue-700"
-                        onClick={() => handleViewCustomerDetails(musteri)}
-                      >
-                        <UserCog className="w-4 h-4 mr-1" />
-                        Detay ve Tercihler
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+    <StaffLayout>
+      <div className="container mx-auto p-4">
+        <h1 className="text-2xl font-bold mb-6">Müşteriler</h1>
+        
+        <Card className="mb-6">
+          <CardHeader className="pb-2">
+            <CardTitle>Müşteri Ara</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="search" 
+                  placeholder="İsim, telefon veya e-posta ile ara..." 
+                  className="pl-8"
+                  value={searchText}
+                  onChange={(e) => setSearchText(e.target.value)}
+                />
+              </div>
+              <Button variant="outline" className="gap-1">
+                <UserPlus className="h-4 w-4" />
+                <span>Yeni Müşteri</span>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <CustomerList 
+          customers={filteredCustomers} 
+          isLoading={isLoading} 
+          error={error as Error}
+        />
       </div>
-
-      <CustomerDetails 
-        open={!!selectedCustomer} 
-        onOpenChange={(open) => !open && setSelectedCustomer(null)} 
-        customer={selectedCustomer} 
-      />
-    </div>
+    </StaffLayout>
   );
 }

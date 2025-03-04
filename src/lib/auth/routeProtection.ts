@@ -46,6 +46,11 @@ export const shouldRedirect = (
     // Admin on homepage should be redirected to shop-home
     if (pathname === "/") {
       console.log("Admin ana sayfada, dükkan ana sayfasına yönlendiriliyor");
+      return false; // Don't redirect, show logout button instead
+    }
+    
+    // Admin trying to access login pages
+    if (pathname === "/login" || pathname === "/admin") {
       return true;
     }
     
@@ -63,6 +68,11 @@ export const shouldRedirect = (
   // Staff on homepage should be redirected to shop-home
   if (userRole === 'staff' && pathname === "/") {
     console.log("Personel ana sayfada, dükkan ana sayfasına yönlendiriliyor");
+    return false; // Don't redirect, show logout button instead
+  }
+  
+  // Staff trying to access login pages
+  if (userRole === 'staff' && (pathname === "/login" || pathname === "/admin")) {
     return true;
   }
   
@@ -124,7 +134,7 @@ export const getRedirectPath = (
   
   // Admin redirect based on path
   if (userRole === 'admin') {
-    if (currentPath === "/") {
+    if (currentPath === "/admin" || currentPath === "/login") {
       return "/shop-home";
     }
     
@@ -136,7 +146,7 @@ export const getRedirectPath = (
   
   // Staff redirect based on path
   if (userRole === 'staff') {
-    if (currentPath === "/" || currentPath === "/personnel") {
+    if (currentPath === "/admin" || currentPath === "/login") {
       return "/shop-home";
     }
     
@@ -159,8 +169,8 @@ export const getRedirectPath = (
       return "/customer-dashboard";
     }
     
-    // Customer on homepage should go to customer dashboard
-    if (currentPath === "/") {
+    // Customer on login pages should go to customer dashboard
+    if (currentPath === "/admin" || currentPath === "/login") {
       return "/customer-dashboard";
     }
   }

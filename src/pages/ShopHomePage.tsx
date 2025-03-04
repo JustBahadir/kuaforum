@@ -32,21 +32,23 @@ export default function ShopHomePage() {
         // Fetch appointments for today
         const today = new Date();
         const todayStr = today.toISOString().split('T')[0];
-        const appointments = await randevuServisi.getDukkanRandevulari(dukkanId, todayStr);
-        setTodayAppointments(appointments.length);
+        const appointments = await randevuServisi.dukkanRandevulariniGetir(dukkanId);
+        const todayAppointments = appointments.filter(a => a.tarih === todayStr);
+        setTodayAppointments(todayAppointments.length);
         
         // Fetch total customers
-        const customers = await musteriServisi.getDukkanMusterileri(dukkanId);
+        const customers = await musteriServisi.hepsiniGetir();
         setTotalCustomers(customers.length);
         
         // Fetch total personnel
         const personnel = await personelServisi.hepsiniGetir();
         const shopPersonnel = personnel.filter(p => p.dukkan_id === dukkanId);
-        setTotalPersonnel(shopPersonnel.length);
+        setTotalPersonnel(shopPersonnel.length || 1); // At least 1 for shop owner
         
         // Fetch total services
-        const services = await islemServisi.dukkanIslemleri(dukkanId);
-        setTotalServices(services.length);
+        const services = await islemServisi.hepsiniGetir();
+        const shopServices = services.filter(s => s.dukkan_id === dukkanId);
+        setTotalServices(shopServices.length);
       } catch (error) {
         console.error("Dashboard data fetch error:", error);
       } finally {
@@ -166,18 +168,18 @@ export default function ShopHomePage() {
                 <CardContent className="space-y-4">
                   <div className="flex justify-between items-center">
                     <span className="text-sm">Doluluk Oranı</span>
-                    <span className="text-sm font-medium">%75</span>
+                    <span className="text-sm font-medium">%{todayAppointments > 0 ? '25' : '0'}</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2.5">
-                    <div className="bg-purple-600 h-2.5 rounded-full" style={{ width: '75%' }}></div>
+                    <div className="bg-purple-600 h-2.5 rounded-full" style={{ width: todayAppointments > 0 ? '25%' : '0%' }}></div>
                   </div>
                   
                   <div className="flex justify-between items-center mt-4">
                     <span className="text-sm">Müşteri Memnuniyeti</span>
-                    <span className="text-sm font-medium">%92</span>
+                    <span className="text-sm font-medium">%{totalCustomers > 0 ? '100' : '0'}</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2.5">
-                    <div className="bg-green-500 h-2.5 rounded-full" style={{ width: '92%' }}></div>
+                    <div className="bg-green-500 h-2.5 rounded-full" style={{ width: totalCustomers > 0 ? '100%' : '0%' }}></div>
                   </div>
                   
                   <Button 

@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Eye, Edit, Trash, Plus } from "lucide-react";
 import { PersonnelDialog } from "./PersonnelDialog";
 import { PersonnelEditDialog } from "./PersonnelEditDialog";
+import { PersonnelDetailsDialog } from "./PersonnelDetailsDialog";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
@@ -27,6 +28,7 @@ export function PersonnelList() {
   const { userRole } = useCustomerAuth();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedPersonel, setSelectedPersonel] = useState<number | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [personelToDelete, setPersonelToDelete] = useState<number | null>(null);
@@ -43,9 +45,19 @@ export function PersonnelList() {
     setEditDialogOpen(true);
   };
 
+  const handleOpenDetailsDialog = (personelId: number) => {
+    setSelectedPersonel(personelId);
+    setDetailsDialogOpen(true);
+  };
+
   const handleCloseEditDialog = () => {
     setSelectedPersonel(null);
     setEditDialogOpen(false);
+  };
+
+  const handleCloseDetailsDialog = () => {
+    setSelectedPersonel(null);
+    setDetailsDialogOpen(false);
   };
 
   const deletePersonelMutation = useMutation({
@@ -159,7 +171,12 @@ export function PersonnelList() {
                     </div>
                   </div>
                   <div className="flex border-t divide-x">
-                    <Button variant="ghost" className="flex-1 rounded-none" title="Detaylar">
+                    <Button 
+                      variant="ghost" 
+                      className="flex-1 rounded-none" 
+                      title="Detaylar"
+                      onClick={() => handleOpenDetailsDialog(personel.id)}
+                    >
                       <Eye className="h-4 w-4 mr-2" />
                       <span className="sr-only sm:not-sr-only sm:text-xs">Detaylar</span>
                     </Button>
@@ -197,6 +214,14 @@ export function PersonnelList() {
           <PersonnelEditDialog 
             open={editDialogOpen} 
             onOpenChange={handleCloseEditDialog}
+            personelId={selectedPersonel}
+          />
+        )}
+
+        {selectedPersonel && (
+          <PersonnelDetailsDialog
+            open={detailsDialogOpen}
+            onOpenChange={handleCloseDetailsDialog}
             personelId={selectedPersonel}
           />
         )}
