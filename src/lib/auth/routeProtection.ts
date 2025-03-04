@@ -13,7 +13,7 @@ export const shouldRedirect = (
     pathname === "/login" || 
     pathname === "/admin" ||
     pathname === "/services" ||
-    pathname === "/appointments"  // Adding appointments to public routes
+    pathname === "/appointments"
   ) {
     console.log("Public page access allowed");
     return false;

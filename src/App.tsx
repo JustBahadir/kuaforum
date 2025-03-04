@@ -4,6 +4,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { Toaster } from "@/components/ui/sonner";
 import { RouteProtection } from "@/components/auth/RouteProtection";
+import HomePage from "./pages/HomePage";
 import StaffLogin from "./pages/StaffLogin";
 import StaffRegister from "./pages/StaffRegister";
 import CustomerAuth from "./pages/Auth";
@@ -42,6 +43,9 @@ function App() {
         <BrowserRouter>
           <RouteProtection>
             <Routes>
+              {/* Landing Page */}
+              <Route path="/" element={<HomePage />} />
+              
               {/* Staff routes */}
               <Route path="/admin" element={<StaffLogin />} />
               <Route path="/admin/register" element={<StaffRegister />} />
@@ -65,7 +69,7 @@ function App() {
               <Route path="/profile" element={<CustomerProfile />} />
               <Route path="/services" element={<CustomerOperations />} />
               <Route path="/appointments" element={<Appointments />} />
-              <Route path="/" element={<CustomerOperations />} />
+              
               <Route path="*" element={<NotFound />} />
             </Routes>
           </RouteProtection>
