@@ -62,15 +62,16 @@ function App() {
               {/* Customer routes */}
               <Route path="/login" element={<CustomerAuth />} />
               <Route path="/account" element={<CustomerDashboard />} />
+              <Route path="/customer-dashboard/*" element={<CustomerDashboard />} />
               <Route path="/profile" element={<CustomerProfile />} />
               <Route path="/services" element={<CustomerOperations />} />
               <Route path="/" element={<CustomerOperations />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </RouteProtection>
+          <ReactQueryDevtools />
+          <Toaster />
         </BrowserRouter>
-        <ReactQueryDevtools />
-        <Toaster />
       </QueryClientProvider>
     </ThemeProvider>
   );
