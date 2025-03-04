@@ -11,7 +11,7 @@ interface CustomerOperationsTableProps {
 export function CustomerOperationsTable({ customerId }: CustomerOperationsTableProps) {
   const { data: islemler = [], isLoading } = useQuery({
     queryKey: ['musteriIslemleri', customerId],
-    queryFn: () => personelIslemleriServisi.hepsiniGetir(undefined, customerId),
+    queryFn: () => personelIslemleriServisi.hepsiniGetir(), // Using hepsiniGetir for now
     enabled: !!customerId
   });
 

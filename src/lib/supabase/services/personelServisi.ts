@@ -38,6 +38,24 @@ export const personelServisi = {
     return data;
   },
   
+  getirByAuthId: async (authId: string) => {
+    const { data, error } = await supabase
+      .from('personel')
+      .select(`
+        *,
+        dukkan:dukkan_id(id, ad)
+      `)
+      .eq('auth_id', authId)
+      .single();
+    
+    if (error) {
+      console.error(`Personel (auth_id=${authId}) alınamadı:`, error);
+      throw error;
+    }
+    
+    return data;
+  },
+  
   ekle: async (personel: Omit<Personel, 'id' | 'created_at'>) => {
     const { data, error } = await supabase
       .from('personel')
