@@ -1,3 +1,4 @@
+
 // Update imports
 import { supabase } from "@/lib/supabase/client";
 import { islemServisi, kategoriServisi, musteriServisi, personelServisi, personelIslemleriServisi, dukkanServisi } from "@/lib/supabase";
@@ -5,7 +6,7 @@ import { faker } from '@faker-js/faker';
 import { toast } from "sonner";
 
 // Set the faker locale to Turkish
-faker.setLocale('tr');
+faker.locale = 'tr';
 
 const generateDukkan = async () => {
   try {
@@ -37,11 +38,11 @@ const generateDukkan = async () => {
         {
           ad: faker.company.name(),
           telefon: faker.phone.number(),
-          adres: faker.address.streetAddress(),
-          acik_adres: faker.address.streetAddress(true),
+          adres: faker.location.streetAddress(),
+          acik_adres: faker.location.streetAddress(true),
           sahibi_id: user.id,
-          kod: faker.random.alpha({ count: 6, casing: 'upper' }),
-          logo_url: faker.image.business(640, 480, true)
+          kod: faker.string.alpha({ length: 6, casing: 'upper' }),
+          logo_url: faker.image.url({ width: 640, height: 480, category: 'business' })
         }
       ])
       .select();
@@ -168,14 +169,14 @@ const generatePersonel = async (count = 10) => {
     // Generate random personnel
     for (let i = 0; i < count; i++) {
       await personelServisi.ekle({
-        ad_soyad: faker.name.fullName(),
+        ad_soyad: faker.person.fullName(),
         telefon: faker.phone.number(),
         eposta: faker.internet.email(),
-        adres: faker.address.streetAddress(),
-        personel_no: faker.random.alphaNumeric(8),
-        maas: faker.datatype.number({ min: 5000, max: 20000 }),
+        adres: faker.location.streetAddress(),
+        personel_no: faker.string.alphanumeric(8),
+        maas: faker.number.int({ min: 5000, max: 20000 }),
         calisma_sistemi: faker.helpers.arrayElement(['haftalik', 'aylik']),
-        prim_yuzdesi: faker.datatype.number({ min: 1, max: 10 }),
+        prim_yuzdesi: faker.number.int({ min: 1, max: 10 }),
         dukkan_id: dukkan.id
       });
     }
@@ -206,11 +207,11 @@ const generateMusteri = async (count = 20) => {
     // Generate random customers
     for (let i = 0; i < count; i++) {
       await musteriServisi.ekle({
-        ad_soyad: faker.name.fullName(),
+        ad_soyad: faker.person.fullName(),
         telefon: faker.phone.number(),
         eposta: faker.internet.email(),
-        adres: faker.address.streetAddress(),
-        musteri_no: faker.random.alphaNumeric(8)
+        adres: faker.location.streetAddress(),
+        musteri_no: faker.string.alphanumeric(8)
       });
     }
 
