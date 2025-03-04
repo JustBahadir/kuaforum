@@ -5,9 +5,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Eye, Edit, Trash, Plus } from "lucide-react";
+import { Eye, Trash, Plus } from "lucide-react";
 import { PersonnelDialog } from "./PersonnelDialog";
-import { PersonnelEditDialog } from "./PersonnelEditDialog";
 import { PersonnelDetailsDialog } from "./PersonnelDetailsDialog";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -27,7 +26,6 @@ import {
 export function PersonnelList() {
   const { userRole } = useCustomerAuth();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedPersonel, setSelectedPersonel] = useState<number | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -40,19 +38,9 @@ export function PersonnelList() {
     queryFn: () => personelServisi.hepsiniGetir()
   });
   
-  const handleOpenEditDialog = (personelId: number) => {
-    setSelectedPersonel(personelId);
-    setEditDialogOpen(true);
-  };
-
   const handleOpenDetailsDialog = (personelId: number) => {
     setSelectedPersonel(personelId);
     setDetailsDialogOpen(true);
-  };
-
-  const handleCloseEditDialog = () => {
-    setSelectedPersonel(null);
-    setEditDialogOpen(false);
   };
 
   const handleCloseDetailsDialog = () => {
@@ -182,15 +170,6 @@ export function PersonnelList() {
                     </Button>
                     <Button 
                       variant="ghost" 
-                      className="flex-1 rounded-none" 
-                      title="Düzenle"
-                      onClick={() => handleOpenEditDialog(personel.id)}
-                    >
-                      <Edit className="h-4 w-4 mr-2" />
-                      <span className="sr-only sm:not-sr-only sm:text-xs">Düzenle</span>
-                    </Button>
-                    <Button 
-                      variant="ghost" 
                       className="flex-1 rounded-none text-destructive" 
                       title="Sil"
                       onClick={() => handleOpenDeleteDialog(personel.id)}
@@ -209,14 +188,6 @@ export function PersonnelList() {
           open={addDialogOpen} 
           onOpenChange={setAddDialogOpen} 
         />
-        
-        {selectedPersonel && (
-          <PersonnelEditDialog 
-            open={editDialogOpen} 
-            onOpenChange={handleCloseEditDialog}
-            personelId={selectedPersonel}
-          />
-        )}
 
         {selectedPersonel && (
           <PersonnelDetailsDialog

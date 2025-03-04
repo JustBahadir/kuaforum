@@ -32,7 +32,7 @@ interface CategoryCardProps {
   islemler: any[];
   isStaff: boolean;
   onEdit?: (islem: any) => void;
-  onDelete?: (islem: any) => void;
+  onDelete?: (islemId: number) => void;
   onKategoriDelete?: (kategoriId: number) => void;
   onSiralamaChange?: (items: any[]) => void;
   onRandevuAl?: (islemId: number) => void;

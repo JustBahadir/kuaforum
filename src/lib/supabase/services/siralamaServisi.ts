@@ -7,7 +7,8 @@ export const siralamaServisi = {
     // Update each category with its new position
     const updates = kategoriler.map((kategori, index) => ({
       id: kategori.id,
-      sira: index
+      sira: index,
+      kategori_adi: kategori.kategori_adi // Include kategori_adi to avoid null constraint error
     }));
     
     try {
@@ -31,7 +32,10 @@ export const siralamaServisi = {
     // Update each item with its new position
     const updates = islemler.map((islem, index) => ({
       id: islem.id,
-      sira: index
+      sira: index,
+      islem_adi: islem.islem_adi, // Include islem_adi to avoid null constraint error
+      fiyat: islem.fiyat, // Include fiyat to avoid potential null constraint errors
+      puan: islem.puan // Include puan to avoid potential null constraint errors
     }));
     
     try {

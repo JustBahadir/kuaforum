@@ -64,8 +64,14 @@ export function ProfileEditForm({
         <CardTitle>Profili Düzenle</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Avatar Upload Section - Repositioned to be horizontal */}
+        {/* Avatar Upload Section - Fixed layout */}
         <div className="flex items-center gap-4 mb-4">
+          <div className="flex-1">
+            <h3 className="text-lg font-medium mb-2">Profil Fotoğrafı</h3>
+            <p className="text-sm text-gray-500">
+              PNG, JPG, GIF dosyası yükleyin (max 5MB)
+            </p>
+          </div>
           <div className="w-32 h-32 flex-shrink-0">
             <FileUpload
               onUploadComplete={handleAvatarUpload}
@@ -74,12 +80,6 @@ export function ProfileEditForm({
               bucketName="photos"
               folderPath="avatars"
             />
-          </div>
-          <div className="flex-1">
-            <h3 className="text-lg font-medium mb-2">Profil Fotoğrafı</h3>
-            <p className="text-sm text-gray-500">
-              PNG, JPG, GIF dosyası yükleyin (max 5MB)
-            </p>
           </div>
         </div>
         

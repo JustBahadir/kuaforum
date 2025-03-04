@@ -108,7 +108,10 @@ export const islemServisi = {
       // Update each item with its new position
       const updates = islemler.map((islem, index) => ({
         id: islem.id,
-        sira: index
+        sira: index,
+        islem_adi: islem.islem_adi,
+        fiyat: islem.fiyat,
+        puan: islem.puan
       }));
 
       const { data, error } = await supabase

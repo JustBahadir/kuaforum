@@ -1,3 +1,4 @@
+
 import { CategoryCard } from "./CategoryCard";
 import { ServiceForm } from "./ServiceForm";
 import { CategoryForm } from "./CategoryForm";
@@ -153,12 +154,13 @@ export function ServicesContent({
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <Button variant="ghost" size="icon" className="h-8 w-8 p-0">
                       <Info className="h-4 w-4" />
+                      <span className="sr-only">Puanlama Sistemi Bilgisi</span>
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="max-w-xs">
+                  <TooltipContent className="max-w-xs">
+                    <p>
                       Puanlama sistemi, müşterileri ve personeli ödüllendirmek için kullanılan bir sistemdir.
                       Aktif edildiğinde, hizmetlere puan ataması yapabilirsiniz.
                     </p>
@@ -168,6 +170,14 @@ export function ServicesContent({
             </div>
             
             <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setDialogAcik(true)}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Hizmet Ekle
+              </Button>
+              
               <Button 
                 variant="outline" 
                 onClick={() => setKategoriDialogAcik(true)}
