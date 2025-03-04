@@ -1,69 +1,35 @@
 
 import { useEffect, useState } from "react";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
-import { useQuery } from "@tanstack/react-query";
-import { profilServisi } from "@/lib/supabase/services/profilServisi";
-import { personelServisi } from "@/lib/supabase/services/personelServisi";
+import { profileService } from "@/lib/auth/profileService";
 
-interface GreetingProps {
-  className?: string;
-}
+export function Greeting() {
+  const { userName, userRole } = useCustomerAuth();
+  const [title, setTitle] = useState<string>("");
 
-export function Greeting({ className }: GreetingProps) {
-  const { userRole, userId } = useCustomerAuth();
-  const [userName, setUserName] = useState<string>("");
-  const [userGender, setUserGender] = useState<string | null>(null);
-  
-  const { data: profile } = useQuery({
-    queryKey: ['profile', userId],
-    queryFn: () => profilServisi.getir(userId!),
-    enabled: !!userId && userRole !== 'staff',
-  });
-  
-  const { data: staff } = useQuery({
-    queryKey: ['staff', userId],
-    queryFn: () => personelServisi.getirByAuthId(userId!),
-    enabled: !!userId && userRole === 'staff',
-  });
-  
   useEffect(() => {
-    if (profile) {
-      setUserName(profile.first_name || "");
-      setUserGender(profile.gender || null);
-    } else if (staff) {
-      // Parse first name from staff's full name
-      const fullName = staff.ad_soyad || "";
-      const firstName = fullName.split(" ")[0];
-      setUserName(firstName);
-      setUserGender(staff.cinsiyet || null);
+    async function loadGenderTitle() {
+      try {
+        const titleValue = await profileService.getGenderSpecificTitle();
+        setTitle(titleValue);
+      } catch (error) {
+        console.error("Error loading gender title:", error);
+      }
     }
-  }, [profile, staff]);
-  
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    let timeGreeting = "";
-    
-    if (hour >= 5 && hour < 12) {
-      timeGreeting = "Günaydın";
-    } else if (hour >= 12 && hour < 18) {
-      timeGreeting = "İyi günler";
-    } else {
-      timeGreeting = "İyi akşamlar";
-    }
-    
-    if (!userName) {
-      return `${timeGreeting}, Değerli Kullanıcımız`;
-    }
-    
-    const honorific = userGender === 'erkek' ? 'Bey' : 
-                     userGender === 'kadın' ? 'Hanım' : '';
-    
-    return `${timeGreeting}, ${userName} ${honorific}`;
-  };
-  
+
+    loadGenderTitle();
+  }, []);
+
   return (
-    <div className={className}>
-      <h2 className="text-xl font-medium">{getGreeting()}</h2>
+    <div className="flex items-center space-x-2">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">
+          {title ? `${title} ${userName}` : userName}
+        </h1>
+        <p className="text-muted-foreground">
+          {userRole === 'staff' ? 'Personel' : userRole === 'admin' ? 'Dükkan Sahibi' : 'Müşteri'} paneline hoş geldiniz.
+        </p>
+      </div>
     </div>
   );
 }

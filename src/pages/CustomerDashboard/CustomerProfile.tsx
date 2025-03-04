@@ -14,11 +14,13 @@ export default function CustomerProfile() {
     lastName: "",
     phone: "",
     email: "",
-    gender: "",
-    birthdate: ""
+    gender: "" as ("erkek" | "kadın" | null),
+    birthdate: "",
+    avatarUrl: ""
   });
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const { refreshProfile } = useCustomerAuth();
   
   useEffect(() => {
@@ -50,6 +52,7 @@ export default function CustomerProfile() {
           const metaPhone = user.user_metadata.phone;
           const metaGender = user.user_metadata.gender;
           const metaBirthdate = user.user_metadata.birthdate;
+          const metaAvatarUrl = user.user_metadata.avatar_url;
           
           if (metaFirstName || metaLastName || metaPhone || metaGender || metaBirthdate) {
             console.log("Using profile data from user metadata");
@@ -60,8 +63,9 @@ export default function CustomerProfile() {
               lastName: metaLastName || "",
               phone: formattedPhone,
               email: user.email || "",
-              gender: metaGender || "",
-              birthdate: metaBirthdate || ""
+              gender: metaGender || null,
+              birthdate: metaBirthdate || "",
+              avatarUrl: metaAvatarUrl || ""
             });
             
             setLoading(false);
@@ -81,8 +85,9 @@ export default function CustomerProfile() {
               lastName: profileData.last_name || "",
               phone: formattedPhone,
               email: user.email || "",
-              gender: profileData.gender || "",
-              birthdate: profileData.birthdate || ""
+              gender: profileData.gender || null,
+              birthdate: profileData.birthdate || "",
+              avatarUrl: profileData.avatar_url || ""
             });
 
             console.log("Loaded profile data:", profileData);
@@ -115,7 +120,81 @@ export default function CustomerProfile() {
   };
   
   const handleSelectChange = (name: string, value: string) => {
-    setProfile(prev => ({ ...prev, [name]: value }));
+    if (name === 'gender') {
+      setProfile(prev => ({ 
+        ...prev, 
+        [name]: value ? value as "erkek" | "kadın" : null 
+      }));
+    } else {
+      setProfile(prev => ({ ...prev, [name]: value }));
+    }
+  };
+  
+  const handleAvatarUpload = async (file: File) => {
+    try {
+      setIsUploading(true);
+      
+      // Check if the file is an image
+      if (!file.type.startsWith('image/')) {
+        toast.error("Lütfen bir resim dosyası seçin");
+        return;
+      }
+      
+      // Check file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("Dosya boyutu 5MB'den küçük olmalıdır");
+        return;
+      }
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Kullanıcı bulunamadı");
+        return;
+      }
+      
+      // Create a unique filename
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+      
+      // Upload to Supabase storage
+      const { error: uploadError } = await supabase.storage
+        .from('photos')
+        .upload(filePath, file);
+        
+      if (uploadError) {
+        console.error('Error uploading avatar:', uploadError);
+        toast.error("Profil fotoğrafı yüklenirken bir hata oluştu");
+        return;
+      }
+      
+      // Get the public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('photos')
+        .getPublicUrl(filePath);
+        
+      // Update profile with avatar URL
+      setProfile(prev => ({ ...prev, avatarUrl: publicUrl }));
+      
+      // Update user metadata
+      await supabase.auth.updateUser({
+        data: { avatar_url: publicUrl }
+      });
+      
+      // Update profile in database
+      await profilServisi.guncelle({
+        avatar_url: publicUrl
+      });
+      
+      toast.success("Profil fotoğrafı başarıyla güncellendi");
+      refreshProfile();
+      
+    } catch (error) {
+      console.error("Avatar upload error:", error);
+      toast.error("Profil fotoğrafı yüklenirken bir hata oluştu");
+    } finally {
+      setIsUploading(false);
+    }
   };
   
   const handleSave = async () => {
@@ -136,7 +215,8 @@ export default function CustomerProfile() {
         last_name: profile.lastName,
         phone: phoneForSaving,
         gender: profile.gender,
-        birthdate: profile.birthdate
+        birthdate: profile.birthdate,
+        avatar_url: profile.avatarUrl
       });
       
       // Update user metadata first for redundancy
@@ -146,7 +226,8 @@ export default function CustomerProfile() {
           last_name: profile.lastName,
           phone: phoneForSaving,
           gender: profile.gender,
-          birthdate: profile.birthdate
+          birthdate: profile.birthdate,
+          avatar_url: profile.avatarUrl
         }
       });
       
@@ -156,7 +237,8 @@ export default function CustomerProfile() {
         last_name: profile.lastName,
         phone: phoneForSaving,
         gender: profile.gender,
-        birthdate: profile.birthdate
+        birthdate: profile.birthdate,
+        avatar_url: profile.avatarUrl
       });
       
       if (result) {
@@ -206,6 +288,7 @@ export default function CustomerProfile() {
         phone={profile.phone}
         gender={profile.gender}
         birthdate={profile.birthdate}
+        avatarUrl={profile.avatarUrl}
       />
       
       <ProfileEditForm
@@ -213,7 +296,9 @@ export default function CustomerProfile() {
         handleChange={handleChange}
         handleSelectChange={handleSelectChange}
         handleSave={handleSave}
+        handleAvatarUpload={handleAvatarUpload}
         isSaving={isSaving}
+        isUploading={isUploading}
       />
     </div>
   );

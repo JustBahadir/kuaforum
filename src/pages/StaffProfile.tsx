@@ -1,281 +1,207 @@
-
 import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { StaffLayout } from "@/components/ui/staff-layout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { useCustomerAuth } from "@/hooks/useCustomerAuth";
-import { personelServisi } from "@/lib/supabase";
-import { authService } from "@/lib/auth/authService";
-import { profileService } from "@/lib/auth/profileService";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Camera } from "lucide-react";
+import { supabase } from "@/lib/supabase/client";
+import { profilServisi } from "@/lib/supabase/services/profilServisi";
+import { useCustomerAuth } from "@/hooks/useCustomerAuth";
+import { formatPhoneNumber } from "@/utils/phoneFormatter";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function StaffProfile() {
-  const queryClient = useQueryClient();
-  const { refreshProfile, userRole } = useCustomerAuth();
-  const [loading, setLoading] = useState(false);
-  
+  const navigate = useNavigate();
+  const { userName, refreshProfile } = useCustomerAuth();
+  const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
     phone: "",
-    gender: "",
+    gender: null as "erkek" | "kadın" | null,
     birthdate: "",
-    avatar_url: ""
-  });
-
-  const { data: currentUser } = useQuery({
-    queryKey: ['currentUser'],
-    queryFn: authService.getCurrentUser
-  });
-
-  const { data: profile } = useQuery({
-    queryKey: ['profile', currentUser?.id],
-    queryFn: () => profileService.getUserProfile(),
-    enabled: !!currentUser
-  });
-
-  const { data: personel } = useQuery({
-    queryKey: ['personelByAuthId', currentUser?.id],
-    queryFn: () => personelServisi.getirByAuthId(currentUser?.id || ""),
-    enabled: !!currentUser?.id
+    email: "",
   });
 
   useEffect(() => {
-    if (profile) {
-      setFormData({
-        firstName: profile.first_name || "",
-        lastName: profile.last_name || "",
-        phone: profile.phone || "",
-        gender: profile.gender || "",
-        birthdate: profile.birthdate || "",
-        avatar_url: profile.avatar_url || ""
-      });
-    }
-  }, [profile]);
+    const fetchProfile = async () => {
+      setLoading(true);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          toast.error("Kullanıcı bilgisi alınamadı");
+          return;
+        }
 
-  const updateProfileMutation = useMutation({
-    mutationFn: async (data: typeof formData) => {
-      return await profileService.updateUserProfile({
-        first_name: data.firstName,
-        last_name: data.lastName,
-        phone: data.phone,
-        gender: data.gender,
-        birthdate: data.birthdate,
-        avatar_url: data.avatar_url
-      });
-    },
-    onSuccess: () => {
-      toast.success("Profil başarıyla güncellendi");
-      queryClient.invalidateQueries({ queryKey: ['profile'] });
-      refreshProfile();
-    },
-    onError: (error: any) => {
-      toast.error(`Profil güncellenirken hata oluştu: ${error.message}`);
-    }
-  });
+        // Get email from auth
+        setFormData(prev => ({ ...prev, email: user.email || "" }));
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      await updateProfileMutation.mutateAsync(formData);
-    } finally {
-      setLoading(false);
-    }
-  };
+        // First check user metadata
+        if (user.user_metadata) {
+          const metaFirstName = user.user_metadata.first_name;
+          const metaLastName = user.user_metadata.last_name;
+          const metaPhone = user.user_metadata.phone;
+          const metaGender = user.user_metadata.gender;
+          const metaBirthdate = user.user_metadata.birthdate;
+
+          if (metaFirstName || metaLastName || metaPhone || metaGender || metaBirthdate) {
+            console.log("Using profile data from user metadata");
+            let formattedPhone = metaPhone ? formatPhoneNumber(metaPhone) : "";
+
+            setFormData({
+              firstName: metaFirstName || "",
+              lastName: metaLastName || "",
+              phone: formattedPhone,
+              email: user.email || "",
+              gender: metaGender || null,
+              birthdate: metaBirthdate || ""
+            });
+
+            setLoading(false);
+            return;
+          }
+        }
+
+        const profile = await profilServisi.getir();
+        if (profile) {
+          setFormData({
+            firstName: profile.first_name || "",
+            lastName: profile.last_name || "",
+            phone: profile.phone || "",
+            gender: profile.gender || null,
+            birthdate: profile.birthdate || "",
+            email: user.email || "",
+          });
+        }
+      } catch (error) {
+        console.error("Profil bilgileri alınırken hata:", error);
+        toast.error("Profil bilgileri alınırken bir hata oluştu");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSelectChange = (name: string, value: string) => {
+  const handleSelectChange = (name: string, value: "erkek" | "kadın" | null) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+
+    try {
+      // Format phone number for saving - remove spaces
+      const phoneForSaving = formData.phone.replace(/\s/g, '');
+
+      await profilServisi.guncelle({
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        phone: phoneForSaving,
+        gender: formData.gender as "erkek" | "kadın" | null,
+        birthdate: formData.birthdate,
+      });
+
+      toast.success("Profil bilgileriniz başarıyla güncellendi");
+      refreshProfile();
+    } catch (error: any) {
+      console.error("Profil güncelleme hatası:", error);
+      toast.error(error.message || "Profil güncellenirken bir hata oluştu");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (loading) {
+    return <p>Yükleniyor...</p>;
+  }
+
   return (
-    <StaffLayout>
-      <div className="container mx-auto p-4">
-        <h1 className="text-2xl font-bold mb-6">Profil Bilgilerim</h1>
-
-        <Tabs defaultValue="profile" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="profile">Kişisel Bilgiler</TabsTrigger>
-            <TabsTrigger value="work">İş Bilgileri</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="profile">
-            <Card>
-              <CardHeader>
-                <CardTitle>Kişisel Bilgilerim</CardTitle>
-                <CardDescription>
-                  Profilinizi güncelleyin. Adınız ve unvanınız sistemde görüntülenecektir.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="flex justify-center mb-6">
-                    <div className="relative">
-                      <Avatar className="w-24 h-24">
-                        <AvatarImage src={formData.avatar_url} alt={`${formData.firstName} ${formData.lastName}`} />
-                        <AvatarFallback className="text-2xl">
-                          {formData.firstName?.[0]}{formData.lastName?.[0]}
-                        </AvatarFallback>
-                      </Avatar>
-                      <Button 
-                        size="icon" 
-                        variant="outline" 
-                        className="absolute bottom-0 right-0 rounded-full h-8 w-8"
-                        type="button"
-                        onClick={() => {
-                          const url = prompt("Profil fotoğrafı URL'si girin:", formData.avatar_url);
-                          if (url) {
-                            setFormData(prev => ({ ...prev, avatar_url: url }));
-                          }
-                        }}
-                      >
-                        <Camera className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="firstName">Ad</Label>
-                      <Input 
-                        id="firstName" 
-                        name="firstName" 
-                        value={formData.firstName} 
-                        onChange={handleChange}
-                        placeholder="Adınız" 
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="lastName">Soyad</Label>
-                      <Input 
-                        id="lastName" 
-                        name="lastName" 
-                        value={formData.lastName} 
-                        onChange={handleChange}
-                        placeholder="Soyadınız" 
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Telefon</Label>
-                      <Input 
-                        id="phone" 
-                        name="phone" 
-                        value={formData.phone} 
-                        onChange={handleChange}
-                        placeholder="Telefon numaranız" 
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="gender">Cinsiyet</Label>
-                      <Select 
-                        value={formData.gender} 
-                        onValueChange={(value) => handleSelectChange("gender", value)}
-                      >
-                        <SelectTrigger id="gender">
-                          <SelectValue placeholder="Cinsiyet seçin" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="male">Erkek</SelectItem>
-                          <SelectItem value="female">Kadın</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="birthdate">Doğum Tarihi</Label>
-                      <Input 
-                        id="birthdate" 
-                        name="birthdate" 
-                        type="date" 
-                        value={formData.birthdate} 
-                        onChange={handleChange}
-                      />
-                    </div>
-                  </div>
-                  
-                  <Button type="submit" disabled={loading} className="w-full sm:w-auto">
-                    {loading ? "Güncelleniyor..." : "Profili Güncelle"}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="work">
-            <Card>
-              <CardHeader>
-                <CardTitle>İş Bilgilerim</CardTitle>
-                <CardDescription>
-                  İş bilgileriniz ve dükkan detaylarınız.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {personel ? (
-                  <div className="space-y-4">
-                    {userRole === 'admin' && (
-                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        <div className="space-y-2">
-                          <Label>Prim Yüzdesi</Label>
-                          <Input value={`%${personel.prim_yuzdesi}`} readOnly />
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <Label>Maaş</Label>
-                          <Input value={`${personel.maas} TL`} readOnly />
-                        </div>
-                      </div>
-                    )}
-                    
-                    <div className="pt-4 border-t">
-                      <h3 className="text-lg font-medium mb-2">Dükkan Bilgileri</h3>
-                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        <div className="space-y-2">
-                          <Label>Dükkan</Label>
-                          <Input value={personel.dukkan?.ad || "Atanmamış"} readOnly />
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <Label>Dükkan Adresi</Label>
-                          <Input value={personel.dukkan?.adres || "Adres girilmemiş"} readOnly />
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <p className="text-sm text-muted-foreground">
-                      Not: İş bilgilerinizi değiştirmek için dükkan yöneticinize başvurun.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="text-center py-4 text-muted-foreground">
-                    Personel bilgileriniz bulunamadı.
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
-    </StaffLayout>
+    <div className="container mx-auto p-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>Personel Profilini Düzenle</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="firstName">Ad</Label>
+              <Input
+                type="text"
+                id="firstName"
+                name="firstName"
+                value={formData.firstName}
+                onChange={handleChange}
+              />
+            </div>
+            <div>
+              <Label htmlFor="lastName">Soyad</Label>
+              <Input
+                type="text"
+                id="lastName"
+                name="lastName"
+                value={formData.lastName}
+                onChange={handleChange}
+              />
+            </div>
+            <div>
+              <Label htmlFor="phone">Telefon</Label>
+              <Input
+                type="tel"
+                id="phone"
+                name="phone"
+                value={formData.phone}
+                onChange={handleChange}
+              />
+            </div>
+            <div>
+              <Label htmlFor="email">E-posta</Label>
+              <Input
+                type="email"
+                id="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                disabled
+              />
+            </div>
+            <div>
+              <Label htmlFor="gender">Cinsiyet</Label>
+              <Select onValueChange={(value) => handleSelectChange("gender", value as "erkek" | "kadın")}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Cinsiyet Seçin" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="erkek">Erkek</SelectItem>
+                  <SelectItem value="kadın">Kadın</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="birthdate">Doğum Tarihi</Label>
+              <Input
+                type="date"
+                id="birthdate"
+                name="birthdate"
+                value={formData.birthdate}
+                onChange={handleChange}
+              />
+            </div>
+            <Button type="submit" disabled={isSaving}>
+              {isSaving ? "Kaydediliyor..." : "Kaydet"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

@@ -58,7 +58,7 @@ export type Personel = {
   dukkan_id?: number;
   dukkan?: Dukkan;
   avatar_url?: string;
-  cinsiyet?: "erkek" | "kadın";
+  cinsiyet?: "erkek" | "kadın" | null;
 }
 
 export type PersonelIslemi = {
@@ -84,7 +84,7 @@ export type Profile = {
   created_at?: string;
   occupation?: string; 
   role?: string; // Role field to support different user types (customer, staff, admin)
-  gender?: "erkek" | "kadın"; // Gender field with only male/female options
+  gender?: "erkek" | "kadın" | null; // Gender field with only male/female options or null
   birthdate?: string; // Birthdate field
   avatar_url?: string; // Avatar URL field
 }

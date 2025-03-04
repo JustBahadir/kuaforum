@@ -30,7 +30,7 @@ export async function updateProfile(data: ProfileUpdateData): Promise<Profile | 
           first_name: data.first_name,
           last_name: data.last_name,
           phone: data.phone,
-          gender: data.gender,
+          gender: data.gender || null,
           birthdate: data.birthdate,
           role: data.role
         }
@@ -55,7 +55,7 @@ export async function updateProfile(data: ProfileUpdateData): Promise<Profile | 
     if (data.last_name !== undefined) updateData.last_name = data.last_name;
     if (data.phone !== undefined) updateData.phone = data.phone;
     if (data.role !== undefined) updateData.role = data.role;
-    if (data.gender !== undefined) updateData.gender = data.gender;
+    if (data.gender !== undefined) updateData.gender = data.gender || null;
     if (data.birthdate !== undefined) updateData.birthdate = data.birthdate;
     
     console.log("Final update data:", updateData);
@@ -88,7 +88,7 @@ export async function updateProfile(data: ProfileUpdateData): Promise<Profile | 
             first_name: data.first_name || '',
             last_name: data.last_name || '',
             phone: data.phone || '',
-            gender: data.gender || '',
+            gender: data.gender || null,
             birthdate: data.birthdate || null,
             role: data.role || 'customer',
             created_at: new Date().toISOString()
@@ -117,7 +117,7 @@ export async function updateProfile(data: ProfileUpdateData): Promise<Profile | 
             first_name: data.first_name || '',
             last_name: data.last_name || '',
             phone: data.phone || '',
-            gender: data.gender || '',
+            gender: data.gender || null,
             birthdate: data.birthdate || null,
             role: data.role || 'customer',
             created_at: new Date().toISOString()
@@ -153,7 +153,7 @@ export async function createOrUpdateProfile(
     last_name?: string; 
     role?: string; 
     phone?: string;
-    gender?: string;
+    gender?: string | null;
     birthdate?: string;
   }
 ): Promise<Profile | null> {
@@ -168,7 +168,7 @@ export async function createOrUpdateProfile(
           last_name: profileData.last_name,
           role: profileData.role,
           phone: profileData.phone,
-          gender: profileData.gender,
+          gender: profileData.gender || null,
           birthdate: profileData.birthdate
         }
       });
@@ -206,7 +206,7 @@ export async function createOrUpdateProfile(
       if (profileData.last_name !== undefined) updateData.last_name = profileData.last_name;
       if (profileData.role !== undefined) updateData.role = profileData.role;
       if (profileData.phone !== undefined) updateData.phone = profileData.phone;
-      if (profileData.gender !== undefined) updateData.gender = profileData.gender;
+      if (profileData.gender !== undefined) updateData.gender = profileData.gender || null;
       if (profileData.birthdate !== undefined) updateData.birthdate = profileData.birthdate;
       
       const { data: updatedProfile, error: updateError } = await supabase
@@ -225,7 +225,7 @@ export async function createOrUpdateProfile(
           last_name: profileData.last_name || '',
           role: profileData.role || 'customer',
           phone: profileData.phone || '',
-          gender: profileData.gender || '',
+          gender: profileData.gender || null,
           birthdate: profileData.birthdate || null,
           created_at: new Date().toISOString()
         };
@@ -244,7 +244,7 @@ export async function createOrUpdateProfile(
           last_name: profileData.last_name || '',
           role: profileData.role || 'customer',
           phone: profileData.phone || '',
-          gender: profileData.gender || '',
+          gender: profileData.gender || null,
           birthdate: profileData.birthdate || null,
         })
         .select('*')
@@ -259,7 +259,7 @@ export async function createOrUpdateProfile(
           last_name: profileData.last_name || '',
           role: profileData.role || 'customer',
           phone: profileData.phone || '',
-          gender: profileData.gender || '',
+          gender: profileData.gender || null,
           birthdate: profileData.birthdate || null,
           created_at: new Date().toISOString()
         };

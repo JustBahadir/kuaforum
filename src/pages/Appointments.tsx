@@ -37,13 +37,15 @@ export default function Appointments() {
   const { data: currentPersonel } = useQuery({
     queryKey: ['currentPersonel', currentUser?.id],
     queryFn: () => personelServisi.getirByAuthId(currentUser?.id || ""),
-    enabled: !!currentUser?.id && userRole === 'staff',
-    onSuccess: (data) => {
-      if (data) {
-        setCurrentPersonelId(data.id);
-      }
-    }
+    enabled: !!currentUser?.id && userRole === 'staff'
   });
+  
+  // Update currentPersonelId when currentPersonel changes
+  useEffect(() => {
+    if (currentPersonel) {
+      setCurrentPersonelId(currentPersonel.id);
+    }
+  }, [currentPersonel]);
   
   const { data: appointments = [], isLoading, refetch } = useQuery({
     queryKey: ['dukkan-randevular', dukkanId],

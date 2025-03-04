@@ -1,28 +1,15 @@
 
-import { Profile } from '../../types';
+export interface ProfileUpdateData {
+  first_name?: string;
+  last_name?: string;
+  phone?: string;
+  role?: string;
+  gender?: "erkek" | "kadın" | null;
+  birthdate?: string;
+  avatar_url?: string;
+}
 
-// Profile service types
-export type ProfileUpdateData = Partial<Profile>;
-
-export type ProfileCreationParams = {
-  user_id: string;
-  user_first_name: string;
-  user_last_name: string;
-  user_phone: string;
-  user_role: string;
-};
-
-export type ProfileServiceError = {
+export interface ProfileServiceError {
   message: string;
-  original?: unknown;
-};
-
-export type Gender = 'male' | 'female' | '';
-
-export const getGenderTitle = (gender: string | undefined): string => {
-  switch(gender) {
-    case 'male': return 'Bey';
-    case 'female': return 'Hanım';
-    default: return '';
-  }
-};
+  original?: any;
+}
