@@ -35,7 +35,7 @@ export default function StaffOperations() {
   });
 
   const { mutate: islemEkle } = useMutation({
-    mutationFn: islemServisi.ekle,
+    mutationFn: islemServisi.islemEkle,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['islemler'] });
       toast.success("İşlem başarıyla eklendi");
@@ -49,7 +49,7 @@ export default function StaffOperations() {
 
   const { mutate: islemGuncelle } = useMutation({
     mutationFn: ({ id, islem }: { id: number; islem: any }) => 
-      islemServisi.guncelle(id, islem),
+      islemServisi.islemGuncelle(id, islem),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['islemler'] });
       toast.success("İşlem başarıyla güncellendi");
@@ -62,7 +62,7 @@ export default function StaffOperations() {
   });
 
   const { mutate: islemSil } = useMutation({
-    mutationFn: islemServisi.sil,
+    mutationFn: islemServisi.islemSil,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['islemler'] });
       toast.success("İşlem başarıyla silindi");

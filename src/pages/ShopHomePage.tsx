@@ -8,7 +8,6 @@ import {
   CalendarDays, 
   Users, 
   Scissors, 
-  TrendingUp, 
   MapPin, 
   Phone, 
   Mail, 
@@ -28,7 +27,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/lib/supabase/client";
 import { dukkanServisi } from "@/lib/supabase/services/dukkanServisi";
-import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
 export default function ShopHomePage() {
@@ -57,7 +55,7 @@ export default function ShopHomePage() {
         setLoading(true);
         
         // Fetch shop information
-        const shopData = await dukkanServisi.getir(dukkanId);
+        const shopData = await dukkanServisi.getirById(dukkanId);
         setShopInfo(shopData);
         
         // Fetch appointments for today
@@ -95,6 +93,8 @@ export default function ShopHomePage() {
   
   const fetchGalleryImages = async () => {
     try {
+      if (!dukkanId) return;
+
       const { data: filesList, error } = await supabase
         .storage
         .from('shop-photos')
@@ -126,7 +126,7 @@ export default function ShopHomePage() {
     try {
       setIsUploading(true);
       
-      await dukkanServisi.guncelle(dukkanId, {
+      await dukkanServisi.dukkaniGuncelle(dukkanId, {
         logo_url: url
       });
       
@@ -154,6 +154,8 @@ export default function ShopHomePage() {
   
   const deleteGalleryImage = async (imageUrl: string) => {
     try {
+      if (!dukkanId) return;
+      
       // Extract the file path from the URL
       const urlParts = imageUrl.split('/');
       const fileName = urlParts[urlParts.length - 1];
@@ -311,7 +313,7 @@ export default function ShopHomePage() {
                       </Button>
                       
                       <Button 
-                        onClick={() => navigateTo("/services")} 
+                        onClick={() => navigateTo("/operations/staff")} 
                         variant="outline" 
                         className="justify-start"
                       >
