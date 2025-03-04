@@ -2,14 +2,12 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Image, Upload, X } from "lucide-react";
+import { Image, Upload, X, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
 
 interface FileUploadProps {
-  // Added id prop
   id?: string;
-  // Changed to accept string URLs rather than File objects
   onUploadComplete: (url: string) => void;
   currentImageUrl?: string;
   label?: string;
@@ -55,7 +53,11 @@ export function FileUpload({
         .upload(filePath, file, { upsert: true });
       
       if (error) {
-        throw error;
+        if (error.message.includes('Bucket not found')) {
+          throw new Error('Depolama alanı bulunamadı. Lütfen sistem yöneticisiyle iletişime geçin.');
+        } else {
+          throw error;
+        }
       }
       
       // Get public URL for the uploaded file
@@ -97,8 +99,9 @@ export function FileUpload({
             size="sm" 
             className="absolute top-2 right-2 h-8 w-8 p-0"
             onClick={clearImage}
+            title="Fotoğrafı kaldır"
           >
-            <X className="h-4 w-4" />
+            <Trash2 className="h-4 w-4" />
           </Button>
         </div>
       ) : (
@@ -109,7 +112,7 @@ export function FileUpload({
         </div>
       )}
       
-      <div className="flex items-center">
+      <div className="flex items-center gap-2">
         <Input
           type="file"
           accept={acceptedFileTypes}
@@ -118,7 +121,7 @@ export function FileUpload({
           id={inputId}
           disabled={isUploading}
         />
-        <label htmlFor={inputId} className="w-full">
+        <label htmlFor={inputId} className="flex-1">
           <Button 
             type="button" 
             className="w-full" 
@@ -141,6 +144,17 @@ export function FileUpload({
             </span>
           </Button>
         </label>
+        
+        {previewUrl && (
+          <Button 
+            variant="destructive"
+            onClick={clearImage}
+            title="Fotoğrafı kaldır"
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Kaldır
+          </Button>
+        )}
       </div>
     </div>
   );

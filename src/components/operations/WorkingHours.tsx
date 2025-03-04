@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -14,12 +13,21 @@ interface WorkingHoursProps {
   onChange?: (index: number, field: keyof CalismaSaati, value: any) => void;
 }
 
+const gunSirasi = {
+  "pazartesi": 1,
+  "sali": 2,
+  "carsamba": 3,
+  "persembe": 4,
+  "cuma": 5,
+  "cumartesi": 6,
+  "pazar": 7
+};
+
 export function WorkingHours({ isStaff = true, gunler = [], onChange }: WorkingHoursProps) {
   const [editing, setEditing] = useState<number | null>(null);
   const [tempChanges, setTempChanges] = useState<Record<number, Partial<CalismaSaati>>>({});
   const queryClient = useQueryClient();
 
-  // If gunler are provided from props, use them, otherwise fetch from API
   const { data: fetchedCalismaSaatleri = [] } = useQuery({
     queryKey: ['calisma_saatleri'],
     queryFn: async () => {
@@ -30,11 +38,15 @@ export function WorkingHours({ isStaff = true, gunler = [], onChange }: WorkingH
       if (error) throw error;
       return data;
     },
-    enabled: gunler.length === 0 // Only fetch if gunler not provided
+    enabled: gunler.length === 0
   });
 
-  // Use either the props gunler or fetched data
-  const calismaSaatleri = gunler.length > 0 ? gunler : fetchedCalismaSaatleri;
+  const calismaSaatleri = [...(gunler.length > 0 ? gunler : fetchedCalismaSaatleri)]
+    .sort((a, b) => {
+      const aIndex = gunSirasi[a.gun as keyof typeof gunSirasi] || 99;
+      const bIndex = gunSirasi[b.gun as keyof typeof gunSirasi] || 99;
+      return aIndex - bIndex;
+    });
 
   const { mutate: saatGuncelle } = useMutation({
     mutationFn: async ({ id, updates }: { id: number; updates: any }) => {
@@ -73,7 +85,6 @@ export function WorkingHours({ isStaff = true, gunler = [], onChange }: WorkingH
 
   const saveChanges = (id: number) => {
     if (onChange) {
-      // If using parent component's state management
       const index = calismaSaatleri.findIndex(s => s.id === id);
       if (index !== -1 && tempChanges[id]) {
         Object.keys(tempChanges[id]).forEach(key => {
@@ -81,7 +92,6 @@ export function WorkingHours({ isStaff = true, gunler = [], onChange }: WorkingH
         });
       }
     } else {
-      // If using direct DB update
       if (tempChanges[id] && Object.keys(tempChanges[id]).length > 0) {
         saatGuncelle({ id, updates: tempChanges[id] });
       }

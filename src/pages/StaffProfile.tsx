@@ -18,8 +18,8 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { User, Phone, Mail, Calendar, MapPin, CreditCard, Camera } from "lucide-react";
-import { FileUpload } from "@/components/ui/file-upload";
+import { User, Phone, Mail, Calendar, MapPin, CreditCard, Camera, Trash2 } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const StaffProfile = () => {
   const { refreshProfile } = useCustomerAuth();
@@ -124,35 +124,106 @@ const StaffProfile = () => {
     }));
   };
 
-  const handleGenderChange = (value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      gender: value as "erkek" | "kadın" | null,
-    }));
-  };
-
-  const handleAvatarUpload = async (url: string) => {
+  const handleAvatarUpload = async (file: File) => {
     try {
       setIsUploading(true);
       
-      setFormData(prev => ({ ...prev, avatarUrl: url }));
+      // Validate file
+      if (!file.type.startsWith('image/')) {
+        toast.error('Lütfen sadece resim dosyası yükleyin');
+        return;
+      }
+
+      // File size check (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Dosya boyutu 5MB\'ı geçemez');
+        return;
+      }
+      
+      // Generate a unique filename
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+      
+      // Upload file to Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('photos')
+        .upload(filePath, file, { upsert: true });
+      
+      if (error) {
+        if (error.message.includes('Bucket not found')) {
+          throw new Error('Depolama alanı bulunamadı. Lütfen sistem yöneticisiyle iletişime geçin.');
+        } else if (error.message.includes('Failed to fetch')) {
+          throw new Error('Bağlantı hatası. Lütfen internet bağlantınızı kontrol edin ve tekrar deneyin.');
+        } else {
+          throw error;
+        }
+      }
+      
+      // Get public URL for the uploaded file
+      const { data: { publicUrl } } = supabase.storage.from('photos').getPublicUrl(filePath);
+      
+      // Update form and user metadata
+      setFormData(prev => ({ ...prev, avatarUrl: publicUrl }));
       
       await supabase.auth.updateUser({
-        data: { avatar_url: url }
+        data: { avatar_url: publicUrl }
       });
       
-      await profilServisi.guncelle({
-        avatar_url: url
-      });
+      // Also update profile to ensure consistency
+      const { error: updateError } = await supabase.from('profiles')
+        .update({ avatar_url: publicUrl })
+        .eq('id', (await supabase.auth.getUser()).data.user?.id);
+      
+      if (updateError && !updateError.message.includes('Could not find the') && !updateError.message.includes('column')) {
+        console.error("Profil güncelleme hatası:", updateError);
+      }
       
       toast.success("Profil fotoğrafı başarıyla güncellendi");
       refreshProfile();
-      
     } catch (error) {
       console.error("Avatar yükleme hatası:", error);
-      toast.error("Profil fotoğrafı yüklenirken bir hata oluştu");
+      toast.error("Profil fotoğrafı yüklenirken bir hata oluştu: " + (error instanceof Error ? error.message : String(error)));
     } finally {
       setIsUploading(false);
+    }
+  };
+  
+  const handleRemoveAvatar = async () => {
+    try {
+      setIsUploading(true);
+      
+      // Update user metadata to remove avatar_url
+      await supabase.auth.updateUser({
+        data: { avatar_url: '' }
+      });
+      
+      // Update form state
+      setFormData(prev => ({ ...prev, avatarUrl: '' }));
+      
+      // Also update profile to ensure consistency
+      const { error: updateError } = await supabase.from('profiles')
+        .update({ avatar_url: null })
+        .eq('id', (await supabase.auth.getUser()).data.user?.id);
+      
+      if (updateError && !updateError.message.includes('Could not find the') && !updateError.message.includes('column')) {
+        console.error("Profil güncelleme hatası:", updateError);
+      }
+      
+      toast.success("Profil fotoğrafı başarıyla kaldırıldı");
+      refreshProfile();
+    } catch (error) {
+      console.error("Avatar silme hatası:", error);
+      toast.error("Profil fotoğrafı kaldırılırken bir hata oluştu");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleAvatarInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleAvatarUpload(file);
     }
   };
 
@@ -170,8 +241,20 @@ const StaffProfile = () => {
         gender: formData.gender,
         birthdate: formData.birthdate,
         address: formData.address,
-        iban: formData.iban,
-        avatar_url: formData.avatarUrl
+        iban: formData.iban
+      });
+
+      // Update user metadata for consistency
+      await supabase.auth.updateUser({
+        data: {
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          phone: phoneForSaving,
+          gender: formData.gender,
+          birthdate: formData.birthdate,
+          address: formData.address,
+          iban: formData.iban
+        }
       });
 
       toast.success("Profil bilgileriniz başarıyla güncellendi");
@@ -212,25 +295,60 @@ const StaffProfile = () => {
                   <p className="text-sm text-gray-500 mb-4">
                     PNG, JPG, GIF dosyası yükleyin (max 5MB)
                   </p>
-                  <Button 
-                    variant="outline"
-                    type="button"
-                    className="flex items-center gap-2"
-                    onClick={() => document.getElementById('avatar-upload-trigger')?.click()}
-                  >
-                    <Camera size={16} />
-                    Fotoğraf Değiştir
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline"
+                      type="button"
+                      className="flex items-center gap-2"
+                      onClick={() => document.getElementById('avatar-input')?.click()}
+                      disabled={isUploading}
+                    >
+                      <Camera size={16} />
+                      Fotoğraf {formData.avatarUrl ? "Değiştir" : "Ekle"}
+                    </Button>
+                    
+                    {formData.avatarUrl && (
+                      <Button
+                        variant="destructive"
+                        type="button"
+                        className="flex items-center gap-2"
+                        onClick={handleRemoveAvatar}
+                        disabled={isUploading}
+                      >
+                        <Trash2 size={16} />
+                        Fotoğrafı Kaldır
+                      </Button>
+                    )}
+                    
+                    <input
+                      type="file"
+                      id="avatar-input"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleAvatarInputChange}
+                      disabled={isUploading}
+                    />
+                  </div>
                 </div>
                 <div className="w-32 h-32 flex-shrink-0 relative rounded-full overflow-hidden border order-1 md:order-2">
-                  <FileUpload
-                    id="avatar-upload-trigger"
-                    onUploadComplete={handleAvatarUpload}
-                    currentImageUrl={formData.avatarUrl}
-                    label=""
-                    bucketName="photos"
-                    folderPath="avatars"
-                  />
+                  {isUploading ? (
+                    <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                      <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
+                    </div>
+                  ) : formData.avatarUrl ? (
+                    <Avatar className="w-full h-full">
+                      <AvatarImage src={formData.avatarUrl} alt="Profil Fotoğrafı" className="object-cover" />
+                      <AvatarFallback>
+                        {formData.firstName && formData.lastName 
+                          ? formData.firstName[0] + formData.lastName[0] 
+                          : "KU"}
+                      </AvatarFallback>
+                    </Avatar>
+                  ) : (
+                    <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-400">
+                      <User size={40} />
+                    </div>
+                  )}
                 </div>
               </div>
               

@@ -4,7 +4,7 @@ import { supabase } from "@/lib/supabase/client";
 import { useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
+import { X, Trash } from "lucide-react";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { toast } from "sonner";
 
@@ -16,7 +16,7 @@ export function ShopGallery({ dukkanId }: ShopGalleryProps) {
   const { userRole } = useCustomerAuth();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   
-  const { data: photos = [], isLoading, error } = useQuery({
+  const { data: photos = [], isLoading, error, refetch } = useQuery({
     queryKey: ['shop-photos', dukkanId],
     queryFn: async () => {
       try {
@@ -72,8 +72,7 @@ export function ShopGallery({ dukkanId }: ShopGalleryProps) {
       // Close the dialog and refetch photos
       setSelectedImage(null);
       toast.success("Fotoğraf başarıyla silindi");
-      // Refetch photos
-      document.location.reload();
+      refetch();
     } catch (error) {
       console.error("Fotoğraf silinirken hata:", error);
       toast.error(`Fotoğraf silinirken hata: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`);
@@ -143,6 +142,7 @@ export function ShopGallery({ dukkanId }: ShopGalleryProps) {
               <div className="absolute bottom-4 right-4">
                 <Button 
                   variant="destructive"
+                  className="flex items-center gap-2"
                   onClick={() => {
                     const photoPath = photos.find(p => p.url === selectedImage)?.path;
                     if (photoPath) {
@@ -150,6 +150,7 @@ export function ShopGallery({ dukkanId }: ShopGalleryProps) {
                     }
                   }}
                 >
+                  <Trash className="h-5 w-5" />
                   Fotoğrafı Sil
                 </Button>
               </div>

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { authService } from "@/lib/auth/authService";
 import { dukkanServisi } from "@/lib/supabase";
-import { MapPin, Phone, Clock, Edit, ImagePlus, PlusCircle, Camera, Star } from "lucide-react";
+import { MapPin, Phone, Clock, Edit, ImagePlus, PlusCircle, Camera, ExternalLink } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ShopGallery } from "@/components/shop/ShopGallery";
@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { formatPhoneNumber } from "@/utils/phoneFormatter";
 
 export default function ShopHomePage() {
   const { dukkanId, userRole } = useCustomerAuth();
@@ -98,7 +99,23 @@ export default function ShopHomePage() {
           .order('gun', { ascending: true });
           
         if (error) throw error;
-        return data || [];
+        
+        // Sort days properly
+        const gunSirasi = {
+          "pazartesi": 1,
+          "sali": 2,
+          "carsamba": 3,
+          "persembe": 4,
+          "cuma": 5,
+          "cumartesi": 6,
+          "pazar": 7
+        };
+        
+        return data.sort((a, b) => {
+          const aIndex = gunSirasi[a.gun as keyof typeof gunSirasi] || 99;
+          const bIndex = gunSirasi[b.gun as keyof typeof gunSirasi] || 99;
+          return aIndex - bIndex;
+        });
       } catch (error) {
         console.error("Çalışma saatleri alınırken hata:", error);
         return [];
@@ -133,6 +150,16 @@ export default function ShopHomePage() {
   const formatTime = (time: string | null) => {
     if (!time) return "Kapalı";
     return time.substring(0, 5); // Extract HH:MM from time string
+  };
+  
+  const openInMaps = () => {
+    if (!dukkanData?.acik_adres) {
+      toast.error("Haritada göstermek için bir açık adres girilmelidir");
+      return;
+    }
+    
+    const encodedAddress = encodeURIComponent(dukkanData.acik_adres);
+    window.open(`https://www.google.com/maps/search/?api=1&query=${encodedAddress}`, '_blank');
   };
 
   if (loading) {
@@ -197,11 +224,13 @@ export default function ShopHomePage() {
               
               {userRole === 'admin' && (
                 <ShopProfilePhotoUpload 
-                  dukkanId={dukkanData.id} 
+                  dukkanId={dukkanData.id}
+                  currentImageUrl={dukkanData.logo_url}
                   onSuccess={(url) => {
                     setDukkanData(prev => ({...prev, logo_url: url}));
                     queryClient.invalidateQueries({ queryKey: ['dukkan'] });
                   }}
+                  className="flex flex-col items-center"
                 >
                   <div className="absolute bottom-2 right-2 p-1 bg-white rounded-full shadow cursor-pointer">
                     <Camera className="h-5 w-5 text-purple-600" />
@@ -212,13 +241,7 @@ export default function ShopHomePage() {
             
             <div className="flex-1 text-center md:text-left">
               <h1 className="text-3xl font-bold text-gray-800">{dukkanData.ad}</h1>
-              <div className="flex items-center justify-center md:justify-start mt-2 mb-4">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <Star key={star} className="h-5 w-5 fill-yellow-400 text-yellow-400" />
-                ))}
-                <span className="ml-2 text-sm text-gray-600">5.0 (24 değerlendirme)</span>
-              </div>
-              <p className="text-gray-600">{dukkanData.adres}</p>
+              <p className="text-gray-600 mt-2">{dukkanData.adres}</p>
               
               {userRole === 'admin' && (
                 <div className="mt-4">
@@ -247,12 +270,34 @@ export default function ShopHomePage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center gap-3">
-                  <MapPin className="h-5 w-5 text-purple-600" />
-                  <span>{dukkanData.adres || "Adres bilgisi bulunmuyor"}</span>
+                  <MapPin className="h-5 w-5 text-purple-600 flex-shrink-0" />
+                  <div>
+                    <div>{dukkanData.adres || "Adres bilgisi bulunmuyor"}</div>
+                    {dukkanData.acik_adres && (
+                      <div className="text-gray-500 text-sm mt-1">{dukkanData.acik_adres}</div>
+                    )}
+                  </div>
                 </div>
+                
+                {dukkanData.acik_adres && (
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="w-full flex items-center gap-2" 
+                    onClick={openInMaps}
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    Haritada Göster
+                  </Button>
+                )}
+                
                 <div className="flex items-center gap-3">
-                  <Phone className="h-5 w-5 text-purple-600" />
-                  <span>{dukkanData.telefon || "Telefon bilgisi bulunmuyor"}</span>
+                  <Phone className="h-5 w-5 text-purple-600 flex-shrink-0" />
+                  <span>
+                    {dukkanData.telefon 
+                      ? formatPhoneNumber(dukkanData.telefon) 
+                      : "Telefon bilgisi bulunmuyor"}
+                  </span>
                 </div>
               </CardContent>
             </Card>
@@ -348,13 +393,16 @@ export default function ShopHomePage() {
                     {personelListesi.map((personel: any) => (
                       <div key={personel.id} className="flex items-center gap-4 bg-gray-50 p-4 rounded-lg">
                         <Avatar>
+                          <AvatarImage src={personel.avatar_url} />
                           <AvatarFallback className="bg-purple-100 text-purple-600">
                             {personel.ad_soyad.split(' ').map((name: string) => name[0]).join('').substring(0, 2).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         <div>
                           <h3 className="font-medium">{personel.ad_soyad}</h3>
-                          <p className="text-sm text-muted-foreground">{personel.telefon}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {personel.telefon ? formatPhoneNumber(personel.telefon) : ""}
+                          </p>
                         </div>
                       </div>
                     ))}
