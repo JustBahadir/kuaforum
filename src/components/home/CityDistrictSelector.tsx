@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { Label } from "@/components/ui/label";
 import { 
   Select,
@@ -8,12 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-interface City {
-  name: string;
-  value: string;
-  districts: { name: string; value: string }[];
-}
+import { City, District } from "@/hooks/useCityDistricts";
 
 interface CityDistrictSelectorProps {
   selectedCity: string;
@@ -21,7 +16,7 @@ interface CityDistrictSelectorProps {
   selectedDistrict: string;
   setSelectedDistrict: (district: string) => void;
   cities: City[];
-  districts: { name: string, value: string }[];
+  districts: District[];
 }
 
 export const CityDistrictSelector = ({ 

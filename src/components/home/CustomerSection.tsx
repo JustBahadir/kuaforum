@@ -2,14 +2,15 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { CityDistrictSelector } from "./CityDistrictSelector";
+import { City, District } from "@/hooks/useCityDistricts";
 
 interface CustomerSectionProps {
-  selectedCity: string | null;
+  selectedCity: string;
   setSelectedCity: (city: string) => void;
-  selectedDistrict: string | null;
+  selectedDistrict: string;
   setSelectedDistrict: (district: string) => void;
-  cities: { id: number; name: string }[];
-  districts: { id: number; name: string; city_id: number }[];
+  cities: City[];
+  districts: District[];
   handleFindSalons: () => void;
 }
 
