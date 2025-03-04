@@ -21,6 +21,9 @@ import { useEffect } from "react";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { shouldRedirect, getRedirectPath } from "@/lib/auth/routeProtection";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import ShopHomePage from "./pages/ShopHomePage";
+import OperationsHistory from "./pages/OperationsHistory";
+import Settings from "./pages/Settings";
 
 // Create a client
 const queryClient = new QueryClient();
@@ -59,13 +62,15 @@ function App() {
           </Route>
           
           {/* Staff Routes */}
+          <Route path="/shop-home" element={<ShopHomePage />} />
           <Route path="/personnel" element={<Personnel />} />
           <Route path="/appointments" element={<Appointments />} />
           <Route path="/services" element={<Services />} />
           <Route path="/shop-settings" element={<ShopSettings />} />
           <Route path="/staff-profile" element={<StaffProfile />} />
           <Route path="/shop-statistics" element={<ShopStatistics />} />
-          <Route path="/settings" element={<StaffProfile />} /> {/* For now, redirect settings to profile */}
+          <Route path="/operations-history" element={<OperationsHistory />} />
+          <Route path="/settings" element={<Settings />} />
           
           {/* Redirect unknown paths */}
           <Route path="*" element={<Navigate to="/" replace />} />

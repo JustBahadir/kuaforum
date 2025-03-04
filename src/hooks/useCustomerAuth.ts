@@ -6,9 +6,10 @@ import { profileService } from "@/lib/auth/profileService";
 import { dukkanServisi } from "@/lib/supabase/services/dukkanServisi";
 import { shouldRedirect, getRedirectPath } from "@/lib/auth/routeProtection";
 import { toast } from "sonner";
+import { supabase } from "@/lib/supabase/client";
 
 export function useCustomerAuth() {
-  const [userName, setUserName] = useState("");
+  const [userName, setUserName] = useState("Değerli Müşterimiz");
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -152,7 +153,7 @@ export function useCustomerAuth() {
           
           const role = await profileService.getUserRole();
           if ((role === 'staff' || role === 'admin') && location.pathname.includes('/staff-login')) {
-            navigate("/personnel");
+            navigate("/shop-home");
           } else if (role === 'customer' && location.pathname.includes('/staff-login')) {
             navigate("/customer-dashboard");
             toast.info("Müşteri hesabı ile giriş yaptınız. Personel girişi için personel hesabı kullanmalısınız.");

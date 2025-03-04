@@ -19,10 +19,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Camera } from "lucide-react";
 
 export default function StaffProfile() {
   const queryClient = useQueryClient();
-  const { refreshProfile } = useCustomerAuth();
+  const { refreshProfile, userRole } = useCustomerAuth();
   const [loading, setLoading] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -30,7 +32,8 @@ export default function StaffProfile() {
     lastName: "",
     phone: "",
     gender: "",
-    birthdate: ""
+    birthdate: "",
+    avatar_url: ""
   });
 
   const { data: currentUser } = useQuery({
@@ -57,7 +60,8 @@ export default function StaffProfile() {
         lastName: profile.last_name || "",
         phone: profile.phone || "",
         gender: profile.gender || "",
-        birthdate: profile.birthdate || ""
+        birthdate: profile.birthdate || "",
+        avatar_url: profile.avatar_url || ""
       });
     }
   }, [profile]);
@@ -69,7 +73,8 @@ export default function StaffProfile() {
         last_name: data.lastName,
         phone: data.phone,
         gender: data.gender,
-        birthdate: data.birthdate
+        birthdate: data.birthdate,
+        avatar_url: data.avatar_url
       });
     },
     onSuccess: () => {
@@ -122,6 +127,31 @@ export default function StaffProfile() {
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="flex justify-center mb-6">
+                    <div className="relative">
+                      <Avatar className="w-24 h-24">
+                        <AvatarImage src={formData.avatar_url} alt={`${formData.firstName} ${formData.lastName}`} />
+                        <AvatarFallback className="text-2xl">
+                          {formData.firstName?.[0]}{formData.lastName?.[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <Button 
+                        size="icon" 
+                        variant="outline" 
+                        className="absolute bottom-0 right-0 rounded-full h-8 w-8"
+                        type="button"
+                        onClick={() => {
+                          const url = prompt("Profil fotoğrafı URL'si girin:", formData.avatar_url);
+                          if (url) {
+                            setFormData(prev => ({ ...prev, avatar_url: url }));
+                          }
+                        }}
+                      >
+                        <Camera className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="firstName">Ad</Label>
@@ -166,9 +196,8 @@ export default function StaffProfile() {
                           <SelectValue placeholder="Cinsiyet seçin" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="erkek">Erkek</SelectItem>
-                          <SelectItem value="kadın">Kadın</SelectItem>
-                          <SelectItem value="diğer">Diğer</SelectItem>
+                          <SelectItem value="male">Erkek</SelectItem>
+                          <SelectItem value="female">Kadın</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -204,30 +233,19 @@ export default function StaffProfile() {
               <CardContent>
                 {personel ? (
                   <div className="space-y-4">
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label>Personel No</Label>
-                        <Input value={personel.personel_no} readOnly />
+                    {userRole === 'admin' && (
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label>Prim Yüzdesi</Label>
+                          <Input value={`%${personel.prim_yuzdesi}`} readOnly />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label>Maaş</Label>
+                          <Input value={`${personel.maas} TL`} readOnly />
+                        </div>
                       </div>
-                      
-                      <div className="space-y-2">
-                        <Label>Çalışma Sistemi</Label>
-                        <Input 
-                          value={personel.calisma_sistemi === 'haftalik' ? 'Haftalık' : 'Aylık'} 
-                          readOnly 
-                        />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label>Prim Yüzdesi</Label>
-                        <Input value={`%${personel.prim_yuzdesi}`} readOnly />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label>Maaş</Label>
-                        <Input value={`${personel.maas} TL`} readOnly />
-                      </div>
-                    </div>
+                    )}
                     
                     <div className="pt-4 border-t">
                       <h3 className="text-lg font-medium mb-2">Dükkan Bilgileri</h3>

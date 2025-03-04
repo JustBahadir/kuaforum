@@ -10,7 +10,8 @@ import {
   BarChart2, 
   User, 
   Store, 
-  LogOut
+  LogOut,
+  FileText
 } from "lucide-react";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { buttonVariants } from "@/components/ui/button";
@@ -40,18 +41,19 @@ const NavItem = ({ href, title, icon, active }: NavItemProps) => {
 
 export function StaffSidebar() {
   const location = useLocation();
-  const { userRole, handleLogout } = useCustomerAuth();
+  const { userRole, userName, handleLogout } = useCustomerAuth();
   const path = location.pathname;
 
   const isAdmin = userRole === 'admin';
 
   const navItems = [
-    { href: "/personnel", title: "Ana Sayfa", icon: <Home size={18} />, roles: ["admin", "staff"] },
+    { href: "/shop-home", title: "Ana Sayfa", icon: <Home size={18} />, roles: ["admin", "staff"] },
     { href: "/personnel", title: "Personel İşlemleri", icon: <Users size={18} />, roles: ["admin"] },
     { href: "/appointments", title: "Randevular", icon: <Calendar size={18} />, roles: ["admin", "staff"] },
     { href: "/services", title: "Hizmet Yönetimi", icon: <Scissors size={18} />, roles: ["admin"] },
     { href: "/shop-settings", title: "Dükkan Ayarları", icon: <Store size={18} />, roles: ["admin"] },
-    { href: "/shop-statistics", title: "Dükkan İstatistikleri", icon: <BarChart2 size={18} />, roles: ["admin", "staff"] },
+    { href: "/shop-statistics", title: "Dükkan İstatistikleri", icon: <BarChart2 size={18} />, roles: ["admin"] },
+    { href: "/operations-history", title: "İşlem Geçmişi", icon: <FileText size={18} />, roles: ["admin", "staff"] },
     { href: "/staff-profile", title: "Profilim", icon: <User size={18} />, roles: ["admin", "staff"] },
     { href: "/settings", title: "Ayarlar", icon: <Settings size={18} />, roles: ["admin", "staff"] },
   ];
@@ -62,6 +64,11 @@ export function StaffSidebar() {
     <aside className="hidden md:flex flex-col gap-2 w-64 border-r px-2 py-4 h-screen fixed">
       <div className="flex flex-col gap-4 p-2">
         <div className="text-xl font-bold text-center py-4 border-b">Kuaför Paneli</div>
+        
+        <div className="text-center py-2 mb-2">
+          <p className="text-sm text-muted-foreground">Hoşgeldiniz</p>
+          <p className="font-medium">{userName}</p>
+        </div>
         
         <nav className="flex flex-col gap-1">
           {filteredNavItems.map((item, index) => (

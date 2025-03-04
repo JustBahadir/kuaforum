@@ -11,6 +11,7 @@ import { StaffLayout } from "@/components/ui/staff-layout";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { Navigate } from "react-router-dom";
 
 export default function Personnel() {
   const { userRole } = useCustomerAuth();
@@ -42,6 +43,11 @@ export default function Personnel() {
       });
     }
   });
+
+  // Redirect staff to shop-home page
+  if (userRole === 'staff') {
+    return <Navigate to="/shop-home" replace />;
+  }
 
   if (!isAdmin) {
     return (
