@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Personel, personelServisi } from "@/lib/supabase";
@@ -25,9 +24,10 @@ interface PersonnelEditDialogProps {
   personelId: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onEditComplete?: () => void;
 }
 
-export function PersonnelEditDialog({ personelId, open, onOpenChange }: PersonnelEditDialogProps) {
+export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComplete }: PersonnelEditDialogProps) {
   const [personelDuzenle, setPersonelDuzenle] = useState<Personel | null>(null);
   const queryClient = useQueryClient();
 
@@ -52,6 +52,9 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange }: Personne
       queryClient.invalidateQueries({ queryKey: ['personel'] });
       toast.success("Personel başarıyla güncellendi.");
       onOpenChange(false);
+      if (onEditComplete) {
+        onEditComplete();
+      }
     },
   });
 
@@ -205,6 +208,18 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange }: Personne
                   )
                 }
                 required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit_iban">IBAN</Label>
+              <Input
+                id="edit_iban"
+                value={personelDuzenle.iban || ''}
+                onChange={(e) =>
+                  setPersonelDuzenle((prev) =>
+                    prev ? { ...prev, iban: e.target.value } : null
+                  )
+                }
               />
             </div>
           </div>
