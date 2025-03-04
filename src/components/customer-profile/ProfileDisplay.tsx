@@ -2,14 +2,16 @@
 import React from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { format } from "date-fns";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
-interface ProfileDisplayProps {
+export interface ProfileDisplayProps {
   firstName: string;
   lastName: string;
   email: string;
   phone: string;
-  gender?: string;
+  gender?: "erkek" | "kadın" | null;
   birthdate?: string;
+  avatarUrl?: string;
 }
 
 export function ProfileDisplay({ 
@@ -18,17 +20,17 @@ export function ProfileDisplay({
   email, 
   phone, 
   gender, 
-  birthdate 
+  birthdate,
+  avatarUrl
 }: ProfileDisplayProps) {
   
   // Format gender for display
-  const formatGender = (gender?: string) => {
+  const formatGender = (gender?: string | null) => {
     if (!gender) return "Belirtilmemiş";
     
     switch(gender) {
-      case "male": return "Erkek";
-      case "female": return "Kadın";
-      case "other": return "Diğer";
+      case "erkek": return "Erkek";
+      case "kadın": return "Kadın";
       default: return "Belirtilmemiş";
     }
   };
@@ -43,9 +45,18 @@ export function ProfileDisplay({
     }
   };
 
+  const initials = `${firstName?.charAt(0) || ''}${lastName?.charAt(0) || ''}`;
+
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center gap-4">
+        <Avatar className="h-16 w-16">
+          {avatarUrl ? (
+            <AvatarImage src={avatarUrl} alt={`${firstName} ${lastName}`} />
+          ) : (
+            <AvatarFallback>{initials}</AvatarFallback>
+          )}
+        </Avatar>
         <CardTitle>Mevcut Bilgilerim</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">

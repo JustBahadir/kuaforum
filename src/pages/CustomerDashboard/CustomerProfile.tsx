@@ -14,7 +14,7 @@ export default function CustomerProfile() {
     lastName: "",
     phone: "",
     email: "",
-    gender: "" as ("erkek" | "kadın" | null),
+    gender: null as ("erkek" | "kadın" | null),
     birthdate: "",
     avatarUrl: ""
   });

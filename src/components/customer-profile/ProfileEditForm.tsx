@@ -20,21 +20,22 @@ import {
 } from "@/components/ui/select";
 import { FileUpload } from "@/components/ui/file-upload";
 
-interface ProfileEditFormProps {
+export interface ProfileEditFormProps {
   profile: {
     firstName: string;
     lastName: string;
     phone: string;
     email: string;
-    gender: string;
+    gender: "erkek" | "kadın" | null;
     birthdate: string;
-    avatar_url?: string;
+    avatarUrl?: string;
   };
   handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
   handleSelectChange: (name: string, value: string) => void;
-  handleAvatarUpload: (url: string) => void;
+  handleAvatarUpload: (file: File) => Promise<void>;
   handleSave: () => Promise<void>;
   isSaving: boolean;
+  isUploading: boolean;
 }
 
 export function ProfileEditForm({ 
@@ -43,7 +44,8 @@ export function ProfileEditForm({
   handleSelectChange,
   handleAvatarUpload,
   handleSave, 
-  isSaving 
+  isSaving,
+  isUploading
 }: ProfileEditFormProps) {
   return (
     <Card>
@@ -56,7 +58,7 @@ export function ProfileEditForm({
           <div className="w-32 h-32 mb-4">
             <FileUpload
               onUploadComplete={handleAvatarUpload}
-              currentImageUrl={profile.avatar_url}
+              currentImageUrl={profile.avatarUrl}
               label="Profil Fotoğrafı Yükle"
               bucketName="photos"
               folderPath="avatars"

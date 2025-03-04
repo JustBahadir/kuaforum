@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -13,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 export default function StaffProfile() {
   const navigate = useNavigate();
-  const { userName, refreshProfile } = useCustomerAuth();
+  const { refreshProfile } = useCustomerAuth();
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
@@ -91,8 +92,11 @@ export default function StaffProfile() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSelectChange = (name: string, value: "erkek" | "kadın" | null) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
+  const handleSelectChange = (name: string, value: "erkek" | "kadın" | "") => {
+    setFormData(prev => ({ 
+      ...prev, 
+      [name]: value === "" ? null : value
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -107,7 +111,7 @@ export default function StaffProfile() {
         first_name: formData.firstName,
         last_name: formData.lastName,
         phone: phoneForSaving,
-        gender: formData.gender as "erkek" | "kadın" | null,
+        gender: formData.gender,
         birthdate: formData.birthdate,
       });
 
@@ -176,7 +180,10 @@ export default function StaffProfile() {
             </div>
             <div>
               <Label htmlFor="gender">Cinsiyet</Label>
-              <Select onValueChange={(value) => handleSelectChange("gender", value as "erkek" | "kadın")}>
+              <Select 
+                onValueChange={(value) => handleSelectChange("gender", value as "erkek" | "kadın")}
+                value={formData.gender || ""}
+              >
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Cinsiyet Seçin" />
                 </SelectTrigger>

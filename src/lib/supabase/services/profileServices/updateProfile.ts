@@ -1,7 +1,7 @@
 
 import { supabase } from '../../client';
 import { Profile } from '../../types';
-import { ProfileServiceError, ProfileUpdateData } from './profileTypes';
+import { ProfileServiceError, ProfileUpdateData, ProfileCreationParams } from './profileTypes';
 
 /**
  * Updates a user's profile
@@ -148,14 +148,7 @@ export async function updateProfile(data: ProfileUpdateData): Promise<Profile | 
  */
 export async function createOrUpdateProfile(
   userId: string, 
-  profileData: { 
-    first_name?: string; 
-    last_name?: string; 
-    role?: string; 
-    phone?: string;
-    gender?: string | null;
-    birthdate?: string;
-  }
+  profileData: ProfileCreationParams
 ): Promise<Profile | null> {
   try {
     console.log("Creating or updating profile for user:", userId, "with data:", profileData);
