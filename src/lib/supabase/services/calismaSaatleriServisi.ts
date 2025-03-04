@@ -1,3 +1,4 @@
+
 import { supabase } from '../client';
 import { CalismaSaati } from '../types';
 
@@ -30,5 +31,15 @@ export const calismaSaatleriServisi = {
 
     if (error) throw error;
     return data || [];
+  },
+  
+  async ekle(saat: Omit<CalismaSaati, "id">) {
+    const { data, error } = await supabase
+      .from('calisma_saatleri')
+      .insert([saat])
+      .select();
+
+    if (error) throw error;
+    return data[0];
   }
 };

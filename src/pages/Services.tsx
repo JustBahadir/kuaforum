@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { StaffLayout } from "@/components/ui/staff-layout";
-import { islemServisi, islemKategoriServisi } from "@/lib/supabase";
+import { islemServisi, kategoriServisi } from "@/lib/supabase";
 import { 
   Card, 
   CardContent, 
@@ -95,7 +95,7 @@ export default function Services() {
   
   const { data: kategoriler = [], isLoading: kategorilerLoading } = useQuery({
     queryKey: ['islem_kategorileri'],
-    queryFn: islemKategoriServisi.hepsiniGetir
+    queryFn: kategoriServisi.hepsiniGetir
   });
 
   const { mutate: addService, isPending: isAddingService } = useMutation({
@@ -118,7 +118,7 @@ export default function Services() {
   });
   
   const { mutate: addCategory, isPending: isAddingCategory } = useMutation({
-    mutationFn: (category: any) => islemKategoriServisi.kategoriEkle(category),
+    mutationFn: (category: any) => kategoriServisi.ekle(category),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['islem_kategorileri'] });
       setIsCategoryDialogOpen(false);

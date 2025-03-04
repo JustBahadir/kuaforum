@@ -89,6 +89,8 @@ export interface Musteri {
   total_services?: number;
 }
 
+export type RandevuDurumu = "beklemede" | "onaylandi" | "iptal_edildi" | "tamamlandi";
+
 export interface Randevu {
   id: number;
   musteri_id?: number;
@@ -97,7 +99,7 @@ export interface Randevu {
   dukkan_id?: number;
   tarih: string;
   saat: string;
-  durum: string;
+  durum: RandevuDurumu;
   notlar?: string;
   admin_notes?: string;
   created_at: string;
@@ -141,5 +143,3 @@ export interface CalismaSaati {
   kapanis?: string;
   kapali?: boolean;
 }
-
-export type RandevuDurumu = "beklemede" | "onaylandi" | "iptal_edildi" | "tamamlandi";

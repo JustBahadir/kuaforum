@@ -1,116 +1,108 @@
 
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { WorkingHours } from "./WorkingHours";
-import { toast } from "sonner";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { calismaSaatleriServisi } from "@/lib/supabase/services/calismaSaatleriServisi";
-import { Loader2 } from "lucide-react";
-import { CalismaSaati } from "@/lib/supabase/types";
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
+import { CalismaSaati } from '@/lib/supabase/types';
+import { calismaSaatleriServisi } from '@/lib/supabase';
 
-// Add dukkanId to the props interface
-interface WorkingHoursFormProps {
-  dukkanId?: number | null;
-}
-
-export function WorkingHoursForm({ dukkanId }: WorkingHoursFormProps) {
+export const WorkingHoursForm = () => {
   const queryClient = useQueryClient();
-  const [gunler, setGunler] = useState<CalismaSaati[]>([
+  const [loading, setLoading] = useState(false);
+  
+  const defaultCalismaSaatleri = [
     { gun: "Pazartesi", acilis: "09:00", kapanis: "18:00", kapali: false },
     { gun: "Salı", acilis: "09:00", kapanis: "18:00", kapali: false },
     { gun: "Çarşamba", acilis: "09:00", kapanis: "18:00", kapali: false },
     { gun: "Perşembe", acilis: "09:00", kapanis: "18:00", kapali: false },
     { gun: "Cuma", acilis: "09:00", kapanis: "18:00", kapali: false },
-    { gun: "Cumartesi", acilis: "09:00", kapanis: "18:00", kapali: false },
-    { gun: "Pazar", acilis: "09:00", kapanis: "18:00", kapali: true },
-  ]);
-  const [yukleniyor, setYukleniyor] = useState(false);
-
-  // Use the dukkanId in the query key if provided
-  const { data: calismaSaatleri, isLoading } = useQuery({
-    queryKey: ['calisma-saatleri', dukkanId],
-    queryFn: calismaSaatleriServisi.hepsiniGetir,
-    enabled: true,
-  });
-
-  useEffect(() => {
-    if (calismaSaatleri && calismaSaatleri.length > 0) {
-      setGunler(calismaSaatleri);
-    }
-  }, [calismaSaatleri]);
-
-  const kaydetMutation = useMutation({
-    mutationFn: async (gunler: CalismaSaati[]) => {
-      // Eğer ID varsa güncelle, yoksa ekle
-      const promises = gunler.map(gun => {
-        if (gun.id) {
-          return calismaSaatleriServisi.guncelle(gun.id, gun);
-        } else {
-          return calismaSaatleriServisi.ekle(gun);
-        }
-      });
-      
-      return Promise.all(promises);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['calisma-saatleri'] });
-      toast.success("Çalışma saatleri başarıyla kaydedildi");
-    },
-    onError: (error: any) => {
-      console.error("Çalışma saatleri kaydedilirken hata:", error);
-      toast.error("Çalışma saatleri kaydedilemedi: " + error.message);
+    { gun: "Cumartesi", acilis: "10:00", kapanis: "16:00", kapali: false },
+    { gun: "Pazar", acilis: "10:00", kapanis: "14:00", kapali: true }
+  ] as Omit<CalismaSaati, "id">[];
+  
+  const { data: calismaSaatleri = [], isLoading: saatlerLoading } = useQuery({
+    queryKey: ['calisma_saatleri'],
+    queryFn: async () => {
+      try {
+        return await calismaSaatleriServisi.hepsiniGetir();
+      } catch (error) {
+        toast.error("Çalışma saatleri yüklenirken bir hata oluştu.");
+        return [];
+      }
     }
   });
 
-  const saatleriGuncelle = (index: number, field: keyof CalismaSaati, value: any) => {
-    const yeniGunler = [...gunler];
-    yeniGunler[index] = { ...yeniGunler[index], [field]: value };
-    setGunler(yeniGunler);
+  const [saatler, setSaatler] = useState<(CalismaSaati | Omit<CalismaSaati, "id">)[]>(
+    calismaSaatleri.length > 0 ? calismaSaatleri : defaultCalismaSaatleri
+  );
+
+  const handleSaat = (index: number, field: keyof CalismaSaati, value: any) => {
+    const newSaatler = [...saatler];
+    (newSaatler[index] as any)[field] = value;
+    setSaatler(newSaatler);
   };
 
-  const kaydet = async () => {
-    setYukleniyor(true);
+  const handleSubmit = async () => {
+    setLoading(true);
     try {
-      // Add dukkanId to each record if it exists
-      const gunlerWithDukkan = dukkanId 
-        ? gunler.map(gun => ({ ...gun, dukkan_id: dukkanId }))
-        : gunler;
-        
-      await kaydetMutation.mutateAsync(gunlerWithDukkan);
+      if (calismaSaatleri.length === 0) {
+        // Create new records
+        for (const saat of saatler) {
+          await calismaSaatleriServisi.ekle(saat as Omit<CalismaSaati, "id">);
+        }
+      } else {
+        // Update existing records
+        await calismaSaatleriServisi.guncelle(saatler as CalismaSaati[]);
+      }
+      
+      queryClient.invalidateQueries({ queryKey: ['calisma_saatleri'] });
+      toast.success("Çalışma saatleri başarıyla kaydedildi.");
     } catch (error) {
-      console.error("Kaydetme işlemi sırasında hata:", error);
+      console.error(error);
+      toast.error("Çalışma saatleri kaydedilirken bir hata oluştu.");
     } finally {
-      setYukleniyor(false);
+      setLoading(false);
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <span className="ml-2">Çalışma saatleri yükleniyor...</span>
-      </div>
-    );
+  if (saatlerLoading) {
+    return <div>Yükleniyor...</div>;
   }
 
   return (
     <div className="space-y-6">
-      <WorkingHours gunler={gunler} onChange={saatleriGuncelle} />
-      
-      <Button 
-        onClick={kaydet} 
-        className="w-full md:w-auto"
-        disabled={yukleniyor}
-      >
-        {yukleniyor ? (
-          <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Kaydediliyor
-          </>
-        ) : (
-          "Değişiklikleri Kaydet"
-        )}
+      <h2 className="text-lg font-medium">Çalışma Saatleri</h2>
+      <div className="grid gap-4">
+        {saatler.map((saat, index) => (
+          <div key={index} className="grid grid-cols-4 gap-4 items-center">
+            <div className="font-medium">{saat.gun}</div>
+            <Input
+              type="time"
+              value={saat.acilis || ""}
+              onChange={(e) => handleSaat(index, 'acilis', e.target.value)}
+              disabled={saat.kapali}
+            />
+            <Input
+              type="time"
+              value={saat.kapanis || ""}
+              onChange={(e) => handleSaat(index, 'kapanis', e.target.value)}
+              disabled={saat.kapali}
+            />
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={!saat.kapali}
+                onCheckedChange={(checked) => handleSaat(index, 'kapali', !checked)}
+              />
+              <span>{saat.kapali ? 'Kapalı' : 'Açık'}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+      <Button onClick={handleSubmit} disabled={loading}>
+        {loading ? "Kaydediliyor..." : "Kaydet"}
       </Button>
     </div>
   );
-}
+};
