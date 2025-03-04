@@ -78,7 +78,18 @@ export default function StaffLogin() {
       try {
         const session = await authenticationService.getSession();
         if (session) {
-          navigate("/personnel");
+          const { data } = await supabase.auth.getUser();
+          if (data && data.user) {
+            const metadata = data.user.user_metadata;
+            // Check if user has staff or admin role
+            if (metadata && (metadata.role === 'staff' || metadata.role === 'admin')) {
+              navigate("/admin/dashboard");
+            } else {
+              // User is not staff or admin, sign them out
+              await supabase.auth.signOut();
+              toast.error("Bu giriş sayfası sadece personel ve yöneticiler içindir.");
+            }
+          }
         }
       } catch (error) {
         console.error("Auth check error:", error);
@@ -92,7 +103,7 @@ export default function StaffLogin() {
 
   const handleLoginSuccess = () => {
     // Redirect to personnel page
-    navigate("/personnel");
+    navigate("/admin/dashboard");
   };
 
   const handleBackClick = () => {

@@ -27,6 +27,7 @@ import CustomerOperations from "./pages/operations/CustomerOperations";
 import StaffOperations from "./pages/operations/StaffOperations";
 import { ThemeProvider } from "./components/ui/theme-provider";
 
+// Create the query client
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -46,7 +47,14 @@ function App() {
               {/* Landing Page */}
               <Route path="/" element={<HomePage />} />
               
-              {/* Staff routes */}
+              {/* Customer Routes */}
+              <Route path="/login" element={<CustomerAuth />} />
+              <Route path="/customer-dashboard/*" element={<CustomerDashboard />} />
+              <Route path="/customer-profile" element={<CustomerProfile />} />
+              <Route path="/customer-services" element={<CustomerOperations />} />
+              <Route path="/customer-appointments" element={<Appointments />} />
+              
+              {/* Staff Routes */}
               <Route path="/admin" element={<StaffLogin />} />
               <Route path="/admin/register" element={<StaffRegister />} />
               <Route path="/admin/dashboard" element={<Dashboard />} />
@@ -63,7 +71,7 @@ function App() {
               <Route path="/admin/operations-history" element={<OperationsHistory />} />
               <Route path="/admin/operations" element={<StaffOperations />} />
               
-              {/* Personnel shortcuts */}
+              {/* Shortcut Routes for Admin/Staff */}
               <Route path="/personnel" element={<Personnel />} />
               <Route path="/shop-home" element={<ShopHomePage />} />
               <Route path="/shop-settings" element={<ShopSettings />} />
@@ -71,11 +79,8 @@ function App() {
               <Route path="/operations-history" element={<OperationsHistory />} />
               <Route path="/staff-profile" element={<StaffProfile />} />
               <Route path="/staff-login" element={<StaffLogin />} />
-
-              {/* Customer routes */}
-              <Route path="/login" element={<CustomerAuth />} />
-              <Route path="/customer-dashboard/*" element={<CustomerDashboard />} />
-              <Route path="/profile" element={<CustomerProfile />} />
+              
+              {/* Public Routes */}
               <Route path="/services" element={<CustomerOperations />} />
               <Route path="/appointments" element={<Appointments />} />
               

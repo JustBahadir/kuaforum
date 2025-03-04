@@ -47,14 +47,24 @@ export default function Auth() {
     e.preventDefault();
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
       
       if (error) throw error;
       
-      navigate('/dashboard');
+      // Check if user is a customer
+      const metadata = data.user?.user_metadata;
+      if (metadata && metadata.role !== 'customer') {
+        // Sign out if not a customer
+        await supabase.auth.signOut();
+        toast.error('Bu giriş sayfası sadece müşteriler içindir.');
+        setLoading(false);
+        return;
+      }
+      
+      navigate('/customer-dashboard');
       toast.success('Giriş başarılı!');
     } catch (error: any) {
       toast.error(error.message);
@@ -156,8 +166,8 @@ export default function Auth() {
 
           <div className="mt-6 text-center">
             <Button variant="link" asChild>
-              <Link to="/staff-register">
-                Personel olarak kaydolmak için tıklayın
+              <Link to="/admin">
+                Personel olarak giriş yapmak için tıklayın
               </Link>
             </Button>
           </div>

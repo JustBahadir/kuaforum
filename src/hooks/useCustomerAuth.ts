@@ -37,7 +37,8 @@ export function useCustomerAuth() {
 
       setIsAuthenticated(true);
       
-      const role = await profileService.getUserRole();
+      // Get role from user metadata for reliable role checking
+      const role = user.user_metadata?.role || await profileService.getUserRole();
       setUserRole(role);
       console.log("User role from refreshProfile:", role);
       
@@ -106,7 +107,7 @@ export function useCustomerAuth() {
           // Ana sayfada veya login sayfalarında ise yönlendirme yapma
           if (location.pathname === "/" || 
               location.pathname === "/login" || 
-              location.pathname === "/staff-login") {
+              location.pathname === "/admin") {
             console.log("On public page, not redirecting");
           } else {
             console.log("Not authenticated, redirecting to home");
@@ -115,7 +116,8 @@ export function useCustomerAuth() {
         } else {
           setIsAuthenticated(true);
           
-          const role = await profileService.getUserRole();
+          // Get role from user metadata for more reliable role checking
+          const role = user.user_metadata?.role || await profileService.getUserRole();
           setUserRole(role);
           console.log("User role determined:", role);
           
@@ -149,14 +151,26 @@ export function useCustomerAuth() {
         if (event === 'SIGNED_IN') {
           console.log("SIGNED_IN event detected");
           setIsAuthenticated(true);
-          await refreshProfile();
           
-          const role = await profileService.getUserRole();
-          if ((role === 'staff' || role === 'admin') && location.pathname.includes('/staff-login')) {
-            navigate("/shop-home");
-          } else if (role === 'customer' && location.pathname.includes('/staff-login')) {
-            navigate("/customer-dashboard");
-            toast.info("Müşteri hesabı ile giriş yaptınız. Personel girişi için personel hesabı kullanmalısınız.");
+          const user = await authService.getCurrentUser();
+          if (user) {
+            // Get role directly from metadata for reliability
+            const role = user.user_metadata?.role || await profileService.getUserRole();
+            setUserRole(role);
+            
+            await refreshProfile();
+            
+            // Redirect based on role
+            if (role === 'admin') {
+              navigate("/admin/dashboard");
+            } else if (role === 'staff') {
+              navigate("/admin/dashboard");
+            } else if (role === 'customer') {
+              if (location.pathname.includes('/admin')) {
+                toast.info("Müşteri hesabı ile giriş yaptınız. Personel girişi için personel hesabı kullanmalısınız.");
+                navigate("/customer-dashboard");
+              }
+            }
           }
         } else if (event === 'SIGNED_OUT') {
           console.log("SIGNED_OUT event detected");

@@ -49,7 +49,11 @@ export const CustomerSection = ({
         
         <div className="mt-4 flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
           <Button 
-            onClick={handleFindSalons} 
+            onClick={() => {
+              if (selectedCity) {
+                handleLoginClick(); // Redirect to login before finding salons
+              }
+            }} 
             className="w-full sm:w-auto" 
             disabled={!selectedCity}
           >

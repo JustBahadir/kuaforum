@@ -35,13 +35,20 @@ export const shouldRedirect = (
     return false;
   }
 
-  // Admin users have full access
+  // Admin users have full access to admin pages
   if (userRole === 'admin') {
     // If admin is on the homepage, redirect to admin dashboard
     if (pathname === "/") {
       console.log("Admin ana sayfada, admin paneline yönlendiriliyor");
       return true;
     }
+    
+    // Admin trying to access customer pages
+    if (pathname.includes('/customer-dashboard')) {
+      console.log("Admin müşteri sayfasına erişmeye çalışıyor:", pathname);
+      return true;
+    }
+    
     console.log("Admin kullanıcı, yönlendirme gerekmez");
     return false;
   }
@@ -142,6 +149,11 @@ export const getRedirectPath = (
         currentPath.includes('/operations-history') ||
         currentPath.includes('/admin/appointments') ||
         currentPath === "/personnel") {
+      return "/customer-dashboard";
+    }
+    
+    // Customer on homepage should go to customer dashboard
+    if (currentPath === "/") {
       return "/customer-dashboard";
     }
   }
