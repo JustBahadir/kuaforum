@@ -1,11 +1,12 @@
 
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { kategoriServisi, islemServisi } from "@/lib/supabase";
+import { kategoriServisi, islemServisi, siralamaServisi } from "@/lib/supabase";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ServicesContent } from "@/components/operations/ServicesContent";
 import { WorkingHours } from "@/components/operations/WorkingHours";
 import { toast } from "sonner";
+import { StaffLayout } from "@/components/ui/staff-layout";
 
 export default function StaffOperations() {
   const [islemAdi, setIslemAdi] = useState("");
@@ -16,6 +17,10 @@ export default function StaffOperations() {
   const [dialogAcik, setDialogAcik] = useState(false);
   const [yeniKategoriAdi, setYeniKategoriAdi] = useState("");
   const [kategoriDialogAcik, setKategoriDialogAcik] = useState(false);
+  const [duzenleKategoriId, setDuzenleKategoriId] = useState<number | null>(null);
+  const [duzenleKategoriAdi, setDuzenleKategoriAdi] = useState("");
+  const [kategoriDuzenleDialogAcik, setKategoriDuzenleDialogAcik] = useState(false);
+  const [puanlamaAktif, setPuanlamaAktif] = useState(true);
 
   const queryClient = useQueryClient();
 
@@ -35,6 +40,10 @@ export default function StaffOperations() {
       queryClient.invalidateQueries({ queryKey: ['islemler'] });
       toast.success("İşlem başarıyla eklendi");
       formuSifirla();
+    },
+    onError: (error) => {
+      console.error("İşlem eklenirken hata:", error);
+      toast.error("İşlem eklenirken hata oluştu");
     }
   });
 
@@ -45,6 +54,10 @@ export default function StaffOperations() {
       queryClient.invalidateQueries({ queryKey: ['islemler'] });
       toast.success("İşlem başarıyla güncellendi");
       formuSifirla();
+    },
+    onError: (error) => {
+      console.error("İşlem güncellenirken hata:", error);
+      toast.error("İşlem güncellenirken hata oluştu");
     }
   });
 
@@ -53,6 +66,10 @@ export default function StaffOperations() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['islemler'] });
       toast.success("İşlem başarıyla silindi");
+    },
+    onError: (error) => {
+      console.error("İşlem silinirken hata:", error);
+      toast.error("İşlem silinirken hata oluştu");
     }
   });
 
@@ -65,6 +82,26 @@ export default function StaffOperations() {
       toast.success("Kategori başarıyla eklendi");
       setYeniKategoriAdi("");
       setKategoriDialogAcik(false);
+    },
+    onError: (error) => {
+      console.error("Kategori eklenirken hata:", error);
+      toast.error("Kategori eklenirken hata oluştu");
+    }
+  });
+
+  const { mutate: kategoriGuncelle } = useMutation({
+    mutationFn: ({ id, kategori }: { id: number; kategori: Partial<any> }) => 
+      kategoriServisi.guncelle(id, kategori),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['kategoriler'] });
+      toast.success("Kategori başarıyla güncellendi");
+      setDuzenleKategoriAdi("");
+      setDuzenleKategoriId(null);
+      setKategoriDuzenleDialogAcik(false);
+    },
+    onError: (error) => {
+      console.error("Kategori güncellenirken hata:", error);
+      toast.error("Kategori güncellenirken hata oluştu");
     }
   });
 
@@ -73,14 +110,34 @@ export default function StaffOperations() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['kategoriler'] });
       toast.success("Kategori başarıyla silindi");
+    },
+    onError: (error) => {
+      console.error("Kategori silinirken hata:", error);
+      toast.error("Kategori silinirken hata oluştu");
+    }
+  });
+
+  const { mutate: islemSiralamaGuncelle } = useMutation({
+    mutationFn: siralamaServisi.islemSiraGuncelle,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['islemler'] });
+      toast.success("İşlem sıralaması güncellendi");
+    },
+    onError: (error) => {
+      console.error("İşlem sıralaması güncellenirken hata:", error);
+      toast.error("İşlem sıralaması güncellenirken hata oluştu");
     }
   });
 
   const { mutate: kategoriSiralamaGuncelle } = useMutation({
-    mutationFn: kategoriServisi.siraGuncelle,
+    mutationFn: siralamaServisi.kategoriSiraGuncelle,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['kategoriler'] });
       toast.success("Kategori sıralaması güncellendi");
+    },
+    onError: (error) => {
+      console.error("Kategori sıralaması güncellenirken hata:", error);
+      toast.error("Kategori sıralaması güncellenirken hata oluştu");
     }
   });
 
@@ -98,7 +155,7 @@ export default function StaffOperations() {
     const islem = {
       islem_adi: islemAdi,
       fiyat,
-      puan,
+      puan: puanlamaAktif ? puan : 0,
       kategori_id: kategoriId
     };
     
@@ -114,12 +171,21 @@ export default function StaffOperations() {
     kategoriEkle(yeniKategoriAdi);
   };
 
+  const handleCategoryEditFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (duzenleKategoriId) {
+      kategoriGuncelle({ 
+        id: duzenleKategoriId, 
+        kategori: { kategori_adi: duzenleKategoriAdi } 
+      });
+    }
+  };
+
   const handleSiralamaChange = async (yeniIslemler: any[]) => {
     try {
-      await islemServisi.siraGuncelle(yeniIslemler);
-      queryClient.invalidateQueries({ queryKey: ['islemler'] });
-      toast.success("Sıralama güncellendi");
+      islemSiralamaGuncelle(yeniIslemler);
     } catch (error) {
+      console.error("Sıralama güncellenirken hata:", error);
       toast.error("Sıralama güncellenirken hata oluştu");
     }
   };
@@ -128,57 +194,74 @@ export default function StaffOperations() {
     kategoriSiralamaGuncelle(yeniKategoriler);
   };
 
+  const handleKategoriDuzenle = (kategori: any) => {
+    setDuzenleKategoriId(kategori.id);
+    setDuzenleKategoriAdi(kategori.kategori_adi);
+    setKategoriDuzenleDialogAcik(true);
+  };
+
   return (
-    <div className="container mx-auto py-6">
-      <Tabs defaultValue="hizmetler">
-        <TabsList>
-          <TabsTrigger value="hizmetler">Hizmetler</TabsTrigger>
-          <TabsTrigger value="calisma-saatleri">Çalışma Saatleri</TabsTrigger>
-        </TabsList>
+    <StaffLayout>
+      <div className="container mx-auto py-6">
+        <Tabs defaultValue="hizmetler">
+          <TabsList>
+            <TabsTrigger value="hizmetler">Hizmetler</TabsTrigger>
+            <TabsTrigger value="calisma-saatleri">Çalışma Saatleri</TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="hizmetler">
-          <ServicesContent
-            isStaff={true}
-            kategoriler={kategoriler}
-            islemler={islemler}
-            dialogAcik={dialogAcik}
-            setDialogAcik={setDialogAcik}
-            kategoriDialogAcik={kategoriDialogAcik}
-            setKategoriDialogAcik={setKategoriDialogAcik}
-            yeniKategoriAdi={yeniKategoriAdi}
-            setYeniKategoriAdi={setYeniKategoriAdi}
-            islemAdi={islemAdi}
-            setIslemAdi={setIslemAdi}
-            fiyat={fiyat}
-            setFiyat={setFiyat}
-            puan={puan}
-            setPuan={setPuan}
-            kategoriId={kategoriId}
-            setKategoriId={setKategoriId}
-            duzenleId={duzenleId}
-            onServiceFormSubmit={handleServiceFormSubmit}
-            onCategoryFormSubmit={handleCategoryFormSubmit}
-            onServiceEdit={(islem) => {
-              setDuzenleId(islem.id);
-              setIslemAdi(islem.islem_adi);
-              setFiyat(islem.fiyat);
-              setPuan(islem.puan);
-              setKategoriId(islem.kategori_id);
-              setDialogAcik(true);
-            }}
-            onServiceDelete={islemSil}
-            onCategoryDelete={kategoriSil}
-            onSiralamaChange={handleSiralamaChange}
-            onCategoryOrderChange={handleCategoryOrderChange}
-            onRandevuAl={() => {}}
-            formuSifirla={formuSifirla}
-          />
-        </TabsContent>
+          <TabsContent value="hizmetler">
+            <ServicesContent
+              isStaff={true}
+              kategoriler={kategoriler}
+              islemler={islemler}
+              dialogAcik={dialogAcik}
+              setDialogAcik={setDialogAcik}
+              kategoriDialogAcik={kategoriDialogAcik}
+              setKategoriDialogAcik={setKategoriDialogAcik}
+              kategoriDuzenleDialogAcik={kategoriDuzenleDialogAcik}
+              setKategoriDuzenleDialogAcik={setKategoriDuzenleDialogAcik}
+              yeniKategoriAdi={yeniKategoriAdi}
+              setYeniKategoriAdi={setYeniKategoriAdi}
+              duzenleKategoriId={duzenleKategoriId}
+              duzenleKategoriAdi={duzenleKategoriAdi}
+              setDuzenleKategoriAdi={setDuzenleKategoriAdi}
+              islemAdi={islemAdi}
+              setIslemAdi={setIslemAdi}
+              fiyat={fiyat}
+              setFiyat={setFiyat}
+              puan={puan}
+              setPuan={setPuan}
+              kategoriId={kategoriId}
+              setKategoriId={setKategoriId}
+              duzenleId={duzenleId}
+              onServiceFormSubmit={handleServiceFormSubmit}
+              onCategoryFormSubmit={handleCategoryFormSubmit}
+              onCategoryEditFormSubmit={handleCategoryEditFormSubmit}
+              onServiceEdit={(islem) => {
+                setDuzenleId(islem.id);
+                setIslemAdi(islem.islem_adi);
+                setFiyat(islem.fiyat);
+                setPuan(islem.puan);
+                setKategoriId(islem.kategori_id);
+                setDialogAcik(true);
+              }}
+              onServiceDelete={islemSil}
+              onCategoryDelete={kategoriSil}
+              onCategoryEdit={handleKategoriDuzenle}
+              onSiralamaChange={handleSiralamaChange}
+              onCategoryOrderChange={handleCategoryOrderChange}
+              onRandevuAl={() => {}}
+              formuSifirla={formuSifirla}
+              puanlamaAktif={puanlamaAktif}
+              setPuanlamaAktif={setPuanlamaAktif}
+            />
+          </TabsContent>
 
-        <TabsContent value="calisma-saatleri">
-          <WorkingHours isStaff={true} />
-        </TabsContent>
-      </Tabs>
-    </div>
+          <TabsContent value="calisma-saatleri">
+            <WorkingHours isStaff={true} />
+          </TabsContent>
+        </Tabs>
+      </div>
+    </StaffLayout>
   );
 }

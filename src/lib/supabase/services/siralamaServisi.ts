@@ -10,13 +10,18 @@ export const siralamaServisi = {
       sira: index
     }));
     
-    const { data, error } = await supabase
-      .from('islem_kategorileri')
-      .upsert(updates)
-      .select();
-      
-    if (error) throw error;
-    return data || [];
+    try {
+      const { data, error } = await supabase
+        .from('islem_kategorileri')
+        .upsert(updates)
+        .select();
+        
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Kategori sıra güncelleme hatası:', error);
+      throw error;
+    }
   },
   
   async islemSiraGuncelle(islemler: Islem[]): Promise<Islem[]> {
@@ -26,12 +31,17 @@ export const siralamaServisi = {
       sira: index
     }));
     
-    const { data, error } = await supabase
-      .from('islemler')
-      .upsert(updates)
-      .select();
-      
-    if (error) throw error;
-    return data || [];
+    try {
+      const { data, error } = await supabase
+        .from('islemler')
+        .upsert(updates)
+        .select();
+        
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('İşlem sıra güncelleme hatası:', error);
+      throw error;
+    }
   }
 };

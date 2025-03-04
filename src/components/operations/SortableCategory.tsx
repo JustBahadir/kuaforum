@@ -3,7 +3,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import { Trash2, GripVertical } from "lucide-react";
+import { Trash2, GripVertical, Pencil } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,6 +28,7 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
+  arrayMove
 } from '@dnd-kit/sortable';
 
 interface SortableCategoryProps {
@@ -38,6 +39,7 @@ interface SortableCategoryProps {
   onServiceEdit?: (islem: any) => void;
   onServiceDelete?: (islem: any) => void;
   onCategoryDelete?: (kategoriId: number) => void;
+  onCategoryEdit?: (kategori: any) => void;
   onSiralamaChange?: (items: any[]) => void;
   onRandevuAl?: (islemId: number) => void;
 }
@@ -50,6 +52,7 @@ export function SortableCategory({
   onServiceEdit,
   onServiceDelete,
   onCategoryDelete,
+  onCategoryEdit,
   onSiralamaChange,
   onRandevuAl
 }: SortableCategoryProps) {
@@ -84,9 +87,7 @@ export function SortableCategory({
       const oldIndex = islemler.findIndex((i) => i.id === active.id);
       const newIndex = islemler.findIndex((i) => i.id === over.id);
       
-      const newItems = [...islemler];
-      const [removed] = newItems.splice(oldIndex, 1);
-      newItems.splice(newIndex, 0, removed);
+      const newItems = arrayMove(islemler, oldIndex, newIndex);
       
       if (onSiralamaChange) {
         onSiralamaChange(newItems);
@@ -115,31 +116,50 @@ export function SortableCategory({
           {kategori.kategori_adi}
         </AccordionTrigger>
         {isStaff && (
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="ghost" size="sm" className="mr-2 text-destructive">
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Kategoriyi Sil</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Bu kategoriyi silmek istediğinizden emin misiniz?
-                  Bu işlem geri alınamaz.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>İptal</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={() => onCategoryDelete?.(kategori.id)}
-                  className="bg-destructive text-destructive-foreground"
+          <div className="flex mr-2">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={(e) => {
+                e.stopPropagation();
+                onCategoryEdit?.(kategori);
+              }}
+              className="mr-1"
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-destructive"
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  Sil
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Kategoriyi Sil</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Bu kategoriyi silmek istediğinizden emin misiniz?
+                    Bu işlem geri alınamaz.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>İptal</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => onCategoryDelete?.(kategori.id)}
+                    className="bg-destructive text-destructive-foreground"
+                  >
+                    Sil
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         )}
       </div>
       <AccordionContent className="px-4 py-2">

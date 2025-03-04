@@ -33,6 +33,7 @@ interface ServiceFormProps {
   duzenleId: number | null;
   onSubmit: (e: React.FormEvent) => void;
   onReset: () => void;
+  puanlamaAktif: boolean;
 }
 
 export function ServiceForm({
@@ -50,6 +51,7 @@ export function ServiceForm({
   duzenleId,
   onSubmit,
   onReset,
+  puanlamaAktif,
 }: ServiceFormProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -69,8 +71,8 @@ export function ServiceForm({
           <div className="space-y-2">
             <Label htmlFor="kategori">Kategori</Label>
             <Select
-              value={kategoriId?.toString()}
-              onValueChange={(value) => setKategoriId(Number(value))}
+              value={kategoriId?.toString() || ""}
+              onValueChange={(value) => setKategoriId(value ? Number(value) : null)}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Kategori seçin" />
@@ -97,7 +99,7 @@ export function ServiceForm({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="fiyat">Fiyat</Label>
+            <Label htmlFor="fiyat">Fiyat (₺)</Label>
             <Input
               id="fiyat"
               type="number"
@@ -106,16 +108,18 @@ export function ServiceForm({
               required
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="puan">Puan</Label>
-            <Input
-              id="puan"
-              type="number"
-              value={puan}
-              onChange={(e) => setPuan(Number(e.target.value))}
-              required
-            />
-          </div>
+          {puanlamaAktif && (
+            <div className="space-y-2">
+              <Label htmlFor="puan">Puan</Label>
+              <Input
+                id="puan"
+                type="number"
+                value={puan}
+                onChange={(e) => setPuan(Number(e.target.value))}
+                required
+              />
+            </div>
+          )}
           <Button type="submit" className="w-full">
             {duzenleId ? "Güncelle" : "Ekle"}
           </Button>

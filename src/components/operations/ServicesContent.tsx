@@ -1,6 +1,8 @@
+
 import { CategoryCard } from "./CategoryCard";
 import { ServiceForm } from "./ServiceForm";
 import { CategoryForm } from "./CategoryForm";
+import { CategoryEditForm } from "./CategoryEditForm";
 import { 
   Accordion, 
   AccordionContent, 
@@ -11,6 +13,16 @@ import { useState } from "react";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { SortableCategory } from "./SortableCategory";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Info } from "lucide-react";
 
 interface ServicesContentProps {
   isStaff: boolean;
@@ -20,8 +32,13 @@ interface ServicesContentProps {
   setDialogAcik: (open: boolean) => void;
   kategoriDialogAcik: boolean;
   setKategoriDialogAcik: (open: boolean) => void;
+  kategoriDuzenleDialogAcik: boolean;
+  setKategoriDuzenleDialogAcik: (open: boolean) => void;
   yeniKategoriAdi: string;
   setYeniKategoriAdi: (value: string) => void;
+  duzenleKategoriId: number | null;
+  duzenleKategoriAdi: string;
+  setDuzenleKategoriAdi: (value: string) => void;
   islemAdi: string;
   setIslemAdi: (value: string) => void;
   fiyat: number;
@@ -33,14 +50,18 @@ interface ServicesContentProps {
   duzenleId: number | null;
   onServiceFormSubmit: (e: React.FormEvent) => void;
   onCategoryFormSubmit: (e: React.FormEvent) => void;
+  onCategoryEditFormSubmit: (e: React.FormEvent) => void;
   onServiceEdit: (islem: any) => void;
   onServiceDelete: (islem: any) => void;
   onCategoryDelete: (kategoriId: number) => void;
+  onCategoryEdit: (kategori: any) => void;
   onSiralamaChange: (items: any[]) => void;
   onCategoryOrderChange?: (items: any[]) => void;
   onRandevuAl: (islemId: number) => void;
   formuSifirla: () => void;
   dukkanId?: number | null;
+  puanlamaAktif: boolean;
+  setPuanlamaAktif: (value: boolean) => void;
 }
 
 export function ServicesContent({
@@ -51,8 +72,13 @@ export function ServicesContent({
   setDialogAcik,
   kategoriDialogAcik,
   setKategoriDialogAcik,
+  kategoriDuzenleDialogAcik,
+  setKategoriDuzenleDialogAcik,
   yeniKategoriAdi,
   setYeniKategoriAdi,
+  duzenleKategoriId,
+  duzenleKategoriAdi,
+  setDuzenleKategoriAdi,
   islemAdi,
   setIslemAdi,
   fiyat,
@@ -64,14 +90,18 @@ export function ServicesContent({
   duzenleId,
   onServiceFormSubmit,
   onCategoryFormSubmit,
+  onCategoryEditFormSubmit,
   onServiceEdit,
   onServiceDelete,
   onCategoryDelete,
+  onCategoryEdit,
   onSiralamaChange,
   onCategoryOrderChange,
   onRandevuAl,
   formuSifirla,
   dukkanId,
+  puanlamaAktif,
+  setPuanlamaAktif,
 }: ServicesContentProps) {
   const [openCategories, setOpenCategories] = useState<string[]>([]);
   
@@ -113,30 +143,64 @@ export function ServicesContent({
       {isStaff && (
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">Hizmet Yönetimi</h1>
-          <div className="flex gap-2">
-            <CategoryForm 
-              isOpen={kategoriDialogAcik}
-              onOpenChange={setKategoriDialogAcik}
-              kategoriAdi={yeniKategoriAdi}
-              setKategoriAdi={setYeniKategoriAdi}
-              onSubmit={onCategoryFormSubmit}
-            />
-            <ServiceForm
-              isOpen={dialogAcik}
-              onOpenChange={setDialogAcik}
-              kategoriler={kategoriler}
-              islemAdi={islemAdi}
-              setIslemAdi={setIslemAdi}
-              fiyat={fiyat}
-              setFiyat={setFiyat}
-              puan={puan}
-              setPuan={setPuan}
-              kategoriId={kategoriId}
-              setKategoriId={setKategoriId}
-              duzenleId={duzenleId}
-              onSubmit={onServiceFormSubmit}
-              onReset={formuSifirla}
-            />
+          <div className="flex items-center gap-4">
+            <div className="flex items-center space-x-2">
+              <Switch 
+                id="puanlama-modu" 
+                checked={puanlamaAktif} 
+                onCheckedChange={setPuanlamaAktif} 
+              />
+              <Label htmlFor="puanlama-modu" className="text-sm">Puanlama Sistemi</Label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Info className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="max-w-xs">
+                      Puanlama sistemi, müşterileri ve personeli ödüllendirmek için kullanılan bir sistemdir.
+                      Aktif edildiğinde, hizmetlere puan ataması yapabilirsiniz.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            
+            <div className="flex gap-2">
+              <CategoryForm 
+                isOpen={kategoriDialogAcik}
+                onOpenChange={setKategoriDialogAcik}
+                kategoriAdi={yeniKategoriAdi}
+                setKategoriAdi={setYeniKategoriAdi}
+                onSubmit={onCategoryFormSubmit}
+              />
+              <CategoryEditForm
+                isOpen={kategoriDuzenleDialogAcik}
+                onOpenChange={setKategoriDuzenleDialogAcik}
+                kategoriAdi={duzenleKategoriAdi}
+                setKategoriAdi={setDuzenleKategoriAdi}
+                onSubmit={onCategoryEditFormSubmit}
+              />
+              <ServiceForm
+                isOpen={dialogAcik}
+                onOpenChange={setDialogAcik}
+                kategoriler={kategoriler}
+                islemAdi={islemAdi}
+                setIslemAdi={setIslemAdi}
+                fiyat={fiyat}
+                setFiyat={setFiyat}
+                puan={puan}
+                setPuan={setPuan}
+                kategoriId={kategoriId}
+                setKategoriId={setKategoriId}
+                duzenleId={duzenleId}
+                onSubmit={onServiceFormSubmit}
+                onReset={formuSifirla}
+                puanlamaAktif={puanlamaAktif}
+              />
+            </div>
           </div>
         </div>
       )}
@@ -168,6 +232,7 @@ export function ServicesContent({
                   onServiceEdit={onServiceEdit}
                   onServiceDelete={onServiceDelete}
                   onCategoryDelete={onCategoryDelete}
+                  onCategoryEdit={onCategoryEdit}
                   onSiralamaChange={onSiralamaChange}
                   onRandevuAl={onRandevuAl}
                 />
