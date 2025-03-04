@@ -21,6 +21,7 @@ export type Dukkan = {
   created_at?: string;
   ad: string;
   adres?: string;
+  il_ilce?: string;
   telefon?: string;
   sahibi_id: string;
   logo_url?: string;
