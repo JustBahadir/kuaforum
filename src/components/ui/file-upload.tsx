@@ -7,6 +7,8 @@ import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
 
 interface FileUploadProps {
+  // Added id prop
+  id?: string;
   // Changed to accept string URLs rather than File objects
   onUploadComplete: (url: string) => void;
   currentImageUrl?: string;
@@ -17,6 +19,7 @@ interface FileUploadProps {
 }
 
 export function FileUpload({
+  id,
   onUploadComplete,
   currentImageUrl,
   label = "Resim Yükle",
@@ -78,6 +81,8 @@ export function FileUpload({
     onUploadComplete("");
   };
 
+  const inputId = id || "file-upload";
+
   return (
     <div className="space-y-4">
       {previewUrl ? (
@@ -110,10 +115,10 @@ export function FileUpload({
           accept={acceptedFileTypes}
           onChange={handleFileChange}
           className="hidden"
-          id="file-upload"
+          id={inputId}
           disabled={isUploading}
         />
-        <label htmlFor="file-upload" className="w-full">
+        <label htmlFor={inputId} className="w-full">
           <Button 
             type="button" 
             className="w-full" 
