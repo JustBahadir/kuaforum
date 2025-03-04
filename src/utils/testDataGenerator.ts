@@ -6,7 +6,8 @@ import { faker } from '@faker-js/faker';
 import { toast } from "sonner";
 
 // Set the faker locale to Turkish
-faker.setDefaultLocale('tr');
+// Use the correct method to set locale for Faker v9
+faker.setLocale('tr');
 
 const generateDukkan = async () => {
   try {
