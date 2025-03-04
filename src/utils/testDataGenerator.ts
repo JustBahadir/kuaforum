@@ -1,8 +1,11 @@
 // Update imports
 import { supabase } from "@/lib/supabase/client";
 import { islemServisi, kategoriServisi, musteriServisi, personelServisi, personelIslemleriServisi, dukkanServisi } from "@/lib/supabase";
-import { faker } from '@faker-js/faker/locale/tr';
+import { faker } from '@faker-js/faker';
 import { toast } from "sonner";
+
+// Set the faker locale to Turkish
+faker.setLocale('tr');
 
 const generateDukkan = async () => {
   try {
@@ -270,4 +273,14 @@ const generateAll = async () => {
   }
 };
 
-export { generateAll, generateDukkan, generateKategoriler, generatePersonel, generateMusteri, generateIslemler, generateIslemForEachPersonel };
+// Export all functions including generateAll as generateTestData for backward compatibility
+export { 
+  generateAll as generateTestData, 
+  generateAll, 
+  generateDukkan, 
+  generateKategoriler, 
+  generatePersonel, 
+  generateMusteri, 
+  generateIslemler, 
+  generateIslemForEachPersonel 
+};
