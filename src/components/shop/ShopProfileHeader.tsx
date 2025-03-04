@@ -3,12 +3,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ShopProfilePhotoUpload } from "@/components/shop/ShopProfilePhotoUpload";
 import { Camera, Edit } from "lucide-react";
-import { UseQueryClient } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 
 interface ShopProfileHeaderProps {
   dukkanData: any;
   userRole: string;
-  queryClient: UseQueryClient;
+  queryClient: QueryClient;
 }
 
 export function ShopProfileHeader({ dukkanData, userRole, queryClient }: ShopProfileHeaderProps) {

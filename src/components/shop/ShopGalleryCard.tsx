@@ -4,12 +4,12 @@ import { Button } from "@/components/ui/button";
 import { ImagePlus } from "lucide-react";
 import { ShopGallery } from "@/components/shop/ShopGallery";
 import { ShopProfilePhotoUpload } from "@/components/shop/ShopProfilePhotoUpload";
-import { UseQueryClient } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 
 interface ShopGalleryCardProps {
   dukkanId: number;
   userRole: string;
-  queryClient: UseQueryClient;
+  queryClient: QueryClient;
 }
 
 export function ShopGalleryCard({ dukkanId, userRole, queryClient }: ShopGalleryCardProps) {
