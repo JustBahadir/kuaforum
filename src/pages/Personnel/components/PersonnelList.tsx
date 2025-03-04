@@ -37,8 +37,10 @@ export function PersonnelList() {
     queryKey: ['personel'],
     queryFn: () => personelServisi.hepsiniGetir(),
     retry: 1,
-    onError: (error) => {
-      console.error("Personel verisi alınırken hata:", error);
+    meta: {
+      onError: (error: any) => {
+        console.error("Personel verisi alınırken hata:", error);
+      }
     }
   });
   
