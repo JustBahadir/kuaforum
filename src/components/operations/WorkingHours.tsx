@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -21,6 +22,16 @@ const gunSirasi = {
   "cuma": 5,
   "cumartesi": 6,
   "pazar": 7
+};
+
+const gunIsimleri: Record<string, string> = {
+  "pazartesi": "Pazartesi",
+  "sali": "Salı",
+  "carsamba": "Çarşamba",
+  "persembe": "Perşembe",
+  "cuma": "Cuma",
+  "cumartesi": "Cumartesi",
+  "pazar": "Pazar"
 };
 
 export function WorkingHours({ isStaff = true, gunler = [], onChange }: WorkingHoursProps) {
@@ -130,7 +141,7 @@ export function WorkingHours({ isStaff = true, gunler = [], onChange }: WorkingH
           {calismaSaatleri.map((saat: CalismaSaati, index: number) => (
             <tr key={saat.id || index}>
               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                {saat.gun}
+                {gunIsimleri[saat.gun] || saat.gun}
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                 {editing === (saat.id || index) ? (
@@ -140,7 +151,7 @@ export function WorkingHours({ isStaff = true, gunler = [], onChange }: WorkingH
                     onChange={(e) => handleTempChange(saat.id || index, 'acilis', e.target.value)}
                   />
                 ) : (
-                  saat.kapali ? "-" : saat.acilis
+                  saat.kapali ? "-" : saat.acilis?.substring(0, 5)
                 )}
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -151,7 +162,7 @@ export function WorkingHours({ isStaff = true, gunler = [], onChange }: WorkingH
                     onChange={(e) => handleTempChange(saat.id || index, 'kapanis', e.target.value)}
                   />
                 ) : (
-                  saat.kapali ? "-" : saat.kapanis
+                  saat.kapali ? "-" : saat.kapanis?.substring(0, 5)
                 )}
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

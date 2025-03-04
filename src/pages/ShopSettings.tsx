@@ -31,9 +31,7 @@ export default function ShopSettings() {
   useEffect(() => {
     if (dukkan) {
       setShopCode(dukkan.kod);
-      // İl/ilçe bilgisini adres olarak atama
       setAddress(dukkan.adres || "");
-      // Açık adres bilgisini fullAddress olarak atama
       setFullAddress(dukkan.acik_adres || "");
     }
   }, [dukkan]);
@@ -70,18 +68,32 @@ export default function ShopSettings() {
   };
 
   const updateShopAddress = useMutation({
-    mutationFn: (newFullAddress: string) => {
-      return dukkanServisi.dukkaniGuncelle(dukkanId!, {
-        acik_adres: newFullAddress
-      });
+    mutationFn: async (newFullAddress: string) => {
+      if (!dukkanId) {
+        throw new Error("Dükkan ID bulunamadı");
+      }
+      
+      try {
+        console.log("Açık adres güncelleniyor:", newFullAddress);
+        
+        const result = await dukkanServisi.dukkaniGuncelle(dukkanId, {
+          acik_adres: newFullAddress
+        });
+        
+        console.log("Güncelleme sonucu:", result);
+        return result;
+      } catch (err) {
+        console.error("Adres güncelleme mutasyon hatası:", err);
+        throw err;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dukkan', dukkanId] });
       toast.success("Dükkan açık adresi güncellendi");
     },
     onError: (error) => {
-      toast.error("Açık adres güncellenirken bir hata oluştu");
-      console.error("Adres güncelleme hatası:", error);
+      console.error("Açık adres güncelleme hatası:", error);
+      toast.error(`Açık adres güncellenirken bir hata oluştu: ${error instanceof Error ? error.message : String(error)}`);
     }
   });
 
@@ -168,10 +180,19 @@ export default function ShopSettings() {
                   </div>
                   
                   <div className="flex gap-2">
-                    <Button className="flex-1" onClick={handleAddressUpdate}>
-                      Açık Adresi Kaydet
+                    <Button 
+                      className="flex-1" 
+                      onClick={handleAddressUpdate}
+                      disabled={updateShopAddress.isPending}
+                    >
+                      {updateShopAddress.isPending ? "Kaydediliyor..." : "Açık Adresi Kaydet"}
                     </Button>
-                    <Button variant="outline" onClick={openInMaps} className="flex items-center gap-2">
+                    <Button 
+                      variant="outline" 
+                      onClick={openInMaps} 
+                      className="flex items-center gap-2"
+                      disabled={!fullAddress}
+                    >
                       <MapPin size={16} />
                       Haritada Göster
                     </Button>

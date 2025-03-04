@@ -76,10 +76,27 @@ export default function ShopHomePage() {
       try {
         const { data, error } = await supabase
           .from('personel')
-          .select('*')
+          .select('*, auth_id')
           .eq('dukkan_id', shopId);
           
         if (error) throw error;
+        
+        // Get profiles for all personnel to get avatar_url
+        if (data && data.length > 0) {
+          for (const personel of data) {
+            if (personel.auth_id) {
+              const { data: profileData } = await supabase
+                .from('profiles')
+                .select('avatar_url')
+                .eq('id', personel.auth_id)
+                .maybeSingle();
+                
+              if (profileData && profileData.avatar_url) {
+                personel.avatar_url = profileData.avatar_url;
+              }
+            }
+          }
+        }
         return data || [];
       } catch (error) {
         console.error("Personel listesi alınırken hata:", error);
@@ -291,8 +308,8 @@ export default function ShopHomePage() {
                   </Button>
                 )}
                 
-                <div className="flex items-center gap-3">
-                  <Phone className="h-5 w-5 text-purple-600 flex-shrink-0" />
+                <div className="flex items-start gap-3">
+                  <Phone className="h-5 w-5 text-purple-600 flex-shrink-0 mt-0.5" />
                   <span>
                     {dukkanData.telefon 
                       ? formatPhoneNumber(dukkanData.telefon) 
@@ -400,9 +417,11 @@ export default function ShopHomePage() {
                         </Avatar>
                         <div>
                           <h3 className="font-medium">{personel.ad_soyad}</h3>
-                          <p className="text-sm text-muted-foreground">
-                            {personel.telefon ? formatPhoneNumber(personel.telefon) : ""}
-                          </p>
+                          {userRole === 'admin' && personel.telefon && (
+                            <p className="text-sm text-muted-foreground">
+                              {formatPhoneNumber(personel.telefon)}
+                            </p>
+                          )}
                         </div>
                       </div>
                     ))}
