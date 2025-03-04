@@ -59,6 +59,7 @@ export interface Personel {
   dukkan_id?: number;
   dukkan?: Dukkan;
   created_at: string;
+  iban?: string;
 }
 
 export interface PersonelIslemi {
