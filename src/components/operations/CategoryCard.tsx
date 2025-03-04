@@ -36,6 +36,7 @@ interface CategoryCardProps {
   onKategoriDelete?: (kategoriId: number) => void;
   onSiralamaChange?: (items: any[]) => void;
   onRandevuAl?: (islemId: number) => void;
+  puanlamaAktif?: boolean;
 }
 
 export function CategoryCard({
@@ -46,7 +47,8 @@ export function CategoryCard({
   onDelete,
   onKategoriDelete,
   onSiralamaChange,
-  onRandevuAl
+  onRandevuAl,
+  puanlamaAktif
 }: CategoryCardProps) {
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -115,11 +117,12 @@ export function CategoryCard({
             {islemler.map((islem) => (
               <ServiceItem
                 key={islem.id}
-                id={islem.id}
                 islem={islem}
                 isStaff={isStaff}
-                onEdit={onEdit}
-                onDelete={onDelete}
+                onEdit={() => onEdit?.(islem)}
+                onDelete={() => onDelete?.(islem.id)}
+                onRandevuAl={() => {}}
+                puanlamaAktif={puanlamaAktif}
               />
             ))}
           </SortableContext>
@@ -129,10 +132,12 @@ export function CategoryCard({
           {islemler.map((islem) => (
             <ServiceItem
               key={islem.id}
-              id={islem.id}
               islem={islem}
               isStaff={isStaff}
-              onRandevuAl={onRandevuAl}
+              onEdit={() => {}}
+              onDelete={() => {}}
+              onRandevuAl={() => onRandevuAl?.(islem.id)}
+              puanlamaAktif={puanlamaAktif}
             />
           ))}
         </div>

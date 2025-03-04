@@ -1,4 +1,3 @@
-
 import { CategoryCard } from "./CategoryCard";
 import { ServiceForm } from "./ServiceForm";
 import { CategoryForm } from "./CategoryForm";
@@ -22,7 +21,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Info } from "lucide-react";
+import { Info, Plus } from "lucide-react";
 
 interface ServicesContentProps {
   isStaff: boolean;
