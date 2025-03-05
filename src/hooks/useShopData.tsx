@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
 import { dukkanServisi } from "@/lib/supabase";
 import { authService } from "@/lib/auth/authService";
+import { gunSirasi } from "@/components/operations/constants/workingDays";
 
 export function useShopData(dukkanId: number | null) {
   const [dukkanData, setDukkanData] = useState<any>(null);
@@ -98,17 +99,7 @@ export function useShopData(dukkanId: number | null) {
           
         if (error) throw error;
         
-        // Correct order for Turkish days
-        const gunSirasi = {
-          "pazartesi": 1,
-          "sali": 2,
-          "carsamba": 3,
-          "persembe": 4,
-          "cuma": 5,
-          "cumartesi": 6,
-          "pazar": 7
-        };
-        
+        // Sort days correctly from Monday to Sunday
         return data.sort((a, b) => {
           const aIndex = gunSirasi[a.gun as keyof typeof gunSirasi] || 99;
           const bIndex = gunSirasi[b.gun as keyof typeof gunSirasi] || 99;

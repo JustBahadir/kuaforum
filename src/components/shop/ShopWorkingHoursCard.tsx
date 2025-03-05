@@ -2,6 +2,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Edit } from "lucide-react";
+import { gunSirasi, gunIsimleri } from "@/components/operations/constants/workingDays";
 
 interface ShopWorkingHoursCardProps {
   calisma_saatleri: any[];
@@ -9,21 +10,10 @@ interface ShopWorkingHoursCardProps {
   gunIsimleri: Record<string, string>;
 }
 
-export function ShopWorkingHoursCard({ calisma_saatleri, userRole, gunIsimleri }: ShopWorkingHoursCardProps) {
+export function ShopWorkingHoursCard({ calisma_saatleri, userRole }: ShopWorkingHoursCardProps) {
   const formatTime = (time: string | null) => {
     if (!time) return "Kapalı";
     return time.substring(0, 5);
-  };
-
-  // Correct order for Turkish days
-  const gunSirasi = {
-    "pazartesi": 1,
-    "sali": 2,
-    "carsamba": 3,
-    "persembe": 4,
-    "cuma": 5,
-    "cumartesi": 6,
-    "pazar": 7
   };
 
   // Make a sorted copy of the working hours

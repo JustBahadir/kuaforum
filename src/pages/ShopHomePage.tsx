@@ -13,6 +13,7 @@ import { ShopWorkingHoursCard } from "@/components/shop/ShopWorkingHoursCard";
 import { ShopGalleryCard } from "@/components/shop/ShopGalleryCard";
 import { ShopPersonnelCard } from "@/components/shop/ShopPersonnelCard";
 import { ShopServicesCard } from "@/components/shop/ShopServicesCard";
+import { gunIsimleri } from "@/components/operations/constants/workingDays";
 
 export default function ShopHomePage() {
   const { dukkanId, userRole } = useCustomerAuth();
@@ -24,16 +25,6 @@ export default function ShopHomePage() {
     personelListesi, 
     calisma_saatleri 
   } = useShopData(dukkanId);
-
-  const gunIsimleri: Record<string, string> = {
-    "pazartesi": "Pazartesi",
-    "sali": "Salı",
-    "carsamba": "Çarşamba",
-    "persembe": "Perşembe",
-    "cuma": "Cuma",
-    "cumartesi": "Cumartesi",
-    "pazar": "Pazar"
-  };
 
   if (loading) {
     return (
