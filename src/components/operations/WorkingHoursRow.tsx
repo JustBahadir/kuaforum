@@ -1,10 +1,11 @@
 
-import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
+import { TableRow, TableCell } from '@/components/ui/table';
 import { CalismaSaati } from '@/lib/supabase/types';
 import { gunIsimleri } from './constants/workingDays';
+import { Edit, Save, X } from 'lucide-react';
 
 interface WorkingHoursRowProps {
   saat: CalismaSaati;
@@ -31,71 +32,74 @@ export function WorkingHoursRow({
 }: WorkingHoursRowProps) {
   const uniqueId = saat.id || index;
   const isEditing = editing === uniqueId;
+  const isKapali = (tempChanges[uniqueId]?.kapali !== undefined) 
+    ? tempChanges[uniqueId].kapali 
+    : saat.kapali;
 
   return (
-    <tr key={uniqueId}>
-      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+    <TableRow key={uniqueId} className="hover:bg-gray-50">
+      <TableCell className="font-medium">
         {gunIsimleri[saat.gun] || saat.gun}
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+      </TableCell>
+      <TableCell>
         {isEditing ? (
           <Input
             type="time"
-            defaultValue={saat.acilis}
+            value={(tempChanges[uniqueId]?.acilis !== undefined) 
+              ? tempChanges[uniqueId].acilis 
+              : saat.acilis || ""}
             onChange={(e) => onTempChange(uniqueId, 'acilis', e.target.value)}
-            disabled={(tempChanges[uniqueId]?.kapali !== undefined) 
-              ? tempChanges[uniqueId].kapali 
-              : saat.kapali}
+            disabled={isKapali}
+            className="w-32"
           />
         ) : (
-          saat.kapali ? "-" : saat.acilis?.substring(0, 5)
+          isKapali ? "-" : (saat.acilis?.substring(0, 5) || "-")
         )}
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+      </TableCell>
+      <TableCell>
         {isEditing ? (
           <Input
             type="time"
-            defaultValue={saat.kapanis}
+            value={(tempChanges[uniqueId]?.kapanis !== undefined) 
+              ? tempChanges[uniqueId].kapanis 
+              : saat.kapanis || ""}
             onChange={(e) => onTempChange(uniqueId, 'kapanis', e.target.value)}
-            disabled={(tempChanges[uniqueId]?.kapali !== undefined) 
-              ? tempChanges[uniqueId].kapali 
-              : saat.kapali}
+            disabled={isKapali}
+            className="w-32"
           />
         ) : (
-          saat.kapali ? "-" : saat.kapanis?.substring(0, 5)
+          isKapali ? "-" : (saat.kapanis?.substring(0, 5) || "-")
         )}
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-        {isStaff ? (
-          isEditing ? (
-            <Switch
-              checked={!((tempChanges[uniqueId]?.kapali !== undefined) 
-                ? tempChanges[uniqueId].kapali 
-                : saat.kapali)}
-              onCheckedChange={(checked) => onTempChange(uniqueId, 'kapali', !checked)}
-            />
-          ) : (
-            <Switch
-              checked={!saat.kapali}
-              onCheckedChange={(checked) => {
+      </TableCell>
+      <TableCell>
+        <div className="flex items-center gap-2">
+          <Switch
+            checked={!isKapali}
+            onCheckedChange={(checked) => {
+              if (isEditing) {
+                onTempChange(uniqueId, 'kapali', !checked);
+              } else {
                 onTempChange(uniqueId, 'kapali', !checked);
                 onSaveChanges(uniqueId);
-              }}
-            />
-          )
-        ) : (
-          saat.kapali ? "Kapalı" : "Açık"
-        )}
-      </td>
+              }
+            }}
+            disabled={isStaff ? false : true}
+          />
+          <span className="text-sm text-gray-600">
+            {isKapali ? "Kapalı" : "Açık"}
+          </span>
+        </div>
+      </TableCell>
       {isStaff && (
-        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+        <TableCell className="text-right">
           {isEditing ? (
-            <div className="flex gap-2">
+            <div className="flex gap-2 justify-end">
               <Button
                 variant="default"
                 size="sm"
                 onClick={() => onSaveChanges(uniqueId)}
               >
+                <Save className="h-4 w-4 mr-1" />
                 Kaydet
               </Button>
               <Button
@@ -103,19 +107,22 @@ export function WorkingHoursRow({
                 size="sm"
                 onClick={() => onCancelEditing(uniqueId)}
               >
+                <X className="h-4 w-4 mr-1" />
                 İptal
               </Button>
             </div>
           ) : (
             <Button
               variant="ghost"
+              size="sm"
               onClick={() => onStartEditing(uniqueId)}
             >
+              <Edit className="h-4 w-4 mr-1" />
               Düzenle
             </Button>
           )}
-        </td>
+        </TableCell>
       )}
-    </tr>
+    </TableRow>
   );
 }

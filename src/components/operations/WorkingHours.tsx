@@ -1,8 +1,9 @@
 
-import { Table } from '@/components/ui/table';
+import { TableHeader, TableRow, TableHead, TableBody, TableCell, Table } from '@/components/ui/table';
 import { CalismaSaati } from '@/lib/supabase/types';
 import { WorkingHoursRow } from './WorkingHoursRow';
 import { useWorkingHours } from './hooks/useWorkingHours';
+import { gunSirasi } from './constants/workingDays';
 
 interface WorkingHoursProps {
   isStaff?: boolean;
@@ -21,20 +22,27 @@ export function WorkingHours({ isStaff = true, gunler = [], onChange }: WorkingH
     cancelEditing
   } = useWorkingHours(isStaff, gunler, onChange);
 
+  // Sort days from Monday to Sunday
+  const sortedSaatler = [...calismaSaatleri].sort((a, b) => {
+    const aIndex = gunSirasi[a.gun as keyof typeof gunSirasi] || 99;
+    const bIndex = gunSirasi[b.gun as keyof typeof gunSirasi] || 99;
+    return aIndex - bIndex;
+  });
+
   return (
     <div className="border rounded-lg overflow-hidden">
       <Table>
-        <thead className="bg-gray-50">
-          <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Gün</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Açılış</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kapanış</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Durum</th>
-            {isStaff && <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">İşlemler</th>}
-          </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
-          {calismaSaatleri.map((saat: CalismaSaati, index: number) => (
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-[150px]">Gün</TableHead>
+            <TableHead>Açılış</TableHead>
+            <TableHead>Kapanış</TableHead>
+            <TableHead>Durum</TableHead>
+            {isStaff && <TableHead className="text-right">İşlemler</TableHead>}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {sortedSaatler.map((saat: CalismaSaati, index: number) => (
             <WorkingHoursRow
               key={saat.id || index}
               saat={saat}
@@ -48,7 +56,7 @@ export function WorkingHours({ isStaff = true, gunler = [], onChange }: WorkingH
               onCancelEditing={cancelEditing}
             />
           ))}
-        </tbody>
+        </TableBody>
       </Table>
     </div>
   );
