@@ -12,7 +12,26 @@ export async function getProfile(): Promise<Profile | null> {
     
     if (userError || !user) {
       console.error("Kullanıcı bilgisi alınamadı:", userError);
-      return null;
+      
+      // Oturumu yenilemeyi dene
+      try {
+        const { data, error: refreshError } = await supabase.auth.refreshSession();
+        if (refreshError) {
+          console.error("Oturum yenileme hatası:", refreshError);
+          return null;
+        }
+        
+        if (!data.user) {
+          console.error("Yenileme sonrası kullanıcı bulunamadı");
+          return null;
+        }
+        
+        // Yenileme başarılı oldu, kullanıcıyı güncelle
+        user = data.user;
+      } catch (refreshErr) {
+        console.error("Oturum yenileme işlemi sırasında hata:", refreshErr);
+        return null;
+      }
     }
     
     // Önce profili doğrudan admin istemcisinden almayı dene (RLS'yi bypass eder)
@@ -66,7 +85,21 @@ export async function getUserRole(): Promise<string | null> {
     
     if (userError || !user) {
       console.error("Rol için kullanıcı alınamadı:", userError);
-      return null;
+      
+      // Oturumu yenilemeyi dene
+      try {
+        const { data, error: refreshError } = await supabase.auth.refreshSession();
+        if (refreshError || !data.user) {
+          console.error("Rol için oturum yenileme başarısız:", refreshError);
+          return null;
+        }
+        
+        // Yenileme başarılı, kullanıcıyı güncelle
+        user = data.user;
+      } catch (refreshErr) {
+        console.error("Rol için oturum yenileme işleminde hata:", refreshErr);
+        return null;
+      }
     }
     
     // Önce rolü kullanıcı meta verisinden almayı dene

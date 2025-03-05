@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,9 +17,25 @@ import { supabase } from "@/lib/supabase/client";
 export default function Customers() {
   const [searchText, setSearchText] = useState("");
   const [isNewCustomerModalOpen, setIsNewCustomerModalOpen] = useState(false);
+  const [retryAttempt, setRetryAttempt] = useState(0); // Retry counter
+  
+  // Her sayfa açılışında oturumu yenilemeyi dene
+  useEffect(() => {
+    const refreshSession = async () => {
+      try {
+        console.log("Sayfa yüklenirken oturum yenileniyor...");
+        await supabase.auth.refreshSession();
+        console.log("Oturum yenilendi");
+      } catch (err) {
+        console.error("Oturum yenileme başarısız:", err);
+      }
+    };
+    
+    refreshSession();
+  }, []);
   
   const { data: customers = [], isLoading, error, refetch } = useQuery({
-    queryKey: ['musteriler'],
+    queryKey: ['musteriler', retryAttempt], // Retry attempt değiştikçe sorgu yenilenir
     queryFn: async () => {
       try {
         console.log("Müşteriler yükleniyor...");
@@ -31,7 +47,7 @@ export default function Customers() {
         throw err;
       }
     },
-    retry: 2, // İki kez daha deneyeceğiz
+    retry: 3, // Üç kez daha deneyeceğiz
     retryDelay: 1000, // 1 saniye sonra tekrar dene
     refetchOnWindowFocus: false,
     meta: {
@@ -42,10 +58,12 @@ export default function Customers() {
         
         if (err.message?.includes('Invalid API key')) {
           errorMessage = "Bağlantı sorunu. Otomatik yenileme deneniyor...";
+          
           // Oturumu yenilemeye çalışalım
           supabase.auth.refreshSession().then(() => {
             console.log("Oturum yenilendi, veri tekrar yükleniyor...");
-            setTimeout(() => refetch(), 1000);
+            // Retry counter'ı artırarak sorguyu yenileyelim
+            setRetryAttempt(prev => prev + 1);
           }).catch(refreshError => {
             console.error("Oturum yenileme hatası:", refreshError);
             toast.error("Oturum yenilenemedi. Lütfen sayfayı yenileyin.");
@@ -76,6 +94,30 @@ export default function Customers() {
   const handleCustomerAdded = () => {
     refetch();
     handleCloseNewCustomerModal();
+  };
+
+  const handleRetryConnection = async () => {
+    toast.loading("Bağlantı yenileniyor...", { id: "refresh-connection" });
+    
+    try {
+      // Oturumu yenile
+      const { data, error } = await supabase.auth.refreshSession();
+      
+      if (error) {
+        throw error;
+      }
+      
+      if (data.session) {
+        toast.success("Bağlantı yenilendi", { id: "refresh-connection" });
+        // Sorguyu yenile
+        setRetryAttempt(prev => prev + 1);
+      } else {
+        toast.error("Oturum bulunamadı. Lütfen tekrar giriş yapın.", { id: "refresh-connection" });
+      }
+    } catch (err) {
+      console.error("Bağlantı yenileme hatası:", err);
+      toast.error("Bağlantı yenilenemedi. Lütfen sayfayı yenileyin.", { id: "refresh-connection" });
+    }
   };
 
   const getErrorMessage = (error: any) => {
@@ -128,8 +170,15 @@ export default function Customers() {
         {error && (
           <Alert variant="destructive" className="mb-6">
             <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              {getErrorMessage(error)}
+            <AlertDescription className="flex justify-between items-center">
+              <span>{getErrorMessage(error)}</span>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleRetryConnection}
+              >
+                Bağlantıyı Yenile
+              </Button>
             </AlertDescription>
           </Alert>
         )}

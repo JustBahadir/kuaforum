@@ -3,7 +3,7 @@ import { Musteri } from '../types';
 import { toast } from 'sonner';
 
 // API isteklerini tekrarlama ve backoff stratejisi ile yeniden deneme fonksiyonu
-const retryFetch = async (fetchFn, maxRetries = 3, delay = 1000) => {
+const retryFetch = async (fetchFn, maxRetries = 8, delay = 1000) => {
   let lastError = null;
   
   for (let i = 0; i < maxRetries; i++) {
@@ -20,7 +20,13 @@ const retryFetch = async (fetchFn, maxRetries = 3, delay = 1000) => {
         try {
           const { data, error: refreshError } = await supabase.auth.refreshSession();
           if (refreshError) throw refreshError;
-          console.log("Oturum yenilendi:", data.session ? "Başarılı" : "Başarısız");
+          
+          // Oturum anahtarını kontrol et
+          if (data && data.session) {
+            console.log("Oturum yenilendi:", "Başarılı");
+          } else {
+            console.error("Oturum yenilendi ama session yok!");
+          }
         } catch (refreshError) {
           console.error("Oturum yenileme hatası:", refreshError);
         }
@@ -28,7 +34,7 @@ const retryFetch = async (fetchFn, maxRetries = 3, delay = 1000) => {
       
       if (i < maxRetries - 1) {
         // Üstel artış ile bekleme süresi (exponential backoff)
-        const retryDelay = delay * Math.pow(2, i);
+        const retryDelay = delay * Math.pow(1.5, i);
         console.log(`${retryDelay/1000} saniye sonra tekrar deneniyor...`);
         await new Promise(resolve => setTimeout(resolve, retryDelay));
       }
@@ -86,7 +92,7 @@ export const musteriServisi = {
       }));
       
       return enrichedCustomers;
-    }, 5); // Daha fazla deneme hakkı (5)
+    }, 8); // Daha fazla deneme hakkı (8)
   },
 
   async istatistiklerGetir() {
@@ -132,7 +138,7 @@ export const musteriServisi = {
       }) || [];
 
       return sonuclar;
-    }, 5); // Daha fazla deneme hakkı (5)
+    }, 8); // Daha fazla deneme hakkı (8)
   },
 
   async ara(aramaMetni: string) {
@@ -152,12 +158,19 @@ export const musteriServisi = {
 
       if (error) throw error;
       return data || [];
-    }, 5); // Daha fazla deneme hakkı (5)
+    }, 8); // Daha fazla deneme hakkı (8)
   },
 
   async ekle(musteri: Partial<Musteri>) {
     return retryFetch(async () => {
       console.log("Müşteri ekleniyor, veriler:", musteri);
+      
+      // Önce oturumu yenileyelim
+      try {
+        await supabase.auth.refreshSession();
+      } catch (err) {
+        console.log("Ekleme öncesi oturum yenileme hatası (devam ediliyor):", err);
+      }
       
       // Her zaman admin istemcisini kullan
       const { data, error } = await supabaseAdmin
@@ -216,7 +229,7 @@ export const musteriServisi = {
       }
       
       return data;
-    }, 5); // Daha fazla deneme hakkı (5)
+    }, 8); // Daha fazla deneme hakkı (8)
   },
 
   async guncelle(id: string, musteri: Partial<Musteri>) {
@@ -230,7 +243,7 @@ export const musteriServisi = {
 
       if (error) throw error;
       return data;
-    }, 5); // Daha fazla deneme hakkı (5)
+    }, 8); // Daha fazla deneme hakkı (8)
   },
   
   async getirKisiselBilgileri(customerId: string) {
@@ -243,7 +256,7 @@ export const musteriServisi = {
         
       if (error) throw error;
       return data;
-    }, 5); // Daha fazla deneme hakkı (5)
+    }, 8); // Daha fazla deneme hakkı (8)
   },
   
   async guncelleKisiselBilgileri(customerId: string, bilgiler: any) {
@@ -279,7 +292,7 @@ export const musteriServisi = {
         if (error) throw error;
         return data;
       }
-    }, 5); // Daha fazla deneme hakkı (5)
+    }, 8); // Daha fazla deneme hakkı (8)
   },
   
   async getirTercihleri(customerId: string) {
@@ -292,7 +305,7 @@ export const musteriServisi = {
         
       if (error) throw error;
       return data;
-    }, 5); // Daha fazla deneme hakkı (5)
+    }, 8); // Daha fazla deneme hakkı (8)
   },
   
   async guncelleTercihleri(customerId: string, tercihler: any) {
@@ -328,6 +341,6 @@ export const musteriServisi = {
         if (error) throw error;
         return data;
       }
-    }, 5); // Daha fazla deneme hakkı (5)
+    }, 8); // Daha fazla deneme hakkı (8)
   }
 };
