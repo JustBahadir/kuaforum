@@ -69,34 +69,33 @@ export function useShopData(dukkanId: number | null) {
         
         // Then for each personnel with an auth_id, get their profile picture
         if (data && data.length > 0) {
-          for (const personel of data) {
+          const enhancedData = await Promise.all(data.map(async (personel) => {
             if (personel.auth_id) {
               try {
-                // Try to get profile avatar using the new approach with avatar_url
+                // Try to get profile avatar from profiles table
                 const { data: profileData } = await supabase
                   .from('profiles')
-                  .select('*')
+                  .select('avatar_url')
                   .eq('id', personel.auth_id)
                   .maybeSingle();
                 
-                if (profileData) {
-                  // If avatar_url exists directly, use it
-                  if (profileData.avatar_url) {
-                    personel.avatar_url = profileData.avatar_url;
-                  } 
-                  // Fallback: Check if it's in user metadata 
-                  else {
-                    const { data: authData } = await supabase.auth.admin.getUserById(personel.auth_id);
-                    if (authData?.user?.user_metadata?.avatar_url) {
-                      personel.avatar_url = authData.user.user_metadata.avatar_url;
-                    }
+                if (profileData?.avatar_url) {
+                  personel.avatar_url = profileData.avatar_url;
+                } else {
+                  // If not in profiles table, try to get from auth user metadata
+                  const { data: userData } = await supabase.auth.admin.getUserById(personel.auth_id);
+                  if (userData?.user?.user_metadata?.avatar_url) {
+                    personel.avatar_url = userData.user.user_metadata.avatar_url;
                   }
                 }
               } catch (profileError) {
                 console.error("Profile data fetch error:", profileError);
               }
             }
-          }
+            return personel;
+          }));
+          
+          return enhancedData;
         }
         
         return data || [];

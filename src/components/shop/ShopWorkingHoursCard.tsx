@@ -7,7 +7,6 @@ import { gunSirasi, gunIsimleri } from "@/components/operations/constants/workin
 interface ShopWorkingHoursCardProps {
   calisma_saatleri: any[];
   userRole: string;
-  gunIsimleri: Record<string, string>;
 }
 
 export function ShopWorkingHoursCard({ calisma_saatleri, userRole }: ShopWorkingHoursCardProps) {

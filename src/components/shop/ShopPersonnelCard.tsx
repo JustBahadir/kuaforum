@@ -3,7 +3,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { formatPhoneNumber } from "@/utils/phoneFormatter";
 
 interface ShopPersonnelCardProps {
   personelListesi: any[];
@@ -46,7 +45,7 @@ export function ShopPersonnelCard({ personelListesi, userRole }: ShopPersonnelCa
                   {/* Only show phone numbers to admins */}
                   {userRole === 'admin' && personel.telefon && (
                     <p className="text-sm text-muted-foreground">
-                      {formatPhoneNumber(personel.telefon)}
+                      {personel.telefon}
                     </p>
                   )}
                 </div>

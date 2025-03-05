@@ -141,12 +141,7 @@ export function PersonnelList() {
                       </Avatar>
                       <div>
                         <h3 className="text-lg font-medium">{personel.ad_soyad}</h3>
-                        {/* Only show personnel number to admin users */}
-                        {userRole === 'admin' && (
-                          <p className="text-sm text-muted-foreground">
-                            {personel.personel_no}
-                          </p>
-                        )}
+                        {/* Personnel numbers completely hidden, not even for admin users */}
                       </div>
                     </div>
                     <div className="mt-4 space-y-2">
