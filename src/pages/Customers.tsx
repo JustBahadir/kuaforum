@@ -12,68 +12,50 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { NewCustomerForm } from "./Customers/components/NewCustomerForm";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { supabase } from "@/lib/supabase/client";
+import { refreshSupabaseSession } from "@/lib/supabase/client";
 
 export default function Customers() {
   const [searchText, setSearchText] = useState("");
   const [isNewCustomerModalOpen, setIsNewCustomerModalOpen] = useState(false);
-  const [retryAttempt, setRetryAttempt] = useState(0); // Retry counter
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
-  // Her sayfa açılışında oturumu yenilemeyi dene
+  // Sayfa yüklendiğinde oturumu yenile - daha az sıklıkla ve daha hızlı
   useEffect(() => {
-    const refreshSession = async () => {
+    const initializeSession = async () => {
       try {
-        console.log("Sayfa yüklenirken oturum yenileniyor...");
-        await supabase.auth.refreshSession();
-        console.log("Oturum yenilendi");
+        // Sessiz modda oturumu yenile (toast göstermeden)
+        const result = await refreshSupabaseSession();
+        console.log("Sayfa yüklenirken oturum durumu:", result.success ? "Başarılı" : "Başarısız");
       } catch (err) {
-        console.error("Oturum yenileme başarısız:", err);
+        console.error("Oturum başlatma hatası:", err);
       }
     };
     
-    refreshSession();
+    initializeSession();
   }, []);
   
-  const { data: customers = [], isLoading, error, refetch } = useQuery({
-    queryKey: ['musteriler', retryAttempt], // Retry attempt değiştikçe sorgu yenilenir
+  // Daha düşük staleTime ile hızlandırılmış sorgu ve azaltılmış deneme hakkı
+  const { 
+    data: customers = [], 
+    isLoading, 
+    error, 
+    refetch 
+  } = useQuery({
+    queryKey: ['musteriler'],
     queryFn: async () => {
       try {
         console.log("Müşteriler yükleniyor...");
         const result = await musteriServisi.hepsiniGetir();
-        console.log(`${result?.length || 0} müşteri başarıyla yüklendi`);
         return result || [];
       } catch (err) {
         console.error("Müşteri veri yükleme hatası:", err);
         throw err;
       }
     },
-    retry: 3, // Üç kez daha deneyeceğiz
-    retryDelay: 1000, // 1 saniye sonra tekrar dene
+    retry: 1, // Sadece bir kez dene
+    retryDelay: 500, // Daha hızlı bir şekilde yeniden dene
     refetchOnWindowFocus: false,
-    meta: {
-      onError: (err: any) => {
-        console.error("Müşteri listesi yüklenirken hata:", err);
-        
-        let errorMessage = "Müşteriler yüklenirken bir sorun oluştu.";
-        
-        if (err.message?.includes('Invalid API key')) {
-          errorMessage = "Bağlantı sorunu. Otomatik yenileme deneniyor...";
-          
-          // Oturumu yenilemeye çalışalım
-          supabase.auth.refreshSession().then(() => {
-            console.log("Oturum yenilendi, veri tekrar yükleniyor...");
-            // Retry counter'ı artırarak sorguyu yenileyelim
-            setRetryAttempt(prev => prev + 1);
-          }).catch(refreshError => {
-            console.error("Oturum yenileme hatası:", refreshError);
-            toast.error("Oturum yenilenemedi. Lütfen sayfayı yenileyin.");
-          });
-        }
-        
-        toast.error(errorMessage);
-      }
-    },
-    staleTime: 30000, // 30 saniye boyunca veriyi taze kabul et
+    staleTime: 10000, // 10 saniye boyunca veriyi taze kabul et
   });
 
   const filteredCustomers = searchText
@@ -97,26 +79,25 @@ export default function Customers() {
   };
 
   const handleRetryConnection = async () => {
+    setIsRefreshing(true);
     toast.loading("Bağlantı yenileniyor...", { id: "refresh-connection" });
     
     try {
       // Oturumu yenile
-      const { data, error } = await supabase.auth.refreshSession();
+      const result = await refreshSupabaseSession();
       
-      if (error) {
-        throw error;
-      }
-      
-      if (data.session) {
-        toast.success("Bağlantı yenilendi", { id: "refresh-connection" });
+      if (result.success) {
+        toast.success("Bağlantı yenilendi, veriler yükleniyor", { id: "refresh-connection" });
         // Sorguyu yenile
-        setRetryAttempt(prev => prev + 1);
+        await refetch();
       } else {
-        toast.error("Oturum bulunamadı. Lütfen tekrar giriş yapın.", { id: "refresh-connection" });
+        toast.error("Oturum yenilenemedi. Lütfen sayfayı yenileyin.", { id: "refresh-connection" });
       }
     } catch (err) {
       console.error("Bağlantı yenileme hatası:", err);
       toast.error("Bağlantı yenilenemedi. Lütfen sayfayı yenileyin.", { id: "refresh-connection" });
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -124,11 +105,7 @@ export default function Customers() {
     if (!error) return "Bilinmeyen bir hata oluştu.";
     
     if (error.message && error.message.includes("Invalid API key")) {
-      return "Bağlantı anahtarında sorun oluştu. Otomatik yenileme deneniyor...";
-    }
-    
-    if (error.message && error.message.includes("infinite recursion")) {
-      return "Müşteri verileri yüklenirken bir sorun oluştu. Lütfen sayfayı yenileyin.";
+      return "Bağlantı anahtarında sorun oluştu. Lütfen 'Bağlantıyı Yenile' butonuna tıklayın.";
     }
     
     return error.message || "Bilinmeyen bir hata oluştu.";
@@ -176,8 +153,9 @@ export default function Customers() {
                 variant="outline" 
                 size="sm" 
                 onClick={handleRetryConnection}
+                disabled={isRefreshing}
               >
-                Bağlantıyı Yenile
+                {isRefreshing ? "Yenileniyor..." : "Bağlantıyı Yenile"}
               </Button>
             </AlertDescription>
           </Alert>

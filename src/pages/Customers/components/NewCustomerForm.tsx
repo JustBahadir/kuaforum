@@ -10,7 +10,7 @@ import { format, parse, isValid } from "date-fns";
 import { tr } from "date-fns/locale";
 import { musteriServisi } from "@/lib/supabase/services/musteriServisi";
 import { toast } from "sonner";
-import { supabase } from "@/lib/supabase/client";
+import { refreshSupabaseSession } from "@/lib/supabase/client";
 import { formatPhoneNumber } from "@/utils/phoneFormatter";
 
 interface NewCustomerFormProps {
@@ -29,6 +29,7 @@ export function NewCustomerForm({ onSuccess, onCancel }: NewCustomerFormProps) {
   const [calendarOpen, setCalendarOpen] = useState(false);
   const birthdateInputRef = useRef<HTMLInputElement>(null);
   
+  // Form doğrulama - basitleştirildi
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
     
@@ -40,27 +41,23 @@ export function NewCustomerForm({ onSuccess, onCancel }: NewCustomerFormProps) {
       newErrors.lastName = 'Soyisim alanı zorunludur';
     }
     
-    if (phone && !/^\d+$/.test(phone.replace(/\s/g, ''))) {
-      newErrors.phone = 'Geçerli bir telefon numarası giriniz';
-    }
-    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
   
+  // Telefon formatı
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Remove any non-digit characters
     const digitsOnly = e.target.value.replace(/\D/g, '');
     setPhone(formatPhoneNumber(digitsOnly));
   };
   
+  // Telefon için supabase'e gönderim formatı
   const formatPhoneForSubmission = (value: string) => {
-    // Remove all non-digit characters for submission
     return value.replace(/\D/g, '');
   };
 
+  // Tarih formatı - nokta (.) ile ayırma
   const formatBirthdateInput = (input: string) => {
-    // Remove all non-digit characters
     const digitsOnly = input.replace(/\D/g, '');
     
     if (digitsOnly.length <= 2) {
@@ -72,17 +69,18 @@ export function NewCustomerForm({ onSuccess, onCancel }: NewCustomerFormProps) {
     }
   };
 
+  // Doğum tarihi değişim fonksiyonu
   const handleBirthdateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const input = e.target.value;
     const formattedInput = formatBirthdateInput(input);
     setBirthdateText(formattedInput);
     
-    // Try to parse the date
-    if (formattedInput.length === 10) { // Complete date format: DD.MM.YYYY
+    // Tarih formatını doğrula
+    if (formattedInput.length === 10) { // DD.MM.YYYY formatında
       const dateParts = formattedInput.split('.');
       if (dateParts.length === 3) {
         const day = parseInt(dateParts[0], 10);
-        const month = parseInt(dateParts[1], 10) - 1; // Month is 0-indexed in Date
+        const month = parseInt(dateParts[1], 10) - 1; // Date objesi 0-11 arası ay değeri alır
         const year = parseInt(dateParts[2], 10);
         const parsedDate = new Date(year, month, day);
         
@@ -93,18 +91,21 @@ export function NewCustomerForm({ onSuccess, onCancel }: NewCustomerFormProps) {
     }
   };
 
+  // Input focus olduğunda placeholder'ı temizle
   const handleBirthdateFocus = () => {
-    // Clear the text when focused
-    setBirthdateText('');
+    if (birthdateText === '01.01.2000') {
+      setBirthdateText('');
+    }
   };
 
+  // Input blur olduğunda default değeri geri koy
   const handleBirthdateBlur = () => {
-    // If empty when blur, reset to placeholder
     if (!birthdateText) {
       setBirthdateText('01.01.2000');
     }
   };
 
+  // Takvimden tarih seçildiğinde
   const handleCalendarSelect = (date: Date | undefined) => {
     setBirthdate(date);
     if (date) {
@@ -113,6 +114,7 @@ export function NewCustomerForm({ onSuccess, onCancel }: NewCustomerFormProps) {
     setCalendarOpen(false);
   };
   
+  // Form gönderim işlemi - hızlandırıldı ve basitleştirildi
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -122,24 +124,31 @@ export function NewCustomerForm({ onSuccess, onCancel }: NewCustomerFormProps) {
     
     setIsSubmitting(true);
     
+    // Toast ile bilgilendirme başla
+    toast.loading("Müşteri ekleniyor...", { id: "customer-add" });
+    
     try {
-      // Validate the date format from text input if not selected from calendar
+      // Bağlantıyı yenileme
+      await refreshSupabaseSession();
+      
+      // Tarih formatını kontrol et
       let selectedDate = birthdate;
       if (!selectedDate && birthdateText && birthdateText !== '01.01.2000') {
         try {
           selectedDate = parse(birthdateText, 'dd.MM.yyyy', new Date());
           if (!isValid(selectedDate)) {
-            toast.error("Lütfen geçerli bir tarih formatı girin (GG.AA.YYYY)");
+            toast.error("Lütfen geçerli bir tarih formatı girin (GG.AA.YYYY)", { id: "customer-add" });
             setIsSubmitting(false);
             return;
           }
         } catch (error) {
-          toast.error("Lütfen geçerli bir tarih formatı girin (GG.AA.YYYY)");
+          toast.error("Lütfen geçerli bir tarih formatı girin (GG.AA.YYYY)", { id: "customer-add" });
           setIsSubmitting(false);
           return;
         }
       }
       
+      // Müşteri verilerini hazırla
       const customerData = {
         first_name: firstName,
         last_name: lastName,
@@ -147,88 +156,30 @@ export function NewCustomerForm({ onSuccess, onCancel }: NewCustomerFormProps) {
         birthdate: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : null
       };
       
-      console.log("Gönderilecek müşteri verileri:", customerData);
-      
-      // Kullanıcıya işlemin başladığını bildir
-      toast.loading("Müşteri ekleniyor...", { id: "customer-add" });
-      
+      // Müşteri ekle - basitleştirilmiş servis
       const result = await musteriServisi.ekle(customerData);
       
-      toast.dismiss("customer-add");
-      
       if (result) {
-        toast.success("Müşteri başarıyla eklendi");
+        toast.success("Müşteri başarıyla eklendi", { id: "customer-add" });
         onSuccess();
+        
+        // Formu sıfırla
         setFirstName('');
         setLastName('');
         setPhone('');
         setBirthdate(undefined);
         setBirthdateText('01.01.2000');
       } else {
-        toast.error("Müşteri eklenemedi");
+        toast.error("Müşteri eklenemedi, tekrar deneyin", { id: "customer-add" });
       }
     } catch (error: any) {
-      toast.dismiss("customer-add");
       console.error("Müşteri eklenirken hata:", error);
       
+      // Hata mesajlarını göster
       if (error.message?.includes('Invalid API key')) {
-        toast.error("Bağlantı hatası. Oturum yenileniyor, lütfen bekleyin...");
-        
-        try {
-          // Oturumu yenile ve bekle
-          const { data, error: refreshError } = await supabase.auth.refreshSession();
-          
-          if (refreshError) {
-            console.error("Oturum yenileme hatası:", refreshError);
-            toast.error("Oturum yenilenemedi. Lütfen sayfayı yenileyin.");
-            setIsSubmitting(false);
-            return;
-          }
-          
-          if (data.session) {
-            // Yeni seanslı tekrar dene
-            toast.loading("Tekrar deneniyor...", { id: "retry-add" });
-            
-            // Biraz bekleyelim yeni token için
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            try {
-              const customerData = {
-                first_name: firstName,
-                last_name: lastName,
-                phone: phone ? formatPhoneForSubmission(phone) : null,
-                birthdate: birthdate ? format(birthdate, 'yyyy-MM-dd') : null
-              };
-              
-              const result = await musteriServisi.ekle(customerData);
-              
-              toast.dismiss("retry-add");
-              
-              if (result) {
-                toast.success("Müşteri başarıyla eklendi");
-                onSuccess();
-                setFirstName('');
-                setLastName('');
-                setPhone('');
-                setBirthdate(undefined);
-                setBirthdateText('01.01.2000');
-              } else {
-                toast.error("Müşteri eklenemedi. Sunucu hatası.");
-              }
-            } catch (retryError: any) {
-              toast.dismiss("retry-add");
-              console.error("Tekrar denemede hata:", retryError);
-              toast.error("Müşteri eklenirken bir hata oluştu: " + (retryError.message || "Bilinmeyen hata"));
-            }
-          } else {
-            toast.error("Oturum bilgisi alınamadı. Lütfen sayfayı yenileyin.");
-          }
-        } catch (refreshError) {
-          console.error("Oturum yenileme işleminde hata:", refreshError);
-          toast.error("Oturum yenilenemedi. Lütfen sayfayı yenileyin.");
-        }
+        toast.error("Bağlantı hatası. Lütfen tekrar deneyin.", { id: "customer-add" });
       } else {
-        toast.error(`Müşteri eklenirken bir hata oluştu: ${error.message || 'Bilinmeyen hata'}`);
+        toast.error(`Müşteri eklenirken bir hata oluştu: ${error.message || 'Bilinmeyen hata'}`, { id: "customer-add" });
       }
     } finally {
       setIsSubmitting(false);
