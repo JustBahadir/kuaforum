@@ -43,6 +43,9 @@ export function WorkingHoursRow({
             type="time"
             defaultValue={saat.acilis}
             onChange={(e) => onTempChange(uniqueId, 'acilis', e.target.value)}
+            disabled={(tempChanges[uniqueId]?.kapali !== undefined) 
+              ? tempChanges[uniqueId].kapali 
+              : saat.kapali}
           />
         ) : (
           saat.kapali ? "-" : saat.acilis?.substring(0, 5)
@@ -54,6 +57,9 @@ export function WorkingHoursRow({
             type="time"
             defaultValue={saat.kapanis}
             onChange={(e) => onTempChange(uniqueId, 'kapanis', e.target.value)}
+            disabled={(tempChanges[uniqueId]?.kapali !== undefined) 
+              ? tempChanges[uniqueId].kapali 
+              : saat.kapali}
           />
         ) : (
           saat.kapali ? "-" : saat.kapanis?.substring(0, 5)

@@ -21,13 +21,14 @@ export function useWorkingHours(
       const { data, error } = await supabase
         .from('calisma_saatleri')
         .select('*');
+      
       if (error) throw error;
       return data;
     },
     enabled: providedGunler.length === 0
   });
 
-  // Properly sort the days from Monday to Sunday
+  // Always ensure days are sorted consistently from Monday to Sunday
   const calismaSaatleri = [...(providedGunler.length > 0 ? providedGunler : fetchedCalismaSaatleri)]
     .sort((a, b) => {
       const aIndex = gunSirasi[a.gun as keyof typeof gunSirasi] || 99;

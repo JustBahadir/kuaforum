@@ -57,7 +57,9 @@ export function useShopData(dukkanId: number | null) {
     queryFn: async () => {
       if (!dukkanId && !dukkanData?.id) return [];
       const shopId = dukkanId || dukkanData?.id;
+      
       try {
+        // First get all personnel for the shop
         const { data, error } = await supabase
           .from('personel')
           .select('*, auth_id')
@@ -65,21 +67,38 @@ export function useShopData(dukkanId: number | null) {
           
         if (error) throw error;
         
+        // Then for each personnel with an auth_id, get their profile picture
         if (data && data.length > 0) {
           for (const personel of data) {
             if (personel.auth_id) {
-              const { data: profileData } = await supabase
-                .from('profiles')
-                .select('avatar_url')
-                .eq('id', personel.auth_id)
-                .maybeSingle();
+              try {
+                // Try to get profile avatar using the new approach with avatar_url
+                const { data: profileData } = await supabase
+                  .from('profiles')
+                  .select('*')
+                  .eq('id', personel.auth_id)
+                  .maybeSingle();
                 
-              if (profileData && profileData.avatar_url) {
-                personel.avatar_url = profileData.avatar_url;
+                if (profileData) {
+                  // If avatar_url exists directly, use it
+                  if (profileData.avatar_url) {
+                    personel.avatar_url = profileData.avatar_url;
+                  } 
+                  // Fallback: Check if it's in user metadata 
+                  else {
+                    const { data: authData } = await supabase.auth.admin.getUserById(personel.auth_id);
+                    if (authData?.user?.user_metadata?.avatar_url) {
+                      personel.avatar_url = authData.user.user_metadata.avatar_url;
+                    }
+                  }
+                }
+              } catch (profileError) {
+                console.error("Profile data fetch error:", profileError);
               }
             }
           }
         }
+        
         return data || [];
       } catch (error) {
         console.error("Personel listesi alınırken hata:", error);
@@ -99,7 +118,7 @@ export function useShopData(dukkanId: number | null) {
           
         if (error) throw error;
         
-        // Sort days correctly from Monday to Sunday
+        // Sort days correctly from Monday to Sunday using the gunSirasi object
         return data.sort((a, b) => {
           const aIndex = gunSirasi[a.gun as keyof typeof gunSirasi] || 99;
           const bIndex = gunSirasi[b.gun as keyof typeof gunSirasi] || 99;

@@ -16,7 +16,7 @@ export function ShopWorkingHoursCard({ calisma_saatleri, userRole }: ShopWorking
     return time.substring(0, 5);
   };
 
-  // Make a sorted copy of the working hours
+  // Sort days based on predefined order (Monday to Sunday)
   const sortedSaatler = [...calisma_saatleri].sort((a, b) => {
     const aIndex = gunSirasi[a.gun as keyof typeof gunSirasi] || 99;
     const bIndex = gunSirasi[b.gun as keyof typeof gunSirasi] || 99;
