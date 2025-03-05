@@ -1,16 +1,15 @@
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Loader2 } from "lucide-react";
 import { format, parse, isValid } from "date-fns";
 import { tr } from "date-fns/locale";
 import { musteriServisi } from "@/lib/supabase/services/musteriServisi";
 import { toast } from "sonner";
-import { refreshSupabaseSession } from "@/lib/supabase/client";
 import { formatPhoneNumber } from "@/utils/phoneFormatter";
 
 interface NewCustomerFormProps {
@@ -23,13 +22,12 @@ export function NewCustomerForm({ onSuccess, onCancel }: NewCustomerFormProps) {
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
   const [birthdate, setBirthdate] = useState<Date | undefined>(undefined);
-  const [birthdateText, setBirthdateText] = useState('01.01.2000');
+  const [birthdateText, setBirthdateText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [calendarOpen, setCalendarOpen] = useState(false);
-  const birthdateInputRef = useRef<HTMLInputElement>(null);
   
-  // Form doğrulama - basitleştirildi
+  // Form validation
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
     
@@ -45,18 +43,18 @@ export function NewCustomerForm({ onSuccess, onCancel }: NewCustomerFormProps) {
     return Object.keys(newErrors).length === 0;
   };
   
-  // Telefon formatı
+  // Phone format
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const digitsOnly = e.target.value.replace(/\D/g, '');
     setPhone(formatPhoneNumber(digitsOnly));
   };
   
-  // Telefon için supabase'e gönderim formatı
+  // Format phone for submission
   const formatPhoneForSubmission = (value: string) => {
     return value.replace(/\D/g, '');
   };
 
-  // Tarih formatı - nokta (.) ile ayırma
+  // Format date input
   const formatBirthdateInput = (input: string) => {
     const digitsOnly = input.replace(/\D/g, '');
     
@@ -69,43 +67,25 @@ export function NewCustomerForm({ onSuccess, onCancel }: NewCustomerFormProps) {
     }
   };
 
-  // Doğum tarihi değişim fonksiyonu
+  // Birthdate change
   const handleBirthdateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const input = e.target.value;
     const formattedInput = formatBirthdateInput(input);
     setBirthdateText(formattedInput);
     
-    // Tarih formatını doğrula
-    if (formattedInput.length === 10) { // DD.MM.YYYY formatında
-      const dateParts = formattedInput.split('.');
-      if (dateParts.length === 3) {
-        const day = parseInt(dateParts[0], 10);
-        const month = parseInt(dateParts[1], 10) - 1; // Date objesi 0-11 arası ay değeri alır
-        const year = parseInt(dateParts[2], 10);
-        const parsedDate = new Date(year, month, day);
-        
+    if (formattedInput.length === 10) {
+      try {
+        const parsedDate = parse(formattedInput, 'dd.MM.yyyy', new Date());
         if (isValid(parsedDate)) {
           setBirthdate(parsedDate);
         }
+      } catch (error) {
+        console.error("Date parsing error:", error);
       }
     }
   };
 
-  // Input focus olduğunda placeholder'ı temizle
-  const handleBirthdateFocus = () => {
-    if (birthdateText === '01.01.2000') {
-      setBirthdateText('');
-    }
-  };
-
-  // Input blur olduğunda default değeri geri koy
-  const handleBirthdateBlur = () => {
-    if (!birthdateText) {
-      setBirthdateText('01.01.2000');
-    }
-  };
-
-  // Takvimden tarih seçildiğinde
+  // Calendar select
   const handleCalendarSelect = (date: Date | undefined) => {
     setBirthdate(date);
     if (date) {
@@ -114,7 +94,7 @@ export function NewCustomerForm({ onSuccess, onCancel }: NewCustomerFormProps) {
     setCalendarOpen(false);
   };
   
-  // Form gönderim işlemi - hızlandırıldı ve basitleştirildi
+  // Form submission - simplified
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -123,32 +103,23 @@ export function NewCustomerForm({ onSuccess, onCancel }: NewCustomerFormProps) {
     }
     
     setIsSubmitting(true);
-    
-    // Toast ile bilgilendirme başla
-    toast.loading("Müşteri ekleniyor...", { id: "customer-add" });
+    toast.loading("Müşteri ekleniyor...");
     
     try {
-      // Bağlantıyı yenileme
-      await refreshSupabaseSession();
-      
-      // Tarih formatını kontrol et
+      // Parse date if entered via text
       let selectedDate = birthdate;
-      if (!selectedDate && birthdateText && birthdateText !== '01.01.2000') {
+      if (!selectedDate && birthdateText) {
         try {
           selectedDate = parse(birthdateText, 'dd.MM.yyyy', new Date());
           if (!isValid(selectedDate)) {
-            toast.error("Lütfen geçerli bir tarih formatı girin (GG.AA.YYYY)", { id: "customer-add" });
-            setIsSubmitting(false);
-            return;
+            selectedDate = undefined;
           }
         } catch (error) {
-          toast.error("Lütfen geçerli bir tarih formatı girin (GG.AA.YYYY)", { id: "customer-add" });
-          setIsSubmitting(false);
-          return;
+          selectedDate = undefined;
         }
       }
       
-      // Müşteri verilerini hazırla
+      // Prepare customer data
       const customerData = {
         first_name: firstName,
         last_name: lastName,
@@ -156,31 +127,25 @@ export function NewCustomerForm({ onSuccess, onCancel }: NewCustomerFormProps) {
         birthdate: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : null
       };
       
-      // Müşteri ekle - basitleştirilmiş servis
-      const result = await musteriServisi.ekle(customerData);
+      // Add customer
+      await musteriServisi.ekle(customerData);
       
-      if (result) {
-        toast.success("Müşteri başarıyla eklendi", { id: "customer-add" });
-        onSuccess();
-        
-        // Formu sıfırla
-        setFirstName('');
-        setLastName('');
-        setPhone('');
-        setBirthdate(undefined);
-        setBirthdateText('01.01.2000');
-      } else {
-        toast.error("Müşteri eklenemedi, tekrar deneyin", { id: "customer-add" });
-      }
+      toast.dismiss();
+      toast.success("Müşteri başarıyla eklendi");
+      onSuccess();
+      
+      // Reset form
+      setFirstName('');
+      setLastName('');
+      setPhone('');
+      setBirthdate(undefined);
+      setBirthdateText('');
+      
     } catch (error: any) {
       console.error("Müşteri eklenirken hata:", error);
       
-      // Hata mesajlarını göster
-      if (error.message?.includes('Invalid API key')) {
-        toast.error("Bağlantı hatası. Lütfen tekrar deneyin.", { id: "customer-add" });
-      } else {
-        toast.error(`Müşteri eklenirken bir hata oluştu: ${error.message || 'Bilinmeyen hata'}`, { id: "customer-add" });
-      }
+      toast.dismiss();
+      toast.error(`Müşteri eklenemedi: ${error.message || 'Bir hata oluştu'}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -221,9 +186,7 @@ export function NewCustomerForm({ onSuccess, onCancel }: NewCustomerFormProps) {
           value={phone}
           onChange={handlePhoneChange}
           placeholder="05XX XXX XX XX"
-          className={errors.phone ? "border-red-500" : ""}
         />
-        {errors.phone && <p className="text-red-500 text-sm mt-1">{errors.phone}</p>}
       </div>
       
       <div>
@@ -231,11 +194,8 @@ export function NewCustomerForm({ onSuccess, onCancel }: NewCustomerFormProps) {
         <div className="flex">
           <Input
             id="birthdate"
-            ref={birthdateInputRef}
             value={birthdateText}
             onChange={handleBirthdateChange}
-            onFocus={handleBirthdateFocus}
-            onBlur={handleBirthdateBlur}
             placeholder="GG.AA.YYYY"
             className="flex-1"
           />
@@ -245,7 +205,6 @@ export function NewCustomerForm({ onSuccess, onCancel }: NewCustomerFormProps) {
                 type="button"
                 variant="outline" 
                 className="ml-2"
-                onClick={() => setCalendarOpen(true)}
               >
                 <CalendarIcon className="h-4 w-4" />
               </Button>
@@ -279,7 +238,12 @@ export function NewCustomerForm({ onSuccess, onCancel }: NewCustomerFormProps) {
           type="submit" 
           disabled={isSubmitting}
         >
-          {isSubmitting ? 'Ekleniyor...' : 'Müşteri Ekle'}
+          {isSubmitting ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Ekleniyor...
+            </>
+          ) : 'Müşteri Ekle'}
         </Button>
       </div>
     </form>
