@@ -13,7 +13,6 @@ import { ShopWorkingHoursCard } from "@/components/shop/ShopWorkingHoursCard";
 import { ShopGalleryCard } from "@/components/shop/ShopGalleryCard";
 import { ShopPersonnelCard } from "@/components/shop/ShopPersonnelCard";
 import { ShopServicesCard } from "@/components/shop/ShopServicesCard";
-import { gunIsimleri } from "@/components/operations/constants/workingDays";
 
 export default function ShopHomePage() {
   const { dukkanId, userRole } = useCustomerAuth();
@@ -87,7 +86,6 @@ export default function ShopHomePage() {
             <ShopWorkingHoursCard 
               calisma_saatleri={calisma_saatleri} 
               userRole={userRole} 
-              gunIsimleri={gunIsimleri} 
             />
           </div>
           
