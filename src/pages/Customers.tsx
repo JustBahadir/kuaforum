@@ -20,33 +20,42 @@ export default function Customers() {
   
   const { data: customers = [], isLoading, error, refetch } = useQuery({
     queryKey: ['musteriler'],
-    queryFn: () => {
-      console.log("Müşteriler yükleniyor...");
-      return musteriServisi.hepsiniGetir();
+    queryFn: async () => {
+      try {
+        console.log("Müşteriler yükleniyor...");
+        const result = await musteriServisi.hepsiniGetir();
+        console.log(`${result?.length || 0} müşteri başarıyla yüklendi`);
+        return result || [];
+      } catch (err) {
+        console.error("Müşteri veri yükleme hatası:", err);
+        throw err;
+      }
     },
-    retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * (2 ** attemptIndex), 10000),
+    retry: 1, // Only retry once to prevent excessive loading
+    retryDelay: 1000, // Retry after 1 second
     refetchOnWindowFocus: false,
     meta: {
       onError: (err: any) => {
         console.error("Müşteri listesi yüklenirken hata:", err);
         
-        let errorMessage = "Müşteriler yüklenirken bir sorun oluştu. Lütfen sayfayı yenileyin.";
+        let errorMessage = "Müşteriler yüklenirken bir sorun oluştu.";
         
         if (err.message?.includes('Invalid API key')) {
-          errorMessage = "Bağlantı sorunu. Lütfen oturumu yenileyip tekrar deneyin.";
+          errorMessage = "Bağlantı sorunu. Otomatik yenileme deneniyor...";
           // Try to auto-refresh the session
           supabase.auth.refreshSession().then(() => {
             console.log("Oturum yenilendi, veri tekrar yükleniyor...");
-            setTimeout(() => refetch(), 1000);
+            setTimeout(() => refetch(), 500);
           }).catch(refreshError => {
             console.error("Oturum yenileme hatası:", refreshError);
+            toast.error("Oturum yenilenemedi. Lütfen sayfayı yenileyin.");
           });
         }
         
         toast.error(errorMessage);
       }
-    }
+    },
+    staleTime: 30000, // Consider data fresh for 30 seconds
   });
 
   const filteredCustomers = searchText
@@ -74,7 +83,7 @@ export default function Customers() {
     if (!error) return "Bilinmeyen bir hata oluştu.";
     
     if (error.message && error.message.includes("Invalid API key")) {
-      return "Bağlantı anahtarında sorun oluştu. Sayfayı yenileyip tekrar deneyin.";
+      return "Bağlantı anahtarında sorun oluştu. Otomatik yenileme deneniyor...";
     }
     
     if (error.message && error.message.includes("infinite recursion")) {

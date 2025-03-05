@@ -4,11 +4,12 @@ import { Musteri } from '../types';
 import { toast } from 'sonner';
 
 // Helper function to retry API requests with exponential backoff
-const retryFetch = async (fetchFn, maxRetries = 3, delay = 1000) => {
+const retryFetch = async (fetchFn, maxRetries = 3, delay = 500) => {
   let lastError = null;
   
   for (let i = 0; i < maxRetries; i++) {
     try {
+      console.log(`Deneme ${i+1}/${maxRetries}`);
       return await fetchFn();
     } catch (error) {
       console.error(`Deneme ${i+1}/${maxRetries} başarısız:`, error);
@@ -26,8 +27,9 @@ const retryFetch = async (fetchFn, maxRetries = 3, delay = 1000) => {
       }
       
       if (i < maxRetries - 1) {
-        console.log(`${delay/1000} saniye sonra tekrar deneniyor...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
+        const retryDelay = delay * Math.pow(2, i); // Exponential backoff
+        console.log(`${retryDelay/1000} saniye sonra tekrar deneniyor...`);
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
       }
     }
   }
