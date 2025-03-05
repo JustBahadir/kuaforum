@@ -8,7 +8,7 @@ import { Profile } from '../../types';
 export async function getProfile(): Promise<Profile | null> {
   try {
     // Mevcut kullanıcıyı al
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    let { data: { user }, error: userError } = await supabase.auth.getUser();
     
     if (userError || !user) {
       console.error("Kullanıcı bilgisi alınamadı:", userError);
@@ -81,7 +81,7 @@ export async function getProfile(): Promise<Profile | null> {
  */
 export async function getUserRole(): Promise<string | null> {
   try {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    let { data: { user }, error: userError } = await supabase.auth.getUser();
     
     if (userError || !user) {
       console.error("Rol için kullanıcı alınamadı:", userError);
