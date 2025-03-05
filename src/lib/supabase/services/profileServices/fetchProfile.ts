@@ -16,34 +16,57 @@ export async function getProfile(): Promise<Profile | null> {
     }
     
     try {
-      // Admin istemcisi ile profil getir, RLS bypass
-      const { data: profile, error } = await supabaseAdmin
-        .from('profiles')
-        .select('id, first_name, last_name, phone, gender, birthdate, role, created_at')
-        .eq('id', user.id)
-        .maybeSingle();
+      // Supabase bağlantı sorunlarını önlemek için tekrar deneme mekanizması
+      let retryCount = 0;
+      let profileData = null;
+      let profileError = null;
       
-      if (error) {
-        console.error("Profil bilgileri alınamadı:", error);
-        
-        // Use user metadata as fallback
-        const avatar_url = user.user_metadata?.avatar_url || '';
-        
-        return {
-          id: user.id,
-          first_name: user.user_metadata?.first_name || '',
-          last_name: user.user_metadata?.last_name || '',
-          role: user.user_metadata?.role || 'customer',
-          phone: user.user_metadata?.phone || '',
-          gender: user.user_metadata?.gender || '',
-          birthdate: user.user_metadata?.birthdate || null,
-          avatar_url: avatar_url,
-          created_at: new Date().toISOString()
-        };
+      while (retryCount < 3 && !profileData) {
+        try {
+          // Admin istemcisi ile profil getir, RLS bypass
+          const { data, error } = await supabaseAdmin
+            .from('profiles')
+            .select('id, first_name, last_name, phone, gender, birthdate, role, created_at')
+            .eq('id', user.id)
+            .maybeSingle();
+          
+          if (!error) {
+            profileData = data;
+            break;
+          }
+          
+          profileError = error;
+          console.error(`Profil getirme denemesi ${retryCount + 1} başarısız:`, error);
+          
+          // API anahtarı hatası için oturumu yenilemeyi dene
+          if (error.message?.includes('Invalid API key')) {
+            try {
+              await supabase.auth.refreshSession();
+              console.log("Oturum yenilendi");
+            } catch (refreshError) {
+              console.error("Oturum yenileme hatası:", refreshError);
+            }
+          }
+          
+          retryCount++;
+          if (retryCount < 3) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        } catch (tryError) {
+          console.error("Try-catch profil getirme hatası:", tryError);
+          profileError = tryError;
+          retryCount++;
+          if (retryCount < 3) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
       }
       
-      // If profile is null, create a default one from user metadata
-      if (!profile) {
+      // Hala hata varsa kullanıcı metadatasını kullan
+      if (!profileData) {
+        console.error("Profil bilgileri alınamadı, metadata kullanılıyor:", profileError);
+        
+        // Use user metadata as fallback
         const avatar_url = user.user_metadata?.avatar_url || '';
         
         return {
@@ -62,7 +85,7 @@ export async function getProfile(): Promise<Profile | null> {
       // Add avatar_url from user metadata if not in profile
       const avatar_url = user.user_metadata?.avatar_url || '';
       return {
-        ...profile,
+        ...profileData,
         avatar_url: avatar_url
       };
     } catch (err) {
@@ -106,24 +129,58 @@ export async function getUserRole(): Promise<string | null> {
       return user.user_metadata.role;
     }
     
-    // Admin istemcisi ile profili doğrudan sorgula
-    try {
-      const { data, error } = await supabaseAdmin
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .maybeSingle();
+    // Supabase bağlantı sorunlarını önlemek için tekrar deneme mekanizması
+    let retryCount = 0;
+    let roleData = null;
+    let roleError = null;
+    
+    while (retryCount < 3 && roleData === null) {
+      try {
+        // Admin istemcisi ile profili doğrudan sorgula
+        const { data, error } = await supabaseAdmin
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .maybeSingle();
+          
+        if (!error) {
+          roleData = data?.role || 'customer';
+          break;
+        }
         
-      if (error) {
-        console.error("Role bilgisi alınamadı:", error);
-        return 'customer'; // Varsayılan değer
+        roleError = error;
+        console.error(`Rol getirme denemesi ${retryCount + 1} başarısız:`, error);
+        
+        // API anahtarı hatası için oturumu yenilemeyi dene
+        if (error.message?.includes('Invalid API key')) {
+          try {
+            await supabase.auth.refreshSession();
+            console.log("Oturum yenilendi");
+          } catch (refreshError) {
+            console.error("Oturum yenileme hatası:", refreshError);
+          }
+        }
+        
+        retryCount++;
+        if (retryCount < 3) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      } catch (tryError) {
+        console.error("Try-catch rol getirme hatası:", tryError);
+        roleError = tryError;
+        retryCount++;
+        if (retryCount < 3) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
       }
-      
-      return data?.role || 'customer';
-    } catch (rpcError) {
-      console.error("getUserRole sorgu hatası:", rpcError);
-      return 'customer';
     }
+    
+    if (roleData !== null) {
+      return roleData;
+    }
+    
+    console.error("Rol bilgisi alınamadı, varsayılan 'customer' kullanılıyor:", roleError);
+    return 'customer';
   } catch (err) {
     console.error("getUserRole fonksiyonunda hata:", err);
     return null;

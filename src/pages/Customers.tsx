@@ -19,13 +19,31 @@ export default function Customers() {
   
   const { data: customers = [], isLoading, error, refetch } = useQuery({
     queryKey: ['musteriler'],
-    queryFn: () => musteriServisi.hepsiniGetir(),
-    retry: 1,
+    queryFn: () => {
+      console.log("Müşteriler yükleniyor...");
+      return musteriServisi.hepsiniGetir();
+    },
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * (2 ** attemptIndex), 10000),
     refetchOnWindowFocus: false,
     meta: {
       onError: (err: any) => {
         console.error("Müşteri listesi yüklenirken hata:", err);
-        toast.error("Müşteriler yüklenirken bir sorun oluştu. Lütfen sayfayı yenileyin.");
+        
+        let errorMessage = "Müşteriler yüklenirken bir sorun oluştu. Lütfen sayfayı yenileyin.";
+        
+        if (err.message?.includes('Invalid API key')) {
+          errorMessage = "Bağlantı sorunu. Lütfen oturumu yenileyip tekrar deneyin.";
+          // Otomatik oturum yenileme dene
+          supabase.auth.refreshSession().then(() => {
+            console.log("Oturum yenilendi, veri tekrar yükleniyor...");
+            setTimeout(() => refetch(), 1000);
+          }).catch(refreshError => {
+            console.error("Oturum yenileme hatası:", refreshError);
+          });
+        }
+        
+        toast.error(errorMessage);
       }
     }
   });
@@ -48,10 +66,15 @@ export default function Customers() {
   const handleCustomerAdded = () => {
     refetch();
     handleCloseNewCustomerModal();
+    toast.success("Müşteri başarıyla eklendi");
   };
 
   const getErrorMessage = (error: any) => {
     if (!error) return "Bilinmeyen bir hata oluştu.";
+    
+    if (error.message && error.message.includes("Invalid API key")) {
+      return "Bağlantı anahtarında sorun oluştu. Sayfayı yenileyip tekrar deneyin.";
+    }
     
     if (error.message && error.message.includes("infinite recursion")) {
       return "Müşteri verileri yüklenirken bir sorun oluştu. Lütfen sayfayı yenileyin.";

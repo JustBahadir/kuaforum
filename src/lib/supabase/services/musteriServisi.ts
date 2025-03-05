@@ -1,11 +1,46 @@
 
 import { supabase, supabaseAdmin } from '../client';
 import { Musteri } from '../types';
+import { toast } from 'sonner';
+
+// API isteği denemelerinin sayısını ve gecikme süresini tanımlayan yardımcı fonksiyon
+const retryFetch = async (fetchFn, maxRetries = 3, delay = 1000) => {
+  let lastError = null;
+  
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await fetchFn();
+    } catch (error) {
+      console.error(`Deneme ${i+1}/${maxRetries} başarısız:`, error);
+      lastError = error;
+      
+      if (error.message?.includes('Invalid API key')) {
+        console.error("API anahtarı hatası tespit edildi, oturumu yenilemeye çalışılıyor...");
+        try {
+          const { data: { session }, error: refreshError } = await supabase.auth.refreshSession();
+          if (refreshError) throw refreshError;
+          console.log("Oturum yenilendi:", session ? "Başarılı" : "Başarısız");
+        } catch (refreshError) {
+          console.error("Oturum yenileme hatası:", refreshError);
+        }
+      }
+      
+      if (i < maxRetries - 1) {
+        console.log(`${delay/1000} saniye sonra tekrar deneniyor...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+  
+  throw lastError; // Tüm denemeler başarısız olursa son hatayı fırlat
+};
 
 export const musteriServisi = {
   async hepsiniGetir() {
-    try {
-      // Admin yetkisiyle tüm müşterileri getir
+    return retryFetch(async () => {
+      console.log("Müşteri listesi alınıyor...");
+      
+      // Her zaman admin istemcisini kullan
       const { data, error } = await supabaseAdmin
         .from('profiles')
         .select(`
@@ -18,12 +53,17 @@ export const musteriServisi = {
         `)
         .eq('role', 'customer');
 
-      if (error) throw error;
+      if (error) {
+        console.error("Müşterileri getirme hatası:", error);
+        throw error;
+      }
+      
+      console.log(`${data?.length || 0} müşteri başarıyla alındı`);
       
       // Get the operations count for each customer
       const enrichedCustomers = await Promise.all((data || []).map(async (customer) => {
         try {
-          const { count, error: countError } = await supabase
+          const { count, error: countError } = await supabaseAdmin
             .from('personel_islemleri')
             .select('id', { count: 'exact', head: true })
             .eq('musteri_id', customer.id);
@@ -33,7 +73,7 @@ export const musteriServisi = {
             total_services: countError ? 0 : count || 0
           };
         } catch (err) {
-          console.error("Error fetching customer operations count:", err);
+          console.error("Müşteri işlem sayısı alınamadı:", err);
           return {
             ...customer,
             total_services: 0
@@ -42,16 +82,14 @@ export const musteriServisi = {
       }));
       
       return enrichedCustomers;
-    } catch (error) {
-      console.error("Error fetching customers:", error);
-      throw error;
-    }
+    });
   },
 
+  // Diğer fonksiyonlarda da benzer değişiklikler yapıyoruz...
   async istatistiklerGetir() {
-    try {
-      // İlk olarak tüm müşterileri alalım
-      const { data: musteriler, error: musteriError } = await supabase
+    return retryFetch(async () => {
+      // İlk olarak tüm müşterileri alalım - admin istemcisi kullan
+      const { data: musteriler, error: musteriError } = await supabaseAdmin
         .from('profiles')
         .select(`
           id,
@@ -59,19 +97,20 @@ export const musteriServisi = {
           last_name,
           phone,
           created_at
-        `);
+        `)
+        .eq('role', 'customer');
 
       if (musteriError) throw musteriError;
 
-      // Tüm randevuları alalım
-      const { data: randevular, error: randevuError } = await supabase
+      // Tüm randevuları alalım - admin istemcisi kullan
+      const { data: randevular, error: randevuError } = await supabaseAdmin
         .from('randevular')
         .select('*');
 
       if (randevuError) throw randevuError;
 
-      // Tüm personel işlemlerini alalım
-      const { data: islemler, error: islemError } = await supabase
+      // Tüm personel işlemlerini alalım - admin istemcisi kullan
+      const { data: islemler, error: islemError } = await supabaseAdmin
         .from('personel_islemleri')
         .select('*');
 
@@ -90,14 +129,11 @@ export const musteriServisi = {
       }) || [];
 
       return sonuclar;
-    } catch (error) {
-      console.error("Error fetching customer statistics:", error);
-      throw error;
-    }
+    });
   },
 
   async ara(aramaMetni: string) {
-    try {
+    return retryFetch(async () => {
       const { data, error } = await supabaseAdmin
         .from('profiles')
         .select(`
@@ -113,17 +149,14 @@ export const musteriServisi = {
 
       if (error) throw error;
       return data || [];
-    } catch (error) {
-      console.error("Error searching customers:", error);
-      throw error;
-    }
+    });
   },
 
   async ekle(musteri: Partial<Musteri>) {
-    try {
-      console.log("Adding customer with data:", musteri);
+    return retryFetch(async () => {
+      console.log("Müşteri ekleniyor, veriler:", musteri);
       
-      // Servis rolü ile direkt profil oluştur (RLS bypass)
+      // Admin istemcisini kullan
       const { data, error } = await supabaseAdmin
         .from('profiles')
         .insert([{
@@ -137,13 +170,13 @@ export const musteriServisi = {
         .single();
 
       if (error) {
-        console.error("Error in profiles insert:", error);
+        console.error("Profil ekleme hatası:", error);
         throw error;
       }
       
-      console.log("Customer added successfully:", data);
+      console.log("Müşteri başarıyla eklendi:", data);
       
-      // Yeni müşteri için customer_personal_data ve customer_preferences tablolarında kayıt oluştur
+      // Yeni müşteri için ilgili tabloları doldur
       if (data && data.id) {
         try {
           // Müşteri kişisel verileri ekle
@@ -160,7 +193,7 @@ export const musteriServisi = {
             .insert([personalDataPayload]);
             
           if (personalDataError) {
-            console.error("Error adding customer personal data:", personalDataError);
+            console.error("Kişisel veri ekleme hatası:", personalDataError);
           }
           
           // Müşteri tercihlerini ekle
@@ -171,24 +204,21 @@ export const musteriServisi = {
             }]);
             
           if (preferencesError) {
-            console.error("Error adding customer preferences:", preferencesError);
+            console.error("Tercih ekleme hatası:", preferencesError);
           }
         } catch (err) {
-          console.error("Error creating related customer records:", err);
-          // Ana profil oluşturuldu, ilgili tablolarda hatalar olsa bile devam edeceğiz
+          console.error("İlgili müşteri kayıtlarını oluşturma hatası:", err);
+          // Ana profil oluşturuldu, hata olsa bile devam et
         }
       }
       
       return data;
-    } catch (error) {
-      console.error("Error adding customer:", error);
-      throw error;
-    }
+    });
   },
 
   async guncelle(id: string, musteri: Partial<Musteri>) {
-    try {
-      const { data, error } = await supabase
+    return retryFetch(async () => {
+      const { data, error } = await supabaseAdmin
         .from('profiles')
         .update(musteri)
         .eq('id', id)
@@ -197,15 +227,12 @@ export const musteriServisi = {
 
       if (error) throw error;
       return data;
-    } catch (error) {
-      console.error("Error updating customer:", error);
-      throw error;
-    }
+    });
   },
   
   async getirKisiselBilgileri(customerId: string) {
-    try {
-      const { data, error } = await supabase
+    return retryFetch(async () => {
+      const { data, error } = await supabaseAdmin
         .from('customer_personal_data')
         .select('*')
         .eq('customer_id', customerId)
@@ -213,15 +240,12 @@ export const musteriServisi = {
         
       if (error) throw error;
       return data;
-    } catch (error) {
-      console.error("Error fetching customer personal data:", error);
-      throw error;
-    }
+    });
   },
   
   async guncelleKisiselBilgileri(customerId: string, bilgiler: any) {
-    try {
-      const { data: existing } = await supabase
+    return retryFetch(async () => {
+      const { data: existing } = await supabaseAdmin
         .from('customer_personal_data')
         .select('id')
         .eq('customer_id', customerId)
@@ -229,7 +253,7 @@ export const musteriServisi = {
         
       if (existing) {
         // Kayıt varsa güncelle
-        const { data, error } = await supabase
+        const { data, error } = await supabaseAdmin
           .from('customer_personal_data')
           .update(bilgiler)
           .eq('customer_id', customerId)
@@ -240,7 +264,7 @@ export const musteriServisi = {
         return data;
       } else {
         // Kayıt yoksa oluştur
-        const { data, error } = await supabase
+        const { data, error } = await supabaseAdmin
           .from('customer_personal_data')
           .insert({
             customer_id: customerId,
@@ -252,15 +276,12 @@ export const musteriServisi = {
         if (error) throw error;
         return data;
       }
-    } catch (error) {
-      console.error("Error updating customer personal data:", error);
-      throw error;
-    }
+    });
   },
   
   async getirTercihleri(customerId: string) {
-    try {
-      const { data, error } = await supabase
+    return retryFetch(async () => {
+      const { data, error } = await supabaseAdmin
         .from('customer_preferences')
         .select('*')
         .eq('customer_id', customerId)
@@ -268,15 +289,12 @@ export const musteriServisi = {
         
       if (error) throw error;
       return data;
-    } catch (error) {
-      console.error("Error fetching customer preferences:", error);
-      throw error;
-    }
+    });
   },
   
   async guncelleTercihleri(customerId: string, tercihler: any) {
-    try {
-      const { data: existing } = await supabase
+    return retryFetch(async () => {
+      const { data: existing } = await supabaseAdmin
         .from('customer_preferences')
         .select('id')
         .eq('customer_id', customerId)
@@ -284,7 +302,7 @@ export const musteriServisi = {
         
       if (existing) {
         // Kayıt varsa güncelle
-        const { data, error } = await supabase
+        const { data, error } = await supabaseAdmin
           .from('customer_preferences')
           .update(tercihler)
           .eq('customer_id', customerId)
@@ -295,7 +313,7 @@ export const musteriServisi = {
         return data;
       } else {
         // Kayıt yoksa oluştur
-        const { data, error } = await supabase
+        const { data, error } = await supabaseAdmin
           .from('customer_preferences')
           .insert({
             customer_id: customerId,
@@ -307,9 +325,6 @@ export const musteriServisi = {
         if (error) throw error;
         return data;
       }
-    } catch (error) {
-      console.error("Error updating customer preferences:", error);
-      throw error;
-    }
+    });
   }
 };
