@@ -6,7 +6,6 @@ import { CustomerOperationsTable } from "./CustomerOperationsTable";
 import { CustomerPreferences } from "./CustomerPreferences";
 import { Musteri } from "@/lib/supabase";
 import { formatPhoneNumber } from "@/utils/phoneFormatter";
-import { getGenderTitle } from "@/lib/supabase/services/profileServices/profileTypes";
 import { Button } from "@/components/ui/button";
 import { Pencil, User, Calendar, Gift, Star } from "lucide-react";
 import { CustomerPersonalInfo } from "./CustomerPersonalInfo";
@@ -51,7 +50,6 @@ export function CustomerDetails({ open, onOpenChange, customer }: CustomerDetail
                 <h3 className="text-sm font-medium text-gray-500">AD SOYAD</h3>
                 <p className="mt-1 text-base">
                   {customer.first_name || customer.ad_soyad} {customer.last_name || ''} 
-                  {customer.gender && <span className="text-gray-500 ml-1">{getGenderTitle(customer.gender)} </span>}
                 </p>
               </div>
               <div>

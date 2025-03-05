@@ -33,6 +33,103 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_personal_data: {
+        Row: {
+          anniversary_date: string | null
+          birth_date: string | null
+          children_names: string[] | null
+          created_at: string
+          custom_notes: string | null
+          customer_id: string | null
+          horoscope: string | null
+          horoscope_description: string | null
+          id: number
+          updated_at: string
+        }
+        Insert: {
+          anniversary_date?: string | null
+          birth_date?: string | null
+          children_names?: string[] | null
+          created_at?: string
+          custom_notes?: string | null
+          customer_id?: string | null
+          horoscope?: string | null
+          horoscope_description?: string | null
+          id?: number
+          updated_at?: string
+        }
+        Update: {
+          anniversary_date?: string | null
+          birth_date?: string | null
+          children_names?: string[] | null
+          created_at?: string
+          custom_notes?: string | null
+          customer_id?: string | null
+          horoscope?: string | null
+          horoscope_description?: string | null
+          id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_personal_data_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_preferences: {
+        Row: {
+          birth_date: string | null
+          cologne_preference: string | null
+          created_at: string
+          custom_preferences: Json | null
+          customer_id: string | null
+          ear_burning: boolean | null
+          id: number
+          razor_preference: string | null
+          special_date: string | null
+          special_date_description: string | null
+          updated_at: string
+        }
+        Insert: {
+          birth_date?: string | null
+          cologne_preference?: string | null
+          created_at?: string
+          custom_preferences?: Json | null
+          customer_id?: string | null
+          ear_burning?: boolean | null
+          id?: number
+          razor_preference?: string | null
+          special_date?: string | null
+          special_date_description?: string | null
+          updated_at?: string
+        }
+        Update: {
+          birth_date?: string | null
+          cologne_preference?: string | null
+          created_at?: string
+          custom_preferences?: Json | null
+          customer_id?: string | null
+          ear_burning?: boolean | null
+          id?: number
+          razor_preference?: string | null
+          special_date?: string | null
+          special_date_description?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_preferences_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dukkanlar: {
         Row: {
           acik_adres: string | null
