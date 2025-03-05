@@ -22,7 +22,7 @@ export function WorkingHours({ isStaff = true, gunler = [], onChange }: WorkingH
     cancelEditing
   } = useWorkingHours(isStaff, gunler, onChange);
 
-  // Sort days from Monday to Sunday
+  // Sort days based on the predefined order
   const sortedSaatler = [...calismaSaatleri].sort((a, b) => {
     const aIndex = gunSirasi[a.gun as keyof typeof gunSirasi] || 99;
     const bIndex = gunSirasi[b.gun as keyof typeof gunSirasi] || 99;

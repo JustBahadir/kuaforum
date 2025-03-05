@@ -83,7 +83,7 @@ export function WorkingHoursRow({
                 onSaveChanges(uniqueId);
               }
             }}
-            disabled={isStaff ? false : true}
+            disabled={!isStaff || (isStaff && !isEditing)}
           />
           <span className="text-sm text-gray-600">
             {isKapali ? "Kapalı" : "Açık"}
