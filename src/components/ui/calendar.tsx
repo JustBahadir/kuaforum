@@ -29,9 +29,15 @@ function Calendar({
         IconRight: ({ ..._props }) => <ChevronRight className="h-4 w-4" />,
         Dropdown: (props: DropdownProps) => {
           const { value, onChange, children, ...rest } = props;
+          
+          // Create a handler that creates a synthetic event with the expected shape
           const handleValueChange = (newValue: string) => {
-            onChange?.(newValue);
+            // Call the onChange handler with the new value
+            if (onChange) {
+              onChange(newValue);
+            }
           };
+          
           return (
             <Select 
               value={value?.toString()} 
