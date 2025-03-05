@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
@@ -59,7 +58,6 @@ export function useShopData(dukkanId: number | null) {
       const shopId = dukkanId || dukkanData?.id;
       
       try {
-        // First get all personnel for the shop
         const { data, error } = await supabase
           .from('personel')
           .select('*, auth_id')
@@ -67,12 +65,10 @@ export function useShopData(dukkanId: number | null) {
           
         if (error) throw error;
         
-        // Then for each personnel with an auth_id, get their profile picture
         if (data && data.length > 0) {
           const enhancedData = await Promise.all(data.map(async (personel) => {
             if (personel.auth_id) {
               try {
-                // Try to get profile avatar from profiles table
                 const { data: profileData } = await supabase
                   .from('profiles')
                   .select('avatar_url')
@@ -82,7 +78,6 @@ export function useShopData(dukkanId: number | null) {
                 if (profileData?.avatar_url) {
                   personel.avatar_url = profileData.avatar_url;
                 } else {
-                  // If not in profiles table, try to get from auth user metadata
                   const { data: userData } = await supabase.auth.admin.getUserById(personel.auth_id);
                   if (userData?.user?.user_metadata?.avatar_url) {
                     personel.avatar_url = userData.user.user_metadata.avatar_url;
@@ -117,12 +112,17 @@ export function useShopData(dukkanId: number | null) {
           
         if (error) throw error;
         
-        // Sort days correctly from Monday to Sunday using the gunSirasi object
-        return data.sort((a, b) => {
+        console.log("Raw calisma_saatleri data:", data);
+        
+        const sortedData = data.sort((a, b) => {
           const aIndex = gunSirasi[a.gun as keyof typeof gunSirasi] || 99;
           const bIndex = gunSirasi[b.gun as keyof typeof gunSirasi] || 99;
           return aIndex - bIndex;
         });
+        
+        console.log("Sorted calisma_saatleri data:", sortedData.map(d => d.gun));
+        
+        return sortedData;
       } catch (error) {
         console.error("Çalışma saatleri alınırken hata:", error);
         return [];

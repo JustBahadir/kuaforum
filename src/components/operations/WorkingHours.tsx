@@ -22,12 +22,15 @@ export function WorkingHours({ isStaff = true, gunler = [], onChange }: WorkingH
     cancelEditing
   } = useWorkingHours(isStaff, gunler, onChange);
 
-  // Sort days based on the predefined order
+  // Always sort days based on our predefined ordering
   const sortedSaatler = [...calismaSaatleri].sort((a, b) => {
     const aIndex = gunSirasi[a.gun as keyof typeof gunSirasi] || 99;
     const bIndex = gunSirasi[b.gun as keyof typeof gunSirasi] || 99;
     return aIndex - bIndex;
   });
+
+  console.log("Days before sorting:", calismaSaatleri.map(s => s.gun));
+  console.log("Days after sorting:", sortedSaatler.map(s => s.gun));
 
   return (
     <div className="border rounded-lg overflow-hidden">
@@ -37,7 +40,7 @@ export function WorkingHours({ isStaff = true, gunler = [], onChange }: WorkingH
             <TableHead className="w-[150px]">Gün</TableHead>
             <TableHead>Açılış</TableHead>
             <TableHead>Kapanış</TableHead>
-            <TableHead>Durum</TableHead>
+            {isStaff && <TableHead>Durum</TableHead>}
             {isStaff && <TableHead className="text-right">İşlemler</TableHead>}
           </TableRow>
         </TableHeader>

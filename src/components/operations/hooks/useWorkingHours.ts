@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase/client';
 import { toast } from 'sonner';
@@ -24,6 +24,9 @@ export function useWorkingHours(
 
   // Use the provided working hours if available, otherwise use the fetched ones
   const calismaSaatleri = [...(providedGunler.length > 0 ? providedGunler : fetchedCalismaSaatleri)];
+
+  // Log the days for debugging
+  console.log("useWorkingHours raw days:", calismaSaatleri.map(s => s.gun));
 
   const { mutate: saatGuncelle } = useMutation({
     mutationFn: async ({ id, updates }: { id: number; updates: any }) => {

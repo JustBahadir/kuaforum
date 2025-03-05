@@ -1,6 +1,7 @@
 
 import { supabase } from '../client';
 import { CalismaSaati } from '../types';
+import { gunSirasi } from '@/components/operations/constants/workingDays';
 
 export const calismaSaatleriServisi = {
   async hepsiniGetir() {
@@ -9,7 +10,13 @@ export const calismaSaatleriServisi = {
       .select('*');
 
     if (error) throw error;
-    return data || [];
+    
+    // Sort by our custom day order
+    return (data || []).sort((a, b) => {
+      const aIndex = gunSirasi[a.gun as keyof typeof gunSirasi] || 99;
+      const bIndex = gunSirasi[b.gun as keyof typeof gunSirasi] || 99;
+      return aIndex - bIndex;
+    });
   },
   
   async gunleriGetir() {
@@ -18,7 +25,13 @@ export const calismaSaatleriServisi = {
       .select('gun');
 
     if (error) throw error;
-    return data || [];
+    
+    // Sort by our custom day order
+    return (data || []).sort((a, b) => {
+      const aIndex = gunSirasi[a.gun as keyof typeof gunSirasi] || 99;
+      const bIndex = gunSirasi[b.gun as keyof typeof gunSirasi] || 99;
+      return aIndex - bIndex;
+    });
   },
   
   async guncelle(saatler: CalismaSaati[]) {
@@ -28,7 +41,13 @@ export const calismaSaatleriServisi = {
       .select();
 
     if (error) throw error;
-    return data || [];
+    
+    // Sort by our custom day order
+    return (data || []).sort((a, b) => {
+      const aIndex = gunSirasi[a.gun as keyof typeof gunSirasi] || 99;
+      const bIndex = gunSirasi[b.gun as keyof typeof gunSirasi] || 99;
+      return aIndex - bIndex;
+    });
   },
   
   async ekle(saat: Omit<CalismaSaati, "id">) {

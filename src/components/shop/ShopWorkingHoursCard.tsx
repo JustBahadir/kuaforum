@@ -16,12 +16,15 @@ export function ShopWorkingHoursCard({ calisma_saatleri, userRole }: ShopWorking
     return time.substring(0, 5);
   };
 
-  // Sort days based on the predefined order
+  // Always sort days based on our predefined ordering
   const sortedSaatler = [...calisma_saatleri].sort((a, b) => {
     const aIndex = gunSirasi[a.gun as keyof typeof gunSirasi] || 99;
     const bIndex = gunSirasi[b.gun as keyof typeof gunSirasi] || 99;
     return aIndex - bIndex;
   });
+
+  console.log("Shop card days before sorting:", calisma_saatleri.map(s => s.gun));
+  console.log("Shop card days after sorting:", sortedSaatler.map(s => s.gun));
 
   return (
     <Card>
