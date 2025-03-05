@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { NewCustomerForm } from "./Customers/components/NewCustomerForm";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { supabase } from "@/lib/supabase/client"; // Add this import
+import { supabase } from "@/lib/supabase/client";
 
 export default function Customers() {
   const [searchText, setSearchText] = useState("");
@@ -35,7 +35,7 @@ export default function Customers() {
         
         if (err.message?.includes('Invalid API key')) {
           errorMessage = "Bağlantı sorunu. Lütfen oturumu yenileyip tekrar deneyin.";
-          // Otomatik oturum yenileme dene
+          // Try to auto-refresh the session
           supabase.auth.refreshSession().then(() => {
             console.log("Oturum yenilendi, veri tekrar yükleniyor...");
             setTimeout(() => refetch(), 1000);

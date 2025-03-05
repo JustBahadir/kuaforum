@@ -3,7 +3,7 @@ import { supabase, supabaseAdmin } from '../client';
 import { Musteri } from '../types';
 import { toast } from 'sonner';
 
-// API isteği denemelerinin sayısını ve gecikme süresini tanımlayan yardımcı fonksiyon
+// Helper function to retry API requests with exponential backoff
 const retryFetch = async (fetchFn, maxRetries = 3, delay = 1000) => {
   let lastError = null;
   
@@ -32,7 +32,7 @@ const retryFetch = async (fetchFn, maxRetries = 3, delay = 1000) => {
     }
   }
   
-  throw lastError; // Tüm denemeler başarısız olursa son hatayı fırlat
+  throw lastError; // Throw the last error if all retries fail
 };
 
 export const musteriServisi = {
@@ -40,7 +40,7 @@ export const musteriServisi = {
     return retryFetch(async () => {
       console.log("Müşteri listesi alınıyor...");
       
-      // Her zaman admin istemcisini kullan
+      // Always use admin client to bypass RLS
       const { data, error } = await supabaseAdmin
         .from('profiles')
         .select(`
@@ -51,7 +51,8 @@ export const musteriServisi = {
           birthdate,
           created_at
         `)
-        .eq('role', 'customer');
+        .eq('role', 'customer')
+        .order('first_name', { ascending: true }); // Alphabetical order by first name
 
       if (error) {
         console.error("Müşterileri getirme hatası:", error);
@@ -156,7 +157,7 @@ export const musteriServisi = {
     return retryFetch(async () => {
       console.log("Müşteri ekleniyor, veriler:", musteri);
       
-      // Admin istemcisini kullan
+      // Using admin client to bypass RLS
       const { data, error } = await supabaseAdmin
         .from('profiles')
         .insert([{
@@ -176,10 +177,10 @@ export const musteriServisi = {
       
       console.log("Müşteri başarıyla eklendi:", data);
       
-      // Yeni müşteri için ilgili tabloları doldur
+      // Create related records for the new customer
       if (data && data.id) {
         try {
-          // Müşteri kişisel verileri ekle
+          // Add customer personal data
           const personalDataPayload: any = {
             customer_id: data.id
           };
@@ -196,7 +197,7 @@ export const musteriServisi = {
             console.error("Kişisel veri ekleme hatası:", personalDataError);
           }
           
-          // Müşteri tercihlerini ekle
+          // Add customer preferences
           const { error: preferencesError } = await supabaseAdmin
             .from('customer_preferences')
             .insert([{
@@ -208,7 +209,7 @@ export const musteriServisi = {
           }
         } catch (err) {
           console.error("İlgili müşteri kayıtlarını oluşturma hatası:", err);
-          // Ana profil oluşturuldu, hata olsa bile devam et
+          // Continue even if related records fail
         }
       }
       

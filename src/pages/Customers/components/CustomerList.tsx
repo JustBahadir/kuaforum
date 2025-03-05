@@ -52,7 +52,8 @@ export function CustomerList({ customers, isLoading, error }: CustomerListProps)
           </div>
         ) : customers.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
-            Müşteri bulunamadı.
+            <p className="text-lg font-medium">Kayıtlı Müşteri Bulunmamaktadır</p>
+            <p className="mt-2">Yeni müşteri eklemek için "Yeni Müşteri" butonunu kullanabilirsiniz.</p>
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

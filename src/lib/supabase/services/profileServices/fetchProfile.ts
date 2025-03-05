@@ -16,14 +16,14 @@ export async function getProfile(): Promise<Profile | null> {
     }
     
     try {
-      // Supabase bağlantı sorunlarını önlemek için tekrar deneme mekanizması
+      // Retry mechanism for Supabase connection issues
       let retryCount = 0;
       let profileData = null;
       let profileError = null;
       
       while (retryCount < 3 && !profileData) {
         try {
-          // Admin istemcisi ile profil getir, RLS bypass
+          // Get profile with admin client to bypass RLS
           const { data, error } = await supabaseAdmin
             .from('profiles')
             .select('id, first_name, last_name, phone, gender, birthdate, role, created_at')
@@ -36,15 +36,15 @@ export async function getProfile(): Promise<Profile | null> {
           }
           
           profileError = error;
-          console.error(`Profil getirme denemesi ${retryCount + 1} başarısız:`, error);
+          console.error(`Profile fetch attempt ${retryCount + 1} failed:`, error);
           
-          // API anahtarı hatası için oturumu yenilemeyi dene
+          // Try to refresh session for API key errors
           if (error.message?.includes('Invalid API key')) {
             try {
               await supabase.auth.refreshSession();
-              console.log("Oturum yenilendi");
+              console.log("Session refreshed");
             } catch (refreshError) {
-              console.error("Oturum yenileme hatası:", refreshError);
+              console.error("Session refresh error:", refreshError);
             }
           }
           
@@ -53,7 +53,7 @@ export async function getProfile(): Promise<Profile | null> {
             await new Promise(resolve => setTimeout(resolve, 1000));
           }
         } catch (tryError) {
-          console.error("Try-catch profil getirme hatası:", tryError);
+          console.error("Try-catch profile fetch error:", tryError);
           profileError = tryError;
           retryCount++;
           if (retryCount < 3) {
@@ -62,9 +62,9 @@ export async function getProfile(): Promise<Profile | null> {
         }
       }
       
-      // Hala hata varsa kullanıcı metadatasını kullan
+      // If still no profile data, use user metadata as fallback
       if (!profileData) {
-        console.error("Profil bilgileri alınamadı, metadata kullanılıyor:", profileError);
+        console.error("Profile data could not be fetched, using metadata:", profileError);
         
         // Use user metadata as fallback
         const avatar_url = user.user_metadata?.avatar_url || '';
@@ -89,7 +89,7 @@ export async function getProfile(): Promise<Profile | null> {
         avatar_url: avatar_url
       };
     } catch (err) {
-      console.error("Profil getirme işleminde hata:", err);
+      console.error("Error in profile fetch process:", err);
       
       // Fallback to user_metadata if available
       const avatar_url = user.user_metadata?.avatar_url || '';
@@ -107,7 +107,7 @@ export async function getProfile(): Promise<Profile | null> {
       };
     }
   } catch (err) {
-    console.error("getProfile fonksiyonunda hata:", err);
+    console.error("Error in getProfile function:", err);
     return null;
   }
 }
@@ -120,23 +120,23 @@ export async function getUserRole(): Promise<string | null> {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
     if (userError || !user) {
-      console.error("Rol için kullanıcı bilgisi alınamadı:", userError);
+      console.error("Could not get user for role:", userError);
       return null;
     }
     
-    // Önce user metadata'dan role almayı deneyelim
+    // First try to get role from user metadata
     if (user.user_metadata?.role) {
       return user.user_metadata.role;
     }
     
-    // Supabase bağlantı sorunlarını önlemek için tekrar deneme mekanizması
+    // Retry mechanism for Supabase connection issues
     let retryCount = 0;
     let roleData = null;
     let roleError = null;
     
     while (retryCount < 3 && roleData === null) {
       try {
-        // Admin istemcisi ile profili doğrudan sorgula
+        // Query profile directly with admin client
         const { data, error } = await supabaseAdmin
           .from('profiles')
           .select('role')
@@ -149,15 +149,15 @@ export async function getUserRole(): Promise<string | null> {
         }
         
         roleError = error;
-        console.error(`Rol getirme denemesi ${retryCount + 1} başarısız:`, error);
+        console.error(`Role fetch attempt ${retryCount + 1} failed:`, error);
         
-        // API anahtarı hatası için oturumu yenilemeyi dene
+        // Try to refresh session for API key errors
         if (error.message?.includes('Invalid API key')) {
           try {
             await supabase.auth.refreshSession();
-            console.log("Oturum yenilendi");
+            console.log("Session refreshed");
           } catch (refreshError) {
-            console.error("Oturum yenileme hatası:", refreshError);
+            console.error("Session refresh error:", refreshError);
           }
         }
         
@@ -166,7 +166,7 @@ export async function getUserRole(): Promise<string | null> {
           await new Promise(resolve => setTimeout(resolve, 1000));
         }
       } catch (tryError) {
-        console.error("Try-catch rol getirme hatası:", tryError);
+        console.error("Try-catch role fetch error:", tryError);
         roleError = tryError;
         retryCount++;
         if (retryCount < 3) {
@@ -179,10 +179,10 @@ export async function getUserRole(): Promise<string | null> {
       return roleData;
     }
     
-    console.error("Rol bilgisi alınamadı, varsayılan 'customer' kullanılıyor:", roleError);
+    console.error("Role could not be fetched, using default 'customer':", roleError);
     return 'customer';
   } catch (err) {
-    console.error("getUserRole fonksiyonunda hata:", err);
+    console.error("Error in getUserRole function:", err);
     return null;
   }
 }
