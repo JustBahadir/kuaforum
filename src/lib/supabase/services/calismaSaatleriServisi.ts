@@ -6,8 +6,7 @@ export const calismaSaatleriServisi = {
   async hepsiniGetir() {
     const { data, error } = await supabase
       .from('calisma_saatleri')
-      .select('*')
-      .order('gun', { ascending: true });
+      .select('*');
 
     if (error) throw error;
     return data || [];
@@ -16,8 +15,7 @@ export const calismaSaatleriServisi = {
   async gunleriGetir() {
     const { data, error } = await supabase
       .from('calisma_saatleri')
-      .select('gun')
-      .order('gun', { ascending: true });
+      .select('gun');
 
     if (error) throw error;
     return data || [];
