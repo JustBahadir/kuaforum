@@ -1,5 +1,5 @@
 
-// Correct day order in Turkish
+// Correct day order in Turkish (Monday to Sunday)
 export const gunSirasi = {
   "pazartesi": 1,
   "sali": 2,

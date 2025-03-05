@@ -3,7 +3,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Edit } from "lucide-react";
 import { TableHeader, TableRow, TableHead, TableBody, TableCell, Table } from '@/components/ui/table';
-import { Switch } from "@/components/ui/switch";
 import { gunSirasi, gunIsimleri } from "@/components/operations/constants/workingDays";
 
 interface ShopWorkingHoursCardProps {
@@ -52,7 +51,6 @@ export function ShopWorkingHoursCard({ calisma_saatleri, userRole }: ShopWorking
                   <TableHead className="w-[150px]">Gün</TableHead>
                   <TableHead>Açılış</TableHead>
                   <TableHead>Kapanış</TableHead>
-                  <TableHead>Durum</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -66,17 +64,6 @@ export function ShopWorkingHoursCard({ calisma_saatleri, userRole }: ShopWorking
                     </TableCell>
                     <TableCell>
                       {saat.kapali ? "-" : formatTime(saat.kapanis)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          checked={!saat.kapali}
-                          disabled={true}
-                        />
-                        <span className="text-sm text-gray-600">
-                          {saat.kapali ? "Kapalı" : "Açık"}
-                        </span>
-                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

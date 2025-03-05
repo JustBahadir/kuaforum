@@ -78,7 +78,7 @@ export function WorkingHoursRow({
             onCheckedChange={(checked) => {
               if (isEditing) {
                 onTempChange(uniqueId, 'kapali', !checked);
-              } else {
+              } else if (isStaff) {
                 onTempChange(uniqueId, 'kapali', !checked);
                 onSaveChanges(uniqueId);
               }
