@@ -113,8 +113,8 @@ export function CustomerList({ customers, isLoading, error }: CustomerListProps)
       {selectedCustomer && (
         <CustomerDetails 
           customer={selectedCustomer} 
-          isOpen={!!selectedCustomer} 
-          onClose={closeCustomerDetails}
+          open={!!selectedCustomer} 
+          onOpenChange={closeCustomerDetails}
         />
       )}
     </>
