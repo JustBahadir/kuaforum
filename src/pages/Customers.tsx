@@ -8,11 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Search, UserPlus, Phone, Mail, Calendar } from "lucide-react";
 import { CustomerList } from "./Customers/components/CustomerList";
 import { musteriServisi } from "@/lib/supabase/services/musteriServisi";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { NewCustomerForm } from "./Customers/components/NewCustomerForm";
 
 export default function Customers() {
   const [searchText, setSearchText] = useState("");
+  const [isNewCustomerModalOpen, setIsNewCustomerModalOpen] = useState(false);
   
-  const { data: customers = [], isLoading, error } = useQuery({
+  const { data: customers = [], isLoading, error, refetch } = useQuery({
     queryKey: ['musteriler'],
     queryFn: () => musteriServisi.hepsiniGetir()
   });
@@ -23,6 +26,19 @@ export default function Customers() {
         (customer.phone && customer.phone.includes(searchText))
       )
     : customers;
+
+  const handleOpenNewCustomerModal = () => {
+    setIsNewCustomerModalOpen(true);
+  };
+
+  const handleCloseNewCustomerModal = () => {
+    setIsNewCustomerModalOpen(false);
+  };
+
+  const handleCustomerAdded = () => {
+    refetch();
+    handleCloseNewCustomerModal();
+  };
 
   return (
     <StaffLayout>
@@ -45,7 +61,11 @@ export default function Customers() {
                   onChange={(e) => setSearchText(e.target.value)}
                 />
               </div>
-              <Button variant="outline" className="gap-1">
+              <Button 
+                variant="outline" 
+                className="gap-1"
+                onClick={handleOpenNewCustomerModal}
+              >
                 <UserPlus className="h-4 w-4" />
                 <span>Yeni Müşteri</span>
               </Button>
@@ -58,6 +78,15 @@ export default function Customers() {
           isLoading={isLoading} 
           error={error as Error}
         />
+
+        <Dialog open={isNewCustomerModalOpen} onOpenChange={setIsNewCustomerModalOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Yeni Müşteri Ekle</DialogTitle>
+            </DialogHeader>
+            <NewCustomerForm onSuccess={handleCustomerAdded} onCancel={handleCloseNewCustomerModal} />
+          </DialogContent>
+        </Dialog>
       </div>
     </StaffLayout>
   );
