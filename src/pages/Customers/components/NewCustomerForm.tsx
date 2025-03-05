@@ -128,7 +128,7 @@ export function NewCustomerForm({ onSuccess, onCancel }: NewCustomerFormProps) {
       
       // Özel hata mesajları
       if (error.message?.includes('infinite recursion')) {
-        toast.error("Sistem hatası: Profil ilişkileri sorunu. IT ekibine başvurun.");
+        toast.error("Müşteri eklenirken bir sorun oluştu. Lütfen tekrar deneyin.");
       } else if (error.code === '23505') {
         toast.error("Bu bilgilere sahip bir müşteri zaten var");
       } else {

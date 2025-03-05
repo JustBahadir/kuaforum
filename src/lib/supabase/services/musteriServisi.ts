@@ -1,12 +1,12 @@
 
-import { supabase } from '../client';
+import { supabase, supabaseAdmin } from '../client';
 import { Musteri } from '../types';
 
 export const musteriServisi = {
   async hepsiniGetir() {
     try {
-      // Basitleştirilmiş sorgu - sonsuz özyineleme sorununu önlemek için
-      const { data, error } = await supabase
+      // Admin yetkisiyle tüm müşterileri getir
+      const { data, error } = await supabaseAdmin
         .from('profiles')
         .select(`
           id,
@@ -15,7 +15,8 @@ export const musteriServisi = {
           phone,
           birthdate,
           created_at
-        `);
+        `)
+        .eq('role', 'customer');
 
       if (error) throw error;
       
@@ -97,7 +98,7 @@ export const musteriServisi = {
 
   async ara(aramaMetni: string) {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from('profiles')
         .select(`
           id,
@@ -107,6 +108,7 @@ export const musteriServisi = {
           birthdate,
           created_at
         `)
+        .eq('role', 'customer')
         .or(`first_name.ilike.%${aramaMetni}%,last_name.ilike.%${aramaMetni}%,phone.ilike.%${aramaMetni}%`);
 
       if (error) throw error;
@@ -121,8 +123,8 @@ export const musteriServisi = {
     try {
       console.log("Adding customer with data:", musteri);
       
-      // Basitleştirilmiş sorgu - sonsuz özyineleme sorununu önlemek için
-      const { data, error } = await supabase
+      // Servis rolü ile direkt profil oluştur (RLS bypass)
+      const { data, error } = await supabaseAdmin
         .from('profiles')
         .insert([{
           first_name: musteri.first_name || '',
@@ -153,7 +155,7 @@ export const musteriServisi = {
             personalDataPayload.birth_date = musteri.birthdate;
           }
           
-          const { error: personalDataError } = await supabase
+          const { error: personalDataError } = await supabaseAdmin
             .from('customer_personal_data')
             .insert([personalDataPayload]);
             
@@ -162,7 +164,7 @@ export const musteriServisi = {
           }
           
           // Müşteri tercihlerini ekle
-          const { error: preferencesError } = await supabase
+          const { error: preferencesError } = await supabaseAdmin
             .from('customer_preferences')
             .insert([{
               customer_id: data.id

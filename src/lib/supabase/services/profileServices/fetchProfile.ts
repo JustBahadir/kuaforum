@@ -1,5 +1,5 @@
 
-import { supabase } from '../../client';
+import { supabase, supabaseAdmin } from '../../client';
 import { Profile } from '../../types';
 
 /**
@@ -16,15 +16,15 @@ export async function getProfile(): Promise<Profile | null> {
     }
     
     try {
-      // Basitleştirilmiş sorgu - sonsuz özyineleme sorununu önlemek için
-      const { data: profile, error } = await supabase
+      // Admin istemcisi ile profil getir, RLS bypass
+      const { data: profile, error } = await supabaseAdmin
         .from('profiles')
         .select('id, first_name, last_name, phone, gender, birthdate, role, created_at')
         .eq('id', user.id)
         .maybeSingle();
       
       if (error) {
-        console.error("Profil bilgileri normal sorgu ile alınamadı:", error);
+        console.error("Profil bilgileri alınamadı:", error);
         
         // Use user metadata as fallback
         const avatar_url = user.user_metadata?.avatar_url || '';
@@ -106,17 +106,22 @@ export async function getUserRole(): Promise<string | null> {
       return user.user_metadata.role;
     }
     
-    // Metadata'da yoksa get_auth_user_role function kullanarak alalım
+    // Admin istemcisi ile profili doğrudan sorgula
     try {
-      const { data, error } = await supabase.rpc('get_auth_user_role');
+      const { data, error } = await supabaseAdmin
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle();
+        
       if (error) {
-        console.error("Role RPC fonksiyonu çağrılırken hata:", error);
-        // Fallback olarak customer role
-        return 'customer';
+        console.error("Role bilgisi alınamadı:", error);
+        return 'customer'; // Varsayılan değer
       }
-      return data || 'customer';
+      
+      return data?.role || 'customer';
     } catch (rpcError) {
-      console.error("getUserRole RPC hatası:", rpcError);
+      console.error("getUserRole sorgu hatası:", rpcError);
       return 'customer';
     }
   } catch (err) {

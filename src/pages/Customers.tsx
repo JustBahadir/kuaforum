@@ -11,6 +11,7 @@ import { musteriServisi } from "@/lib/supabase/services/musteriServisi";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { NewCustomerForm } from "./Customers/components/NewCustomerForm";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { toast } from "sonner";
 
 export default function Customers() {
   const [searchText, setSearchText] = useState("");
@@ -24,6 +25,7 @@ export default function Customers() {
     meta: {
       onError: (err: any) => {
         console.error("Müşteri listesi yüklenirken hata:", err);
+        toast.error("Müşteriler yüklenirken bir sorun oluştu. Lütfen sayfayı yenileyin.");
       }
     }
   });
@@ -52,7 +54,7 @@ export default function Customers() {
     if (!error) return "Bilinmeyen bir hata oluştu.";
     
     if (error.message && error.message.includes("infinite recursion")) {
-      return "Sistem hatası: Profil verileri erişiminde problem. Lütfen sistem yöneticinizle iletişime geçin.";
+      return "Müşteri verileri yüklenirken bir sorun oluştu. Lütfen sayfayı yenileyin.";
     }
     
     return error.message || "Bilinmeyen bir hata oluştu.";
