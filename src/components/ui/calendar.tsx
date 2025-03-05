@@ -32,9 +32,16 @@ function Calendar({
           
           // Create a handler that creates a synthetic event with the expected shape
           const handleValueChange = (newValue: string) => {
-            // Call the onChange handler with the new value
+            // Call the onChange handler with the new value - creating a compatible format
             if (onChange) {
-              onChange(newValue);
+              // Create a synthetic event object that matches ChangeEvent<HTMLSelectElement>
+              const syntheticEvent = {
+                target: {
+                  value: newValue
+                }
+              } as React.ChangeEvent<HTMLSelectElement>;
+              
+              onChange(syntheticEvent);
             }
           };
           
