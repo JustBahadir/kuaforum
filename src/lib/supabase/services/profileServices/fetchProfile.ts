@@ -16,7 +16,7 @@ export async function getProfile(): Promise<Profile | null> {
     }
     
     try {
-      // Get the profile from the database with simplified query to avoid RLS recursion
+      // Basitleştirilmiş sorgu - sonsuz özyineleme sorununu önlemek için
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('id, first_name, last_name, phone, gender, birthdate, role, created_at')
@@ -101,14 +101,24 @@ export async function getUserRole(): Promise<string | null> {
       return null;
     }
     
-    // First try to get role from user metadata
+    // Önce user metadata'dan role almayı deneyelim
     if (user.user_metadata?.role) {
       return user.user_metadata.role;
     }
     
-    // If not in metadata, try to get from profile
-    const profile = await getProfile();
-    return profile?.role || 'customer';
+    // Metadata'da yoksa get_auth_user_role function kullanarak alalım
+    try {
+      const { data, error } = await supabase.rpc('get_auth_user_role');
+      if (error) {
+        console.error("Role RPC fonksiyonu çağrılırken hata:", error);
+        // Fallback olarak customer role
+        return 'customer';
+      }
+      return data || 'customer';
+    } catch (rpcError) {
+      console.error("getUserRole RPC hatası:", rpcError);
+      return 'customer';
+    }
   } catch (err) {
     console.error("getUserRole fonksiyonunda hata:", err);
     return null;

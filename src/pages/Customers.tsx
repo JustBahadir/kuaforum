@@ -19,7 +19,8 @@ export default function Customers() {
   const { data: customers = [], isLoading, error, refetch } = useQuery({
     queryKey: ['musteriler'],
     queryFn: () => musteriServisi.hepsiniGetir(),
-    retry: 1, // Only retry once to avoid too many recursion errors
+    retry: 1,
+    refetchOnWindowFocus: false,
     meta: {
       onError: (err: any) => {
         console.error("Müşteri listesi yüklenirken hata:", err);
@@ -51,7 +52,7 @@ export default function Customers() {
     if (!error) return "Bilinmeyen bir hata oluştu.";
     
     if (error.message && error.message.includes("infinite recursion")) {
-      return "Sonsuz döngü hatası: Profil ilişkileri için sonsuz özyineleme algılandı. Lütfen sistem yöneticinizle iletişime geçin.";
+      return "Sistem hatası: Profil verileri erişiminde problem. Lütfen sistem yöneticinizle iletişime geçin.";
     }
     
     return error.message || "Bilinmeyen bir hata oluştu.";

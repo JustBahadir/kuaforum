@@ -125,7 +125,15 @@ export function NewCustomerForm({ onSuccess, onCancel }: NewCustomerFormProps) {
       }
     } catch (error: any) {
       console.error("Müşteri eklerken hata:", error);
-      toast.error(`Müşteri eklenirken hata: ${error.message || "Bilinmeyen hata"}`);
+      
+      // Özel hata mesajları
+      if (error.message?.includes('infinite recursion')) {
+        toast.error("Sistem hatası: Profil ilişkileri sorunu. IT ekibine başvurun.");
+      } else if (error.code === '23505') {
+        toast.error("Bu bilgilere sahip bir müşteri zaten var");
+      } else {
+        toast.error(`Müşteri eklenirken hata: ${error.message || "Bilinmeyen hata"}`);
+      }
     } finally {
       setIsLoading(false);
     }

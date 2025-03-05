@@ -5,6 +5,7 @@ import { Musteri } from '../types';
 export const musteriServisi = {
   async hepsiniGetir() {
     try {
+      // Basitleştirilmiş sorgu - sonsuz özyineleme sorununu önlemek için
       const { data, error } = await supabase
         .from('profiles')
         .select(`
@@ -120,7 +121,7 @@ export const musteriServisi = {
     try {
       console.log("Adding customer with data:", musteri);
       
-      // Müşteri tipi Partial<Musteri> olarak değiştirildi, bu sayede tüm alanlar zorunlu değil
+      // Basitleştirilmiş sorgu - sonsuz özyineleme sorununu önlemek için
       const { data, error } = await supabase
         .from('profiles')
         .insert([{
@@ -172,7 +173,7 @@ export const musteriServisi = {
           }
         } catch (err) {
           console.error("Error creating related customer records:", err);
-          // Main profile was created, so we'll continue despite errors with related tables
+          // Ana profil oluşturuldu, ilgili tablolarda hatalar olsa bile devam edeceğiz
         }
       }
       
