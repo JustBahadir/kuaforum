@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { NewCustomerForm } from "./Customers/components/NewCustomerForm";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
+import { supabase } from "@/lib/supabase/client"; // Add this import
 
 export default function Customers() {
   const [searchText, setSearchText] = useState("");
