@@ -1,7 +1,7 @@
 
 import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { DayPicker, CaptionProps } from "react-day-picker";
+import { DayPicker, DropdownProps } from "react-day-picker";
 import { tr } from "date-fns/locale";
 
 import { cn } from "@/lib/utils";
@@ -27,34 +27,32 @@ function Calendar({
       components={{
         IconLeft: ({ ..._props }) => <ChevronLeft className="h-4 w-4" />,
         IconRight: ({ ..._props }) => <ChevronRight className="h-4 w-4" />,
-        Dropdown: ({ value, onChange, children, ...props }: {
-          value: string | number;
-          onChange: (value: string | number) => void;
-          children: React.ReactNode;
-          [key: string]: any;
-        }) => {
-          const options = React.Children.toArray(children) as React.ReactElement[];
+        Dropdown: (props: DropdownProps) => {
+          const { value, onChange, children, ...rest } = props;
           const handleValueChange = (newValue: string) => {
-            onChange(newValue);
+            onChange?.(newValue);
           };
           return (
             <Select 
-              value={value.toString()} 
+              value={value?.toString()} 
               onValueChange={handleValueChange}
             >
               <SelectTrigger className="w-[90px] border-0 px-2 py-1 text-sm h-auto font-medium">
                 <SelectValue>{value}</SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {options.map((option) => (
-                  <SelectItem 
-                    key={option.props.value} 
-                    value={option.props.value.toString()} 
-                    className="text-sm"
-                  >
-                    {option.props.children}
-                  </SelectItem>
-                ))}
+                {React.Children.map(children, (option) => {
+                  if (!React.isValidElement(option)) return null;
+                  return (
+                    <SelectItem 
+                      key={option.props.value} 
+                      value={option.props.value.toString()} 
+                      className="text-sm"
+                    >
+                      {option.props.children}
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
           );

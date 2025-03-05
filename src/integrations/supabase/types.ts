@@ -556,7 +556,10 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      get_auth_user_role: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
     }
     Enums: {
       user_role: "customer" | "staff" | "admin"

@@ -20,8 +20,10 @@ export default function Customers() {
     queryKey: ['musteriler'],
     queryFn: () => musteriServisi.hepsiniGetir(),
     retry: 1, // Only retry once to avoid too many recursion errors
-    onError: (err) => {
-      console.error("Müşteri listesi yüklenirken hata:", err);
+    meta: {
+      onError: (err: any) => {
+        console.error("Müşteri listesi yüklenirken hata:", err);
+      }
     }
   });
 
