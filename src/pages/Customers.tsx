@@ -12,13 +12,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { NewCustomerForm } from "./Customers/components/NewCustomerForm";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Toaster } from "sonner";
+import { toast } from "sonner";
+import { refreshSupabaseSession } from "@/lib/supabase/client";
 
 export default function Customers() {
   const [searchText, setSearchText] = useState("");
   const [isNewCustomerModalOpen, setIsNewCustomerModalOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   
-  // Simple data fetching with minimal options
+  // Query with proper error handling and shorter stale time
   const { 
     data: customers = [], 
     isLoading, 
@@ -30,11 +32,13 @@ export default function Customers() {
       try {
         return await musteriServisi.hepsiniGetir();
       } catch (err) {
-        console.error("Müşteri veri yükleme hatası:", err);
+        console.error("Customer data loading error:", err);
         throw err;
       }
     },
     refetchOnWindowFocus: false,
+    staleTime: 30000, // 30 seconds
+    retry: 1,
   });
 
   const filteredCustomers = searchText
@@ -59,11 +63,22 @@ export default function Customers() {
 
   const handleRetryConnection = async () => {
     setIsRefreshing(true);
+    toast.loading("Bağlantı yenileniyor...");
+    
     try {
+      // First refresh the Supabase session
+      await refreshSupabaseSession();
+      
+      // Then refetch the data
       await refetch();
-      setIsRefreshing(false);
+      
+      toast.dismiss();
+      toast.success("Bağlantı başarıyla yenilendi");
     } catch (err) {
-      console.error("Bağlantı yenileme hatası:", err);
+      console.error("Connection refresh error:", err);
+      toast.dismiss();
+      toast.error("Bağlantı yenilenirken hata oluştu. Lütfen sayfayı yenileyin.");
+    } finally {
       setIsRefreshing(false);
     }
   };

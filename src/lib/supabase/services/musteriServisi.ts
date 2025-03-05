@@ -2,7 +2,7 @@
 import { supabaseAdmin } from '../client';
 import { Musteri } from '../types';
 
-// Simplified customer service that only handles basic operations
+// Simplified customer service with better error handling
 export const musteriServisi = {
   // Get all customers
   async hepsiniGetir() {
@@ -13,15 +13,19 @@ export const musteriServisi = {
         .eq('role', 'customer')
         .order('first_name', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching customers:", error);
+        throw error;
+      }
+      
       return data || [];
     } catch (error) {
-      console.error("Müşterileri getirme hatası:", error);
+      console.error("Customer fetch error:", error);
       throw error;
     }
   },
 
-  // Add a new customer
+  // Add a new customer with simpler error handling
   async ekle(musteri: Partial<Musteri>) {
     try {
       const { data, error } = await supabaseAdmin
@@ -36,10 +40,14 @@ export const musteriServisi = {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Customer addition error:", error);
+        throw error;
+      }
+      
       return data;
     } catch (error) {
-      console.error("Müşteri ekleme hatası:", error);
+      console.error("Customer addition error:", error);
       throw error;
     }
   }
