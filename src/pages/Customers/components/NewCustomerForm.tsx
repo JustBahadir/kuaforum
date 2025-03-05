@@ -16,9 +16,10 @@ import { supabaseAdmin } from "@/lib/supabase/client";
 interface NewCustomerFormProps {
   onSuccess: () => void;
   onCancel: () => void;
+  dukkanId?: number;
 }
 
-export function NewCustomerForm({ onSuccess, onCancel }: NewCustomerFormProps) {
+export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFormProps) {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
@@ -56,24 +57,32 @@ export function NewCustomerForm({ onSuccess, onCancel }: NewCustomerFormProps) {
   };
 
   // Format date input
-  const formatBirthdateInput = (input: string) => {
-    const digitsOnly = input.replace(/\D/g, '');
-    
-    if (digitsOnly.length <= 2) {
-      return digitsOnly;
-    } else if (digitsOnly.length <= 4) {
-      return `${digitsOnly.slice(0, 2)}.${digitsOnly.slice(2)}`;
-    } else {
-      return `${digitsOnly.slice(0, 2)}.${digitsOnly.slice(2, 4)}.${digitsOnly.slice(4, 8)}`;
-    }
-  };
-
-  // Birthdate change
   const handleBirthdateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const input = e.target.value;
-    const formattedInput = formatBirthdateInput(input);
+    
+    // Allow empty value
+    if (!input) {
+      setBirthdateText('');
+      setBirthdate(undefined);
+      return;
+    }
+    
+    // Only allow digits and dots
+    const cleanInput = input.replace(/[^\d.]/g, '');
+    
+    // Format into DD.MM.YYYY
+    let formattedInput = cleanInput;
+    if (cleanInput.length <= 2) {
+      formattedInput = cleanInput;
+    } else if (cleanInput.length <= 4) {
+      formattedInput = `${cleanInput.slice(0, 2)}.${cleanInput.slice(2)}`;
+    } else {
+      formattedInput = `${cleanInput.slice(0, 2)}.${cleanInput.slice(2, 4)}.${cleanInput.slice(4, 8)}`;
+    }
+    
     setBirthdateText(formattedInput);
     
+    // Parse date if complete
     if (formattedInput.length === 10) {
       try {
         const parsedDate = parse(formattedInput, 'dd.MM.yyyy', new Date());
@@ -95,7 +104,7 @@ export function NewCustomerForm({ onSuccess, onCancel }: NewCustomerFormProps) {
     setCalendarOpen(false);
   };
   
-  // Form submission - simplified and more direct
+  // Form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -104,24 +113,9 @@ export function NewCustomerForm({ onSuccess, onCancel }: NewCustomerFormProps) {
     }
     
     setIsSubmitting(true);
-    
-    // Using a simple toast for better UX
     const toastId = toast.loading("Müşteri ekleniyor...");
     
     try {
-      // Parse date if entered via text
-      let selectedDate = birthdate;
-      if (!selectedDate && birthdateText) {
-        try {
-          selectedDate = parse(birthdateText, 'dd.MM.yyyy', new Date());
-          if (!isValid(selectedDate)) {
-            selectedDate = undefined;
-          }
-        } catch (error) {
-          selectedDate = undefined;
-        }
-      }
-      
       // Direct insertion with supabaseAdmin to bypass RLS
       const { data, error } = await supabaseAdmin
         .from('profiles')
@@ -129,12 +123,12 @@ export function NewCustomerForm({ onSuccess, onCancel }: NewCustomerFormProps) {
           first_name: firstName,
           last_name: lastName,
           phone: phone ? formatPhoneForSubmission(phone) : null,
-          birthdate: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : null,
-          role: 'customer'
+          birthdate: birthdate ? format(birthdate, 'yyyy-MM-dd') : null,
+          role: 'customer',
+          dukkan_id: dukkanId
         }])
-        .select()
-        .single();
-      
+        .select();
+        
       if (error) {
         throw error;
       }
@@ -151,10 +145,10 @@ export function NewCustomerForm({ onSuccess, onCancel }: NewCustomerFormProps) {
       onSuccess();
       
     } catch (error: any) {
-      console.error("Customer addition error:", error);
+      console.error("Müşteri ekleme hatası:", error);
       
       toast.dismiss(toastId);
-      toast.error(`Müşteri eklenemedi: ${error.message || 'API key geçersiz veya bağlantı hatası'}`);
+      toast.error(`Müşteri eklenemedi: ${error.message || 'Bağlantı hatası'}`);
     } finally {
       setIsSubmitting(false);
     }

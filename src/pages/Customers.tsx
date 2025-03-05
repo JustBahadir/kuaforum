@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,34 +13,38 @@ import { NewCustomerForm } from "./Customers/components/NewCustomerForm";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Toaster } from "sonner";
 import { toast } from "sonner";
-import { refreshSupabaseSession } from "@/lib/supabase/client";
+import { useShopData } from "@/hooks/useShopData";
 
 export default function Customers() {
   const [searchText, setSearchText] = useState("");
   const [isNewCustomerModalOpen, setIsNewCustomerModalOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const { dukkanData } = useShopData(null);
   
-  // Query with proper error handling and shorter stale time
+  // Query with shop context
   const { 
     data: customers = [], 
     isLoading, 
     error, 
     refetch 
   } = useQuery({
-    queryKey: ['musteriler'],
+    queryKey: ['musteriler', dukkanData?.id],
     queryFn: async () => {
       try {
-        return await musteriServisi.hepsiniGetir();
+        // Only fetch customers for this shop
+        return await musteriServisi.hepsiniGetir(dukkanData?.id);
       } catch (err) {
-        console.error("Customer data loading error:", err);
+        console.error("Müşteri verisi yüklenirken hata:", err);
         throw err;
       }
     },
     refetchOnWindowFocus: false,
     staleTime: 30000, // 30 seconds
     retry: 1,
+    enabled: !!dukkanData?.id // Only run query when shop data is available
   });
 
+  // Filter customers based on search text
   const filteredCustomers = searchText
     ? customers.filter(customer => 
         `${customer.first_name} ${customer.last_name}`.toLowerCase().includes(searchText.toLowerCase()) ||
@@ -66,16 +70,11 @@ export default function Customers() {
     toast.loading("Bağlantı yenileniyor...");
     
     try {
-      // First refresh the Supabase session
-      await refreshSupabaseSession();
-      
-      // Then refetch the data
       await refetch();
-      
       toast.dismiss();
       toast.success("Bağlantı başarıyla yenilendi");
     } catch (err) {
-      console.error("Connection refresh error:", err);
+      console.error("Bağlantı yenileme hatası:", err);
       toast.dismiss();
       toast.error("Bağlantı yenilenirken hata oluştu. Lütfen sayfayı yenileyin.");
     } finally {
@@ -85,7 +84,7 @@ export default function Customers() {
 
   return (
     <StaffLayout>
-      <Toaster />
+      <Toaster position="top-right" />
       <div className="container mx-auto p-4">
         <h1 className="text-2xl font-bold mb-6">Müşteriler</h1>
         
@@ -99,7 +98,7 @@ export default function Customers() {
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="search" 
-                  placeholder="İsim, telefon veya e-posta ile ara..." 
+                  placeholder="İsim veya telefon ile ara..." 
                   className="pl-8"
                   value={searchText}
                   onChange={(e) => setSearchText(e.target.value)}
@@ -146,14 +145,18 @@ export default function Customers() {
         />
 
         <Dialog open={isNewCustomerModalOpen} onOpenChange={setIsNewCustomerModalOpen}>
-          <DialogContent className="sm:max-w-[550px]">
+          <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>Yeni Müşteri Ekle</DialogTitle>
               <DialogDescription>
                 Müşteri bilgilerini girerek yeni bir müşteri kaydı oluşturun.
               </DialogDescription>
             </DialogHeader>
-            <NewCustomerForm onSuccess={handleCustomerAdded} onCancel={handleCloseNewCustomerModal} />
+            <NewCustomerForm 
+              onSuccess={handleCustomerAdded} 
+              onCancel={handleCloseNewCustomerModal} 
+              dukkanId={dukkanData?.id}
+            />
           </DialogContent>
         </Dialog>
       </div>
