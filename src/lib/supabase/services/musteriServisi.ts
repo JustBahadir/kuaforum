@@ -1,10 +1,9 @@
-
 import { supabase, supabaseAdmin } from '../client';
 import { Musteri } from '../types';
 import { toast } from 'sonner';
 
-// Helper function to retry API requests with exponential backoff
-const retryFetch = async (fetchFn, maxRetries = 3, delay = 500) => {
+// API isteklerini tekrarlama ve backoff stratejisi ile yeniden deneme fonksiyonu
+const retryFetch = async (fetchFn, maxRetries = 3, delay = 1000) => {
   let lastError = null;
   
   for (let i = 0; i < maxRetries; i++) {
@@ -15,26 +14,28 @@ const retryFetch = async (fetchFn, maxRetries = 3, delay = 500) => {
       console.error(`Deneme ${i+1}/${maxRetries} başarısız:`, error);
       lastError = error;
       
+      // API anahtarı hatası durumunda oturumu yenileme
       if (error.message?.includes('Invalid API key')) {
         console.error("API anahtarı hatası tespit edildi, oturumu yenilemeye çalışılıyor...");
         try {
-          const { data: { session }, error: refreshError } = await supabase.auth.refreshSession();
+          const { data, error: refreshError } = await supabase.auth.refreshSession();
           if (refreshError) throw refreshError;
-          console.log("Oturum yenilendi:", session ? "Başarılı" : "Başarısız");
+          console.log("Oturum yenilendi:", data.session ? "Başarılı" : "Başarısız");
         } catch (refreshError) {
           console.error("Oturum yenileme hatası:", refreshError);
         }
       }
       
       if (i < maxRetries - 1) {
-        const retryDelay = delay * Math.pow(2, i); // Exponential backoff
+        // Üstel artış ile bekleme süresi (exponential backoff)
+        const retryDelay = delay * Math.pow(2, i);
         console.log(`${retryDelay/1000} saniye sonra tekrar deneniyor...`);
         await new Promise(resolve => setTimeout(resolve, retryDelay));
       }
     }
   }
   
-  throw lastError; // Throw the last error if all retries fail
+  throw lastError; // Tüm denemeler başarısız olursa son hatayı fırlat
 };
 
 export const musteriServisi = {
@@ -42,7 +43,7 @@ export const musteriServisi = {
     return retryFetch(async () => {
       console.log("Müşteri listesi alınıyor...");
       
-      // Always use admin client to bypass RLS
+      // Her zaman admin istemcisini kullan (RLS'yi bypass etmek için)
       const { data, error } = await supabaseAdmin
         .from('profiles')
         .select(`
@@ -54,7 +55,7 @@ export const musteriServisi = {
           created_at
         `)
         .eq('role', 'customer')
-        .order('first_name', { ascending: true }); // Alphabetical order by first name
+        .order('first_name', { ascending: true }); // İsme göre alfabetik sırala
 
       if (error) {
         console.error("Müşterileri getirme hatası:", error);
@@ -63,7 +64,7 @@ export const musteriServisi = {
       
       console.log(`${data?.length || 0} müşteri başarıyla alındı`);
       
-      // Get the operations count for each customer
+      // Her müşteri için işlem sayısını al
       const enrichedCustomers = await Promise.all((data || []).map(async (customer) => {
         try {
           const { count, error: countError } = await supabaseAdmin
@@ -85,10 +86,9 @@ export const musteriServisi = {
       }));
       
       return enrichedCustomers;
-    });
+    }, 5); // Daha fazla deneme hakkı (5)
   },
 
-  // Diğer fonksiyonlarda da benzer değişiklikler yapıyoruz...
   async istatistiklerGetir() {
     return retryFetch(async () => {
       // İlk olarak tüm müşterileri alalım - admin istemcisi kullan
@@ -132,7 +132,7 @@ export const musteriServisi = {
       }) || [];
 
       return sonuclar;
-    });
+    }, 5); // Daha fazla deneme hakkı (5)
   },
 
   async ara(aramaMetni: string) {
@@ -152,14 +152,14 @@ export const musteriServisi = {
 
       if (error) throw error;
       return data || [];
-    });
+    }, 5); // Daha fazla deneme hakkı (5)
   },
 
   async ekle(musteri: Partial<Musteri>) {
     return retryFetch(async () => {
       console.log("Müşteri ekleniyor, veriler:", musteri);
       
-      // Using admin client to bypass RLS
+      // Her zaman admin istemcisini kullan
       const { data, error } = await supabaseAdmin
         .from('profiles')
         .insert([{
@@ -179,10 +179,10 @@ export const musteriServisi = {
       
       console.log("Müşteri başarıyla eklendi:", data);
       
-      // Create related records for the new customer
+      // Yeni müşteri için ilişkili kayıtları oluştur
       if (data && data.id) {
         try {
-          // Add customer personal data
+          // Müşteri kişisel verilerini ekle
           const personalDataPayload: any = {
             customer_id: data.id
           };
@@ -199,7 +199,7 @@ export const musteriServisi = {
             console.error("Kişisel veri ekleme hatası:", personalDataError);
           }
           
-          // Add customer preferences
+          // Müşteri tercihlerini ekle
           const { error: preferencesError } = await supabaseAdmin
             .from('customer_preferences')
             .insert([{
@@ -211,12 +211,12 @@ export const musteriServisi = {
           }
         } catch (err) {
           console.error("İlgili müşteri kayıtlarını oluşturma hatası:", err);
-          // Continue even if related records fail
+          // İlişkili kayıtlar başarısız olsa bile devam et
         }
       }
       
       return data;
-    });
+    }, 5); // Daha fazla deneme hakkı (5)
   },
 
   async guncelle(id: string, musteri: Partial<Musteri>) {
@@ -230,7 +230,7 @@ export const musteriServisi = {
 
       if (error) throw error;
       return data;
-    });
+    }, 5); // Daha fazla deneme hakkı (5)
   },
   
   async getirKisiselBilgileri(customerId: string) {
@@ -243,7 +243,7 @@ export const musteriServisi = {
         
       if (error) throw error;
       return data;
-    });
+    }, 5); // Daha fazla deneme hakkı (5)
   },
   
   async guncelleKisiselBilgileri(customerId: string, bilgiler: any) {
@@ -279,7 +279,7 @@ export const musteriServisi = {
         if (error) throw error;
         return data;
       }
-    });
+    }, 5); // Daha fazla deneme hakkı (5)
   },
   
   async getirTercihleri(customerId: string) {
@@ -292,7 +292,7 @@ export const musteriServisi = {
         
       if (error) throw error;
       return data;
-    });
+    }, 5); // Daha fazla deneme hakkı (5)
   },
   
   async guncelleTercihleri(customerId: string, tercihler: any) {
@@ -328,6 +328,6 @@ export const musteriServisi = {
         if (error) throw error;
         return data;
       }
-    });
+    }, 5); // Daha fazla deneme hakkı (5)
   }
 };

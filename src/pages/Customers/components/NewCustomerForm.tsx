@@ -11,6 +11,7 @@ import { tr } from "date-fns/locale";
 import { musteriServisi } from "@/lib/supabase/services/musteriServisi";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
+import { formatPhoneNumber } from "@/utils/phoneFormatter";
 
 interface NewCustomerFormProps {
   onSuccess: () => void;
@@ -44,10 +45,15 @@ export function NewCustomerForm({ onSuccess, onCancel }: NewCustomerFormProps) {
     return Object.keys(newErrors).length === 0;
   };
   
-  const formatPhoneInput = (value: string) => {
-    // Remove all non-digit characters
-    const digitsOnly = value.replace(/\D/g, '');
-    return digitsOnly;
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Remove any non-digit characters
+    const digitsOnly = e.target.value.replace(/\D/g, '');
+    setPhone(formatPhoneNumber(digitsOnly));
+  };
+  
+  const formatPhoneForSubmission = (value: string) => {
+    // Remove all non-digit characters for submission
+    return value.replace(/\D/g, '');
   };
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -63,18 +69,23 @@ export function NewCustomerForm({ onSuccess, onCancel }: NewCustomerFormProps) {
       const customerData = {
         first_name: firstName,
         last_name: lastName,
-        phone: phone ? formatPhoneInput(phone) : null,
+        phone: phone ? formatPhoneForSubmission(phone) : null,
         birthdate: birthdate ? format(birthdate, 'yyyy-MM-dd') : null
       };
+      
+      console.log("Gönderilecek müşteri verileri:", customerData);
       
       const result = await musteriServisi.ekle(customerData);
       
       if (result) {
+        toast.success("Müşteri başarıyla eklendi");
         onSuccess();
         setFirstName('');
         setLastName('');
         setPhone('');
         setBirthdate(undefined);
+      } else {
+        toast.error("Müşteri eklenemedi");
       }
     } catch (error: any) {
       console.error("Müşteri eklenirken hata:", error);
@@ -84,7 +95,33 @@ export function NewCustomerForm({ onSuccess, onCancel }: NewCustomerFormProps) {
         
         try {
           await supabase.auth.refreshSession();
-          toast.info("Oturum yenilendi. Lütfen tekrar deneyin.");
+          // Tekrar deneme
+          setTimeout(async () => {
+            try {
+              const customerData = {
+                first_name: firstName,
+                last_name: lastName,
+                phone: phone ? formatPhoneForSubmission(phone) : null,
+                birthdate: birthdate ? format(birthdate, 'yyyy-MM-dd') : null
+              };
+              
+              const result = await musteriServisi.ekle(customerData);
+              
+              if (result) {
+                toast.success("Müşteri başarıyla eklendi");
+                onSuccess();
+                setFirstName('');
+                setLastName('');
+                setPhone('');
+                setBirthdate(undefined);
+              } else {
+                toast.error("Müşteri eklenemedi");
+              }
+            } catch (retryError) {
+              console.error("Tekrar denemede hata:", retryError);
+              toast.error("Müşteri eklenirken bir hata oluştu. Lütfen daha sonra tekrar deneyin.");
+            }
+          }, 1000);
         } catch (refreshError) {
           console.error("Oturum yenileme hatası:", refreshError);
           toast.error("Oturum yenilenemedi. Lütfen sayfayı yenileyin.");
@@ -130,7 +167,7 @@ export function NewCustomerForm({ onSuccess, onCancel }: NewCustomerFormProps) {
         <Input
           id="phone"
           value={phone}
-          onChange={(e) => setPhone(e.target.value)}
+          onChange={handlePhoneChange}
           placeholder="Telefon numarası"
           className={errors.phone ? "border-red-500" : ""}
         />

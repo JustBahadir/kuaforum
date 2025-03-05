@@ -31,8 +31,8 @@ export default function Customers() {
         throw err;
       }
     },
-    retry: 1, // Only retry once to prevent excessive loading
-    retryDelay: 1000, // Retry after 1 second
+    retry: 2, // İki kez daha deneyeceğiz
+    retryDelay: 1000, // 1 saniye sonra tekrar dene
     refetchOnWindowFocus: false,
     meta: {
       onError: (err: any) => {
@@ -42,10 +42,10 @@ export default function Customers() {
         
         if (err.message?.includes('Invalid API key')) {
           errorMessage = "Bağlantı sorunu. Otomatik yenileme deneniyor...";
-          // Try to auto-refresh the session
+          // Oturumu yenilemeye çalışalım
           supabase.auth.refreshSession().then(() => {
             console.log("Oturum yenilendi, veri tekrar yükleniyor...");
-            setTimeout(() => refetch(), 500);
+            setTimeout(() => refetch(), 1000);
           }).catch(refreshError => {
             console.error("Oturum yenileme hatası:", refreshError);
             toast.error("Oturum yenilenemedi. Lütfen sayfayı yenileyin.");
@@ -55,7 +55,7 @@ export default function Customers() {
         toast.error(errorMessage);
       }
     },
-    staleTime: 30000, // Consider data fresh for 30 seconds
+    staleTime: 30000, // 30 saniye boyunca veriyi taze kabul et
   });
 
   const filteredCustomers = searchText
@@ -76,7 +76,6 @@ export default function Customers() {
   const handleCustomerAdded = () => {
     refetch();
     handleCloseNewCustomerModal();
-    toast.success("Müşteri başarıyla eklendi");
   };
 
   const getErrorMessage = (error: any) => {

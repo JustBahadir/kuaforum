@@ -3,11 +3,11 @@ import { supabase, supabaseAdmin } from '../../client';
 import { Profile } from '../../types';
 
 /**
- * Fetches the current user's profile
+ * Mevcut kullanıcının profilini getirir
  */
 export async function getProfile(): Promise<Profile | null> {
   try {
-    // Get the current user
+    // Mevcut kullanıcıyı al
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
     if (userError || !user) {
@@ -15,7 +15,7 @@ export async function getProfile(): Promise<Profile | null> {
       return null;
     }
     
-    // First, try to get profile directly from admin client which bypasses RLS
+    // Önce profili doğrudan admin istemcisinden almayı dene (RLS'yi bypass eder)
     try {
       const { data, error } = await supabaseAdmin
         .from('profiles')
@@ -24,7 +24,7 @@ export async function getProfile(): Promise<Profile | null> {
         .maybeSingle();
       
       if (!error && data) {
-        // Add avatar_url from user metadata if not in profile
+        // Profilde yoksa avatar_url'i kullanıcı meta verisinden ekle
         const avatar_url = user.user_metadata?.avatar_url || '';
         return {
           ...data,
@@ -32,12 +32,12 @@ export async function getProfile(): Promise<Profile | null> {
         };
       }
       
-      console.warn("Profile not found or error, using metadata:", error);
+      console.warn("Profil bulunamadı veya hata, meta veri kullanılıyor:", error);
     } catch (err) {
-      console.error("Error in profile fetch with admin client:", err);
+      console.error("Admin istemci ile profil getirme hatası:", err);
     }
     
-    // Fallback to user metadata as profile data
+    // Profil yoksa veya hata varsa, kullanıcı meta verisini profil verisi olarak kullan
     const avatar_url = user.user_metadata?.avatar_url || '';
     
     return {
@@ -52,29 +52,29 @@ export async function getProfile(): Promise<Profile | null> {
       created_at: new Date().toISOString()
     };
   } catch (err) {
-    console.error("Error in getProfile function:", err);
+    console.error("getProfile fonksiyonunda hata:", err);
     return null;
   }
 }
 
 /**
- * Gets the user role from the profile
+ * Kullanıcı rolünü profilden alır
  */
 export async function getUserRole(): Promise<string | null> {
   try {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
     if (userError || !user) {
-      console.error("Could not get user for role:", userError);
+      console.error("Rol için kullanıcı alınamadı:", userError);
       return null;
     }
     
-    // First try to get role from user metadata
+    // Önce rolü kullanıcı meta verisinden almayı dene
     if (user.user_metadata?.role) {
       return user.user_metadata.role;
     }
     
-    // Try to get role directly with admin client
+    // Rolü doğrudan admin istemcisi ile almayı dene
     try {
       const { data, error } = await supabaseAdmin
         .from('profiles')
@@ -86,14 +86,14 @@ export async function getUserRole(): Promise<string | null> {
         return data.role;
       }
       
-      console.warn("Role not found in profile, using default:", error);
+      console.warn("Profilde rol bulunamadı, varsayılan kullanılıyor:", error);
     } catch (err) {
-      console.error("Error in role fetch with admin client:", err);
+      console.error("Admin istemci ile rol getirme hatası:", err);
     }
     
-    return 'customer'; // Default role
+    return 'customer'; // Varsayılan rol
   } catch (err) {
-    console.error("Error in getUserRole function:", err);
+    console.error("getUserRole fonksiyonunda hata:", err);
     return null;
   }
 }

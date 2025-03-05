@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { User, Phone, Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
+import { formatPhoneNumber } from "@/utils/phoneFormatter";
 
 interface CustomerListProps {
   customers: any[];
@@ -40,7 +41,7 @@ export function CustomerList({ customers, isLoading, error }: CustomerListProps)
   }
 
   if (error) {
-    return null; // Error already displayed above this component
+    return null; // Hata zaten bu bileşenin üstünde gösteriliyor
   }
 
   if (customers.length === 0) {
@@ -52,11 +53,6 @@ export function CustomerList({ customers, isLoading, error }: CustomerListProps)
       </Card>
     );
   }
-
-  const formatPhoneNumber = (phone: string) => {
-    if (!phone) return '';
-    return phone.replace(/(\d{4})(\d{3})(\d{2})(\d{2})/, '$1 $2 $3 $4');
-  };
 
   const openCustomerDetails = (customer: any) => {
     setSelectedCustomer(customer);
