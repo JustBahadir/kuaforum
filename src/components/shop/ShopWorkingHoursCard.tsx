@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Edit } from "lucide-react";
 import { TableHeader, TableRow, TableHead, TableBody, TableCell, Table } from '@/components/ui/table';
-import { gunSirasi, gunIsimleri } from "@/components/operations/constants/workingDays";
+import { gunSiralama, gunIsimleri } from "@/components/operations/constants/workingDays";
 
 interface ShopWorkingHoursCardProps {
   calisma_saatleri: any[];
@@ -16,10 +16,10 @@ export function ShopWorkingHoursCard({ calisma_saatleri, userRole }: ShopWorking
     return time.substring(0, 5);
   };
 
-  // Always sort days based on our predefined ordering
+  // Always sort days based on our array index
   const sortedSaatler = [...calisma_saatleri].sort((a, b) => {
-    const aIndex = gunSirasi[a.gun as keyof typeof gunSirasi] || 99;
-    const bIndex = gunSirasi[b.gun as keyof typeof gunSirasi] || 99;
+    const aIndex = gunSiralama.indexOf(a.gun);
+    const bIndex = gunSiralama.indexOf(b.gun);
     return aIndex - bIndex;
   });
 

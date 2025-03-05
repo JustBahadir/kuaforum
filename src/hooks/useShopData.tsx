@@ -1,9 +1,10 @@
+
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
 import { dukkanServisi } from "@/lib/supabase";
 import { authService } from "@/lib/auth/authService";
-import { gunSirasi } from "@/components/operations/constants/workingDays";
+import { gunSiralama } from "@/components/operations/constants/workingDays";
 
 export function useShopData(dukkanId: number | null) {
   const [dukkanData, setDukkanData] = useState<any>(null);
@@ -114,9 +115,10 @@ export function useShopData(dukkanId: number | null) {
         
         console.log("Raw calisma_saatleri data:", data);
         
+        // Use array index for sorting
         const sortedData = data.sort((a, b) => {
-          const aIndex = gunSirasi[a.gun as keyof typeof gunSirasi] || 99;
-          const bIndex = gunSirasi[b.gun as keyof typeof gunSirasi] || 99;
+          const aIndex = gunSiralama.indexOf(a.gun);
+          const bIndex = gunSiralama.indexOf(b.gun);
           return aIndex - bIndex;
         });
         

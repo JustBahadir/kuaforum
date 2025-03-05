@@ -7,26 +7,28 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { CalismaSaati } from '@/lib/supabase/types';
 import { calismaSaatleriServisi } from '@/lib/supabase';
+import { gunSiralama, gunIsimleri } from './constants/workingDays';
 
 export const WorkingHoursForm = () => {
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   
   const defaultCalismaSaatleri = [
-    { gun: "Pazartesi", acilis: "09:00", kapanis: "18:00", kapali: false },
-    { gun: "Salı", acilis: "09:00", kapanis: "18:00", kapali: false },
-    { gun: "Çarşamba", acilis: "09:00", kapanis: "18:00", kapali: false },
-    { gun: "Perşembe", acilis: "09:00", kapanis: "18:00", kapali: false },
-    { gun: "Cuma", acilis: "09:00", kapanis: "18:00", kapali: false },
-    { gun: "Cumartesi", acilis: "10:00", kapanis: "16:00", kapali: false },
-    { gun: "Pazar", acilis: "10:00", kapanis: "14:00", kapali: true }
+    { gun: "pazartesi", acilis: "09:00", kapanis: "18:00", kapali: false },
+    { gun: "sali", acilis: "09:00", kapanis: "18:00", kapali: false },
+    { gun: "carsamba", acilis: "09:00", kapanis: "18:00", kapali: false },
+    { gun: "persembe", acilis: "09:00", kapanis: "18:00", kapali: false },
+    { gun: "cuma", acilis: "09:00", kapanis: "18:00", kapali: false },
+    { gun: "cumartesi", acilis: "10:00", kapanis: "16:00", kapali: false },
+    { gun: "pazar", acilis: "10:00", kapanis: "14:00", kapali: true }
   ] as Omit<CalismaSaati, "id">[];
   
   const { data: calismaSaatleri = [], isLoading: saatlerLoading } = useQuery({
     queryKey: ['calisma_saatleri'],
     queryFn: async () => {
       try {
-        return await calismaSaatleriServisi.hepsiniGetir();
+        const data = await calismaSaatleriServisi.hepsiniGetir();
+        return data.sort((a, b) => gunSiralama.indexOf(a.gun) - gunSiralama.indexOf(b.gun));
       } catch (error) {
         toast.error("Çalışma saatleri yüklenirken bir hata oluştu.");
         return [];
@@ -35,12 +37,17 @@ export const WorkingHoursForm = () => {
   });
 
   const [saatler, setSaatler] = useState<(CalismaSaati | Omit<CalismaSaati, "id">)[]>(
-    calismaSaatleri.length > 0 ? calismaSaatleri : defaultCalismaSaatleri
+    calismaSaatleri.length > 0
+      ? calismaSaatleri.sort((a, b) => gunSiralama.indexOf(a.gun) - gunSiralama.indexOf(b.gun))
+      : defaultCalismaSaatleri
   );
 
   const handleSaat = (index: number, field: keyof CalismaSaati, value: any) => {
     const newSaatler = [...saatler];
     (newSaatler[index] as any)[field] = value;
+
+    // Günleri sıralı tut
+    newSaatler.sort((a, b) => gunSiralama.indexOf(a.gun) - gunSiralama.indexOf(b.gun));
     setSaatler(newSaatler);
   };
 
@@ -48,12 +55,12 @@ export const WorkingHoursForm = () => {
     setLoading(true);
     try {
       if (calismaSaatleri.length === 0) {
-        // Create new records
+        // Yeni kayıtlar oluştur
         for (const saat of saatler) {
           await calismaSaatleriServisi.ekle(saat as Omit<CalismaSaati, "id">);
         }
       } else {
-        // Update existing records
+        // Mevcut kayıtları güncelle
         await calismaSaatleriServisi.guncelle(saatler as CalismaSaati[]);
       }
       
@@ -77,7 +84,7 @@ export const WorkingHoursForm = () => {
       <div className="grid gap-4">
         {saatler.map((saat, index) => (
           <div key={index} className="grid grid-cols-4 gap-4 items-center">
-            <div className="font-medium">{saat.gun}</div>
+            <div className="font-medium">{gunIsimleri[saat.gun] || saat.gun}</div>
             <Input
               type="time"
               value={saat.acilis || ""}

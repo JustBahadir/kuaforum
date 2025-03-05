@@ -10,6 +10,17 @@ export const gunSirasi = {
   "pazar": 7
 };
 
+// Array of days in correct order for easier sorting
+export const gunSiralama = [
+  "pazartesi",
+  "sali",
+  "carsamba",
+  "persembe",
+  "cuma",
+  "cumartesi",
+  "pazar"
+];
+
 export const gunIsimleri: Record<string, string> = {
   "pazartesi": "Pazartesi",
   "sali": "Salı",

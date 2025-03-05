@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import { CalismaSaati } from '@/lib/supabase/types';
 import { calismaSaatleriServisi } from '@/lib/supabase/services/calismaSaatleriServisi';
-import { gunSirasi } from '../constants/workingDays';
+import { gunSiralama } from '../constants/workingDays';
 
 export function useWorkingHours(
   isStaff: boolean = true,
@@ -27,6 +27,15 @@ export function useWorkingHours(
 
   // Log the days for debugging
   console.log("useWorkingHours raw days:", calismaSaatleri.map(s => s.gun));
+  
+  // Sort the days correctly
+  const sortedSaatler = [...calismaSaatleri].sort((a, b) => {
+    const aIndex = gunSiralama.indexOf(a.gun);
+    const bIndex = gunSiralama.indexOf(b.gun);
+    return aIndex - bIndex;
+  });
+  
+  console.log("useWorkingHours sorted days:", sortedSaatler.map(s => s.gun));
 
   const { mutate: saatGuncelle } = useMutation({
     mutationFn: async ({ id, updates }: { id: number; updates: any }) => {
@@ -110,7 +119,7 @@ export function useWorkingHours(
   };
 
   return {
-    calismaSaatleri,
+    calismaSaatleri: sortedSaatler, // Return the sorted array
     editing,
     tempChanges,
     startEditing,

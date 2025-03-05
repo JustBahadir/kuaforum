@@ -1,7 +1,7 @@
 
 import { supabase } from '../client';
 import { CalismaSaati } from '../types';
-import { gunSirasi } from '@/components/operations/constants/workingDays';
+import { gunSiralama } from '@/components/operations/constants/workingDays';
 
 export const calismaSaatleriServisi = {
   async hepsiniGetir() {
@@ -11,10 +11,10 @@ export const calismaSaatleriServisi = {
 
     if (error) throw error;
     
-    // Sort by our custom day order
+    // Sort by our array index instead of object lookup
     return (data || []).sort((a, b) => {
-      const aIndex = gunSirasi[a.gun as keyof typeof gunSirasi] || 99;
-      const bIndex = gunSirasi[b.gun as keyof typeof gunSirasi] || 99;
+      const aIndex = gunSiralama.indexOf(a.gun);
+      const bIndex = gunSiralama.indexOf(b.gun);
       return aIndex - bIndex;
     });
   },
@@ -26,10 +26,10 @@ export const calismaSaatleriServisi = {
 
     if (error) throw error;
     
-    // Sort by our custom day order
+    // Sort by our array index
     return (data || []).sort((a, b) => {
-      const aIndex = gunSirasi[a.gun as keyof typeof gunSirasi] || 99;
-      const bIndex = gunSirasi[b.gun as keyof typeof gunSirasi] || 99;
+      const aIndex = gunSiralama.indexOf(a.gun);
+      const bIndex = gunSiralama.indexOf(b.gun);
       return aIndex - bIndex;
     });
   },
@@ -42,10 +42,10 @@ export const calismaSaatleriServisi = {
 
     if (error) throw error;
     
-    // Sort by our custom day order
+    // Sort by our array index
     return (data || []).sort((a, b) => {
-      const aIndex = gunSirasi[a.gun as keyof typeof gunSirasi] || 99;
-      const bIndex = gunSirasi[b.gun as keyof typeof gunSirasi] || 99;
+      const aIndex = gunSiralama.indexOf(a.gun);
+      const bIndex = gunSiralama.indexOf(b.gun);
       return aIndex - bIndex;
     });
   },

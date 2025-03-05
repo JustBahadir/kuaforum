@@ -3,7 +3,7 @@ import { TableHeader, TableRow, TableHead, TableBody, TableCell, Table } from '@
 import { CalismaSaati } from '@/lib/supabase/types';
 import { WorkingHoursRow } from './WorkingHoursRow';
 import { useWorkingHours } from './hooks/useWorkingHours';
-import { gunSirasi } from './constants/workingDays';
+import { gunSiralama } from './constants/workingDays';
 
 interface WorkingHoursProps {
   isStaff?: boolean;
@@ -22,10 +22,10 @@ export function WorkingHours({ isStaff = true, gunler = [], onChange }: WorkingH
     cancelEditing
   } = useWorkingHours(isStaff, gunler, onChange);
 
-  // Always sort days based on our predefined ordering
+  // Always sort days based on our array index
   const sortedSaatler = [...calismaSaatleri].sort((a, b) => {
-    const aIndex = gunSirasi[a.gun as keyof typeof gunSirasi] || 99;
-    const bIndex = gunSirasi[b.gun as keyof typeof gunSirasi] || 99;
+    const aIndex = gunSiralama.indexOf(a.gun);
+    const bIndex = gunSiralama.indexOf(b.gun);
     return aIndex - bIndex;
   });
 
