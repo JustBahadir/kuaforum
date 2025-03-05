@@ -87,6 +87,7 @@ export interface Musteri {
   first_name?: string;
   last_name?: string;
   phone?: string;
+  birthdate?: string | null;
   total_services?: number;
 }
 

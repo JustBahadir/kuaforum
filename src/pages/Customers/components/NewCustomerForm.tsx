@@ -56,7 +56,7 @@ export function NewCustomerForm({ onSuccess, onCancel }: NewCustomerFormProps) {
       // Format the phone number to remove spaces or special characters
       const formattedPhone = data.phone ? data.phone.replace(/\s+/g, "") : undefined;
       
-      // Convert birthdate to ISO string
+      // Convert birthdate to ISO string or null
       const birthdate = data.birthdate ? data.birthdate.toISOString().split('T')[0] : null;
       
       await musteriServisi.ekle({
