@@ -15,6 +15,24 @@ export function ShopWorkingHoursCard({ calisma_saatleri, userRole, gunIsimleri }
     return time.substring(0, 5);
   };
 
+  // Correct order for Turkish days
+  const gunSirasi = {
+    "pazartesi": 1,
+    "sali": 2,
+    "carsamba": 3,
+    "persembe": 4,
+    "cuma": 5,
+    "cumartesi": 6,
+    "pazar": 7
+  };
+
+  // Make a sorted copy of the working hours
+  const sortedSaatler = [...calisma_saatleri].sort((a, b) => {
+    const aIndex = gunSirasi[a.gun as keyof typeof gunSirasi] || 99;
+    const bIndex = gunSirasi[b.gun as keyof typeof gunSirasi] || 99;
+    return aIndex - bIndex;
+  });
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -32,13 +50,13 @@ export function ShopWorkingHoursCard({ calisma_saatleri, userRole, gunIsimleri }
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {calisma_saatleri.length === 0 ? (
+          {sortedSaatler.length === 0 ? (
             <div className="text-center py-4 text-gray-500">
               Çalışma saati bilgisi bulunmuyor.
             </div>
           ) : (
             <div className="space-y-2">
-              {calisma_saatleri.map((saat: any) => (
+              {sortedSaatler.map((saat: any) => (
                 <div key={saat.gun} className="flex justify-between py-2 border-b">
                   <span className="font-medium">{gunIsimleri[saat.gun] || saat.gun}</span>
                   <span>

@@ -98,6 +98,7 @@ export function useShopData(dukkanId: number | null) {
           
         if (error) throw error;
         
+        // Correct order for Turkish days
         const gunSirasi = {
           "pazartesi": 1,
           "sali": 2,

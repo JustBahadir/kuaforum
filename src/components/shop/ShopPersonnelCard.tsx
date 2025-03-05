@@ -36,7 +36,7 @@ export function ShopPersonnelCard({ personelListesi, userRole }: ShopPersonnelCa
             {personelListesi.map((personel: any) => (
               <div key={personel.id} className="flex items-center gap-4 bg-gray-50 p-4 rounded-lg">
                 <Avatar>
-                  <AvatarImage src={personel.avatar_url} />
+                  <AvatarImage src={personel.avatar_url} alt={personel.ad_soyad} />
                   <AvatarFallback className="bg-purple-100 text-purple-600">
                     {personel.ad_soyad.split(' ').map((name: string) => name[0]).join('').substring(0, 2).toUpperCase()}
                   </AvatarFallback>
