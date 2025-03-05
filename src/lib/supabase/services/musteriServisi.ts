@@ -12,6 +12,7 @@ export const musteriServisi = {
           first_name,
           last_name,
           phone,
+          birthdate,
           created_at
         `);
 
@@ -102,6 +103,7 @@ export const musteriServisi = {
           first_name,
           last_name,
           phone,
+          birthdate,
           created_at
         `)
         .or(`first_name.ilike.%${aramaMetni}%,last_name.ilike.%${aramaMetni}%,phone.ilike.%${aramaMetni}%`);
@@ -116,29 +118,62 @@ export const musteriServisi = {
 
   async ekle(musteri: Partial<Musteri>) {
     try {
+      console.log("Adding customer with data:", musteri);
+      
       // Müşteri tipi Partial<Musteri> olarak değiştirildi, bu sayede tüm alanlar zorunlu değil
       const { data, error } = await supabase
         .from('profiles')
-        .insert([musteri])
+        .insert([{
+          first_name: musteri.first_name || '',
+          last_name: musteri.last_name || '',
+          phone: musteri.phone,
+          birthdate: musteri.birthdate,
+          role: 'customer'
+        }])
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error in profiles insert:", error);
+        throw error;
+      }
+      
+      console.log("Customer added successfully:", data);
       
       // Yeni müşteri için customer_personal_data ve customer_preferences tablolarında kayıt oluştur
       if (data && data.id) {
-        // Müşteri kişisel verileri ekle
-        if (musteri.birthdate) {
-          await supabase.from('customer_personal_data').insert({
-            customer_id: data.id,
-            birth_date: musteri.birthdate
-          });
+        try {
+          // Müşteri kişisel verileri ekle
+          const personalDataPayload: any = {
+            customer_id: data.id
+          };
+          
+          if (musteri.birthdate) {
+            personalDataPayload.birth_date = musteri.birthdate;
+          }
+          
+          const { error: personalDataError } = await supabase
+            .from('customer_personal_data')
+            .insert([personalDataPayload]);
+            
+          if (personalDataError) {
+            console.error("Error adding customer personal data:", personalDataError);
+          }
+          
+          // Müşteri tercihlerini ekle
+          const { error: preferencesError } = await supabase
+            .from('customer_preferences')
+            .insert([{
+              customer_id: data.id
+            }]);
+            
+          if (preferencesError) {
+            console.error("Error adding customer preferences:", preferencesError);
+          }
+        } catch (err) {
+          console.error("Error creating related customer records:", err);
+          // Main profile was created, so we'll continue despite errors with related tables
         }
-        
-        // Müşteri tercihlerini ekle
-        await supabase.from('customer_preferences').insert({
-          customer_id: data.id
-        });
       }
       
       return data;

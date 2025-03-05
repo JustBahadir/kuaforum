@@ -19,7 +19,7 @@ import { CalendarIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { format, subYears, parse } from "date-fns";
 import { tr } from "date-fns/locale";
 
 // Form validation schema
@@ -39,6 +39,7 @@ interface NewCustomerFormProps {
 
 export function NewCustomerForm({ onSuccess, onCancel }: NewCustomerFormProps) {
   const [loading, setLoading] = useState(false);
+  const [dateInput, setDateInput] = useState("");
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -70,9 +71,29 @@ export function NewCustomerForm({ onSuccess, onCancel }: NewCustomerFormProps) {
       onSuccess();
     } catch (error) {
       console.error("Müşteri eklenirken hata oluştu:", error);
-      toast.error("Müşteri eklenirken bir hata oluştu");
+      toast.error("Müşteri eklenirken bir hata oluştu. Lütfen tekrar deneyin.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleManualDateInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+    setDateInput(inputValue);
+    
+    // Try to parse the date if it matches expected format
+    try {
+      if (inputValue.match(/^\d{1,2}[\/\.\-]\d{1,2}[\/\.\-]\d{4}$/)) {
+        // Replace any separator with /
+        const normalizedDate = inputValue.replace(/[.\-]/g, '/');
+        const parsedDate = parse(normalizedDate, 'dd/MM/yyyy', new Date());
+        
+        if (!isNaN(parsedDate.getTime())) {
+          form.setValue('birthdate', parsedDate);
+        }
+      }
+    } catch (error) {
+      // Invalid date format, just continue with the input
     }
   };
 
@@ -146,38 +167,88 @@ export function NewCustomerForm({ onSuccess, onCancel }: NewCustomerFormProps) {
           render={({ field }) => (
             <FormItem className="flex flex-col">
               <FormLabel>Doğum Tarihi</FormLabel>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <FormControl>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-full pl-3 text-left font-normal",
-                        !field.value && "text-muted-foreground"
-                      )}
-                    >
-                      {field.value ? (
-                        format(field.value, "PPP", { locale: tr })
-                      ) : (
-                        <span>Doğum tarihi seçin</span>
-                      )}
-                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                    </Button>
-                  </FormControl>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={field.value || undefined}
-                    onSelect={field.onChange}
-                    disabled={(date) =>
-                      date > new Date() || date < new Date("1900-01-01")
-                    }
-                    initialFocus
+              <div className="flex gap-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-full pl-3 text-left font-normal flex justify-between items-center",
+                          !field.value && "text-muted-foreground"
+                        )}
+                      >
+                        {field.value ? (
+                          format(field.value, "dd.MM.yyyy", { locale: tr })
+                        ) : (
+                          <span>Doğum tarihi seçin</span>
+                        )}
+                        <CalendarIcon className="h-4 w-4 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={field.value || undefined}
+                      onSelect={(date) => {
+                        field.onChange(date);
+                        if (date) {
+                          setDateInput(format(date, "dd.MM.yyyy", { locale: tr }));
+                        } else {
+                          setDateInput("");
+                        }
+                      }}
+                      disabled={(date) =>
+                        date > new Date() || date < new Date("1900-01-01")
+                      }
+                      initialFocus
+                      captionLayout="dropdown-buttons"
+                      fromYear={1920}
+                      toYear={new Date().getFullYear()}
+                      defaultMonth={field.value || subYears(new Date(), 30)}
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+                
+                <FormControl>
+                  <Input
+                    placeholder="GG.AA.YYYY"
+                    value={dateInput}
+                    onChange={handleManualDateInput}
+                    onBlur={() => {
+                      if (dateInput && !field.value) {
+                        try {
+                          // Try different formats
+                          let parsedDate;
+                          if (dateInput.includes('.')) {
+                            parsedDate = parse(dateInput, 'dd.MM.yyyy', new Date());
+                          } else if (dateInput.includes('/')) {
+                            parsedDate = parse(dateInput, 'dd/MM/yyyy', new Date());
+                          } else if (dateInput.includes('-')) {
+                            parsedDate = parse(dateInput, 'dd-MM-yyyy', new Date());
+                          }
+                          
+                          if (parsedDate && !isNaN(parsedDate.getTime())) {
+                            field.onChange(parsedDate);
+                          } else {
+                            setDateInput("");
+                            toast.error("Geçersiz tarih formatı. Lütfen GG.AA.YYYY formatında girin.");
+                          }
+                        } catch (error) {
+                          setDateInput("");
+                          toast.error("Geçersiz tarih formatı. Lütfen GG.AA.YYYY formatında girin.");
+                        }
+                      }
+                    }}
                   />
-                </PopoverContent>
-              </Popover>
+                </FormControl>
+              </div>
               <FormMessage />
+              <p className="text-xs text-muted-foreground">
+                Tarihi "GG.AA.YYYY" formatında girebilirsiniz (örn: 15.04.1990)
+              </p>
             </FormItem>
           )}
         />
