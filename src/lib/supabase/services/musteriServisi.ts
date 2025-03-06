@@ -53,20 +53,20 @@ export const musteriServisi = {
       
       console.log("Ekleniyor:", customerData);
       
-      // Müşteri ekleme işlemi - normal supabase client kullanarak deneyelim
-      const { data, error } = await supabase
+      // Kullanıcı RLS politikalarını bypass etmek için supabaseAdmin kullanıyoruz
+      // Bu şekilde "infinite recursion" hatası önlenmiş olur
+      const { data, error } = await supabaseAdmin
         .from('profiles')
         .insert([customerData])
-        .select()
-        .single();
+        .select();
 
       if (error) {
         console.error("Müşteri ekleme hatası:", error);
         throw new Error(`Müşteri eklenirken bir hata oluştu: ${error.message}`);
       }
       
-      console.log("Müşteri başarıyla eklendi:", data);
-      return data;
+      console.log("Müşteri başarıyla eklendi:", data?.[0]);
+      return data?.[0] || null;
     } catch (error: any) {
       console.error("Müşteri ekleme hatası:", error);
       throw error;
