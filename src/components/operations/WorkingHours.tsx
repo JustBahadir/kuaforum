@@ -22,15 +22,12 @@ export function WorkingHours({ isStaff = true, gunler = [], onChange }: WorkingH
     cancelEditing
   } = useWorkingHours(isStaff, gunler, onChange);
 
-  // Always sort days based on our array index
+  // IMPORTANT: Always sort by predefined day order regardless of editing status
   const sortedSaatler = [...calismaSaatleri].sort((a, b) => {
     const aIndex = gunSiralama.indexOf(a.gun);
     const bIndex = gunSiralama.indexOf(b.gun);
     return aIndex - bIndex;
   });
-
-  console.log("Days before sorting:", calismaSaatleri.map(s => s.gun));
-  console.log("Days after sorting:", sortedSaatler.map(s => s.gun));
 
   return (
     <div className="border rounded-lg overflow-hidden">

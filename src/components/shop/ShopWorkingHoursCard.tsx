@@ -16,7 +16,7 @@ export function ShopWorkingHoursCard({ calisma_saatleri, userRole }: ShopWorking
     return time.substring(0, 5);
   };
 
-  // Always sort days based on our array index
+  // Always sort days based on our predefined array order
   const sortedSaatler = [...calisma_saatleri].sort((a, b) => {
     const aIndex = gunSiralama.indexOf(a.gun);
     const bIndex = gunSiralama.indexOf(b.gun);

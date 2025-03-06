@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
@@ -79,9 +78,9 @@ export function useShopData(dukkanId: number | null) {
                 if (profileData?.avatar_url) {
                   personel.avatar_url = profileData.avatar_url;
                 } else {
-                  const { data: userData } = await supabase.auth.admin.getUserById(personel.auth_id);
-                  if (userData?.user?.user_metadata?.avatar_url) {
-                    personel.avatar_url = userData.user.user_metadata.avatar_url;
+                  const { data: { user } } = await supabase.auth.admin.getUserById(personel.auth_id);
+                  if (user?.user_metadata?.avatar_url) {
+                    personel.avatar_url = user.user_metadata.avatar_url;
                   }
                 }
               } catch (profileError) {
@@ -113,18 +112,11 @@ export function useShopData(dukkanId: number | null) {
           
         if (error) throw error;
         
-        console.log("Raw calisma_saatleri data:", data);
-        
-        // Use array index for sorting
-        const sortedData = data.sort((a, b) => {
+        return data.sort((a, b) => {
           const aIndex = gunSiralama.indexOf(a.gun);
           const bIndex = gunSiralama.indexOf(b.gun);
           return aIndex - bIndex;
         });
-        
-        console.log("Sorted calisma_saatleri data:", sortedData.map(d => d.gun));
-        
-        return sortedData;
       } catch (error) {
         console.error("Çalışma saatleri alınırken hata:", error);
         return [];

@@ -24,7 +24,7 @@ export function useWorkingHours(
   // Use the provided working hours if available, otherwise use the fetched ones
   const calismaSaatleri = [...(providedGunler.length > 0 ? providedGunler : fetchedCalismaSaatleri)];
 
-  // We'll keep the sort only based on the gun property now, removing any resort based on editing
+  // IMPORTANT: Always sort by predefined day order and never resort after editing
   const sortedSaatler = [...calismaSaatleri].sort((a, b) => {
     const aIndex = gunSiralama.indexOf(a.gun);
     const bIndex = gunSiralama.indexOf(b.gun);
@@ -113,7 +113,7 @@ export function useWorkingHours(
   };
 
   return {
-    calismaSaatleri: sortedSaatler, // Return the sorted array
+    calismaSaatleri: sortedSaatler, // Always return the sorted array
     editing,
     tempChanges,
     startEditing,

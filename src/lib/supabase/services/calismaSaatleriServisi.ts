@@ -11,7 +11,7 @@ export const calismaSaatleriServisi = {
 
     if (error) throw error;
     
-    // Sort by our array index instead of object lookup
+    // Always sort by predefined day order
     return (data || []).sort((a, b) => {
       const aIndex = gunSiralama.indexOf(a.gun);
       const bIndex = gunSiralama.indexOf(b.gun);
@@ -26,7 +26,7 @@ export const calismaSaatleriServisi = {
 
     if (error) throw error;
     
-    // Sort by our array index
+    // Always sort by predefined day order
     return (data || []).sort((a, b) => {
       const aIndex = gunSiralama.indexOf(a.gun);
       const bIndex = gunSiralama.indexOf(b.gun);
@@ -42,7 +42,7 @@ export const calismaSaatleriServisi = {
 
     if (error) throw error;
     
-    // Sort by our array index
+    // Always sort by predefined day order
     return (data || []).sort((a, b) => {
       const aIndex = gunSiralama.indexOf(a.gun);
       const bIndex = gunSiralama.indexOf(b.gun);

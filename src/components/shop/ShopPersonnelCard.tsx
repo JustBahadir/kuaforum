@@ -34,7 +34,7 @@ export function ShopPersonnelCard({ personelListesi, userRole }: ShopPersonnelCa
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {personelListesi.map((personel: any) => (
               <div key={personel.id} className="flex items-center gap-4 bg-gray-50 p-4 rounded-lg">
-                <Avatar>
+                <Avatar className="h-12 w-12">
                   <AvatarImage src={personel.avatar_url} alt={personel.ad_soyad} />
                   <AvatarFallback className="bg-purple-100 text-purple-600">
                     {personel.ad_soyad.split(' ').map((name: string) => name[0]).join('').substring(0, 2).toUpperCase()}
@@ -42,7 +42,7 @@ export function ShopPersonnelCard({ personelListesi, userRole }: ShopPersonnelCa
                 </Avatar>
                 <div>
                   <h3 className="font-medium">{personel.ad_soyad}</h3>
-                  {/* Phone numbers are now completely hidden - not even for admin users */}
+                  {/* Phone numbers are hidden for privacy */}
                 </div>
               </div>
             ))}
