@@ -421,6 +421,7 @@ export type Database = {
         Row: {
           birthdate: string | null
           created_at: string
+          dukkan_id: number | null
           first_name: string | null
           gender: string | null
           id: string
@@ -431,6 +432,7 @@ export type Database = {
         Insert: {
           birthdate?: string | null
           created_at?: string
+          dukkan_id?: number | null
           first_name?: string | null
           gender?: string | null
           id: string
@@ -441,6 +443,7 @@ export type Database = {
         Update: {
           birthdate?: string | null
           created_at?: string
+          dukkan_id?: number | null
           first_name?: string | null
           gender?: string | null
           id?: string
@@ -448,7 +451,15 @@ export type Database = {
           phone?: string | null
           role?: Database["public"]["Enums"]["user_role"] | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_dukkan_id_fkey"
+            columns: ["dukkan_id"]
+            isOneToOne: false
+            referencedRelation: "dukkanlar"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       randevular: {
         Row: {

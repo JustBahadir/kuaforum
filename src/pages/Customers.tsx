@@ -108,11 +108,17 @@ export default function Customers() {
                 variant="outline" 
                 className="gap-1"
                 onClick={handleOpenNewCustomerModal}
+                disabled={!dukkanData?.id}
               >
                 <UserPlus className="h-4 w-4" />
                 <span>Yeni Müşteri</span>
               </Button>
             </div>
+            {!dukkanData?.id && (
+              <p className="text-sm text-red-500 mt-2">
+                Müşteri eklemek için dükkan yöneticisi olmanız gerekmektedir.
+              </p>
+            )}
           </CardContent>
         </Card>
         

@@ -9,7 +9,7 @@ const supabaseServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXB
 // Create client with service role key for admin operations
 export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
   auth: { 
-    autoRefreshToken: true,
+    autoRefreshToken: false,
     persistSession: false 
   }
 });

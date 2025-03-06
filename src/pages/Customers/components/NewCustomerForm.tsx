@@ -8,7 +8,6 @@ import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon, Loader2 } from "lucide-react";
 import { format, parse, isValid } from "date-fns";
 import { tr } from "date-fns/locale";
-import { musteriServisi } from "@/lib/supabase/services/musteriServisi";
 import { toast } from "sonner";
 import { formatPhoneNumber } from "@/utils/phoneFormatter";
 import { supabaseAdmin } from "@/lib/supabase/client";
@@ -39,6 +38,10 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFo
     
     if (!lastName.trim()) {
       newErrors.lastName = 'Soyisim alanı zorunludur';
+    }
+    
+    if (!dukkanId) {
+      newErrors.dukkan = 'Dükkan bilgisi eksik, lütfen sayfayı yenileyip tekrar deneyin';
     }
     
     setErrors(newErrors);
@@ -116,6 +119,15 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFo
     const toastId = toast.loading("Müşteri ekleniyor...");
     
     try {
+      console.log("Müşteri ekleniyor:", { 
+        first_name: firstName,
+        last_name: lastName,
+        phone: phone ? formatPhoneForSubmission(phone) : null,
+        birthdate: birthdate ? format(birthdate, 'yyyy-MM-dd') : null,
+        role: 'customer',
+        dukkan_id: dukkanId
+      });
+      
       // Direct insertion with supabaseAdmin to bypass RLS
       const { data, error } = await supabaseAdmin
         .from('profiles')
@@ -130,6 +142,7 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFo
         .select();
         
       if (error) {
+        console.error("Insert error:", error);
         throw error;
       }
       
@@ -228,6 +241,8 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFo
         </div>
       </div>
       
+      {errors.dukkan && <p className="text-red-500 text-sm mt-1">{errors.dukkan}</p>}
+      
       <div className="flex justify-end space-x-2 pt-4">
         <Button 
           type="button" 
@@ -239,7 +254,7 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFo
         </Button>
         <Button 
           type="submit" 
-          disabled={isSubmitting}
+          disabled={isSubmitting || !dukkanId}
         >
           {isSubmitting ? (
             <>
