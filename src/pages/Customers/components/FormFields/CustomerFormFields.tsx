@@ -40,7 +40,7 @@ export function CustomerFormFields({
           id="lastName"
           value={lastName}
           onChange={(e) => onLastNameChange(e.target.value)}
-          placeholder="Soyisim (Opsiyonel)"
+          placeholder="Soyisim"
           className={errors.lastName ? "border-red-500" : ""}
         />
         {errors.lastName && <p className="text-red-500 text-sm mt-1">{errors.lastName}</p>}

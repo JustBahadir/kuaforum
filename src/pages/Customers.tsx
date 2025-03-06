@@ -76,11 +76,13 @@ export default function Customers() {
     }
   };
 
-  // Only show error if we have shop data and there's an error
+  // Only show error if we have shop data and there's an error 
+  // and we're not in a loading state
   const shouldShowError = error && dukkanData?.id && !isLoading;
 
   return (
     <StaffLayout>
+      {/* Only use this Toaster, remove any other toast components */}
       <Toaster position="top-right" richColors />
       <div className="container mx-auto p-4">
         <h1 className="text-2xl font-bold mb-6">Müşteriler</h1>

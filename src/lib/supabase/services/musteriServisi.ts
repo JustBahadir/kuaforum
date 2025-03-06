@@ -34,11 +34,12 @@ export const musteriServisi = {
   // Add a new customer with shop association
   async ekle(musteri: Partial<Musteri>, dukkanId?: number) {
     try {
+      // Use service_role client for admin operations to bypass RLS
       const { data, error } = await supabase
         .from('profiles')
         .insert([{
           first_name: musteri.first_name || '',
-          last_name: musteri.last_name || '',
+          last_name: musteri.last_name || null,
           phone: musteri.phone || null,
           birthdate: musteri.birthdate || null,
           role: 'customer',
