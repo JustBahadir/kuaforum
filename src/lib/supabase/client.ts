@@ -25,7 +25,9 @@ export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
   // Add global error handling for debugging
   global: {
     fetch: (...args) => {
-      return fetch(...args)
+      // Fix: Properly type the arguments for fetch
+      const [url, options, ...rest] = args;
+      return fetch(url, options)
         .then(response => {
           if (!response.ok) {
             console.error('Supabase Admin API error:', response.status, response.statusText);
