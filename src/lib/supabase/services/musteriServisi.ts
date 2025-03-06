@@ -8,7 +8,7 @@ export const musteriServisi = {
     try {
       console.log("Müşteri listesi getiriliyor, dükkan ID:", dukkanId);
       
-      let query = supabaseAdmin
+      let query = supabase
         .from('profiles')
         .select('id, first_name, last_name, phone, birthdate, created_at, dukkan_id')
         .eq('role', 'customer');
@@ -53,8 +53,8 @@ export const musteriServisi = {
       
       console.log("Ekleniyor:", customerData);
       
-      // Müşteri ekleme işlemi
-      const { data, error } = await supabaseAdmin
+      // Müşteri ekleme işlemi - normal supabase client kullanarak deneyelim
+      const { data, error } = await supabase
         .from('profiles')
         .insert([customerData])
         .select()
@@ -76,7 +76,7 @@ export const musteriServisi = {
   // ID'ye göre tek müşteri getir
   async getirById(id: string) {
     try {
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', id)
