@@ -85,22 +85,8 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFo
     } catch (error: any) {
       console.error("Müşteri ekleme hatası (form):", error);
       
-      // More specific error messages based on the error type
-      let errorMessage = "Bağlantı hatası";
-      
-      if (error.message) {
-        if (error.message.includes("API anahtarı geçersiz")) {
-          errorMessage = "API anahtarı geçersiz. Lütfen sistem yöneticinize başvurun.";
-        } else if (error.message.includes("Yetkilendirme hatası")) {
-          errorMessage = "Yetkilendirme hatası. RLS politikalarını kontrol edin.";
-        } else if (error.message.includes("zaten mevcut")) {
-          errorMessage = "Bu müşteri zaten kayıtlı.";
-        } else {
-          errorMessage = error.message;
-        }
-      }
-      
-      toast.error(`Müşteri eklenemedi: ${errorMessage}`);
+      // Daha basit hata mesajı kullan
+      toast.error(`Müşteri eklenemedi: ${error.message || "Bir hata oluştu"}`);
     } finally {
       setIsSubmitting(false);
     }

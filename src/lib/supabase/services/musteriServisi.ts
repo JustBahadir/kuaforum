@@ -1,9 +1,9 @@
 
-import { supabase, supabaseAdmin, testServiceRoleKeyValidity } from '../client';
+import { supabase, supabaseAdmin } from '../client';
 import { Musteri } from '../types';
 
 export const musteriServisi = {
-  // Get all customers for a specific shop
+  // Belirli bir dükkan için tüm müşterileri getir
   async hepsiniGetir(dukkanId?: number) {
     try {
       console.log("Müşteri listesi getiriliyor, dükkan ID:", dukkanId);
@@ -32,7 +32,7 @@ export const musteriServisi = {
     }
   },
 
-  // Add a new customer with shop association
+  // Dükkan ilişkili yeni müşteri ekle 
   async ekle(musteri: Partial<Musteri>, dukkanId?: number) {
     try {
       console.log("Müşteri ekleme başlatıldı:", { ...musteri, dukkanId });
@@ -41,9 +41,7 @@ export const musteriServisi = {
         throw new Error("Dükkan ID bulunamadı. Müşteri eklenemez.");
       }
       
-      // Skip service role validity check for now to simplify
-      
-      // Prepare customer data
+      // Müşteri verilerini hazırla
       const customerData = {
         first_name: musteri.first_name || '',
         last_name: musteri.last_name || null,
@@ -55,7 +53,7 @@ export const musteriServisi = {
       
       console.log("Ekleniyor:", customerData);
       
-      // Use supabaseAdmin client
+      // doğrudan insert işlemini yap, hiçbir kontrol olmadan
       const { data, error } = await supabaseAdmin
         .from('profiles')
         .insert([customerData])
@@ -64,20 +62,7 @@ export const musteriServisi = {
 
       if (error) {
         console.error("Müşteri ekleme hatası:", error);
-        
-        if (error.message && error.message.includes("Invalid API key")) {
-          throw new Error("API anahtarı geçersiz. Lütfen Supabase ayarlarınızı kontrol edin.");
-        }
-        
-        if (error.code === "42501" || error.message.includes("permission denied")) {
-          throw new Error("Yetkilendirme hatası. RLS politikalarını kontrol edin.");
-        }
-        
-        if (error.code === "23505") {
-          throw new Error("Bu müşteri zaten mevcut.");
-        }
-        
-        throw error;
+        throw new Error("Müşteri eklenirken bir hata oluştu: " + error.message);
       }
       
       console.log("Müşteri başarıyla eklendi:", data);
@@ -88,7 +73,7 @@ export const musteriServisi = {
     }
   },
   
-  // Get a single customer by ID
+  // ID'ye göre tek müşteri getir
   async getirById(id: string) {
     try {
       const { data, error } = await supabaseAdmin
