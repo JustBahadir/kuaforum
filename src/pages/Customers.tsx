@@ -64,7 +64,7 @@ export default function Customers() {
 
   return (
     <StaffLayout>
-      {/* Only use Sonner Toaster for notifications - no other toast components */}
+      {/* Only use Sonner Toaster for notifications */}
       <Toaster position="bottom-right" richColors />
       
       <div className="container mx-auto p-4">
@@ -103,24 +103,6 @@ export default function Customers() {
             )}
           </CardContent>
         </Card>
-        
-        {error && !isLoading && !isRefetching && (
-          <Card className="mb-6 border-red-200 bg-red-50">
-            <CardContent className="p-4">
-              <div className="flex justify-between items-center">
-                <p className="text-red-600">Bağlantı hatası. Lütfen tekrar deneyin.</p>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => refetch()}
-                  disabled={isRefetching}
-                >
-                  {isRefetching ? 'Yenileniyor...' : 'Bağlantıyı Yenile'}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
         
         <CustomerList 
           customers={filteredCustomers} 
