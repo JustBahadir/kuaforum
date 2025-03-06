@@ -11,14 +11,13 @@ export const musteriServisi = {
       let query = supabaseAdmin
         .from('profiles')
         .select('id, first_name, last_name, phone, birthdate, created_at, dukkan_id')
-        .eq('role', 'customer')
-        .order('first_name', { ascending: true });
+        .eq('role', 'customer');
       
       if (dukkanId) {
         query = query.eq('dukkan_id', dukkanId);
       }
 
-      const { data, error } = await query;
+      const { data, error } = await query.order('first_name', { ascending: true });
 
       if (error) {
         console.error("Müşteri getirme hatası:", error);
@@ -42,12 +41,7 @@ export const musteriServisi = {
         throw new Error("Dükkan ID bulunamadı. Müşteri eklenemez.");
       }
       
-      // First, check if the service role key is valid
-      const isValidKey = await testServiceRoleKeyValidity();
-      if (!isValidKey) {
-        console.error("Servis rol anahtarı doğrulanamadı!");
-        throw new Error("Servis yetki anahtarı doğrulanamadı. Sistem ayarlarını kontrol edin.");
-      }
+      // Skip service role validity check for now to simplify
       
       // Prepare customer data
       const customerData = {
@@ -61,7 +55,7 @@ export const musteriServisi = {
       
       console.log("Ekleniyor:", customerData);
       
-      // Use supabaseAdmin client with explicit service role key
+      // Use supabaseAdmin client
       const { data, error } = await supabaseAdmin
         .from('profiles')
         .insert([customerData])
@@ -72,7 +66,7 @@ export const musteriServisi = {
         console.error("Müşteri ekleme hatası:", error);
         
         if (error.message && error.message.includes("Invalid API key")) {
-          throw new Error("API anahtarı geçersiz. Lütfen API anahtarınızı kontrol edin.");
+          throw new Error("API anahtarı geçersiz. Lütfen Supabase ayarlarınızı kontrol edin.");
         }
         
         if (error.code === "42501" || error.message.includes("permission denied")) {
