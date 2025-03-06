@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -76,14 +76,14 @@ export default function Customers() {
     }
   };
 
-  // Only show error if we have shop data and there's an error 
-  // and we're not in a loading state
-  const shouldShowError = error && dukkanData?.id && !isLoading;
+  // Only show error if we have shop data and there's an error and we're not in a loading state
+  const shouldShowError = error && dukkanData?.id && !isLoading && !isRefreshing;
 
   return (
     <StaffLayout>
-      {/* Only use this Toaster, remove any other toast components */}
+      {/* Only use this Toaster */}
       <Toaster position="top-right" richColors />
+      
       <div className="container mx-auto p-4">
         <h1 className="text-2xl font-bold mb-6">Müşteriler</h1>
         
@@ -145,7 +145,7 @@ export default function Customers() {
         
         <CustomerList 
           customers={filteredCustomers} 
-          isLoading={isLoading} 
+          isLoading={isLoading || isRefreshing} 
           error={shouldShowError ? (error as Error) : null}
         />
 

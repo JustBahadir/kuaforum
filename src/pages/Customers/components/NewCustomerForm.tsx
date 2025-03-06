@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { supabase } from "@/lib/supabase/client";
+import { musteriServisi } from "@/lib/supabase/services/musteriServisi";
 import { DatePickerField } from "./FormFields/DatePickerField";
 import { PhoneInputField } from "./FormFields/PhoneInputField";
 import { CustomerFormActions } from "./FormFields/CustomerFormActions";
@@ -56,26 +56,14 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFo
     const toastId = toast.loading("Müşteri ekleniyor...");
     
     try {
-      // Direct insertion with supabase client
-      const { data, error } = await supabase
-        .from('profiles')
-        .insert([{
-          first_name: firstName,
-          last_name: lastName || null, // Allow empty last name
-          phone: phone ? formatPhoneForSubmission(phone) : null,
-          birthdate: birthdate ? format(birthdate, 'yyyy-MM-dd') : null,
-          role: 'customer',
-          dukkan_id: dukkanId
-        }])
-        .select();
+      // Use the musteriServisi instead of direct supabase call
+      await musteriServisi.ekle({
+        first_name: firstName,
+        last_name: lastName || null,
+        phone: phone ? formatPhoneForSubmission(phone) : null,
+        birthdate: birthdate ? format(birthdate, 'yyyy-MM-dd') : null,
+      }, dukkanId);
         
-      if (error) {
-        console.error("Insert error:", error);
-        toast.dismiss(toastId);
-        toast.error(`Müşteri eklenemedi: ${error.message || 'Bağlantı hatası'}`);
-        return;
-      }
-      
       toast.dismiss(toastId);
       toast.success("Müşteri başarıyla eklendi");
       

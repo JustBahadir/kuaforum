@@ -1,5 +1,5 @@
 
-import { supabase } from '../client';
+import { supabase, supabaseAdmin } from '../client';
 import { Musteri } from '../types';
 
 export const musteriServisi = {
@@ -31,11 +31,11 @@ export const musteriServisi = {
     }
   },
 
-  // Add a new customer with shop association
+  // Add a new customer with shop association - using admin client to bypass RLS
   async ekle(musteri: Partial<Musteri>, dukkanId?: number) {
     try {
-      // Use service_role client for admin operations to bypass RLS
-      const { data, error } = await supabase
+      // Using supabaseAdmin to bypass RLS for customer creation
+      const { data, error } = await supabaseAdmin
         .from('profiles')
         .insert([{
           first_name: musteri.first_name || '',
