@@ -30,12 +30,16 @@ export const musteriServisi = {
     }
   },
 
-  // Add a new customer with shop association - using admin client to bypass RLS
+  // Add a new customer with shop association
   async ekle(musteri: Partial<Musteri>, dukkanId?: number) {
     try {
       console.log("Müşteri ekleme başlatıldı:", { musteri, dukkanId });
       
-      // Make sure we're using the supabaseAdmin client with service role key
+      if (!dukkanId) {
+        throw new Error("Dükkan ID bulunamadı. Müşteri eklenemez.");
+      }
+      
+      // Prepare customer data
       const customerData = {
         first_name: musteri.first_name || '',
         last_name: musteri.last_name || null,
@@ -45,8 +49,9 @@ export const musteriServisi = {
         dukkan_id: dukkanId
       };
       
-      console.log("Inserting customer data:", customerData);
+      console.log("Inserting customer data via supabaseAdmin:", customerData);
       
+      // Use supabaseAdmin client directly without any auth dependency
       const { data, error } = await supabaseAdmin
         .from('profiles')
         .insert([customerData])
@@ -54,7 +59,12 @@ export const musteriServisi = {
         .single();
 
       if (error) {
-        console.error("Müşteri ekleme hatası (detaylar):", error);
+        console.error("Müşteri ekleme hatası:", error);
+        // Check if this is an API key error
+        if (error.message && error.message.includes("Invalid API key")) {
+          console.error("API anahtarı hatası tespit edildi. Service role key kontrol edilmeli.");
+          throw new Error("API anahtarı doğrulanamadı. Lütfen sistem yöneticinize başvurun.");
+        }
         throw error;
       }
       

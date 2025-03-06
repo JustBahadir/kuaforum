@@ -15,11 +15,13 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 });
 
 // Create admin client with service role key for admin operations
-// Based on GitHub issue #271, we need to make sure we don't mix auth settings
+// IMPORTANT: Complete separation from regular client - no shared auth state
 export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
   auth: {
     autoRefreshToken: false,
-    persistSession: false
+    persistSession: false,
+    // Explicitly use a different storage key to avoid conflicts
+    storageKey: 'supabase_admin_auth'
   }
 });
 
