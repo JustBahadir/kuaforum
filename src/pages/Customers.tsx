@@ -77,7 +77,7 @@ export default function Customers() {
   };
 
   // Only show error if we have shop data and there's an error
-  const shouldShowError = error && dukkanData?.id;
+  const shouldShowError = error && dukkanData?.id && customers.length > 0;
 
   return (
     <StaffLayout>
