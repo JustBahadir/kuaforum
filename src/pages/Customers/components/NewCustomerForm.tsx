@@ -69,19 +69,22 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFo
       console.log("Dükkan ID:", dukkanId);
       
       // Call the service to add customer
-      await musteriServisi.ekle(customerData, dukkanId);
+      const result = await musteriServisi.ekle(customerData, dukkanId);
+      
+      if (result) {
+        toast.success("Müşteri başarıyla eklendi");
         
-      toast.success("Müşteri başarıyla eklendi");
-      
-      // Reset form and notify parent
-      setFirstName('');
-      setLastName('');
-      setPhone('');
-      setBirthdate(undefined);
-      setBirthdateText('');
-      setErrors({});
-      onSuccess();
-      
+        // Reset form and notify parent
+        setFirstName('');
+        setLastName('');
+        setPhone('');
+        setBirthdate(undefined);
+        setBirthdateText('');
+        setErrors({});
+        onSuccess();
+      } else {
+        toast.error("Müşteri eklenirken bir hata oluştu");
+      }
     } catch (error: any) {
       console.error("Müşteri ekleme hatası (form):", error);
       toast.error(`Müşteri eklenemedi: ${error.message || "Bir hata oluştu"}`);
