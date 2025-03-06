@@ -1,12 +1,12 @@
 
-import { supabaseAdmin } from '../client';
+import { supabase } from '../client';
 import { Musteri } from '../types';
 
 export const musteriServisi = {
   // Get all customers for a specific shop
   async hepsiniGetir(dukkanId?: number) {
     try {
-      let query = supabaseAdmin
+      let query = supabase
         .from('profiles')
         .select('id, first_name, last_name, phone, birthdate, created_at, dukkan_id')
         .eq('role', 'customer')
@@ -34,7 +34,7 @@ export const musteriServisi = {
   // Add a new customer with shop association
   async ekle(musteri: Partial<Musteri>, dukkanId?: number) {
     try {
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await supabase
         .from('profiles')
         .insert([{
           first_name: musteri.first_name || '',
@@ -62,7 +62,7 @@ export const musteriServisi = {
   // Get a single customer by ID
   async getirById(id: string) {
     try {
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', id)

@@ -12,7 +12,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { NewCustomerForm } from "./Customers/components/NewCustomerForm";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Toaster } from "sonner";
-import { toast } from "sonner";
 import { useShopData } from "@/hooks/useShopData";
 
 export default function Customers() {
@@ -67,20 +66,18 @@ export default function Customers() {
 
   const handleRetryConnection = async () => {
     setIsRefreshing(true);
-    toast.loading("Bağlantı yenileniyor...");
     
     try {
       await refetch();
-      toast.dismiss();
-      toast.success("Bağlantı başarıyla yenilendi");
     } catch (err) {
       console.error("Bağlantı yenileme hatası:", err);
-      toast.dismiss();
-      toast.error("Bağlantı yenilenirken hata oluştu. Lütfen sayfayı yenileyin.");
     } finally {
       setIsRefreshing(false);
     }
   };
+
+  // Only show error if we have shop data and there's an error
+  const shouldShowError = error && dukkanData?.id;
 
   return (
     <StaffLayout>
@@ -122,7 +119,7 @@ export default function Customers() {
           </CardContent>
         </Card>
         
-        {error && (
+        {shouldShowError && (
           <Alert variant="destructive" className="mb-6">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription className="flex justify-between items-center">
@@ -147,7 +144,7 @@ export default function Customers() {
         <CustomerList 
           customers={filteredCustomers} 
           isLoading={isLoading} 
-          error={error ? (error as Error) : null}
+          error={shouldShowError ? (error as Error) : null}
         />
 
         <Dialog open={isNewCustomerModalOpen} onOpenChange={setIsNewCustomerModalOpen}>

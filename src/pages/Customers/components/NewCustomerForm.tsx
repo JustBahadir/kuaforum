@@ -10,7 +10,7 @@ import { format, parse, isValid } from "date-fns";
 import { tr } from "date-fns/locale";
 import { toast } from "sonner";
 import { formatPhoneNumber } from "@/utils/phoneFormatter";
-import { supabaseAdmin } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase/client";
 
 interface NewCustomerFormProps {
   onSuccess: () => void;
@@ -74,7 +74,8 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFo
     const cleanInput = input.replace(/[^\d.]/g, '');
     
     // Format into DD.MM.YYYY
-    let formattedInput = cleanInput;
+    let formattedInput = '';
+    
     if (cleanInput.length <= 2) {
       formattedInput = cleanInput;
     } else if (cleanInput.length <= 4) {
@@ -128,8 +129,8 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFo
         dukkan_id: dukkanId
       });
       
-      // Direct insertion with supabaseAdmin to bypass RLS
-      const { data, error } = await supabaseAdmin
+      // Direct insertion with supabase client
+      const { data, error } = await supabase
         .from('profiles')
         .insert([{
           first_name: firstName,
@@ -143,7 +144,9 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFo
         
       if (error) {
         console.error("Insert error:", error);
-        throw error;
+        toast.dismiss(toastId);
+        toast.error(`Müşteri eklenemedi: ${error.message || 'Bağlantı hatası'}`);
+        return;
       }
       
       toast.dismiss(toastId);
@@ -159,7 +162,6 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFo
       
     } catch (error: any) {
       console.error("Müşteri ekleme hatası:", error);
-      
       toast.dismiss(toastId);
       toast.error(`Müşteri eklenemedi: ${error.message || 'Bağlantı hatası'}`);
     } finally {
