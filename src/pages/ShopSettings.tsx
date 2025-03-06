@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { dukkanServisi } from "@/lib/supabase";
 import { StaffLayout } from "@/components/ui/staff-layout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Copy, MapPin } from "lucide-react";
@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { authService } from "@/lib/auth/authService";
 import { Textarea } from "@/components/ui/textarea";
 
 export default function ShopSettings() {
@@ -45,25 +44,6 @@ export default function ShopSettings() {
       setTimeout(() => {
         setCopied(false);
       }, 3000);
-    }
-  };
-
-  const generateNewCode = async () => {
-    if (!dukkan) return;
-    
-    try {
-      const newCode = await authService.generateShopCode(dukkan.ad);
-      const updatedShop = await dukkanServisi.dukkaniGuncelle(dukkanId!, {
-        kod: newCode
-      });
-      
-      if (updatedShop) {
-        setShopCode(updatedShop.kod);
-        toast.success("Yeni dükkan kodu oluşturuldu");
-      }
-    } catch (error) {
-      toast.error("Kod oluşturulurken bir hata oluştu");
-      console.error("Kod oluşturma hatası:", error);
     }
   };
 
@@ -111,6 +91,16 @@ export default function ShopSettings() {
     const encodedAddress = encodeURIComponent(fullAddress);
     window.open(`https://www.google.com/maps/search/?api=1&query=${encodedAddress}`, '_blank');
   };
+
+  if (!userRole) {
+    return (
+      <StaffLayout>
+        <div className="flex justify-center p-12">
+          <div className="w-10 h-10 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
+        </div>
+      </StaffLayout>
+    );
+  }
 
   if (userRole !== 'admin') {
     return (
@@ -207,7 +197,7 @@ export default function ShopSettings() {
               </CardContent>
             </Card>
             
-            {/* Dükkan Kodu */}
+            {/* Dükkan Kodu - Updated to be non-changeable */}
             <Card>
               <CardHeader>
                 <CardTitle>Dükkan Kodu</CardTitle>
@@ -233,13 +223,9 @@ export default function ShopSettings() {
                     </Button>
                   </div>
                   
-                  <Button className="w-full" onClick={generateNewCode}>
-                    Yeni Kod Oluştur
-                  </Button>
-                  
                   <div className="text-sm text-muted-foreground">
-                    Not: Yeni kod oluşturduğunuzda eski kod geçerliliğini yitirir ve 
-                    henüz katılmamış personellerinizin yeni kodu kullanması gerekir.
+                    Not: Bu kod dükkanınıza özeldir ve değiştirilemez. Personellerinizin
+                    sisteme kaydolabilmesi için bu kodu kullanmaları gerekir.
                   </div>
                 </div>
               </CardContent>

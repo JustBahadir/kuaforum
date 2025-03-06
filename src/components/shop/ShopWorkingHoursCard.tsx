@@ -23,9 +23,6 @@ export function ShopWorkingHoursCard({ calisma_saatleri, userRole }: ShopWorking
     return aIndex - bIndex;
   });
 
-  console.log("Shop card days before sorting:", calisma_saatleri.map(s => s.gun));
-  console.log("Shop card days after sorting:", sortedSaatler.map(s => s.gun));
-
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">

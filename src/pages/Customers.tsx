@@ -147,7 +147,7 @@ export default function Customers() {
         <CustomerList 
           customers={filteredCustomers} 
           isLoading={isLoading} 
-          error={error as Error}
+          error={error ? (error as Error) : null}
         />
 
         <Dialog open={isNewCustomerModalOpen} onOpenChange={setIsNewCustomerModalOpen}>

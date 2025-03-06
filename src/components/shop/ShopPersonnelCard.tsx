@@ -42,12 +42,7 @@ export function ShopPersonnelCard({ personelListesi, userRole }: ShopPersonnelCa
                 </Avatar>
                 <div>
                   <h3 className="font-medium">{personel.ad_soyad}</h3>
-                  {/* Only show phone numbers to admins */}
-                  {userRole === 'admin' && personel.telefon && (
-                    <p className="text-sm text-muted-foreground">
-                      {personel.telefon}
-                    </p>
-                  )}
+                  {/* Phone numbers are now completely hidden - not even for admin users */}
                 </div>
               </div>
             ))}

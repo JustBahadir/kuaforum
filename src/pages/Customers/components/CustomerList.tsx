@@ -1,12 +1,7 @@
 
-import { useState } from "react";
-import { CustomerDetails } from "./CustomerDetails";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
-import { User, Phone, Calendar } from "lucide-react";
-import { format } from "date-fns";
-import { tr } from "date-fns/locale";
-import { formatPhoneNumber } from "@/utils/phoneFormatter";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface CustomerListProps {
   customers: any[];
@@ -15,104 +10,72 @@ interface CustomerListProps {
 }
 
 export function CustomerList({ customers, isLoading, error }: CustomerListProps) {
-  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
-  
+  // Show loading state
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <Card key={i} className="overflow-hidden">
-            <CardContent className="p-0">
-              <div className="p-6">
-                <div className="flex justify-between">
-                  <Skeleton className="h-6 w-[250px] mb-2" />
-                  <Skeleton className="h-6 w-[100px]" />
-                </div>
-                <div className="flex items-center space-x-4 mt-4">
-                  <Skeleton className="h-4 w-[180px]" />
-                  <Skeleton className="h-4 w-[140px]" />
+      <Card>
+        <CardContent className="p-6">
+          <div className="space-y-4">
+            {Array(3).fill(0).map((_, i) => (
+              <div key={i} className="flex items-center gap-4">
+                <Skeleton className="h-12 w-12 rounded-full" />
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-[200px]" />
+                  <Skeleton className="h-4 w-[150px]" />
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    );
-  }
-
-  if (error) {
-    return null; // Hata zaten bu bileşenin üstünde gösteriliyor
-  }
-
-  if (customers.length === 0) {
-    return (
-      <Card className="overflow-hidden">
-        <CardContent className="p-6 text-center">
-          <p className="text-muted-foreground py-10">Kayıtlı müşteri bulunmamaktadır.</p>
+            ))}
+          </div>
         </CardContent>
       </Card>
     );
   }
 
-  const openCustomerDetails = (customer: any) => {
-    setSelectedCustomer(customer);
-  };
+  // Show empty state
+  if (customers.length === 0) {
+    return (
+      <Card>
+        <CardContent className="p-6 text-center text-muted-foreground">
+          <div className="py-8">
+            <p className="text-lg mb-2">Müşteri bulunamadı</p>
+            <p className="text-sm">Hiç müşteri kaydı mevcut değil veya arama kriterlerinize uygun sonuç yok.</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
-  const closeCustomerDetails = () => {
-    setSelectedCustomer(null);
-  };
-
+  // Show customer list
   return (
-    <>
-      <div className="space-y-4">
-        {customers.map((customer) => (
-          <Card 
-            key={customer.id} 
-            className="overflow-hidden cursor-pointer hover:bg-accent/50 transition-colors"
-            onClick={() => openCustomerDetails(customer)}
-          >
-            <CardContent className="p-6">
-              <div className="flex justify-between items-start">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-lg">{customer.first_name} {customer.last_name}</span>
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  {customer.total_services || 0} işlem
-                </div>
-              </div>
-              
-              <div className="flex flex-wrap gap-x-4 gap-y-2 mt-2">
-                {customer.phone && (
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <Phone className="h-3.5 w-3.5 mr-1" />
-                    {formatPhoneNumber(customer.phone)}
-                  </div>
-                )}
-                
-                {customer.birthdate && (
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <Calendar className="h-3.5 w-3.5 mr-1" />
-                    {format(new Date(customer.birthdate), 'dd MMMM yyyy', { locale: tr })}
-                  </div>
-                )}
-                
-                <div className="flex items-center text-sm text-muted-foreground">
-                  <User className="h-3.5 w-3.5 mr-1" />
-                  {format(new Date(customer.created_at), 'dd MMMM yyyy', { locale: tr })} tarihinde eklendi
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-      
-      {selectedCustomer && (
-        <CustomerDetails 
-          customer={selectedCustomer} 
-          open={!!selectedCustomer} 
-          onOpenChange={closeCustomerDetails}
-        />
-      )}
-    </>
+    <Card>
+      <CardContent className="p-0">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>İsim Soyisim</TableHead>
+              <TableHead>Telefon</TableHead>
+              <TableHead>Doğum Tarihi</TableHead>
+              <TableHead>Kayıt Tarihi</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {customers.map((customer) => (
+              <TableRow key={customer.id} className="cursor-pointer hover:bg-gray-50"
+                onClick={() => {
+                  // Handle customer click - can be implemented later
+                  console.log("Müşteri seçildi:", customer);
+                }}>
+                <TableCell className="font-medium">
+                  {customer.first_name} {customer.last_name}
+                </TableCell>
+                <TableCell>{customer.phone || "-"}</TableCell>
+                <TableCell>{customer.birthdate ? new Date(customer.birthdate).toLocaleDateString('tr-TR') : "-"}</TableCell>
+                <TableCell>{customer.created_at ? new Date(customer.created_at).toLocaleDateString('tr-TR') : "-"}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   );
 }
