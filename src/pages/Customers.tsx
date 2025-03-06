@@ -10,7 +10,6 @@ import { CustomerList } from "./Customers/components/CustomerList";
 import { musteriServisi } from "@/lib/supabase/services/musteriServisi";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { NewCustomerForm } from "./Customers/components/NewCustomerForm";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Toaster } from "sonner";
 import { useShopData } from "@/hooks/useShopData";
 
@@ -81,7 +80,7 @@ export default function Customers() {
 
   return (
     <StaffLayout>
-      {/* Only use this Toaster */}
+      {/* Only use this Toaster - no additional error alerts in the UI */}
       <Toaster position="top-right" richColors />
       
       <div className="container mx-auto p-4">
@@ -168,3 +167,6 @@ export default function Customers() {
     </StaffLayout>
   );
 }
+
+// Import Alert components
+import { Alert, AlertDescription } from "@/components/ui/alert";

@@ -6,7 +6,7 @@ export const musteriServisi = {
   // Get all customers for a specific shop
   async hepsiniGetir(dukkanId?: number) {
     try {
-      let query = supabase
+      let query = supabaseAdmin
         .from('profiles')
         .select('id, first_name, last_name, phone, birthdate, created_at, dukkan_id')
         .eq('role', 'customer')
