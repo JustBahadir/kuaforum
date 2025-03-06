@@ -12,7 +12,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { NewCustomerForm } from "./Customers/components/NewCustomerForm";
 import { Toaster } from "sonner";
 import { useShopData } from "@/hooks/useShopData";
-import { toast } from "sonner";
 
 export default function Customers() {
   const [searchText, setSearchText] = useState("");
@@ -63,18 +62,10 @@ export default function Customers() {
     handleCloseNewCustomerModal();
   };
 
-  const handleRetryConnection = async () => {
-    try {
-      await refetch();
-    } catch (err) {
-      toast.error("Bağlantı hatası. Lütfen tekrar deneyin.");
-    }
-  };
-
   return (
     <StaffLayout>
-      {/* Only use Toaster for notifications */}
-      <Toaster position="top-right" richColors />
+      {/* Only use Sonner Toaster for notifications - no other toast components */}
+      <Toaster position="bottom-right" richColors />
       
       <div className="container mx-auto p-4">
         <h1 className="text-2xl font-bold mb-6">Müşteriler</h1>
@@ -121,7 +112,7 @@ export default function Customers() {
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  onClick={handleRetryConnection}
+                  onClick={() => refetch()}
                   disabled={isRefetching}
                 >
                   {isRefetching ? 'Yenileniyor...' : 'Bağlantıyı Yenile'}
@@ -134,7 +125,6 @@ export default function Customers() {
         <CustomerList 
           customers={filteredCustomers} 
           isLoading={isLoading || isRefetching} 
-          error={error ? (error as Error) : null}
         />
 
         <Dialog open={isNewCustomerModalOpen} onOpenChange={setIsNewCustomerModalOpen}>

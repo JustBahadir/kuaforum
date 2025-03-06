@@ -6,10 +6,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 interface CustomerListProps {
   customers: any[];
   isLoading: boolean;
-  error: Error | null;
 }
 
-export function CustomerList({ customers, isLoading, error }: CustomerListProps) {
+export function CustomerList({ customers, isLoading }: CustomerListProps) {
   // Show loading state
   if (isLoading) {
     return (
