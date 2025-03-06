@@ -5,18 +5,18 @@ import { StaffLayout } from "@/components/ui/staff-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, UserPlus, AlertCircle, Loader2 } from "lucide-react";
+import { Search, UserPlus } from "lucide-react";
 import { CustomerList } from "./Customers/components/CustomerList";
 import { musteriServisi } from "@/lib/supabase/services/musteriServisi";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { NewCustomerForm } from "./Customers/components/NewCustomerForm";
 import { Toaster } from "sonner";
 import { useShopData } from "@/hooks/useShopData";
+import { toast } from "sonner";
 
 export default function Customers() {
   const [searchText, setSearchText] = useState("");
   const [isNewCustomerModalOpen, setIsNewCustomerModalOpen] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const { dukkanData } = useShopData(null);
   
   // Query with shop context
@@ -24,12 +24,12 @@ export default function Customers() {
     data: customers = [], 
     isLoading, 
     error, 
-    refetch 
+    refetch,
+    isRefetching
   } = useQuery({
     queryKey: ['musteriler', dukkanData?.id],
     queryFn: async () => {
       try {
-        // Only fetch customers for this shop
         return await musteriServisi.hepsiniGetir(dukkanData?.id);
       } catch (err) {
         console.error("Müşteri verisi yüklenirken hata:", err);
@@ -64,23 +64,16 @@ export default function Customers() {
   };
 
   const handleRetryConnection = async () => {
-    setIsRefreshing(true);
-    
     try {
       await refetch();
     } catch (err) {
-      console.error("Bağlantı yenileme hatası:", err);
-    } finally {
-      setIsRefreshing(false);
+      toast.error("Bağlantı hatası. Lütfen tekrar deneyin.");
     }
   };
 
-  // Only show error if we have shop data and there's an error and we're not in a loading state
-  const shouldShowError = error && dukkanData?.id && !isLoading && !isRefreshing;
-
   return (
     <StaffLayout>
-      {/* Only use this Toaster - no additional error alerts in the UI */}
+      {/* Only use Toaster for notifications */}
       <Toaster position="top-right" richColors />
       
       <div className="container mx-auto p-4">
@@ -120,32 +113,28 @@ export default function Customers() {
           </CardContent>
         </Card>
         
-        {shouldShowError && (
-          <Alert variant="destructive" className="mb-6">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription className="flex justify-between items-center">
-              <span>Bağlantı hatası. Lütfen tekrar deneyin.</span>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleRetryConnection}
-                disabled={isRefreshing}
-              >
-                {isRefreshing ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Yenileniyor...
-                  </>
-                ) : 'Bağlantıyı Yenile'}
-              </Button>
-            </AlertDescription>
-          </Alert>
+        {error && !isLoading && !isRefetching && (
+          <Card className="mb-6 border-red-200 bg-red-50">
+            <CardContent className="p-4">
+              <div className="flex justify-between items-center">
+                <p className="text-red-600">Bağlantı hatası. Lütfen tekrar deneyin.</p>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleRetryConnection}
+                  disabled={isRefetching}
+                >
+                  {isRefetching ? 'Yenileniyor...' : 'Bağlantıyı Yenile'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         )}
         
         <CustomerList 
           customers={filteredCustomers} 
-          isLoading={isLoading || isRefreshing} 
-          error={shouldShowError ? (error as Error) : null}
+          isLoading={isLoading || isRefetching} 
+          error={error ? (error as Error) : null}
         />
 
         <Dialog open={isNewCustomerModalOpen} onOpenChange={setIsNewCustomerModalOpen}>
@@ -167,6 +156,3 @@ export default function Customers() {
     </StaffLayout>
   );
 }
-
-// Import Alert components
-import { Alert, AlertDescription } from "@/components/ui/alert";

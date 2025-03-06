@@ -53,10 +53,8 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFo
     }
     
     setIsSubmitting(true);
-    const toastId = toast.loading("Müşteri ekleniyor...");
     
     try {
-      // Use the musteriServisi instead of direct supabase call
       await musteriServisi.ekle({
         first_name: firstName,
         last_name: lastName || null,
@@ -64,7 +62,6 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFo
         birthdate: birthdate ? format(birthdate, 'yyyy-MM-dd') : null,
       }, dukkanId);
         
-      toast.dismiss(toastId);
       toast.success("Müşteri başarıyla eklendi");
       
       // Reset form and notify parent
@@ -78,7 +75,6 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFo
       
     } catch (error: any) {
       console.error("Müşteri ekleme hatası:", error);
-      toast.dismiss(toastId);
       toast.error(`Müşteri eklenemedi: ${error.message || 'Bağlantı hatası'}`);
     } finally {
       setIsSubmitting(false);

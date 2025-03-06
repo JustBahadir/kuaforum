@@ -20,7 +20,6 @@ export const musteriServisi = {
       const { data, error } = await query;
 
       if (error) {
-        console.error("Müşteri getirme hatası:", error);
         throw error;
       }
       
@@ -49,7 +48,6 @@ export const musteriServisi = {
         .single();
 
       if (error) {
-        console.error("Müşteri ekleme hatası:", error);
         throw error;
       }
       
@@ -63,7 +61,7 @@ export const musteriServisi = {
   // Get a single customer by ID
   async getirById(id: string) {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from('profiles')
         .select('*')
         .eq('id', id)
@@ -71,7 +69,6 @@ export const musteriServisi = {
         .single();
 
       if (error) {
-        console.error("Müşteri getirme hatası:", error);
         throw error;
       }
       
