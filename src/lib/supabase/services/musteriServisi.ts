@@ -35,21 +35,26 @@ export const musteriServisi = {
     try {
       console.log("Müşteri ekleme başlatıldı:", { musteri, dukkanId });
       
+      // Make sure we're using the supabaseAdmin client with service role key
+      const customerData = {
+        first_name: musteri.first_name || '',
+        last_name: musteri.last_name || null,
+        phone: musteri.phone || null,
+        birthdate: musteri.birthdate || null,
+        role: 'customer',
+        dukkan_id: dukkanId
+      };
+      
+      console.log("Inserting customer data:", customerData);
+      
       const { data, error } = await supabaseAdmin
         .from('profiles')
-        .insert([{
-          first_name: musteri.first_name || '',
-          last_name: musteri.last_name || null,
-          phone: musteri.phone || null,
-          birthdate: musteri.birthdate || null,
-          role: 'customer',
-          dukkan_id: dukkanId
-        }])
+        .insert([customerData])
         .select()
         .single();
 
       if (error) {
-        console.error("Müşteri ekleme hatası:", error);
+        console.error("Müşteri ekleme hatası (detaylar):", error);
         throw error;
       }
       

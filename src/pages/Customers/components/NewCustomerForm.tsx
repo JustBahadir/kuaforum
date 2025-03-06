@@ -55,12 +55,21 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFo
     setIsSubmitting(true);
     
     try {
-      await musteriServisi.ekle({
+      console.log("Form onaylandı, müşteri ekleme işlemi başlatılıyor...");
+      
+      // Prepare customer data
+      const customerData = {
         first_name: firstName,
         last_name: lastName || null,
         phone: phone ? formatPhoneForSubmission(phone) : null,
         birthdate: birthdate ? format(birthdate, 'yyyy-MM-dd') : null,
-      }, dukkanId);
+      };
+      
+      console.log("Müşteri verileri:", customerData);
+      console.log("Dükkan ID:", dukkanId);
+      
+      // Call the service to add customer
+      await musteriServisi.ekle(customerData, dukkanId);
         
       toast.success("Müşteri başarıyla eklendi");
       
@@ -74,8 +83,20 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFo
       onSuccess();
       
     } catch (error: any) {
-      console.error("Müşteri ekleme hatası:", error);
-      toast.error(`Müşteri eklenemedi: ${error.message || 'Bağlantı hatası'}`);
+      console.error("Müşteri ekleme hatası (form):", error);
+      
+      // More specific error message based on the error
+      let errorMessage = "Bağlantı hatası";
+      
+      if (error.message) {
+        if (error.message.includes("Invalid API key")) {
+          errorMessage = "API anahtarı hatası. Lütfen sistem yöneticinize başvurun.";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      toast.error(`Müşteri eklenemedi: ${errorMessage}`);
     } finally {
       setIsSubmitting(false);
     }
