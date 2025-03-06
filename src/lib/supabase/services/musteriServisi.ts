@@ -6,6 +6,8 @@ export const musteriServisi = {
   // Get all customers for a specific shop
   async hepsiniGetir(dukkanId?: number) {
     try {
+      console.log("Müşteri listesi getiriliyor, dükkan ID:", dukkanId);
+      
       let query = supabaseAdmin
         .from('profiles')
         .select('id, first_name, last_name, phone, birthdate, created_at, dukkan_id')
@@ -23,6 +25,7 @@ export const musteriServisi = {
         throw error;
       }
       
+      console.log(`${data?.length || 0} müşteri başarıyla getirildi`);
       return data || [];
     } catch (error) {
       console.error("Müşteri getirme hatası:", error);
@@ -33,7 +36,7 @@ export const musteriServisi = {
   // Add a new customer with shop association
   async ekle(musteri: Partial<Musteri>, dukkanId?: number) {
     try {
-      console.log("Müşteri ekleme başlatıldı:", { musteri, dukkanId });
+      console.log("Müşteri ekleme başlatıldı:", { ...musteri, dukkanId });
       
       if (!dukkanId) {
         throw new Error("Dükkan ID bulunamadı. Müşteri eklenemez.");
@@ -42,6 +45,7 @@ export const musteriServisi = {
       // First, check if the service role key is valid
       const isValidKey = await testServiceRoleKeyValidity();
       if (!isValidKey) {
+        console.error("Servis rol anahtarı doğrulanamadı!");
         throw new Error("Servis yetki anahtarı doğrulanamadı. Sistem ayarlarını kontrol edin.");
       }
       
@@ -55,9 +59,9 @@ export const musteriServisi = {
         dukkan_id: dukkanId
       };
       
-      console.log("Inserting customer data via supabaseAdmin:", customerData);
+      console.log("Ekleniyor:", customerData);
       
-      // Use supabaseAdmin client with explicit headers to ensure service role is used
+      // Use supabaseAdmin client with explicit service role key
       const { data, error } = await supabaseAdmin
         .from('profiles')
         .insert([customerData])
@@ -67,14 +71,12 @@ export const musteriServisi = {
       if (error) {
         console.error("Müşteri ekleme hatası:", error);
         
-        // Specific error handling for common issues
         if (error.message && error.message.includes("Invalid API key")) {
-          console.error("API anahtarı hatası tespit edildi. Service role key kontrol edilmeli.");
-          throw new Error("API anahtarı geçersiz. Lütfen Supabase proje ayarlarınızı kontrol edin.");
+          throw new Error("API anahtarı geçersiz. Lütfen API anahtarınızı kontrol edin.");
         }
         
         if (error.code === "42501" || error.message.includes("permission denied")) {
-          throw new Error("Yetkilendirme hatası. Row-Level Security politikalarını kontrol edin.");
+          throw new Error("Yetkilendirme hatası. RLS politikalarını kontrol edin.");
         }
         
         if (error.code === "23505") {
