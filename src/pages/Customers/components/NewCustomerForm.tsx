@@ -31,10 +31,6 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFo
       newErrors.firstName = 'İsim alanı zorunludur';
     }
     
-    if (!lastName.trim()) {
-      newErrors.lastName = 'Soyisim alanı zorunludur';
-    }
-    
     if (!dukkanId) {
       newErrors.dukkan = 'Dükkan bilgisi eksik, lütfen sayfayı yenileyip tekrar deneyin';
     }
@@ -65,7 +61,7 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFo
         .from('profiles')
         .insert([{
           first_name: firstName,
-          last_name: lastName,
+          last_name: lastName || null, // Allow empty last name
           phone: phone ? formatPhoneForSubmission(phone) : null,
           birthdate: birthdate ? format(birthdate, 'yyyy-MM-dd') : null,
           role: 'customer',
@@ -89,6 +85,7 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFo
       setPhone('');
       setBirthdate(undefined);
       setBirthdateText('');
+      setErrors({});
       onSuccess();
       
     } catch (error: any) {

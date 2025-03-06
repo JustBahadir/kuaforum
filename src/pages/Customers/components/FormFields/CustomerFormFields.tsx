@@ -23,7 +23,7 @@ export function CustomerFormFields({
   return (
     <div className="grid grid-cols-2 gap-4">
       <div>
-        <Label htmlFor="firstName">İsim</Label>
+        <Label htmlFor="firstName">İsim*</Label>
         <Input
           id="firstName"
           value={firstName}
@@ -40,7 +40,7 @@ export function CustomerFormFields({
           id="lastName"
           value={lastName}
           onChange={(e) => onLastNameChange(e.target.value)}
-          placeholder="Soyisim"
+          placeholder="Soyisim (Opsiyonel)"
           className={errors.lastName ? "border-red-500" : ""}
         />
         {errors.lastName && <p className="text-red-500 text-sm mt-1">{errors.lastName}</p>}

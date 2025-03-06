@@ -46,7 +46,7 @@ export default function Customers() {
   // Filter customers based on search text
   const filteredCustomers = searchText
     ? customers.filter(customer => 
-        `${customer.first_name} ${customer.last_name}`.toLowerCase().includes(searchText.toLowerCase()) ||
+        `${customer.first_name} ${customer.last_name || ''}`.toLowerCase().includes(searchText.toLowerCase()) ||
         (customer.phone && customer.phone.includes(searchText))
       )
     : customers;
@@ -59,8 +59,8 @@ export default function Customers() {
     setIsNewCustomerModalOpen(false);
   };
 
-  const handleCustomerAdded = () => {
-    refetch();
+  const handleCustomerAdded = async () => {
+    await refetch();
     handleCloseNewCustomerModal();
   };
 
@@ -77,11 +77,11 @@ export default function Customers() {
   };
 
   // Only show error if we have shop data and there's an error
-  const shouldShowError = error && dukkanData?.id && customers.length > 0;
+  const shouldShowError = error && dukkanData?.id && !isLoading;
 
   return (
     <StaffLayout>
-      <Toaster position="top-right" />
+      <Toaster position="top-right" richColors />
       <div className="container mx-auto p-4">
         <h1 className="text-2xl font-bold mb-6">Müşteriler</h1>
         
