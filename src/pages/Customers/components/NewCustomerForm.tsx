@@ -84,8 +84,6 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFo
       
     } catch (error: any) {
       console.error("Müşteri ekleme hatası (form):", error);
-      
-      // Daha basit hata mesajı kullan
       toast.error(`Müşteri eklenemedi: ${error.message || "Bir hata oluştu"}`);
     } finally {
       setIsSubmitting(false);

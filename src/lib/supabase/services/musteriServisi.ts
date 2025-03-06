@@ -21,14 +21,14 @@ export const musteriServisi = {
 
       if (error) {
         console.error("Müşteri getirme hatası:", error);
-        throw error;
+        throw new Error(`Müşteri listesi alınamadı: ${error.message}`);
       }
       
       console.log(`${data?.length || 0} müşteri başarıyla getirildi`);
       return data || [];
-    } catch (error) {
+    } catch (error: any) {
       console.error("Müşteri getirme hatası:", error);
-      throw error;
+      throw new Error(`Müşteri listesi alınamadı: ${error.message}`);
     }
   },
 
@@ -53,7 +53,7 @@ export const musteriServisi = {
       
       console.log("Ekleniyor:", customerData);
       
-      // doğrudan insert işlemini yap, hiçbir kontrol olmadan
+      // Müşteri ekleme işlemi
       const { data, error } = await supabaseAdmin
         .from('profiles')
         .insert([customerData])
@@ -62,12 +62,12 @@ export const musteriServisi = {
 
       if (error) {
         console.error("Müşteri ekleme hatası:", error);
-        throw new Error("Müşteri eklenirken bir hata oluştu: " + error.message);
+        throw new Error(`Müşteri eklenirken bir hata oluştu: ${error.message}`);
       }
       
       console.log("Müşteri başarıyla eklendi:", data);
       return data;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Müşteri ekleme hatası:", error);
       throw error;
     }
@@ -84,13 +84,14 @@ export const musteriServisi = {
         .single();
 
       if (error) {
-        throw error;
+        console.error("Müşteri getirme hatası:", error);
+        throw new Error(`Müşteri bulunamadı: ${error.message}`);
       }
       
       return data;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Müşteri getirme hatası:", error);
-      throw error;
+      throw new Error(`Müşteri alınamadı: ${error.message}`);
     }
   }
 };
