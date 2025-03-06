@@ -85,12 +85,16 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFo
     } catch (error: any) {
       console.error("Müşteri ekleme hatası (form):", error);
       
-      // More specific error message based on the error
+      // More specific error messages based on the error type
       let errorMessage = "Bağlantı hatası";
       
       if (error.message) {
-        if (error.message.includes("Invalid API key")) {
-          errorMessage = "API anahtarı hatası. Lütfen sistem yöneticinize başvurun.";
+        if (error.message.includes("API anahtarı geçersiz")) {
+          errorMessage = "API anahtarı geçersiz. Lütfen sistem yöneticinize başvurun.";
+        } else if (error.message.includes("Yetkilendirme hatası")) {
+          errorMessage = "Yetkilendirme hatası. RLS politikalarını kontrol edin.";
+        } else if (error.message.includes("zaten mevcut")) {
+          errorMessage = "Bu müşteri zaten kayıtlı.";
         } else {
           errorMessage = error.message;
         }
