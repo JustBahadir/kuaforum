@@ -12,7 +12,6 @@ export const musteriServisi = {
         .eq('role', 'customer')
         .order('first_name', { ascending: true });
       
-      // Filter by shop if a shop ID is provided
       if (dukkanId) {
         query = query.eq('dukkan_id', dukkanId);
       }
@@ -34,7 +33,8 @@ export const musteriServisi = {
   // Add a new customer with shop association - using admin client to bypass RLS
   async ekle(musteri: Partial<Musteri>, dukkanId?: number) {
     try {
-      // Using supabaseAdmin to bypass RLS for customer creation
+      console.log("Müşteri ekleme başlatıldı:", { musteri, dukkanId });
+      
       const { data, error } = await supabaseAdmin
         .from('profiles')
         .insert([{
@@ -53,6 +53,7 @@ export const musteriServisi = {
         throw error;
       }
       
+      console.log("Müşteri başarıyla eklendi:", data);
       return data;
     } catch (error) {
       console.error("Müşteri ekleme hatası:", error);
