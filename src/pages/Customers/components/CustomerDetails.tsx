@@ -28,7 +28,7 @@ import {
 import type { CustomerPersonalData, CustomerOperation } from "@/lib/supabase";
 import { formatPhoneNumber } from "@/utils/phoneFormatter";
 import { PhoneInputField } from "../components/FormFields/PhoneInputField";
-import { getHoroscope, getHoroscopeDescription, getDailyHoroscopeReading } from "../utils/horoscopeUtils";
+import { getHoroscope, getHoroscopeDescription, getDailyHoroscopeReading, HoroscopeSign } from "../utils/horoscopeUtils";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { formatCurrency } from "@/lib/utils";
 
@@ -72,7 +72,8 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
   // Calculate horoscope from birthdate
   useEffect(() => {
     if (formData.birthdate) {
-      const horoscope = getHoroscope(new Date(formData.birthdate));
+      const birthDate = new Date(formData.birthdate);
+      const horoscope = getHoroscope(birthDate);
       const horoscopeDescription = getHoroscopeDescription(horoscope);
       
       setPersonalData(prev => ({
@@ -101,7 +102,7 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
     queryKey: ['dailyHoroscope', personalData.horoscope],
     queryFn: async () => {
       if (!personalData.horoscope) return null;
-      return getDailyHoroscopeReading(personalData.horoscope);
+      return getDailyHoroscopeReading(personalData.horoscope as HoroscopeSign);
     },
     enabled: !!personalData.horoscope
   });
@@ -405,7 +406,7 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
                         id="anniversary_date" 
                         name="anniversary_date" 
                         type="date" 
-                        value={personalData.anniversary_date || ''} 
+                        value={personalData.anniversary_date?.toString() || ''} 
                         onChange={handleChange}
                         disabled={!editMode}
                       />
