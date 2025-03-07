@@ -1,5 +1,7 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation, useNavigate } from "react-router-dom";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -19,6 +21,20 @@ export default function Customers() {
   const [isNewCustomerModalOpen, setIsNewCustomerModalOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Musteri | null>(null);
   const { dukkanData } = useShopData(null);
+  const location = useLocation();
+  const navigate = useNavigate();
+  
+  // Check if we should open the new customer dialog based on URL parameter
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const shouldOpenNewCustomer = searchParams.get('new') === 'true';
+    
+    if (shouldOpenNewCustomer) {
+      setIsNewCustomerModalOpen(true);
+      // Remove the parameter from the URL without refreshing the page
+      navigate(location.pathname, { replace: true });
+    }
+  }, [location, navigate]);
   
   // Query with shop context
   const { 

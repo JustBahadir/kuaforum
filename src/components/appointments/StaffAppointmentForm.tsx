@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format, addDays, isBefore, isToday, set } from "date-fns";
 import { tr } from "date-fns/locale";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -46,6 +45,8 @@ import {
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { CustomerSelection } from "./CustomerSelection";
 import { gunIsimleri } from "@/components/operations/constants/workingDays";
+import { useNavigate } from "react-router-dom";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 interface StaffAppointmentFormProps {
   onAppointmentCreated?: (appointment: Randevu) => void;
@@ -92,6 +93,7 @@ export function StaffAppointmentForm({
 }: StaffAppointmentFormProps) {
   const [submitting, setSubmitting] = useState(false);
   const { dukkanId, userRole } = useCustomerAuth();
+  const navigate = useNavigate();
   
   const form = useForm<StaffAppointmentFormValues>({
     resolver: zodResolver(formSchema),
@@ -256,6 +258,12 @@ export function StaffAppointmentForm({
     }
   };
 
+  const handleNewCustomerClick = () => {
+    // Close the current dialog and navigate to the customers page with a query parameter
+    // to open the new customer dialog
+    navigate("/customers?new=true");
+  };
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4">
@@ -270,6 +278,18 @@ export function StaffAppointmentForm({
                 onChange={field.onChange}
               />
               <FormMessage />
+              <div className="mt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={handleNewCustomerClick}
+                >
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Yeni Müşteri Ekle
+                </Button>
+              </div>
             </FormItem>
           )}
         />

@@ -25,8 +25,9 @@ export function PhoneInputField({
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (disabled) return;
     
-    // Only allow digits and limit to 10 digits (excluding formatting)
-    const digitsOnly = e.target.value.replace(/\D/g, '').substring(0, 10);
+    // Only allow digits and limit to 11 digits (excluding formatting)
+    // 11 digits for "0" + 10 digits of the actual number
+    const digitsOnly = e.target.value.replace(/\D/g, '').substring(0, 11);
     
     // Format and update the phone number
     onChange(formatPhoneNumber(digitsOnly));
