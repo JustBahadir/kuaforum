@@ -7,6 +7,8 @@ import { gunSiralama, gunIsimleri } from "@/components/operations/constants/work
 import { useQuery } from "@tanstack/react-query";
 import { calismaSaatleriServisi } from "@/lib/supabase/services/calismaSaatleriServisi";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
+import { useEffect } from "react";
 
 interface ShopWorkingHoursCardProps {
   calisma_saatleri: any[];
@@ -16,14 +18,24 @@ interface ShopWorkingHoursCardProps {
 
 export function ShopWorkingHoursCard({ calisma_saatleri = [], userRole, dukkanId }: ShopWorkingHoursCardProps) {
   // Fetch working hours directly if not provided or empty
-  const { data: fetchedSaatler = [], isLoading } = useQuery({
+  const { data: fetchedSaatler = [], isLoading, error } = useQuery({
     queryKey: ['dukkan_saatleri', dukkanId],
     queryFn: async () => {
       if (!dukkanId) return [];
-      return await calismaSaatleriServisi.dukkanSaatleriGetir(dukkanId);
+      console.log("Fetching working hours for shop ID:", dukkanId);
+      const data = await calismaSaatleriServisi.dukkanSaatleriGetir(dukkanId);
+      console.log("Fetched working hours:", data);
+      return data;
     },
     enabled: !!dukkanId
   });
+
+  useEffect(() => {
+    if (error) {
+      console.error("Error fetching working hours:", error);
+      toast.error("Çalışma saatleri yüklenirken bir hata oluştu");
+    }
+  }, [error]);
 
   // Use provided hours if available, otherwise use fetched hours
   const saatler = calisma_saatleri.length > 0 ? calisma_saatleri : fetchedSaatler;
@@ -76,6 +88,26 @@ export function ShopWorkingHoursCard({ calisma_saatleri = [], userRole, dukkanId
         {sortedSaatler.length === 0 ? (
           <div className="text-center py-4 text-gray-500">
             Çalışma saati bilgisi bulunmuyor.
+            {userRole === 'admin' && (
+              <div className="mt-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={async () => {
+                    try {
+                      await calismaSaatleriServisi.varsayilanSaatleriOlustur(dukkanId);
+                      toast.success("Varsayılan çalışma saatleri oluşturuldu");
+                      setTimeout(() => window.location.reload(), 1500);
+                    } catch (err) {
+                      console.error("Varsayılan saatler oluşturulurken hata:", err);
+                      toast.error("Varsayılan saatler oluşturulurken hata");
+                    }
+                  }}
+                >
+                  Varsayılan Saatleri Oluştur
+                </Button>
+              </div>
+            )}
           </div>
         ) : (
           <div className="border rounded-lg overflow-hidden">

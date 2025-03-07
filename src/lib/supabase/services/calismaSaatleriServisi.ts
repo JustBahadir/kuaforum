@@ -147,14 +147,24 @@ export const calismaSaatleriServisi = {
   
   async varsayilanSaatleriOlustur(dukkanId: number) {
     try {
+      if (!dukkanId) {
+        console.error("Dükkan ID gerekli");
+        throw new Error("Dükkan ID gerekli");
+      }
+      
       // First check if hours already exist for this shop
-      const { data: existing } = await supabase
+      const { data: existing, error: checkError } = await supabase
         .from('calisma_saatleri')
         .select('id')
         .eq('dukkan_id', dukkanId);
+      
+      if (checkError) {
+        console.error("Mevcut saatleri kontrol ederken hata:", checkError);
+        throw checkError;
+      }
         
       if (existing && existing.length > 0) {
-        console.log("Bu dükkan için çalışma saatleri zaten mevcut");
+        console.log("Bu dükkan için çalışma saatleri zaten mevcut, ID:", dukkanId);
         return existing;
       }
       
@@ -167,7 +177,7 @@ export const calismaSaatleriServisi = {
         dukkan_id: dukkanId
       }));
       
-      console.log("Varsayılan saatler oluşturuluyor:", varsayilanSaatler);
+      console.log(`Dükkan ${dukkanId} için varsayılan saatler oluşturuluyor:`, varsayilanSaatler);
       
       const { data, error } = await supabase
         .from('calisma_saatleri')
@@ -179,6 +189,7 @@ export const calismaSaatleriServisi = {
         throw error;
       }
       
+      console.log("Varsayılan saatler oluşturuldu:", data);
       return data;
     } catch (err) {
       console.error("Varsayılan çalışma saatleri oluşturulurken hata:", err);
@@ -193,6 +204,8 @@ export const calismaSaatleriServisi = {
         return [];
       }
       
+      console.log(`Dükkan ${dukkanId} için çalışma saatleri getiriliyor`);
+      
       const { data, error } = await supabase
         .from('calisma_saatleri')
         .select('*')
@@ -202,6 +215,8 @@ export const calismaSaatleriServisi = {
         console.error("Dükkan saatleri getirme hatası:", error);
         throw error;
       }
+      
+      console.log(`Dükkan ${dukkanId} için çalışma saatleri:`, data);
       
       // Sort by predefined day order
       return (data || []).sort((a, b) => {

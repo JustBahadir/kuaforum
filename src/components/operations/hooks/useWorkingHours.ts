@@ -24,11 +24,24 @@ export function useWorkingHours(
     refetch 
   } = useQuery({
     queryKey: ['calisma_saatleri', dukkanId],
-    queryFn: () => dukkanId 
-      ? calismaSaatleriServisi.dukkanSaatleriGetir(dukkanId) 
-      : calismaSaatleriServisi.hepsiniGetir(),
-    enabled: providedGunler.length === 0,
-    retry: 1
+    queryFn: async () => {
+      console.log("useWorkingHours: Fetching working hours, dukkanId:", dukkanId);
+      try {
+        if (dukkanId) {
+          const data = await calismaSaatleriServisi.dukkanSaatleriGetir(dukkanId);
+          console.log("useWorkingHours: Fetched shop-specific hours:", data);
+          return data;
+        } else {
+          const data = await calismaSaatleriServisi.hepsiniGetir();
+          console.log("useWorkingHours: Fetched all hours:", data);
+          return data;
+        }
+      } catch (err) {
+        console.error("Error fetching working hours:", err);
+        throw err;
+      }
+    },
+    enabled: providedGunler.length === 0
   });
 
   // Use the provided working hours if available, otherwise use the fetched ones
@@ -58,6 +71,7 @@ export function useWorkingHours(
       queryClient.invalidateQueries({ queryKey: ['calisma_saatleri'] });
       if (dukkanId) {
         queryClient.invalidateQueries({ queryKey: ['calisma_saatleri', dukkanId] });
+        queryClient.invalidateQueries({ queryKey: ['dukkan_saatleri', dukkanId] });
       }
       refetch();
       toast.success('Çalışma saati güncellendi');
@@ -149,23 +163,26 @@ export function useWorkingHours(
 
   const handleStatusToggle = async (id: number, isOpen: boolean) => {
     try {
+      console.log(`Toggling status for ID ${id}, current isOpen:`, isOpen);
+      
       const updates: Partial<CalismaSaati> = {
         kapali: !isOpen,
       };
       
       // If closing, clear times
-      if (!isOpen) {
+      if (isOpen) { // We're toggling from open to closed
         updates.acilis = null;
         updates.kapanis = null;
-      } else {
+      } else { // We're toggling from closed to open
         // If opening, set default times if none exist
         const saat = calismaSaatleri.find(s => s.id === id || (typeof s.id === 'string' && parseInt(s.id) === id));
-        if (saat && (!saat.acilis || !saat.kapanis)) {
+        if (saat) {
           updates.acilis = "09:00";
           updates.kapanis = "18:00";
         }
       }
       
+      console.log("Status toggle updates:", updates);
       await saatGuncelle({ id, updates });
     } catch (error) {
       console.error("Durum değişikliği sırasında hata:", error);

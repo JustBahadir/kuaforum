@@ -54,10 +54,10 @@ export function useShopData(dukkanId: number | null) {
   }, [dukkanId]);
 
   const { data: personelListesi = [] } = useQuery({
-    queryKey: ['personel', dukkanData?.id],
+    queryKey: ['personel', dukkanData?.id || dukkanId],
     queryFn: async () => {
-      if (!dukkanId && !dukkanData?.id) return [];
       const shopId = dukkanId || dukkanData?.id;
+      if (!shopId) return [];
       
       try {
         const { data, error } = await supabase
@@ -105,17 +105,33 @@ export function useShopData(dukkanId: number | null) {
         return [];
       }
     },
-    enabled: !!dukkanId || !!dukkanData?.id
+    enabled: !!(dukkanData?.id || dukkanId)
   });
 
   const { data: calisma_saatleri = [], isLoading: isLoadingSaatler } = useQuery({
-    queryKey: ['calisma_saatleri', dukkanData?.id || dukkanId],
+    queryKey: ['dukkan_saatleri', dukkanData?.id || dukkanId],
     queryFn: async () => {
       try {
-        if (!dukkanData?.id && !dukkanId) return [];
-        
         const shopId = dukkanData?.id || dukkanId;
-        return await calismaSaatleriServisi.dukkanSaatleriGetir(shopId);
+        if (!shopId) return [];
+        
+        console.log("useShopData: Fetching working hours for shop ID:", shopId);
+        const data = await calismaSaatleriServisi.dukkanSaatleriGetir(shopId);
+        console.log("useShopData: Fetched working hours:", data);
+        
+        if (data.length === 0 && shopId) {
+          console.log("No working hours found, creating default hours");
+          try {
+            await calismaSaatleriServisi.varsayilanSaatleriOlustur(shopId);
+            // Fetch again after creating default hours
+            return await calismaSaatleriServisi.dukkanSaatleriGetir(shopId);
+          } catch (createError) {
+            console.error("Error creating default hours:", createError);
+            return [];
+          }
+        }
+        
+        return data;
       } catch (error) {
         console.error("Çalışma saatleri alınırken hata:", error);
         return [];

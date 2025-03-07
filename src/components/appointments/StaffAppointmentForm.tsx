@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -141,8 +140,20 @@ export function StaffAppointmentForm({
   const { data: calismaSaatleri = [] } = useQuery({
     queryKey: ["calisma_saatleri"],
     queryFn: async () => {
-      return await calismaSaatleriServisi.hepsiniGetir();
+      try {
+        console.log("StaffAppointmentForm: Fetching working hours for shop ID:", dukkanId);
+        if (dukkanId) {
+          const data = await calismaSaatleriServisi.dukkanSaatleriGetir(dukkanId);
+          console.log("StaffAppointmentForm: Fetched working hours:", data);
+          return data;
+        }
+        return [];
+      } catch (error) {
+        console.error("Error fetching working hours:", error);
+        return [];
+      }
     },
+    enabled: !!dukkanId
   });
 
   const selectedCategory = form.watch("category");

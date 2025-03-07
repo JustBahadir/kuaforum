@@ -7,6 +7,9 @@ import { gunSiralama } from './constants/workingDays';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useEffect } from 'react';
 import { useToast } from '@/components/ui/use-toast';
+import { Button } from '@/components/ui/button';
+import { calismaSaatleriServisi } from '@/lib/supabase/services/calismaSaatleriServisi';
+import { toast } from 'sonner';
 
 interface WorkingHoursProps {
   isStaff?: boolean;
@@ -16,7 +19,7 @@ interface WorkingHoursProps {
 }
 
 export function WorkingHours({ isStaff = true, gunler = [], dukkanId, onChange }: WorkingHoursProps) {
-  const { toast } = useToast();
+  const { toast: uiToast } = useToast();
   
   const { 
     calismaSaatleri, 
@@ -29,9 +32,21 @@ export function WorkingHours({ isStaff = true, gunler = [], dukkanId, onChange }
     handleTempChange,
     saveChanges,
     cancelEditing,
-    handleStatusToggle
+    handleStatusToggle,
+    refetch
   } = useWorkingHours(isStaff, gunler, dukkanId, onChange);
   
+  useEffect(() => {
+    if (error) {
+      console.error("WorkingHours component error:", error);
+      uiToast({
+        variant: "destructive",
+        title: "Hata",
+        description: "Çalışma saatleri yüklenirken bir hata oluştu. Lütfen daha sonra tekrar deneyiniz."
+      });
+    }
+  }, [error, uiToast]);
+
   if (isLoading) {
     return (
       <div className="border rounded-lg overflow-hidden p-4">
@@ -44,6 +59,26 @@ export function WorkingHours({ isStaff = true, gunler = [], dukkanId, onChange }
       </div>
     );
   }
+
+  const handleCreateDefaultHours = async () => {
+    if (!dukkanId) {
+      uiToast({
+        variant: "destructive",
+        title: "Hata",
+        description: "Dükkan ID bilgisi bulunamadı."
+      });
+      return;
+    }
+    
+    try {
+      await calismaSaatleriServisi.varsayilanSaatleriOlustur(dukkanId);
+      toast.success("Varsayılan çalışma saatleri oluşturuldu");
+      refetch();
+    } catch (err) {
+      console.error("Varsayılan saatler oluşturulurken hata:", err);
+      toast.error("Varsayılan saatler oluşturulurken hata oluştu");
+    }
+  };
 
   if (error) {
     return (
@@ -69,7 +104,20 @@ export function WorkingHours({ isStaff = true, gunler = [], dukkanId, onChange }
           {calismaSaatleri.length === 0 ? (
             <TableRow>
               <TableCell colSpan={isStaff ? 5 : 3} className="text-center py-6 text-gray-500">
-                Çalışma saati bilgisi bulunamadı
+                <div>
+                  Çalışma saati bilgisi bulunamadı
+                  {isStaff && dukkanId && (
+                    <div className="mt-4">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={handleCreateDefaultHours}
+                      >
+                        Varsayılan Saatleri Oluştur
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </TableCell>
             </TableRow>
           ) : (

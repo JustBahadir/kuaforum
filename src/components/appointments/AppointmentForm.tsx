@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -116,11 +115,18 @@ export function AppointmentForm({
     },
   });
   
-  // Get working hours for the shop
   const { data: calismaSaatleri = [] } = useQuery({
     queryKey: ["calisma_saatleri"],
     queryFn: async () => {
-      return await calismaSaatleriServisi.hepsiniGetir();
+      try {
+        console.log("AppointmentForm: Fetching working hours");
+        const data = await calismaSaatleriServisi.hepsiniGetir();
+        console.log("AppointmentForm: Fetched working hours:", data);
+        return data;
+      } catch (error) {
+        console.error("Error fetching working hours:", error);
+        return [];
+      }
     },
   });
 
@@ -141,24 +147,19 @@ export function AppointmentForm({
     }
   }, [initialServiceId, islemlerData, form]);
 
-  // Generate available times based on working hours for the selected day
   const availableTimes = React.useMemo(() => {
     if (!selectedDate || !calismaSaatleri.length) return [];
     
-    // Get the day name in Turkish
     const dayName = format(selectedDate, 'EEEE', { locale: tr }).toLowerCase();
     
-    // Find the working hours for the selected day
     const dayWorkingHours = calismaSaatleri.find(calisma => 
       calisma.gun.toLowerCase() === dayName
     );
     
-    // If no working hours found or the shop is closed on this day, return empty array
     if (!dayWorkingHours || dayWorkingHours.kapali || !dayWorkingHours.acilis || !dayWorkingHours.kapanis) {
       return [];
     }
     
-    // Parse opening and closing hours
     const [openHour, openMinute] = dayWorkingHours.acilis.split(':').map(Number);
     const [closeHour, closeMinute] = dayWorkingHours.kapanis.split(':').map(Number);
     
@@ -166,7 +167,6 @@ export function AppointmentForm({
     let currentHour = openHour;
     let currentMinute = openMinute;
     
-    // Generate times with 30-minute intervals
     while (
       currentHour < closeHour || 
       (currentHour === closeHour && currentMinute < closeMinute - 30)
@@ -175,7 +175,6 @@ export function AppointmentForm({
         `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`
       );
       
-      // Advance 30 minutes
       currentMinute += 30;
       if (currentMinute >= 60) {
         currentHour += 1;
@@ -186,20 +185,16 @@ export function AppointmentForm({
     return times;
   }, [selectedDate, calismaSaatleri]);
 
-  // Custom calendar day validator
   const isDateDisabled = (date: Date) => {
-    // Prevent selecting past dates
     if (isBefore(date, new Date()) && !isToday(date)) {
       return true;
     }
     
-    // Check if the shop is closed on this day
     const dayName = format(date, 'EEEE', { locale: tr }).toLowerCase();
     const dayWorkingHours = calismaSaatleri.find(calisma => 
       calisma.gun.toLowerCase() === dayName
     );
     
-    // If no working hours found or the shop is closed on this day, disable it
     return !dayWorkingHours || dayWorkingHours.kapali;
   };
 
