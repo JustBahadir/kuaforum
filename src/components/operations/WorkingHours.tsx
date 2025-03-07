@@ -32,7 +32,12 @@ export function WorkingHours({ isStaff = true, gunler = [], dukkanId, onChange }
     cancelEditing,
     handleStatusToggle,
     refetch
-  } = useWorkingHours(isStaff, gunler, dukkanId, onChange);
+  } = useWorkingHours({
+    isStaff,
+    providedGunler: gunler,
+    dukkanId,
+    onChange
+  });
   
   useEffect(() => {
     if (error) {
