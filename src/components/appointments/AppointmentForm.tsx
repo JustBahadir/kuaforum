@@ -119,7 +119,9 @@ export function AppointmentForm({
   // Get working hours for the shop
   const { data: calismaSaatleri = [] } = useQuery({
     queryKey: ["calisma_saatleri"],
-    queryFn: calismaSaatleriServisi.hepsiniGetir,
+    queryFn: async () => {
+      return await calismaSaatleriServisi.hepsiniGetir();
+    },
   });
 
   const selectedCategory = form.watch("category");

@@ -109,7 +109,7 @@ export function useShopData(dukkanId: number | null) {
   });
 
   const { data: calisma_saatleri = [], isLoading: isLoadingSaatler } = useQuery({
-    queryKey: ['calisma_saatleri', dukkanData?.id],
+    queryKey: ['calisma_saatleri', dukkanData?.id || dukkanId],
     queryFn: async () => {
       try {
         if (!dukkanData?.id && !dukkanId) return [];
@@ -121,7 +121,7 @@ export function useShopData(dukkanId: number | null) {
         return [];
       }
     },
-    enabled: !!dukkanData?.id || !!dukkanId
+    enabled: !!(dukkanData?.id || dukkanId)
   });
 
   return { 

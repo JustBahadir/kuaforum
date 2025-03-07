@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -139,7 +140,9 @@ export function StaffAppointmentForm({
 
   const { data: calismaSaatleri = [] } = useQuery({
     queryKey: ["calisma_saatleri"],
-    queryFn: calismaSaatleriServisi.hepsiniGetir,
+    queryFn: async () => {
+      return await calismaSaatleriServisi.hepsiniGetir();
+    },
   });
 
   const selectedCategory = form.watch("category");

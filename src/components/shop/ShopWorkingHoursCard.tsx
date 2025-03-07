@@ -18,8 +18,11 @@ export function ShopWorkingHoursCard({ calisma_saatleri = [], userRole, dukkanId
   // Fetch working hours directly if not provided or empty
   const { data: fetchedSaatler = [], isLoading } = useQuery({
     queryKey: ['dukkan_saatleri', dukkanId],
-    queryFn: () => calismaSaatleriServisi.dukkanSaatleriGetir(dukkanId),
-    enabled: calisma_saatleri.length === 0 && !!dukkanId
+    queryFn: async () => {
+      if (!dukkanId) return [];
+      return await calismaSaatleriServisi.dukkanSaatleriGetir(dukkanId);
+    },
+    enabled: !!dukkanId
   });
 
   // Use provided hours if available, otherwise use fetched hours

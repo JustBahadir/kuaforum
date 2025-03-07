@@ -25,7 +25,10 @@ export function useAppointments(dukkanId: number | undefined) {
 
   const { data: currentPersonel } = useQuery({
     queryKey: ['currentPersonel', currentUser?.id],
-    queryFn: () => personelServisi.getirByAuthId(currentUser?.id || ""),
+    queryFn: async () => {
+      if (!currentUser?.id) return null;
+      return await personelServisi.getirByAuthId(currentUser.id);
+    },
     enabled: !!currentUser?.id
   });
   
@@ -42,10 +45,8 @@ export function useAppointments(dukkanId: number | undefined) {
   } = useQuery({
     queryKey: ['dukkan-randevular', dukkanId],
     queryFn: async () => {
-      if (dukkanId) {
-        return randevuServisi.dukkanRandevulariniGetir(dukkanId);
-      }
-      return [];
+      if (!dukkanId) return [];
+      return await randevuServisi.dukkanRandevulariniGetir(dukkanId);
     },
     enabled: !!dukkanId
   });
