@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CustomerOperationsTable } from "./CustomerOperationsTable";
 import { CustomerPreferences } from "./CustomerPreferences";
-import { Musteri } from "@/lib/supabase";
+import { Musteri } from "@/lib/supabase/types";
 import { formatPhoneNumber } from "@/utils/phoneFormatter";
 import { Button } from "@/components/ui/button";
 import { Pencil, User, Calendar, Gift, Star } from "lucide-react";
@@ -49,13 +49,13 @@ export function CustomerDetails({ open, onOpenChange, customer }: CustomerDetail
               <div>
                 <h3 className="text-sm font-medium text-gray-500">AD SOYAD</h3>
                 <p className="mt-1 text-base">
-                  {customer.first_name || customer.ad_soyad} {customer.last_name || ''} 
+                  {customer.first_name} {customer.last_name || ''} 
                 </p>
               </div>
               <div>
                 <h3 className="text-sm font-medium text-gray-500">TELEFON</h3>
                 <p className="mt-1 text-base">
-                  {customer.phone && formatPhoneNumber(customer.phone) || customer.telefon || '-'}
+                  {customer.phone && formatPhoneNumber(customer.phone) || '-'}
                 </p>
               </div>
               <div>

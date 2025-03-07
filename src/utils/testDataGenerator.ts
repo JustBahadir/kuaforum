@@ -113,7 +113,7 @@ const generateIslemler = async (kategoriler: Kategori[]) => {
       { islem_adi: "Sıcak Taş Masajı", fiyat: 350, puan: 20, kategori_id: masajKategori?.id, sira: 2 },
     ];
 
-    const allIslemler = [
+    const allIslemleri = [
       ...sacIslemleri,
       ...ciltIslemleri,
       ...tirnakIslemleri,
@@ -123,7 +123,7 @@ const generateIslemler = async (kategoriler: Kategori[]) => {
 
     const { data, error } = await supabase
       .from('islemler')
-      .insert(allIslemler)
+      .insert(allIslemleri)
       .select();
 
     if (error) throw error;
@@ -168,7 +168,7 @@ const generatePersonel = async (dukkanId: number) => {
   }
 };
 
-const generateMusteriler = async () => {
+const generateMusteriler = async (dukkanId: number) => {
   try {
     const musteriler: Partial<Musteri>[] = [];
 
@@ -177,16 +177,18 @@ const generateMusteriler = async () => {
       const lastName = faker.person.lastName();
 
       musteriler.push({
-        ad_soyad: `${firstName} ${lastName}`,
-        telefon: faker.phone.number(),
-        eposta: faker.internet.email({ firstName, lastName }),
-        adres: faker.location.streetAddress({ useFullAddress: true }),
-        musteri_no: `M${faker.string.numeric(4)}`,
+        first_name: firstName,
+        last_name: lastName,
+        phone: faker.phone.number(),
+        birthdate: faker.date.birthdate().toISOString().split('T')[0],
+        dukkan_id: dukkanId,
+        role: 'customer'
       });
     }
 
+    // Insert into profiles table which now holds customer data
     const { data, error } = await supabase
-      .from('musteriler')
+      .from('profiles')
       .insert(musteriler)
       .select();
 
@@ -204,7 +206,7 @@ const generateRandomData = async () => {
     const kategoriler = await generateKategoriler();
     const islemler = await generateIslemler(kategoriler);
     const personeller = await generatePersonel(dukkan.id);
-    const musteriler = await generateMusteriler();
+    const musteriler = await generateMusteriler(dukkan.id);
 
     return {
       dukkan,
