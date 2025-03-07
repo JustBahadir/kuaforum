@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { format, parse, startOfWeek, addDays, isToday, isSameDay } from 'date-fns';
 import { tr } from 'date-fns/locale';
@@ -39,7 +38,6 @@ export default function Appointments() {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Randevu | null>(null);
   
-  // Get current user
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
     queryFn: async () => {
@@ -48,14 +46,12 @@ export default function Appointments() {
     }
   });
 
-  // Get current user's personnel record if they are staff
   const { data: currentPersonel } = useQuery({
     queryKey: ['currentPersonel', currentUser?.id],
     queryFn: () => personelServisi.getirByAuthId(currentUser?.id || ""),
     enabled: !!currentUser?.id && userRole === 'staff'
   });
   
-  // Update currentPersonelId when currentPersonel changes
   useEffect(() => {
     if (currentPersonel) {
       setCurrentPersonelId(currentPersonel.id);
@@ -73,21 +69,17 @@ export default function Appointments() {
     enabled: !!dukkanId
   });
   
-  // Seçili güne ait randevular
   const selectedDayAppointments = appointments.filter(appointment => {
     if (!appointment.tarih) return false;
     const appointmentDate = new Date(appointment.tarih);
     return isSameDay(appointmentDate, selectedDate);
   }).sort((a, b) => {
-    // Saate göre sırala
     return a.saat.localeCompare(b.saat);
   });
   
-  // Haftalık görünüm için gün aralığını hesapla
-  const startDate = startOfWeek(selectedDate, { weekStartsOn: 1 }); // Pazartesi başlangıç
+  const startDate = startOfWeek(selectedDate, { weekStartsOn: 1 });
   const weekDays = [...Array(7)].map((_, i) => addDays(startDate, i));
   
-  // Randevu durumuna göre stil bilgisi
   const getStatusStyle = (status: string) => {
     switch(status) {
       case 'beklemede':
@@ -103,16 +95,13 @@ export default function Appointments() {
     }
   };
   
-  // Personelin kendisine ait randevular için stil
   const getAppointmentContainerStyle = (appointment: Randevu) => {
-    // If personel_id matches current personel, highlight it
     if (currentPersonelId && appointment.personel_id === currentPersonelId) {
       return "flex border-2 border-purple-400 p-4 rounded-lg bg-purple-50";
     }
     return "flex border p-4 rounded-lg";
   };
   
-  // Gün bloğunda gösterilecek randevu sayısı
   const getAppointmentsForDay = (date: Date) => {
     return appointments.filter(appointment => {
       if (!appointment.tarih) return false;
@@ -127,7 +116,6 @@ export default function Appointments() {
     setAddDialogOpen(false);
   };
   
-  // Personelin kendisine ait randevular için renk ve işaretleme
   const getAppointmentCardStyle = (appointment: Randevu) => {
     if (currentPersonelId && appointment.personel_id === currentPersonelId) {
       return `mb-1 p-1 text-xs rounded border-2 border-purple-400 ${getStatusStyle(appointment.durum)} bg-opacity-70`;
@@ -135,27 +123,28 @@ export default function Appointments() {
     return `mb-1 p-1 text-xs rounded ${getStatusStyle(appointment.durum)}`;
   };
   
-  // Determine which form to show based on user role
   const AppointmentFormComponent = userRole === 'staff' || userRole === 'admin' 
     ? StaffAppointmentForm 
     : AppointmentForm;
   
-  // Handle marking appointment as completed
   const handleAppointmentComplete = async () => {
     if (!selectedAppointment) return;
     
     try {
-      // Update appointment status to 'tamamlandi'
       await randevuServisi.guncelle(selectedAppointment.id, {
         durum: 'tamamlandi'
       });
       
-      // Create service operation record
       if (selectedAppointment.islemler && selectedAppointment.islemler.length > 0) {
         for (const islemId of selectedAppointment.islemler) {
           await personelIslemleriServisi.ekle({
-            personel_id: selectedAppointment.personel_id,
+            personel_id: selectedAppointment.personel_id || 0,
             islem_id: islemId,
+            tutar: 0,
+            odenen: 0,
+            prim_yuzdesi: 0,
+            puan: 0,
+            aciklama: selectedAppointment.notlar || '',
             musteri_id: selectedAppointment.musteri_id,
             tarih: selectedAppointment.tarih,
             notlar: selectedAppointment.notlar || ''
@@ -172,7 +161,6 @@ export default function Appointments() {
     }
   };
   
-  // Handle canceling appointment
   const handleAppointmentCancel = async () => {
     if (!selectedAppointment) return;
     
@@ -280,7 +268,6 @@ export default function Appointments() {
                             </p>
                           )}
                           
-                          {/* Appointment action buttons */}
                           {appointment.durum !== 'tamamlandi' && appointment.durum !== 'iptal_edildi' && (
                             <div className="flex gap-2 mt-3">
                               <Button 
@@ -453,7 +440,6 @@ export default function Appointments() {
                                 </p>
                               )}
                               
-                              {/* Appointment action buttons */}
                               {appointment.durum !== 'tamamlandi' && appointment.durum !== 'iptal_edildi' && (
                                 <div className="flex gap-2 mt-3">
                                   <Button 
@@ -498,7 +484,6 @@ export default function Appointments() {
           </TabsContent>
         </Tabs>
         
-        {/* New Appointment Dialog */}
         <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
           <DialogContent className="max-w-md">
             <DialogHeader>
@@ -511,7 +496,6 @@ export default function Appointments() {
           </DialogContent>
         </Dialog>
         
-        {/* Confirm Appointment Completion Dialog */}
         <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -529,7 +513,6 @@ export default function Appointments() {
           </AlertDialogContent>
         </AlertDialog>
         
-        {/* Cancel Appointment Dialog */}
         <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
