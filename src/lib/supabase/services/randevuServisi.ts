@@ -17,7 +17,10 @@ export const randevuServisi = {
       .order('tarih', { ascending: true })
       .order('saat', { ascending: true });
 
-    if (error) throw error;
+    if (error) {
+      console.error("Randevular getirme hatası:", error);
+      throw error;
+    }
     return data || [];
   },
 
@@ -35,7 +38,10 @@ export const randevuServisi = {
       .order('tarih', { ascending: true })
       .order('saat', { ascending: true });
 
-    if (error) throw error;
+    if (error) {
+      console.error("Dükkan randevuları getirme hatası:", error);
+      throw error;
+    }
     return data || [];
   },
 
@@ -54,14 +60,17 @@ export const randevuServisi = {
       .order('tarih', { ascending: true })
       .order('saat', { ascending: true });
 
-    if (error) throw error;
+    if (error) {
+      console.error("Kendi randevularını getirme hatası:", error);
+      throw error;
+    }
     return data || [];
   },
 
   async ekle(randevu: Omit<Randevu, 'id' | 'created_at' | 'musteri' | 'personel'>) {
     console.log("Randevu ekle service received data:", randevu);
     
-    // Validate required fields
+    // Tüm gerekli alanları kontrol et
     if (!randevu.dukkan_id) {
       throw new Error("dukkan_id is required");
     }
@@ -78,12 +87,12 @@ export const randevuServisi = {
       throw new Error("tarih and saat are required");
     }
 
-    // Ensure islemler is an array even if only one service is selected
+    // İşlemleri düzenle - tek işlem bile olsa array olarak sakla
     const islemler = Array.isArray(randevu.islemler) 
       ? randevu.islemler 
       : randevu.islemler ? [randevu.islemler] : [];
 
-    // Prepare insert data
+    // Kayıt için hazırla
     const insertData = {
       dukkan_id: randevu.dukkan_id,
       musteri_id: randevu.musteri_id,
@@ -93,13 +102,13 @@ export const randevuServisi = {
       durum: randevu.durum || "onaylandi",
       notlar: randevu.notlar || "",
       islemler: islemler,
-      customer_id: randevu.customer_id || randevu.musteri_id.toString()
+      customer_id: randevu.customer_id || null // Müşteri ID'si varsa kullan, yoksa null olsun
     };
     
-    console.log("Formatted appointment data:", insertData);
+    console.log("Eklenen randevu verisi:", insertData);
 
     try {
-      // Perform the insert operation
+      // Randevuyu ekle
       const { data, error } = await supabase
         .from('randevular')
         .insert(insertData)
@@ -107,60 +116,61 @@ export const randevuServisi = {
         .single();
 
       if (error) {
-        console.error("Supabase insert error:", error);
-        throw new Error(error.message || "Randevu eklenirken bir hata oluştu");
+        console.error("Supabase randevu ekleme hatası:", error);
+        throw new Error("Randevu eklenirken bir hata oluştu: " + error.message);
       }
       
       if (!data) {
         throw new Error("Randevu eklendi ancak veri döndürülemedi");
       }
       
-      // Then fetch complete records with relations if needed
-      const { data: fullData, error: fetchError } = await supabase
-        .from('randevular')
-        .select(`
-          *,
-          musteri:musteriler(*),
-          personel:personel(*)
-        `)
-        .eq('id', data.id)
-        .single();
-        
-      if (fetchError) {
-        console.error("Error fetching created appointment:", fetchError);
-        // Return the basic record anyway since it was created
-        return data;
-      }
+      console.log("Randevu başarıyla oluşturuldu:", data);
       
-      return fullData || data;
+      return data;
     } catch (error: any) {
-      console.error("Error creating appointment:", error);
+      console.error("Randevu oluşturma hatası:", error);
       throw new Error(error?.message || "Randevu oluşturulurken bir hata oluştu");
     }
   },
 
   async guncelle(id: number, randevu: Partial<Randevu>) {
-    const { data, error } = await supabase
-      .from('randevular')
-      .update(randevu)
-      .eq('id', id)
-      .select(`
-        *,
-        musteri:musteriler(*),
-        personel:personel(*)
-      `)
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('randevular')
+        .update(randevu)
+        .eq('id', id)
+        .select(`
+          *,
+          musteri:musteriler(*),
+          personel:personel(*)
+        `)
+        .single();
 
-    if (error) throw error;
-    return data;
+      if (error) {
+        console.error("Randevu güncelleme hatası:", error);
+        throw error;
+      }
+      return data;
+    } catch (error) {
+      console.error("Randevu güncelleme hatası:", error);
+      throw error;
+    }
   },
 
   async sil(id: number) {
-    const { error } = await supabase
-      .from('randevular')
-      .delete()
-      .eq('id', id);
+    try {
+      const { error } = await supabase
+        .from('randevular')
+        .delete()
+        .eq('id', id);
 
-    if (error) throw error;
+      if (error) {
+        console.error("Randevu silme hatası:", error);
+        throw error;
+      }
+    } catch (error) {
+      console.error("Randevu silme hatası:", error);
+      throw error;
+    }
   }
 };

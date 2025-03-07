@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { format, addDays, isBefore, isToday } from "date-fns";
+import { format, addDays, isBefore, isToday, parse } from "date-fns";
 import { tr } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -176,43 +176,41 @@ export function StaffAppointmentForm({
     }
   }, [initialServiceId, islemlerData, form]);
 
-  const availableTimes = React.useMemo(() => {
-    if (!selectedDate || !calismaSaatleri.length) return [];
+  // Mevcut gün için saat aralıklarını hesapla
+  const getTimeSlots = (date: Date, saatler: CalismaSaati[]) => {
+    const dayName = format(date, 'EEEE', { locale: tr }).toLowerCase();
     
-    // Get day name in Turkish lowercase
-    const dayName = format(selectedDate, 'EEEE', { locale: tr }).toLowerCase();
-    console.log("Selected day:", dayName);
-    
-    // Find working hours for this day
-    const dayWorkingHours = calismaSaatleri.find(calisma => 
-      calisma.gun.toLowerCase() === dayName
+    // Seçilen güne ait çalışma saatlerini bul
+    const dayWorkingHours = saatler.find(saat => 
+      saat.gun.toLowerCase() === dayName
     );
     
-    console.log("Working hours found:", dayWorkingHours);
-    
+    // Çalışma saati yoksa veya kapalıysa boş array döndür
     if (!dayWorkingHours || dayWorkingHours.kapali || !dayWorkingHours.acilis || !dayWorkingHours.kapanis) {
-      console.log("No working hours found for day:", dayName);
+      console.log(`${dayName} günü için çalışma saati bulunamadı veya kapalı.`);
       return [];
     }
     
-    console.log("Working hours for", dayName, ":", dayWorkingHours.acilis, "to", dayWorkingHours.kapanis);
+    console.log(`${dayName} günü çalışma saatleri:`, dayWorkingHours.acilis, "to", dayWorkingHours.kapanis);
     
+    // Açılış ve kapanış saatlerini parçala
     const [openHour, openMinute] = dayWorkingHours.acilis.split(':').map(Number);
     const [closeHour, closeMinute] = dayWorkingHours.kapanis.split(':').map(Number);
     
-    const times: string[] = [];
+    // Saat aralıklarını oluştur
+    const timeSlots: string[] = [];
     let currentHour = openHour;
     let currentMinute = openMinute;
     
-    // Generate times at 30-minute intervals from opening time to 30 minutes before closing
+    // Kapanıştan 30 dakika öncesine kadar 30'ar dakikalık randevu saatleri oluştur
     while (
       currentHour < closeHour || 
       (currentHour === closeHour && currentMinute <= closeMinute - 30)
     ) {
-      times.push(
-        `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`
-      );
+      const timeStr = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`;
+      timeSlots.push(timeStr);
       
+      // 30 dakika ekle
       currentMinute += 30;
       if (currentMinute >= 60) {
         currentHour += 1;
@@ -220,51 +218,61 @@ export function StaffAppointmentForm({
       }
     }
     
-    console.log("Available times:", times);
-    return times;
+    console.log("Oluşturulan saat dilimleri:", timeSlots);
+    return timeSlots;
+  };
+
+  const availableTimes = React.useMemo(() => {
+    if (!selectedDate || !calismaSaatleri || calismaSaatleri.length === 0) {
+      console.log("Tarih veya çalışma saatleri bulunamadı");
+      return [];
+    }
+    
+    return getTimeSlots(selectedDate, calismaSaatleri);
   }, [selectedDate, calismaSaatleri]);
 
+  // Takvimde geçmiş tarihleri ve kapalı günleri devre dışı bırak
   const isDateDisabled = (date: Date) => {
-    // Disable past dates (except today)
+    // Geçmiş tarihleri (bugün hariç) devre dışı bırak
     if (isBefore(date, new Date()) && !isToday(date)) {
       return true;
     }
     
-    // Get the day name and find if the shop is closed that day
+    // Gün adını al ve dükkanın o gün kapalı olup olmadığını kontrol et
     const dayName = format(date, 'EEEE', { locale: tr }).toLowerCase();
-    const dayWorkingHours = calismaSaatleri.find(calisma => 
-      calisma.gun.toLowerCase() === dayName
+    const dayWorkingHours = calismaSaatleri.find(saat => 
+      saat.gun.toLowerCase() === dayName
     );
     
-    // Only disable the date if we have working hours info AND the shop is explicitly closed
+    // Sadece çalışma saati bilgisi VAR ise ve dükkan açıkça kapalı ise devre dışı bırak
     if (dayWorkingHours && dayWorkingHours.kapali) {
       return true;
     }
     
-    // If we don't have working hours for this day, allow selection (default to open)
+    // Bu gün için çalışma saati yoksa, seçime izin ver (varsayılan olarak açık)
     return false;
   };
 
   const handleFormSubmit = async (data: StaffAppointmentFormValues) => {
     try {
       setSubmitting(true);
-      console.log("Form data being submitted:", data);
+      console.log("Form verileri gönderiliyor:", data);
       
       if (!dukkanId) {
         toast.error("Dükkan ID bulunamadı");
         return;
       }
       
-      // Get customer info to retrieve auth ID
+      // Müşteri bilgilerini al
       const customerDetails = await musteriServisi.getirById(data.customerId);
-      console.log("Customer details fetched:", customerDetails);
+      console.log("Müşteri bilgileri alındı:", customerDetails);
       
       if (!customerDetails) {
         toast.error("Müşteri bilgileri alınamadı");
         return;
       }
       
-      // Prepare appointment data with proper format
+      // Randevu verilerini doğru formatta hazırla
       const formattedDate = format(data.date, 'yyyy-MM-dd');
       
       const randevuData = {
@@ -276,14 +284,14 @@ export function StaffAppointmentForm({
         durum: "onaylandi" as const,
         notlar: data.notes || "",
         islemler: [data.service],
-        customer_id: customerDetails.auth_id || data.customerId.toString()
+        customer_id: customerDetails.auth_id || null // Auth ID yoksa null olarak gönder
       };
       
-      console.log("Appointment data being sent:", randevuData);
+      console.log("Randevu verileri gönderiliyor:", randevuData);
 
-      // Create the appointment with error handling
+      // Randevuyu oluştur
       const newRandevu = await randevuServisi.ekle(randevuData);
-      console.log("New appointment created:", newRandevu);
+      console.log("Yeni randevu oluşturuldu:", newRandevu);
       
       toast.success("Randevu başarıyla oluşturuldu");
       
@@ -311,7 +319,7 @@ export function StaffAppointmentForm({
           name="customerId"
           render={({ field }) => (
             <FormItem>
-              {/* Removed the duplicate FormLabel here */}
+              <FormLabel className="text-base">Müşteri Seçin*</FormLabel>
               <CustomerSelection 
                 dukkanId={dukkanId}
                 value={field.value}
@@ -493,8 +501,12 @@ export function StaffAppointmentForm({
                       onSelect={(date) => {
                         if (date) {
                           field.onChange(date);
-                          // Reset time when date changes
-                          form.setValue('time', availableTimes.length > 0 ? availableTimes[0] : '');
+                          // Tarih değiştiğinde saatleri sıfırla
+                          if (availableTimes && availableTimes.length > 0) {
+                            form.setValue('time', availableTimes[0]);
+                          } else {
+                            form.setValue('time', '');
+                          }
                         }
                       }}
                       disabled={isDateDisabled}
@@ -518,18 +530,18 @@ export function StaffAppointmentForm({
                 <Select
                   onValueChange={field.onChange}
                   value={field.value}
-                  disabled={availableTimes.length === 0}
+                  disabled={!availableTimes || availableTimes.length === 0}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder={
-                      availableTimes.length === 0 
+                      !availableTimes || availableTimes.length === 0 
                         ? "Bu gün için uygun saat yok" 
                         : "Saat seçin"
                     } />
                   </SelectTrigger>
                   <SelectContent className="h-[200px]">
                     <ScrollArea className="h-[200px]">
-                      {availableTimes.length > 0 ? (
+                      {availableTimes && availableTimes.length > 0 ? (
                         availableTimes.map((time) => (
                           <SelectItem key={time} value={time}>
                             {time}
