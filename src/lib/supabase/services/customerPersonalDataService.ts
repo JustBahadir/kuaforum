@@ -3,21 +3,20 @@ import { supabase } from '../client';
 
 export interface CustomerPersonalData {
   id?: number;
-  customer_id: string; 
-  horoscope?: string | null;
-  horoscope_description?: string | null;
-  birth_date?: string | null;
-  anniversary_date?: string | null;
-  children_names?: string[];
-  custom_notes?: string | null;
+  customer_id: string;
+  birth_date: Date | string | null;
+  anniversary_date: Date | string | null;
+  horoscope: string | null;
+  horoscope_description: string | null;
+  children_names: string[];
+  custom_notes: string | null;
+  daily_horoscope_reading?: string | null;
   created_at?: string;
   updated_at?: string;
 }
 
 export const customerPersonalDataService = {
-  // Get personal data for a customer
-  async getByCustomerId(customerId: string) {
-    console.log("Getting personal data for customer:", customerId);
+  async getByCustomerId(customerId: string): Promise<CustomerPersonalData | null> {
     try {
       const { data, error } = await supabase
         .from('customer_personal_data')
@@ -25,75 +24,67 @@ export const customerPersonalDataService = {
         .eq('customer_id', customerId)
         .maybeSingle();
 
-      if (error) {
-        console.error("Error fetching customer personal data:", error);
-        throw new Error(`Müşteri kişisel verileri alınamadı: ${error.message}`);
-      }
-      
+      if (error) throw error;
       return data;
-    } catch (error: any) {
-      console.error("Error in getByCustomerId:", error);
-      throw error;
+    } catch (error) {
+      console.error('Error fetching customer personal data:', error);
+      return null;
     }
   },
 
-  // Create personal data for a customer
-  async create(data: CustomerPersonalData) {
-    console.log("Creating personal data for customer:", data.customer_id);
-    try {
-      const { data: newData, error } = await supabase
-        .from('customer_personal_data')
-        .insert([data])
-        .select();
-
-      if (error) {
-        console.error("Error creating customer personal data:", error);
-        throw new Error(`Müşteri kişisel verileri oluşturulamadı: ${error.message}`);
-      }
-      
-      return newData?.[0];
-    } catch (error: any) {
-      console.error("Error in create:", error);
-      throw error;
-    }
-  },
-
-  // Update personal data for a customer
-  async update(id: number, data: Partial<CustomerPersonalData>) {
-    console.log("Updating personal data for id:", id);
-    try {
-      const { data: updatedData, error } = await supabase
-        .from('customer_personal_data')
-        .update(data)
-        .eq('id', id)
-        .select();
-
-      if (error) {
-        console.error("Error updating customer personal data:", error);
-        throw new Error(`Müşteri kişisel verileri güncellenemedi: ${error.message}`);
-      }
-      
-      return updatedData?.[0];
-    } catch (error: any) {
-      console.error("Error in update:", error);
-      throw error;
-    }
-  },
-
-  // Upsert personal data for a customer (create if not exists, update if exists)
-  async upsert(data: CustomerPersonalData) {
-    console.log("Upserting personal data for customer:", data.customer_id);
+  async upsert(data: CustomerPersonalData): Promise<CustomerPersonalData | null> {
     try {
       // Check if record exists
-      const existing = await this.getByCustomerId(data.customer_id);
+      const { data: existingData } = await supabase
+        .from('customer_personal_data')
+        .select('id')
+        .eq('customer_id', data.customer_id)
+        .maybeSingle();
+
+      let result;
       
-      if (existing) {
-        return await this.update(existing.id, data);
+      if (existingData?.id) {
+        // Update
+        const { data: updatedData, error } = await supabase
+          .from('customer_personal_data')
+          .update({
+            birth_date: data.birth_date,
+            anniversary_date: data.anniversary_date,
+            horoscope: data.horoscope,
+            horoscope_description: data.horoscope_description,
+            children_names: data.children_names,
+            custom_notes: data.custom_notes,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingData.id)
+          .select()
+          .single();
+
+        if (error) throw error;
+        result = updatedData;
       } else {
-        return await this.create(data);
+        // Insert
+        const { data: newData, error } = await supabase
+          .from('customer_personal_data')
+          .insert([{
+            customer_id: data.customer_id,
+            birth_date: data.birth_date,
+            anniversary_date: data.anniversary_date,
+            horoscope: data.horoscope,
+            horoscope_description: data.horoscope_description,
+            children_names: data.children_names,
+            custom_notes: data.custom_notes
+          }])
+          .select()
+          .single();
+
+        if (error) throw error;
+        result = newData;
       }
-    } catch (error: any) {
-      console.error("Error in upsert:", error);
+
+      return result;
+    } catch (error) {
+      console.error('Error saving customer personal data:', error);
       throw error;
     }
   }

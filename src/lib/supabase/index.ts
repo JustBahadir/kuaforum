@@ -15,3 +15,5 @@ export { profilServisi } from './services/profilServisi';
 export { siralamaServisi } from './services/siralamaServisi';
 export { customerPersonalDataService } from './services/customerPersonalDataService';
 export type { CustomerPersonalData } from './services/customerPersonalDataService';
+export { customerOperationsService } from './services/customerOperationsService';
+export type { CustomerOperation } from './services/customerOperationsService';

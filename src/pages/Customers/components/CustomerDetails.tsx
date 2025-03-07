@@ -1,7 +1,8 @@
+
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,18 +12,25 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { 
-  User, Calendar, Mail, Phone, MapPin, Briefcase, Edit, Save, Trash2, AlertTriangle
+  User, Calendar, Mail, Phone, MapPin, Briefcase, Edit, Save, Trash2, AlertTriangle,
+  FileText, Camera, Clock, CreditCard, Award, BookOpen, MessageSquare
 } from "lucide-react";
 import { 
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle 
 } from "@/components/ui/alert-dialog";
 import { Musteri } from "@/lib/supabase/types";
-import { customerPersonalDataService, musteriServisi } from "@/lib/supabase";
-import type { CustomerPersonalData } from "@/lib/supabase";
+import { 
+  customerPersonalDataService, 
+  customerOperationsService,
+  musteriServisi 
+} from "@/lib/supabase";
+import type { CustomerPersonalData, CustomerOperation } from "@/lib/supabase";
 import { formatPhoneNumber } from "@/utils/phoneFormatter";
 import { PhoneInputField } from "../components/FormFields/PhoneInputField";
-import { getHoroscope, getHoroscopeDescription } from "../utils/horoscopeUtils";
+import { getHoroscope, getHoroscopeDescription, getDailyHoroscopeReading } from "../utils/horoscopeUtils";
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
+import { formatCurrency } from "@/lib/utils";
 
 interface CustomerDetailsProps {
   customer: Musteri;
@@ -36,6 +44,7 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
   const [editMode, setEditMode] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const queryClient = useQueryClient();
   
   // Customer basic data form
   const [formData, setFormData] = useState({
@@ -53,8 +62,12 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
     horoscope: null,
     horoscope_description: null,
     children_names: [],
-    custom_notes: null
+    custom_notes: null,
+    daily_horoscope_reading: null
   });
+
+  // Operation notes being edited
+  const [editingNotes, setEditingNotes] = useState<{ [key: number]: string }>({});
 
   // Calculate horoscope from birthdate
   useEffect(() => {
@@ -83,6 +96,38 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
     }
   });
 
+  // Fetch daily horoscope reading
+  const { data: dailyHoroscope, isLoading: isLoadingHoroscope } = useQuery({
+    queryKey: ['dailyHoroscope', personalData.horoscope],
+    queryFn: async () => {
+      if (!personalData.horoscope) return null;
+      return getDailyHoroscopeReading(personalData.horoscope);
+    },
+    enabled: !!personalData.horoscope
+  });
+
+  // Fetch customer operations
+  const { data: customerOperations = [], isLoading: isLoadingOperations } = useQuery({
+    queryKey: ['customerOperations', customer.id],
+    queryFn: async () => {
+      return customerOperationsService.getCustomerOperations(customer.id.toString());
+    }
+  });
+
+  // Save operation notes mutation
+  const saveNotesMutation = useMutation({
+    mutationFn: ({ appointmentId, notes }: { appointmentId: number, notes: string }) => {
+      return customerOperationsService.updateOperationNotes(appointmentId, notes);
+    },
+    onSuccess: () => {
+      toast.success("Not başarıyla kaydedildi");
+      queryClient.invalidateQueries({ queryKey: ['customerOperations', customer.id] });
+    },
+    onError: (error) => {
+      toast.error("Not kaydedilirken bir hata oluştu");
+    }
+  });
+
   // Update personal data state when fetched from API
   useEffect(() => {
     if (customerPersonalData) {
@@ -92,6 +137,16 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
       });
     }
   }, [customerPersonalData, customer.id]);
+
+  // Update daily horoscope when fetched
+  useEffect(() => {
+    if (dailyHoroscope) {
+      setPersonalData(prev => ({
+        ...prev,
+        daily_horoscope_reading: dailyHoroscope
+      }));
+    }
+  }, [dailyHoroscope]);
 
   // Format date for display
   const formatDate = (dateString?: string | null) => {
@@ -111,6 +166,24 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
       setFormData(prev => ({ ...prev, [name]: value }));
     } else if (activeTab === "personal") {
       setPersonalData(prev => ({ ...prev, [name]: value }));
+    }
+  };
+
+  // Handle operation notes changes
+  const handleNotesChange = (operationId: number, notes: string) => {
+    setEditingNotes(prev => ({
+      ...prev,
+      [operationId]: notes
+    }));
+  };
+
+  // Save operation notes
+  const handleSaveNotes = (operationId: number) => {
+    if (editingNotes[operationId] !== undefined) {
+      saveNotesMutation.mutate({
+        appointmentId: operationId,
+        notes: editingNotes[operationId]
+      });
     }
   };
 
@@ -241,14 +314,22 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
       </Card>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid grid-cols-2 mb-4">
+        <TabsList className="grid grid-cols-4 mb-4">
           <TabsTrigger value="basic" className="flex items-center">
             <User className="h-4 w-4 mr-2" />
             Temel Bilgiler
           </TabsTrigger>
           <TabsTrigger value="personal" className="flex items-center">
-            <Calendar className="h-4 w-4 mr-2" />
+            <BookOpen className="h-4 w-4 mr-2" />
             Detaylı Bilgiler
+          </TabsTrigger>
+          <TabsTrigger value="operations" className="flex items-center">
+            <FileText className="h-4 w-4 mr-2" />
+            İşlem Geçmişi
+          </TabsTrigger>
+          <TabsTrigger value="photos" className="flex items-center">
+            <Camera className="h-4 w-4 mr-2" />
+            Fotoğraflar
           </TabsTrigger>
         </TabsList>
         
@@ -283,15 +364,13 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <PhoneInputField 
-                    id="phone"
-                    label="Telefon"
-                    value={formData.phone || ''} 
-                    onChange={handlePhoneChange}
-                    disabled={!editMode}
-                  />
-                </div>
+                <PhoneInputField 
+                  id="phone"
+                  label="Telefon"
+                  value={formData.phone || ''} 
+                  onChange={handlePhoneChange}
+                  disabled={!editMode}
+                />
                 
                 <div className="space-y-2">
                   <Label htmlFor="birthdate">Doğum Tarihi</Label>
@@ -362,14 +441,23 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
                   <div className="space-y-2">
                     <Label>Günlük Burç Yorumu</Label>
                     <Card className="p-3 bg-gray-50">
-                      <p className="font-semibold mb-1">
-                        {format(new Date(), "d MMMM yyyy", { locale: tr })}
-                      </p>
-                      <p className="text-sm">
-                        {personalData.horoscope ? 
-                          `${personalData.horoscope} burcu için günlük yorum henüz yüklenmedi.` : 
-                          "Burç bilgisi bulunamadı. Lütfen doğum tarihi giriniz."}
-                      </p>
+                      {isLoadingHoroscope ? (
+                        <div className="text-center py-2">
+                          <div className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent"></div>
+                          <p className="mt-2">Burç yorumu yükleniyor...</p>
+                        </div>
+                      ) : (
+                        <>
+                          <p className="font-semibold mb-1">
+                            {format(new Date(), "d MMMM yyyy", { locale: tr })}
+                          </p>
+                          <p className="text-sm">
+                            {personalData.horoscope ? 
+                              (personalData.daily_horoscope_reading || `${personalData.horoscope} burcu için günlük yorum henüz yüklenmedi.`) : 
+                              "Burç bilgisi bulunamadı. Lütfen doğum tarihi giriniz."}
+                          </p>
+                        </>
+                      )}
                     </Card>
                   </div>
 
@@ -411,6 +499,90 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
                 </Button>
               </CardFooter>
             )}
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="operations" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>İşlem Geçmişi</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoadingOperations ? (
+                <div className="text-center py-8">
+                  <div className="inline-block h-6 w-6 animate-spin rounded-full border-4 border-solid border-current border-r-transparent"></div>
+                  <p className="mt-4">İşlem geçmişi yükleniyor...</p>
+                </div>
+              ) : customerOperations.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <FileText className="mx-auto h-12 w-12 opacity-20" />
+                  <p className="mt-2">Henüz kayıtlı işlem bulunmuyor</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead><Calendar className="h-4 w-4 mr-2" /> Tarih</TableHead>
+                        <TableHead><FileText className="h-4 w-4 mr-2" /> İşlem</TableHead>
+                        <TableHead><User className="h-4 w-4 mr-2" /> Personel</TableHead>
+                        <TableHead><CreditCard className="h-4 w-4 mr-2" /> Tutar</TableHead>
+                        <TableHead><Award className="h-4 w-4 mr-2" /> Puan</TableHead>
+                        <TableHead className="w-1/3"><MessageSquare className="h-4 w-4 mr-2" /> Açıklama</TableHead>
+                        <TableHead></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {customerOperations.map(operation => (
+                        <TableRow key={operation.id}>
+                          <TableCell className="font-medium">{formatDate(operation.date)}</TableCell>
+                          <TableCell>{operation.service_name}</TableCell>
+                          <TableCell>{operation.personnel_name}</TableCell>
+                          <TableCell>{formatCurrency(operation.amount)}</TableCell>
+                          <TableCell>{operation.points}</TableCell>
+                          <TableCell>
+                            <Textarea
+                              value={editingNotes[operation.id] !== undefined ? editingNotes[operation.id] : operation.notes || ''}
+                              onChange={(e) => handleNotesChange(operation.id, e.target.value)}
+                              placeholder="İşlem hakkında notlar..."
+                              className="resize-none min-h-[80px]"
+                              rows={2}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleSaveNotes(operation.id)}
+                              disabled={saveNotesMutation.isPending}
+                            >
+                              <Save className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="photos" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Müşteri Fotoğrafları</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8 text-muted-foreground">
+                <Camera className="mx-auto h-12 w-12 opacity-20" />
+                <p className="mt-2">Henüz kayıtlı fotoğraf bulunmuyor</p>
+                <Button variant="outline" className="mt-4">
+                  <Camera className="h-4 w-4 mr-2" /> Fotoğraf Yükle
+                </Button>
+              </div>
+            </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
