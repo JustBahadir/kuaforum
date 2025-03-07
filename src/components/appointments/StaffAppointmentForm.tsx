@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { format, addDays, isBefore, isToday, parse } from "date-fns";
+import { format, parse } from "date-fns";
 import { tr } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -55,16 +55,6 @@ interface StaffAppointmentFormProps {
   initialServiceId?: number;
 }
 
-interface StaffAppointmentFormValues {
-  customerId: number;
-  category: number;
-  service: number;
-  date: Date;
-  time: string;
-  personnel: string;
-  notes: string;
-}
-
 const formSchema = z.object({
   customerId: z.number({
     required_error: "Müşteri seçilmelidir",
@@ -87,6 +77,8 @@ const formSchema = z.object({
   notes: z.string().optional(),
 });
 
+type FormValues = z.infer<typeof formSchema>;
+
 export function StaffAppointmentForm({
   onAppointmentCreated,
   initialDate,
@@ -96,7 +88,7 @@ export function StaffAppointmentForm({
   const { dukkanId, userRole } = useCustomerAuth();
   const navigate = useNavigate();
   
-  const form = useForm<StaffAppointmentFormValues>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       customerId: undefined,
@@ -178,6 +170,7 @@ export function StaffAppointmentForm({
 
   // Mevcut gün için saat aralıklarını hesapla
   const getTimeSlots = (date: Date, saatler: CalismaSaati[]) => {
+    // Gün adını al (küçük harfle)
     const dayName = format(date, 'EEEE', { locale: tr }).toLowerCase();
     
     // Seçilen güne ait çalışma saatlerini bul
@@ -224,20 +217,14 @@ export function StaffAppointmentForm({
 
   const availableTimes = React.useMemo(() => {
     if (!selectedDate || !calismaSaatleri || calismaSaatleri.length === 0) {
-      console.log("Tarih veya çalışma saatleri bulunamadı");
       return [];
     }
     
     return getTimeSlots(selectedDate, calismaSaatleri);
   }, [selectedDate, calismaSaatleri]);
 
-  // Takvimde geçmiş tarihleri ve kapalı günleri devre dışı bırak
+  // Takvimde kapalı günleri devre dışı bırak
   const isDateDisabled = (date: Date) => {
-    // Geçmiş tarihleri (bugün hariç) devre dışı bırak
-    if (isBefore(date, new Date()) && !isToday(date)) {
-      return true;
-    }
-    
     // Gün adını al ve dükkanın o gün kapalı olup olmadığını kontrol et
     const dayName = format(date, 'EEEE', { locale: tr }).toLowerCase();
     const dayWorkingHours = calismaSaatleri.find(saat => 
@@ -253,7 +240,7 @@ export function StaffAppointmentForm({
     return false;
   };
 
-  const handleFormSubmit = async (data: StaffAppointmentFormValues) => {
+  const handleFormSubmit = async (data: FormValues) => {
     try {
       setSubmitting(true);
       console.log("Form verileri gönderiliyor:", data);
@@ -501,12 +488,15 @@ export function StaffAppointmentForm({
                       onSelect={(date) => {
                         if (date) {
                           field.onChange(date);
-                          // Tarih değiştiğinde saatleri sıfırla
-                          if (availableTimes && availableTimes.length > 0) {
-                            form.setValue('time', availableTimes[0]);
-                          } else {
-                            form.setValue('time', '');
-                          }
+                          // Tarih değiştiğinde saatleri hesapla
+                          setTimeout(() => {
+                            const newTimes = getTimeSlots(date, calismaSaatleri);
+                            if (newTimes && newTimes.length > 0) {
+                              form.setValue('time', newTimes[0]);
+                            } else {
+                              form.setValue('time', '');
+                            }
+                          }, 0);
                         }
                       }}
                       disabled={isDateDisabled}
@@ -535,7 +525,7 @@ export function StaffAppointmentForm({
                   <SelectTrigger>
                     <SelectValue placeholder={
                       !availableTimes || availableTimes.length === 0 
-                        ? "Bu gün için uygun saat yok" 
+                        ? "Saat seçin" 
                         : "Saat seçin"
                     } />
                   </SelectTrigger>
@@ -549,7 +539,7 @@ export function StaffAppointmentForm({
                         ))
                       ) : (
                         <SelectItem value="none" disabled>
-                          Bu gün için uygun saat bulunamadı
+                          Lütfen başka bir tarih seçin
                         </SelectItem>
                       )}
                     </ScrollArea>

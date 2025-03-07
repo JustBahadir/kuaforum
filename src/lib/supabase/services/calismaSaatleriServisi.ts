@@ -6,9 +6,7 @@ import { gunSiralama } from '@/components/operations/constants/workingDays';
 export const calismaSaatleriServisi = {
   async hepsiniGetir(dukkanId?: number) {
     try {
-      let query = supabase
-        .from('calisma_saatleri')
-        .select('*');
+      let query = supabase.from('calisma_saatleri').select('*');
       
       if (dukkanId) {
         query = query.eq('dukkan_id', dukkanId);
@@ -49,28 +47,30 @@ export const calismaSaatleriServisi = {
       const results = [];
       for (const saat of validSaatler) {
         try {
+          const saatId = typeof saat.id === 'number' ? saat.id : 0;
+          
+          // Veri hazırlığı
+          const saatData = {
+            gun: saat.gun,
+            acilis: saat.kapali ? null : (saat.acilis || "09:00"),
+            kapanis: saat.kapali ? null : (saat.kapanis || "18:00"),
+            kapali: saat.kapali || false,
+            dukkan_id: saat.dukkan_id || 0
+          };
+          
           // Negatif ID'ler (geçici) vs pozitif ID'ler (var olan kayıtlar)
-          if (saat.id && typeof saat.id === 'number' && saat.id > 0) {
+          if (saatId > 0) {
             // Var olan kaydı güncelle
-            const updateData = {
-              gun: saat.gun,
-              acilis: saat.kapali ? null : (saat.acilis || "09:00"),
-              kapanis: saat.kapali ? null : (saat.kapanis || "18:00"),
-              kapali: saat.kapali || false,
-              dukkan_id: saat.dukkan_id || 0
-            };
-            
             const { data, error } = await supabase
               .from('calisma_saatleri')
-              .update(updateData)
-              .eq('id', saat.id)
-              .select()
-              .single();
+              .update(saatData)
+              .eq('id', saatId)
+              .select();
               
             if (error) {
-              console.error(`ID ${saat.id} güncelleme hatası:`, error);
-            } else if (data) {
-              results.push(data);
+              console.error(`ID ${saatId} güncelleme hatası:`, error);
+            } else if (data && data.length > 0) {
+              results.push(data[0]);
             }
           } else {
             // Var olan bir kayıt var mı kontrol et
@@ -86,37 +86,22 @@ export const calismaSaatleriServisi = {
             
             if (existingData && existingData.length > 0) {
               // Var olan kaydı güncelle
-              const updateData = {
-                acilis: saat.kapali ? null : (saat.acilis || "09:00"),
-                kapanis: saat.kapali ? null : (saat.kapanis || "18:00"),
-                kapali: saat.kapali || false,
-              };
-              
               const { data, error } = await supabase
                 .from('calisma_saatleri')
-                .update(updateData)
+                .update(saatData)
                 .eq('id', existingData[0].id)
-                .select()
-                .single();
+                .select();
                 
               if (error) {
                 console.error(`ID ${existingData[0].id} güncelleme hatası:`, error);
-              } else if (data) {
-                results.push(data);
+              } else if (data && data.length > 0) {
+                results.push(data[0]);
               }
             } else {
               // Yeni kayıt oluştur
-              const newData = {
-                gun: saat.gun,
-                acilis: saat.kapali ? null : (saat.acilis || "09:00"),
-                kapanis: saat.kapali ? null : (saat.kapanis || "18:00"),
-                kapali: saat.kapali || false,
-                dukkan_id: saat.dukkan_id || 0
-              };
-              
               const { data, error } = await supabase
                 .from('calisma_saatleri')
-                .insert([newData])
+                .insert([saatData])
                 .select();
                 
               if (error) {
@@ -159,20 +144,78 @@ export const calismaSaatleriServisi = {
       
       console.log("Final güncelleme verileri:", updateData);
       
-      const { data, error } = await supabase
-        .from('calisma_saatleri')
-        .update(updateData)
-        .eq('id', id)
-        .select()
-        .single();
+      // Negatif ID'ler (geçici) için yeni kayıt oluştur
+      if (id < 0) {
+        // Eksik alanları kontrol et
+        if (!updateData.gun || updateData.dukkan_id === undefined) {
+          throw new Error("Gün ve dükkan ID bilgileri gerekli");
+        }
+        
+        // Önce var olan kayıt var mı kontrol et
+        const { data: existingData, error: checkError } = await supabase
+          .from('calisma_saatleri')
+          .select('id')
+          .eq('dukkan_id', updateData.dukkan_id)
+          .eq('gun', updateData.gun);
+        
+        if (checkError) {
+          console.error("Var olan kayıt kontrolü hatası:", checkError);
+        }
+        
+        if (existingData && existingData.length > 0) {
+          // Var olan kaydı güncelle
+          const { data, error } = await supabase
+            .from('calisma_saatleri')
+            .update(updateData)
+            .eq('id', existingData[0].id)
+            .select()
+            .single();
+            
+          if (error) {
+            console.error(`Var olan kayıt güncelleme hatası:`, error);
+            throw error;
+          }
+          
+          return data;
+        } else {
+          // Yeni kayıt oluştur
+          const insertData = {
+            gun: updateData.gun,
+            acilis: updateData.kapali ? null : (updateData.acilis || "09:00"),
+            kapanis: updateData.kapali ? null : (updateData.kapanis || "18:00"),
+            kapali: updateData.kapali || false,
+            dukkan_id: updateData.dukkan_id
+          };
+          
+          const { data, error } = await supabase
+            .from('calisma_saatleri')
+            .insert([insertData])
+            .select()
+            .single();
+            
+          if (error) {
+            console.error(`Yeni çalışma saati ekleme hatası:`, error);
+            throw error;
+          }
+          
+          return data;
+        }
+      } else {
+        // Var olan kaydı güncelle
+        const { data, error } = await supabase
+          .from('calisma_saatleri')
+          .update(updateData)
+          .eq('id', id)
+          .select()
+          .single();
 
-      if (error) {
-        console.error("Tek çalışma saati güncelleme hatası:", error);
-        throw error;
+        if (error) {
+          console.error("Tek çalışma saati güncelleme hatası:", error);
+          throw error;
+        }
+        
+        return data;
       }
-      
-      console.log("Tek güncelleme sonucu:", data);
-      return data;
     } catch (err) {
       console.error(`ID ${id} güncellenirken hata:`, err);
       throw err;
@@ -188,9 +231,12 @@ export const calismaSaatleriServisi = {
       
       console.log("Yeni çalışma saati eklenecek:", saat);
       
-      // dukkan_id yoksa 0 varsayılan değerini kullan
+      // Eksik alanları doldur
       const saatObj = {
-        ...saat,
+        gun: saat.gun,
+        acilis: saat.kapali ? null : (saat.acilis || "09:00"),
+        kapanis: saat.kapali ? null : (saat.kapanis || "18:00"),
+        kapali: saat.kapali || false,
         dukkan_id: saat.dukkan_id !== undefined ? saat.dukkan_id : 0
       };
       
@@ -207,22 +253,35 @@ export const calismaSaatleriServisi = {
       
       if (existingData && existingData.length > 0) {
         // Var olan kaydı güncelle
-        return await this.tekGuncelle(existingData[0].id, saatObj);
+        const { data, error } = await supabase
+          .from('calisma_saatleri')
+          .update(saatObj)
+          .eq('id', existingData[0].id)
+          .select()
+          .single();
+          
+        if (error) {
+          console.error("Çalışma saati güncelleme hatası:", error);
+          throw error;
+        }
+        
+        return data;
       }
       
       // Yeni kayıt oluştur
       const { data, error } = await supabase
         .from('calisma_saatleri')
         .insert([saatObj])
-        .select();
+        .select()
+        .single();
 
       if (error) {
         console.error("Çalışma saati ekleme hatası:", error);
         throw error;
       }
       
-      console.log("Eklenen çalışma saati:", data?.[0]);
-      return data?.[0];
+      console.log("Eklenen çalışma saati:", data);
+      return data;
     } catch (err) {
       console.error("Çalışma saati eklenirken hata:", err);
       throw err;

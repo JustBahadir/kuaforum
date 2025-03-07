@@ -7,84 +7,98 @@ export const randevuServisi = {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return [];
 
-    const { data, error } = await supabase
-      .from('randevular')
-      .select(`
-        *,
-        musteri:musteriler(*),
-        personel:personel(*)
-      `)
-      .order('tarih', { ascending: true })
-      .order('saat', { ascending: true });
+    try {
+      const { data, error } = await supabase
+        .from('randevular')
+        .select(`
+          *,
+          musteri:musteriler(*),
+          personel:personel(*)
+        `)
+        .order('tarih', { ascending: true })
+        .order('saat', { ascending: true });
 
-    if (error) {
-      console.error("Randevular getirme hatası:", error);
-      throw error;
+      if (error) {
+        console.error("Randevular getirme hatası:", error);
+        return [];
+      }
+      return data || [];
+    } catch (err) {
+      console.error("Randevular getirme hatası:", err);
+      return [];
     }
-    return data || [];
   },
 
   async dukkanRandevulariniGetir(dukkanId: number) {
     if (!dukkanId) return [];
 
-    const { data, error } = await supabase
-      .from('randevular')
-      .select(`
-        *,
-        musteri:musteriler(*),
-        personel:personel(*)
-      `)
-      .eq('dukkan_id', dukkanId)
-      .order('tarih', { ascending: true })
-      .order('saat', { ascending: true });
+    try {
+      const { data, error } = await supabase
+        .from('randevular')
+        .select(`
+          *,
+          musteri:musteriler(*),
+          personel:personel(*)
+        `)
+        .eq('dukkan_id', dukkanId)
+        .order('tarih', { ascending: true })
+        .order('saat', { ascending: true });
 
-    if (error) {
-      console.error("Dükkan randevuları getirme hatası:", error);
-      throw error;
+      if (error) {
+        console.error("Dükkan randevuları getirme hatası:", error);
+        return [];
+      }
+      return data || [];
+    } catch (err) {
+      console.error("Dükkan randevuları getirme hatası:", err);
+      return [];
     }
-    return data || [];
   },
 
   async kendiRandevulariniGetir() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return [];
 
-    const { data, error } = await supabase
-      .from('randevular')
-      .select(`
-        *,
-        musteri:musteriler(*),
-        personel:personel(*)
-      `)
-      .eq('customer_id', user.id)
-      .order('tarih', { ascending: true })
-      .order('saat', { ascending: true });
+    try {
+      const { data, error } = await supabase
+        .from('randevular')
+        .select(`
+          *,
+          musteri:musteriler(*),
+          personel:personel(*)
+        `)
+        .eq('customer_id', user.id)
+        .order('tarih', { ascending: true })
+        .order('saat', { ascending: true });
 
-    if (error) {
-      console.error("Kendi randevularını getirme hatası:", error);
-      throw error;
+      if (error) {
+        console.error("Kendi randevularını getirme hatası:", error);
+        return [];
+      }
+      return data || [];
+    } catch (err) {
+      console.error("Kendi randevularını getirme hatası:", err);
+      return [];
     }
-    return data || [];
   },
 
   async ekle(randevu: Omit<Randevu, 'id' | 'created_at' | 'musteri' | 'personel'>) {
     console.log("Randevu ekle service received data:", randevu);
     
-    // Tüm gerekli alanları kontrol et
     if (!randevu.dukkan_id) {
-      throw new Error("dukkan_id is required");
+      throw new Error("Dükkan seçimi zorunludur");
     }
     
     if (!randevu.musteri_id) {
-      throw new Error("musteri_id is required");
+      throw new Error("Müşteri seçimi zorunludur");
     }
     
     if (!randevu.personel_id) {
-      throw new Error("personel_id is required");
+      throw new Error("Personel seçimi zorunludur");
     }
     
     if (!randevu.tarih || !randevu.saat) {
-      throw new Error("tarih and saat are required");
+      throw new Error("Tarih ve saat seçimi zorunludur");
     }
 
     // İşlemleri düzenle - tek işlem bile olsa array olarak sakla
@@ -148,12 +162,12 @@ export const randevuServisi = {
 
       if (error) {
         console.error("Randevu güncelleme hatası:", error);
-        throw error;
+        throw new Error("Randevu güncellenirken bir hata oluştu: " + error.message);
       }
       return data;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Randevu güncelleme hatası:", error);
-      throw error;
+      throw new Error(error?.message || "Randevu güncellenirken bir hata oluştu");
     }
   },
 
@@ -166,11 +180,11 @@ export const randevuServisi = {
 
       if (error) {
         console.error("Randevu silme hatası:", error);
-        throw error;
+        throw new Error("Randevu silinirken bir hata oluştu: " + error.message);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Randevu silme hatası:", error);
-      throw error;
+      throw new Error(error?.message || "Randevu silinirken bir hata oluştu");
     }
   }
 };

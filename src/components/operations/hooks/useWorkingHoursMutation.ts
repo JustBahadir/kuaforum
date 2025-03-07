@@ -33,8 +33,8 @@ export function useWorkingHoursMutation({ dukkanId, onMutationSuccess }: Working
       
       try {
         if (id < 0) {
-          // This is a temporary ID, need to create new record
-          const newSaat = {
+          // For temporary records, use the simplified ekle method
+          const newData = {
             gun: preparedUpdates.gun || "",
             acilis: preparedUpdates.kapali ? null : (preparedUpdates.acilis || "09:00"),
             kapanis: preparedUpdates.kapali ? null : (preparedUpdates.kapanis || "18:00"),
@@ -42,7 +42,7 @@ export function useWorkingHoursMutation({ dukkanId, onMutationSuccess }: Working
             dukkan_id: preparedUpdates.dukkan_id || 0
           };
           
-          const result = await calismaSaatleriServisi.ekle(newSaat);
+          const result = await calismaSaatleriServisi.ekle(newData);
           return { id, updates, result };
         }
         
@@ -57,11 +57,10 @@ export function useWorkingHoursMutation({ dukkanId, onMutationSuccess }: Working
     onSuccess: (data) => {
       invalidateQueries();
       
-      // Only show success message if data was really updated
       if (data?.result) {
         toast.success('Çalışma saati güncellendi');
         console.log("Update successful:", data);
-        // Call success callback if provided
+        
         if (onMutationSuccess) {
           onMutationSuccess();
         }
@@ -69,9 +68,9 @@ export function useWorkingHoursMutation({ dukkanId, onMutationSuccess }: Working
         toast.error('Güncelleme sırasında bir hata oluştu');
       }
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error("Çalışma saati güncellenirken hata:", error);
-      toast.error('Güncelleme sırasında bir hata oluştu');
+      toast.error(error?.message || 'Güncelleme sırasında bir hata oluştu');
     }
   });
 
@@ -105,9 +104,9 @@ export function useWorkingHoursMutation({ dukkanId, onMutationSuccess }: Working
     onSuccess: () => {
       invalidateQueries();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error("Durum değişikliği sırasında hata:", error);
-      toast.error("Durum güncellenirken bir hata oluştu");
+      toast.error(error?.message || "Durum güncellenirken bir hata oluştu");
     }
   });
   
