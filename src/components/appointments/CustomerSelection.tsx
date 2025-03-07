@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -20,7 +20,6 @@ import {
 } from "@/components/ui/command";
 import { useNavigate } from "react-router-dom";
 import { musteriServisi } from "@/lib/supabase";
-import { PhoneInputField } from "@/pages/Customers/components/FormFields/PhoneInputField";
 import { formatPhoneNumber } from "@/utils/phoneFormatter";
 
 interface Customer {
@@ -58,7 +57,7 @@ export function CustomerSelection({ dukkanId, value, onChange }: CustomerSelecti
 
   // Handle new customer button click
   const handleNewCustomer = () => {
-    navigate("/customers/new");
+    navigate("/customers?new=true");
   };
 
   // Filter customers based on search query with Turkish character support
@@ -66,13 +65,11 @@ export function CustomerSelection({ dukkanId, value, onChange }: CustomerSelecti
     ? customers 
     : customers.filter(customer => {
         const searchLower = searchQuery.toLowerCase();
-        const firstName = customer.first_name?.toLowerCase() || "";
-        const lastName = customer.last_name?.toLowerCase() || "";
+        const fullName = `${customer.first_name} ${customer.last_name || ""}`.toLowerCase();
         const phone = customer.phone || "";
         
         // Support for Turkish characters by doing direct string comparison
-        return firstName.includes(searchLower) || 
-               lastName.includes(searchLower) ||
+        return fullName.includes(searchLower) ||
                phone.includes(searchQuery.replace(/\D/g, ""));
       });
 
@@ -125,6 +122,7 @@ export function CustomerSelection({ dukkanId, value, onChange }: CustomerSelecti
                       onChange(customer.id);
                       setOpen(false);
                     }}
+                    className="cursor-pointer hover:bg-accent"
                   >
                     <Check
                       className={cn(
@@ -143,16 +141,6 @@ export function CustomerSelection({ dukkanId, value, onChange }: CustomerSelecti
                   </CommandItem>
                 ))}
               </CommandGroup>
-              <div className="border-t p-2">
-                <Button 
-                  variant="outline" 
-                  className="w-full"
-                  onClick={handleNewCustomer}
-                >
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  Yeni Müşteri Ekle
-                </Button>
-              </div>
             </CommandList>
           </Command>
         </PopoverContent>
