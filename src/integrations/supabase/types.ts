@@ -230,33 +230,41 @@ export type Database = {
       }
       musteriler: {
         Row: {
-          ad_soyad: string
-          adres: string
+          birthdate: string | null
           created_at: string
-          eposta: string
+          dukkan_id: number | null
+          first_name: string
           id: number
-          musteri_no: string
-          telefon: string
+          last_name: string | null
+          phone: string | null
         }
         Insert: {
-          ad_soyad: string
-          adres: string
+          birthdate?: string | null
           created_at?: string
-          eposta: string
+          dukkan_id?: number | null
+          first_name: string
           id?: number
-          musteri_no: string
-          telefon: string
+          last_name?: string | null
+          phone?: string | null
         }
         Update: {
-          ad_soyad?: string
-          adres?: string
+          birthdate?: string | null
           created_at?: string
-          eposta?: string
+          dukkan_id?: number | null
+          first_name?: string
           id?: number
-          musteri_no?: string
-          telefon?: string
+          last_name?: string | null
+          phone?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "musteriler_dukkan_id_fkey"
+            columns: ["dukkan_id"]
+            isOneToOne: false
+            referencedRelation: "dukkanlar"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notifications: {
         Row: {
@@ -526,13 +534,6 @@ export type Database = {
             columns: ["dukkan_id"]
             isOneToOne: false
             referencedRelation: "dukkanlar"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "randevular_musteri_id_fkey"
-            columns: ["musteri_id"]
-            isOneToOne: false
-            referencedRelation: "musteriler"
             referencedColumns: ["id"]
           },
           {

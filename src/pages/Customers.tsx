@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { NewCustomerForm } from "./Customers/components/NewCustomerForm";
 import { Toaster } from "sonner";
 import { useShopData } from "@/hooks/useShopData";
+import { Musteri } from "@/lib/supabase/types";
 
 export default function Customers() {
   const [searchText, setSearchText] = useState("");
@@ -22,13 +23,15 @@ export default function Customers() {
   const { 
     data: customers = [], 
     isLoading, 
-    error, 
     refetch,
     isRefetching
   } = useQuery({
     queryKey: ['musteriler', dukkanData?.id],
     queryFn: async () => {
       try {
+        if (!dukkanData?.id) {
+          throw new Error("Dükkan ID bulunamadı");
+        }
         return await musteriServisi.hepsiniGetir(dukkanData?.id);
       } catch (err) {
         console.error("Müşteri verisi yüklenirken hata:", err);
@@ -43,7 +46,7 @@ export default function Customers() {
 
   // Filter customers based on search text
   const filteredCustomers = searchText
-    ? customers.filter(customer => 
+    ? customers.filter((customer: Musteri) => 
         `${customer.first_name} ${customer.last_name || ''}`.toLowerCase().includes(searchText.toLowerCase()) ||
         (customer.phone && customer.phone.includes(searchText))
       )

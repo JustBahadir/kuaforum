@@ -1,4 +1,3 @@
-
 import { PostgrestError } from '@supabase/supabase-js';
 
 export interface Profile {
@@ -77,15 +76,13 @@ export interface PersonelIslemi {
 }
 
 export interface Musteri {
-  id: number | string;
+  id: number;
   first_name: string;
   last_name?: string;
   phone?: string;
   birthdate?: string | null;
   created_at: string;
   dukkan_id?: number;
-  role?: string;
-  total_services?: number;
 }
 
 export type RandevuDurumu = "beklemede" | "onaylandi" | "iptal_edildi" | "tamamlandi";

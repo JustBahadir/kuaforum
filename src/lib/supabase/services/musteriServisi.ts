@@ -3,21 +3,20 @@ import { supabase, supabaseAdmin } from '../client';
 import { Musteri } from '../types';
 
 export const musteriServisi = {
-  // Belirli bir dükkan için tüm müşterileri getir
+  // Fetch all customers for a specific shop
   async hepsiniGetir(dukkanId?: number) {
     try {
       console.log("Müşteri listesi getiriliyor, dükkan ID:", dukkanId);
       
-      let query = supabase
-        .from('profiles')
-        .select('id, first_name, last_name, phone, birthdate, created_at, dukkan_id')
-        .eq('role', 'customer');
-      
-      if (dukkanId) {
-        query = query.eq('dukkan_id', dukkanId);
+      if (!dukkanId) {
+        throw new Error("Dükkan ID bulunamadı. Müşteriler getirilemez.");
       }
-
-      const { data, error } = await query.order('first_name', { ascending: true });
+      
+      const { data, error } = await supabase
+        .from('musteriler')
+        .select('*')
+        .eq('dukkan_id', dukkanId)
+        .order('first_name', { ascending: true });
 
       if (error) {
         console.error("Müşteri getirme hatası:", error);
@@ -32,7 +31,7 @@ export const musteriServisi = {
     }
   },
 
-  // Dükkan ilişkili yeni müşteri ekle 
+  // Add a new customer for a shop
   async ekle(musteri: Partial<Musteri>, dukkanId?: number) {
     try {
       console.log("Müşteri ekleme başlatıldı:", { ...musteri, dukkanId });
@@ -41,21 +40,19 @@ export const musteriServisi = {
         throw new Error("Dükkan ID bulunamadı. Müşteri eklenemez.");
       }
       
-      // Müşteri verilerini hazırla
+      // Prepare customer data
       const customerData = {
-        first_name: musteri.first_name || '',
+        first_name: musteri.first_name,
         last_name: musteri.last_name || null,
         phone: musteri.phone || null,
         birthdate: musteri.birthdate || null,
-        role: 'customer',
         dukkan_id: dukkanId
       };
       
       console.log("Ekleniyor:", customerData);
       
-      // supabaseAdmin kullanarak RLS'yi bypass et
-      const { data, error } = await supabaseAdmin
-        .from('profiles')
+      const { data, error } = await supabase
+        .from('musteriler')
         .insert([customerData])
         .select();
 
@@ -72,14 +69,13 @@ export const musteriServisi = {
     }
   },
   
-  // ID'ye göre tek müşteri getir
-  async getirById(id: string) {
+  // Get a single customer by ID
+  async getirById(id: number) {
     try {
       const { data, error } = await supabase
-        .from('profiles')
+        .from('musteriler')
         .select('*')
         .eq('id', id)
-        .eq('role', 'customer')
         .single();
 
       if (error) {
@@ -91,6 +87,52 @@ export const musteriServisi = {
     } catch (error: any) {
       console.error("Müşteri getirme hatası:", error);
       throw new Error(`Müşteri alınamadı: ${error.message}`);
+    }
+  },
+  
+  // Update a customer
+  async guncelle(id: number, musteri: Partial<Musteri>) {
+    try {
+      const { data, error } = await supabase
+        .from('musteriler')
+        .update({
+          first_name: musteri.first_name,
+          last_name: musteri.last_name,
+          phone: musteri.phone,
+          birthdate: musteri.birthdate
+        })
+        .eq('id', id)
+        .select();
+
+      if (error) {
+        console.error("Müşteri güncelleme hatası:", error);
+        throw new Error(`Müşteri güncellenirken bir hata oluştu: ${error.message}`);
+      }
+      
+      return data?.[0] || null;
+    } catch (error: any) {
+      console.error("Müşteri güncelleme hatası:", error);
+      throw error;
+    }
+  },
+  
+  // Delete a customer
+  async sil(id: number) {
+    try {
+      const { error } = await supabase
+        .from('musteriler')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error("Müşteri silme hatası:", error);
+        throw new Error(`Müşteri silinirken bir hata oluştu: ${error.message}`);
+      }
+      
+      return true;
+    } catch (error: any) {
+      console.error("Müşteri silme hatası:", error);
+      throw error;
     }
   }
 };
