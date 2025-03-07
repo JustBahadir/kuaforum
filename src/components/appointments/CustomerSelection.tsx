@@ -61,16 +61,19 @@ export function CustomerSelection({ dukkanId, value, onChange }: CustomerSelecti
     navigate("/customers/new");
   };
 
-  // Filter customers based on search query
+  // Filter customers based on search query with Turkish character support
   const filteredCustomers = searchQuery === "" 
     ? customers 
     : customers.filter(customer => {
         const searchLower = searchQuery.toLowerCase();
-        return (
-          (customer.first_name && customer.first_name.toLowerCase().includes(searchLower)) ||
-          (customer.last_name && customer.last_name.toLowerCase().includes(searchLower)) ||
-          (customer.phone && customer.phone.includes(searchQuery.replace(/\D/g, "")))
-        );
+        const firstName = customer.first_name?.toLowerCase() || "";
+        const lastName = customer.last_name?.toLowerCase() || "";
+        const phone = customer.phone || "";
+        
+        // Support for Turkish characters by doing direct string comparison
+        return firstName.includes(searchLower) || 
+               lastName.includes(searchLower) ||
+               phone.includes(searchQuery.replace(/\D/g, ""));
       });
 
   return (
@@ -117,7 +120,7 @@ export function CustomerSelection({ dukkanId, value, onChange }: CustomerSelecti
                 {filteredCustomers.map((customer) => (
                   <CommandItem
                     key={customer.id}
-                    value={customer.first_name + (customer.last_name || "")}
+                    value={`${customer.first_name}${customer.last_name || ""}`}
                     onSelect={() => {
                       onChange(customer.id);
                       setOpen(false);

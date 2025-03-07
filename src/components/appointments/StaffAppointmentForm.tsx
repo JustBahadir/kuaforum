@@ -187,6 +187,7 @@ export function StaffAppointmentForm({
     let currentMinute = openMinute;
     
     // Generate times with 30-minute intervals
+    // Stop 30 minutes before closing time
     while (
       currentHour < closeHour || 
       (currentHour === closeHour && currentMinute < closeMinute - 30)
@@ -236,6 +237,7 @@ export function StaffAppointmentForm({
         durum: "onaylandi" as const, // Staff-created appointments are automatically confirmed
         notlar: data.notes,
         islemler: [data.service],
+        customer_id: undefined // This field will be null for staff-created appointments
       };
 
       const newRandevu = await randevuServisi.ekle(randevuData);
@@ -433,6 +435,7 @@ export function StaffAppointmentForm({
                       disabled={isDateDisabled}
                       initialFocus
                       locale={tr}
+                      className="pointer-events-auto"
                     />
                   </PopoverContent>
                 </Popover>
@@ -489,7 +492,7 @@ export function StaffAppointmentForm({
               <FormLabel className="text-base">Notlar</FormLabel>
               <FormControl>
                 <Textarea
-                  placeholder="Randevu ile ilgili eklemek istediğiniz notlar..."
+                  placeholder="Personele özel notlar (Müşteri talepleri, dikkat edilmesi gereken hususlar...)"
                   className="resize-none"
                   rows={3}
                   {...field}

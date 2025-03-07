@@ -51,7 +51,11 @@ export const personelIslemleriServisi = {
   },
 
   // Add a new operation
-  async ekle(islemi: Omit<PersonelIslemi, 'id' | 'created_at'> & { musteri_id?: number; tarih?: string; notlar?: string }) {
+  async ekle(islemi: Omit<PersonelIslemi, 'id' | 'created_at'> & { 
+    musteri_id?: number; 
+    tarih?: string; 
+    notlar?: string 
+  }) {
     const { data, error } = await supabase
       .from('personel_islemleri')
       .insert([islemi])
