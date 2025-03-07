@@ -25,7 +25,7 @@ export function PhoneInputField({
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (disabled) return;
     
-    // Allow 11 digits (including the leading 0)
+    // Allow exactly 11 digits (including the leading 0)
     const digitsOnly = e.target.value.replace(/\D/g, '');
     const limitedDigits = digitsOnly.substring(0, 11);
     

@@ -6,19 +6,15 @@ import { Label } from "@/components/ui/label";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-} from "@/components/ui/command";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { musteriServisi } from "@/lib/supabase";
 import { formatPhoneNumber } from "@/utils/phoneFormatter";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Customer {
   id: number;
@@ -34,9 +30,6 @@ interface CustomerSelectionProps {
 }
 
 export function CustomerSelection({ dukkanId, value, onChange }: CustomerSelectionProps) {
-  const [open, setOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  
   // Fetch customers for the salon
   const { data: customers = [], isLoading } = useQuery({
     queryKey: ["customers", dukkanId],
@@ -52,85 +45,59 @@ export function CustomerSelection({ dukkanId, value, onChange }: CustomerSelecti
     (customer) => customer.id === value
   );
 
-  // Filter customers based on search query with Turkish character support
-  const filteredCustomers = searchQuery === "" 
-    ? customers 
-    : customers.filter(customer => {
-        const searchLower = searchQuery.toLowerCase();
-        const fullName = `${customer.first_name} ${customer.last_name || ""}`.toLowerCase();
-        const phone = customer.phone || "";
-        
-        return fullName.includes(searchLower) ||
-               phone.includes(searchQuery.replace(/\D/g, ""));
-      });
+  // Format the display name for the selected customer
+  const getDisplayName = (customer?: Customer) => {
+    if (!customer) return "Müşteri seçin";
+    
+    return `${customer.first_name} ${customer.last_name || ""} ${
+      customer.phone ? `(${formatPhoneNumber(customer.phone)})` : ""
+    }`.trim();
+  };
 
   return (
     <div className="space-y-2">
       <Label>Müşteri Seçin*</Label>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className="w-full justify-between"
-          >
-            {value && selectedCustomer
-              ? `${selectedCustomer.first_name} ${selectedCustomer.last_name || ""} ${
-                  selectedCustomer.phone ? `(${formatPhoneNumber(selectedCustomer.phone)})` : ""
-                }`
-              : "Müşteri seçin"}
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-[400px] p-0">
-          <Command>
-            <CommandInput 
-              placeholder="Müşteri ara..." 
-              value={searchQuery}
-              onValueChange={setSearchQuery}
-            />
-            <CommandGroup className="max-h-[300px] overflow-y-auto">
-              {filteredCustomers.length === 0 ? (
-                <CommandEmpty>
-                  <div className="py-6 text-center">
-                    <p>Müşteri bulunamadı.</p>
+      <Select
+        disabled={isLoading}
+        onValueChange={(value) => onChange(parseInt(value))}
+        value={value ? value.toString() : undefined}
+      >
+        <SelectTrigger className="w-full">
+          <SelectValue placeholder="Müşteri seçin">
+            {value ? getDisplayName(selectedCustomer) : "Müşteri seçin"}
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent className="max-h-[300px]">
+          <ScrollArea className="h-[300px]">
+            {isLoading ? (
+              <SelectItem value="loading" disabled>
+                Yükleniyor...
+              </SelectItem>
+            ) : customers && customers.length > 0 ? (
+              customers.map((customer) => (
+                <SelectItem
+                  key={customer.id}
+                  value={customer.id.toString()}
+                  className="flex py-3"
+                >
+                  <div className="flex flex-col">
+                    <span className="font-medium">{customer.first_name} {customer.last_name || ""}</span>
+                    {customer.phone && (
+                      <span className="text-sm text-muted-foreground">
+                        {formatPhoneNumber(customer.phone)}
+                      </span>
+                    )}
                   </div>
-                </CommandEmpty>
-              ) : (
-                filteredCustomers.map((customer) => (
-                  <CommandItem
-                    key={customer.id}
-                    value={`${customer.id}-${customer.first_name}`}
-                    onSelect={() => {
-                      onChange(customer.id);
-                      setOpen(false);
-                    }}
-                    className="flex items-center cursor-pointer py-3 px-2"
-                  >
-                    <div className="flex items-center w-full">
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          value === customer.id ? "opacity-100" : "opacity-0"
-                        )}
-                      />
-                      <div className="flex flex-col">
-                        <span className="font-medium">{customer.first_name} {customer.last_name || ""}</span>
-                        {customer.phone && (
-                          <span className="text-sm text-muted-foreground">
-                            {formatPhoneNumber(customer.phone)}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </CommandItem>
-                ))
-              )}
-            </CommandGroup>
-          </Command>
-        </PopoverContent>
-      </Popover>
+                </SelectItem>
+              ))
+            ) : (
+              <SelectItem value="none" disabled>
+                Müşteri bulunamadı
+              </SelectItem>
+            )}
+          </ScrollArea>
+        </SelectContent>
+      </Select>
     </div>
   );
 }

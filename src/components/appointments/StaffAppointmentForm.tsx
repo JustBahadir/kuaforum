@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format, addDays, isBefore, isToday, set } from "date-fns";
 import { tr } from "date-fns/locale";
-import { CalendarIcon, UserPlus } from "lucide-react";
+import { CalendarIcon } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -46,7 +46,6 @@ import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { CustomerSelection } from "./CustomerSelection";
 import { gunIsimleri } from "@/components/operations/constants/workingDays";
 import { useNavigate } from "react-router-dom";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 interface StaffAppointmentFormProps {
   onAppointmentCreated?: (appointment: Randevu) => void;
@@ -138,7 +137,6 @@ export function StaffAppointmentForm({
     enabled: !!dukkanId,
   });
 
-  // Get working hours for the shop
   const { data: calismaSaatleri = [] } = useQuery({
     queryKey: ["calisma_saatleri"],
     queryFn: calismaSaatleriServisi.hepsiniGetir,
@@ -152,7 +150,6 @@ export function StaffAppointmentForm({
     return islemlerData.filter(islem => islem.kategori_id === selectedCategory);
   }, [selectedCategory, islemlerData]);
 
-  // Update service selection when initialServiceId is provided
   useEffect(() => {
     if (initialServiceId && islemlerData) {
       const service = islemlerData.find(islem => islem.id === initialServiceId);
@@ -163,24 +160,19 @@ export function StaffAppointmentForm({
     }
   }, [initialServiceId, islemlerData, form]);
 
-  // Generate available times based on working hours for the selected day
   const availableTimes = React.useMemo(() => {
     if (!selectedDate || !calismaSaatleri.length) return [];
     
-    // Get the day name in Turkish
     const dayName = format(selectedDate, 'EEEE', { locale: tr }).toLowerCase();
     
-    // Find the working hours for the selected day
     const dayWorkingHours = calismaSaatleri.find(calisma => 
       calisma.gun.toLowerCase() === dayName
     );
     
-    // If no working hours found or the shop is closed on this day, return empty array
     if (!dayWorkingHours || dayWorkingHours.kapali || !dayWorkingHours.acilis || !dayWorkingHours.kapanis) {
       return [];
     }
     
-    // Parse opening and closing hours
     const [openHour, openMinute] = dayWorkingHours.acilis.split(':').map(Number);
     const [closeHour, closeMinute] = dayWorkingHours.kapanis.split(':').map(Number);
     
@@ -188,8 +180,6 @@ export function StaffAppointmentForm({
     let currentHour = openHour;
     let currentMinute = openMinute;
     
-    // Generate times with 30-minute intervals
-    // Stop 30 minutes before closing time
     while (
       currentHour < closeHour || 
       (currentHour === closeHour && currentMinute < closeMinute - 30)
@@ -198,7 +188,6 @@ export function StaffAppointmentForm({
         `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`
       );
       
-      // Advance 30 minutes
       currentMinute += 30;
       if (currentMinute >= 60) {
         currentHour += 1;
@@ -209,20 +198,16 @@ export function StaffAppointmentForm({
     return times;
   }, [selectedDate, calismaSaatleri]);
 
-  // Custom calendar day validator
   const isDateDisabled = (date: Date) => {
-    // Prevent selecting past dates
     if (isBefore(date, new Date()) && !isToday(date)) {
       return true;
     }
     
-    // Check if the shop is closed on this day
     const dayName = format(date, 'EEEE', { locale: tr }).toLowerCase();
     const dayWorkingHours = calismaSaatleri.find(calisma => 
       calisma.gun.toLowerCase() === dayName
     );
     
-    // If no working hours found or the shop is closed on this day, disable it
     return !dayWorkingHours || dayWorkingHours.kapali;
   };
 
@@ -236,10 +221,10 @@ export function StaffAppointmentForm({
         personel_id: parseInt(data.personnel),
         tarih: format(data.date, 'yyyy-MM-dd'),
         saat: data.time || "09:00",
-        durum: "onaylandi" as const, // Staff-created appointments are automatically confirmed
+        durum: "onaylandi" as const,
         notlar: data.notes,
         islemler: [data.service],
-        customer_id: undefined // This field will be null for staff-created appointments
+        customer_id: undefined
       };
 
       const newRandevu = await randevuServisi.ekle(randevuData);
@@ -259,8 +244,6 @@ export function StaffAppointmentForm({
   };
 
   const handleNewCustomerClick = () => {
-    // Close the current dialog and navigate to the customers page with a query parameter
-    // to open the new customer dialog
     navigate("/customers?new=true");
   };
 
@@ -286,7 +269,6 @@ export function StaffAppointmentForm({
                   className="w-full"
                   onClick={handleNewCustomerClick}
                 >
-                  <UserPlus className="mr-2 h-4 w-4" />
                   Yeni Müşteri Ekle
                 </Button>
               </div>
