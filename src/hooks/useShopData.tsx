@@ -1,9 +1,11 @@
+
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
 import { dukkanServisi } from "@/lib/supabase";
 import { authService } from "@/lib/auth/authService";
 import { gunSiralama } from "@/components/operations/constants/workingDays";
+import { calismaSaatleriServisi } from "@/lib/supabase/services/calismaSaatleriServisi";
 
 export function useShopData(dukkanId: number | null) {
   const [dukkanData, setDukkanData] = useState<any>(null);
@@ -71,16 +73,20 @@ export function useShopData(dukkanId: number | null) {
               try {
                 const { data: profileData } = await supabase
                   .from('profiles')
-                  .select('avatar_url')
+                  .select('*')
                   .eq('id', personel.auth_id)
                   .maybeSingle();
                 
-                if (profileData?.avatar_url) {
+                if (profileData) {
                   personel.avatar_url = profileData.avatar_url;
                 } else {
-                  const { data: { user } } = await supabase.auth.admin.getUserById(personel.auth_id);
-                  if (user?.user_metadata?.avatar_url) {
-                    personel.avatar_url = user.user_metadata.avatar_url;
+                  try {
+                    const { data: { user } } = await supabase.auth.admin.getUserById(personel.auth_id);
+                    if (user?.user_metadata?.avatar_url) {
+                      personel.avatar_url = user.user_metadata.avatar_url;
+                    }
+                  } catch (authError) {
+                    console.error("Auth profile data fetch error:", authError);
                   }
                 }
               } catch (profileError) {
@@ -106,18 +112,10 @@ export function useShopData(dukkanId: number | null) {
     queryKey: ['calisma_saatleri', dukkanData?.id],
     queryFn: async () => {
       try {
-        const { data, error } = await supabase
-          .from('calisma_saatleri')
-          .select('*')
-          .eq('dukkan_id', dukkanData?.id || dukkanId);
-          
-        if (error) throw error;
+        if (!dukkanData?.id && !dukkanId) return [];
         
-        return (data || []).sort((a, b) => {
-          const aIndex = gunSiralama.indexOf(a.gun);
-          const bIndex = gunSiralama.indexOf(b.gun);
-          return aIndex - bIndex;
-        });
+        const shopId = dukkanData?.id || dukkanId;
+        return await calismaSaatleriServisi.dukkanSaatleriGetir(shopId);
       } catch (error) {
         console.error("Çalışma saatleri alınırken hata:", error);
         return [];

@@ -9,20 +9,24 @@ import { gunSiralama } from '../constants/workingDays';
 export function useWorkingHours(
   isStaff: boolean = true,
   providedGunler: CalismaSaati[] = [],
+  dukkanId?: number,
   onChange?: (index: number, field: keyof CalismaSaati, value: any) => void
 ) {
   const [editing, setEditing] = useState<number | null>(null);
   const [tempChanges, setTempChanges] = useState<Record<number, Partial<CalismaSaati>>>({});
   const queryClient = useQueryClient();
 
+  // If dukkanId is provided, fetch hours for that shop, otherwise fetch all hours
   const { 
     data: fetchedCalismaSaatleri = [], 
     isLoading, 
     error, 
     refetch 
   } = useQuery({
-    queryKey: ['calisma_saatleri'],
-    queryFn: calismaSaatleriServisi.hepsiniGetir,
+    queryKey: ['calisma_saatleri', dukkanId],
+    queryFn: () => dukkanId 
+      ? calismaSaatleriServisi.dukkanSaatleriGetir(dukkanId) 
+      : calismaSaatleriServisi.hepsiniGetir(),
     enabled: providedGunler.length === 0,
     retry: 1
   });
@@ -52,6 +56,9 @@ export function useWorkingHours(
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['calisma_saatleri'] });
+      if (dukkanId) {
+        queryClient.invalidateQueries({ queryKey: ['calisma_saatleri', dukkanId] });
+      }
       refetch();
       toast.success('Çalışma saati güncellendi');
       console.log("Update successful:", data);

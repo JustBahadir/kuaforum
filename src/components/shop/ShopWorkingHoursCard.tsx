@@ -4,24 +4,55 @@ import { Button } from "@/components/ui/button";
 import { Edit } from "lucide-react";
 import { TableHeader, TableRow, TableHead, TableBody, TableCell, Table } from '@/components/ui/table';
 import { gunSiralama, gunIsimleri } from "@/components/operations/constants/workingDays";
+import { useQuery } from "@tanstack/react-query";
+import { calismaSaatleriServisi } from "@/lib/supabase/services/calismaSaatleriServisi";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface ShopWorkingHoursCardProps {
   calisma_saatleri: any[];
   userRole: string;
+  dukkanId: number;
 }
 
-export function ShopWorkingHoursCard({ calisma_saatleri, userRole }: ShopWorkingHoursCardProps) {
+export function ShopWorkingHoursCard({ calisma_saatleri = [], userRole, dukkanId }: ShopWorkingHoursCardProps) {
+  // Fetch working hours directly if not provided or empty
+  const { data: fetchedSaatler = [], isLoading } = useQuery({
+    queryKey: ['dukkan_saatleri', dukkanId],
+    queryFn: () => calismaSaatleriServisi.dukkanSaatleriGetir(dukkanId),
+    enabled: calisma_saatleri.length === 0 && !!dukkanId
+  });
+
+  // Use provided hours if available, otherwise use fetched hours
+  const saatler = calisma_saatleri.length > 0 ? calisma_saatleri : fetchedSaatler;
+
   const formatTime = (time: string | null) => {
     if (!time) return "-";
     return time.substring(0, 5);
   };
 
   // Always sort days based on our predefined array order
-  const sortedSaatler = [...calisma_saatleri].sort((a, b) => {
+  const sortedSaatler = [...saatler].sort((a, b) => {
     const aIndex = gunSiralama.indexOf(a.gun);
     const bIndex = gunSiralama.indexOf(b.gun);
     return aIndex - bIndex;
   });
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Çalışma Saatleri</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <Skeleton className="h-6 w-full" />
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>

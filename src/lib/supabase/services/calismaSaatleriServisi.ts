@@ -5,11 +5,17 @@ import { gunSiralama } from '@/components/operations/constants/workingDays';
 import { toast } from 'sonner';
 
 export const calismaSaatleriServisi = {
-  async hepsiniGetir() {
+  async hepsiniGetir(dukkanId?: number) {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('calisma_saatleri')
         .select('*');
+      
+      if (dukkanId) {
+        query = query.eq('dukkan_id', dukkanId);
+      }
+      
+      const { data, error } = await query;
 
       if (error) {
         console.error("Çalışma saatleri getirme hatası:", error);
@@ -89,7 +95,6 @@ export const calismaSaatleriServisi = {
     try {
       // Ensure we have a valid ID
       if (!id) {
-        console.error("ID gerekli");
         throw new Error("ID gerekli");
       }
       
@@ -101,6 +106,7 @@ export const calismaSaatleriServisi = {
         updates.kapanis = null;
       }
       
+      // We'll avoid using the profile table and directly update only calisma_saatleri
       const { data, error } = await supabase
         .from('calisma_saatleri')
         .update(updates)
@@ -141,6 +147,17 @@ export const calismaSaatleriServisi = {
   
   async varsayilanSaatleriOlustur(dukkanId: number) {
     try {
+      // First check if hours already exist for this shop
+      const { data: existing } = await supabase
+        .from('calisma_saatleri')
+        .select('id')
+        .eq('dukkan_id', dukkanId);
+        
+      if (existing && existing.length > 0) {
+        console.log("Bu dükkan için çalışma saatleri zaten mevcut");
+        return existing;
+      }
+      
       // Standard business hours (9-18) with Sunday closed
       const varsayilanSaatler = gunSiralama.map(gun => ({
         gun,
@@ -166,6 +183,35 @@ export const calismaSaatleriServisi = {
     } catch (err) {
       console.error("Varsayılan çalışma saatleri oluşturulurken hata:", err);
       throw err;
+    }
+  },
+  
+  async dukkanSaatleriGetir(dukkanId: number) {
+    try {
+      if (!dukkanId) {
+        console.warn("Dükkan ID gerekli");
+        return [];
+      }
+      
+      const { data, error } = await supabase
+        .from('calisma_saatleri')
+        .select('*')
+        .eq('dukkan_id', dukkanId);
+
+      if (error) {
+        console.error("Dükkan saatleri getirme hatası:", error);
+        throw error;
+      }
+      
+      // Sort by predefined day order
+      return (data || []).sort((a, b) => {
+        const aIndex = gunSiralama.indexOf(a.gun);
+        const bIndex = gunSiralama.indexOf(b.gun);
+        return aIndex - bIndex;
+      });
+    } catch (err) {
+      console.error("Dükkan saatleri getirme sırasında hata:", err);
+      return [];
     }
   }
 };

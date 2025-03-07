@@ -30,7 +30,7 @@ export function WorkingHours({ isStaff = true, gunler = [], dukkanId, onChange }
     saveChanges,
     cancelEditing,
     handleStatusToggle
-  } = useWorkingHours(isStaff, gunler, onChange);
+  } = useWorkingHours(isStaff, gunler, dukkanId, onChange);
   
   if (isLoading) {
     return (
