@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -39,6 +39,7 @@ export function CustomerSelection({ dukkanId, value, onChange }: CustomerSelecti
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
+  const commandListRef = useRef<HTMLDivElement>(null);
   
   // Fetch customers for the salon
   const { data: customers = [], isLoading } = useQuery({
@@ -73,6 +74,12 @@ export function CustomerSelection({ dukkanId, value, onChange }: CustomerSelecti
                phone.includes(searchQuery.replace(/\D/g, ""));
       });
 
+  // Handle selection of a customer
+  const handleSelect = (customerId: number) => {
+    onChange(customerId);
+    setOpen(false);
+  };
+
   return (
     <div className="space-y-2">
       <Label>Müşteri Seçin*</Label>
@@ -99,7 +106,7 @@ export function CustomerSelection({ dukkanId, value, onChange }: CustomerSelecti
               value={searchQuery}
               onValueChange={setSearchQuery}
             />
-            <CommandList className="max-h-[300px] overflow-y-auto">
+            <CommandList ref={commandListRef} className="max-h-[300px] overflow-y-auto">
               <CommandEmpty>
                 <div className="py-6 text-center">
                   <p>Müşteri bulunamadı.</p>
@@ -110,11 +117,8 @@ export function CustomerSelection({ dukkanId, value, onChange }: CustomerSelecti
                   <CommandItem
                     key={customer.id}
                     value={`${customer.id}-${customer.first_name}`}
-                    onSelect={() => {
-                      onChange(customer.id);
-                      setOpen(false);
-                    }}
-                    className="flex items-center cursor-pointer py-3 px-2 hover:bg-accent data-[selected='true']:bg-accent"
+                    onSelect={() => handleSelect(customer.id)}
+                    className="flex items-center cursor-pointer py-3 px-2 hover:bg-slate-100 dark:hover:bg-slate-700"
                   >
                     <div className="flex items-center w-full">
                       <Check
