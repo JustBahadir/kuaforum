@@ -129,7 +129,8 @@ export const calismaSaatleriServisi = {
         .from('calisma_saatleri')
         .update(updateData)
         .eq('id', id)
-        .select('*');
+        .select('*')
+        .single();
 
       if (error) {
         console.error("Tek çalışma saati güncelleme hatası:", error);
@@ -137,7 +138,7 @@ export const calismaSaatleriServisi = {
       }
       
       console.log("Tek güncelleme sonucu:", data);
-      return data?.[0] || null;
+      return data;
     } catch (err) {
       console.error(`ID ${id} güncellenirken hata:`, err);
       throw err;

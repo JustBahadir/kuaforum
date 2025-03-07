@@ -1,26 +1,40 @@
-
-import { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { CalismaSaati } from '@/lib/supabase/types';
 import { calismaSaatleriServisi } from '@/lib/supabase/services/calismaSaatleriServisi';
-import { gunSiralama } from '../constants/workingDays';
+import { useWorkingHoursState } from './useWorkingHoursState';
+import { useWorkingHoursMutation } from './useWorkingHoursMutation';
+import { sortWorkingHours, createDefaultWorkingHours } from '../utils/workingHoursUtils';
 
-export function useWorkingHours(
-  isStaff: boolean = true,
-  providedGunler: CalismaSaati[] = [],
-  dukkanId?: number,
-  onChange?: (index: number, field: keyof CalismaSaati, value: any) => void
-) {
-  const [editing, setEditing] = useState<number | null>(null);
-  const [tempChanges, setTempChanges] = useState<Record<number, Partial<CalismaSaati>>>({});
-  const queryClient = useQueryClient();
+interface UseWorkingHoursProps {
+  isStaff?: boolean;
+  providedGunler?: CalismaSaati[];
+  dukkanId?: number;
+  onChange?: (index: number, field: keyof CalismaSaati, value: any) => void;
+}
 
-  // If dukkanId is provided, fetch hours for that shop
+export function useWorkingHours({
+  isStaff = true,
+  providedGunler = [],
+  dukkanId,
+  onChange
+}: UseWorkingHoursProps = {}) {
+  // Use our state management hook
+  const {
+    editing,
+    tempChanges,
+    startEditing,
+    handleTempChange,
+    cancelEditing,
+    clearEditingState
+  } = useWorkingHoursState();
+
+  // Fetch working hours data
   const { 
     data: fetchedCalismaSaatleri = [], 
     isLoading, 
-    error, 
+    error,
     refetch 
   } = useQuery({
     queryKey: ['calisma_saatleri', dukkanId],
@@ -38,14 +52,7 @@ export function useWorkingHours(
         
         // If no data returned, use default working hours but don't save them yet
         if (!data || data.length === 0) {
-          data = gunSiralama.map((gun, index) => ({
-            id: -(index + 1), // Negative IDs for unsaved records
-            gun,
-            acilis: "09:00",
-            kapanis: "18:00",
-            kapali: gun === "pazar", // Close Sundays by default
-            dukkan_id: dukkanId || 0
-          }));
+          data = createDefaultWorkingHours(dukkanId);
         }
         
         console.log("Working hours retrieved:", data);
@@ -54,112 +61,33 @@ export function useWorkingHours(
         console.error("Error fetching working hours:", err);
         
         // Return default working hours in case of error
-        return gunSiralama.map((gun, index) => ({
-          id: -(index + 1),
-          gun,
-          acilis: "09:00",
-          kapanis: "18:00",
-          kapali: gun === "pazar",
-          dukkan_id: dukkanId || 0
-        }));
+        return createDefaultWorkingHours(dukkanId);
       }
     },
     refetchOnWindowFocus: false,
     staleTime: 30000 // 30 seconds
   });
 
+  // Use mutation hook for updates
+  const {
+    saatGuncelle,
+    statusToggle,
+    isUpdating
+  } = useWorkingHoursMutation({ 
+    dukkanId,
+    onMutationSuccess: () => {
+      // Force refresh to show updated state
+      setTimeout(() => refetch(), 500);
+    }
+  });
+
   // Use the provided working hours if available, otherwise use the fetched ones
   const calismaSaatleri = providedGunler.length > 0 ? providedGunler : fetchedCalismaSaatleri;
 
   // Always sort by predefined day order
-  const sortedSaatler = [...calismaSaatleri].sort((a, b) => {
-    const aIndex = gunSiralama.indexOf(a.gun);
-    const bIndex = gunSiralama.indexOf(b.gun);
-    return aIndex - bIndex;
-  });
+  const sortedSaatler = sortWorkingHours(calismaSaatleri);
 
-  // Mutation for updating a single working hour
-  const { mutate: saatGuncelle, isPending: isUpdating } = useMutation({
-    mutationFn: async ({ id, updates }: { id: number; updates: Partial<CalismaSaati> }) => {
-      console.log("Updating working hours:", id, updates);
-      
-      // Make sure the gun parameter is set
-      if (!updates.gun && id < 0) {
-        // If it's a new record with negative ID, we need the gun
-        const existingRecord = sortedSaatler.find(s => s.id === id);
-        if (existingRecord && existingRecord.gun) {
-          updates.gun = existingRecord.gun;
-        }
-      }
-      
-      // Make sure dukkan_id is set
-      if (!updates.dukkan_id && dukkanId) {
-        updates.dukkan_id = dukkanId;
-      }
-      
-      try {
-        if (id < 0) {
-          // This is a temporary ID, need to create new record
-          const newSaat = {
-            gun: updates.gun || "",
-            acilis: updates.kapali ? null : (updates.acilis || "09:00"),
-            kapanis: updates.kapali ? null : (updates.kapanis || "18:00"),
-            kapali: updates.kapali || false,
-            dukkan_id: dukkanId || 0
-          };
-          
-          const result = await calismaSaatleriServisi.ekle(newSaat);
-          return { id, updates, result };
-        }
-        
-        // Use the dedicated single update method for existing records
-        const result = await calismaSaatleriServisi.tekGuncelle(id, updates);
-        return { id, updates, result };
-      } catch (error) {
-        console.error("Error updating working hour:", error);
-        throw error;
-      }
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['calisma_saatleri'] });
-      if (dukkanId) {
-        queryClient.invalidateQueries({ queryKey: ['calisma_saatleri', dukkanId] });
-      }
-      
-      // Only show success message if data was really updated
-      if (data?.result) {
-        toast.success('Çalışma saati güncellendi');
-        console.log("Update successful:", data);
-        // Manually refresh data to show updated values
-        setTimeout(() => refetch(), 500);
-      } else {
-        toast.error('Güncelleme sırasında bir hata oluştu');
-      }
-    },
-    onError: (error) => {
-      console.error("Çalışma saati güncellenirken hata:", error);
-      toast.error('Güncelleme sırasında bir hata oluştu');
-    }
-  });
-
-  const startEditing = (id: number) => {
-    setEditing(id);
-    setTempChanges(prev => ({
-      ...prev,
-      [id]: {}
-    }));
-  };
-
-  const handleTempChange = (id: number, field: keyof CalismaSaati, value: any) => {
-    setTempChanges(prev => ({
-      ...prev,
-      [id]: {
-        ...prev[id],
-        [field]: value
-      }
-    }));
-  };
-
+  // Handle saving changes
   const saveChanges = async (id: number) => {
     const saat = calismaSaatleri.find(s => {
       return s.id === id || (typeof s.id === 'string' && parseInt(s.id) === id);
@@ -186,49 +114,26 @@ export function useWorkingHours(
       } else {
         // For internal updates with Supabase
         if (tempChanges[id] && Object.keys(tempChanges[id]).length > 0) {
-          // Make sure gun is included for validation
-          const updates = {
-            ...tempChanges[id],
-            gun: saat.gun, // Always include the day
-            dukkan_id: dukkanId || saat.dukkan_id, // Always include shop ID
-            // If shop is marked as closed, ensure times are cleared
-            ...(tempChanges[id].kapali ? { 
-              acilis: null, 
-              kapanis: null 
-            } : {})
-          };
-          
-          await saatGuncelle({ id, updates });
+          await saatGuncelle({ 
+            id, 
+            updates: tempChanges[id],
+            currentDay: saat
+          });
         } else {
           toast.info("Değişiklik yapılmadı");
         }
       }
       
-      setEditing(null);
-      setTempChanges(prev => {
-        const updated = {...prev};
-        delete updated[id];
-        return updated;
-      });
+      clearEditingState(id);
     } catch (error) {
       console.error("Çalışma saati kaydedilirken hata:", error);
       toast.error("Güncelleme sırasında bir hata oluştu");
     }
   };
 
-  const cancelEditing = (id: number) => {
-    setEditing(null);
-    setTempChanges(prev => {
-      const updated = {...prev};
-      delete updated[id];
-      return updated;
-    });
-  };
-
+  // Handle status toggle (open/closed)
   const handleStatusToggle = async (id: number, isOpen: boolean) => {
     try {
-      console.log(`Toggling status for ID ${id}, setting to isOpen:`, isOpen);
-      
       // Find the current day record
       const currentDay = sortedSaatler.find(s => s.id === id);
       if (!currentDay) {
@@ -236,32 +141,23 @@ export function useWorkingHours(
         return;
       }
       
-      const updates: Partial<CalismaSaati> = {
-        kapali: !isOpen,
-        gun: currentDay.gun, // Include gun for validation
-        dukkan_id: dukkanId || currentDay.dukkan_id // Include shop ID
-      };
-      
-      // If closing, clear times
-      if (!isOpen) { // We're toggling to closed
-        updates.acilis = null;
-        updates.kapanis = null;
-      } else { // We're toggling to open
-        // If opening, set default times
-        updates.acilis = "09:00";
-        updates.kapanis = "18:00";
-      }
-      
-      console.log("Status toggle updates:", updates);
-      await saatGuncelle({ id, updates });
-      
-      // Force refresh to show updated state
-      setTimeout(() => refetch(), 500);
+      await statusToggle({
+        id,
+        isOpen,
+        currentDay
+      });
     } catch (error) {
       console.error("Durum değişikliği sırasında hata:", error);
       toast.error("Durum güncellenirken bir hata oluştu");
     }
   };
+
+  // Log errors to the console
+  useEffect(() => {
+    if (error) {
+      console.error("Error in useWorkingHours:", error);
+    }
+  }, [error]);
 
   return {
     calismaSaatleri: sortedSaatler,
