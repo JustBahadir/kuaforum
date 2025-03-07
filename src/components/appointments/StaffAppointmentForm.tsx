@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { format } from "date-fns";
+import { format, addDays, isBefore, isToday, set } from "date-fns";
 import { tr } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -34,16 +34,18 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useQuery } from "@tanstack/react-query";
-import { Islem, Kategori, Personel, Randevu } from "@/lib/supabase/types";
+import { Islem, Kategori, Personel, Randevu, CalismaSaati } from "@/lib/supabase/types";
 import { 
   islemServisi, 
   kategoriServisi, 
   personelServisi, 
   randevuServisi,
-  dukkanServisi
+  dukkanServisi,
+  calismaSaatleriServisi
 } from "@/lib/supabase";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { CustomerSelection } from "./CustomerSelection";
+import { gunIsimleri } from "@/components/operations/constants/workingDays";
 
 interface StaffAppointmentFormProps {
   onAppointmentCreated?: (appointment: Randevu) => void;
@@ -134,12 +136,21 @@ export function StaffAppointmentForm({
     enabled: !!dukkanId,
   });
 
+  // Get working hours for the shop
+  const { data: calismaSaatleri = [] } = useQuery({
+    queryKey: ["calisma_saatleri"],
+    queryFn: calismaSaatleriServisi.hepsiniGetir,
+  });
+
   const selectedCategory = form.watch("category");
+  const selectedDate = form.watch("date");
+  
   const filteredServices = React.useMemo(() => {
     if (!selectedCategory || !islemlerData) return [];
     return islemlerData.filter(islem => islem.kategori_id === selectedCategory);
   }, [selectedCategory, islemlerData]);
 
+  // Update service selection when initialServiceId is provided
   useEffect(() => {
     if (initialServiceId && islemlerData) {
       const service = islemlerData.find(islem => islem.id === initialServiceId);
@@ -150,11 +161,67 @@ export function StaffAppointmentForm({
     }
   }, [initialServiceId, islemlerData, form]);
 
-  const availableTimes = [
-    "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", 
-    "12:00", "12:30", "13:00", "13:30", "14:00", "14:30",
-    "15:00", "15:30", "16:00", "16:30", "17:00", "17:30", "18:00"
-  ];
+  // Generate available times based on working hours for the selected day
+  const availableTimes = React.useMemo(() => {
+    if (!selectedDate || !calismaSaatleri.length) return [];
+    
+    // Get the day name in Turkish
+    const dayName = format(selectedDate, 'EEEE', { locale: tr }).toLowerCase();
+    
+    // Find the working hours for the selected day
+    const dayWorkingHours = calismaSaatleri.find(calisma => 
+      calisma.gun.toLowerCase() === dayName
+    );
+    
+    // If no working hours found or the shop is closed on this day, return empty array
+    if (!dayWorkingHours || dayWorkingHours.kapali || !dayWorkingHours.acilis || !dayWorkingHours.kapanis) {
+      return [];
+    }
+    
+    // Parse opening and closing hours
+    const [openHour, openMinute] = dayWorkingHours.acilis.split(':').map(Number);
+    const [closeHour, closeMinute] = dayWorkingHours.kapanis.split(':').map(Number);
+    
+    const times: string[] = [];
+    let currentHour = openHour;
+    let currentMinute = openMinute;
+    
+    // Generate times with 30-minute intervals
+    while (
+      currentHour < closeHour || 
+      (currentHour === closeHour && currentMinute < closeMinute - 30)
+    ) {
+      times.push(
+        `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`
+      );
+      
+      // Advance 30 minutes
+      currentMinute += 30;
+      if (currentMinute >= 60) {
+        currentHour += 1;
+        currentMinute = 0;
+      }
+    }
+    
+    return times;
+  }, [selectedDate, calismaSaatleri]);
+
+  // Custom calendar day validator
+  const isDateDisabled = (date: Date) => {
+    // Prevent selecting past dates
+    if (isBefore(date, new Date()) && !isToday(date)) {
+      return true;
+    }
+    
+    // Check if the shop is closed on this day
+    const dayName = format(date, 'EEEE', { locale: tr }).toLowerCase();
+    const dayWorkingHours = calismaSaatleri.find(calisma => 
+      calisma.gun.toLowerCase() === dayName
+    );
+    
+    // If no working hours found or the shop is closed on this day, disable it
+    return !dayWorkingHours || dayWorkingHours.kapali;
+  };
 
   const handleFormSubmit = async (data: StaffAppointmentFormValues) => {
     try {
@@ -363,7 +430,9 @@ export function StaffAppointmentForm({
                       mode="single"
                       selected={field.value}
                       onSelect={(date) => date && field.onChange(date)}
+                      disabled={isDateDisabled}
                       initialFocus
+                      locale={tr}
                     />
                   </PopoverContent>
                 </Popover>
@@ -381,17 +450,28 @@ export function StaffAppointmentForm({
                 <Select
                   onValueChange={field.onChange}
                   value={field.value}
+                  disabled={availableTimes.length === 0}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Saat seçin" />
+                    <SelectValue placeholder={
+                      availableTimes.length === 0 
+                        ? "Bu gün için uygun saat yok" 
+                        : "Saat seçin"
+                    } />
                   </SelectTrigger>
                   <SelectContent className="h-[200px]">
                     <ScrollArea className="h-[200px]">
-                      {availableTimes.map((time) => (
-                        <SelectItem key={time} value={time}>
-                          {time}
+                      {availableTimes.length > 0 ? (
+                        availableTimes.map((time) => (
+                          <SelectItem key={time} value={time}>
+                            {time}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="none" disabled>
+                          Bu gün için uygun saat bulunamadı
                         </SelectItem>
-                      ))}
+                      )}
                     </ScrollArea>
                   </SelectContent>
                 </Select>

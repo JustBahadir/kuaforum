@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { format, parse, startOfWeek, addDays, isToday, isSameDay } from 'date-fns';
 import { tr } from 'date-fns/locale';
@@ -13,16 +14,30 @@ import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { AppointmentForm } from "@/components/appointments/AppointmentForm";
 import { StaffAppointmentForm } from "@/components/appointments/StaffAppointmentForm";
 import { randevuServisi } from "@/lib/supabase/services/randevuServisi";
+import { personelIslemleriServisi } from "@/lib/supabase/services/personelIslemleriServisi";
 import { Randevu } from "@/lib/supabase/types";
-import { Loader2, Plus, Calendar as CalendarIcon } from "lucide-react";
+import { Loader2, Plus, Calendar as CalendarIcon, Check, X } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { personelServisi } from "@/lib/supabase";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function Appointments() {
   const { dukkanId, userRole } = useCustomerAuth();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [currentPersonelId, setCurrentPersonelId] = useState<number | null>(null);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState<Randevu | null>(null);
   
   // Get current user
   const { data: currentUser } = useQuery({
@@ -125,6 +140,56 @@ export default function Appointments() {
     ? StaffAppointmentForm 
     : AppointmentForm;
   
+  // Handle marking appointment as completed
+  const handleAppointmentComplete = async () => {
+    if (!selectedAppointment) return;
+    
+    try {
+      // Update appointment status to 'tamamlandi'
+      await randevuServisi.guncelle(selectedAppointment.id, {
+        durum: 'tamamlandi'
+      });
+      
+      // Create service operation record
+      if (selectedAppointment.islemler && selectedAppointment.islemler.length > 0) {
+        for (const islemId of selectedAppointment.islemler) {
+          await personelIslemleriServisi.ekle({
+            personel_id: selectedAppointment.personel_id,
+            islem_id: islemId,
+            musteri_id: selectedAppointment.musteri_id,
+            tarih: selectedAppointment.tarih,
+            notlar: selectedAppointment.notlar || ''
+          });
+        }
+      }
+      
+      toast.success("İşlem başarıyla tamamlandı ve işlem geçmişine eklendi");
+      refetch();
+      setConfirmDialogOpen(false);
+    } catch (error) {
+      console.error("İşlem tamamlanırken hata:", error);
+      toast.error("İşlem tamamlanırken bir hata oluştu");
+    }
+  };
+  
+  // Handle canceling appointment
+  const handleAppointmentCancel = async () => {
+    if (!selectedAppointment) return;
+    
+    try {
+      await randevuServisi.guncelle(selectedAppointment.id, {
+        durum: 'iptal_edildi'
+      });
+      
+      toast.success("Randevu iptal edildi");
+      refetch();
+      setCancelDialogOpen(false);
+    } catch (error) {
+      console.error("Randevu iptal edilirken hata:", error);
+      toast.error("Randevu iptal edilirken bir hata oluştu");
+    }
+  };
+
   return (
     <StaffLayout>
       <div className="container mx-auto py-6">
@@ -213,6 +278,36 @@ export default function Appointments() {
                             <p className="mt-2 text-sm">
                               <span className="font-medium">Not:</span> {appointment.notlar}
                             </p>
+                          )}
+                          
+                          {/* Appointment action buttons */}
+                          {appointment.durum !== 'tamamlandi' && appointment.durum !== 'iptal_edildi' && (
+                            <div className="flex gap-2 mt-3">
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                className="bg-green-50 text-green-600 hover:text-green-700 hover:bg-green-100 border-green-200"
+                                onClick={() => {
+                                  setSelectedAppointment(appointment);
+                                  setConfirmDialogOpen(true);
+                                }}
+                              >
+                                <Check className="h-4 w-4 mr-1" />
+                                İşlem Gerçekleşti
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                className="bg-red-50 text-red-600 hover:text-red-700 hover:bg-red-100 border-red-200"
+                                onClick={() => {
+                                  setSelectedAppointment(appointment);
+                                  setCancelDialogOpen(true);
+                                }}
+                              >
+                                <X className="h-4 w-4 mr-1" />
+                                İptal Et
+                              </Button>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -357,6 +452,36 @@ export default function Appointments() {
                                   <span className="font-medium">Not:</span> {appointment.notlar}
                                 </p>
                               )}
+                              
+                              {/* Appointment action buttons */}
+                              {appointment.durum !== 'tamamlandi' && appointment.durum !== 'iptal_edildi' && (
+                                <div className="flex gap-2 mt-3">
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    className="bg-green-50 text-green-600 hover:text-green-700 hover:bg-green-100 border-green-200"
+                                    onClick={() => {
+                                      setSelectedAppointment(appointment);
+                                      setConfirmDialogOpen(true);
+                                    }}
+                                  >
+                                    <Check className="h-4 w-4 mr-1" />
+                                    İşlem Gerçekleşti
+                                  </Button>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    className="bg-red-50 text-red-600 hover:text-red-700 hover:bg-red-100 border-red-200"
+                                    onClick={() => {
+                                      setSelectedAppointment(appointment);
+                                      setCancelDialogOpen(true);
+                                    }}
+                                  >
+                                    <X className="h-4 w-4 mr-1" />
+                                    İptal Et
+                                  </Button>
+                                </div>
+                              )}
                             </div>
                           </div>
                         ))}
@@ -373,6 +498,7 @@ export default function Appointments() {
           </TabsContent>
         </Tabs>
         
+        {/* New Appointment Dialog */}
         <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
           <DialogContent className="max-w-md">
             <DialogHeader>
@@ -384,6 +510,45 @@ export default function Appointments() {
             />
           </DialogContent>
         </Dialog>
+        
+        {/* Confirm Appointment Completion Dialog */}
+        <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>İşlemi Onayla</AlertDialogTitle>
+              <AlertDialogDescription>
+                Bu işlemi tamamlandı olarak işaretleyeceksiniz. Bu işlem müşterinin işlem geçmişine kaydedilecek ve istatistiklere eklenecektir.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>İptal</AlertDialogCancel>
+              <AlertDialogAction onClick={handleAppointmentComplete}>
+                Tamamlandı Olarak İşaretle
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+        
+        {/* Cancel Appointment Dialog */}
+        <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Randevuyu İptal Et</AlertDialogTitle>
+              <AlertDialogDescription>
+                Bu randevuyu iptal etmek istediğinize emin misiniz? İptal edilen randevular geri alınamaz.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Vazgeç</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleAppointmentCancel}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                Randevuyu İptal Et
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </StaffLayout>
   );

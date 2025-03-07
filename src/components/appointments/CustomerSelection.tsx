@@ -61,6 +61,18 @@ export function CustomerSelection({ dukkanId, value, onChange }: CustomerSelecti
     navigate("/customers/new");
   };
 
+  // Filter customers based on search query
+  const filteredCustomers = searchQuery === "" 
+    ? customers 
+    : customers.filter(customer => {
+        const searchLower = searchQuery.toLowerCase();
+        return (
+          (customer.first_name && customer.first_name.toLowerCase().includes(searchLower)) ||
+          (customer.last_name && customer.last_name.toLowerCase().includes(searchLower)) ||
+          (customer.phone && customer.phone.includes(searchQuery.replace(/\D/g, "")))
+        );
+      });
+
   return (
     <div className="space-y-2">
       <Label>Müşteri Seçin*</Label>
@@ -102,38 +114,31 @@ export function CustomerSelection({ dukkanId, value, onChange }: CustomerSelecti
                 </div>
               </CommandEmpty>
               <CommandGroup>
-                {customers
-                  .filter(
-                    (customer) =>
-                      customer.first_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                      (customer.last_name && customer.last_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-                      (customer.phone && customer.phone.includes(searchQuery.replace(/\D/g, "")))
-                  )
-                  .map((customer) => (
-                    <CommandItem
-                      key={customer.id}
-                      value={customer.id.toString()}
-                      onSelect={() => {
-                        onChange(customer.id);
-                        setOpen(false);
-                      }}
-                    >
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          value === customer.id ? "opacity-100" : "opacity-0"
-                        )}
-                      />
-                      <div className="flex flex-col">
-                        <span>{customer.first_name} {customer.last_name || ""}</span>
-                        {customer.phone && (
-                          <span className="text-sm text-muted-foreground">
-                            {formatPhoneNumber(customer.phone)}
-                          </span>
-                        )}
-                      </div>
-                    </CommandItem>
-                  ))}
+                {filteredCustomers.map((customer) => (
+                  <CommandItem
+                    key={customer.id}
+                    value={customer.first_name + (customer.last_name || "")}
+                    onSelect={() => {
+                      onChange(customer.id);
+                      setOpen(false);
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        value === customer.id ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    <div className="flex flex-col">
+                      <span>{customer.first_name} {customer.last_name || ""}</span>
+                      {customer.phone && (
+                        <span className="text-sm text-muted-foreground">
+                          {formatPhoneNumber(customer.phone)}
+                        </span>
+                      )}
+                    </div>
+                  </CommandItem>
+                ))}
               </CommandGroup>
               <div className="border-t p-2">
                 <Button 
