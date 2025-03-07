@@ -14,7 +14,7 @@ export function useWorkingHours(
   onChange?: (index: number, field: keyof CalismaSaati, value: any) => void
 ): UseWorkingHoursResult {
   // Use the sub-hooks
-  const { calismaSaatleri, isLoading, error, refetch } = useWorkingHoursData(providedGunler, dukkanId);
+  const { calismaSaatleri, isLoading, error, refetch: originalRefetch } = useWorkingHoursData(providedGunler, dukkanId);
   const { saatGuncelle, isUpdating } = useWorkingHoursUpdate(dukkanId);
   const { 
     editing, 
@@ -24,6 +24,11 @@ export function useWorkingHours(
     cancelEditing,
     resetEditingState
   } = useWorkingHoursState();
+
+  // Wrap the refetch function to match our return type
+  const refetch = async (): Promise<void> => {
+    await originalRefetch();
+  };
 
   const saveChanges = async (id: number) => {
     try {
