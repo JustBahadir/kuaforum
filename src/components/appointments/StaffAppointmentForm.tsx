@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -46,6 +47,7 @@ import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { CustomerSelection } from "./CustomerSelection";
 import { gunIsimleri } from "@/components/operations/constants/workingDays";
 import { useNavigate } from "react-router-dom";
+import { musteriServisi } from "@/lib/supabase/services/musteriServisi";
 
 interface StaffAppointmentFormProps {
   onAppointmentCreated?: (appointment: Randevu) => void;
@@ -228,6 +230,15 @@ export function StaffAppointmentForm({
   const handleFormSubmit = async (data: StaffAppointmentFormValues) => {
     try {
       setSubmitting(true);
+      console.log("Form data being submitted:", data);
+      
+      // Get customer info to retrieve auth ID
+      const customerDetails = await musteriServisi.getirById(data.customerId);
+      if (!customerDetails) {
+        throw new Error("Müşteri bilgileri alınamadı");
+      }
+      
+      console.log("Customer details:", customerDetails);
       
       const randevuData = {
         dukkan_id: dukkanId,
@@ -238,8 +249,10 @@ export function StaffAppointmentForm({
         durum: "onaylandi" as const,
         notlar: data.notes,
         islemler: [data.service],
-        customer_id: undefined
+        customer_id: customerDetails.auth_id // Add the auth_id as customer_id
       };
+      
+      console.log("Appointment data being sent:", randevuData);
 
       const newRandevu = await randevuServisi.ekle(randevuData);
       

@@ -59,35 +59,44 @@ export const randevuServisi = {
   },
 
   async ekle(randevu: Omit<Randevu, 'id' | 'created_at' | 'musteri' | 'personel'>) {
-    // Ensure customer_id is provided
-    if (!randevu.customer_id) {
-      throw new Error('customer_id is required');
+    console.log("Randevu ekle service received data:", randevu);
+    
+    // Check for customer_id or musteri_id
+    if (!randevu.customer_id && !randevu.musteri_id) {
+      console.error("Required fields missing:", { customer_id: randevu.customer_id, musteri_id: randevu.musteri_id });
+      throw new Error("customer_id or musteri_id is required");
     }
 
     // Ensure islemler is an array even if only one service is selected
     const islemler = Array.isArray(randevu.islemler) 
       ? randevu.islemler 
-      : [randevu.islemler];
+      : randevu.islemler ? [randevu.islemler] : [];
 
-    const { data, error } = await supabase
-      .from('randevular')
-      .insert([{ 
-        ...randevu, 
-        islemler: islemler 
-      }])
-      .select(`
-        *,
-        musteri:profiles(*),
-        personel:personel(*)
-      `)
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('randevular')
+        .insert([{ 
+          ...randevu, 
+          islemler: islemler 
+        }])
+        .select(`
+          *,
+          musteri:profiles(*),
+          personel:personel(*)
+        `)
+        .single();
 
-    if (error) {
+      if (error) {
+        console.error("Randevu eklenirken supabase hatası:", error);
+        throw error;
+      }
+      
+      console.log("Randevu başarıyla eklendi:", data);
+      return data;
+    } catch (error) {
       console.error("Randevu eklenirken hata:", error);
       throw error;
     }
-    
-    return data;
   },
 
   async guncelle(id: number, randevu: Partial<Randevu>) {
