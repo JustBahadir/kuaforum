@@ -135,9 +135,9 @@ export interface Notification {
 }
 
 export interface CalismaSaati {
-  id: number;
+  id?: number;
   gun: string;
-  acilis?: string;
-  kapanis?: string;
-  kapali?: boolean;
+  acilis: string | null;
+  kapanis: string | null;
+  kapali: boolean;
 }
