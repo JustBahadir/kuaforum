@@ -30,7 +30,10 @@ export function WorkingHoursRow({
   onSaveChanges,
   onCancelEditing
 }: WorkingHoursRowProps) {
-  const uniqueId = saat.id !== undefined ? saat.id : index;
+  // Ensure we have a numeric ID for comparisons
+  const saatId = typeof saat.id === 'number' ? saat.id : Number(saat.id);
+  const uniqueId = isNaN(saatId) ? index : saatId;
+  
   const isEditing = editing === uniqueId;
   const isKapali = (tempChanges[uniqueId]?.kapali !== undefined) 
     ? tempChanges[uniqueId].kapali 
@@ -41,7 +44,15 @@ export function WorkingHoursRow({
     if (isEditing) {
       onTempChange(uniqueId, 'kapali', newStatus);
     } else if (isStaff) {
+      // For direct toggle without edit mode
       onTempChange(uniqueId, 'kapali', newStatus);
+      
+      // If shop is closed, clear open/close times
+      if (newStatus) {
+        onTempChange(uniqueId, 'acilis', null);
+        onTempChange(uniqueId, 'kapanis', null);
+      }
+      
       onSaveChanges(uniqueId);
     }
   };

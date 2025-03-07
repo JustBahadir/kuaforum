@@ -4,6 +4,7 @@ import { CalismaSaati } from '@/lib/supabase/types';
 import { WorkingHoursRow } from './WorkingHoursRow';
 import { useWorkingHours } from './hooks/useWorkingHours';
 import { gunSiralama } from './constants/workingDays';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface WorkingHoursProps {
   isStaff?: boolean;
@@ -16,11 +17,34 @@ export function WorkingHours({ isStaff = true, gunler = [], onChange }: WorkingH
     calismaSaatleri, 
     editing, 
     tempChanges,
+    isLoading,
+    error,
     startEditing,
     handleTempChange,
     saveChanges,
     cancelEditing
   } = useWorkingHours(isStaff, gunler, onChange);
+
+  if (isLoading) {
+    return (
+      <div className="border rounded-lg overflow-hidden p-4">
+        <div className="space-y-2">
+          <Skeleton className="h-6 w-full" />
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-12 w-full" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="border rounded-lg overflow-hidden p-4 text-red-500">
+        Çalışma saatleri yüklenirken bir hata oluştu. Lütfen daha sonra tekrar deneyiniz.
+      </div>
+    );
+  }
 
   return (
     <div className="border rounded-lg overflow-hidden">
@@ -35,20 +59,28 @@ export function WorkingHours({ isStaff = true, gunler = [], onChange }: WorkingH
           </TableRow>
         </TableHeader>
         <TableBody>
-          {calismaSaatleri.map((saat: CalismaSaati, index: number) => (
-            <WorkingHoursRow
-              key={saat.id !== undefined ? saat.id : index}
-              saat={saat}
-              index={index}
-              isStaff={isStaff}
-              editing={editing}
-              tempChanges={tempChanges}
-              onStartEditing={startEditing}
-              onTempChange={handleTempChange}
-              onSaveChanges={saveChanges}
-              onCancelEditing={cancelEditing}
-            />
-          ))}
+          {calismaSaatleri.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={isStaff ? 5 : 3} className="text-center py-6 text-gray-500">
+                Çalışma saati bilgisi bulunamadı
+              </TableCell>
+            </TableRow>
+          ) : (
+            calismaSaatleri.map((saat: CalismaSaati, index: number) => (
+              <WorkingHoursRow
+                key={saat.id !== undefined ? saat.id : index}
+                saat={saat}
+                index={index}
+                isStaff={isStaff}
+                editing={editing}
+                tempChanges={tempChanges}
+                onStartEditing={startEditing}
+                onTempChange={handleTempChange}
+                onSaveChanges={saveChanges}
+                onCancelEditing={cancelEditing}
+              />
+            ))
+          )}
         </TableBody>
       </Table>
     </div>

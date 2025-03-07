@@ -1,7 +1,6 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import { CalismaSaati } from '@/lib/supabase/types';
 import { calismaSaatleriServisi } from '@/lib/supabase/services/calismaSaatleriServisi';
@@ -16,7 +15,7 @@ export function useWorkingHours(
   const [tempChanges, setTempChanges] = useState<Record<number, Partial<CalismaSaati>>>({});
   const queryClient = useQueryClient();
 
-  const { data: fetchedCalismaSaatleri = [] } = useQuery({
+  const { data: fetchedCalismaSaatleri = [], isLoading, error } = useQuery({
     queryKey: ['calisma_saatleri'],
     queryFn: calismaSaatleriServisi.hepsiniGetir,
     enabled: providedGunler.length === 0
@@ -40,23 +39,15 @@ export function useWorkingHours(
       
       console.log("Updating working hours:", id, updates);
       
-      const { data, error } = await supabase
-        .from('calisma_saatleri')
-        .update(updates)
-        .eq('id', id)
-        .select();
-        
-      if (error) {
-        console.error("Update error:", error);
-        throw error;
-      }
+      // Use the dedicated single update method instead
+      const result = await calismaSaatleriServisi.tekGuncelle(id, updates);
       
-      console.log("Update successful:", data);
-      return { id, updates };
+      return { id, updates, result };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['calisma_saatleri'] });
       toast.success('Çalışma saati güncellendi');
+      console.log("Update successful:", data);
     },
     onError: (error) => {
       console.error("Çalışma saati güncellenirken hata:", error);
@@ -83,29 +74,42 @@ export function useWorkingHours(
   };
 
   const saveChanges = (id: number) => {
-    const saat = calismaSaatleri.find(s => (s.id || 0) === id);
-    if (!saat) return;
+    const saat = calismaSaatleri.find(s => {
+      const saatId = typeof s.id === 'number' ? s.id : Number(s.id);
+      return saatId === id;
+    });
+    
+    if (!saat) {
+      console.error(`Saat ID ${id} bulunamadı`);
+      toast.error("Çalışma saati bulunamadı");
+      return;
+    }
 
     if (onChange) {
-      const index = calismaSaatleri.findIndex(s => (s.id || 0) === id);
+      // For external controlled components
+      const index = calismaSaatleri.findIndex(s => {
+        const saatId = typeof s.id === 'number' ? s.id : Number(s.id);
+        return saatId === id;
+      });
+      
       if (index !== -1 && tempChanges[id]) {
         Object.keys(tempChanges[id]).forEach(key => {
           onChange(index, key as keyof CalismaSaati, tempChanges[id][key as keyof CalismaSaati]);
         });
       }
     } else {
+      // For internal updates with Supabase
       if (tempChanges[id] && Object.keys(tempChanges[id]).length > 0) {
-        saatGuncelle({ 
-          id, 
-          updates: {
-            ...tempChanges[id],
-            // If shop is marked as closed, ensure times are cleared if they were modified
-            ...(tempChanges[id].kapali ? { 
-              acilis: null, 
-              kapanis: null 
-            } : {})
-          } 
-        });
+        const updates = {
+          ...tempChanges[id],
+          // If shop is marked as closed, ensure times are cleared if they were modified
+          ...(tempChanges[id].kapali ? { 
+            acilis: null, 
+            kapanis: null 
+          } : {})
+        };
+        
+        saatGuncelle({ id, updates });
       }
     }
     
@@ -130,6 +134,8 @@ export function useWorkingHours(
     calismaSaatleri: sortedSaatler, // Always return the sorted array
     editing,
     tempChanges,
+    isLoading,
+    error,
     startEditing,
     handleTempChange,
     saveChanges,
