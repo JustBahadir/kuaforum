@@ -92,7 +92,7 @@ export function CustomerSelection({ dukkanId, value, onChange }: CustomerSelecti
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[400px] p-0">
+        <PopoverContent className="w-[400px] p-0" align="start" side="bottom">
           <Command>
             <CommandInput 
               placeholder="Müşteri ara..." 
@@ -103,54 +103,49 @@ export function CustomerSelection({ dukkanId, value, onChange }: CustomerSelecti
               <CommandEmpty>
                 <div className="py-6 text-center">
                   <p>Müşteri bulunamadı.</p>
-                  <Button 
-                    variant="outline"
-                    className="mt-4"
-                    onClick={handleNewCustomer}
-                  >
-                    <UserPlus className="mr-2 h-4 w-4" />
-                    Yeni Müşteri Ekle
-                  </Button>
                 </div>
               </CommandEmpty>
               <CommandGroup>
                 {filteredCustomers.map((customer) => (
                   <CommandItem
                     key={customer.id}
+                    value={`${customer.id}-${customer.first_name}`}
                     onSelect={() => {
                       onChange(customer.id);
                       setOpen(false);
                     }}
-                    className="flex items-center gap-2 cursor-pointer py-2 pl-2 hover:bg-accent data-[selected=true]:bg-accent data-[highlighted=true]:bg-accent"
+                    className="flex items-center cursor-pointer py-3 px-2 hover:bg-accent data-[selected='true']:bg-accent"
                   >
-                    <Check
-                      className={cn(
-                        "mr-2 h-4 w-4",
-                        value === customer.id ? "opacity-100" : "opacity-0"
-                      )}
-                    />
-                    <div className="flex flex-col">
-                      <span>{customer.first_name} {customer.last_name || ""}</span>
-                      {customer.phone && (
-                        <span className="text-sm text-muted-foreground">
-                          {formatPhoneNumber(customer.phone)}
-                        </span>
-                      )}
+                    <div className="flex items-center w-full">
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          value === customer.id ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      <div className="flex flex-col">
+                        <span className="font-medium">{customer.first_name} {customer.last_name || ""}</span>
+                        {customer.phone && (
+                          <span className="text-sm text-muted-foreground">
+                            {formatPhoneNumber(customer.phone)}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </CommandItem>
                 ))}
               </CommandGroup>
-              <div className="p-2 border-t">
-                <Button 
-                  variant="outline" 
-                  className="w-full"
-                  onClick={handleNewCustomer}
-                >
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  Yeni Müşteri Ekle
-                </Button>
-              </div>
             </CommandList>
+            <div className="p-2 border-t">
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={handleNewCustomer}
+              >
+                <UserPlus className="mr-2 h-4 w-4" />
+                Yeni Müşteri Ekle
+              </Button>
+            </div>
           </Command>
         </PopoverContent>
       </Popover>

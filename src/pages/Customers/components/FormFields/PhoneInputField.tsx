@@ -25,12 +25,12 @@ export function PhoneInputField({
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (disabled) return;
     
-    // Allow 10 digits after the initial 0 (11 digits total including the leading 0)
+    // Allow 11 digits (including the leading 0)
     const digitsOnly = e.target.value.replace(/\D/g, '');
     const limitedDigits = digitsOnly.substring(0, 11);
     
     // Format and update the phone number
-    onChange(formatPhoneNumber(limitedDigits));
+    onChange(limitedDigits);
   };
 
   return (
@@ -38,7 +38,7 @@ export function PhoneInputField({
       <Label htmlFor={id}>{label}</Label>
       <Input
         id={id}
-        value={value}
+        value={formatPhoneNumber(value)}
         onChange={handlePhoneChange}
         placeholder={placeholder}
         className={error ? "border-red-500" : ""}
