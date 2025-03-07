@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { format, addDays, isBefore, isToday, set } from "date-fns";
+import { format, addDays, isBefore, isToday, set, parseISO } from "date-fns";
 import { tr } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -186,8 +186,11 @@ export function StaffAppointmentForm({
     );
     
     if (!dayWorkingHours || dayWorkingHours.kapali || !dayWorkingHours.acilis || !dayWorkingHours.kapanis) {
+      console.log("No working hours found for day:", dayName);
       return [];
     }
+    
+    console.log("Working hours for", dayName, ":", dayWorkingHours.acilis, "to", dayWorkingHours.kapanis);
     
     const [openHour, openMinute] = dayWorkingHours.acilis.split(':').map(Number);
     const [closeHour, closeMinute] = dayWorkingHours.kapanis.split(':').map(Number);
@@ -196,6 +199,7 @@ export function StaffAppointmentForm({
     let currentHour = openHour;
     let currentMinute = openMinute;
     
+    // Generate times at 30-minute intervals from opening time to 30 minutes before closing
     while (
       currentHour < closeHour || 
       (currentHour === closeHour && currentMinute < closeMinute - 30)
@@ -211,20 +215,29 @@ export function StaffAppointmentForm({
       }
     }
     
+    console.log("Available times:", times);
     return times;
   }, [selectedDate, calismaSaatleri]);
 
   const isDateDisabled = (date: Date) => {
+    // Disable past dates (except today)
     if (isBefore(date, new Date()) && !isToday(date)) {
       return true;
     }
     
+    // Get the day name and find if the shop is closed that day
     const dayName = format(date, 'EEEE', { locale: tr }).toLowerCase();
     const dayWorkingHours = calismaSaatleri.find(calisma => 
       calisma.gun.toLowerCase() === dayName
     );
     
-    return !dayWorkingHours || dayWorkingHours.kapali;
+    // Only disable the date if we have working hours info AND the shop is explicitly closed
+    if (dayWorkingHours && dayWorkingHours.kapali) {
+      return true;
+    }
+    
+    // If we don't have working hours for this day, allow selection (default to open)
+    return false;
   };
 
   const handleFormSubmit = async (data: StaffAppointmentFormValues) => {
@@ -232,29 +245,36 @@ export function StaffAppointmentForm({
       setSubmitting(true);
       console.log("Form data being submitted:", data);
       
+      if (!dukkanId) {
+        throw new Error("Dükkan ID bulunamadı");
+      }
+      
       // Get customer info to retrieve auth ID
       const customerDetails = await musteriServisi.getirById(data.customerId);
+      console.log("Customer details fetched:", customerDetails);
+      
       if (!customerDetails) {
         throw new Error("Müşteri bilgileri alınamadı");
       }
       
-      console.log("Customer details:", customerDetails);
-      
+      // Prepare appointment data
       const randevuData = {
         dukkan_id: dukkanId,
         musteri_id: data.customerId,
         personel_id: parseInt(data.personnel),
         tarih: format(data.date, 'yyyy-MM-dd'),
-        saat: data.time || "09:00",
+        saat: data.time,
         durum: "onaylandi" as const,
-        notlar: data.notes,
+        notlar: data.notes || "",
         islemler: [data.service],
         customer_id: customerDetails.auth_id // Add the auth_id as customer_id
       };
       
       console.log("Appointment data being sent:", randevuData);
 
+      // Create the appointment
       const newRandevu = await randevuServisi.ekle(randevuData);
+      console.log("New appointment created:", newRandevu);
       
       toast.success("Randevu başarıyla oluşturuldu");
       
@@ -460,7 +480,13 @@ export function StaffAppointmentForm({
                     <Calendar
                       mode="single"
                       selected={field.value}
-                      onSelect={(date) => date && field.onChange(date)}
+                      onSelect={(date) => {
+                        if (date) {
+                          field.onChange(date);
+                          // Reset time when date changes
+                          form.setValue('time', availableTimes.length > 0 ? availableTimes[0] : '');
+                        }
+                      }}
                       disabled={isDateDisabled}
                       initialFocus
                       locale={tr}

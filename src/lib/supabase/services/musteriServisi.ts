@@ -30,9 +30,15 @@ export const musteriServisi = {
   
   async getirById(id: number): Promise<Musteri | null> {
     try {
+      console.log(`Müşteri ID ${id} getiriliyor`);
+      
+      // First try to get the customer data with a join to profiles
       const { data, error } = await supabase
         .from('musteriler')
-        .select('*, profiles(id)')  // Join with profiles to get auth_id
+        .select(`
+          *,
+          profile:profiles(id)
+        `)
         .eq('id', id)
         .single();
       
@@ -41,12 +47,33 @@ export const musteriServisi = {
         return null;
       }
       
-      // Extract auth_id and merge with customer data
-      let customer = data as Musteri;
-      if (data.profiles) {
-        customer.auth_id = data.profiles.id;
+      console.log(`Müşteri ID ${id} verisi:`, data);
+      
+      // If profile data exists, extract auth_id
+      let customer = { ...data } as Musteri;
+      if (data.profile) {
+        customer.auth_id = data.profile.id;
+        console.log(`Müşteri auth_id bulundu: ${customer.auth_id}`);
+      } else {
+        console.log(`Müşteri için auth_id bulunamadı, profiles tablosunda manuel arama yapılıyor`);
+        
+        // If no profile record found through join, try to find a matching profile by name and phone
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name, phone')
+          .eq('first_name', data.first_name)
+          .eq('phone', data.phone || '')
+          .maybeSingle();
+        
+        if (!profilesError && profilesData) {
+          customer.auth_id = profilesData.id;
+          console.log(`Profiles tablosunda eşleşen kullanıcı bulundu: ${customer.auth_id}`);
+        } else {
+          console.log(`Profiles tablosunda eşleşen kullanıcı bulunamadı`);
+        }
       }
       
+      console.log(`Müşteri verisi hazırlandı:`, customer);
       return customer;
     } catch (err) {
       console.error(`ID ${id} müşteri getirme sırasında hata:`, err);

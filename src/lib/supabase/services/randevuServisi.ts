@@ -61,18 +61,38 @@ export const randevuServisi = {
   async ekle(randevu: Omit<Randevu, 'id' | 'created_at' | 'musteri' | 'personel'>) {
     console.log("Randevu ekle service received data:", randevu);
     
-    // Check for customer_id or musteri_id
-    if (!randevu.customer_id && !randevu.musteri_id) {
-      console.error("Required fields missing:", { customer_id: randevu.customer_id, musteri_id: randevu.musteri_id });
-      throw new Error("customer_id or musteri_id is required");
-    }
-
-    // Ensure islemler is an array even if only one service is selected
-    const islemler = Array.isArray(randevu.islemler) 
-      ? randevu.islemler 
-      : randevu.islemler ? [randevu.islemler] : [];
-
     try {
+      // Perform validation checks
+      if (!randevu.dukkan_id) {
+        console.error("Missing dukkan_id in randevu data", randevu);
+        throw new Error("dukkan_id is required");
+      }
+      
+      if (!randevu.musteri_id) {
+        console.error("Missing musteri_id in randevu data", randevu);
+        throw new Error("musteri_id is required");
+      }
+      
+      if (!randevu.personel_id) {
+        console.error("Missing personel_id in randevu data", randevu);
+        throw new Error("personel_id is required");
+      }
+      
+      if (!randevu.tarih || !randevu.saat) {
+        console.error("Missing date or time in randevu data", randevu);
+        throw new Error("tarih and saat are required");
+      }
+
+      // Ensure islemler is an array even if only one service is selected
+      const islemler = Array.isArray(randevu.islemler) 
+        ? randevu.islemler 
+        : randevu.islemler ? [randevu.islemler] : [];
+      
+      console.log("Formatted appointment data:", { 
+        ...randevu, 
+        islemler 
+      });
+
       const { data, error } = await supabase
         .from('randevular')
         .insert([{ 
@@ -93,9 +113,9 @@ export const randevuServisi = {
       
       console.log("Randevu başarıyla eklendi:", data);
       return data;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Randevu eklenirken hata:", error);
-      throw error;
+      throw new Error(error?.message || "Randevu oluşturulurken bir hata oluştu");
     }
   },
 
