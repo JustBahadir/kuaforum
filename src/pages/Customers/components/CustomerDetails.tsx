@@ -1,24 +1,81 @@
 
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CustomerOperationsTable } from "./CustomerOperationsTable";
-import { CustomerPreferences } from "./CustomerPreferences";
-import { Musteri } from "@/lib/supabase/types";
-import { formatPhoneNumber } from "@/utils/phoneFormatter";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Pencil, User, Calendar, Gift, Star } from "lucide-react";
+import { toast } from "sonner";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
+import { 
+  User, Calendar, Mail, Phone, MapPin, Briefcase, Edit, Save, Trash2, AlertTriangle
+} from "lucide-react";
+import { 
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle 
+} from "@/components/ui/alert-dialog";
+import { Musteri } from "@/lib/supabase/types";
+import { customerPersonalDataService, CustomerPersonalData, musteriServisi } from "@/lib/supabase";
+import { formatPhoneNumber } from "@/utils/phoneFormatter";
 
 interface CustomerDetailsProps {
   customer: Musteri;
+  dukkanId?: number;
   onEdit?: () => void;
+  onDelete?: () => void;
 }
 
-export function CustomerDetails({ customer, onEdit }: CustomerDetailsProps) {
-  const [activeTab, setActiveTab] = useState<string>("info");
+export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: CustomerDetailsProps) {
+  const [activeTab, setActiveTab] = useState<string>("basic");
+  const [editMode, setEditMode] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  
+  // Customer basic data form
+  const [formData, setFormData] = useState({
+    first_name: customer.first_name,
+    last_name: customer.last_name || "",
+    phone: customer.phone || "",
+    birthdate: customer.birthdate || ""
+  });
+  
+  // Customer personal data form
+  const [personalData, setPersonalData] = useState<CustomerPersonalData>({
+    customer_id: customer.id.toString(),
+    birth_date: null,
+    anniversary_date: null,
+    horoscope: null,
+    horoscope_description: null,
+    children_names: [],
+    custom_notes: null
+  });
+
+  // Fetch customer personal data
+  const { data: customerPersonalData, isLoading: isLoadingPersonalData } = useQuery({
+    queryKey: ['customerPersonalData', customer.id],
+    queryFn: async () => {
+      try {
+        return await customerPersonalDataService.getByCustomerId(customer.id.toString());
+      } catch (err) {
+        console.error("Customer personal data fetch error:", err);
+        return null;
+      }
+    }
+  });
+
+  // Update personal data state when fetched from API
+  useEffect(() => {
+    if (customerPersonalData) {
+      setPersonalData({
+        ...customerPersonalData,
+        customer_id: customer.id.toString()
+      });
+    }
+  }, [customerPersonalData, customer.id]);
 
   // Format date for display
   const formatDate = (dateString?: string | null) => {
@@ -30,48 +87,131 @@ export function CustomerDetails({ customer, onEdit }: CustomerDetailsProps) {
     }
   };
 
+  // Handle form input changes
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    
+    if (activeTab === "basic") {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    } else if (activeTab === "personal") {
+      setPersonalData(prev => ({ ...prev, [name]: value }));
+    }
+  };
+
   // Calculate customer's initials for avatar
   const getInitials = () => {
     if (!customer.first_name) return "?";
     return `${customer.first_name.charAt(0)}${customer.last_name ? customer.last_name.charAt(0) : ''}`;
   };
 
+  // Toggle edit mode
+  const handleEditToggle = () => {
+    setEditMode(!editMode);
+  };
+
+  // Save customer changes
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      // First save basic customer data
+      if (activeTab === "basic") {
+        await musteriServisi.guncelle(customer.id, formData);
+        toast.success("Müşteri bilgileri başarıyla güncellendi");
+      } 
+      // Save personal data
+      else if (activeTab === "personal") {
+        await customerPersonalDataService.upsert(personalData);
+        toast.success("Müşteri kişisel bilgileri başarıyla güncellendi");
+      }
+      
+      setEditMode(false);
+      if (onEdit) onEdit();
+    } catch (error: any) {
+      console.error("Error saving customer:", error);
+      toast.error(`Kaydetme hatası: ${error.message}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Delete customer
+  const handleDeleteCustomer = async () => {
+    try {
+      await musteriServisi.sil(customer.id);
+      toast.success("Müşteri başarıyla silindi");
+      setIsDeleteDialogOpen(false);
+      if (onDelete) onDelete();
+    } catch (error: any) {
+      console.error("Error deleting customer:", error);
+      toast.error(`Silme hatası: ${error.message}`);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="flex justify-between items-center">
-            <span>Müşteri Bilgileri</span>
-            <Button variant="ghost" size="sm" onClick={onEdit}>
-              <Pencil className="h-4 w-4 mr-1" />
-              Düzenle
-            </Button>
-          </CardTitle>
+          <div className="flex justify-between items-center">
+            <CardTitle>Müşteri Bilgileri</CardTitle>
+            <div className="flex gap-2">
+              {!editMode ? (
+                <Button variant="outline" size="sm" onClick={handleEditToggle}>
+                  <Edit className="h-4 w-4 mr-1" />
+                  Düzenle
+                </Button>
+              ) : (
+                <Button size="sm" onClick={handleSave} disabled={isSaving} className="bg-green-600 hover:bg-green-700">
+                  <Save className="h-4 w-4 mr-1" />
+                  {isSaving ? "Kaydediliyor..." : "Kaydet"}
+                </Button>
+              )}
+              <Button 
+                variant="destructive" 
+                size="sm" 
+                onClick={() => setIsDeleteDialogOpen(true)}
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                Sil
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="flex items-start space-x-4">
+          <div className="flex flex-col md:flex-row items-start gap-4">
             <Avatar className="h-20 w-20">
-              <AvatarFallback className="text-lg">{getInitials()}</AvatarFallback>
+              <AvatarFallback className="text-lg bg-purple-100 text-purple-600">{getInitials()}</AvatarFallback>
             </Avatar>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-y-4 gap-x-6 flex-1">
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6 flex-1">
               <div>
-                <h3 className="text-sm font-medium text-gray-500">AD SOYAD</h3>
-                <p className="mt-1 text-base">
+                <h3 className="text-sm font-medium text-gray-500 flex items-center gap-1">
+                  <User className="h-4 w-4" /> AD SOYAD
+                </h3>
+                <p className="mt-1 text-base font-medium">
                   {customer.first_name} {customer.last_name || ''} 
                 </p>
               </div>
+              
               <div>
-                <h3 className="text-sm font-medium text-gray-500">TELEFON</h3>
+                <h3 className="text-sm font-medium text-gray-500 flex items-center gap-1">
+                  <Phone className="h-4 w-4" /> TELEFON
+                </h3>
                 <p className="mt-1 text-base">
-                  {customer.phone && formatPhoneNumber(customer.phone) || '-'}
+                  {customer.phone ? formatPhoneNumber(customer.phone) : '-'}
                 </p>
               </div>
+              
               <div>
-                <h3 className="text-sm font-medium text-gray-500">DOĞUM TARİHİ</h3>
+                <h3 className="text-sm font-medium text-gray-500 flex items-center gap-1">
+                  <Calendar className="h-4 w-4" /> DOĞUM TARİHİ
+                </h3>
                 <p className="mt-1 text-base">{formatDate(customer.birthdate)}</p>
               </div>
+              
               <div>
-                <h3 className="text-sm font-medium text-gray-500">KAYIT TARİHİ</h3>
+                <h3 className="text-sm font-medium text-gray-500 flex items-center gap-1">
+                  <Calendar className="h-4 w-4" /> KAYIT TARİHİ
+                </h3>
                 <p className="mt-1 text-base">{formatDate(customer.created_at)}</p>
               </div>
             </div>
@@ -80,48 +220,200 @@ export function CustomerDetails({ customer, onEdit }: CustomerDetailsProps) {
       </Card>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid grid-cols-3 mb-4">
-          <TabsTrigger value="info" className="flex items-center">
+        <TabsList className="grid grid-cols-2 mb-4">
+          <TabsTrigger value="basic" className="flex items-center">
             <User className="h-4 w-4 mr-2" />
-            Kişisel Bilgiler
+            Temel Bilgiler
           </TabsTrigger>
-          <TabsTrigger value="operations" className="flex items-center">
+          <TabsTrigger value="personal" className="flex items-center">
             <Calendar className="h-4 w-4 mr-2" />
-            İşlem Geçmişi
-          </TabsTrigger>
-          <TabsTrigger value="preferences" className="flex items-center">
-            <Star className="h-4 w-4 mr-2" />
-            Tercihler
+            Detaylı Bilgiler
           </TabsTrigger>
         </TabsList>
         
-        <TabsContent value="info" className="space-y-4">
+        <TabsContent value="basic" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Kişisel Detaylar</CardTitle>
+              <CardTitle>Müşteri Temel Bilgileri</CardTitle>
             </CardHeader>
-            <CardContent>
-              <CustomerPersonalInfo customerId={customer.id} />
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="first_name">Ad</Label>
+                  <Input 
+                    id="first_name" 
+                    name="first_name" 
+                    value={formData.first_name} 
+                    onChange={handleChange}
+                    disabled={!editMode}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="last_name">Soyad</Label>
+                  <Input 
+                    id="last_name" 
+                    name="last_name" 
+                    value={formData.last_name} 
+                    onChange={handleChange}
+                    disabled={!editMode}
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Telefon</Label>
+                  <Input 
+                    id="phone" 
+                    name="phone" 
+                    value={formData.phone} 
+                    onChange={handleChange}
+                    disabled={!editMode}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="birthdate">Doğum Tarihi</Label>
+                  <Input 
+                    id="birthdate" 
+                    name="birthdate" 
+                    type="date" 
+                    value={formData.birthdate || ''} 
+                    onChange={handleChange}
+                    disabled={!editMode}
+                  />
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
         
-        <TabsContent value="operations" className="space-y-4">
-          <CustomerOperationsTable customerId={customer.id.toString()} />
-        </TabsContent>
-        
-        <TabsContent value="preferences" className="space-y-4">
-          <CustomerPreferences customerId={customer.id.toString()} />
+        <TabsContent value="personal" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Kişisel Detaylar</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {isLoadingPersonalData ? (
+                <div className="p-8 text-center">Bilgiler yükleniyor...</div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="birth_date">Doğum Tarihi (Düzeltme)</Label>
+                      <Input 
+                        id="birth_date" 
+                        name="birth_date" 
+                        type="date" 
+                        value={personalData.birth_date || ''} 
+                        onChange={handleChange}
+                        disabled={!editMode}
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="anniversary_date">Yıldönümü/Evlilik Tarihi</Label>
+                      <Input 
+                        id="anniversary_date" 
+                        name="anniversary_date" 
+                        type="date" 
+                        value={personalData.anniversary_date || ''} 
+                        onChange={handleChange}
+                        disabled={!editMode}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="horoscope">Burç</Label>
+                      <Input 
+                        id="horoscope" 
+                        name="horoscope" 
+                        value={personalData.horoscope || ''} 
+                        onChange={handleChange}
+                        disabled={!editMode}
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="horoscope_description">Burç Özellikleri</Label>
+                      <Input 
+                        id="horoscope_description" 
+                        name="horoscope_description" 
+                        value={personalData.horoscope_description || ''} 
+                        onChange={handleChange}
+                        disabled={!editMode}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="children_names">Çocuklarının İsimleri (virgülle ayırın)</Label>
+                    <Input 
+                      id="children_names" 
+                      name="children_names" 
+                      value={personalData.children_names?.join(', ') || ''} 
+                      onChange={(e) => {
+                        const names = e.target.value.split(',').map(name => name.trim());
+                        setPersonalData(prev => ({ ...prev, children_names: names }));
+                      }}
+                      disabled={!editMode}
+                      placeholder="Ali, Ayşe, Mehmet"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="custom_notes">Notlar</Label>
+                    <Textarea 
+                      id="custom_notes" 
+                      name="custom_notes" 
+                      value={personalData.custom_notes || ''} 
+                      onChange={handleChange}
+                      disabled={!editMode}
+                      rows={4}
+                      placeholder="Müşteri hakkında özel notlar..."
+                    />
+                  </div>
+                </>
+              )}
+            </CardContent>
+            {editMode && (
+              <CardFooter className="flex justify-end">
+                <Button onClick={handleSave} disabled={isSaving} className="bg-green-600 hover:bg-green-700">
+                  <Save className="h-4 w-4 mr-1" />
+                  {isSaving ? "Kaydediliyor..." : "Değişiklikleri Kaydet"}
+                </Button>
+              </CardFooter>
+            )}
+          </Card>
         </TabsContent>
       </Tabs>
-    </div>
-  );
-}
-
-function CustomerPersonalInfo({ customerId }: { customerId: number }) {
-  return (
-    <div className="space-y-4">
-      <p className="text-muted-foreground">Bu müşteri için ek kişisel bilgi kaydedilmemiş.</p>
+      
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              Müşteri Kaydını Sil
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              <span className="font-medium text-black">{customer.first_name} {customer.last_name}</span> adlı müşteriye ait tüm bilgiler kalıcı olarak silinecektir. Bu işlem geri alınamaz. Devam etmek istediğinize emin misiniz?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>İptal Et</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteCustomer}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Evet, Sil
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

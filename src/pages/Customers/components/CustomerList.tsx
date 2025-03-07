@@ -67,7 +67,8 @@ export function CustomerList({ customers, isLoading, onSelectCustomer }: Custome
             </TableHeader>
             <TableBody>
               {customers.map((customer) => (
-                <TableRow key={customer.id} className="cursor-pointer hover:bg-gray-50"
+                <TableRow key={customer.id} 
+                  className="cursor-pointer hover:bg-gray-50"
                   onClick={() => onSelectCustomer && onSelectCustomer(customer)}>
                   <TableCell className="font-medium">
                     {customer.first_name} {customer.last_name || ""}

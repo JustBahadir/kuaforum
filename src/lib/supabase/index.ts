@@ -1,3 +1,4 @@
+
 // Hizmetleri export et
 export * from './client';
 export * from './types';
@@ -12,3 +13,4 @@ export { bildirimServisi } from './services/bildirimServisi';
 export { calismaSaatleriServisi } from './services/calismaSaatleriServisi';
 export { profilServisi } from './services/profilServisi';
 export { siralamaServisi } from './services/siralamaServisi';
+export { customerPersonalDataService } from './services/customerPersonalDataService';
