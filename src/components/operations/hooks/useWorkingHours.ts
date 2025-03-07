@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -39,39 +40,20 @@ export function useWorkingHours(
         if (!data || data.length === 0) {
           // Create default working hours
           data = gunSiralama.map((gun, index) => ({
-            id: index,
+            id: -(index + 1), // Using negative IDs to indicate these are temporary
             gun,
             acilis: "09:00",
             kapanis: "18:00",
             kapali: false,
             dukkan_id: dukkanId || 0
           }));
-          
-          // If we have a shop ID, save these default hours
-          if (dukkanId) {
-            try {
-              await calismaSaatleriServisi.guncelle(data);
-              console.log("Created default working hours for shop:", dukkanId);
-            } catch (err) {
-              console.error("Error creating default working hours:", err);
-            }
-          }
         }
         
         console.log("Working hours retrieved:", data);
         return data;
       } catch (err) {
         console.error("Error fetching working hours:", err);
-        
-        // Return default working hours in case of error
-        return gunSiralama.map((gun, index) => ({
-          id: index,
-          gun,
-          acilis: "09:00",
-          kapanis: "18:00",
-          kapali: false,
-          dukkan_id: dukkanId || 0
-        }));
+        throw err;
       }
     },
     staleTime: 30000 // 30 seconds
@@ -92,23 +74,28 @@ export function useWorkingHours(
     mutationFn: async ({ id, updates }: { id: number; updates: Partial<CalismaSaati> }) => {
       console.log("Updating working hours:", id, updates);
       
-      if (id < 0 || id >= 1000) {
-        // This is a temporary ID, need to create new record
-        const newSaat = {
-          gun: updates.gun || "",
-          acilis: updates.kapali ? null : (updates.acilis || "09:00"),
-          kapanis: updates.kapali ? null : (updates.kapanis || "18:00"),
-          kapali: updates.kapali || false,
-          dukkan_id: dukkanId || 0
-        };
+      try {
+        if (id < 0) {
+          // This is a temporary ID, need to create new record
+          const newSaat = {
+            gun: updates.gun || "",
+            acilis: updates.kapali ? null : (updates.acilis || "09:00"),
+            kapanis: updates.kapali ? null : (updates.kapanis || "18:00"),
+            kapali: updates.kapali || false,
+            dukkan_id: dukkanId || 0
+          };
+          
+          const result = await calismaSaatleriServisi.ekle(newSaat);
+          return { id, updates, result };
+        }
         
-        const result = await calismaSaatleriServisi.ekle(newSaat);
+        // Use the dedicated single update method for existing records
+        const result = await calismaSaatleriServisi.tekGuncelle(id, updates);
         return { id, updates, result };
+      } catch (error) {
+        console.error("Error updating working hours:", error);
+        throw error;
       }
-      
-      // Use the dedicated single update method for existing records
-      const result = await calismaSaatleriServisi.tekGuncelle(id, updates);
-      return { id, updates, result };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['calisma_saatleri'] });
@@ -116,7 +103,15 @@ export function useWorkingHours(
         queryClient.invalidateQueries({ queryKey: ['calisma_saatleri', dukkanId] });
         queryClient.invalidateQueries({ queryKey: ['dukkan_saatleri', dukkanId] });
       }
-      refetch();
+      
+      // Reset editing state
+      setEditing(null);
+      setTempChanges(prev => {
+        const updated = {...prev};
+        delete updated[data.id];
+        return updated;
+      });
+      
       toast.success('Çalışma saati güncellendi');
       console.log("Update successful:", data);
     },
@@ -145,17 +140,17 @@ export function useWorkingHours(
   };
 
   const saveChanges = async (id: number) => {
-    const saat = calismaSaatleri.find(s => {
-      return s.id === id || (typeof s.id === 'string' && parseInt(s.id) === id);
-    });
-    
-    if (!saat) {
-      console.error(`Saat ID ${id} bulunamadı`);
-      toast.error("Çalışma saati bulunamadı");
-      return;
-    }
-
     try {
+      const saat = calismaSaatleri.find(s => {
+        return s.id === id || (typeof s.id === 'string' && parseInt(s.id) === id);
+      });
+      
+      if (!saat) {
+        console.error(`Saat ID ${id} bulunamadı`);
+        toast.error("Çalışma saati bulunamadı");
+        return;
+      }
+
       if (onChange) {
         // For external controlled components
         const index = calismaSaatleri.findIndex(s => {
@@ -167,6 +162,14 @@ export function useWorkingHours(
             onChange(index, key as keyof CalismaSaati, tempChanges[id][key as keyof CalismaSaati]);
           });
         }
+        
+        // Reset editing state for controlled components
+        setEditing(null);
+        setTempChanges(prev => {
+          const updated = {...prev};
+          delete updated[id];
+          return updated;
+        });
       } else {
         // For internal updates with Supabase
         if (tempChanges[id] && Object.keys(tempChanges[id]).length > 0) {
@@ -180,15 +183,17 @@ export function useWorkingHours(
           };
           
           await saatGuncelle({ id, updates });
+          // Don't reset editing state here as it's handled in the mutation's onSuccess
+        } else {
+          // If no changes, just exit edit mode
+          setEditing(null);
+          setTempChanges(prev => {
+            const updated = {...prev};
+            delete updated[id];
+            return updated;
+          });
         }
       }
-      
-      setEditing(null);
-      setTempChanges(prev => {
-        const updated = {...prev};
-        delete updated[id];
-        return updated;
-      });
     } catch (error) {
       console.error("Çalışma saati kaydedilirken hata:", error);
       toast.error("Güncelleme sırasında bir hata oluştu");

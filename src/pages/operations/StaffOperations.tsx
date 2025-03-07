@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { kategoriServisi, islemServisi, siralamaServisi } from "@/lib/supabase";
@@ -8,8 +7,22 @@ import { WorkingHours } from "@/components/operations/WorkingHours";
 import { toast } from "sonner";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
+import { useLocation } from "react-router-dom";
 
 export default function StaffOperations() {
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState<string>("hizmetler");
+  const { dukkanId } = useCustomerAuth();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tabParam = params.get('tab');
+    if (tabParam === 'calisma-saatleri') {
+      setActiveTab('calisma-saatleri');
+    }
+  }, [location.search]);
+
   const [islemAdi, setIslemAdi] = useState("");
   const [fiyat, setFiyat] = useState<number>(0);
   const [puan, setPuan] = useState<number>(0);
@@ -22,9 +35,6 @@ export default function StaffOperations() {
   const [duzenleKategoriAdi, setDuzenleKategoriAdi] = useState("");
   const [kategoriDuzenleDialogAcik, setKategoriDuzenleDialogAcik] = useState(false);
   const [puanlamaAktif, setPuanlamaAktif] = useState(true);
-  const { dukkanId } = useCustomerAuth();
-
-  const queryClient = useQueryClient();
 
   const { data: kategoriler = [] } = useQuery({
     queryKey: ['kategoriler'],
@@ -205,7 +215,7 @@ export default function StaffOperations() {
   return (
     <StaffLayout>
       <div className="container mx-auto py-6">
-        <Tabs defaultValue="hizmetler">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
             <TabsTrigger value="hizmetler">Hizmetler</TabsTrigger>
             <TabsTrigger value="calisma-saatleri">Çalışma Saatleri</TabsTrigger>
