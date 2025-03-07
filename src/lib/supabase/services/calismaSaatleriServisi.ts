@@ -18,7 +18,7 @@ export const calismaSaatleriServisi = {
 
       if (error) {
         console.error("Çalışma saatleri getirme hatası:", error);
-        throw error;
+        return [];
       }
       
       // Sort by predefined day order
@@ -29,7 +29,7 @@ export const calismaSaatleriServisi = {
       });
     } catch (err) {
       console.error("Çalışma saatleri getirme sırasında hata:", err);
-      throw err;
+      return [];
     }
   },
   
@@ -47,12 +47,12 @@ export const calismaSaatleriServisi = {
       
       const { data, error } = await supabase
         .from('calisma_saatleri')
-        .upsert(validSaatler, { onConflict: 'dukkan_id,gun' })
+        .upsert(validSaatler)
         .select();
 
       if (error) {
         console.error("Çalışma saatleri güncelleme hatası:", error);
-        throw error;
+        return [];
       }
       
       console.log("Güncelleme sonucu:", data);
@@ -65,7 +65,7 @@ export const calismaSaatleriServisi = {
       });
     } catch (err) {
       console.error("Güncelleme işlemi sırasında hata:", err);
-      throw err;
+      return [];
     }
   },
   
@@ -105,13 +105,6 @@ export const calismaSaatleriServisi = {
   
   async ekle(saat: Omit<CalismaSaati, "id">) {
     try {
-      console.log("Eklenecek çalışma saati:", saat);
-      
-      // Validate required fields
-      if (!saat.gun || !saat.dukkan_id) {
-        throw new Error("Gün ve dükkan ID zorunludur");
-      }
-
       const { data, error } = await supabase
         .from('calisma_saatleri')
         .insert([saat])
@@ -122,7 +115,6 @@ export const calismaSaatleriServisi = {
         throw error;
       }
       
-      console.log("Ekleme sonucu:", data);
       return data[0];
     } catch (err) {
       console.error("Çalışma saati eklenirken hata:", err);
@@ -134,7 +126,7 @@ export const calismaSaatleriServisi = {
     try {
       if (!dukkanId) {
         console.warn("Dükkan ID gerekli");
-        throw new Error("Dükkan ID gerekli");
+        return [];
       }
       
       console.log(`Dükkan ${dukkanId} için çalışma saatleri getiriliyor`);
@@ -146,13 +138,14 @@ export const calismaSaatleriServisi = {
 
       if (error) {
         console.error("Dükkan saatleri getirme hatası:", error);
-        throw error;
+        return this.getDefaultWorkingHours(dukkanId);
       }
       
       console.log(`Dükkan ${dukkanId} için çalışma saatleri:`, data);
       
       if (!data || data.length === 0) {
-        // If no hours found, return default hours
+        // If no hours found, return default hours without trying to create them in DB
+        // This avoids potential error loops
         return this.getDefaultWorkingHours(dukkanId);
       }
       

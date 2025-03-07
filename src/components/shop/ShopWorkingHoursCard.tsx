@@ -9,7 +9,6 @@ import { calismaSaatleriServisi } from "@/lib/supabase/services/calismaSaatleriS
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 
 interface ShopWorkingHoursCardProps {
   calisma_saatleri: any[];
@@ -18,8 +17,6 @@ interface ShopWorkingHoursCardProps {
 }
 
 export function ShopWorkingHoursCard({ calisma_saatleri = [], userRole, dukkanId }: ShopWorkingHoursCardProps) {
-  const navigate = useNavigate();
-  
   // Fetch working hours directly if not provided or empty
   const { data: fetchedSaatler = [], isLoading, error } = useQuery({
     queryKey: ['dukkan_saatleri', dukkanId],
@@ -30,6 +27,18 @@ export function ShopWorkingHoursCard({ calisma_saatleri = [], userRole, dukkanId
       try {
         const data = await calismaSaatleriServisi.dukkanSaatleriGetir(dukkanId);
         console.log("Fetched working hours:", data);
+        
+        // If no data returned, provide default hours
+        if (!data || data.length === 0) {
+          return gunSiralama.map(gun => ({
+            gun,
+            acilis: "09:00",
+            kapanis: "18:00",
+            kapali: false,
+            dukkan_id: dukkanId
+          }));
+        }
+        
         return data;
       } catch (err) {
         console.error("Error fetching shop working hours:", err);
@@ -59,11 +68,6 @@ export function ShopWorkingHoursCard({ calisma_saatleri = [], userRole, dukkanId
   const formatTime = (time: string | null) => {
     if (!time) return "-";
     return time.substring(0, 5);
-  };
-
-  // Navigate to working hours management page
-  const handleEditHours = () => {
-    navigate("/admin/operations?tab=calisma-saatleri");
   };
 
   // Always sort days based on our predefined array order
@@ -98,7 +102,7 @@ export function ShopWorkingHoursCard({ calisma_saatleri = [], userRole, dukkanId
           <Button 
             variant="outline" 
             size="sm" 
-            onClick={handleEditHours}
+            onClick={() => window.location.href = "/admin/operations"}
           >
             <Edit className="h-4 w-4 mr-2" />
             Düzenle

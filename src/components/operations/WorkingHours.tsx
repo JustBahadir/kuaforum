@@ -8,7 +8,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useEffect } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { toast } from 'sonner';
-import { calismaSaatleriServisi } from '@/lib/supabase/services/calismaSaatleriServisi';
 
 interface WorkingHoursProps {
   isStaff?: boolean;
@@ -38,9 +37,13 @@ export function WorkingHours({ isStaff = true, gunler = [], dukkanId, onChange }
   useEffect(() => {
     if (error) {
       console.error("WorkingHours component error:", error);
-      toast.error("Çalışma saatleri yüklenirken bir hata oluştu. Tekrar deneyin.");
+      uiToast({
+        variant: "destructive",
+        title: "Hata",
+        description: "Çalışma saatleri yüklenirken bir hata oluştu."
+      });
     }
-  }, [error]);
+  }, [error, uiToast]);
 
   // If no working hours exist, show skeleton while loading
   if (isLoading) {
@@ -55,30 +58,6 @@ export function WorkingHours({ isStaff = true, gunler = [], dukkanId, onChange }
       </div>
     );
   }
-
-  // If loaded but no data, create default working hours for the current shop
-  useEffect(() => {
-    const createDefaultHours = async () => {
-      if (!isLoading && calismaSaatleri.length === 0 && dukkanId && isStaff) {
-        try {
-          const defaultHours = gunSiralama.map(gun => ({
-            gun,
-            acilis: "09:00",
-            kapanis: "18:00",
-            kapali: false,
-            dukkan_id: dukkanId
-          }));
-          
-          await calismaSaatleriServisi.guncelle(defaultHours);
-          refetch();
-        } catch (error) {
-          console.error("Varsayılan çalışma saatleri oluşturulurken hata:", error);
-        }
-      }
-    };
-    
-    createDefaultHours();
-  }, [isLoading, calismaSaatleri.length, dukkanId, isStaff, refetch]);
 
   return (
     <div className="border rounded-lg overflow-hidden">
@@ -96,7 +75,29 @@ export function WorkingHours({ isStaff = true, gunler = [], dukkanId, onChange }
           {calismaSaatleri.length === 0 ? (
             <TableRow>
               <TableCell colSpan={isStaff ? 5 : 3} className="text-center py-6 text-gray-500">
-                Çalışma saatleri yükleniyor...
+                {gunSiralama.map((gun, index) => (
+                  <WorkingHoursRow
+                    key={index}
+                    saat={{
+                      id: index,
+                      gun,
+                      acilis: "09:00",
+                      kapanis: "18:00",
+                      kapali: false,
+                      dukkan_id: dukkanId || 0
+                    }}
+                    index={index}
+                    isStaff={isStaff}
+                    editing={editing}
+                    isUpdating={isUpdating}
+                    tempChanges={tempChanges}
+                    onStartEditing={startEditing}
+                    onTempChange={handleTempChange}
+                    onSaveChanges={saveChanges}
+                    onCancelEditing={cancelEditing}
+                    onStatusToggle={handleStatusToggle}
+                  />
+                ))}
               </TableCell>
             </TableRow>
           ) : (
