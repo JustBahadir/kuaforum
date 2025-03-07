@@ -5,26 +5,33 @@ import { WorkingHoursRow } from './WorkingHoursRow';
 import { useWorkingHours } from './hooks/useWorkingHours';
 import { gunSiralama } from './constants/workingDays';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useEffect } from 'react';
+import { useToast } from '@/components/ui/use-toast';
 
 interface WorkingHoursProps {
   isStaff?: boolean;
   gunler?: CalismaSaati[];
+  dukkanId?: number;
   onChange?: (index: number, field: keyof CalismaSaati, value: any) => void;
 }
 
-export function WorkingHours({ isStaff = true, gunler = [], onChange }: WorkingHoursProps) {
+export function WorkingHours({ isStaff = true, gunler = [], dukkanId, onChange }: WorkingHoursProps) {
+  const { toast } = useToast();
+  
   const { 
     calismaSaatleri, 
     editing, 
     tempChanges,
     isLoading,
+    isUpdating,
     error,
     startEditing,
     handleTempChange,
     saveChanges,
-    cancelEditing
+    cancelEditing,
+    handleStatusToggle
   } = useWorkingHours(isStaff, gunler, onChange);
-
+  
   if (isLoading) {
     return (
       <div className="border rounded-lg overflow-hidden p-4">
@@ -66,18 +73,20 @@ export function WorkingHours({ isStaff = true, gunler = [], onChange }: WorkingH
               </TableCell>
             </TableRow>
           ) : (
-            calismaSaatleri.map((saat: CalismaSaati, index: number) => (
+            calismaSaatleri.map((saat, index) => (
               <WorkingHoursRow
-                key={saat.id !== undefined ? saat.id : index}
+                key={typeof saat.id !== 'undefined' ? saat.id : index}
                 saat={saat}
                 index={index}
                 isStaff={isStaff}
                 editing={editing}
+                isUpdating={isUpdating}
                 tempChanges={tempChanges}
                 onStartEditing={startEditing}
                 onTempChange={handleTempChange}
                 onSaveChanges={saveChanges}
                 onCancelEditing={cancelEditing}
+                onStatusToggle={handleStatusToggle}
               />
             ))
           )}

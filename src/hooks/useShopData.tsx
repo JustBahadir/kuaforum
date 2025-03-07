@@ -102,17 +102,18 @@ export function useShopData(dukkanId: number | null) {
     enabled: !!dukkanId || !!dukkanData?.id
   });
 
-  const { data: calisma_saatleri = [] } = useQuery({
-    queryKey: ['calisma_saatleri'],
+  const { data: calisma_saatleri = [], isLoading: isLoadingSaatler } = useQuery({
+    queryKey: ['calisma_saatleri', dukkanData?.id],
     queryFn: async () => {
       try {
         const { data, error } = await supabase
           .from('calisma_saatleri')
-          .select('*');
+          .select('*')
+          .eq('dukkan_id', dukkanData?.id || dukkanId);
           
         if (error) throw error;
         
-        return data.sort((a, b) => {
+        return (data || []).sort((a, b) => {
           const aIndex = gunSiralama.indexOf(a.gun);
           const bIndex = gunSiralama.indexOf(b.gun);
           return aIndex - bIndex;
@@ -121,8 +122,17 @@ export function useShopData(dukkanId: number | null) {
         console.error("Çalışma saatleri alınırken hata:", error);
         return [];
       }
-    }
+    },
+    enabled: !!dukkanData?.id || !!dukkanId
   });
 
-  return { dukkanData, setDukkanData, loading, error, personelListesi, calisma_saatleri };
+  return { 
+    dukkanData, 
+    setDukkanData, 
+    loading, 
+    error, 
+    personelListesi, 
+    calisma_saatleri,
+    isLoadingSaatler
+  };
 }

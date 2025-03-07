@@ -12,11 +12,13 @@ interface WorkingHoursRowProps {
   index: number;
   isStaff: boolean;
   editing: number | null;
+  isUpdating?: boolean; 
   tempChanges: Record<number, Partial<CalismaSaati>>;
   onStartEditing: (id: number) => void;
   onTempChange: (id: number, field: keyof CalismaSaati, value: any) => void;
   onSaveChanges: (id: number) => void;
   onCancelEditing: (id: number) => void;
+  onStatusToggle?: (id: number, isOpen: boolean) => void;
 }
 
 export function WorkingHoursRow({
@@ -24,41 +26,45 @@ export function WorkingHoursRow({
   index,
   isStaff,
   editing,
+  isUpdating = false,
   tempChanges,
   onStartEditing,
   onTempChange,
   onSaveChanges,
-  onCancelEditing
+  onCancelEditing,
+  onStatusToggle
 }: WorkingHoursRowProps) {
   // Ensure we have a numeric ID for comparisons
   const saatId = typeof saat.id === 'number' ? saat.id : Number(saat.id);
-  const uniqueId = isNaN(saatId) ? index : saatId;
+  const isEditing = editing === saatId;
   
-  const isEditing = editing === uniqueId;
-  const isKapali = (tempChanges[uniqueId]?.kapali !== undefined) 
-    ? tempChanges[uniqueId].kapali 
+  // Get current status (either from temp changes or from the original data)
+  const isKapali = (tempChanges[saatId]?.kapali !== undefined) 
+    ? tempChanges[saatId].kapali 
     : saat.kapali;
 
   const handleStatusToggle = (checked: boolean) => {
-    const newStatus = !checked;
     if (isEditing) {
-      onTempChange(uniqueId, 'kapali', newStatus);
-    } else if (isStaff) {
-      // For direct toggle without edit mode
-      onTempChange(uniqueId, 'kapali', newStatus);
+      // In edit mode, just update the temp changes
+      onTempChange(saatId, 'kapali', !checked);
       
-      // If shop is closed, clear open/close times
-      if (newStatus) {
-        onTempChange(uniqueId, 'acilis', null);
-        onTempChange(uniqueId, 'kapanis', null);
+      // Clear times if closed
+      if (!checked) {
+        onTempChange(saatId, 'acilis', null);
+        onTempChange(saatId, 'kapanis', null);
+      } else if (!saat.acilis && !saat.kapanis) {
+        // Set default times if opening and no times exist
+        onTempChange(saatId, 'acilis', "09:00");
+        onTempChange(saatId, 'kapanis', "18:00");
       }
-      
-      onSaveChanges(uniqueId);
+    } else if (isStaff && onStatusToggle) {
+      // Direct toggle without edit mode
+      onStatusToggle(saatId, checked);
     }
   };
 
   return (
-    <TableRow key={uniqueId} className="hover:bg-gray-50">
+    <TableRow key={saatId} className="hover:bg-gray-50">
       <TableCell className="font-medium">
         {gunIsimleri[saat.gun] || saat.gun}
       </TableCell>
@@ -66,10 +72,10 @@ export function WorkingHoursRow({
         {isEditing ? (
           <Input
             type="time"
-            value={(tempChanges[uniqueId]?.acilis !== undefined) 
-              ? tempChanges[uniqueId].acilis || "" 
+            value={(tempChanges[saatId]?.acilis !== undefined) 
+              ? tempChanges[saatId].acilis || "" 
               : saat.acilis || ""}
-            onChange={(e) => onTempChange(uniqueId, 'acilis', e.target.value)}
+            onChange={(e) => onTempChange(saatId, 'acilis', e.target.value)}
             disabled={isKapali}
             className="w-32"
           />
@@ -81,10 +87,10 @@ export function WorkingHoursRow({
         {isEditing ? (
           <Input
             type="time"
-            value={(tempChanges[uniqueId]?.kapanis !== undefined) 
-              ? tempChanges[uniqueId].kapanis || "" 
+            value={(tempChanges[saatId]?.kapanis !== undefined) 
+              ? tempChanges[saatId].kapanis || "" 
               : saat.kapanis || ""}
-            onChange={(e) => onTempChange(uniqueId, 'kapanis', e.target.value)}
+            onChange={(e) => onTempChange(saatId, 'kapanis', e.target.value)}
             disabled={isKapali}
             className="w-32"
           />
@@ -97,7 +103,7 @@ export function WorkingHoursRow({
           <Switch
             checked={!isKapali}
             onCheckedChange={(checked) => handleStatusToggle(checked)}
-            disabled={!isStaff || (isStaff && !isEditing && editing !== null)}
+            disabled={!isStaff || (isStaff && !isEditing && editing !== null) || isUpdating}
           />
           <span className="text-sm text-gray-600">
             {isKapali ? "Kapalı" : "Açık"}
@@ -111,7 +117,8 @@ export function WorkingHoursRow({
               <Button
                 variant="default"
                 size="sm"
-                onClick={() => onSaveChanges(uniqueId)}
+                onClick={() => onSaveChanges(saatId)}
+                disabled={isUpdating}
               >
                 <Save className="h-4 w-4 mr-1" />
                 Kaydet
@@ -119,7 +126,8 @@ export function WorkingHoursRow({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => onCancelEditing(uniqueId)}
+                onClick={() => onCancelEditing(saatId)}
+                disabled={isUpdating}
               >
                 <X className="h-4 w-4 mr-1" />
                 İptal
@@ -129,8 +137,8 @@ export function WorkingHoursRow({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => onStartEditing(uniqueId)}
-              disabled={editing !== null && editing !== uniqueId}
+              onClick={() => onStartEditing(saatId)}
+              disabled={(editing !== null && editing !== saatId) || isUpdating}
             >
               <Edit className="h-4 w-4 mr-1" />
               Düzenle
