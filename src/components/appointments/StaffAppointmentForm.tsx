@@ -140,7 +140,7 @@ export function StaffAppointmentForm({
   });
 
   const { data: calismaSaatleri = [] } = useQuery({
-    queryKey: ["calisma_saatleri"],
+    queryKey: ["calisma_saatleri", dukkanId],
     queryFn: async () => {
       try {
         console.log("StaffAppointmentForm: Fetching working hours for shop ID:", dukkanId);
@@ -261,12 +261,14 @@ export function StaffAppointmentForm({
         return;
       }
       
-      // Prepare appointment data
+      // Prepare appointment data with proper format
+      const formattedDate = format(data.date, 'yyyy-MM-dd');
+      
       const randevuData = {
         dukkan_id: dukkanId,
         musteri_id: data.customerId,
         personel_id: parseInt(data.personnel),
-        tarih: format(data.date, 'yyyy-MM-dd'),
+        tarih: formattedDate,
         saat: data.time,
         durum: "onaylandi" as const,
         notlar: data.notes || "",
@@ -276,19 +278,24 @@ export function StaffAppointmentForm({
       
       console.log("Appointment data being sent:", randevuData);
 
-      // Create the appointment
-      const newRandevu = await randevuServisi.ekle(randevuData);
-      console.log("New appointment created:", newRandevu);
-      
-      toast.success("Randevu başarıyla oluşturuldu");
-      
-      if (onAppointmentCreated) {
-        onAppointmentCreated(newRandevu);
+      // Create the appointment with error handling
+      try {
+        const newRandevu = await randevuServisi.ekle(randevuData);
+        console.log("New appointment created:", newRandevu);
+        
+        toast.success("Randevu başarıyla oluşturuldu");
+        
+        if (onAppointmentCreated && newRandevu) {
+          onAppointmentCreated(newRandevu);
+        }
+      } catch (error: any) {
+        console.error("Randevu oluşturulurken hata:", error);
+        toast.error(error.message || "Randevu oluşturulurken bir hata oluştu");
       }
       
-    } catch (error) {
+    } catch (error: any) {
       console.error("Randevu oluşturulurken hata:", error);
-      toast.error("Randevu oluşturulurken bir hata oluştu");
+      toast.error(error.message || "Randevu oluşturulurken bir hata oluştu");
     } finally {
       setSubmitting(false);
     }
@@ -519,7 +526,7 @@ export function StaffAppointmentForm({
                     <SelectValue placeholder={
                       availableTimes.length === 0 
                         ? "Bu gün için uygun saat yok" 
-                        : "Saat se��in"
+                        : "Saat seçin"
                     } />
                   </SelectTrigger>
                   <SelectContent className="h-[200px]">

@@ -36,9 +36,8 @@ export function useWorkingHours(
           data = await calismaSaatleriServisi.hepsiniGetir();
         }
         
-        // If no data returned, create default working hours
+        // If no data returned, use default working hours but don't save them yet
         if (!data || data.length === 0) {
-          // Create default working hours
           data = gunSiralama.map((gun, index) => ({
             id: -(index + 1), // Negative IDs for unsaved records
             gun,
@@ -65,6 +64,7 @@ export function useWorkingHours(
         }));
       }
     },
+    refetchOnWindowFocus: false,
     staleTime: 30000 // 30 seconds
   });
 
@@ -124,11 +124,17 @@ export function useWorkingHours(
       queryClient.invalidateQueries({ queryKey: ['calisma_saatleri'] });
       if (dukkanId) {
         queryClient.invalidateQueries({ queryKey: ['calisma_saatleri', dukkanId] });
-        queryClient.invalidateQueries({ queryKey: ['dukkan_saatleri', dukkanId] });
       }
-      refetch();
-      toast.success('Çalışma saati güncellendi');
-      console.log("Update successful:", data);
+      
+      // Only show success message if data was really updated
+      if (data?.result) {
+        toast.success('Çalışma saati güncellendi');
+        console.log("Update successful:", data);
+        // Manually refresh data to show updated values
+        setTimeout(() => refetch(), 500);
+      } else {
+        toast.error('Güncelleme sırasında bir hata oluştu');
+      }
     },
     onError: (error) => {
       console.error("Çalışma saati güncellenirken hata:", error);
@@ -193,6 +199,8 @@ export function useWorkingHours(
           };
           
           await saatGuncelle({ id, updates });
+        } else {
+          toast.info("Değişiklik yapılmadı");
         }
       }
       
@@ -219,7 +227,7 @@ export function useWorkingHours(
 
   const handleStatusToggle = async (id: number, isOpen: boolean) => {
     try {
-      console.log(`Toggling status for ID ${id}, current isOpen:`, isOpen);
+      console.log(`Toggling status for ID ${id}, setting to isOpen:`, isOpen);
       
       // Find the current day record
       const currentDay = sortedSaatler.find(s => s.id === id);
@@ -235,10 +243,10 @@ export function useWorkingHours(
       };
       
       // If closing, clear times
-      if (isOpen) { // We're toggling from open to closed
+      if (!isOpen) { // We're toggling to closed
         updates.acilis = null;
         updates.kapanis = null;
-      } else { // We're toggling from closed to open
+      } else { // We're toggling to open
         // If opening, set default times
         updates.acilis = "09:00";
         updates.kapanis = "18:00";
@@ -246,6 +254,9 @@ export function useWorkingHours(
       
       console.log("Status toggle updates:", updates);
       await saatGuncelle({ id, updates });
+      
+      // Force refresh to show updated state
+      setTimeout(() => refetch(), 500);
     } catch (error) {
       console.error("Durum değişikliği sırasında hata:", error);
       toast.error("Durum güncellenirken bir hata oluştu");

@@ -48,24 +48,52 @@ export const calismaSaatleriServisi = {
       // Process each working hour individually to avoid relationships issue
       const results = [];
       for (const saat of validSaatler) {
-        if (saat.id && saat.id > 0) {
-          // Update existing record
-          const { data, error } = await this.tekGuncelle(saat.id, saat);
-          if (!error && data) {
-            results.push(data);
+        try {
+          // Handle negative IDs (temporary) vs positive IDs (existing records)
+          if (saat.id && typeof saat.id === 'number' && saat.id > 0) {
+            // Update existing record
+            const { data, error } = await this.tekGuncelle(saat.id, saat);
+            if (!error && data) {
+              results.push(data);
+            } else {
+              console.error(`Error updating hour with ID ${saat.id}:`, error);
+            }
+          } else {
+            // Create new record after checking for existing one
+            const { data: existingData, error: checkError } = await supabase
+              .from('calisma_saatleri')
+              .select('id')
+              .eq('dukkan_id', saat.dukkan_id)
+              .eq('gun', saat.gun);
+              
+            if (checkError) {
+              console.error("Error checking for existing record:", checkError);
+            }
+            
+            if (existingData && existingData.length > 0) {
+              // Update existing record instead of creating new one
+              const { data, error } = await this.tekGuncelle(existingData[0].id, saat);
+              if (!error && data) {
+                results.push(data);
+              }
+            } else {
+              // Create new record
+              const newData = {
+                gun: saat.gun,
+                acilis: saat.kapali ? null : (saat.acilis || "09:00"),
+                kapanis: saat.kapali ? null : (saat.kapanis || "18:00"),
+                kapali: saat.kapali || false,
+                dukkan_id: saat.dukkan_id || 0
+              };
+              
+              const { data, error } = await this.ekle(newData);
+              if (!error && data) {
+                results.push(data);
+              }
+            }
           }
-        } else {
-          // Create new record
-          const { data, error } = await this.ekle({
-            gun: saat.gun,
-            acilis: saat.kapali ? null : (saat.acilis || "09:00"),
-            kapanis: saat.kapali ? null : (saat.kapanis || "18:00"),
-            kapali: saat.kapali || false,
-            dukkan_id: saat.dukkan_id || 0
-          });
-          if (!error && data) {
-            results.push(data);
-          }
+        } catch (err) {
+          console.error(`Error processing hour for day ${saat.gun}:`, err);
         }
       }
       
@@ -87,32 +115,21 @@ export const calismaSaatleriServisi = {
     try {
       console.log(`ID ${id} için güncelleniyor:`, updates);
       
-      // Handle negative IDs (temporary IDs) by creating a new record
-      if (id < 0) {
-        if (!updates.gun) {
-          throw new Error("Gün bilgisi gerekli");
-        }
-        
-        return await this.ekle({
-          gun: updates.gun,
-          acilis: updates.kapali ? null : (updates.acilis || "09:00"),
-          kapanis: updates.kapali ? null : (updates.kapanis || "18:00"),
-          kapali: updates.kapali || false,
-          dukkan_id: updates.dukkan_id || 0
-        });
+      // Ensure null values are properly handled for closed days
+      const updateData: Partial<CalismaSaati> = { ...updates };
+      
+      if (updateData.kapali) {
+        updateData.acilis = null;
+        updateData.kapanis = null;
       }
       
-      // Ensure null values are properly handled for closed days
-      if (updates.kapali === true) {
-        updates.acilis = null;
-        updates.kapanis = null;
-      }
+      console.log("Final update data:", updateData);
       
       const { data, error } = await supabase
         .from('calisma_saatleri')
-        .update(updates)
+        .update(updateData)
         .eq('id', id)
-        .select();
+        .select('*');
 
       if (error) {
         console.error("Tek çalışma saati güncelleme hatası:", error);
@@ -142,25 +159,30 @@ export const calismaSaatleriServisi = {
         dukkan_id: saat.dukkan_id !== undefined ? saat.dukkan_id : 0
       };
       
+      // First check if this day already exists for this shop to avoid duplicates
+      const { data: existingData, error: checkError } = await supabase
+        .from('calisma_saatleri')
+        .select('id')
+        .eq('dukkan_id', saatObj.dukkan_id)
+        .eq('gun', saatObj.gun);
+        
+      if (checkError) {
+        console.error("Error checking existing record:", checkError);
+      }
+      
+      if (existingData && existingData.length > 0) {
+        // Update existing record instead
+        return await this.tekGuncelle(existingData[0].id, saatObj);
+      }
+      
+      // Insert new record if none exists
       const { data, error } = await supabase
         .from('calisma_saatleri')
         .insert([saatObj])
-        .select();
+        .select('*');
 
       if (error) {
         console.error("Çalışma saati ekleme hatası:", error);
-        
-        // For serious errors that can't be fixed, return a mock response
-        // to avoid breaking the UI flow
-        if (error.message?.includes("recursion") || error.message?.includes("schema cache")) {
-          console.log("Kritik hata oluştu, geçici veri döndürülüyor");
-          return {
-            id: Date.now(),
-            ...saatObj,
-            created_at: new Date().toISOString()
-          };
-        }
-        
         throw error;
       }
       
@@ -168,15 +190,7 @@ export const calismaSaatleriServisi = {
       return data?.[0];
     } catch (err) {
       console.error("Çalışma saati eklenirken hata:", err);
-      
-      // Return a mock object to avoid breaking the UI in case of error
-      const mockData = {
-        id: Date.now(),
-        ...saat,
-        created_at: new Date().toISOString()
-      };
-      
-      return mockData;
+      throw err;
     }
   },
   
@@ -202,8 +216,33 @@ export const calismaSaatleriServisi = {
       console.log(`Dükkan ${dukkanId} için çalışma saatleri:`, data);
       
       if (!data || data.length === 0) {
-        // If no hours found, return default hours
-        return this.getDefaultWorkingHours(dukkanId);
+        // If no hours found, insert default hours into database
+        const defaultHours = this.getDefaultWorkingHours(dukkanId);
+        const results = [];
+        
+        for (const hour of defaultHours) {
+          try {
+            const inserted = await this.ekle({
+              gun: hour.gun,
+              acilis: hour.kapali ? null : hour.acilis,
+              kapanis: hour.kapali ? null : hour.kapanis,
+              kapali: hour.kapali,
+              dukkan_id: dukkanId
+            });
+            
+            if (inserted) {
+              results.push(inserted);
+            }
+          } catch (err) {
+            console.error(`Error inserting default hours for ${hour.gun}:`, err);
+          }
+        }
+        
+        if (results.length > 0) {
+          return results;
+        }
+        
+        return defaultHours;
       }
       
       // Sort by predefined day order
