@@ -56,6 +56,8 @@ export const musteriServisi = {
   
   async ekle(musteri: Omit<Musteri, 'id' | 'created_at'>) {
     try {
+      console.log("Eklenecek müşteri verileri:", musteri);
+
       const { data, error } = await supabase
         .from('musteriler')
         .insert([musteri])
@@ -66,6 +68,7 @@ export const musteriServisi = {
         throw error;
       }
       
+      console.log("Eklenen müşteri:", data[0]);
       return data[0];
     } catch (err) {
       console.error("Müşteri eklenirken hata:", err);
