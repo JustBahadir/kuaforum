@@ -53,8 +53,7 @@ export const musteriServisi = {
       
       console.log("Ekleniyor:", customerData);
       
-      // Kullanıcı RLS politikalarını bypass etmek için supabaseAdmin kullanıyoruz
-      // Bu şekilde "infinite recursion" hatası önlenmiş olur
+      // supabaseAdmin kullanarak RLS'yi bypass et
       const { data, error } = await supabaseAdmin
         .from('profiles')
         .insert([customerData])

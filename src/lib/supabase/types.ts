@@ -77,17 +77,14 @@ export interface PersonelIslemi {
 }
 
 export interface Musteri {
-  id: number;
-  ad_soyad: string;
-  telefon: string;
-  eposta: string;
-  adres: string;
-  musteri_no: string;
-  created_at: string;
-  first_name?: string;
+  id: number | string;
+  first_name: string;
   last_name?: string;
   phone?: string;
   birthdate?: string | null;
+  created_at: string;
+  dukkan_id?: number;
+  role?: string;
   total_services?: number;
 }
 
