@@ -179,11 +179,16 @@ export function StaffAppointmentForm({
   const availableTimes = React.useMemo(() => {
     if (!selectedDate || !calismaSaatleri.length) return [];
     
+    // Get day name in Turkish lowercase
     const dayName = format(selectedDate, 'EEEE', { locale: tr }).toLowerCase();
+    console.log("Selected day:", dayName);
     
+    // Find working hours for this day
     const dayWorkingHours = calismaSaatleri.find(calisma => 
       calisma.gun.toLowerCase() === dayName
     );
+    
+    console.log("Working hours found:", dayWorkingHours);
     
     if (!dayWorkingHours || dayWorkingHours.kapali || !dayWorkingHours.acilis || !dayWorkingHours.kapanis) {
       console.log("No working hours found for day:", dayName);
@@ -246,7 +251,6 @@ export function StaffAppointmentForm({
       console.log("Form data being submitted:", data);
       
       if (!dukkanId) {
-        console.error("Dükkan ID bulunamadı");
         toast.error("Dükkan ID bulunamadı");
         return;
       }
@@ -256,7 +260,6 @@ export function StaffAppointmentForm({
       console.log("Customer details fetched:", customerDetails);
       
       if (!customerDetails) {
-        console.error("Müşteri bilgileri alınamadı");
         toast.error("Müşteri bilgileri alınamadı");
         return;
       }
@@ -279,18 +282,13 @@ export function StaffAppointmentForm({
       console.log("Appointment data being sent:", randevuData);
 
       // Create the appointment with error handling
-      try {
-        const newRandevu = await randevuServisi.ekle(randevuData);
-        console.log("New appointment created:", newRandevu);
-        
-        toast.success("Randevu başarıyla oluşturuldu");
-        
-        if (onAppointmentCreated && newRandevu) {
-          onAppointmentCreated(newRandevu);
-        }
-      } catch (error: any) {
-        console.error("Randevu oluşturulurken hata:", error);
-        toast.error(error.message || "Randevu oluşturulurken bir hata oluştu");
+      const newRandevu = await randevuServisi.ekle(randevuData);
+      console.log("New appointment created:", newRandevu);
+      
+      toast.success("Randevu başarıyla oluşturuldu");
+      
+      if (onAppointmentCreated && newRandevu) {
+        onAppointmentCreated(newRandevu);
       }
       
     } catch (error: any) {
@@ -313,7 +311,7 @@ export function StaffAppointmentForm({
           name="customerId"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-base">Müşteri Seçin*</FormLabel>
+              {/* Removed the duplicate FormLabel here */}
               <CustomerSelection 
                 dukkanId={dukkanId}
                 value={field.value}

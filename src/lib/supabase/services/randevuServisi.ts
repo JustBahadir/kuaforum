@@ -61,49 +61,49 @@ export const randevuServisi = {
   async ekle(randevu: Omit<Randevu, 'id' | 'created_at' | 'musteri' | 'personel'>) {
     console.log("Randevu ekle service received data:", randevu);
     
+    // Validate required fields
+    if (!randevu.dukkan_id) {
+      throw new Error("dukkan_id is required");
+    }
+    
+    if (!randevu.musteri_id) {
+      throw new Error("musteri_id is required");
+    }
+    
+    if (!randevu.personel_id) {
+      throw new Error("personel_id is required");
+    }
+    
+    if (!randevu.tarih || !randevu.saat) {
+      throw new Error("tarih and saat are required");
+    }
+
+    // Ensure islemler is an array even if only one service is selected
+    const islemler = Array.isArray(randevu.islemler) 
+      ? randevu.islemler 
+      : randevu.islemler ? [randevu.islemler] : [];
+
+    // Prepare insert data
+    const insertData = {
+      dukkan_id: randevu.dukkan_id,
+      musteri_id: randevu.musteri_id,
+      personel_id: randevu.personel_id,
+      tarih: randevu.tarih,
+      saat: randevu.saat,
+      durum: randevu.durum || "onaylandi",
+      notlar: randevu.notlar || "",
+      islemler: islemler,
+      customer_id: randevu.customer_id || randevu.musteri_id.toString()
+    };
+    
+    console.log("Formatted appointment data:", insertData);
+
     try {
-      // Perform validation checks
-      if (!randevu.dukkan_id) {
-        throw new Error("dukkan_id is required");
-      }
-      
-      if (!randevu.musteri_id) {
-        throw new Error("musteri_id is required");
-      }
-      
-      if (!randevu.personel_id) {
-        throw new Error("personel_id is required");
-      }
-      
-      if (!randevu.tarih || !randevu.saat) {
-        throw new Error("tarih and saat are required");
-      }
-
-      // Ensure islemler is an array even if only one service is selected
-      const islemler = Array.isArray(randevu.islemler) 
-        ? randevu.islemler 
-        : randevu.islemler ? [randevu.islemler] : [];
-
-      // Prepare insert data
-      const insertData = {
-        dukkan_id: randevu.dukkan_id,
-        musteri_id: randevu.musteri_id,
-        personel_id: randevu.personel_id,
-        tarih: randevu.tarih,
-        saat: randevu.saat,
-        durum: randevu.durum || "onaylandi",
-        notlar: randevu.notlar || "",
-        islemler: islemler,
-        customer_id: randevu.customer_id || randevu.musteri_id.toString()
-      };
-      
-      console.log("Formatted appointment data:", insertData);
-
-      // Use raw insert without joins to avoid recursion issues
+      // Perform the insert operation
       const { data, error } = await supabase
         .from('randevular')
         .insert(insertData)
-        .select('id')
+        .select()
         .single();
 
       if (error) {
@@ -115,8 +115,8 @@ export const randevuServisi = {
         throw new Error("Randevu eklendi ancak veri döndürülemedi");
       }
       
-      // Fetch the complete record with relations
-      const { data: fullRecord, error: fetchError } = await supabase
+      // Then fetch complete records with relations if needed
+      const { data: fullData, error: fetchError } = await supabase
         .from('randevular')
         .select(`
           *,
@@ -129,13 +129,12 @@ export const randevuServisi = {
       if (fetchError) {
         console.error("Error fetching created appointment:", fetchError);
         // Return the basic record anyway since it was created
-        return { ...insertData, id: data.id };
+        return data;
       }
       
-      console.log("Randevu başarıyla eklendi:", fullRecord);
-      return fullRecord;
+      return fullData || data;
     } catch (error: any) {
-      console.error("Randevu eklenirken hata:", error);
+      console.error("Error creating appointment:", error);
       throw new Error(error?.message || "Randevu oluşturulurken bir hata oluştu");
     }
   },
