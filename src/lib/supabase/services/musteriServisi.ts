@@ -46,46 +46,14 @@ export const musteriServisi = {
       
       console.log(`Müşteri ID ${id} temel verisi:`, data);
       
-      // If we have customer data, try to find a matching auth user in profiles
+      // If we have customer data, create a complete customer object with auth_id
       if (data) {
-        let customer = { ...data } as Musteri;
-        
-        try {
-          // Try to find a matching profile by name and phone
-          const { data: profilesData, error: profilesError } = await supabase
-            .from('profiles')
-            .select('id, first_name, last_name, phone')
-            .eq('first_name', data.first_name)
-            .eq('phone', data.phone || '')
-            .maybeSingle();
-          
-          if (!profilesError && profilesData) {
-            customer.auth_id = profilesData.id;
-            console.log(`Profiles tablosunda eşleşen kullanıcı bulundu: ${customer.auth_id}`);
-          } else {
-            console.log(`Profiles tablosunda eşleşen kullanıcı bulunamadı. İsim veya telefon eşleşmiyor.`);
-            
-            // If no match by name and phone, try just by first_name as fallback
-            const { data: nameMatchData } = await supabase
-              .from('profiles')
-              .select('id, first_name')
-              .eq('first_name', data.first_name)
-              .maybeSingle();
-            
-            if (nameMatchData) {
-              customer.auth_id = nameMatchData.id;
-              console.log(`İsim ile eşleşen kullanıcı bulundu: ${customer.auth_id}`);
-            } else {
-              // Last resort: Just use the customer ID as auth_id for this appointment
-              customer.auth_id = id.toString();
-              console.log(`Eşleşen profil bulunamadı, müşteri ID kullanılacak: ${customer.auth_id}`);
-            }
-          }
-        } catch (err) {
-          console.error("Profil eşleştirme hatası:", err);
-          // Fallback to using customer ID as string
-          customer.auth_id = id.toString();
-        }
+        // Simply use the customer ID as the auth_id for now
+        // This avoids the problematic profiles join
+        let customer = { 
+          ...data,
+          auth_id: id.toString()
+        } as Musteri;
         
         console.log(`Müşteri verisi hazırlandı:`, customer);
         return customer;

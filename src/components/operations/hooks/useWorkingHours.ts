@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -39,23 +40,13 @@ export function useWorkingHours(
         if (!data || data.length === 0) {
           // Create default working hours
           data = gunSiralama.map((gun, index) => ({
-            id: index,
+            id: -(index + 1), // Negative IDs for unsaved records
             gun,
             acilis: "09:00",
             kapanis: "18:00",
-            kapali: false,
+            kapali: gun === "pazar", // Close Sundays by default
             dukkan_id: dukkanId || 0
           }));
-          
-          // If we have a shop ID, save these default hours
-          if (dukkanId) {
-            try {
-              await calismaSaatleriServisi.guncelle(data);
-              console.log("Created default working hours for shop:", dukkanId);
-            } catch (err) {
-              console.error("Error creating default working hours:", err);
-            }
-          }
         }
         
         console.log("Working hours retrieved:", data);
@@ -65,11 +56,11 @@ export function useWorkingHours(
         
         // Return default working hours in case of error
         return gunSiralama.map((gun, index) => ({
-          id: index,
+          id: -(index + 1),
           gun,
           acilis: "09:00",
           kapanis: "18:00",
-          kapali: false,
+          kapali: gun === "pazar",
           dukkan_id: dukkanId || 0
         }));
       }
@@ -92,23 +83,42 @@ export function useWorkingHours(
     mutationFn: async ({ id, updates }: { id: number; updates: Partial<CalismaSaati> }) => {
       console.log("Updating working hours:", id, updates);
       
-      if (id < 0 || id >= 1000) {
-        // This is a temporary ID, need to create new record
-        const newSaat = {
-          gun: updates.gun || "",
-          acilis: updates.kapali ? null : (updates.acilis || "09:00"),
-          kapanis: updates.kapali ? null : (updates.kapanis || "18:00"),
-          kapali: updates.kapali || false,
-          dukkan_id: dukkanId || 0
-        };
-        
-        const result = await calismaSaatleriServisi.ekle(newSaat);
-        return { id, updates, result };
+      // Make sure the gun parameter is set
+      if (!updates.gun && id < 0) {
+        // If it's a new record with negative ID, we need the gun
+        const existingRecord = sortedSaatler.find(s => s.id === id);
+        if (existingRecord && existingRecord.gun) {
+          updates.gun = existingRecord.gun;
+        }
       }
       
-      // Use the dedicated single update method for existing records
-      const result = await calismaSaatleriServisi.tekGuncelle(id, updates);
-      return { id, updates, result };
+      // Make sure dukkan_id is set
+      if (!updates.dukkan_id && dukkanId) {
+        updates.dukkan_id = dukkanId;
+      }
+      
+      try {
+        if (id < 0) {
+          // This is a temporary ID, need to create new record
+          const newSaat = {
+            gun: updates.gun || "",
+            acilis: updates.kapali ? null : (updates.acilis || "09:00"),
+            kapanis: updates.kapali ? null : (updates.kapanis || "18:00"),
+            kapali: updates.kapali || false,
+            dukkan_id: dukkanId || 0
+          };
+          
+          const result = await calismaSaatleriServisi.ekle(newSaat);
+          return { id, updates, result };
+        }
+        
+        // Use the dedicated single update method for existing records
+        const result = await calismaSaatleriServisi.tekGuncelle(id, updates);
+        return { id, updates, result };
+      } catch (error) {
+        console.error("Error updating working hour:", error);
+        throw error;
+      }
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['calisma_saatleri'] });
@@ -170,8 +180,11 @@ export function useWorkingHours(
       } else {
         // For internal updates with Supabase
         if (tempChanges[id] && Object.keys(tempChanges[id]).length > 0) {
+          // Make sure gun is included for validation
           const updates = {
             ...tempChanges[id],
+            gun: saat.gun, // Always include the day
+            dukkan_id: dukkanId || saat.dukkan_id, // Always include shop ID
             // If shop is marked as closed, ensure times are cleared
             ...(tempChanges[id].kapali ? { 
               acilis: null, 
@@ -208,8 +221,17 @@ export function useWorkingHours(
     try {
       console.log(`Toggling status for ID ${id}, current isOpen:`, isOpen);
       
+      // Find the current day record
+      const currentDay = sortedSaatler.find(s => s.id === id);
+      if (!currentDay) {
+        console.error(`ID ${id} için gün bulunamadı`);
+        return;
+      }
+      
       const updates: Partial<CalismaSaati> = {
         kapali: !isOpen,
+        gun: currentDay.gun, // Include gun for validation
+        dukkan_id: dukkanId || currentDay.dukkan_id // Include shop ID
       };
       
       // If closing, clear times

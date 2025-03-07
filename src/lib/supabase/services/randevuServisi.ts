@@ -11,7 +11,7 @@ export const randevuServisi = {
       .from('randevular')
       .select(`
         *,
-        musteri:profiles(*),
+        musteri:musteriler(*),
         personel:personel(*)
       `)
       .order('tarih', { ascending: true })
@@ -28,7 +28,7 @@ export const randevuServisi = {
       .from('randevular')
       .select(`
         *,
-        musteri:profiles(*),
+        musteri:musteriler(*),
         personel:personel(*)
       `)
       .eq('dukkan_id', dukkanId)
@@ -47,7 +47,7 @@ export const randevuServisi = {
       .from('randevular')
       .select(`
         *,
-        musteri:profiles(*),
+        musteri:musteriler(*),
         personel:personel(*)
       `)
       .eq('customer_id', user.id)
@@ -99,17 +99,14 @@ export const randevuServisi = {
         islemler 
       });
 
+      // Direct insert without joins to avoid recursion issues
       const { data, error } = await supabase
         .from('randevular')
         .insert([{ 
           ...randevu, 
           islemler: islemler 
         }])
-        .select(`
-          *,
-          musteri:profiles(*),
-          personel:personel(*)
-        `)
+        .select('*')
         .single();
 
       if (error) {
@@ -121,35 +118,6 @@ export const randevuServisi = {
       return data;
     } catch (error: any) {
       console.error("Randevu eklenirken hata:", error);
-      
-      // Handle special case - profile relation issues
-      if (error?.message?.includes("recursion") && error?.message?.includes("profiles")) {
-        console.log("Profiles ile ilgili bir hata oluştu, alternatif yöntem deneniyor");
-        
-        try {
-          // Try direct insert without joins
-          const { data, error: insertError } = await supabase
-            .from('randevular')
-            .insert([{ 
-              ...randevu, 
-              islemler: Array.isArray(randevu.islemler) ? randevu.islemler : [randevu.islemler]
-            }])
-            .select('*')
-            .single();
-          
-          if (insertError) {
-            console.error("Alternatif randevu eklemede hata:", insertError);
-            throw insertError;
-          }
-          
-          console.log("Randevu alternatif yöntemle eklendi:", data);
-          return data;
-        } catch (altError) {
-          console.error("Alternatif randevu ekleme hatası:", altError);
-          throw new Error("Randevu oluşturulurken teknik bir hata oluştu");
-        }
-      }
-      
       throw new Error(error?.message || "Randevu oluşturulurken bir hata oluştu");
     }
   },
@@ -161,7 +129,7 @@ export const randevuServisi = {
       .eq('id', id)
       .select(`
         *,
-        musteri:profiles(*),
+        musteri:musteriler(*),
         personel:personel(*)
       `)
       .single();

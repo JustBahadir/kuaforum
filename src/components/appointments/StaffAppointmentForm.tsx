@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { format, addDays, isBefore, isToday, set, parseISO } from "date-fns";
+import { format, addDays, isBefore, isToday } from "date-fns";
 import { tr } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -34,7 +33,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useQuery } from "@tanstack/react-query";
-import { Islem, Kategori, Personel, Randevu, CalismaSaati } from "@/lib/supabase/types";
+import { CalismaSaati } from "@/lib/supabase/types";
 import { 
   islemServisi, 
   kategoriServisi, 
@@ -202,7 +201,7 @@ export function StaffAppointmentForm({
     // Generate times at 30-minute intervals from opening time to 30 minutes before closing
     while (
       currentHour < closeHour || 
-      (currentHour === closeHour && currentMinute < closeMinute - 29)
+      (currentHour === closeHour && currentMinute <= closeMinute - 30)
     ) {
       times.push(
         `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`
@@ -261,38 +260,7 @@ export function StaffAppointmentForm({
         return;
       }
       
-      // Make sure we have the auth_id (customer_id)
-      if (!customerDetails.auth_id) {
-        console.error("Müşteri auth_id bulunamadı", customerDetails);
-        
-        // Try to fallback to using customerId itself for profiles without auth_id
-        const randevuData = {
-          dukkan_id: dukkanId,
-          musteri_id: data.customerId,
-          personel_id: parseInt(data.personnel),
-          tarih: format(data.date, 'yyyy-MM-dd'),
-          saat: data.time,
-          durum: "onaylandi" as const,
-          notlar: data.notes || "",
-          islemler: [data.service],
-          customer_id: data.customerId.toString() // Use customerId as fallback
-        };
-        
-        console.log("Using customerId as fallback for auth_id:", randevuData);
-        
-        const newRandevu = await randevuServisi.ekle(randevuData);
-        console.log("New appointment created with fallback:", newRandevu);
-        
-        toast.success("Randevu başarıyla oluşturuldu");
-        
-        if (onAppointmentCreated) {
-          onAppointmentCreated(newRandevu);
-        }
-        
-        return;
-      }
-      
-      // Prepare appointment data with auth_id
+      // Prepare appointment data
       const randevuData = {
         dukkan_id: dukkanId,
         musteri_id: data.customerId,
@@ -302,7 +270,7 @@ export function StaffAppointmentForm({
         durum: "onaylandi" as const,
         notlar: data.notes || "",
         islemler: [data.service],
-        customer_id: customerDetails.auth_id // Add the auth_id as customer_id
+        customer_id: customerDetails.auth_id || data.customerId.toString()
       };
       
       console.log("Appointment data being sent:", randevuData);
@@ -550,7 +518,7 @@ export function StaffAppointmentForm({
                     <SelectValue placeholder={
                       availableTimes.length === 0 
                         ? "Bu gün için uygun saat yok" 
-                        : "Saat seçin"
+                        : "Saat se��in"
                     } />
                   </SelectTrigger>
                   <SelectContent className="h-[200px]">
