@@ -37,8 +37,8 @@ export const calismaSaatleriServisi = {
     try {
       console.log("Toplu güncelleme için gönderilen saatler:", saatler);
       
-      // Filter out entries without id
-      const validSaatler = saatler.filter(saat => saat.id !== undefined || saat.dukkan_id !== undefined);
+      // Filter out entries without required fields
+      const validSaatler = saatler.filter(saat => saat.dukkan_id !== undefined && saat.gun);
       
       if (validSaatler.length === 0) {
         console.warn("Güncelleme için geçerli çalışma saati bulunamadı");
@@ -143,7 +143,7 @@ export const calismaSaatleriServisi = {
       console.log(`Dükkan ${dukkanId} için çalışma saatleri:`, data);
       
       if (data && data.length === 0) {
-        // If no hours found, create default hours
+        // If no hours found, create default hours in this method directly
         const defaultHours = gunSiralama.map(gun => ({
           gun,
           acilis: "09:00",

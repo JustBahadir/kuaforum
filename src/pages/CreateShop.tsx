@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,7 @@ import {
 } from "@/components/ui/form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { gunSiralama } from "@/components/operations/constants/workingDays";
 
 interface City {
   name: string;
@@ -139,7 +141,16 @@ export default function CreateShop() {
       
       if (newShop && newShop.id) {
         try {
-          await calismaSaatleriServisi.varsayilanSaatleriOlustur(newShop.id);
+          // Create default working hours with 09:00 opening and 18:00 closing
+          const defaultHours = gunSiralama.map(gun => ({
+            gun,
+            acilis: "09:00",
+            kapanis: "18:00",
+            kapali: false,
+            dukkan_id: newShop.id
+          }));
+          
+          await calismaSaatleriServisi.guncelle(defaultHours);
           console.log("Varsayılan çalışma saatleri oluşturuldu");
         } catch (workingHoursError) {
           console.error("Varsayılan çalışma saatleri oluşturulurken hata:", workingHoursError);

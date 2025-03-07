@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useEffect } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { toast } from 'sonner';
+import { calismaSaatleriServisi } from '@/lib/supabase/services/calismaSaatleriServisi';
 
 interface WorkingHoursProps {
   isStaff?: boolean;
@@ -66,7 +67,7 @@ export function WorkingHours({ isStaff = true, gunler = [], dukkanId, onChange }
     );
   }
 
-  // Ensure we create default hours if none exist
+  // Create default working hours if none exist
   const createHoursIfNeeded = async () => {
     if (!dukkanId) return;
     
@@ -80,12 +81,11 @@ export function WorkingHours({ isStaff = true, gunler = [], dukkanId, onChange }
         dukkan_id: dukkanId
       }));
       
-      const result = await calismaSaatleri.length === 0 
-        ? await calismaSaatleriServisi.guncelle(defaultHours)
-        : calismaSaatleri;
-        
-      toast.success("Çalışma saatleri hazırlandı");
-      refetch();
+      if (calismaSaatleri.length === 0) {
+        await calismaSaatleriServisi.guncelle(defaultHours);
+        toast.success("Çalışma saatleri hazırlandı");
+        refetch();
+      }
     } catch (err) {
       console.error("Çalışma saatleri oluşturulurken hata:", err);
       toast.error("Çalışma saatleri oluşturulurken hata oluştu");
