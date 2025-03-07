@@ -299,13 +299,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "notifications_related_appointment_id_fkey"
-            columns: ["related_appointment_id"]
-            isOneToOne: false
-            referencedRelation: "randevular"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "notifications_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
@@ -465,89 +458,6 @@ export type Database = {
             columns: ["dukkan_id"]
             isOneToOne: false
             referencedRelation: "dukkanlar"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      randevular: {
-        Row: {
-          admin_notes: string | null
-          counter_proposal_date: string | null
-          counter_proposal_time: string | null
-          created_at: string
-          customer_accepted: boolean | null
-          customer_id: string | null
-          dukkan_id: number | null
-          durum: string
-          id: number
-          islemler: number[] | null
-          musteri_id: number | null
-          notlar: string | null
-          personel_id: number | null
-          saat: string
-          tarih: string
-        }
-        Insert: {
-          admin_notes?: string | null
-          counter_proposal_date?: string | null
-          counter_proposal_time?: string | null
-          created_at?: string
-          customer_accepted?: boolean | null
-          customer_id?: string | null
-          dukkan_id?: number | null
-          durum?: string
-          id?: number
-          islemler?: number[] | null
-          musteri_id?: number | null
-          notlar?: string | null
-          personel_id?: number | null
-          saat: string
-          tarih: string
-        }
-        Update: {
-          admin_notes?: string | null
-          counter_proposal_date?: string | null
-          counter_proposal_time?: string | null
-          created_at?: string
-          customer_accepted?: boolean | null
-          customer_id?: string | null
-          dukkan_id?: number | null
-          durum?: string
-          id?: number
-          islemler?: number[] | null
-          musteri_id?: number | null
-          notlar?: string | null
-          personel_id?: number | null
-          saat?: string
-          tarih?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "randevular_customer_id_fkey"
-            columns: ["customer_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "randevular_dukkan_id_fkey"
-            columns: ["dukkan_id"]
-            isOneToOne: false
-            referencedRelation: "dukkanlar"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "randevular_personel_id_fkey"
-            columns: ["personel_id"]
-            isOneToOne: false
-            referencedRelation: "personel"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "randevular_personel_id_fkey"
-            columns: ["personel_id"]
-            isOneToOne: false
-            referencedRelation: "personel_performans"
             referencedColumns: ["id"]
           },
         ]
