@@ -13,4 +13,5 @@ export { bildirimServisi } from './services/bildirimServisi';
 export { calismaSaatleriServisi } from './services/calismaSaatleriServisi';
 export { profilServisi } from './services/profilServisi';
 export { siralamaServisi } from './services/siralamaServisi';
-export { customerPersonalDataService, CustomerPersonalData } from './services/customerPersonalDataService';
+export { customerPersonalDataService } from './services/customerPersonalDataService';
+export type { CustomerPersonalData } from './services/customerPersonalDataService';
