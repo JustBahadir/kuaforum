@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { format, parse, startOfWeek, addDays, isToday, isSameDay } from 'date-fns';
 import { tr } from 'date-fns/locale';
@@ -12,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { AppointmentForm } from "@/components/appointments/AppointmentForm";
+import { StaffAppointmentForm } from "@/components/appointments/StaffAppointmentForm";
 import { randevuServisi } from "@/lib/supabase/services/randevuServisi";
 import { Randevu } from "@/lib/supabase/types";
 import { Loader2, Plus, Calendar as CalendarIcon } from "lucide-react";
@@ -119,6 +119,11 @@ export default function Appointments() {
     }
     return `mb-1 p-1 text-xs rounded ${getStatusStyle(appointment.durum)}`;
   };
+  
+  // Determine which form to show based on user role
+  const AppointmentFormComponent = userRole === 'staff' || userRole === 'admin' 
+    ? StaffAppointmentForm 
+    : AppointmentForm;
   
   return (
     <StaffLayout>
@@ -373,7 +378,7 @@ export default function Appointments() {
             <DialogHeader>
               <DialogTitle>Yeni Randevu Oluştur</DialogTitle>
             </DialogHeader>
-            <AppointmentForm 
+            <AppointmentFormComponent 
               onAppointmentCreated={handleAppointmentCreated}
               initialDate={format(selectedDate, 'yyyy-MM-dd')}
             />
