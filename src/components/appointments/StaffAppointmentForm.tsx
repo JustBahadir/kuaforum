@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -33,7 +34,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useQuery } from "@tanstack/react-query";
-import { CalismaSaati } from "@/lib/supabase/types";
+import { CalismaSaati, Randevu } from "@/lib/supabase/types";
 import { 
   islemServisi, 
   kategoriServisi, 
