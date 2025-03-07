@@ -52,7 +52,7 @@ export function WorkingHoursRow({
       if (!checked) {
         onTempChange(saatId, 'acilis', null);
         onTempChange(saatId, 'kapanis', null);
-      } else if (!saat.acilis && !saat.kapanis) {
+      } else {
         // Set default times if opening and no times exist
         onTempChange(saatId, 'acilis', "09:00");
         onTempChange(saatId, 'kapanis', "18:00");
@@ -64,7 +64,7 @@ export function WorkingHoursRow({
   };
 
   return (
-    <TableRow key={saatId} className="hover:bg-gray-50">
+    <TableRow className="hover:bg-gray-50">
       <TableCell className="font-medium">
         {gunIsimleri[saat.gun] || saat.gun}
       </TableCell>

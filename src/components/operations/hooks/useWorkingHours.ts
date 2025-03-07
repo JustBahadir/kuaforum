@@ -26,23 +26,55 @@ export function useWorkingHours(
     queryFn: async () => {
       console.log("useWorkingHours: Fetching working hours, dukkanId:", dukkanId);
       try {
+        let data;
         if (dukkanId) {
           // If we have a shop ID, get hours for that shop
-          const data = await calismaSaatleriServisi.dukkanSaatleriGetir(dukkanId);
-          console.log("useWorkingHours: Fetched shop-specific hours:", data);
-          return data;
+          data = await calismaSaatleriServisi.dukkanSaatleriGetir(dukkanId);
         } else {
           // Otherwise get all hours
-          const data = await calismaSaatleriServisi.hepsiniGetir();
-          console.log("useWorkingHours: Fetched all hours:", data);
-          return data;
+          data = await calismaSaatleriServisi.hepsiniGetir();
         }
+        
+        // If no data returned, create default working hours
+        if (!data || data.length === 0) {
+          // Create default working hours
+          data = gunSiralama.map((gun, index) => ({
+            id: index,
+            gun,
+            acilis: "09:00",
+            kapanis: "18:00",
+            kapali: false,
+            dukkan_id: dukkanId || 0
+          }));
+          
+          // If we have a shop ID, save these default hours
+          if (dukkanId) {
+            try {
+              await calismaSaatleriServisi.guncelle(data);
+              console.log("Created default working hours for shop:", dukkanId);
+            } catch (err) {
+              console.error("Error creating default working hours:", err);
+            }
+          }
+        }
+        
+        console.log("Working hours retrieved:", data);
+        return data;
       } catch (err) {
         console.error("Error fetching working hours:", err);
-        throw err;
+        
+        // Return default working hours in case of error
+        return gunSiralama.map((gun, index) => ({
+          id: index,
+          gun,
+          acilis: "09:00",
+          kapanis: "18:00",
+          kapali: false,
+          dukkan_id: dukkanId || 0
+        }));
       }
     },
-    enabled: providedGunler.length === 0
+    staleTime: 30000 // 30 seconds
   });
 
   // Use the provided working hours if available, otherwise use the fetched ones
@@ -58,15 +90,24 @@ export function useWorkingHours(
   // Mutation for updating a single working hour
   const { mutate: saatGuncelle, isPending: isUpdating } = useMutation({
     mutationFn: async ({ id, updates }: { id: number; updates: Partial<CalismaSaati> }) => {
-      if (!id) {
-        throw new Error('ID is required for updating working hours');
-      }
-      
       console.log("Updating working hours:", id, updates);
       
-      // Use the dedicated single update method
-      const result = await calismaSaatleriServisi.tekGuncelle(id, updates);
+      if (id < 0 || id >= 1000) {
+        // This is a temporary ID, need to create new record
+        const newSaat = {
+          gun: updates.gun || "",
+          acilis: updates.kapali ? null : (updates.acilis || "09:00"),
+          kapanis: updates.kapali ? null : (updates.kapanis || "18:00"),
+          kapali: updates.kapali || false,
+          dukkan_id: dukkanId || 0
+        };
+        
+        const result = await calismaSaatleriServisi.ekle(newSaat);
+        return { id, updates, result };
+      }
       
+      // Use the dedicated single update method for existing records
+      const result = await calismaSaatleriServisi.tekGuncelle(id, updates);
       return { id, updates, result };
     },
     onSuccess: (data) => {

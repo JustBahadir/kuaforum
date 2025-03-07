@@ -8,7 +8,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useEffect } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { toast } from 'sonner';
-import { calismaSaatleriServisi } from '@/lib/supabase/services/calismaSaatleriServisi';
 
 interface WorkingHoursProps {
   isStaff?: boolean;
@@ -41,11 +40,12 @@ export function WorkingHours({ isStaff = true, gunler = [], dukkanId, onChange }
       uiToast({
         variant: "destructive",
         title: "Hata",
-        description: "Çalışma saatleri yüklenirken bir hata oluştu. Lütfen daha sonra tekrar deneyiniz."
+        description: "Çalışma saatleri yüklenirken bir hata oluştu."
       });
     }
   }, [error, uiToast]);
 
+  // If no working hours exist, show skeleton while loading
   if (isLoading) {
     return (
       <div className="border rounded-lg overflow-hidden p-4">
@@ -58,46 +58,6 @@ export function WorkingHours({ isStaff = true, gunler = [], dukkanId, onChange }
       </div>
     );
   }
-
-  if (error) {
-    return (
-      <div className="border rounded-lg overflow-hidden p-4 text-red-500">
-        Çalışma saatleri yüklenirken bir hata oluştu. Lütfen daha sonra tekrar deneyiniz.
-      </div>
-    );
-  }
-
-  // Create default working hours if none exist
-  const createHoursIfNeeded = async () => {
-    if (!dukkanId) return;
-    
-    try {
-      // Create default hours with 09:00 opening and 18:00 closing times for all days
-      const defaultHours = gunSiralama.map(gun => ({
-        gun,
-        acilis: "09:00",
-        kapanis: "18:00",
-        kapali: false,
-        dukkan_id: dukkanId
-      }));
-      
-      if (calismaSaatleri.length === 0) {
-        await calismaSaatleriServisi.guncelle(defaultHours);
-        toast.success("Çalışma saatleri hazırlandı");
-        refetch();
-      }
-    } catch (err) {
-      console.error("Çalışma saatleri oluşturulurken hata:", err);
-      toast.error("Çalışma saatleri oluşturulurken hata oluştu");
-    }
-  };
-
-  // If no hours exist, create them automatically
-  useEffect(() => {
-    if (calismaSaatleri.length === 0 && dukkanId && isStaff) {
-      createHoursIfNeeded();
-    }
-  }, [calismaSaatleri.length, dukkanId, isStaff]);
 
   return (
     <div className="border rounded-lg overflow-hidden">
@@ -115,9 +75,29 @@ export function WorkingHours({ isStaff = true, gunler = [], dukkanId, onChange }
           {calismaSaatleri.length === 0 ? (
             <TableRow>
               <TableCell colSpan={isStaff ? 5 : 3} className="text-center py-6 text-gray-500">
-                <div>
-                  Çalışma saati bilgisi hazırlanıyor...
-                </div>
+                {gunSiralama.map((gun, index) => (
+                  <WorkingHoursRow
+                    key={index}
+                    saat={{
+                      id: index,
+                      gun,
+                      acilis: "09:00",
+                      kapanis: "18:00",
+                      kapali: false,
+                      dukkan_id: dukkanId || 0
+                    }}
+                    index={index}
+                    isStaff={isStaff}
+                    editing={editing}
+                    isUpdating={isUpdating}
+                    tempChanges={tempChanges}
+                    onStartEditing={startEditing}
+                    onTempChange={handleTempChange}
+                    onSaveChanges={saveChanges}
+                    onCancelEditing={cancelEditing}
+                    onStatusToggle={handleStatusToggle}
+                  />
+                ))}
               </TableCell>
             </TableRow>
           ) : (

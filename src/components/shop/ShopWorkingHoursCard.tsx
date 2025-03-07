@@ -23,11 +23,36 @@ export function ShopWorkingHoursCard({ calisma_saatleri = [], userRole, dukkanId
     queryFn: async () => {
       if (!dukkanId) return [];
       console.log("Fetching working hours for shop ID:", dukkanId);
-      const data = await calismaSaatleriServisi.dukkanSaatleriGetir(dukkanId);
-      console.log("Fetched working hours:", data);
-      return data;
+      
+      try {
+        const data = await calismaSaatleriServisi.dukkanSaatleriGetir(dukkanId);
+        console.log("Fetched working hours:", data);
+        
+        // If no data returned, provide default hours
+        if (!data || data.length === 0) {
+          return gunSiralama.map(gun => ({
+            gun,
+            acilis: "09:00",
+            kapanis: "18:00",
+            kapali: false,
+            dukkan_id: dukkanId
+          }));
+        }
+        
+        return data;
+      } catch (err) {
+        console.error("Error fetching shop working hours:", err);
+        // Return default hours in case of error
+        return gunSiralama.map(gun => ({
+          gun,
+          acilis: "09:00",
+          kapanis: "18:00",
+          kapali: false,
+          dukkan_id: dukkanId
+        }));
+      }
     },
-    enabled: !!dukkanId
+    staleTime: 30000 // 30 seconds
   });
 
   useEffect(() => {
@@ -96,11 +121,13 @@ export function ShopWorkingHoursCard({ calisma_saatleri = [], userRole, dukkanId
             </TableHeader>
             <TableBody>
               {sortedSaatler.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={3} className="text-center py-6 text-gray-500">
-                    Çalışma saati bilgisi yükleniyor...
-                  </TableCell>
-                </TableRow>
+                gunSiralama.map((gun, index) => (
+                  <TableRow key={gun} className="hover:bg-gray-50">
+                    <TableCell className="font-medium">{gunIsimleri[gun]}</TableCell>
+                    <TableCell>09:00</TableCell>
+                    <TableCell>18:00</TableCell>
+                  </TableRow>
+                ))
               ) : (
                 sortedSaatler.map((saat: any) => (
                   <TableRow key={saat.gun} className="hover:bg-gray-50">

@@ -18,7 +18,7 @@ export const calismaSaatleriServisi = {
 
       if (error) {
         console.error("Çalışma saatleri getirme hatası:", error);
-        throw error;
+        return [];
       }
       
       // Sort by predefined day order
@@ -29,7 +29,7 @@ export const calismaSaatleriServisi = {
       });
     } catch (err) {
       console.error("Çalışma saatleri getirme sırasında hata:", err);
-      throw err;
+      return [];
     }
   },
   
@@ -52,11 +52,12 @@ export const calismaSaatleriServisi = {
 
       if (error) {
         console.error("Çalışma saatleri güncelleme hatası:", error);
-        throw error;
+        return [];
       }
       
       console.log("Güncelleme sonucu:", data);
       
+      // Sort by predefined day order
       return (data || []).sort((a, b) => {
         const aIndex = gunSiralama.indexOf(a.gun);
         const bIndex = gunSiralama.indexOf(b.gun);
@@ -64,15 +65,15 @@ export const calismaSaatleriServisi = {
       });
     } catch (err) {
       console.error("Güncelleme işlemi sırasında hata:", err);
-      throw err;
+      return [];
     }
   },
   
   async tekGuncelle(id: number, updates: Partial<CalismaSaati>) {
     try {
       // Ensure we have a valid ID
-      if (!id) {
-        throw new Error("ID gerekli");
+      if (!id || id < 0) {
+        throw new Error("Geçerli ID gerekli");
       }
       
       console.log(`ID ${id} için güncelleniyor:`, updates);
@@ -137,49 +138,38 @@ export const calismaSaatleriServisi = {
 
       if (error) {
         console.error("Dükkan saatleri getirme hatası:", error);
-        throw error;
+        return this.getDefaultWorkingHours(dukkanId);
       }
       
       console.log(`Dükkan ${dukkanId} için çalışma saatleri:`, data);
       
-      if (data && data.length === 0) {
-        // If no hours found, create default hours in this method directly
-        const defaultHours = gunSiralama.map(gun => ({
-          gun,
-          acilis: "09:00",
-          kapanis: "18:00",
-          kapali: false,
-          dukkan_id: dukkanId
-        }));
-        
-        try {
-          const { data: newData, error: insertError } = await supabase
-            .from('calisma_saatleri')
-            .upsert(defaultHours)
-            .select();
-            
-          if (insertError) {
-            console.error("Varsayılan saatleri ekleme hatası:", insertError);
-            return [];
-          }
-          
-          console.log("Yeni oluşturulan saatler:", newData);
-          return newData || [];
-        } catch (err) {
-          console.error("Varsayılan saatler oluşturulurken hata:", err);
-          return [];
-        }
+      if (!data || data.length === 0) {
+        // If no hours found, return default hours without trying to create them in DB
+        // This avoids potential error loops
+        return this.getDefaultWorkingHours(dukkanId);
       }
       
       // Sort by predefined day order
-      return (data || []).sort((a, b) => {
+      return data.sort((a, b) => {
         const aIndex = gunSiralama.indexOf(a.gun);
         const bIndex = gunSiralama.indexOf(b.gun);
         return aIndex - bIndex;
       });
     } catch (err) {
       console.error("Dükkan saatleri getirme sırasında hata:", err);
-      return [];
+      return this.getDefaultWorkingHours(dukkanId);
     }
+  },
+  
+  // Helper method to get default working hours without DB operations
+  getDefaultWorkingHours(dukkanId: number) {
+    return gunSiralama.map((gun, index) => ({
+      id: -(index + 1), // Using negative IDs to indicate these are temporary
+      gun,
+      acilis: "09:00",
+      kapanis: "18:00",
+      kapali: false,
+      dukkan_id: dukkanId
+    }));
   }
 };
