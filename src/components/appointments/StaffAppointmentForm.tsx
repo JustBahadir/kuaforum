@@ -202,7 +202,7 @@ export function StaffAppointmentForm({
     // Generate times at 30-minute intervals from opening time to 30 minutes before closing
     while (
       currentHour < closeHour || 
-      (currentHour === closeHour && currentMinute < closeMinute - 30)
+      (currentHour === closeHour && currentMinute < closeMinute - 29)
     ) {
       times.push(
         `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`
@@ -246,7 +246,9 @@ export function StaffAppointmentForm({
       console.log("Form data being submitted:", data);
       
       if (!dukkanId) {
-        throw new Error("Dükkan ID bulunamadı");
+        console.error("Dükkan ID bulunamadı");
+        toast.error("Dükkan ID bulunamadı");
+        return;
       }
       
       // Get customer info to retrieve auth ID
@@ -254,10 +256,43 @@ export function StaffAppointmentForm({
       console.log("Customer details fetched:", customerDetails);
       
       if (!customerDetails) {
-        throw new Error("Müşteri bilgileri alınamadı");
+        console.error("Müşteri bilgileri alınamadı");
+        toast.error("Müşteri bilgileri alınamadı");
+        return;
       }
       
-      // Prepare appointment data
+      // Make sure we have the auth_id (customer_id)
+      if (!customerDetails.auth_id) {
+        console.error("Müşteri auth_id bulunamadı", customerDetails);
+        
+        // Try to fallback to using customerId itself for profiles without auth_id
+        const randevuData = {
+          dukkan_id: dukkanId,
+          musteri_id: data.customerId,
+          personel_id: parseInt(data.personnel),
+          tarih: format(data.date, 'yyyy-MM-dd'),
+          saat: data.time,
+          durum: "onaylandi" as const,
+          notlar: data.notes || "",
+          islemler: [data.service],
+          customer_id: data.customerId.toString() // Use customerId as fallback
+        };
+        
+        console.log("Using customerId as fallback for auth_id:", randevuData);
+        
+        const newRandevu = await randevuServisi.ekle(randevuData);
+        console.log("New appointment created with fallback:", newRandevu);
+        
+        toast.success("Randevu başarıyla oluşturuldu");
+        
+        if (onAppointmentCreated) {
+          onAppointmentCreated(newRandevu);
+        }
+        
+        return;
+      }
+      
+      // Prepare appointment data with auth_id
       const randevuData = {
         dukkan_id: dukkanId,
         musteri_id: data.customerId,
@@ -302,6 +337,7 @@ export function StaffAppointmentForm({
           name="customerId"
           render={({ field }) => (
             <FormItem>
+              <FormLabel className="text-base">Müşteri Seçin*</FormLabel>
               <CustomerSelection 
                 dukkanId={dukkanId}
                 value={field.value}

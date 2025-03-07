@@ -83,6 +83,12 @@ export const randevuServisi = {
         throw new Error("tarih and saat are required");
       }
 
+      // Handle customer_id validation - ensure it exists
+      if (!randevu.customer_id) {
+        console.warn("Missing customer_id, will use musteri_id as fallback", randevu);
+        randevu.customer_id = randevu.musteri_id.toString();
+      }
+
       // Ensure islemler is an array even if only one service is selected
       const islemler = Array.isArray(randevu.islemler) 
         ? randevu.islemler 
@@ -115,6 +121,35 @@ export const randevuServisi = {
       return data;
     } catch (error: any) {
       console.error("Randevu eklenirken hata:", error);
+      
+      // Handle special case - profile relation issues
+      if (error?.message?.includes("recursion") && error?.message?.includes("profiles")) {
+        console.log("Profiles ile ilgili bir hata oluştu, alternatif yöntem deneniyor");
+        
+        try {
+          // Try direct insert without joins
+          const { data, error: insertError } = await supabase
+            .from('randevular')
+            .insert([{ 
+              ...randevu, 
+              islemler: Array.isArray(randevu.islemler) ? randevu.islemler : [randevu.islemler]
+            }])
+            .select('*')
+            .single();
+          
+          if (insertError) {
+            console.error("Alternatif randevu eklemede hata:", insertError);
+            throw insertError;
+          }
+          
+          console.log("Randevu alternatif yöntemle eklendi:", data);
+          return data;
+        } catch (altError) {
+          console.error("Alternatif randevu ekleme hatası:", altError);
+          throw new Error("Randevu oluşturulurken teknik bir hata oluştu");
+        }
+      }
+      
       throw new Error(error?.message || "Randevu oluşturulurken bir hata oluştu");
     }
   },

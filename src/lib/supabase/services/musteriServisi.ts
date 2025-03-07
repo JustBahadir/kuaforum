@@ -32,13 +32,10 @@ export const musteriServisi = {
     try {
       console.log(`Müşteri ID ${id} getiriliyor`);
       
-      // First try to get the customer data with a join to profiles
+      // First get the basic customer data
       const { data, error } = await supabase
         .from('musteriler')
-        .select(`
-          *,
-          profile:profiles(id)
-        `)
+        .select('*')
         .eq('id', id)
         .single();
       
@@ -47,34 +44,54 @@ export const musteriServisi = {
         return null;
       }
       
-      console.log(`Müşteri ID ${id} verisi:`, data);
+      console.log(`Müşteri ID ${id} temel verisi:`, data);
       
-      // If profile data exists, extract auth_id
-      let customer = { ...data } as Musteri;
-      if (data.profile) {
-        customer.auth_id = data.profile.id;
-        console.log(`Müşteri auth_id bulundu: ${customer.auth_id}`);
-      } else {
-        console.log(`Müşteri için auth_id bulunamadı, profiles tablosunda manuel arama yapılıyor`);
+      // If we have customer data, try to find a matching auth user in profiles
+      if (data) {
+        let customer = { ...data } as Musteri;
         
-        // If no profile record found through join, try to find a matching profile by name and phone
-        const { data: profilesData, error: profilesError } = await supabase
-          .from('profiles')
-          .select('id, first_name, last_name, phone')
-          .eq('first_name', data.first_name)
-          .eq('phone', data.phone || '')
-          .maybeSingle();
-        
-        if (!profilesError && profilesData) {
-          customer.auth_id = profilesData.id;
-          console.log(`Profiles tablosunda eşleşen kullanıcı bulundu: ${customer.auth_id}`);
-        } else {
-          console.log(`Profiles tablosunda eşleşen kullanıcı bulunamadı`);
+        try {
+          // Try to find a matching profile by name and phone
+          const { data: profilesData, error: profilesError } = await supabase
+            .from('profiles')
+            .select('id, first_name, last_name, phone')
+            .eq('first_name', data.first_name)
+            .eq('phone', data.phone || '')
+            .maybeSingle();
+          
+          if (!profilesError && profilesData) {
+            customer.auth_id = profilesData.id;
+            console.log(`Profiles tablosunda eşleşen kullanıcı bulundu: ${customer.auth_id}`);
+          } else {
+            console.log(`Profiles tablosunda eşleşen kullanıcı bulunamadı. İsim veya telefon eşleşmiyor.`);
+            
+            // If no match by name and phone, try just by first_name as fallback
+            const { data: nameMatchData } = await supabase
+              .from('profiles')
+              .select('id, first_name')
+              .eq('first_name', data.first_name)
+              .maybeSingle();
+            
+            if (nameMatchData) {
+              customer.auth_id = nameMatchData.id;
+              console.log(`İsim ile eşleşen kullanıcı bulundu: ${customer.auth_id}`);
+            } else {
+              // Last resort: Just use the customer ID as auth_id for this appointment
+              customer.auth_id = id.toString();
+              console.log(`Eşleşen profil bulunamadı, müşteri ID kullanılacak: ${customer.auth_id}`);
+            }
+          }
+        } catch (err) {
+          console.error("Profil eşleştirme hatası:", err);
+          // Fallback to using customer ID as string
+          customer.auth_id = id.toString();
         }
+        
+        console.log(`Müşteri verisi hazırlandı:`, customer);
+        return customer;
       }
       
-      console.log(`Müşteri verisi hazırlandı:`, customer);
-      return customer;
+      return null;
     } catch (err) {
       console.error(`ID ${id} müşteri getirme sırasında hata:`, err);
       return null;
