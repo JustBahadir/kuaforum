@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -19,8 +18,11 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle 
 } from "@/components/ui/alert-dialog";
 import { Musteri } from "@/lib/supabase/types";
-import { customerPersonalDataService, CustomerPersonalData, musteriServisi } from "@/lib/supabase";
+import { customerPersonalDataService, musteriServisi } from "@/lib/supabase";
+import type { CustomerPersonalData } from "@/lib/supabase";
 import { formatPhoneNumber } from "@/utils/phoneFormatter";
+import { PhoneInputField } from "../components/FormFields/PhoneInputField";
+import { getHoroscope, getHoroscopeDescription } from "../utils/horoscopeUtils";
 
 interface CustomerDetailsProps {
   customer: Musteri;
@@ -53,6 +55,20 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
     children_names: [],
     custom_notes: null
   });
+
+  // Calculate horoscope from birthdate
+  useEffect(() => {
+    if (formData.birthdate) {
+      const horoscope = getHoroscope(new Date(formData.birthdate));
+      const horoscopeDescription = getHoroscopeDescription(horoscope);
+      
+      setPersonalData(prev => ({
+        ...prev,
+        horoscope,
+        horoscope_description: horoscopeDescription
+      }));
+    }
+  }, [formData.birthdate]);
 
   // Fetch customer personal data
   const { data: customerPersonalData, isLoading: isLoadingPersonalData } = useQuery({
@@ -96,6 +112,11 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
     } else if (activeTab === "personal") {
       setPersonalData(prev => ({ ...prev, [name]: value }));
     }
+  };
+
+  // Handle phone input changes
+  const handlePhoneChange = (phone: string) => {
+    setFormData(prev => ({ ...prev, phone }));
   };
 
   // Calculate customer's initials for avatar
@@ -263,12 +284,11 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Telefon</Label>
-                  <Input 
-                    id="phone" 
-                    name="phone" 
-                    value={formData.phone} 
-                    onChange={handleChange}
+                  <PhoneInputField 
+                    id="phone"
+                    label="Telefon"
+                    value={formData.phone || ''} 
+                    onChange={handlePhoneChange}
                     disabled={!editMode}
                   />
                 </div>
@@ -301,19 +321,7 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="birth_date">Doğum Tarihi (Düzeltme)</Label>
-                      <Input 
-                        id="birth_date" 
-                        name="birth_date" 
-                        type="date" 
-                        value={personalData.birth_date || ''} 
-                        onChange={handleChange}
-                        disabled={!editMode}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="anniversary_date">Yıldönümü/Evlilik Tarihi</Label>
+                      <Label htmlFor="anniversary_date">Evlilik Yıl Dönümü Tarihi</Label>
                       <Input 
                         id="anniversary_date" 
                         name="anniversary_date" 
@@ -323,9 +331,7 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
                         disabled={!editMode}
                       />
                     </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    
                     <div className="space-y-2">
                       <Label htmlFor="horoscope">Burç</Label>
                       <Input 
@@ -333,20 +339,38 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
                         name="horoscope" 
                         value={personalData.horoscope || ''} 
                         onChange={handleChange}
-                        disabled={!editMode}
+                        disabled={true}
+                        className="bg-gray-50"
                       />
+                      <p className="text-xs text-gray-500">Doğum tarihine göre otomatik hesaplanır</p>
                     </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="horoscope_description">Burç Özellikleri</Label>
-                      <Input 
-                        id="horoscope_description" 
-                        name="horoscope_description" 
-                        value={personalData.horoscope_description || ''} 
-                        onChange={handleChange}
-                        disabled={!editMode}
-                      />
-                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="horoscope_description">Burç Özellikleri</Label>
+                    <Textarea 
+                      id="horoscope_description" 
+                      name="horoscope_description" 
+                      value={personalData.horoscope_description || ''} 
+                      onChange={handleChange}
+                      disabled={true}
+                      rows={3}
+                      className="bg-gray-50"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Günlük Burç Yorumu</Label>
+                    <Card className="p-3 bg-gray-50">
+                      <p className="font-semibold mb-1">
+                        {format(new Date(), "d MMMM yyyy", { locale: tr })}
+                      </p>
+                      <p className="text-sm">
+                        {personalData.horoscope ? 
+                          `${personalData.horoscope} burcu için günlük yorum henüz yüklenmedi.` : 
+                          "Burç bilgisi bulunamadı. Lütfen doğum tarihi giriniz."}
+                      </p>
+                    </Card>
                   </div>
 
                   <div className="space-y-2">

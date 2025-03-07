@@ -1,66 +1,87 @@
 
-/**
- * Calculates the horoscope sign based on birth date
- */
-export function getHoroscope(birthDate: Date): string | null {
-  if (!birthDate) return null;
-  
-  const day = birthDate.getDate();
-  const month = birthDate.getMonth() + 1; // JavaScript months are 0-based
-  
-  if ((month === 3 && day >= 21) || (month === 4 && day <= 19)) {
-    return "Koç";
-  } else if ((month === 4 && day >= 20) || (month === 5 && day <= 20)) {
-    return "Boğa";
-  } else if ((month === 5 && day >= 21) || (month === 6 && day <= 20)) {
-    return "İkizler";
-  } else if ((month === 6 && day >= 21) || (month === 7 && day <= 22)) {
-    return "Yengeç";
-  } else if ((month === 7 && day >= 23) || (month === 8 && day <= 22)) {
-    return "Aslan";
-  } else if ((month === 8 && day >= 23) || (month === 9 && day <= 22)) {
-    return "Başak";
-  } else if ((month === 9 && day >= 23) || (month === 10 && day <= 22)) {
-    return "Terazi";
-  } else if ((month === 10 && day >= 23) || (month === 11 && day <= 21)) {
-    return "Akrep";
-  } else if ((month === 11 && day >= 22) || (month === 12 && day <= 21)) {
-    return "Yay";
-  } else if ((month === 12 && day >= 22) || (month === 1 && day <= 19)) {
-    return "Oğlak";
-  } else if ((month === 1 && day >= 20) || (month === 2 && day <= 18)) {
-    return "Kova";
-  } else if ((month === 2 && day >= 19) || (month === 3 && day <= 20)) {
-    return "Balık";
-  }
-  
-  return null;
+type HoroscopeSign = 
+  'Koç' | 'Boğa' | 'İkizler' | 'Yengeç' | 'Aslan' | 'Başak' | 
+  'Terazi' | 'Akrep' | 'Yay' | 'Oğlak' | 'Kova' | 'Balık' | null;
+
+interface HoroscopeRange {
+  sign: HoroscopeSign;
+  startMonth: number;
+  startDay: number;
+  endMonth: number;
+  endDay: number;
 }
 
-/**
- * Fetches horoscope description from elle.com.tr
- */
-export async function getHoroscopeDescription(horoscope: string): Promise<string> {
-  // Map Turkish horoscope names to English as used in the URL
-  const horoscopeMap: Record<string, string> = {
-    "Koç": "koc",
-    "Boğa": "boga",
-    "İkizler": "ikizler",
-    "Yengeç": "yengec",
-    "Aslan": "aslan",
-    "Başak": "basak",
-    "Terazi": "terazi",
-    "Akrep": "akrep",
-    "Yay": "yay",
-    "Oğlak": "oglak",
-    "Kova": "kova",
-    "Balık": "balik"
+// Burç tarih aralıklarını tanımla
+const horoscopeRanges: HoroscopeRange[] = [
+  { sign: 'Koç', startMonth: 3, startDay: 21, endMonth: 4, endDay: 19 },
+  { sign: 'Boğa', startMonth: 4, startDay: 20, endMonth: 5, endDay: 20 },
+  { sign: 'İkizler', startMonth: 5, startDay: 21, endMonth: 6, endDay: 20 },
+  { sign: 'Yengeç', startMonth: 6, startDay: 21, endMonth: 7, endDay: 22 },
+  { sign: 'Aslan', startMonth: 7, startDay: 23, endMonth: 8, endDay: 22 },
+  { sign: 'Başak', startMonth: 8, startDay: 23, endMonth: 9, endDay: 22 },
+  { sign: 'Terazi', startMonth: 9, startDay: 23, endMonth: 10, endDay: 22 },
+  { sign: 'Akrep', startMonth: 10, startDay: 23, endMonth: 11, endDay: 21 },
+  { sign: 'Yay', startMonth: 11, startDay: 22, endMonth: 12, endDay: 21 },
+  { sign: 'Oğlak', startMonth: 12, startDay: 22, endMonth: 1, endDay: 19 },
+  { sign: 'Kova', startMonth: 1, startDay: 20, endMonth: 2, endDay: 18 },
+  { sign: 'Balık', startMonth: 2, startDay: 19, endMonth: 3, endDay: 20 },
+];
+
+// Doğum tarihine göre burç hesaplama
+export function getHoroscope(birthDate: Date | null): HoroscopeSign {
+  if (!birthDate) return null;
+  
+  const month = birthDate.getMonth() + 1; // JavaScript'te aylar 0-11 arası
+  const day = birthDate.getDate();
+  
+  const horoscope = horoscopeRanges.find(range => {
+    // Aynı ay içinde başlayıp biten burçlar için
+    if (range.startMonth === range.endMonth) {
+      return month === range.startMonth && day >= range.startDay && day <= range.endDay;
+    }
+    
+    // Yılı aşan burçlar için (örn. Oğlak)
+    if (range.startMonth > range.endMonth) {
+      return (month === range.startMonth && day >= range.startDay) || 
+             (month === range.endMonth && day <= range.endDay);
+    }
+    
+    // Normal durumlar için
+    return (month === range.startMonth && day >= range.startDay) || 
+           (month === range.endMonth && day <= range.endDay) || 
+           (month > range.startMonth && month < range.endMonth);
+  });
+  
+  return horoscope?.sign || null;
+}
+
+// Burç özelliklerini getir
+export function getHoroscopeDescription(sign: HoroscopeSign): string {
+  if (!sign) return '';
+  
+  const descriptions: Record<string, string> = {
+    'Koç': 'Cesur, enerjik ve lider ruhlu. Koç burcu insanları girişimci, dinamik ve hızlı karar verebilen kişilerdir. Yeni başlangıçlar yapmayı severler. Sabırsız olabilirler.',
+    'Boğa': 'Kararlı, güvenilir ve pratik. Boğa burcu insanları sadık, sakin ve rahata düşkündür. Değişimden hoşlanmazlar ve maddi güvenliğe önem verirler. İnatçı olabilirler.',
+    'İkizler': 'Meraklı, uyumlu ve zeki. İkizler burcu insanları iletişimi kuvvetli, hareketli ve çok yönlüdür. Birden fazla konuyla aynı anda ilgilenebilirler. Kararsız olabilirler.',
+    'Yengeç': 'Duygusal, koruyucu ve sezgisel. Yengeç burcu insanları ailesine düşkün, merhametli ve derin duygulara sahiptir. Yuvalarına bağlıdırlar. Alıngan olabilirler.',
+    'Aslan': 'Yaratıcı, tutkulu ve cömert. Aslan burcu insanları kendine güvenen, lider ve dikkat çekmeyi seven kişilerdir. Sadık ve sıcakkanlıdırlar. Kibirli olabilirler.',
+    'Başak': 'Analitik, çalışkan ve titiz. Başak burcu insanları detaylara dikkat eden, mükemmeliyetçi ve yardımseverdir. Pratik çözümler üretirler. Eleştirel olabilirler.',
+    'Terazi': 'Diplomatik, adil ve uyumlu. Terazi burcu insanları ilişkilere önem veren, dengeli ve estetik anlayışı yüksek kişilerdir. Sosyal adaleti önemserler. Kararsız olabilirler.',
+    'Akrep': 'Tutkulu, kararlı ve derin. Akrep burcu insanları güçlü sezgilere sahip, gizemli ve araştırmacıdır. İntikam duyguları güçlüdür. Kıskanç olabilirler.',
+    'Yay': 'Maceracı, iyimser ve dürüst. Yay burcu insanları özgürlüğüne düşkün, bilgiye açık ve felsefi düşünceye yatkındır. Gezmeyi severler. Düşüncesiz olabilirler.',
+    'Oğlak': 'Disiplinli, sorumlu ve sabırlı. Oğlak burcu insanları hırslı, geleneksel ve çalışkandır. Kariyer odaklıdırlar. Mesafeli olabilirler.',
+    'Kova': 'Özgün, idealist ve bağımsız. Kova burcu insanları yenilikçi, insancıl ve entelektüel kişilerdir. Toplumsal konulara ilgi duyarlar. Duygusal olarak mesafeli olabilirler.',
+    'Balık': 'Şefkatli, artistik ve sezgisel. Balık burcu insanları hayalperest, empatik ve romantiktir. Sanatsal yetenekleri vardır. Gerçeklerden kaçma eğiliminde olabilirler.'
   };
   
-  // In a real implementation, this would fetch the horoscope from elle.com.tr
-  // For simulation purposes, we'll return a fixed description
-  const englishHoroscope = horoscopeMap[horoscope] || "";
+  return descriptions[sign] || '';
+}
+
+// Günlük burç yorumu getirme fonksiyonu (API entegrasyonu için hazır)
+export async function getDailyHoroscopeReading(sign: HoroscopeSign, date: Date): Promise<string> {
+  // Buraya gelecekte API entegrasyonu eklenebilir
+  // Şimdilik sabit bir metin döndürüyoruz
+  if (!sign) return '';
   
-  // We're simulating the API call since we can't actually scrape the website
-  return `${horoscope} burcu günlük yorumu: Bugün kendinizi daha enerjik ve motive hissedebilirsiniz. İş hayatınızda olumlu gelişmeler yaşanabilir. Sevdiklerinizle vakit geçirmek size iyi gelecek.`;
+  return `${sign} burcu için günlük yorumunuz: Bugün kendinizi enerjik hissedeceksiniz. Yeni fırsatlar kapınızı çalabilir, açık olun.`;
 }

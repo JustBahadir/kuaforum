@@ -10,6 +10,7 @@ interface PhoneInputFieldProps {
   placeholder?: string;
   id?: string;
   error?: string;
+  disabled?: boolean;
 }
 
 export function PhoneInputField({
@@ -18,9 +19,12 @@ export function PhoneInputField({
   label = "Telefon Numarası",
   placeholder = "05XX XXX XX XX",
   id = "phone",
-  error
+  error,
+  disabled = false
 }: PhoneInputFieldProps) {
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (disabled) return;
+    
     const digitsOnly = e.target.value.replace(/\D/g, '');
     onChange(formatPhoneNumber(digitsOnly));
   };
@@ -34,6 +38,7 @@ export function PhoneInputField({
         onChange={handlePhoneChange}
         placeholder={placeholder}
         className={error ? "border-red-500" : ""}
+        disabled={disabled}
       />
       {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
     </div>
