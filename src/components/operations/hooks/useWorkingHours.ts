@@ -34,11 +34,24 @@ export function useWorkingHours(
 
   const { mutate: saatGuncelle } = useMutation({
     mutationFn: async ({ id, updates }: { id: number; updates: any }) => {
-      const { error } = await supabase
+      if (!id) {
+        throw new Error('ID is required for updating working hours');
+      }
+      
+      console.log("Updating working hours:", id, updates);
+      
+      const { data, error } = await supabase
         .from('calisma_saatleri')
         .update(updates)
-        .eq('id', id);
-      if (error) throw error;
+        .eq('id', id)
+        .select();
+        
+      if (error) {
+        console.error("Update error:", error);
+        throw error;
+      }
+      
+      console.log("Update successful:", data);
       return { id, updates };
     },
     onSuccess: () => {

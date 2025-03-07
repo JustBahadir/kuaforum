@@ -30,11 +30,21 @@ export function WorkingHoursRow({
   onSaveChanges,
   onCancelEditing
 }: WorkingHoursRowProps) {
-  const uniqueId = saat.id || index;
+  const uniqueId = saat.id !== undefined ? saat.id : index;
   const isEditing = editing === uniqueId;
   const isKapali = (tempChanges[uniqueId]?.kapali !== undefined) 
     ? tempChanges[uniqueId].kapali 
     : saat.kapali;
+
+  const handleStatusToggle = (checked: boolean) => {
+    const newStatus = !checked;
+    if (isEditing) {
+      onTempChange(uniqueId, 'kapali', newStatus);
+    } else if (isStaff) {
+      onTempChange(uniqueId, 'kapali', newStatus);
+      onSaveChanges(uniqueId);
+    }
+  };
 
   return (
     <TableRow key={uniqueId} className="hover:bg-gray-50">
@@ -46,7 +56,7 @@ export function WorkingHoursRow({
           <Input
             type="time"
             value={(tempChanges[uniqueId]?.acilis !== undefined) 
-              ? tempChanges[uniqueId].acilis 
+              ? tempChanges[uniqueId].acilis || "" 
               : saat.acilis || ""}
             onChange={(e) => onTempChange(uniqueId, 'acilis', e.target.value)}
             disabled={isKapali}
@@ -61,7 +71,7 @@ export function WorkingHoursRow({
           <Input
             type="time"
             value={(tempChanges[uniqueId]?.kapanis !== undefined) 
-              ? tempChanges[uniqueId].kapanis 
+              ? tempChanges[uniqueId].kapanis || "" 
               : saat.kapanis || ""}
             onChange={(e) => onTempChange(uniqueId, 'kapanis', e.target.value)}
             disabled={isKapali}
@@ -71,25 +81,18 @@ export function WorkingHoursRow({
           isKapali ? "-" : (saat.kapanis?.substring(0, 5) || "-")
         )}
       </TableCell>
-      <TableCell>
+      {isStaff && <TableCell>
         <div className="flex items-center gap-2">
           <Switch
             checked={!isKapali}
-            onCheckedChange={(checked) => {
-              if (isEditing) {
-                onTempChange(uniqueId, 'kapali', !checked);
-              } else if (isStaff) {
-                onTempChange(uniqueId, 'kapali', !checked);
-                onSaveChanges(uniqueId);
-              }
-            }}
-            disabled={!isStaff || (isStaff && !isEditing)}
+            onCheckedChange={(checked) => handleStatusToggle(checked)}
+            disabled={!isStaff || (isStaff && !isEditing && editing !== null)}
           />
           <span className="text-sm text-gray-600">
             {isKapali ? "Kapalı" : "Açık"}
           </span>
         </div>
-      </TableCell>
+      </TableCell>}
       {isStaff && (
         <TableCell className="text-right">
           {isEditing ? (
@@ -116,6 +119,7 @@ export function WorkingHoursRow({
               variant="ghost"
               size="sm"
               onClick={() => onStartEditing(uniqueId)}
+              disabled={editing !== null && editing !== uniqueId}
             >
               <Edit className="h-4 w-4 mr-1" />
               Düzenle

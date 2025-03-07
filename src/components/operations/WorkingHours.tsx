@@ -22,13 +22,6 @@ export function WorkingHours({ isStaff = true, gunler = [], onChange }: WorkingH
     cancelEditing
   } = useWorkingHours(isStaff, gunler, onChange);
 
-  // IMPORTANT: Always sort by predefined day order regardless of editing status
-  const sortedSaatler = [...calismaSaatleri].sort((a, b) => {
-    const aIndex = gunSiralama.indexOf(a.gun);
-    const bIndex = gunSiralama.indexOf(b.gun);
-    return aIndex - bIndex;
-  });
-
   return (
     <div className="border rounded-lg overflow-hidden">
       <Table>
@@ -42,9 +35,9 @@ export function WorkingHours({ isStaff = true, gunler = [], onChange }: WorkingH
           </TableRow>
         </TableHeader>
         <TableBody>
-          {sortedSaatler.map((saat: CalismaSaati, index: number) => (
+          {calismaSaatleri.map((saat: CalismaSaati, index: number) => (
             <WorkingHoursRow
-              key={saat.id || index}
+              key={saat.id !== undefined ? saat.id : index}
               saat={saat}
               index={index}
               isStaff={isStaff}
