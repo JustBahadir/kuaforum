@@ -107,11 +107,11 @@ export function CustomerDetails({ customer, onEdit }: CustomerDetailsProps) {
         </TabsContent>
         
         <TabsContent value="operations" className="space-y-4">
-          <CustomerOperationsTable customerId={customer.id} />
+          <CustomerOperationsTable customerId={customer.id.toString()} />
         </TabsContent>
         
         <TabsContent value="preferences" className="space-y-4">
-          <CustomerPreferences customerId={customer.id} />
+          <CustomerPreferences customerId={customer.id.toString()} />
         </TabsContent>
       </Tabs>
     </div>

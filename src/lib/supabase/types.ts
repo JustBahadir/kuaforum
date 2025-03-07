@@ -1,3 +1,4 @@
+
 import { PostgrestError } from '@supabase/supabase-js';
 
 export interface Profile {
@@ -83,6 +84,7 @@ export interface Musteri {
   birthdate?: string | null;
   created_at: string;
   dukkan_id?: number;
+  // Note: 'role' is not part of the Musteri interface
 }
 
 export type RandevuDurumu = "beklemede" | "onaylandi" | "iptal_edildi" | "tamamlandi";
