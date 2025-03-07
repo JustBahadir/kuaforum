@@ -12,26 +12,40 @@ export type Database = {
       calisma_saatleri: {
         Row: {
           acilis: string | null
+          created_at: string
+          dukkan_id: number | null
           gun: string
           id: number
-          kapali: boolean | null
+          kapali: boolean
           kapanis: string | null
         }
         Insert: {
           acilis?: string | null
+          created_at?: string
+          dukkan_id?: number | null
           gun: string
           id?: number
-          kapali?: boolean | null
+          kapali?: boolean
           kapanis?: string | null
         }
         Update: {
           acilis?: string | null
+          created_at?: string
+          dukkan_id?: number | null
           gun?: string
           id?: number
-          kapali?: boolean | null
+          kapali?: boolean
           kapanis?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "calisma_saatleri_dukkan_id_fkey"
+            columns: ["dukkan_id"]
+            isOneToOne: false
+            referencedRelation: "dukkanlar"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       customer_personal_data: {
         Row: {

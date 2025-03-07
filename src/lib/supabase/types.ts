@@ -1,4 +1,3 @@
-
 import { PostgrestError } from '@supabase/supabase-js';
 
 export interface Profile {
@@ -140,4 +139,6 @@ export interface CalismaSaati {
   acilis: string | null;
   kapanis: string | null;
   kapali: boolean;
+  created_at?: string;
+  dukkan_id?: number;
 }

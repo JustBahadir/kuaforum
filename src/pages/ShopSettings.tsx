@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { dukkanServisi } from "@/lib/supabase";
@@ -133,7 +132,6 @@ export default function ShopSettings() {
           </Alert>
         ) : dukkan ? (
           <div className="grid gap-6 md:grid-cols-2">
-            {/* Dükkan Bilgileri */}
             <Card>
               <CardHeader>
                 <CardTitle>Dükkan Bilgileri</CardTitle>
@@ -197,7 +195,6 @@ export default function ShopSettings() {
               </CardContent>
             </Card>
             
-            {/* Dükkan Kodu - Updated to be non-changeable */}
             <Card>
               <CardHeader>
                 <CardTitle>Dükkan Kodu</CardTitle>
