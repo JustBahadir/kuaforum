@@ -2,7 +2,6 @@
 import { supabase } from '../client';
 import { CalismaSaati } from '../types';
 import { gunSiralama } from '@/components/operations/constants/workingDays';
-import { toast } from 'sonner';
 
 export const calismaSaatleriServisi = {
   async hepsiniGetir(dukkanId?: number) {
@@ -34,34 +33,12 @@ export const calismaSaatleriServisi = {
     }
   },
   
-  async gunleriGetir() {
-    try {
-      const { data, error } = await supabase
-        .from('calisma_saatleri')
-        .select('gun');
-
-      if (error) {
-        console.error("Günleri getirme hatası:", error);
-        throw error;
-      }
-      
-      return (data || []).sort((a, b) => {
-        const aIndex = gunSiralama.indexOf(a.gun);
-        const bIndex = gunSiralama.indexOf(b.gun);
-        return aIndex - bIndex;
-      });
-    } catch (err) {
-      console.error("Günleri getirme sırasında hata:", err);
-      throw err;
-    }
-  },
-  
   async guncelle(saatler: CalismaSaati[]) {
     try {
       console.log("Toplu güncelleme için gönderilen saatler:", saatler);
       
       // Filter out entries without id
-      const validSaatler = saatler.filter(saat => saat.id !== undefined);
+      const validSaatler = saatler.filter(saat => saat.id !== undefined || saat.dukkan_id !== undefined);
       
       if (validSaatler.length === 0) {
         console.warn("Güncelleme için geçerli çalışma saati bulunamadı");
@@ -106,7 +83,6 @@ export const calismaSaatleriServisi = {
         updates.kapanis = null;
       }
       
-      // We'll avoid using the profile table and directly update only calisma_saatleri
       const { data, error } = await supabase
         .from('calisma_saatleri')
         .update(updates)
@@ -145,58 +121,6 @@ export const calismaSaatleriServisi = {
     }
   },
   
-  async varsayilanSaatleriOlustur(dukkanId: number) {
-    try {
-      if (!dukkanId) {
-        console.error("Dükkan ID gerekli");
-        throw new Error("Dükkan ID gerekli");
-      }
-      
-      // First check if hours already exist for this shop
-      const { data: existing, error: checkError } = await supabase
-        .from('calisma_saatleri')
-        .select('id')
-        .eq('dukkan_id', dukkanId);
-      
-      if (checkError) {
-        console.error("Mevcut saatleri kontrol ederken hata:", checkError);
-        throw checkError;
-      }
-        
-      if (existing && existing.length > 0) {
-        console.log("Bu dükkan için çalışma saatleri zaten mevcut, ID:", dukkanId);
-        return existing;
-      }
-      
-      // Standard business hours (9-18) with Sunday closed
-      const varsayilanSaatler = gunSiralama.map(gun => ({
-        gun,
-        acilis: gun === "pazar" ? null : "09:00",
-        kapanis: gun === "pazar" ? null : "18:00",
-        kapali: gun === "pazar", // Sunday closed by default
-        dukkan_id: dukkanId
-      }));
-      
-      console.log(`Dükkan ${dukkanId} için varsayılan saatler oluşturuluyor:`, varsayilanSaatler);
-      
-      const { data, error } = await supabase
-        .from('calisma_saatleri')
-        .insert(varsayilanSaatler)
-        .select();
-
-      if (error) {
-        console.error("Varsayılan çalışma saatleri oluşturma hatası:", error);
-        throw error;
-      }
-      
-      console.log("Varsayılan saatler oluşturuldu:", data);
-      return data;
-    } catch (err) {
-      console.error("Varsayılan çalışma saatleri oluşturulurken hata:", err);
-      throw err;
-    }
-  },
-  
   async dukkanSaatleriGetir(dukkanId: number) {
     try {
       if (!dukkanId) {
@@ -217,6 +141,35 @@ export const calismaSaatleriServisi = {
       }
       
       console.log(`Dükkan ${dukkanId} için çalışma saatleri:`, data);
+      
+      if (data && data.length === 0) {
+        // If no hours found, create default hours
+        const defaultHours = gunSiralama.map(gun => ({
+          gun,
+          acilis: "09:00",
+          kapanis: "18:00",
+          kapali: false,
+          dukkan_id: dukkanId
+        }));
+        
+        try {
+          const { data: newData, error: insertError } = await supabase
+            .from('calisma_saatleri')
+            .upsert(defaultHours)
+            .select();
+            
+          if (insertError) {
+            console.error("Varsayılan saatleri ekleme hatası:", insertError);
+            return [];
+          }
+          
+          console.log("Yeni oluşturulan saatler:", newData);
+          return newData || [];
+        } catch (err) {
+          console.error("Varsayılan saatler oluşturulurken hata:", err);
+          return [];
+        }
+      }
       
       // Sort by predefined day order
       return (data || []).sort((a, b) => {

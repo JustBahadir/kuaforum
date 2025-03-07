@@ -85,42 +85,24 @@ export function ShopWorkingHoursCard({ calisma_saatleri = [], userRole, dukkanId
         )}
       </CardHeader>
       <CardContent>
-        {sortedSaatler.length === 0 ? (
-          <div className="text-center py-4 text-gray-500">
-            Çalışma saati bilgisi bulunmuyor.
-            {userRole === 'admin' && (
-              <div className="mt-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={async () => {
-                    try {
-                      await calismaSaatleriServisi.varsayilanSaatleriOlustur(dukkanId);
-                      toast.success("Varsayılan çalışma saatleri oluşturuldu");
-                      setTimeout(() => window.location.reload(), 1500);
-                    } catch (err) {
-                      console.error("Varsayılan saatler oluşturulurken hata:", err);
-                      toast.error("Varsayılan saatler oluşturulurken hata");
-                    }
-                  }}
-                >
-                  Varsayılan Saatleri Oluştur
-                </Button>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="border rounded-lg overflow-hidden">
-            <Table>
-              <TableHeader>
+        <div className="border rounded-lg overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[150px]">Gün</TableHead>
+                <TableHead>Açılış</TableHead>
+                <TableHead>Kapanış</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sortedSaatler.length === 0 ? (
                 <TableRow>
-                  <TableHead className="w-[150px]">Gün</TableHead>
-                  <TableHead>Açılış</TableHead>
-                  <TableHead>Kapanış</TableHead>
+                  <TableCell colSpan={3} className="text-center py-6 text-gray-500">
+                    Çalışma saati bilgisi yükleniyor...
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sortedSaatler.map((saat: any) => (
+              ) : (
+                sortedSaatler.map((saat: any) => (
                   <TableRow key={saat.gun} className="hover:bg-gray-50">
                     <TableCell className="font-medium">
                       {gunIsimleri[saat.gun] || saat.gun}
@@ -132,11 +114,11 @@ export function ShopWorkingHoursCard({ calisma_saatleri = [], userRole, dukkanId
                       {saat.kapali ? "-" : formatTime(saat.kapanis)}
                     </TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </CardContent>
     </Card>
   );

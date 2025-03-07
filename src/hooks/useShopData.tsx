@@ -119,25 +119,14 @@ export function useShopData(dukkanId: number | null) {
         const data = await calismaSaatleriServisi.dukkanSaatleriGetir(shopId);
         console.log("useShopData: Fetched working hours:", data);
         
-        if (data.length === 0 && shopId) {
-          console.log("No working hours found, creating default hours");
-          try {
-            await calismaSaatleriServisi.varsayilanSaatleriOlustur(shopId);
-            // Fetch again after creating default hours
-            return await calismaSaatleriServisi.dukkanSaatleriGetir(shopId);
-          } catch (createError) {
-            console.error("Error creating default hours:", createError);
-            return [];
-          }
-        }
-        
         return data;
       } catch (error) {
         console.error("Çalışma saatleri alınırken hata:", error);
         return [];
       }
     },
-    enabled: !!(dukkanData?.id || dukkanId)
+    enabled: !!(dukkanData?.id || dukkanId),
+    staleTime: 30000 // Refresh every 30 seconds
   });
 
   return { 

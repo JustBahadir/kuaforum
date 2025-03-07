@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -16,7 +15,7 @@ export function useWorkingHours(
   const [tempChanges, setTempChanges] = useState<Record<number, Partial<CalismaSaati>>>({});
   const queryClient = useQueryClient();
 
-  // If dukkanId is provided, fetch hours for that shop, otherwise fetch all hours
+  // If dukkanId is provided, fetch hours for that shop
   const { 
     data: fetchedCalismaSaatleri = [], 
     isLoading, 
@@ -28,10 +27,12 @@ export function useWorkingHours(
       console.log("useWorkingHours: Fetching working hours, dukkanId:", dukkanId);
       try {
         if (dukkanId) {
+          // If we have a shop ID, get hours for that shop
           const data = await calismaSaatleriServisi.dukkanSaatleriGetir(dukkanId);
           console.log("useWorkingHours: Fetched shop-specific hours:", data);
           return data;
         } else {
+          // Otherwise get all hours
           const data = await calismaSaatleriServisi.hepsiniGetir();
           console.log("useWorkingHours: Fetched all hours:", data);
           return data;
@@ -47,13 +48,14 @@ export function useWorkingHours(
   // Use the provided working hours if available, otherwise use the fetched ones
   const calismaSaatleri = providedGunler.length > 0 ? providedGunler : fetchedCalismaSaatleri;
 
-  // Always sort by predefined day order and never resort after editing
+  // Always sort by predefined day order
   const sortedSaatler = [...calismaSaatleri].sort((a, b) => {
     const aIndex = gunSiralama.indexOf(a.gun);
     const bIndex = gunSiralama.indexOf(b.gun);
     return aIndex - bIndex;
   });
 
+  // Mutation for updating a single working hour
   const { mutate: saatGuncelle, isPending: isUpdating } = useMutation({
     mutationFn: async ({ id, updates }: { id: number; updates: Partial<CalismaSaati> }) => {
       if (!id) {
@@ -174,12 +176,9 @@ export function useWorkingHours(
         updates.acilis = null;
         updates.kapanis = null;
       } else { // We're toggling from closed to open
-        // If opening, set default times if none exist
-        const saat = calismaSaatleri.find(s => s.id === id || (typeof s.id === 'string' && parseInt(s.id) === id));
-        if (saat) {
-          updates.acilis = "09:00";
-          updates.kapanis = "18:00";
-        }
+        // If opening, set default times
+        updates.acilis = "09:00";
+        updates.kapanis = "18:00";
       }
       
       console.log("Status toggle updates:", updates);
