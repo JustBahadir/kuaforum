@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -13,12 +12,21 @@ import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { 
   User, Calendar, Mail, Phone, MapPin, Briefcase, Edit, Save, Trash2, AlertTriangle,
-  FileText, Camera, Clock, CreditCard, Award, BookOpen, MessageSquare
+  FileText, Camera, Clock, CreditCard, Award, BookOpen, MessageSquare, Plus, X, Pencil
 } from "lucide-react";
 import { 
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle 
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Musteri } from "@/lib/supabase/types";
 import { 
   customerPersonalDataService, 
@@ -46,7 +54,10 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
   const [isSaving, setIsSaving] = useState(false);
   const queryClient = useQueryClient();
   
-  // Customer basic data form
+  const [childNameDialogOpen, setChildNameDialogOpen] = useState(false);
+  const [childName, setChildName] = useState("");
+  const [editingChildIndex, setEditingChildIndex] = useState<number | null>(null);
+  
   const [formData, setFormData] = useState({
     first_name: customer.first_name,
     last_name: customer.last_name || "",
@@ -54,7 +65,6 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
     birthdate: customer.birthdate || ""
   });
   
-  // Customer personal data form
   const [personalData, setPersonalData] = useState<CustomerPersonalData>({
     customer_id: customer.id.toString(),
     birth_date: null,
@@ -66,10 +76,8 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
     daily_horoscope_reading: null
   });
 
-  // Operation notes being edited
   const [editingNotes, setEditingNotes] = useState<{ [key: number]: string }>({});
 
-  // Calculate horoscope from birthdate
   useEffect(() => {
     if (formData.birthdate) {
       const birthDate = new Date(formData.birthdate);
@@ -84,7 +92,6 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
     }
   }, [formData.birthdate]);
 
-  // Fetch customer personal data
   const { data: customerPersonalData, isLoading: isLoadingPersonalData } = useQuery({
     queryKey: ['customerPersonalData', customer.id],
     queryFn: async () => {
@@ -97,7 +104,6 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
     }
   });
 
-  // Fetch daily horoscope reading
   const { data: dailyHoroscope, isLoading: isLoadingHoroscope } = useQuery({
     queryKey: ['dailyHoroscope', personalData.horoscope],
     queryFn: async () => {
@@ -107,7 +113,6 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
     enabled: !!personalData.horoscope
   });
 
-  // Fetch customer operations
   const { data: customerOperations = [], isLoading: isLoadingOperations } = useQuery({
     queryKey: ['customerOperations', customer.id],
     queryFn: async () => {
@@ -115,7 +120,6 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
     }
   });
 
-  // Save operation notes mutation
   const saveNotesMutation = useMutation({
     mutationFn: ({ appointmentId, notes }: { appointmentId: number, notes: string }) => {
       return customerOperationsService.updateOperationNotes(appointmentId, notes);
@@ -129,7 +133,6 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
     }
   });
 
-  // Update personal data state when fetched from API
   useEffect(() => {
     if (customerPersonalData) {
       setPersonalData({
@@ -139,7 +142,6 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
     }
   }, [customerPersonalData, customer.id]);
 
-  // Update daily horoscope when fetched
   useEffect(() => {
     if (dailyHoroscope) {
       setPersonalData(prev => ({
@@ -149,7 +151,6 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
     }
   }, [dailyHoroscope]);
 
-  // Format date for display
   const formatDate = (dateString?: string | null) => {
     if (!dateString) return "-";
     try {
@@ -159,7 +160,6 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
     }
   };
 
-  // Handle form input changes
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     
@@ -170,7 +170,6 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
     }
   };
 
-  // Handle operation notes changes
   const handleNotesChange = (operationId: number, notes: string) => {
     setEditingNotes(prev => ({
       ...prev,
@@ -178,7 +177,6 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
     }));
   };
 
-  // Save operation notes
   const handleSaveNotes = (operationId: number) => {
     if (editingNotes[operationId] !== undefined) {
       saveNotesMutation.mutate({
@@ -188,32 +186,66 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
     }
   };
 
-  // Handle phone input changes
   const handlePhoneChange = (phone: string) => {
     setFormData(prev => ({ ...prev, phone }));
   };
 
-  // Calculate customer's initials for avatar
+  const handleAddChildName = () => {
+    if (!childName.trim()) {
+      toast.error("Çocuk ismi boş olamaz");
+      return;
+    }
+
+    if (editingChildIndex !== null) {
+      const updatedNames = [...personalData.children_names];
+      updatedNames[editingChildIndex] = childName;
+      
+      setPersonalData(prev => ({
+        ...prev, 
+        children_names: updatedNames
+      }));
+    } else {
+      setPersonalData(prev => ({
+        ...prev,
+        children_names: [...prev.children_names, childName]
+      }));
+    }
+    
+    setChildName("");
+    setEditingChildIndex(null);
+    setChildNameDialogOpen(false);
+  };
+
+  const handleEditChildName = (index: number) => {
+    setChildName(personalData.children_names[index]);
+    setEditingChildIndex(index);
+    setChildNameDialogOpen(true);
+  };
+
+  const handleRemoveChildName = (index: number) => {
+    const updatedNames = personalData.children_names.filter((_, i) => i !== index);
+    setPersonalData(prev => ({
+      ...prev,
+      children_names: updatedNames
+    }));
+  };
+
   const getInitials = () => {
     if (!customer.first_name) return "?";
     return `${customer.first_name.charAt(0)}${customer.last_name ? customer.last_name.charAt(0) : ''}`;
   };
 
-  // Toggle edit mode
   const handleEditToggle = () => {
     setEditMode(!editMode);
   };
 
-  // Save customer changes
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      // First save basic customer data
       if (activeTab === "basic") {
         await musteriServisi.guncelle(customer.id, formData);
         toast.success("Müşteri bilgileri başarıyla güncellendi");
       } 
-      // Save personal data
       else if (activeTab === "personal") {
         await customerPersonalDataService.upsert(personalData);
         toast.success("Müşteri kişisel bilgileri başarıyla güncellendi");
@@ -229,7 +261,6 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
     }
   };
 
-  // Delete customer
   const handleDeleteCustomer = async () => {
     try {
       await musteriServisi.sil(customer.id);
@@ -462,19 +493,94 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
                     </Card>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="children_names">Çocuklarının İsimleri (virgülle ayırın)</Label>
-                    <Input 
-                      id="children_names" 
-                      name="children_names" 
-                      value={personalData.children_names?.join(', ') || ''} 
-                      onChange={(e) => {
-                        const names = e.target.value.split(',').map(name => name.trim());
-                        setPersonalData(prev => ({ ...prev, children_names: names }));
-                      }}
-                      disabled={!editMode}
-                      placeholder="Ali, Ayşe, Mehmet"
-                    />
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <Label>Çocukları</Label>
+                      {editMode && (
+                        <Dialog open={childNameDialogOpen} onOpenChange={setChildNameDialogOpen}>
+                          <DialogTrigger asChild>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => {
+                                setChildName("");
+                                setEditingChildIndex(null);
+                              }}
+                            >
+                              <Plus className="h-4 w-4 mr-1" />
+                              Çocuk Ekle
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="sm:max-w-md">
+                            <DialogHeader>
+                              <DialogTitle>
+                                {editingChildIndex !== null ? "Çocuk İsmini Düzenle" : "Yeni Çocuk Ekle"}
+                              </DialogTitle>
+                              <DialogDescription>
+                                Lütfen çocuğun adını ve soyadını girin.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-4 py-4">
+                              <div className="space-y-2">
+                                <Label htmlFor="childName">Çocuk Adı</Label>
+                                <Input 
+                                  id="childName"
+                                  value={childName}
+                                  onChange={(e) => setChildName(e.target.value)}
+                                  placeholder="Örn: Ahmet Yılmaz"
+                                />
+                              </div>
+                            </div>
+                            <DialogFooter>
+                              <Button variant="outline" onClick={() => setChildNameDialogOpen(false)}>
+                                İptal
+                              </Button>
+                              <Button onClick={handleAddChildName}>
+                                {editingChildIndex !== null ? "Güncelle" : "Ekle"}
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                      )}
+                    </div>
+                    
+                    {personalData.children_names.length === 0 ? (
+                      <div className="p-4 border rounded-md bg-gray-50 text-center text-sm text-gray-500">
+                        Henüz çocuk bilgisi eklenmemiş
+                      </div>
+                    ) : (
+                      <div className="border rounded-md divide-y">
+                        {personalData.children_names.map((name, index) => (
+                          <div 
+                            key={index} 
+                            className="flex justify-between items-center p-3"
+                          >
+                            <span className="flex items-center gap-2">
+                              <User className="h-4 w-4 text-gray-500" />
+                              {name}
+                            </span>
+                            {editMode && (
+                              <div className="flex gap-2">
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon"
+                                  onClick={() => handleEditChildName(index)}
+                                >
+                                  <Pencil className="h-4 w-4 text-gray-500" />
+                                </Button>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon"
+                                  onClick={() => handleRemoveChildName(index)}
+                                >
+                                  <X className="h-4 w-4 text-red-500" />
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   
                   <div className="space-y-2">
@@ -588,7 +694,6 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
         </TabsContent>
       </Tabs>
       
-      {/* Delete confirmation dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

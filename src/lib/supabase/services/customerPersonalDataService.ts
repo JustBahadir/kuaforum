@@ -18,6 +18,7 @@ export interface CustomerPersonalData {
 export const customerPersonalDataService = {
   async getByCustomerId(customerId: string): Promise<CustomerPersonalData | null> {
     try {
+      // Use numeric ID directly without trying to treat it as a UUID
       const { data, error } = await supabase
         .from('customer_personal_data')
         .select('*')

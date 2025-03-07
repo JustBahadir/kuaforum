@@ -99,7 +99,7 @@ export function CustomerSelection({ dukkanId, value, onChange }: CustomerSelecti
               value={searchQuery}
               onValueChange={setSearchQuery}
             />
-            <CommandList>
+            <CommandList className="max-h-[300px] overflow-y-auto">
               <CommandEmpty>
                 <div className="py-6 text-center">
                   <p>Müşteri bulunamadı.</p>
@@ -117,12 +117,11 @@ export function CustomerSelection({ dukkanId, value, onChange }: CustomerSelecti
                 {filteredCustomers.map((customer) => (
                   <CommandItem
                     key={customer.id}
-                    value={`${customer.first_name}${customer.last_name || ""}`}
                     onSelect={() => {
                       onChange(customer.id);
                       setOpen(false);
                     }}
-                    className="cursor-pointer hover:bg-accent"
+                    className="flex items-center gap-2 cursor-pointer py-2 pl-2 hover:bg-accent data-[selected=true]:bg-accent data-[highlighted=true]:bg-accent"
                   >
                     <Check
                       className={cn(
@@ -141,6 +140,16 @@ export function CustomerSelection({ dukkanId, value, onChange }: CustomerSelecti
                   </CommandItem>
                 ))}
               </CommandGroup>
+              <div className="p-2 border-t">
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={handleNewCustomer}
+                >
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Yeni Müşteri Ekle
+                </Button>
+              </div>
             </CommandList>
           </Command>
         </PopoverContent>
