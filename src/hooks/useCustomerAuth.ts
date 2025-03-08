@@ -17,13 +17,13 @@ export function useCustomerAuth() {
     try {
       setLoading(true);
       
-      // Simple auth check with minimal timeout
+      // Set a very short timeout to avoid hanging
       const timeoutId = setTimeout(() => {
         console.log('Auth check timed out, treating as not authenticated');
         setIsAuthenticated(false);
         setLoading(false);
-      }, 400); // Very short timeout
-
+      }, 2000); // 2 seconds timeout - increased from 400ms to give more time but still avoid hanging
+      
       // Basic session check
       const { data, error } = await supabase.auth.getSession();
       
@@ -144,15 +144,17 @@ export function useCustomerAuth() {
     }
   };
 
-  // Add the missing refreshProfile function
+  // Add the refreshProfile function
   const refreshProfile = async () => {
+    console.log("Refreshing profile...");
     return await fetchUserSession();
   };
 
-  // Add the missing resetSession function
+  // Add the resetSession function
   const resetSession = async () => {
     try {
       setLoading(true);
+      console.log("Resetting session completely...");
       await supabase.auth.signOut();
       
       // Clear all session data
@@ -189,7 +191,7 @@ export function useCustomerAuth() {
     dukkanId,
     dukkanAdi,
     userId,
-    refreshProfile,  // Added the missing function
-    resetSession     // Added the missing function
+    refreshProfile,
+    resetSession
   };
 }

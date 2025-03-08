@@ -1,3 +1,4 @@
+
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
 
@@ -10,6 +11,8 @@ export const authenticationService = {
    */
   signIn: async (email: string, password: string) => {
     try {
+      console.log("Attempting login with:", email);
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
@@ -23,6 +26,7 @@ export const authenticationService = {
         throw error;
       }
       
+      console.log("Login successful, user data:", data.user?.id);
       return data;
     } catch (error) {
       console.error("Giriş yapılırken hata:", error);

@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,10 +50,20 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
     
     try {
       console.log("Giriş yapılıyor:", email);
-      const { data, error } = await supabase.auth.signInWithPassword({
+      
+      // Use a promise with timeout to avoid hanging
+      const loginPromise = supabase.auth.signInWithPassword({
         email,
         password
       });
+      
+      // Set a timeout of 10 seconds
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error("Giriş zaman aşımına uğradı. Lütfen tekrar deneyin.")), 10000);
+      });
+      
+      // Race the login and timeout promises
+      const { data, error } = await Promise.race([loginPromise, timeoutPromise]) as any;
       
       if (error) {
         console.error("Giriş hatası:", error);
@@ -66,7 +77,11 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         const metadata = data.user.user_metadata;
         if (metadata?.role === 'staff' || metadata?.role === 'admin') {
           toast.success("Giriş başarılı!");
-          onSuccess();
+          
+          // Add a small delay before redirecting to ensure state is updated
+          setTimeout(() => {
+            onSuccess();
+          }, 500);
         } else {
           // Logout if not staff or admin
           await supabase.auth.signOut();
@@ -77,7 +92,13 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       }
     } catch (error: any) {
       console.error("Giriş hatası:", error);
-      setLoginError(error.message || "Giriş yapılamadı. Lütfen bilgilerinizi kontrol edin.");
+      
+      // Handle timeout error
+      if (error.message.includes("zaman aşımına uğradı")) {
+        setLoginError(error.message);
+      } else {
+        setLoginError(error.message || "Giriş yapılamadı. Lütfen bilgilerinizi kontrol edin.");
+      }
     } finally {
       setLoading(false);
     }

@@ -10,7 +10,6 @@ import { supabase } from "@/lib/supabase/client";
 
 export default function StaffLogin() {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
   const [processingAuth, setProcessingAuth] = useState(false);
   const [authTimeout, setAuthTimeout] = useState<NodeJS.Timeout | null>(null);
   
@@ -55,7 +54,7 @@ export default function StaffLogin() {
     // Setup a timeout to avoid infinite loading
     const authCheckTimeout = setTimeout(() => {
       setProcessingAuth(false);
-    }, 5000); // 5 seconds timeout
+    }, 3000); // 3 seconds timeout
     
     setAuthTimeout(authCheckTimeout);
     
@@ -94,10 +93,21 @@ export default function StaffLogin() {
     
     checkHash();
 
-    // Check if user is already logged in
+    // Check if user is already logged in (with timeout for reliability)
     const checkAuth = async () => {
       try {
-        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        const authCheckPromise = supabase.auth.getSession();
+        
+        // Create a timeout promise
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error("Auth check timed out")), 5000);
+        });
+        
+        // Race between the auth check and timeout
+        const { data: sessionData, error: sessionError } = await Promise.race([
+          authCheckPromise,
+          timeoutPromise
+        ]) as any;
         
         if (sessionError) {
           console.error("Session check error:", sessionError);
