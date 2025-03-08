@@ -12,6 +12,7 @@ interface InputWithIconProps {
   placeholder?: string;
   icon: ReactNode;
   required?: boolean;
+  disabled?: boolean; // Added disabled prop
 }
 
 export function InputWithIcon({
@@ -22,7 +23,8 @@ export function InputWithIcon({
   onChange,
   placeholder,
   icon,
-  required = false
+  required = false,
+  disabled = false // Default value for disabled prop
 }: InputWithIconProps) {
   return (
     <div className="space-y-2">
@@ -39,6 +41,7 @@ export function InputWithIcon({
           className="pl-10"
           placeholder={placeholder}
           required={required}
+          disabled={disabled}
         />
       </div>
     </div>
