@@ -10,9 +10,9 @@ interface RouteProtectionProps {
 export const RouteProtection = ({ children }: RouteProtectionProps) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [checking, setChecking] = useState(false);
+  const [checking, setChecking] = useState(true);
 
-  // Erişime açık sayfalar
+  // Public pages that don't require authentication
   const publicPages = ["/", "/login", "/admin", "/staff-login"];
 
   useEffect(() => {
@@ -20,19 +20,17 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
     let timeout: NodeJS.Timeout;
     
     const checkSession = async () => {
-      // Mevcut sayfanın erişime açık olup olmadığını kontrol et
-      const isPublicPage = publicPages.some(page => 
-        location.pathname === page || location.pathname.startsWith(`${page}/`)
-      );
-      
-      // Kimlik doğrulaması gerekmeyen sayfaları doğrudan göster
-      if (isPublicPage) {
-        if (isMounted) setChecking(false);
-        return;
-      }
-      
       try {
-        setChecking(true);
+        // If it's a public page, no need for session check
+        const isPublicPage = publicPages.some(page => 
+          location.pathname === page || location.pathname.startsWith(`${page}/`)
+        );
+        
+        if (isPublicPage) {
+          if (isMounted) setChecking(false);
+          return;
+        }
+        
         const { data, error } = await supabase.auth.getSession();
         
         if (error || !data.session) {
@@ -42,8 +40,11 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
         
         const userRole = data.session.user.user_metadata?.role;
         
-        // Admin/personel kontrolü
-        if (location.pathname.startsWith('/shop-') || location.pathname === '/shop-home' || location.pathname.startsWith('/admin')) {
+        // Check admin/staff routes access
+        if (location.pathname.startsWith('/shop-') || 
+            location.pathname === '/shop-home' || 
+            location.pathname.startsWith('/admin') ||
+            location.pathname === '/admin/operations') {
           if (userRole !== 'admin' && userRole !== 'staff') {
             if (isMounted) navigate('/staff-login');
             return;
@@ -56,17 +57,13 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
       }
     };
     
-    // Sadece korumalı sayfalarda kontrol yap
-    if (!publicPages.includes(location.pathname)) {
-      checkSession();
-      
-      // Güvenlik önlemi olarak maksimum 5 saniye sonra yükleme durumunu kapat
-      timeout = setTimeout(() => {
-        if (isMounted) setChecking(false);
-      }, 2000);
-    }
+    checkSession();
     
-    // Cleanup
+    // Set a maximum timeout to avoid infinite loading
+    timeout = setTimeout(() => {
+      if (isMounted) setChecking(false);
+    }, 1500);
+    
     return () => {
       isMounted = false;
       clearTimeout(timeout);

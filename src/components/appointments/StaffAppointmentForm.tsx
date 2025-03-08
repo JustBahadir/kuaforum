@@ -111,7 +111,10 @@ export function StaffAppointmentForm({ onAppointmentCreated, initialDate }: Staf
       setAvailableTimes(slots);
     } catch (error) {
       console.error("Error fetching available times:", error);
-      toast.error("Müsait saatler yüklenirken bir hata oluştu");
+      
+      // Fallback - generate default time slots for the selected day
+      const defaultSlots = generateTimeSlots('09:00', '19:00');
+      setAvailableTimes(defaultSlots);
     } finally {
       setIsFetchingTimes(false);
     }

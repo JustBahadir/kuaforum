@@ -28,27 +28,31 @@ export const calismaSaatleriServisi = {
       
       console.log('calismaSaatleriServisi: Fetching hours for shop ID:', dukkanId);
       
+      // Try to get existing hours
       const { data, error } = await supabase
         .from('calisma_saatleri')
         .select('*')
         .eq('dukkan_id', dukkanId)
         .order('gun_sira', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        // If table doesn't exist yet, return default hours
+        console.error('Çalışma saatleri veritabanı hatası:', error);
+        return this.defaultWorkingHours(dukkanId);
+      }
       
       // If no data returned, create default hours
       if (!data || data.length === 0) {
-        console.log('calismaSaatleriServisi: No hours found, creating defaults');
-        const defaultHours = this.defaultWorkingHours(dukkanId);
-        await this.ekle(defaultHours);
-        return defaultHours;
+        console.log('calismaSaatleriServisi: No hours found, returning defaults');
+        return this.defaultWorkingHours(dukkanId);
       }
       
       console.log('calismaSaatleriServisi: Hours retrieved:', data);
       return data;
     } catch (error) {
       console.error('Dükkan çalışma saatleri getirme hatası:', error);
-      throw error;
+      // Return default hours on error
+      return this.defaultWorkingHours(dukkanId);
     }
   },
 

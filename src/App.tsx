@@ -69,6 +69,10 @@ function App() {
               <Route path="/customers" element={<Customers />} />
               <Route path="/settings" element={<Settings />} />
               
+              {/* Admin Operations Routes */}
+              <Route path="/admin/operations" element={<StaffOperations />} />
+              <Route path="/admin/customers/new" element={<Customers />} />
+              
               {/* Public Routes */}
               <Route path="/services" element={<CustomerOperations />} />
               <Route path="/appointments" element={<Appointments />} />

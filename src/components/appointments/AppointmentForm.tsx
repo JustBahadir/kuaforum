@@ -79,7 +79,9 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
       setAvailableTimes(slots);
     } catch (error) {
       console.error("Error fetching available times:", error);
-      toast.error("Müsait saatler yüklenirken bir hata oluştu");
+      // Fallback to default hours
+      const defaultSlots = generateTimeSlots('09:00', '19:00');
+      setAvailableTimes(defaultSlots);
     } finally {
       setIsFetchingTimes(false);
     }
@@ -202,6 +204,7 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
         <Select 
           onValueChange={(value) => setSelectedService(Number(value))}
           disabled={!selectedCategory || isLoadingIslemler}
+          value={selectedService?.toString()}
         >
           <SelectTrigger id="service">
             <SelectValue placeholder={!selectedCategory ? "Önce kategori seçin" : "Hizmet seçin"} />
@@ -264,7 +267,7 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
       <div className="space-y-2">
         <Label htmlFor="time">Saat</Label>
         <Select onValueChange={setSelectedTime}>
-          <SelectTrigger id="time">
+          <SelectTrigger id="time" onClick={() => fetchAvailableTimes(selectedDate)}>
             <SelectValue placeholder={
               isFetchingTimes 
                 ? "Saatler yükleniyor..." 
