@@ -1,6 +1,6 @@
 
-import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { calismaSaatleriServisi } from '@/lib/supabase/services/calismaSaatleriServisi';
 import { CalismaSaati } from '@/lib/supabase/types';
 import { toast } from 'sonner';
@@ -10,77 +10,69 @@ export interface UseWorkingHoursMutationProps {
   onMutationSuccess?: () => void;
 }
 
-export const useWorkingHoursMutation = (props: UseWorkingHoursMutationProps | number) => {
-  // Handle both object and direct number parameter
-  const dukkanId = typeof props === 'number' ? props : props.dukkanId;
-  const onMutationSuccess = typeof props === 'number' ? undefined : props.onMutationSuccess;
+export const useWorkingHoursMutation = (props: UseWorkingHoursMutationProps) => {
+  const { dukkanId, onMutationSuccess } = props;
   
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
   // Update all working hours
-  const updateAllHoursMutation = useMutation({
-    mutationFn: async (hours: CalismaSaati[]) => {
-      setIsUpdating(true);
-      try {
-        const result = await calismaSaatleriServisi.guncelle(hours);
-        return result;
-      } finally {
-        setIsUpdating(false);
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['dukkan_saatleri', dukkanId] });
+  const updateAllHours = useCallback(async (hours: CalismaSaati[]) => {
+    try {
+      setIsLoading(true);
+      console.log('Updating all hours for dukkan ID:', dukkanId);
+      
+      // Ensure all hours have the correct dukkan_id
+      const hoursWithShopId = hours.map(hour => ({
+        ...hour,
+        dukkan_id: dukkanId
+      }));
+      
+      await calismaSaatleriServisi.guncelle(hoursWithShopId);
+      
+      // Invalidate and refetch
+      await queryClient.invalidateQueries({ queryKey: ['calisma_saatleri', dukkanId] });
+      
       toast.success('Çalışma saatleri başarıyla güncellendi');
-      if (onMutationSuccess) onMutationSuccess();
-    },
-    onError: (error: any) => {
-      console.error('Çalışma saatleri güncelleme hatası:', error);
-      toast.error(`Hata: ${error.message || 'Çalışma saatleri güncellenemedi'}`);
-    }
-  });
-
-  // Update a single day's working hours
-  const updateSingleDayMutation = useMutation({
-    mutationFn: async (day: CalismaSaati) => {
-      setIsUpdating(true);
-      try {
-        const result = await calismaSaatleriServisi.tekGuncelle(day);
-        return result;
-      } finally {
-        setIsUpdating(false);
+      
+      if (onMutationSuccess) {
+        onMutationSuccess();
       }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['dukkan_saatleri', dukkanId] });
+    } catch (error) {
+      console.error('Hours update error:', error);
+      toast.error('Çalışma saatleri güncellenirken bir hata oluştu');
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [dukkanId, queryClient, onMutationSuccess]);
+
+  // Update a single day
+  const updateSingleDay = useCallback(async (day: CalismaSaati) => {
+    try {
+      setIsUpdating(true);
+      await calismaSaatleriServisi.tekGuncelle({
+        ...day,
+        dukkan_id: dukkanId
+      });
+      
+      // Invalidate and refetch
+      await queryClient.invalidateQueries({ queryKey: ['calisma_saatleri', dukkanId] });
+      
       toast.success('Çalışma saati başarıyla güncellendi');
-      if (onMutationSuccess) onMutationSuccess();
-    },
-    onError: (error: any) => {
-      console.error('Çalışma saati güncelleme hatası:', error);
-      toast.error(`Hata: ${error.message || 'Çalışma saati güncellenemedi'}`);
-    }
-  });
-
-  // Wrapper functions
-  const updateAllHours = async (hours: CalismaSaati[]): Promise<boolean> => {
-    try {
-      await updateAllHoursMutation.mutateAsync(hours);
-      return true;
+      
+      if (onMutationSuccess) {
+        onMutationSuccess();
+      }
     } catch (error) {
-      return false;
+      console.error('Single day update error:', error);
+      toast.error('Çalışma saati güncellenirken bir hata oluştu');
+      throw error;
+    } finally {
+      setIsUpdating(false);
     }
-  };
-
-  const updateSingleDay = async (day: CalismaSaati): Promise<boolean> => {
-    try {
-      await updateSingleDayMutation.mutateAsync(day);
-      return true;
-    } catch (error) {
-      return false;
-    }
-  };
+  }, [dukkanId, queryClient, onMutationSuccess]);
 
   return {
     updateAllHours,

@@ -26,6 +26,8 @@ export const calismaSaatleriServisi = {
         return [];
       }
       
+      console.log('calismaSaatleriServisi: Fetching hours for shop ID:', dukkanId);
+      
       const { data, error } = await supabase
         .from('calisma_saatleri')
         .select('*')
@@ -36,11 +38,13 @@ export const calismaSaatleriServisi = {
       
       // If no data returned, create default hours
       if (!data || data.length === 0) {
+        console.log('calismaSaatleriServisi: No hours found, creating defaults');
         const defaultHours = this.defaultWorkingHours(dukkanId);
         await this.ekle(defaultHours);
         return defaultHours;
       }
       
+      console.log('calismaSaatleriServisi: Hours retrieved:', data);
       return data;
     } catch (error) {
       console.error('Dükkan çalışma saatleri getirme hatası:', error);
@@ -50,6 +54,7 @@ export const calismaSaatleriServisi = {
 
   async guncelle(saatler: CalismaSaati[]) {
     try {
+      console.log('calismaSaatleriServisi: Updating hours:', saatler);
       const { data, error } = await supabase
         .from('calisma_saatleri')
         .upsert(saatler, { onConflict: 'id' })
@@ -86,6 +91,7 @@ export const calismaSaatleriServisi = {
   
   async ekle(saatler: Omit<CalismaSaati, 'id'>[]) {
     try {
+      console.log('calismaSaatleriServisi: Adding hours:', saatler);
       const { data, error } = await supabase
         .from('calisma_saatleri')
         .insert(saatler)

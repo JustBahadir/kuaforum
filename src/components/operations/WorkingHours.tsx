@@ -11,6 +11,7 @@ import { gunSiralama, gunIsimleri } from "./constants/workingDays";
 import { CalismaSaati } from "@/lib/supabase/types";
 import { calismaSaatleriServisi } from "@/lib/supabase/services/calismaSaatleriServisi";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useWorkingHours } from "./hooks/useWorkingHours";
 
 interface WorkingHoursProps {
   isStaff?: boolean;
@@ -18,54 +19,37 @@ interface WorkingHoursProps {
 }
 
 export function WorkingHours({ isStaff = true, dukkanId }: WorkingHoursProps) {
-  const [saatler, setSaatler] = useState<CalismaSaati[]>([]);
   const [editingMode, setEditingMode] = useState(false);
-  const [tempSaatler, setTempSaatler] = useState<CalismaSaati[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Fetch working hours on component mount
-  useEffect(() => {
-    fetchWorkingHours();
-  }, [dukkanId]);
+  const {
+    hours,
+    updateDay,
+    saveHours,
+    resetHours,
+    isLoading,
+    isError,
+    hasChanges,
+    refetch
+  } = useWorkingHours({ 
+    dukkanId: dukkanId || 0,
+    onMutationSuccess: () => setEditingMode(false)
+  });
 
-  const fetchWorkingHours = async () => {
-    try {
-      setIsLoading(true);
-      let data;
-      
-      if (dukkanId) {
-        data = await calismaSaatleriServisi.dukkanSaatleriGetir(dukkanId);
-      } else {
-        data = await calismaSaatleriServisi.hepsiniGetir();
-      }
-      
-      // Sort days based on our predefined order
-      const sortedData = [...data].sort((a, b) => {
-        const aIndex = gunSiralama.indexOf(a.gun);
-        const bIndex = gunSiralama.indexOf(b.gun);
-        return aIndex - bIndex;
-      });
-      
-      setSaatler(sortedData);
-      setIsLoading(false);
-    } catch (error) {
-      console.error("Error fetching working hours:", error);
-      toast.error("Çalışma saatleri yüklenirken bir hata oluştu");
-      setIsLoading(false);
+  useEffect(() => {
+    if (dukkanId) {
+      console.log("WorkingHours component: dukkanId changed to:", dukkanId);
+      refetch();
     }
-  };
+  }, [dukkanId, refetch]);
 
   const handleEdit = () => {
-    // Create a deep copy of saatler for editing
-    setTempSaatler(JSON.parse(JSON.stringify(saatler)));
     setEditingMode(true);
   };
 
   const handleCancel = () => {
+    resetHours();
     setEditingMode(false);
-    // Discard changes
-    setTempSaatler([]);
   };
 
   const handleSave = async () => {
@@ -73,7 +57,7 @@ export function WorkingHours({ isStaff = true, dukkanId }: WorkingHoursProps) {
       setIsSaving(true);
       
       // Validate times
-      for (const saat of tempSaatler) {
+      for (const saat of hours) {
         if (!saat.kapali) {
           if (!saat.acilis || !saat.kapanis) {
             toast.error("Açık günler için açılış ve kapanış saatleri gereklidir");
@@ -96,22 +80,8 @@ export function WorkingHours({ isStaff = true, dukkanId }: WorkingHoursProps) {
         }
       }
       
-      // Prepare data for update
-      const updateData = tempSaatler.map(saat => ({
-        ...saat,
-        dukkan_id: dukkanId || saat.dukkan_id
-      }));
-      
-      // Save to database
-      const result = await calismaSaatleriServisi.guncelle(updateData);
-      
-      if (result && result.length > 0) {
-        setSaatler(result);
-        toast.success("Çalışma saatleri başarıyla güncellendi");
-        setEditingMode(false);
-      } else {
-        toast.error("Güncelleme sırasında bir hata oluştu");
-      }
+      await saveHours();
+      toast.success("Çalışma saatleri başarıyla güncellendi");
     } catch (error) {
       console.error("Error saving working hours:", error);
       toast.error("Güncelleme sırasında bir hata oluştu");
@@ -121,26 +91,23 @@ export function WorkingHours({ isStaff = true, dukkanId }: WorkingHoursProps) {
   };
 
   const handleTimeChange = (index: number, field: "acilis" | "kapanis", value: string) => {
-    const updatedSaatler = [...tempSaatler];
-    updatedSaatler[index][field] = value;
-    setTempSaatler(updatedSaatler);
+    updateDay(index, { [field]: value });
   };
 
   const handleStatusChange = (index: number, value: boolean) => {
-    const updatedSaatler = [...tempSaatler];
-    updatedSaatler[index].kapali = value;
+    const updates: Partial<CalismaSaati> = { kapali: value };
     
     // Clear times if closed
     if (value) {
-      updatedSaatler[index].acilis = null;
-      updatedSaatler[index].kapanis = null;
+      updates.acilis = null;
+      updates.kapanis = null;
     } else {
       // Set default times if opening
-      updatedSaatler[index].acilis = "09:00";
-      updatedSaatler[index].kapanis = "19:00";
+      updates.acilis = "09:00";
+      updates.kapanis = "19:00";
     }
     
-    setTempSaatler(updatedSaatler);
+    updateDay(index, updates);
   };
 
   const formatTime = (time: string | null) => {
@@ -170,6 +137,22 @@ export function WorkingHours({ isStaff = true, dukkanId }: WorkingHoursProps) {
     );
   }
 
+  if (isError) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Çalışma Saatleri</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="p-4 border border-red-300 bg-red-50 rounded-lg text-red-800">
+            Çalışma saatleri yüklenirken bir hata oluştu. Lütfen daha sonra tekrar deneyin.
+          </div>
+          <Button onClick={() => refetch()} className="mt-4">Yeniden Dene</Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="w-full">
       <CardHeader className="flex flex-row items-center justify-between">
@@ -190,7 +173,7 @@ export function WorkingHours({ isStaff = true, dukkanId }: WorkingHoursProps) {
               </Button>
               <Button 
                 onClick={handleSave}
-                disabled={isSaving}
+                disabled={isSaving || !hasChanges()}
               >
                 {isSaving ? "Kaydediliyor..." : "Kaydet"}
               </Button>
@@ -212,8 +195,8 @@ export function WorkingHours({ isStaff = true, dukkanId }: WorkingHoursProps) {
             <TableBody>
               {editingMode ? (
                 // Editing mode
-                tempSaatler.map((saat, index) => (
-                  <TableRow key={saat.gun}>
+                hours.map((saat, index) => (
+                  <TableRow key={index}>
                     <TableCell className="font-medium">
                       {gunIsimleri[saat.gun] || saat.gun}
                     </TableCell>
@@ -251,26 +234,41 @@ export function WorkingHours({ isStaff = true, dukkanId }: WorkingHoursProps) {
                 ))
               ) : (
                 // View mode
-                saatler.map((saat) => (
-                  <TableRow key={saat.gun}>
-                    <TableCell className="font-medium">
-                      {gunIsimleri[saat.gun] || saat.gun}
-                    </TableCell>
-                    <TableCell>
-                      {saat.kapali ? "-" : formatTime(saat.acilis)}
-                    </TableCell>
-                    <TableCell>
-                      {saat.kapali ? "-" : formatTime(saat.kapanis)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        saat.kapali ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"
-                      }`}>
-                        {saat.kapali ? "Kapalı" : "Açık"}
-                      </span>
-                    </TableCell>
-                  </TableRow>
-                ))
+                hours.length > 0 ? (
+                  hours.map((saat, index) => (
+                    <TableRow key={index}>
+                      <TableCell className="font-medium">
+                        {gunIsimleri[saat.gun] || saat.gun}
+                      </TableCell>
+                      <TableCell>
+                        {saat.kapali ? "-" : formatTime(saat.acilis)}
+                      </TableCell>
+                      <TableCell>
+                        {saat.kapali ? "-" : formatTime(saat.kapanis)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          saat.kapali ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"
+                        }`}>
+                          {saat.kapali ? "Kapalı" : "Açık"}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  gunSiralama.map((gun) => (
+                    <TableRow key={gun} className="hover:bg-gray-50">
+                      <TableCell className="font-medium">{gunIsimleri[gun]}</TableCell>
+                      <TableCell>09:00</TableCell>
+                      <TableCell>19:00</TableCell>
+                      <TableCell className="text-right">
+                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          Açık
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )
               )}
             </TableBody>
           </Table>

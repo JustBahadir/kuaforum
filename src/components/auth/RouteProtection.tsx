@@ -1,5 +1,5 @@
 
-import React, { ReactNode, useEffect } from 'react';
+import React, { ReactNode, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { shouldRedirect, getRedirectPath } from '@/lib/auth/routeProtection';
 import { useCustomerAuth } from '@/hooks/useCustomerAuth';
@@ -16,6 +16,22 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
   const { isAuthenticated, userRole, loading, handleLogout } = useCustomerAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const [loadingTimeout, setLoadingTimeout] = useState<boolean>(false);
+
+  // Set a timeout for loading to prevent infinite loading screen
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    
+    if (loading) {
+      timeoutId = setTimeout(() => {
+        setLoadingTimeout(true);
+      }, 5000); // 5-second timeout
+    }
+    
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [loading]);
 
   useEffect(() => {
     // Automatically log out users when they return to home page if they were authenticated
@@ -39,9 +55,30 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
   // If loading, show a loading indicator
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex flex-col items-center justify-center h-screen">
         <div className="w-12 h-12 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin mb-4"></div>
-        <p className="text-gray-600 ml-3">Yükleniyor...</p>
+        <p className="text-gray-600">Yükleniyor...</p>
+        
+        {loadingTimeout && (
+          <div className="mt-6 text-center">
+            <p className="text-red-500 mb-2">Yükleme uzun sürdü. Lütfen sayfayı yenileyin veya tekrar giriş yapın.</p>
+            <button 
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors mr-2"
+            >
+              Sayfayı Yenile
+            </button>
+            <button 
+              onClick={() => {
+                localStorage.removeItem('supabase.auth.token');
+                window.location.href = '/login';
+              }}
+              className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+            >
+              Tekrar Giriş Yap
+            </button>
+          </div>
+        )}
       </div>
     );
   }

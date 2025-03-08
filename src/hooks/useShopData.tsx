@@ -126,7 +126,8 @@ export function useShopData(dukkanId: number | null) {
       }
     },
     enabled: !!(dukkanData?.id || dukkanId),
-    staleTime: 30000 // Refresh every 30 seconds
+    staleTime: 30000, // Refresh every 30 seconds
+    retry: 3          // Retry 3 times on failure
   });
 
   return { 

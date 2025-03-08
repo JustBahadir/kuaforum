@@ -1,18 +1,18 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { CalismaSaati } from '@/lib/supabase/types';
 import { calismaSaatleriServisi } from '@/lib/supabase/services/calismaSaatleriServisi';
-import { useWorkingHoursMutation } from './useWorkingHoursMutation';
+import { useWorkingHoursMutation, UseWorkingHoursMutationProps } from './useWorkingHoursMutation';
+import { gunSiralama } from '../constants/workingDays';
 
 interface UseWorkingHoursProps {
   dukkanId: number;
   onMutationSuccess?: () => void;
 }
 
-export function useWorkingHours({ dukkanId, onMutationSuccess }: UseWorkingHoursProps) {
-  const [workingHours, setWorkingHours] = useState<CalismaSaati[]>([]);
-  const [isEditing, setIsEditing] = useState(false);
+export const useWorkingHours = ({ dukkanId, onMutationSuccess }: UseWorkingHoursProps) => {
+  const [hours, setHours] = useState<CalismaSaati[]>([]);
   const [originalHours, setOriginalHours] = useState<CalismaSaati[]>([]);
   
   // Use the mutation hook for updates
@@ -20,71 +20,108 @@ export function useWorkingHours({ dukkanId, onMutationSuccess }: UseWorkingHours
   const { updateAllHours, updateSingleDay, isLoading: isMutationLoading, isUpdating } = mutation;
 
   // Fetch working hours with React Query
-  const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['dukkan_saatleri', dukkanId],
+  const { 
+    data: fetchedHours = [], 
+    isLoading, 
+    isError, 
+    error,
+    refetch
+  } = useQuery({
+    queryKey: ['calisma_saatleri', dukkanId],
     queryFn: async () => {
-      console.log("Fetching working hours for dukkan ID:", dukkanId);
+      console.log('useWorkingHours: Fetching hours for shop ID:', dukkanId);
       if (!dukkanId) return [];
-      return await calismaSaatleriServisi.dukkanSaatleriGetir(dukkanId);
+      
+      try {
+        const result = await calismaSaatleriServisi.dukkanSaatleriGetir(dukkanId);
+        console.log('useWorkingHours: Fetched hours:', result);
+        return result;
+      } catch (err) {
+        console.error('useWorkingHours: Error fetching hours:', err);
+        throw err;
+      }
     },
-    enabled: !!dukkanId
+    enabled: !!dukkanId,
   });
 
-  // Update state when data changes
+  // Update local state when fetched data changes
   useEffect(() => {
-    if (data) {
-      setWorkingHours(data);
-      setOriginalHours(JSON.parse(JSON.stringify(data))); // Deep clone
+    if (fetchedHours && fetchedHours.length > 0) {
+      // Sort by our predefined day order
+      const sortedHours = [...fetchedHours].sort((a, b) => {
+        const aIndex = gunSiralama.indexOf(a.gun);
+        const bIndex = gunSiralama.indexOf(b.gun);
+        return aIndex - bIndex;
+      });
+      
+      setHours(sortedHours);
+      setOriginalHours(JSON.parse(JSON.stringify(sortedHours)));
+    } else if (dukkanId && !isLoading && fetchedHours.length === 0) {
+      // If we have a dukkanId but no hours, create default hours
+      const defaultHours = calismaSaatleriServisi.defaultWorkingHours(dukkanId);
+      setHours(defaultHours);
+      setOriginalHours(JSON.parse(JSON.stringify(defaultHours)));
     }
-  }, [data]);
+  }, [fetchedHours, isLoading, dukkanId]);
 
-  const handleSave = async () => {
-    const success = await updateAllHours(workingHours);
-    if (success) {
-      setIsEditing(false);
-      if (onMutationSuccess) onMutationSuccess();
+  // Update a single day
+  const updateDay = useCallback((index: number, updates: Partial<CalismaSaati>) => {
+    setHours(current => {
+      const updated = [...current];
+      updated[index] = { ...updated[index], ...updates };
+      return updated;
+    });
+  }, []);
+
+  // Save current hours to the database
+  const saveHours = useCallback(async () => {
+    if (hours.length === 0) return;
+    
+    try {
+      console.log('useWorkingHours: Saving hours:', hours);
+      await updateAllHours(hours);
+      setOriginalHours(JSON.parse(JSON.stringify(hours)));
+    } catch (error) {
+      console.error('useWorkingHours: Error saving hours:', error);
+      throw error;
     }
-  };
+  }, [hours, updateAllHours]);
 
-  const handleCancel = () => {
-    setWorkingHours([...originalHours]);
-    setIsEditing(false);
-  };
+  // Reset to original state
+  const resetHours = useCallback(() => {
+    setHours(JSON.parse(JSON.stringify(originalHours)));
+  }, [originalHours]);
 
-  const handleEdit = () => {
-    setOriginalHours(JSON.parse(JSON.stringify(workingHours))); // Deep clone
-    setIsEditing(true);
-  };
-
-  // Update time for a specific day
-  const updateTime = (id: number, field: 'acilis' | 'kapanis', value: string) => {
-    setWorkingHours(prev => 
-      prev.map(hour => 
-        hour.id === id ? { ...hour, [field]: value } : hour
-      )
-    );
-  };
-
-  // Toggle status for a specific day
-  const toggleStatus = (id: number) => {
-    setWorkingHours(prev => 
-      prev.map(hour => 
-        hour.id === id ? { ...hour, kapali: !hour.kapali } : hour
-      )
-    );
-  };
+  // Check if there are unsaved changes
+  const hasChanges = useCallback(() => {
+    if (hours.length !== originalHours.length) return true;
+    
+    for (let i = 0; i < hours.length; i++) {
+      const current = hours[i];
+      const original = originalHours[i];
+      
+      if (current.kapali !== original.kapali) return true;
+      if (!current.kapali && !original.kapali) {
+        if (current.acilis !== original.acilis) return true;
+        if (current.kapanis !== original.kapanis) return true;
+      }
+    }
+    
+    return false;
+  }, [hours, originalHours]);
 
   return {
-    workingHours,
-    isLoading: isLoading || isMutationLoading,
-    isEditing,
-    isUpdating,
+    hours,
+    setHours,
+    updateDay,
+    saveHours,
+    resetHours,
+    isLoading,
     isError,
     error,
-    handleEdit,
-    handleSave,
-    handleCancel,
-    updateTime,
-    toggleStatus
+    hasChanges,
+    refetch,
+    isMutationLoading,
+    isUpdating
   };
-}
+};
