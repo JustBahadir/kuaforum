@@ -144,20 +144,16 @@ export function useCustomerAuth() {
   const resetSession = async () => {
     try {
       setLoading(true);
-      console.log("Resetting session completely...");
+      console.log("Resetting session...");
       await supabase.auth.signOut();
       
-      // Clear all session data
+      // Clear session data
       setIsAuthenticated(false);
       setUserName('');
       setUserRole('');
       setDukkanId(0);
       setDukkanAdi('');
       setUserId('');
-      setActiveTab('dashboard');
-      
-      // Clear any stored tokens or session data
-      localStorage.removeItem('supabase.auth.token');
       
       // Redirect to login page
       window.location.href = '/login';

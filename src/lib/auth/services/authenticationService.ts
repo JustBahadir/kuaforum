@@ -159,22 +159,7 @@ export const authenticationService = {
       
       if (error) {
         console.error("Kullanıcı silme hatası (RPC):", error);
-        
-        try {
-          const { error: deleteError } = await supabase.functions.invoke("delete-user", {
-            body: { email }
-          });
-          
-          if (deleteError) {
-            console.error("Alternatif silme işlemi başarısız:", deleteError);
-            throw new Error(`Kullanıcı silinemedi: ${deleteError.message}`);
-          }
-          
-          return { success: true, message: `${email} başarıyla silindi.` };
-        } catch (alternativeError) {
-          console.error("Alternatif silme hatası:", alternativeError);
-          throw alternativeError;
-        }
+        throw new Error(`Kullanıcı silinemedi: ${error.message}`);
       }
       
       return { success: true, message: `${email} başarıyla silindi.` };

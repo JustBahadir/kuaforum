@@ -3,8 +3,6 @@ import React, { ReactNode, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { shouldRedirect, getRedirectPath } from '@/lib/auth/routeProtection';
 import { useCustomerAuth } from '@/hooks/useCustomerAuth';
-import { toast } from 'sonner';
-import { supabase } from '@/lib/supabase/client';
 
 interface RouteProtectionProps {
   children: ReactNode;
@@ -14,11 +12,10 @@ interface RouteProtectionProps {
  * RouteProtection component to handle authentication redirection
  */
 export const RouteProtection = ({ children }: RouteProtectionProps) => {
-  const { isAuthenticated, userRole, loading, handleLogout } = useCustomerAuth();
+  const { isAuthenticated, userRole, loading } = useCustomerAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [showLocalLoading, setShowLocalLoading] = useState(false);
-  const [localCheckTimeout, setLocalCheckTimeout] = useState<NodeJS.Timeout | null>(null);
 
   // Define public pages list
   const publicPages = [
@@ -47,19 +44,13 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
     if (loading) {
       const timeout = setTimeout(() => {
         setShowLocalLoading(true);
-      }, 300); // Slightly increased for reliability
-      
-      setLocalCheckTimeout(timeout);
+      }, 300);
       
       return () => {
         clearTimeout(timeout);
       };
     } else {
       setShowLocalLoading(false);
-      if (localCheckTimeout) {
-        clearTimeout(localCheckTimeout);
-        setLocalCheckTimeout(null);
-      }
     }
   }, [loading, location.pathname]);
 

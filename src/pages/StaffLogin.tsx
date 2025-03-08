@@ -12,33 +12,6 @@ export default function StaffLogin() {
   const navigate = useNavigate();
   const [processingAuth, setProcessingAuth] = useState(false);
   
-  // Oturumu tamamen sıfırlama fonksiyonu
-  const resetAllAuth = async () => {
-    try {
-      setProcessingAuth(true);
-      
-      // Tüm Supabase oturumunu temizle
-      await supabase.auth.signOut();
-      
-      // Yerel depolamayı temizle
-      localStorage.clear();
-      sessionStorage.clear();
-      
-      // Sayfayı yenile - en radikal çözüm
-      toast.success("Oturum ve önbellek temizlendi, sayfa yenileniyor...");
-      
-      setTimeout(() => {
-        window.location.href = '/admin';
-      }, 1000);
-      
-    } catch (error) {
-      console.error("Oturum sıfırlama hatası:", error);
-      toast.error("Oturum temizlenirken bir hata oluştu");
-    } finally {
-      setProcessingAuth(false);
-    }
-  };
-  
   // Check for any pending password resets or email confirmations
   useEffect(() => {
     const checkHash = async () => {
@@ -78,7 +51,6 @@ export default function StaffLogin() {
     // Check if user is already logged in
     const checkAuth = async () => {
       try {
-        // Simple auth check with no timeout
         const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
@@ -153,22 +125,13 @@ export default function StaffLogin() {
         <CardContent className="p-6">
           <LoginTabs onSuccess={handleLoginSuccess} />
 
-          <div className="flex flex-col items-center mt-4 space-y-2">
+          <div className="flex flex-col items-center mt-4">
             <Button 
               variant="link" 
               onClick={handleBackClick}
               className="text-purple-600 hover:text-purple-800"
             >
               Ana Sayfaya Dön
-            </Button>
-            
-            <Button 
-              variant="destructive" 
-              onClick={resetAllAuth}
-              className="mt-4 flex items-center gap-1 text-sm"
-              size="sm"
-            >
-              🔄 Oturumu Tamamen Sıfırla
             </Button>
           </div>
         </CardContent>
