@@ -4,64 +4,40 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { StaffCardHeader } from "@/components/staff/StaffCardHeader";
 import { LoginTabs } from "@/components/staff/LoginTabs";
-import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 
 export default function StaffLogin() {
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   
   useEffect(() => {
     // Sayfa yüklendiğinde mevcut oturum kontrolü
     const checkSession = async () => {
       try {
-        console.log("StaffLogin: Oturum kontrolü başlatılıyor");
-        const { data, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error("StaffLogin: Oturum kontrolü hatası:", error);
-          setIsLoading(false);
-          return;
-        }
+        const { data } = await supabase.auth.getSession();
         
         if (data?.session) {
           const role = data.session.user.user_metadata?.role;
           if (role === 'staff' || role === 'admin') {
-            console.log("StaffLogin: Mevcut oturum bulundu, shop-home'a yönlendiriliyor");
             navigate("/shop-home");
             return;
           }
         }
         
-        console.log("StaffLogin: Personel oturumu bulunamadı, form gösteriliyor");
-        setIsLoading(false);
+        // Oturum yoksa veya personel değilse form göster
       } catch (err) {
         console.error("StaffLogin: Beklenmeyen hata:", err);
+      } finally {
         setIsLoading(false);
       }
     };
     
-    // Maksimum 3 saniye bekle, sonra yükleme durumunu kapat
-    const loadingTimeout = setTimeout(() => {
-      if (isLoading) {
-        console.log("StaffLogin: Zaman aşımı, yükleme durumu kapatılıyor");
-        setIsLoading(false);
-      }
-    }, 3000);
-    
     checkSession();
-    
-    // Cleanup
-    return () => clearTimeout(loadingTimeout);
   }, [navigate]);
   
   const handleLoginSuccess = () => {
-    console.log("Login başarılı, yönlendirme yapılıyor");
-    toast.success("Başarıyla giriş yaptınız!");
-    setTimeout(() => {
-      navigate("/shop-home");
-    }, 500);
+    navigate("/shop-home");
   };
 
   const handleBackClick = () => {
