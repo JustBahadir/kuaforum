@@ -4,9 +4,6 @@ import { Randevu } from '../types';
 
 export const randevuServisi = {
   async hepsiniGetir() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return [];
-
     try {
       const { data, error } = await supabase
         .from('randevular')
@@ -20,17 +17,20 @@ export const randevuServisi = {
 
       if (error) {
         console.error("Randevular getirme hatası:", error);
-        return [];
+        throw error;
       }
+      
       return data || [];
     } catch (err) {
       console.error("Randevular getirme hatası:", err);
-      return [];
+      throw err;
     }
   },
 
   async dukkanRandevulariniGetir(dukkanId: number) {
-    if (!dukkanId) return [];
+    if (!dukkanId) {
+      throw new Error("Dükkan ID gereklidir");
+    }
 
     try {
       const { data, error } = await supabase
@@ -46,20 +46,23 @@ export const randevuServisi = {
 
       if (error) {
         console.error("Dükkan randevuları getirme hatası:", error);
-        return [];
+        throw error;
       }
+      
       return data || [];
     } catch (err) {
       console.error("Dükkan randevuları getirme hatası:", err);
-      return [];
+      throw err;
     }
   },
 
   async kendiRandevulariniGetir() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return [];
-
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error("Oturum açmış kullanıcı bulunamadı");
+      }
+
       const { data, error } = await supabase
         .from('randevular')
         .select(`
@@ -73,17 +76,18 @@ export const randevuServisi = {
 
       if (error) {
         console.error("Kendi randevularını getirme hatası:", error);
-        return [];
+        throw error;
       }
+      
       return data || [];
     } catch (err) {
       console.error("Kendi randevularını getirme hatası:", err);
-      return [];
+      throw err;
     }
   },
 
   async ekle(randevu: Omit<Randevu, 'id' | 'created_at' | 'musteri' | 'personel'>) {
-    console.log("Randevu ekle service received data:", randevu);
+    console.log("Randevu ekle başlangıç, alınan veri:", randevu);
     
     if (!randevu.dukkan_id) {
       throw new Error("Dükkan seçimi zorunludur");
@@ -104,7 +108,11 @@ export const randevuServisi = {
     // İşlemleri düzenle - tek işlem bile olsa array olarak sakla
     const islemler = Array.isArray(randevu.islemler) 
       ? randevu.islemler 
-      : randevu.islemler ? [randevu.islemler] : [];
+      : (randevu.islemler ? [randevu.islemler] : []);
+      
+    if (islemler.length === 0) {
+      throw new Error("En az bir hizmet seçmelisiniz");
+    }
 
     // Kayıt için hazırla
     const insertData = {
@@ -131,7 +139,7 @@ export const randevuServisi = {
 
       if (error) {
         console.error("Supabase randevu ekleme hatası:", error);
-        throw new Error("Randevu eklenirken bir hata oluştu: " + error.message);
+        throw new Error(`Randevu eklenirken bir hata oluştu: ${error.message}`);
       }
       
       if (!data) {
@@ -148,7 +156,13 @@ export const randevuServisi = {
   },
 
   async guncelle(id: number, randevu: Partial<Randevu>) {
+    if (!id) {
+      throw new Error("Randevu ID gereklidir");
+    }
+    
     try {
+      console.log(`Randevu ${id} güncelleniyor:`, randevu);
+      
       const { data, error } = await supabase
         .from('randevular')
         .update(randevu)
@@ -162,8 +176,10 @@ export const randevuServisi = {
 
       if (error) {
         console.error("Randevu güncelleme hatası:", error);
-        throw new Error("Randevu güncellenirken bir hata oluştu: " + error.message);
+        throw new Error(`Randevu güncellenirken bir hata oluştu: ${error.message}`);
       }
+      
+      console.log("Randevu güncelleme başarılı:", data);
       return data;
     } catch (error: any) {
       console.error("Randevu güncelleme hatası:", error);
@@ -172,7 +188,13 @@ export const randevuServisi = {
   },
 
   async sil(id: number) {
+    if (!id) {
+      throw new Error("Randevu ID gereklidir");
+    }
+    
     try {
+      console.log(`Randevu ${id} siliniyor`);
+      
       const { error } = await supabase
         .from('randevular')
         .delete()
@@ -180,8 +202,11 @@ export const randevuServisi = {
 
       if (error) {
         console.error("Randevu silme hatası:", error);
-        throw new Error("Randevu silinirken bir hata oluştu: " + error.message);
+        throw new Error(`Randevu silinirken bir hata oluştu: ${error.message}`);
       }
+      
+      console.log(`Randevu ${id} başarıyla silindi`);
+      return true;
     } catch (error: any) {
       console.error("Randevu silme hatası:", error);
       throw new Error(error?.message || "Randevu silinirken bir hata oluştu");

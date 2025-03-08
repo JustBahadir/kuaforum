@@ -46,7 +46,7 @@ export default function Appointments() {
     refetch
   } = useAppointments(dukkanId);
   
-  const handleAppointmentCreated = (appointment: Randevu) => {
+  const handleAppointmentCreated = () => {
     refetch();
     setAddDialogOpen(false);
   };

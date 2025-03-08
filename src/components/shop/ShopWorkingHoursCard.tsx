@@ -11,8 +11,8 @@ import { toast } from "sonner";
 import { useEffect } from "react";
 
 interface ShopWorkingHoursCardProps {
-  calisma_saatleri: any[];
-  userRole: string;
+  calisma_saatleri?: any[];
+  userRole?: string;
   dukkanId: number;
 }
 
@@ -22,36 +22,16 @@ export function ShopWorkingHoursCard({ calisma_saatleri = [], userRole, dukkanId
     queryKey: ['dukkan_saatleri', dukkanId],
     queryFn: async () => {
       if (!dukkanId) return [];
-      console.log("Fetching working hours for shop ID:", dukkanId);
       
       try {
         const data = await calismaSaatleriServisi.dukkanSaatleriGetir(dukkanId);
-        console.log("Fetched working hours:", data);
-        
-        // If no data returned, provide default hours
-        if (!data || data.length === 0) {
-          return gunSiralama.map(gun => ({
-            gun,
-            acilis: "09:00",
-            kapanis: "18:00",
-            kapali: false,
-            dukkan_id: dukkanId
-          }));
-        }
-        
         return data;
       } catch (err) {
         console.error("Error fetching shop working hours:", err);
-        // Return default hours in case of error
-        return gunSiralama.map(gun => ({
-          gun,
-          acilis: "09:00",
-          kapanis: "18:00",
-          kapali: false,
-          dukkan_id: dukkanId
-        }));
+        throw err;
       }
     },
+    enabled: !!dukkanId && calisma_saatleri.length === 0,
     staleTime: 30000 // 30 seconds
   });
 
@@ -88,6 +68,11 @@ export function ShopWorkingHoursCard({ calisma_saatleri = [], userRole, dukkanId
             <Skeleton className="h-6 w-full" />
             <Skeleton className="h-12 w-full" />
             <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
           </div>
         </CardContent>
       </Card>
@@ -117,15 +102,21 @@ export function ShopWorkingHoursCard({ calisma_saatleri = [], userRole, dukkanId
                 <TableHead className="w-[150px]">Gün</TableHead>
                 <TableHead>Açılış</TableHead>
                 <TableHead>Kapanış</TableHead>
+                <TableHead className="text-right">Durum</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {sortedSaatler.length === 0 ? (
-                gunSiralama.map((gun, index) => (
+                gunSiralama.map((gun) => (
                   <TableRow key={gun} className="hover:bg-gray-50">
                     <TableCell className="font-medium">{gunIsimleri[gun]}</TableCell>
                     <TableCell>09:00</TableCell>
-                    <TableCell>18:00</TableCell>
+                    <TableCell>19:00</TableCell>
+                    <TableCell className="text-right">
+                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        Açık
+                      </span>
+                    </TableCell>
                   </TableRow>
                 ))
               ) : (
@@ -139,6 +130,13 @@ export function ShopWorkingHoursCard({ calisma_saatleri = [], userRole, dukkanId
                     </TableCell>
                     <TableCell>
                       {saat.kapali ? "-" : formatTime(saat.kapanis)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        saat.kapali ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"
+                      }`}>
+                        {saat.kapali ? "Kapalı" : "Açık"}
+                      </span>
                     </TableCell>
                   </TableRow>
                 ))
