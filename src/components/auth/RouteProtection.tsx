@@ -20,39 +20,39 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
   const [showLocalLoading, setShowLocalLoading] = useState(false);
   const [localCheckTimeout, setLocalCheckTimeout] = useState<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    // Check if we need to show loading state for non-public pages
-    const isPublicPage = 
-      location.pathname === "/" || 
-      location.pathname === "/login" || 
-      location.pathname === "/admin" ||
-      location.pathname === "/services" ||
-      location.pathname === "/appointments";
+  // Define public pages list
+  const publicPages = [
+    "/",
+    "/login",
+    "/admin",
+    "/services",
+    "/appointments",
+  ];
 
-    // Only show loading screen for non-public pages and only briefly
-    if (!isPublicPage && loading) {
-      // Set a very short timeout to show loading indicator
+  // Helper function to check if current page is public
+  const isPublicPage = () => {
+    return publicPages.includes(location.pathname) || 
+           location.pathname.startsWith("/services/") ||
+           location.pathname.startsWith("/appointments/");
+  };
+
+  useEffect(() => {
+    // Skip loading for public pages entirely
+    if (isPublicPage()) {
+      setShowLocalLoading(false);
+      return;
+    }
+
+    // Simplified loading logic
+    if (loading) {
       const timeout = setTimeout(() => {
         setShowLocalLoading(true);
-      }, 200); // Only show loading after 200ms delay
+      }, 300); // Slightly increased for reliability
       
       setLocalCheckTimeout(timeout);
       
-      // Set another timeout to force-clear loading state if it gets stuck
-      const forceTimeout = setTimeout(() => {
-        setShowLocalLoading(false);
-        // Also do an additional auth check
-        supabase.auth.getSession().then(({ data }) => {
-          if (!data.session) {
-            console.log("Force redirecting to login page after timeout");
-            navigate("/login");
-          }
-        });
-      }, 3000); // Force clear loading state after 3 seconds max
-      
       return () => {
         clearTimeout(timeout);
-        clearTimeout(forceTimeout);
       };
     } else {
       setShowLocalLoading(false);
@@ -61,42 +61,31 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
         setLocalCheckTimeout(null);
       }
     }
-  }, [loading, location.pathname, navigate]);
+  }, [loading, location.pathname]);
 
   useEffect(() => {
-    // Automatically log out users when they return to home page if they were authenticated
-    if (location.pathname === "/" && isAuthenticated) {
-      // We don't auto-logout here, we just notify the user they can use the logout button
-      // as per user's request
-      if (userRole === 'admin' || userRole === 'staff') {
-        toast.info("Personel panelinden çıkmak için lütfen çıkış yapın");
-      }
+    // Skip redirect checks for public pages
+    if (isPublicPage()) {
+      console.log("Genel erişimli sayfa, erişime izin verildi");
+      return;
     }
     
+    // Only perform redirects if not loading
     if (!loading) {
-      // Check if redirection is needed
       if (shouldRedirect(isAuthenticated, userRole, location.pathname)) {
         const redirectPath = getRedirectPath(isAuthenticated, userRole, location.pathname);
         console.log(`Redirecting from ${location.pathname} to ${redirectPath}`);
         navigate(redirectPath);
       }
     }
-  }, [isAuthenticated, userRole, location.pathname, navigate, loading, handleLogout]);
-
-  // Don't show loading screen on public pages
-  const isPublicPage = 
-    location.pathname === "/" || 
-    location.pathname === "/login" || 
-    location.pathname === "/admin" ||
-    location.pathname === "/services" ||
-    location.pathname === "/appointments";
+  }, [isAuthenticated, userRole, location.pathname, navigate, loading]);
 
   // For public pages, never show loading screen
-  if (isPublicPage) {
+  if (isPublicPage()) {
     return <>{children}</>;
   }
 
-  // For other pages, show loading only briefly
+  // For other pages, show loading only if needed
   if (showLocalLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-screen">

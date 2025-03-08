@@ -11,20 +11,10 @@ import { supabase } from "@/lib/supabase/client";
 export default function StaffLogin() {
   const navigate = useNavigate();
   const [processingAuth, setProcessingAuth] = useState(false);
-  const [authTimeout, setAuthTimeout] = useState<NodeJS.Timeout | null>(null);
-  
-  // Function to clear any timeouts to prevent memory leaks
-  const clearAuthTimeout = () => {
-    if (authTimeout) {
-      clearTimeout(authTimeout);
-      setAuthTimeout(null);
-    }
-  };
   
   // Oturumu tamamen sıfırlama fonksiyonu
   const resetAllAuth = async () => {
     try {
-      clearAuthTimeout();
       setProcessingAuth(true);
       
       // Tüm Supabase oturumunu temizle
@@ -51,16 +41,8 @@ export default function StaffLogin() {
   
   // Check for any pending password resets or email confirmations
   useEffect(() => {
-    // Setup a timeout to avoid infinite loading
-    const authCheckTimeout = setTimeout(() => {
-      setProcessingAuth(false);
-    }, 3000); // 3 seconds timeout
-    
-    setAuthTimeout(authCheckTimeout);
-    
     const checkHash = async () => {
       setProcessingAuth(true);
-      clearAuthTimeout();
       
       try {
         const hash = window.location.hash;
@@ -93,21 +75,11 @@ export default function StaffLogin() {
     
     checkHash();
 
-    // Check if user is already logged in (with timeout for reliability)
+    // Check if user is already logged in
     const checkAuth = async () => {
       try {
-        const authCheckPromise = supabase.auth.getSession();
-        
-        // Create a timeout promise
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error("Auth check timed out")), 5000);
-        });
-        
-        // Race between the auth check and timeout
-        const { data: sessionData, error: sessionError } = await Promise.race([
-          authCheckPromise,
-          timeoutPromise
-        ]) as any;
+        // Simple auth check with no timeout
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
           console.error("Session check error:", sessionError);
@@ -147,11 +119,6 @@ export default function StaffLogin() {
     };
 
     checkAuth();
-    
-    // Cleanup function
-    return () => {
-      clearAuthTimeout();
-    };
   }, [navigate]);
 
   const handleLoginSuccess = () => {

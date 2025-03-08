@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Lock, User, Trash2, AlertTriangle } from "lucide-react";
+import { Lock, User, Trash2, AlertTriangle, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { authenticationService } from "@/lib/auth/services/authenticationService";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -36,7 +36,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
   const [cleanupLoading, setCleanupLoading] = useState(false);
   const [cleanupSuccess, setCleanupSuccess] = useState(false);
 
-  // Login function
+  // Login function - Direct approach without timeouts
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError(null);
@@ -51,19 +51,11 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
     try {
       console.log("Giriş yapılıyor:", email);
       
-      // Use a promise with timeout to avoid hanging
-      const loginPromise = supabase.auth.signInWithPassword({
+      // Direct login without race condition or timeout
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
-      
-      // Set a timeout of 10 seconds
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error("Giriş zaman aşımına uğradı. Lütfen tekrar deneyin.")), 10000);
-      });
-      
-      // Race the login and timeout promises
-      const { data, error } = await Promise.race([loginPromise, timeoutPromise]) as any;
       
       if (error) {
         console.error("Giriş hatası:", error);
@@ -78,10 +70,8 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         if (metadata?.role === 'staff' || metadata?.role === 'admin') {
           toast.success("Giriş başarılı!");
           
-          // Add a small delay before redirecting to ensure state is updated
-          setTimeout(() => {
-            onSuccess();
-          }, 500);
+          // Immediately redirect on success
+          onSuccess();
         } else {
           // Logout if not staff or admin
           await supabase.auth.signOut();
@@ -92,14 +82,33 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       }
     } catch (error: any) {
       console.error("Giriş hatası:", error);
-      
-      // Handle timeout error
-      if (error.message.includes("zaman aşımına uğradı")) {
-        setLoginError(error.message);
-      } else {
-        setLoginError(error.message || "Giriş yapılamadı. Lütfen bilgilerinizi kontrol edin.");
-      }
+      setLoginError(error.message || "Giriş yapılamadı. Lütfen bilgilerinizi kontrol edin.");
     } finally {
+      setLoading(false);
+    }
+  };
+
+  // Complete session reset - more aggressive approach
+  const handleCompleteReset = async () => {
+    try {
+      setLoading(true);
+      setLoginError(null);
+      
+      // Force sign out
+      await supabase.auth.signOut();
+      
+      // Clear all storage
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Wait a bit for cleanup
+      setTimeout(() => {
+        toast.success("Oturum tamamen sıfırlandı, sayfa yenileniyor");
+        window.location.href = window.location.pathname;
+      }, 500);
+    } catch (error) {
+      console.error("Oturum sıfırlama hatası:", error);
+      setLoginError("Oturum sıfırlanamadı");
       setLoading(false);
     }
   };
@@ -215,10 +224,21 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         
         <Button 
           type="submit" 
-          className="w-full"
+          className="w-full bg-purple-600 hover:bg-purple-700 text-white"
           disabled={loading}
         >
           {loading ? "Giriş yapılıyor..." : "Giriş Yap"}
+        </Button>
+        
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-full flex items-center justify-center gap-2 mt-1"
+          onClick={handleCompleteReset}
+        >
+          <RefreshCw size={14} />
+          Oturumu Tamamen Sıfırla
         </Button>
       </form>
 

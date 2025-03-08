@@ -110,24 +110,34 @@ export const authenticationService = {
    * Get current session
    */
   getSession: async () => {
-    const { data, error } = await supabase.auth.getSession();
-    if (error) {
+    try {
+      const { data, error } = await supabase.auth.getSession();
+      if (error) {
+        console.error("Oturum bilgisi alınırken hata:", error);
+        return null;
+      }
+      return data.session;
+    } catch (error) {
       console.error("Oturum bilgisi alınırken hata:", error);
       return null;
     }
-    return data.session;
   },
 
   /**
    * Get current user
    */
   getCurrentUser: async () => {
-    const { data, error } = await supabase.auth.getUser();
-    if (error) {
+    try {
+      const { data, error } = await supabase.auth.getUser();
+      if (error) {
+        console.error("Kullanıcı bilgisi alınırken hata:", error);
+        return null;
+      }
+      return data.user;
+    } catch (error) {
       console.error("Kullanıcı bilgisi alınırken hata:", error);
       return null;
     }
-    return data.user;
   },
 
   /**

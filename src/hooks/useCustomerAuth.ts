@@ -17,18 +17,8 @@ export function useCustomerAuth() {
     try {
       setLoading(true);
       
-      // Set a very short timeout to avoid hanging
-      const timeoutId = setTimeout(() => {
-        console.log('Auth check timed out, treating as not authenticated');
-        setIsAuthenticated(false);
-        setLoading(false);
-      }, 2000); // 2 seconds timeout - increased from 400ms to give more time but still avoid hanging
-      
-      // Basic session check
+      // Get session directly with no timeout
       const { data, error } = await supabase.auth.getSession();
-      
-      // Clear the timeout since we got a response
-      clearTimeout(timeoutId);
       
       if (error) {
         console.error('Auth session error:', error);
@@ -144,13 +134,13 @@ export function useCustomerAuth() {
     }
   };
 
-  // Add the refreshProfile function
+  // Function to refresh user profile
   const refreshProfile = async () => {
     console.log("Refreshing profile...");
     return await fetchUserSession();
   };
 
-  // Add the resetSession function
+  // Function to completely reset session
   const resetSession = async () => {
     try {
       setLoading(true);
