@@ -38,6 +38,11 @@ export default function StaffLogin() {
       } catch (err) {
         console.error("Beklenmeyen hata:", err);
         setIsLoading(false);
+      } finally {
+        // Yükleme durumunu her durumda kapat
+        setTimeout(() => {
+          setIsLoading(false);
+        }, 500);
       }
     };
     

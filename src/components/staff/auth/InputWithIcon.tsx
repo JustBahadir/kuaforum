@@ -1,7 +1,7 @@
 
-import { ReactNode } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 
 interface InputWithIconProps {
   id: string;
@@ -10,9 +10,9 @@ interface InputWithIconProps {
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   placeholder?: string;
-  icon: ReactNode;
+  icon?: React.ReactNode;
   required?: boolean;
-  disabled?: boolean; // Added disabled prop
+  disabled?: boolean;
 }
 
 export function InputWithIcon({
@@ -23,25 +23,30 @@ export function InputWithIcon({
   onChange,
   placeholder,
   icon,
-  required = false,
-  disabled = false // Default value for disabled prop
+  required,
+  disabled
 }: InputWithIconProps) {
   return (
     <div className="space-y-2">
       <Label htmlFor={id}>{label}</Label>
       <div className="relative">
-        <div className="absolute left-3 top-3 text-gray-400">
-          {icon}
-        </div>
-        <Input 
+        {icon && (
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+            {icon}
+          </div>
+        )}
+        <Input
           id={id}
           type={type}
           value={value}
           onChange={onChange}
-          className="pl-10"
           placeholder={placeholder}
           required={required}
           disabled={disabled}
+          className={cn(
+            "transition-all",
+            icon ? "pl-10" : ""
+          )}
         />
       </div>
     </div>

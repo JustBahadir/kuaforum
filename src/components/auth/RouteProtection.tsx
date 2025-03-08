@@ -36,13 +36,15 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
         
         if (error) {
           console.error("RouteProtection: Session error", error);
-          navigate('/staff-login');
+          navigate('/login'); // Önemli: Hata durumunda genel login sayfasına yönlendir
+          setChecking(false);
           return;
         }
         
         if (!data.session) {
           console.log("RouteProtection: No session, redirecting to login");
-          navigate('/staff-login');
+          navigate('/login'); // Oturum yoksa genel login sayfasına yönlendir
+          setChecking(false);
           return;
         }
         
@@ -52,17 +54,18 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
         // Admin/personel kontrolü
         if (location.pathname.startsWith('/shop-') || location.pathname === '/shop-home') {
           if (userRole !== 'admin' && userRole !== 'staff') {
-            console.log("RouteProtection: Not staff/admin, redirecting to login");
+            console.log("RouteProtection: Not staff/admin, redirecting to staff login");
             navigate('/staff-login');
+            setChecking(false);
             return;
           }
         }
         
         console.log("RouteProtection: Access granted");
+        setChecking(false);
       } catch (error) {
         console.error("RouteProtection: Unexpected error", error);
-      } finally {
-        setChecking(false);
+        setChecking(false); // Hata durumunda bile checking'i false yap
       }
     };
     

@@ -1,4 +1,3 @@
-
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
@@ -55,21 +54,9 @@ function App() {
               <Route path="/customer-appointments" element={<Appointments />} />
               
               {/* Staff Routes */}
+              <Route path="/staff-login" element={<StaffLogin />} />
               <Route path="/admin" element={<StaffLogin />} />
               <Route path="/admin/register" element={<StaffRegister />} />
-              <Route path="/admin/dashboard" element={<Dashboard />} />
-              <Route path="/admin/shop" element={<ShopHomePage />} />
-              <Route path="/admin/services" element={<Services />} />
-              <Route path="/admin/personnel" element={<Personnel />} />
-              <Route path="/admin/appointments" element={<Appointments />} />
-              <Route path="/admin/customers" element={<Customers />} />
-              <Route path="/admin/profile" element={<StaffProfile />} />
-              <Route path="/admin/create-shop" element={<CreateShop />} />
-              <Route path="/admin/statistics" element={<ShopStatistics />} />
-              <Route path="/admin/settings" element={<Settings />} />
-              <Route path="/admin/shop-settings" element={<ShopSettings />} />
-              <Route path="/admin/operations-history" element={<OperationsHistory />} />
-              <Route path="/admin/operations" element={<StaffOperations />} />
               
               {/* Shortcut Routes for Admin/Staff */}
               <Route path="/personnel" element={<Personnel />} />
@@ -78,7 +65,6 @@ function App() {
               <Route path="/shop-statistics" element={<ShopStatistics />} />
               <Route path="/operations-history" element={<OperationsHistory />} />
               <Route path="/staff-profile" element={<StaffProfile />} />
-              <Route path="/staff-login" element={<StaffLogin />} />
               <Route path="/customers" element={<Customers />} />
               <Route path="/settings" element={<Settings />} />
               
