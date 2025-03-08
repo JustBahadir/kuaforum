@@ -51,10 +51,8 @@ export function useLoginHandler(onSuccess: () => void) {
         console.log("Personel/admin girişi başarılı. Yönlendirme yapılacak.");
         toast.success("Giriş başarılı!");
         
-        // Burada bir kısa gecikme ekleyelim - önce toast gösterilsin
-        setTimeout(() => {
-          onSuccess();
-        }, 500);
+        // Başarılı giriş işlemi
+        onSuccess();
       } else {
         console.error("Kullanıcının rolü personel veya admin değil:", userRole);
         setLoginError("Bu hesap personel girişi için yetkilendirilmemiş. Lütfen personel hesabınızla giriş yapın.");

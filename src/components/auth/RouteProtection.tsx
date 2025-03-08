@@ -9,7 +9,7 @@ interface RouteProtectionProps {
 }
 
 export const RouteProtection = ({ children }: RouteProtectionProps) => {
-  const { isAuthenticated, userRole, loading } = useCustomerAuth();
+  const { isAuthenticated, userRole, loading: authLoading } = useCustomerAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [checking, setChecking] = useState(true);
@@ -31,7 +31,6 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
         return;
       }
       
-      // Oturum kontrolü yap
       try {
         const { data, error } = await supabase.auth.getSession();
         
@@ -62,7 +61,6 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
         console.log("RouteProtection: Access granted");
       } catch (error) {
         console.error("RouteProtection: Unexpected error", error);
-        navigate('/staff-login');
       } finally {
         setChecking(false);
       }
@@ -71,7 +69,7 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
     checkSession();
   }, [location.pathname, navigate]);
 
-  if (checking || loading) {
+  if (checking) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>

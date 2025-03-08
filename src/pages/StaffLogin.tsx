@@ -5,23 +5,39 @@ import { Card, CardContent } from "@/components/ui/card";
 import { StaffCardHeader } from "@/components/staff/StaffCardHeader";
 import { LoginTabs } from "@/components/staff/LoginTabs";
 import { toast } from "sonner";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 
 export default function StaffLogin() {
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
     // Sayfa yüklendiğinde mevcut oturum kontrolü
     const checkSession = async () => {
-      const { data, error } = await supabase.auth.getSession();
-      
-      if (data?.session) {
-        const role = data.session.user.user_metadata?.role;
-        if (role === 'staff' || role === 'admin') {
-          console.log("Mevcut oturum bulundu, shop-home'a yönlendiriliyor.");
-          navigate("/shop-home");
+      try {
+        setIsLoading(true);
+        const { data, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error("Oturum kontrolü hatası:", error);
+          setIsLoading(false);
+          return;
         }
+        
+        if (data?.session) {
+          const role = data.session.user.user_metadata?.role;
+          if (role === 'staff' || role === 'admin') {
+            console.log("Mevcut oturum bulundu, shop-home'a yönlendiriliyor.");
+            navigate("/shop-home");
+            return;
+          }
+        }
+        
+        setIsLoading(false);
+      } catch (err) {
+        console.error("Beklenmeyen hata:", err);
+        setIsLoading(false);
       }
     };
     
@@ -39,6 +55,14 @@ export default function StaffLogin() {
   const handleBackClick = () => {
     navigate("/");
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-r from-purple-50 to-pink-50 flex items-center justify-center p-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-r from-purple-50 to-pink-50 flex items-center justify-center p-4">
