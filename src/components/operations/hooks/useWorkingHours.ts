@@ -16,7 +16,7 @@ export function useWorkingHours({ dukkanId, onMutationSuccess }: UseWorkingHours
   const [originalHours, setOriginalHours] = useState<CalismaSaati[]>([]);
   
   // Use the mutation hook for updates
-  const mutation = useWorkingHoursMutation(dukkanId);
+  const mutation = useWorkingHoursMutation({ dukkanId, onMutationSuccess });
   const { updateAllHours, updateSingleDay, isLoading: isMutationLoading, isUpdating } = mutation;
 
   // Fetch working hours with React Query

@@ -5,13 +5,16 @@ import { calismaSaatleriServisi } from '@/lib/supabase/services/calismaSaatleriS
 import { CalismaSaati } from '@/lib/supabase/types';
 import { toast } from 'sonner';
 
-interface UseWorkingHoursMutationProps {
+export interface UseWorkingHoursMutationProps {
   dukkanId: number;
   onMutationSuccess?: () => void;
 }
 
-export const useWorkingHoursMutation = (props: UseWorkingHoursMutationProps) => {
-  const { dukkanId, onMutationSuccess } = props;
+export const useWorkingHoursMutation = (props: UseWorkingHoursMutationProps | number) => {
+  // Handle both object and direct number parameter
+  const dukkanId = typeof props === 'number' ? props : props.dukkanId;
+  const onMutationSuccess = typeof props === 'number' ? undefined : props.onMutationSuccess;
+  
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
