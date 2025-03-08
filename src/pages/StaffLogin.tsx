@@ -1,86 +1,14 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { StaffCardHeader } from "@/components/staff/StaffCardHeader";
 import { LoginTabs } from "@/components/staff/LoginTabs";
-import { toast } from "sonner";
-import { supabase } from "@/lib/supabase/client";
 
 export default function StaffLogin() {
   const navigate = useNavigate();
-  const [processingAuth, setProcessingAuth] = useState(false);
   
-  // Check for any pending password resets or email confirmations
-  useEffect(() => {
-    const checkHash = async () => {
-      try {
-        const hash = window.location.hash;
-        
-        // Handle password reset or email confirmation
-        if (hash && (hash.includes("type=recovery") || hash.includes("type=signup"))) {
-          setProcessingAuth(true);
-          const { data, error } = await supabase.auth.getSession();
-          
-          if (error) {
-            toast.error("Bağlantı geçersiz: " + error.message);
-            setProcessingAuth(false);
-          } else if (data.session) {
-            if (hash.includes("type=recovery")) {
-              toast.success("Şifre başarıyla değiştirildi");
-            } else {
-              toast.success("E-posta adresiniz doğrulandı");
-            }
-            navigate("/shop-home");
-          } else {
-            setProcessingAuth(false);
-          }
-        }
-      } catch (error) {
-        console.error("Hash check error:", error);
-        setProcessingAuth(false);
-      }
-    };
-    
-    checkHash();
-
-    // Check if user is already logged in
-    const checkAuth = async () => {
-      try {
-        setProcessingAuth(true);
-        const { data: sessionData } = await supabase.auth.getSession();
-        
-        if (sessionData.session) {
-          const { data } = await supabase.auth.getUser();
-          
-          if (data && data.user) {
-            const metadata = data.user.user_metadata;
-            // Check if user has staff or admin role
-            if (metadata && (metadata.role === 'staff' || metadata.role === 'admin')) {
-              console.log("Staff/admin user detected, redirecting to shop-home");
-              navigate("/shop-home");
-            } else {
-              // User is not staff or admin, sign them out
-              await supabase.auth.signOut();
-              toast.error("Bu giriş sayfası sadece personel ve yöneticiler içindir.");
-              setProcessingAuth(false);
-            }
-          } else {
-            setProcessingAuth(false);
-          }
-        } else {
-          setProcessingAuth(false);
-        }
-      } catch (error) {
-        console.error("Auth check error:", error);
-        setProcessingAuth(false);
-      }
-    };
-
-    checkAuth();
-  }, [navigate]);
-
   const handleLoginSuccess = () => {
     // Redirect to shop home page
     navigate("/shop-home");
@@ -89,22 +17,6 @@ export default function StaffLogin() {
   const handleBackClick = () => {
     navigate("/");
   };
-
-  if (processingAuth) {
-    return (
-      <div className="min-h-screen bg-gradient-to-r from-purple-50 to-pink-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md shadow-xl border-0">
-          <StaffCardHeader onBack={handleBackClick} />
-          <CardContent className="p-6 text-center">
-            <div className="flex flex-col items-center justify-center h-40">
-              <div className="w-12 h-12 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin mb-4"></div>
-              <p className="text-gray-600">Kimlik doğrulama işlemi sürüyor...</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-r from-purple-50 to-pink-50 flex items-center justify-center p-4">

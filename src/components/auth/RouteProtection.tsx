@@ -35,6 +35,10 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
   };
 
   useEffect(() => {
+    console.log("RouteProtection: Current path:", location.pathname);
+    console.log("RouteProtection: Is public page:", isPublicPage());
+    console.log("RouteProtection: Auth state:", { isAuthenticated, userRole, loading });
+    
     // Skip loading for public pages entirely
     if (isPublicPage()) {
       setShowLocalLoading(false);

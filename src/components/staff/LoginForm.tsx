@@ -50,7 +50,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       
       if (error) {
         console.error("Giriş hatası:", error);
-        setLoginError(error.message || "Giriş yapılamadı. Lütfen bilgilerinizi kontrol edin.");
+        setLoginError("Giriş yapılamadı. Lütfen bilgilerinizi kontrol edin.");
         setLoading(false);
         return;
       }
@@ -74,7 +74,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       }
     } catch (error: any) {
       console.error("Giriş hatası:", error);
-      setLoginError(error.message || "Giriş yapılamadı. Lütfen bilgilerinizi kontrol edin.");
+      setLoginError("Giriş yapılamadı. Lütfen daha sonra tekrar deneyin.");
       setLoading(false);
     }
   };
