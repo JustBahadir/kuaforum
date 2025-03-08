@@ -26,7 +26,20 @@ export function useCustomerAuth() {
     const fetchUserSession = async () => {
       try {
         setLoading(true);
+        
+        // Fast timeout to prevent hanging
+        const timeoutId = setTimeout(() => {
+          console.log('Auth check timed out, treating as not authenticated');
+          setIsAuthenticated(false);
+          setLoading(false);
+        }, 800);
+        
+        setAuthTimeout(timeoutId);
+        
         const { data, error } = await supabase.auth.getSession();
+        
+        // Clear the timeout since we got a response
+        clearAuthTimeout();
         
         if (error) {
           console.error('Auth session error:', error);

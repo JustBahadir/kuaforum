@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,26 @@ export default function Auth() {
   const [password, setPassword] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+
+  // Check if user is already logged in
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        // Redirect to dashboard if already logged in
+        const metadata = data.session.user?.user_metadata;
+        const userRole = metadata?.role || 'customer';
+        
+        if (userRole === 'customer') {
+          navigate('/customer-dashboard');
+        } else if (userRole === 'admin' || userRole === 'staff') {
+          navigate('/admin/dashboard');
+        }
+      }
+    };
+    
+    checkSession();
+  }, [navigate]);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
