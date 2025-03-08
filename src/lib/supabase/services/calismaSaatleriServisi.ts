@@ -70,7 +70,7 @@ export const calismaSaatleriServisi = {
         .update({
           acilis: saat.acilis,
           kapanis: saat.kapanis,
-          durum: saat.durum
+          kapali: saat.kapali
         })
         .eq('id', saat.id)
         .select()
@@ -106,7 +106,7 @@ export const calismaSaatleriServisi = {
       gun_sira: index,
       acilis: '09:00',
       kapanis: '19:00',
-      durum: index < 5 // Weekdays are active by default
+      kapali: index >= 5 // Only weekdays (first 5 days) are active by default
     }));
   }
 };

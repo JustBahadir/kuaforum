@@ -1,4 +1,3 @@
-
 import { PostgrestError } from '@supabase/supabase-js';
 
 export interface Profile {
@@ -13,6 +12,7 @@ export interface Profile {
   avatar_url?: string;
   address?: string;
   iban?: string;
+  dukkan_id?: number | null;
 }
 
 export interface Dukkan {
@@ -141,6 +141,7 @@ export interface CalismaSaati {
   acilis: string | null;
   kapanis: string | null;
   kapali: boolean;
+  gun_sira?: number;
   created_at?: string;
   dukkan_id?: number;
 }

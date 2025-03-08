@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { CalismaSaati } from '@/lib/supabase/types';
 import { calismaSaatleriServisi } from '@/lib/supabase/services/calismaSaatleriServisi';
 import { useWorkingHoursMutation } from './useWorkingHoursMutation';
@@ -11,19 +11,13 @@ interface UseWorkingHoursProps {
 }
 
 export function useWorkingHours({ dukkanId, onMutationSuccess }: UseWorkingHoursProps) {
-  const queryClient = useQueryClient();
   const [workingHours, setWorkingHours] = useState<CalismaSaati[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [originalHours, setOriginalHours] = useState<CalismaSaati[]>([]);
   
   // Use the mutation hook for updates
-  const { updateAllHours, updateSingleDay, isLoading: isMutationLoading, isUpdating } = useWorkingHoursMutation({
-    dukkanId,
-    onMutationSuccess: () => {
-      setIsEditing(false);
-      if (onMutationSuccess) onMutationSuccess();
-    }
-  });
+  const mutation = useWorkingHoursMutation(dukkanId);
+  const { updateAllHours, updateSingleDay, isLoading: isMutationLoading, isUpdating } = mutation;
 
   // Fetch working hours with React Query
   const { data, isLoading, isError, error } = useQuery({
@@ -48,6 +42,7 @@ export function useWorkingHours({ dukkanId, onMutationSuccess }: UseWorkingHours
     const success = await updateAllHours(workingHours);
     if (success) {
       setIsEditing(false);
+      if (onMutationSuccess) onMutationSuccess();
     }
   };
 
@@ -74,7 +69,7 @@ export function useWorkingHours({ dukkanId, onMutationSuccess }: UseWorkingHours
   const toggleStatus = (id: number) => {
     setWorkingHours(prev => 
       prev.map(hour => 
-        hour.id === id ? { ...hour, durum: !hour.durum } : hour
+        hour.id === id ? { ...hour, kapali: !hour.kapali } : hour
       )
     );
   };
