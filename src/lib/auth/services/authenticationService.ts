@@ -1,4 +1,3 @@
-
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
 
@@ -36,9 +35,6 @@ export const authenticationService = {
    */
   signUp: async (email: string, password: string, metadata: any) => {
     try {
-      // We're no longer checking for existing users here as we'll handle this via 
-      // the Supabase Auth API response instead
-
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -143,7 +139,6 @@ export const authenticationService = {
    */
   deleteUserByEmail: async (email: string) => {
     try {
-      // Daha güçlü bir silme işlemi için doğrudan RPC çağrısı kullanıyoruz
       const { data, error } = await supabase.rpc('completely_delete_user', { 
         target_email: email 
       });
@@ -151,9 +146,7 @@ export const authenticationService = {
       if (error) {
         console.error("Kullanıcı silme hatası (RPC):", error);
         
-        // Alternatif yöntem olarak doğrudan auth.users tablosundan silmeyi deneyelim
         try {
-          // Kullanıcıyı auth tablosundan silme
           const { error: deleteError } = await supabase.functions.invoke("delete-user", {
             body: { email }
           });

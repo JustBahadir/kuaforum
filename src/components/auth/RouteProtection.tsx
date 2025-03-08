@@ -45,25 +45,13 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
     location.pathname === "/services" ||
     location.pathname === "/appointments";
 
-  // Very short timeout for auth check - if it takes longer than 500ms, just render the page
-  // This prevents the infinite loading screen on login or homepage
-  useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
-    
-    if (loading && !isPublicPage) {
-      timeoutId = setTimeout(() => {
-        navigate('/login');
-        toast.error("Oturum bilgisi alınamadı, lütfen tekrar giriş yapın");
-      }, 500); // Reduced from 1000ms to 500ms for faster response
-    }
-    
-    return () => {
-      if (timeoutId) clearTimeout(timeoutId);
-    };
-  }, [loading, navigate, isPublicPage]);
+  // No loading screen for public pages at all
+  if (isPublicPage) {
+    return <>{children}</>;
+  }
 
-  // If loading and not on a public page, show a brief loading spinner
-  if (loading && !isPublicPage) {
+  // For other pages, only show loading for a very brief period
+  if (loading) {
     return (
       <div className="flex flex-col items-center justify-center h-screen">
         <div className="w-12 h-12 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin mb-4"></div>
@@ -72,6 +60,5 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
     );
   }
 
-  // For public pages or after loading, just render the children
   return <>{children}</>;
 };

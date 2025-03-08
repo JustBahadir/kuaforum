@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,6 +57,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       if (error) {
         console.error("Giriş hatası:", error);
         setLoginError(error.message || "Giriş yapılamadı. Lütfen bilgilerinizi kontrol edin.");
+        setLoading(false);
         return;
       }
       
