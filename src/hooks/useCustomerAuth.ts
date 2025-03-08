@@ -13,89 +13,89 @@ export function useCustomerAuth() {
   const [dukkanAdi, setDukkanAdi] = useState<string>('');
   const [userId, setUserId] = useState<string>('');
 
-  useEffect(() => {
-    const fetchUserSession = async () => {
-      try {
-        setLoading(true);
-        
-        // Simple auth check with minimal timeout
-        const timeoutId = setTimeout(() => {
-          console.log('Auth check timed out, treating as not authenticated');
-          setIsAuthenticated(false);
-          setLoading(false);
-        }, 400); // Very short timeout
+  const fetchUserSession = async () => {
+    try {
+      setLoading(true);
+      
+      // Simple auth check with minimal timeout
+      const timeoutId = setTimeout(() => {
+        console.log('Auth check timed out, treating as not authenticated');
+        setIsAuthenticated(false);
+        setLoading(false);
+      }, 400); // Very short timeout
 
-        // Basic session check
-        const { data, error } = await supabase.auth.getSession();
-        
-        // Clear the timeout since we got a response
-        clearTimeout(timeoutId);
-        
-        if (error) {
-          console.error('Auth session error:', error);
-          setIsAuthenticated(false);
-          setLoading(false);
-          return;
-        }
+      // Basic session check
+      const { data, error } = await supabase.auth.getSession();
+      
+      // Clear the timeout since we got a response
+      clearTimeout(timeoutId);
+      
+      if (error) {
+        console.error('Auth session error:', error);
+        setIsAuthenticated(false);
+        setLoading(false);
+        return;
+      }
 
-        if (data?.session) {
-          // User is authenticated
-          setIsAuthenticated(true);
-          setUserId(data.session.user.id);
+      if (data?.session) {
+        // User is authenticated
+        setIsAuthenticated(true);
+        setUserId(data.session.user.id);
+        
+        // Get user metadata from session
+        const metadata = data.session.user.user_metadata;
+        if (metadata) {
+          setUserName(`${metadata.first_name || ''} ${metadata.last_name || ''}`.trim());
+          setUserRole(metadata.role || 'customer');
           
-          // Get user metadata from session
-          const metadata = data.session.user.user_metadata;
-          if (metadata) {
-            setUserName(`${metadata.first_name || ''} ${metadata.last_name || ''}`.trim());
-            setUserRole(metadata.role || 'customer');
-            
-            // Get dukkan info if needed
-            if (metadata.role === 'staff' || metadata.role === 'admin') {
-              if (metadata.role === 'admin') {
+          // Get dukkan info if needed
+          if (metadata.role === 'staff' || metadata.role === 'admin') {
+            if (metadata.role === 'admin') {
+              const { data: dukkanData } = await supabase
+                .from('dukkanlar')
+                .select('id, ad')
+                .eq('sahibi_id', data.session.user.id)
+                .single();
+                
+              if (dukkanData) {
+                setDukkanId(dukkanData.id);
+                setDukkanAdi(dukkanData.ad || '');
+              }
+            } else if (metadata.role === 'staff') {
+              const { data: staffData } = await supabase
+                .from('personel')
+                .select('dukkan_id')
+                .eq('auth_id', data.session.user.id)
+                .single();
+                
+              if (staffData?.dukkan_id) {
+                setDukkanId(staffData.dukkan_id);
+                
                 const { data: dukkanData } = await supabase
                   .from('dukkanlar')
-                  .select('id, ad')
-                  .eq('sahibi_id', data.session.user.id)
+                  .select('ad')
+                  .eq('id', staffData.dukkan_id)
                   .single();
                   
                 if (dukkanData) {
-                  setDukkanId(dukkanData.id);
                   setDukkanAdi(dukkanData.ad || '');
-                }
-              } else if (metadata.role === 'staff') {
-                const { data: staffData } = await supabase
-                  .from('personel')
-                  .select('dukkan_id')
-                  .eq('auth_id', data.session.user.id)
-                  .single();
-                  
-                if (staffData?.dukkan_id) {
-                  setDukkanId(staffData.dukkan_id);
-                  
-                  const { data: dukkanData } = await supabase
-                    .from('dukkanlar')
-                    .select('ad')
-                    .eq('id', staffData.dukkan_id)
-                    .single();
-                    
-                  if (dukkanData) {
-                    setDukkanAdi(dukkanData.ad || '');
-                  }
                 }
               }
             }
           }
-        } else {
-          setIsAuthenticated(false);
         }
-      } catch (error) {
-        console.error('Auth check error:', error);
+      } else {
         setIsAuthenticated(false);
-      } finally {
-        setLoading(false);
       }
-    };
+    } catch (error) {
+      console.error('Auth check error:', error);
+      setIsAuthenticated(false);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchUserSession();
 
     // Set up auth state change listener
@@ -144,6 +144,40 @@ export function useCustomerAuth() {
     }
   };
 
+  // Add the missing refreshProfile function
+  const refreshProfile = async () => {
+    return await fetchUserSession();
+  };
+
+  // Add the missing resetSession function
+  const resetSession = async () => {
+    try {
+      setLoading(true);
+      await supabase.auth.signOut();
+      
+      // Clear all session data
+      setIsAuthenticated(false);
+      setUserName('');
+      setUserRole('');
+      setDukkanId(0);
+      setDukkanAdi('');
+      setUserId('');
+      setActiveTab('dashboard');
+      
+      // Clear any stored tokens or session data
+      localStorage.removeItem('supabase.auth.token');
+      
+      // Redirect to login page
+      window.location.href = '/login';
+      toast.success('Oturum başarıyla sıfırlandı');
+    } catch (error) {
+      console.error('Session reset error:', error);
+      toast.error('Oturum sıfırlanırken bir hata oluştu');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     userName,
     loading,
@@ -154,6 +188,8 @@ export function useCustomerAuth() {
     isAuthenticated,
     dukkanId,
     dukkanAdi,
-    userId
+    userId,
+    refreshProfile,  // Added the missing function
+    resetSession     // Added the missing function
   };
 }
