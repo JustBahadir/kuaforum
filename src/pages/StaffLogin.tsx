@@ -7,16 +7,25 @@ import { StaffCardHeader } from "@/components/staff/StaffCardHeader";
 import { LoginTabs } from "@/components/staff/LoginTabs";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
-import { authenticationService } from "@/lib/auth/services/authenticationService";
 
 export default function StaffLogin() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [processingAuth, setProcessingAuth] = useState(false);
+  const [authTimeout, setAuthTimeout] = useState<NodeJS.Timeout | null>(null);
+  
+  // Function to clear any timeouts to prevent memory leaks
+  const clearAuthTimeout = () => {
+    if (authTimeout) {
+      clearTimeout(authTimeout);
+      setAuthTimeout(null);
+    }
+  };
   
   // Oturumu tamamen sıfırlama fonksiyonu
   const resetAllAuth = async () => {
     try {
+      clearAuthTimeout();
       setProcessingAuth(true);
       
       // Tüm Supabase oturumunu temizle
@@ -43,8 +52,17 @@ export default function StaffLogin() {
   
   // Check for any pending password resets or email confirmations
   useEffect(() => {
+    // Setup a timeout to avoid infinite loading
+    const authCheckTimeout = setTimeout(() => {
+      setProcessingAuth(false);
+    }, 5000); // 5 seconds timeout
+    
+    setAuthTimeout(authCheckTimeout);
+    
     const checkHash = async () => {
       setProcessingAuth(true);
+      clearAuthTimeout();
+      
       try {
         const hash = window.location.hash;
         
@@ -54,6 +72,7 @@ export default function StaffLogin() {
           
           if (error) {
             toast.error("Bağlantı geçersiz: " + error.message);
+            setProcessingAuth(false);
           } else if (data.session) {
             if (hash.includes("type=recovery")) {
               toast.success("Şifre başarıyla değiştirildi");
@@ -61,11 +80,14 @@ export default function StaffLogin() {
               toast.success("E-posta adresiniz doğrulandı");
             }
             navigate("/shop-home");
+          } else {
+            setProcessingAuth(false);
           }
+        } else {
+          setProcessingAuth(false);
         }
       } catch (error) {
         console.error("Hash check error:", error);
-      } finally {
         setProcessingAuth(false);
       }
     };
@@ -74,11 +96,23 @@ export default function StaffLogin() {
 
     // Check if user is already logged in
     const checkAuth = async () => {
-      setProcessingAuth(true);
       try {
-        const session = await authenticationService.getSession();
-        if (session) {
-          const { data } = await supabase.auth.getUser();
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error("Session check error:", sessionError);
+          setProcessingAuth(false);
+          return;
+        }
+        
+        if (sessionData.session) {
+          const { data, error } = await supabase.auth.getUser();
+          if (error) {
+            console.error("User data fetch error:", error);
+            setProcessingAuth(false);
+            return;
+          }
+          
           if (data && data.user) {
             const metadata = data.user.user_metadata;
             // Check if user has staff or admin role
@@ -88,17 +122,26 @@ export default function StaffLogin() {
               // User is not staff or admin, sign them out
               await supabase.auth.signOut();
               toast.error("Bu giriş sayfası sadece personel ve yöneticiler içindir.");
+              setProcessingAuth(false);
             }
+          } else {
+            setProcessingAuth(false);
           }
+        } else {
+          setProcessingAuth(false);
         }
       } catch (error) {
         console.error("Auth check error:", error);
-      } finally {
         setProcessingAuth(false);
       }
     };
 
     checkAuth();
+    
+    // Cleanup function
+    return () => {
+      clearAuthTimeout();
+    };
   }, [navigate]);
 
   const handleLoginSuccess = () => {

@@ -15,6 +15,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { supabase } from "@/lib/supabase/client";
 
 interface LoginFormProps {
   onSuccess: () => void;
@@ -49,18 +50,33 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
     
     try {
       console.log("Giriş yapılıyor:", email);
-      const { user, session } = await authenticationService.signIn(email, password);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
       
-      if (user && session) {
-        toast.success("Giriş başarılı!");
-        onSuccess();
+      if (error) {
+        console.error("Giriş hatası:", error);
+        setLoginError(error.message || "Giriş yapılamadı. Lütfen bilgilerinizi kontrol edin.");
+        return;
+      }
+      
+      if (data?.user) {
+        // Check user role
+        const metadata = data.user.user_metadata;
+        if (metadata?.role === 'staff' || metadata?.role === 'admin') {
+          toast.success("Giriş başarılı!");
+          onSuccess();
+        } else {
+          // Logout if not staff or admin
+          await supabase.auth.signOut();
+          setLoginError("Bu giriş sayfası sadece personel ve yöneticiler içindir.");
+        }
       } else {
         setLoginError("Giriş yapılamadı. Lütfen bilgilerinizi kontrol edin.");
       }
     } catch (error: any) {
       console.error("Giriş hatası:", error);
-      
-      // Use the custom error message if available
       setLoginError(error.message || "Giriş yapılamadı. Lütfen bilgilerinizi kontrol edin.");
     } finally {
       setLoading(false);

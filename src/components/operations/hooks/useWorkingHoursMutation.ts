@@ -1,63 +1,81 @@
 
-import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { calismaSaatleriServisi } from "@/lib/supabase/services/calismaSaatleriServisi";
-import { CalismaSaati } from "@/lib/supabase/types";
-import { toast } from "sonner";
+import { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { calismaSaatleriServisi } from '@/lib/supabase/services/calismaSaatleriServisi';
+import { CalismaSaati } from '@/lib/supabase/types';
+import { toast } from 'sonner';
 
-export function useWorkingHoursMutation(dukkanId: number | undefined) {
-  const [isLoading, setIsLoading] = useState(false);
+interface UseWorkingHoursMutationProps {
+  dukkanId: number;
+  onMutationSuccess?: () => void;
+}
+
+export const useWorkingHoursMutation = (props: UseWorkingHoursMutationProps) => {
+  const { dukkanId, onMutationSuccess } = props;
   const queryClient = useQueryClient();
+  const [isLoading, setIsLoading] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
-  const updateHoursMutation = useMutation({
+  // Update all working hours
+  const updateAllHoursMutation = useMutation({
     mutationFn: async (hours: CalismaSaati[]) => {
-      if (!dukkanId) throw new Error("Dükkan ID bulunamadı");
-      
-      // Ensure all hours have the dukkan_id
-      const preparedHours = hours.map(hour => ({
-        ...hour,
-        dukkan_id: dukkanId
-      }));
-      
-      return calismaSaatleriServisi.guncelle(preparedHours);
+      setIsUpdating(true);
+      try {
+        const result = await calismaSaatleriServisi.guncelle(hours);
+        return result;
+      } finally {
+        setIsUpdating(false);
+      }
     },
     onSuccess: () => {
-      toast.success("Çalışma saatleri başarıyla güncellendi");
-      // Invalidate queries that depend on working hours
-      queryClient.invalidateQueries({ queryKey: ['workingHours'] });
-      queryClient.invalidateQueries({ queryKey: ['dukkan_saatleri'] });
+      queryClient.invalidateQueries({ queryKey: ['dukkan_saatleri', dukkanId] });
+      toast.success('Çalışma saatleri başarıyla güncellendi');
+      if (onMutationSuccess) onMutationSuccess();
     },
     onError: (error: any) => {
-      console.error("Çalışma saatleri güncellenirken hata:", error);
-      toast.error(`Güncelleme sırasında bir hata oluştu: ${error.message || "Bilinmeyen hata"}`);
+      console.error('Çalışma saatleri güncelleme hatası:', error);
+      toast.error(`Hata: ${error.message || 'Çalışma saatleri güncellenemedi'}`);
     }
   });
 
-  const updateAllHours = async (hours: CalismaSaati[]) => {
-    setIsLoading(true);
+  // Update a single day's working hours
+  const updateSingleDayMutation = useMutation({
+    mutationFn: async (day: CalismaSaati) => {
+      setIsUpdating(true);
+      try {
+        const result = await calismaSaatleriServisi.tekGuncelle(day);
+        return result;
+      } finally {
+        setIsUpdating(false);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dukkan_saatleri', dukkanId] });
+      toast.success('Çalışma saati başarıyla güncellendi');
+      if (onMutationSuccess) onMutationSuccess();
+    },
+    onError: (error: any) => {
+      console.error('Çalışma saati güncelleme hatası:', error);
+      toast.error(`Hata: ${error.message || 'Çalışma saati güncellenemedi'}`);
+    }
+  });
+
+  // Wrapper functions
+  const updateAllHours = async (hours: CalismaSaati[]): Promise<boolean> => {
     try {
-      await updateHoursMutation.mutateAsync(hours);
+      await updateAllHoursMutation.mutateAsync(hours);
       return true;
     } catch (error) {
       return false;
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  const updateSingleDay = async (day: CalismaSaati) => {
-    setIsLoading(true);
+  const updateSingleDay = async (day: CalismaSaati): Promise<boolean> => {
     try {
-      await calismaSaatleriServisi.guncelle([day]);
-      toast.success(`${day.gun} günü için çalışma saatleri güncellendi`);
-      queryClient.invalidateQueries({ queryKey: ['workingHours'] });
-      queryClient.invalidateQueries({ queryKey: ['dukkan_saatleri'] });
+      await updateSingleDayMutation.mutateAsync(day);
       return true;
-    } catch (error: any) {
-      toast.error(`Güncelleme sırasında bir hata oluştu: ${error.message || "Bilinmeyen hata"}`);
+    } catch (error) {
       return false;
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -65,6 +83,6 @@ export function useWorkingHoursMutation(dukkanId: number | undefined) {
     updateAllHours,
     updateSingleDay,
     isLoading,
-    isUpdating: updateHoursMutation.isPending
+    isUpdating
   };
-}
+};
