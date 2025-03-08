@@ -43,22 +43,26 @@ export function useLoginHandler(onSuccess: () => void) {
         return;
       }
       
-      // Başarılı giriş
-      console.log("Kullanıcı başarıyla giriş yaptı:", data.user.id);
-      
       // Kullanıcı rolünü kontrol et
       const userRole = data.user.user_metadata?.role;
       console.log("Kullanıcı rolü:", userRole);
       
       if (userRole === 'staff' || userRole === 'admin') {
-        console.log("Personel/admin girişi başarılı. /shop-home sayfasına yönlendiriliyor.");
+        console.log("Personel/admin girişi başarılı. Yönlendirme yapılacak.");
         toast.success("Giriş başarılı!");
-        onSuccess();
+        
+        // Burada bir kısa gecikme ekleyelim - önce toast gösterilsin
+        setTimeout(() => {
+          onSuccess();
+        }, 500);
+      } else {
+        console.error("Kullanıcının rolü personel veya admin değil:", userRole);
+        setLoginError("Bu hesap personel girişi için yetkilendirilmemiş. Lütfen personel hesabınızla giriş yapın.");
+        setLoading(false);
       }
     } catch (error: any) {
       console.error("Beklenmeyen bir hata:", error.message);
       setLoginError("Giriş sırasında bir hata oluştu. Lütfen tekrar deneyin.");
-    } finally {
       setLoading(false);
     }
   };

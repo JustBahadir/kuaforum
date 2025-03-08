@@ -1,5 +1,5 @@
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 
 interface LoginErrorProps {
@@ -10,8 +10,9 @@ export function LoginError({ error }: LoginErrorProps) {
   if (!error) return null;
   
   return (
-    <Alert variant="destructive">
-      <AlertCircle className="h-4 w-4" />
+    <Alert variant="destructive" className="mb-4 border-red-500">
+      <AlertCircle className="h-5 w-5" />
+      <AlertTitle className="font-semibold">Giriş Hatası</AlertTitle>
       <AlertDescription>{error}</AlertDescription>
     </Alert>
   );

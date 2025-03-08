@@ -4,6 +4,7 @@ import { Lock, User } from "lucide-react";
 import { InputWithIcon } from "./auth/InputWithIcon";
 import { LoginError } from "./auth/LoginError";
 import { useLoginHandler } from "./auth/useLoginHandler";
+import { useState, useEffect } from "react";
 
 interface LoginFormProps {
   onSuccess: () => void;
@@ -20,8 +21,22 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
     handleLogin
   } = useLoginHandler(onSuccess);
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    // Form gönderildiğinde loading true olur
+    if (loading) {
+      setIsSubmitting(true);
+    }
+  }, [loading]);
+
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    setIsSubmitting(true);
+    await handleLogin(e);
+  };
+
   return (
-    <form onSubmit={handleLogin} className="space-y-4">
+    <form onSubmit={handleFormSubmit} className="space-y-4">
       <LoginError error={loginError} />
 
       <InputWithIcon
@@ -33,6 +48,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         placeholder="ornek@email.com"
         icon={<User className="h-4 w-4" />}
         required
+        disabled={isSubmitting}
       />
 
       <InputWithIcon
@@ -43,14 +59,15 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         onChange={(e) => setPassword(e.target.value)}
         icon={<Lock className="h-4 w-4" />}
         required
+        disabled={isSubmitting}
       />
 
       <Button 
         type="submit" 
         className="w-full bg-purple-600 hover:bg-purple-700"
-        disabled={loading}
+        disabled={isSubmitting}
       >
-        {loading ? "Giriş yapılıyor..." : "Giriş Yap"}
+        {isSubmitting ? "Giriş yapılıyor..." : "Giriş Yap"}
       </Button>
     </form>
   );

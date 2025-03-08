@@ -4,13 +4,36 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { StaffCardHeader } from "@/components/staff/StaffCardHeader";
 import { LoginTabs } from "@/components/staff/LoginTabs";
+import { toast } from "sonner";
+import { useEffect } from "react";
+import { supabase } from "@/lib/supabase/client";
 
 export default function StaffLogin() {
   const navigate = useNavigate();
   
+  useEffect(() => {
+    // Sayfa yüklendiğinde mevcut oturum kontrolü
+    const checkSession = async () => {
+      const { data, error } = await supabase.auth.getSession();
+      
+      if (data?.session) {
+        const role = data.session.user.user_metadata?.role;
+        if (role === 'staff' || role === 'admin') {
+          console.log("Mevcut oturum bulundu, shop-home'a yönlendiriliyor.");
+          navigate("/shop-home");
+        }
+      }
+    };
+    
+    checkSession();
+  }, [navigate]);
+  
   const handleLoginSuccess = () => {
     console.log("Login başarılı, yönlendirme yapılıyor");
-    navigate("/shop-home");
+    toast.success("Başarıyla giriş yaptınız!");
+    setTimeout(() => {
+      navigate("/shop-home");
+    }, 500);
   };
 
   const handleBackClick = () => {
