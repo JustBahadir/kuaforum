@@ -41,176 +41,95 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
     setLoading(true);
     
     try {
-      console.log("Giriş yapılıyor:", email);
+      console.log("Giriş denenecek e-posta:", email);
       
+      // Supabase ile giriş işlemi
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
       
       if (error) {
-        console.error("Giriş hatası:", error);
-        setLoginError("Giriş yapılamadı. Lütfen bilgilerinizi kontrol edin.");
+        console.error("Giriş hatası:", error.message);
+        setLoginError("Giriş yapılamadı. E-posta veya şifre hatalı.");
         setLoading(false);
         return;
       }
       
-      if (data?.user) {
-        console.log("Kullanıcı bilgisi:", data.user);
-        // Kullanıcı rolünü kontrol et
-        const metadata = data.user.user_metadata;
-        console.log("Kullanıcı metadata:", metadata);
-        
-        if (metadata?.role === 'staff' || metadata?.role === 'admin') {
-          console.log("Personel veya admin girişi başarılı, yönlendiriliyor");
-          toast.success("Giriş başarılı!");
-          // Önce onSuccess çağrılıyor (yönlendirme için)
-          onSuccess();
-        } else {
-          console.error("Yetkisiz kullanıcı girişi", metadata);
-          // Personel veya admin değilse çıkış yap
-          await supabase.auth.signOut();
-          setLoginError("Bu giriş sayfası sadece personel ve yöneticiler içindir.");
-          setLoading(false);
-        }
-      } else {
-        console.error("Kullanıcı bilgisi bulunamadı");
-        setLoginError("Giriş yapılamadı. Lütfen bilgilerinizi kontrol edin.");
+      if (!data || !data.user) {
+        console.error("Kullanıcı verileri alınamadı");
+        setLoginError("Kullanıcı bilgileri alınamadı.");
         setLoading(false);
+        return;
+      }
+      
+      // Başarılı giriş
+      console.log("Kullanıcı başarıyla giriş yaptı:", data.user.id);
+      
+      // Kullanıcı rolünü kontrol et
+      const userRole = data.user.user_metadata?.role;
+      console.log("Kullanıcı rolü:", userRole);
+      
+      if (userRole === 'staff' || userRole === 'admin') {
+        console.log("Personel/admin girişi başarılı. /shop-home sayfasına yönlendiriliyor.");
+        toast.success("Giriş başarılı!");
+        onSuccess();
       }
     } catch (error: any) {
-      console.error("Giriş sırasında hata oluştu:", error);
-      setLoginError("Giriş yapılamadı. Lütfen daha sonra tekrar deneyin.");
+      console.error("Beklenmeyen bir hata:", error.message);
+      setLoginError("Giriş sırasında bir hata oluştu. Lütfen tekrar deneyin.");
+    } finally {
       setLoading(false);
     }
   };
 
-  const handleResetPassword = async () => {
-    if (!resetEmail) {
-      toast.error("Lütfen e-posta adresinizi girin");
-      return;
-    }
-    
-    setResetLoading(true);
-    
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
-        redirectTo: `${window.location.origin}/staff-login`,
-      });
-      
-      if (error) {
-        throw error;
-      }
-      
-      toast.success("Şifre sıfırlama bağlantısı e-posta adresinize gönderildi");
-      setShowForgotDialog(false);
-    } catch (error: any) {
-      toast.error("Şifre sıfırlama işlemi başarısız: " + error.message);
-    } finally {
-      setResetLoading(false);
-    }
-  };
-
   return (
-    <>
-      <form onSubmit={handleLogin} className="space-y-4">
-        {loginError && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{loginError}</AlertDescription>
-          </Alert>
-        )}
+    <form onSubmit={handleLogin} className="space-y-4">
+      {loginError && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{loginError}</AlertDescription>
+        </Alert>
+      )}
 
-        <div className="space-y-2">
-          <Label htmlFor="staff-email">E-posta</Label>
-          <div className="relative">
-            <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-            <Input 
-              id="staff-email" 
-              type="email" 
-              placeholder="personel@salonyonetim.com" 
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="pl-10"
-              required
-            />
-          </div>
+      <div className="space-y-2">
+        <Label htmlFor="email">E-posta</Label>
+        <div className="relative">
+          <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+          <Input 
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="pl-10"
+            placeholder="ornek@email.com"
+            required
+          />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="staff-password">Şifre</Label>
-          <div className="relative">
-            <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-            <Input 
-              id="staff-password" 
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="pl-10"
-              required
-            />
-          </div>
-        </div>
-        
-        <div className="flex justify-end">
-          <Button 
-            type="button" 
-            variant="link" 
-            className="text-xs text-purple-600"
-            onClick={() => setShowForgotDialog(true)}
-          >
-            Şifremi Unuttum
-          </Button>
-        </div>
-        
-        <Button 
-          type="submit" 
-          className="w-full bg-purple-600 hover:bg-purple-700 text-white"
-          disabled={loading}
-        >
-          {loading ? "Giriş yapılıyor..." : "Giriş Yap"}
-        </Button>
-      </form>
+      </div>
 
-      {/* Forgot Password Dialog */}
-      <Dialog open={showForgotDialog} onOpenChange={setShowForgotDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Şifremi Unuttum</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <p className="text-sm text-muted-foreground">
-              Şifrenizi sıfırlamak için e-posta adresinizi girin. Size bir sıfırlama bağlantısı göndereceğiz.
-            </p>
-            <div className="space-y-2">
-              <Label htmlFor="reset-email">E-posta</Label>
-              <Input
-                id="reset-email"
-                type="email"
-                value={resetEmail}
-                onChange={(e) => setResetEmail(e.target.value)}
-                placeholder="ornek@email.com"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setShowForgotDialog(false)}
-              disabled={resetLoading}
-            >
-              İptal
-            </Button>
-            <Button
-              type="button"
-              onClick={handleResetPassword}
-              disabled={resetLoading}
-            >
-              {resetLoading ? "Gönderiliyor..." : "Sıfırlama Bağlantısı Gönder"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+      <div className="space-y-2">
+        <Label htmlFor="password">Şifre</Label>
+        <div className="relative">
+          <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+          <Input 
+            id="password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="pl-10"
+            required
+          />
+        </div>
+      </div>
+
+      <Button 
+        type="submit" 
+        className="w-full bg-purple-600 hover:bg-purple-700"
+        disabled={loading}
+      >
+        {loading ? "Giriş yapılıyor..." : "Giriş Yap"}
+      </Button>
+    </form>
   );
 }

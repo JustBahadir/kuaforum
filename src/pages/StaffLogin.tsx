@@ -9,8 +9,7 @@ export default function StaffLogin() {
   const navigate = useNavigate();
   
   const handleLoginSuccess = () => {
-    console.log("Login success detected, redirecting to shop home");
-    // Doğrudan yönlendirme
+    console.log("Login başarılı, yönlendirme yapılıyor");
     navigate("/shop-home");
   };
 
@@ -24,7 +23,6 @@ export default function StaffLogin() {
         <StaffCardHeader onBack={handleBackClick} />
         <CardContent className="p-6">
           <LoginTabs onSuccess={handleLoginSuccess} />
-
           <div className="flex flex-col items-center mt-4">
             <Button 
               variant="link" 
