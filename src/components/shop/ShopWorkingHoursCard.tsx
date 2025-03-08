@@ -102,7 +102,6 @@ export function ShopWorkingHoursCard({ calisma_saatleri = [], userRole, dukkanId
                 <TableHead className="w-[150px]">Gün</TableHead>
                 <TableHead>Açılış</TableHead>
                 <TableHead>Kapanış</TableHead>
-                <TableHead className="text-right">Durum</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -112,11 +111,6 @@ export function ShopWorkingHoursCard({ calisma_saatleri = [], userRole, dukkanId
                     <TableCell className="font-medium">{gunIsimleri[gun]}</TableCell>
                     <TableCell>09:00</TableCell>
                     <TableCell>19:00</TableCell>
-                    <TableCell className="text-right">
-                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        Açık
-                      </span>
-                    </TableCell>
                   </TableRow>
                 ))
               ) : (
@@ -125,19 +119,16 @@ export function ShopWorkingHoursCard({ calisma_saatleri = [], userRole, dukkanId
                     <TableCell className="font-medium">
                       {gunIsimleri[saat.gun] || saat.gun}
                     </TableCell>
-                    <TableCell>
-                      {saat.kapali ? "-" : formatTime(saat.acilis)}
-                    </TableCell>
-                    <TableCell>
-                      {saat.kapali ? "-" : formatTime(saat.kapanis)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        saat.kapali ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"
-                      }`}>
-                        {saat.kapali ? "Kapalı" : "Açık"}
-                      </span>
-                    </TableCell>
+                    {saat.kapali ? (
+                      <TableCell colSpan={2} className="text-center font-medium text-red-600">
+                        KAPALI
+                      </TableCell>
+                    ) : (
+                      <>
+                        <TableCell>{formatTime(saat.acilis)}</TableCell>
+                        <TableCell>{formatTime(saat.kapanis)}</TableCell>
+                      </>
+                    )}
                   </TableRow>
                 ))
               )}

@@ -17,6 +17,7 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
 
   useEffect(() => {
     let isMounted = true;
+    let timeout: NodeJS.Timeout;
     
     const checkSession = async () => {
       // Mevcut sayfanın erişime açık olup olmadığını kontrol et
@@ -31,6 +32,7 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
       }
       
       try {
+        setChecking(true);
         const { data, error } = await supabase.auth.getSession();
         
         if (error || !data.session) {
@@ -41,7 +43,7 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
         const userRole = data.session.user.user_metadata?.role;
         
         // Admin/personel kontrolü
-        if (location.pathname.startsWith('/shop-') || location.pathname === '/shop-home') {
+        if (location.pathname.startsWith('/shop-') || location.pathname === '/shop-home' || location.pathname.startsWith('/admin')) {
           if (userRole !== 'admin' && userRole !== 'staff') {
             if (isMounted) navigate('/staff-login');
             return;
@@ -56,13 +58,18 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
     
     // Sadece korumalı sayfalarda kontrol yap
     if (!publicPages.includes(location.pathname)) {
-      setChecking(true);
       checkSession();
+      
+      // Güvenlik önlemi olarak maksimum 5 saniye sonra yükleme durumunu kapat
+      timeout = setTimeout(() => {
+        if (isMounted) setChecking(false);
+      }, 2000);
     }
     
     // Cleanup
     return () => {
       isMounted = false;
+      clearTimeout(timeout);
     };
   }, [location.pathname, navigate]);
 

@@ -37,7 +37,7 @@ export function StaffAppointmentForm({ onAppointmentCreated, initialDate }: Staf
   const { dukkanId } = useCustomerAuth();
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [availableTimes, setAvailableTimes] = useState<string[]>([]);
-  const [selectedServices, setSelectedServices] = useState<number[]>([]);
+  const [selectedService, setSelectedService] = useState<number | null>(null);
   const [isFetchingTimes, setIsFetchingTimes] = useState(false);
   
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<FormValues>({
@@ -94,9 +94,11 @@ export function StaffAppointmentForm({ onAppointmentCreated, initialDate }: Staf
       
       // Get working hours for this shop
       const workingHours = await calismaSaatleriServisi.dukkanSaatleriGetir(dukkanId);
+      console.log("Fetched working hours:", workingHours);
       
       // Find working hours for this day
       const dayHours = workingHours.find((h: CalismaSaati) => h.gun === dayName);
+      console.log("Day hours for", dayName, ":", dayHours);
       
       if (!dayHours || dayHours.kapali || !dayHours.acilis || !dayHours.kapanis) {
         setAvailableTimes([]);
@@ -105,6 +107,7 @@ export function StaffAppointmentForm({ onAppointmentCreated, initialDate }: Staf
       
       // Generate time slots from opening to closing with 30-minute intervals
       const slots = generateTimeSlots(dayHours.acilis, dayHours.kapanis);
+      console.log("Generated time slots:", slots);
       setAvailableTimes(slots);
     } catch (error) {
       console.error("Error fetching available times:", error);
@@ -165,27 +168,22 @@ export function StaffAppointmentForm({ onAppointmentCreated, initialDate }: Staf
   
   const handleCategoryChange = (categoryId: string) => {
     setSelectedCategory(Number(categoryId));
-    // Reset selected services when category changes
-    setSelectedServices([]);
+    // Reset selected service when category changes
+    setSelectedService(null);
   };
   
   const handleServiceChange = (serviceId: string) => {
     const id = Number(serviceId);
-    
-    // Toggle service selection
-    if (selectedServices.includes(id)) {
-      setSelectedServices(selectedServices.filter(s => s !== id));
-    } else {
-      setSelectedServices([...selectedServices, id]);
-    }
+    setSelectedService(id);
+    setValue('islemler', [id]);
   };
   
   const onSubmit = (data: FormValues) => {
-    // Use selected services from state
-    data.islemler = selectedServices;
-    
-    if (selectedServices.length === 0) {
-      toast.error("En az bir hizmet seçmelisiniz");
+    // Use selected service
+    if (selectedService) {
+      data.islemler = [selectedService];
+    } else {
+      toast.error("Bir hizmet seçmelisiniz");
       return;
     }
     
@@ -267,14 +265,13 @@ export function StaffAppointmentForm({ onAppointmentCreated, initialDate }: Staf
         <Select 
           onValueChange={handleServiceChange}
           disabled={!selectedCategory || isLoadingIslemler}
+          value={selectedService?.toString()}
         >
           <SelectTrigger id="hizmet">
             <SelectValue placeholder={
               !selectedCategory 
                 ? "Önce kategori seçin" 
-                : selectedServices.length > 0 
-                  ? `${selectedServices.length} hizmet seçildi` 
-                  : "Hizmet seçin"
+                : "Hizmet seçin"
             } />
           </SelectTrigger>
           <SelectContent>
@@ -292,7 +289,6 @@ export function StaffAppointmentForm({ onAppointmentCreated, initialDate }: Staf
                 <SelectItem 
                   key={islem.id} 
                   value={islem.id.toString()}
-                  className={selectedServices.includes(islem.id) ? "bg-primary/10" : ""}
                 >
                   {islem.islem_adi} - {islem.fiyat} TL
                 </SelectItem>
@@ -300,26 +296,6 @@ export function StaffAppointmentForm({ onAppointmentCreated, initialDate }: Staf
             )}
           </SelectContent>
         </Select>
-        
-        {selectedServices.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-2">
-            {selectedServices.map(id => {
-              const service = islemler.find(i => i.id === id);
-              return service ? (
-                <div key={id} className="bg-primary/10 text-primary px-2 py-1 rounded-md text-sm flex items-center">
-                  {service.islem_adi}
-                  <button 
-                    type="button"
-                    onClick={() => setSelectedServices(selectedServices.filter(s => s !== id))}
-                    className="ml-2 text-primary hover:text-primary/80 text-xs"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ) : null;
-            })}
-          </div>
-        )}
       </div>
       
       <div className="space-y-2">

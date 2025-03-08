@@ -31,12 +31,14 @@ export function useLoginHandler(onSuccess: () => void) {
       if (error) {
         console.error("Giriş hatası:", error.message);
         setLoginError("Giriş yapılamadı. E-posta veya şifre hatalı.");
+        setLoading(false);
         return;
       }
       
       if (!data || !data.user) {
         console.error("Kullanıcı verileri alınamadı");
         setLoginError("Kullanıcı bilgileri alınamadı.");
+        setLoading(false);
         return;
       }
       
@@ -51,11 +53,11 @@ export function useLoginHandler(onSuccess: () => void) {
       } else {
         console.error("Kullanıcının rolü personel veya admin değil:", userRole);
         setLoginError("Bu hesap personel girişi için yetkilendirilmemiş. Lütfen personel hesabınızla giriş yapın.");
+        setLoading(false);
       }
     } catch (error: any) {
       console.error("Beklenmeyen bir hata:", error.message);
       setLoginError("Giriş sırasında bir hata oluştu. Lütfen tekrar deneyin.");
-    } finally {
       setLoading(false);
     }
   };

@@ -9,7 +9,7 @@ import { supabase } from "@/lib/supabase/client";
 
 export default function StaffLogin() {
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
     // Sayfa yüklendiğinde mevcut oturum kontrolü
@@ -24,8 +24,6 @@ export default function StaffLogin() {
             return;
           }
         }
-        
-        // Oturum yoksa veya personel değilse form göster
       } catch (err) {
         console.error("StaffLogin: Beklenmeyen hata:", err);
       } finally {
@@ -34,6 +32,13 @@ export default function StaffLogin() {
     };
     
     checkSession();
+    
+    // Yükleme ekranında sonsuz kalması durumuna karşı bir güvenlik önlemi
+    const timeout = setTimeout(() => {
+      setIsLoading(false);
+    }, 2000);
+    
+    return () => clearTimeout(timeout);
   }, [navigate]);
   
   const handleLoginSuccess = () => {

@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { gunSiralama, gunIsimleri } from "./constants/workingDays";
 import { CalismaSaati } from "@/lib/supabase/types";
-import { calismaSaatleriServisi } from "@/lib/supabase/services/calismaSaatleriServisi";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWorkingHours } from "./hooks/useWorkingHours";
 
@@ -240,18 +239,25 @@ export function WorkingHours({ isStaff = true, dukkanId }: WorkingHoursProps) {
                       <TableCell className="font-medium">
                         {gunIsimleri[saat.gun] || saat.gun}
                       </TableCell>
-                      <TableCell>
-                        {saat.kapali ? "-" : formatTime(saat.acilis)}
-                      </TableCell>
-                      <TableCell>
-                        {saat.kapali ? "-" : formatTime(saat.kapanis)}
-                      </TableCell>
+                      {saat.kapali ? (
+                        <TableCell colSpan={2} className="text-center font-medium text-red-600">
+                          KAPALI
+                        </TableCell>
+                      ) : (
+                        <>
+                          <TableCell>{formatTime(saat.acilis)}</TableCell>
+                          <TableCell>{formatTime(saat.kapanis)}</TableCell>
+                        </>
+                      )}
                       <TableCell className="text-right">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          saat.kapali ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"
-                        }`}>
-                          {saat.kapali ? "Kapalı" : "Açık"}
-                        </span>
+                        <div className="flex items-center justify-end space-x-2">
+                          <Label htmlFor={`status-${index}`}>
+                            {saat.kapali ? "Kapalı" : "Açık"}
+                          </Label>
+                          <div className={`h-4 w-4 rounded-full ${
+                            saat.kapali ? "bg-red-500" : "bg-green-500"
+                          }`}></div>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -262,9 +268,10 @@ export function WorkingHours({ isStaff = true, dukkanId }: WorkingHoursProps) {
                       <TableCell>09:00</TableCell>
                       <TableCell>19:00</TableCell>
                       <TableCell className="text-right">
-                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          Açık
-                        </span>
+                        <div className="flex items-center justify-end space-x-2">
+                          <Label>Açık</Label>
+                          <div className="h-4 w-4 rounded-full bg-green-500"></div>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
