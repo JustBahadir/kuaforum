@@ -9,6 +9,47 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      calisma_saatleri: {
+        Row: {
+          acilis: string | null
+          created_at: string | null
+          dukkan_id: number | null
+          gun: string
+          gun_sira: number
+          id: number
+          kapali: boolean | null
+          kapanis: string | null
+        }
+        Insert: {
+          acilis?: string | null
+          created_at?: string | null
+          dukkan_id?: number | null
+          gun: string
+          gun_sira: number
+          id?: never
+          kapali?: boolean | null
+          kapanis?: string | null
+        }
+        Update: {
+          acilis?: string | null
+          created_at?: string | null
+          dukkan_id?: number | null
+          gun?: string
+          gun_sira?: number
+          id?: never
+          kapali?: boolean | null
+          kapanis?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calisma_saatleri_dukkan_id_fkey"
+            columns: ["dukkan_id"]
+            isOneToOne: false
+            referencedRelation: "dukkanlar"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_personal_data: {
         Row: {
           anniversary_date: string | null
