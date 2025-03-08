@@ -17,7 +17,7 @@ export function useCustomerAuth() {
     try {
       setLoading(true);
       
-      // Get session directly with no timeout
+      // Get session
       const { data, error } = await supabase.auth.getSession();
       
       if (error) {
@@ -136,34 +136,7 @@ export function useCustomerAuth() {
 
   // Function to refresh user profile
   const refreshProfile = async () => {
-    console.log("Refreshing profile...");
     return await fetchUserSession();
-  };
-
-  // Function to completely reset session
-  const resetSession = async () => {
-    try {
-      setLoading(true);
-      console.log("Resetting session...");
-      await supabase.auth.signOut();
-      
-      // Clear session data
-      setIsAuthenticated(false);
-      setUserName('');
-      setUserRole('');
-      setDukkanId(0);
-      setDukkanAdi('');
-      setUserId('');
-      
-      // Redirect to login page
-      window.location.href = '/login';
-      toast.success('Oturum başarıyla sıfırlandı');
-    } catch (error) {
-      console.error('Session reset error:', error);
-      toast.error('Oturum sıfırlanırken bir hata oluştu');
-    } finally {
-      setLoading(false);
-    }
   };
 
   return {
@@ -177,7 +150,6 @@ export function useCustomerAuth() {
     dukkanId,
     dukkanAdi,
     userId,
-    refreshProfile,
-    resetSession
+    refreshProfile
   };
 }

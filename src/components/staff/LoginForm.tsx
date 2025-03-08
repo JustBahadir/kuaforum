@@ -29,7 +29,6 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
   const [resetLoading, setResetLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
 
-  // Basitleştirilmiş giriş fonksiyonu
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError(null);
@@ -60,25 +59,26 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         // Kullanıcı rolünü kontrol et
         const metadata = data.user.user_metadata;
         if (metadata?.role === 'staff' || metadata?.role === 'admin') {
+          console.log("Giriş başarılı, yönlendiriliyor");
           toast.success("Giriş başarılı!");
           onSuccess();
         } else {
           // Personel veya admin değilse çıkış yap
           await supabase.auth.signOut();
           setLoginError("Bu giriş sayfası sadece personel ve yöneticiler içindir.");
+          setLoading(false);
         }
       } else {
         setLoginError("Giriş yapılamadı. Lütfen bilgilerinizi kontrol edin.");
+        setLoading(false);
       }
     } catch (error: any) {
       console.error("Giriş hatası:", error);
       setLoginError(error.message || "Giriş yapılamadı. Lütfen bilgilerinizi kontrol edin.");
-    } finally {
       setLoading(false);
     }
   };
 
-  // Şifre sıfırlama fonksiyonu 
   const handleResetPassword = async () => {
     if (!resetEmail) {
       toast.error("Lütfen e-posta adresinizi girin");

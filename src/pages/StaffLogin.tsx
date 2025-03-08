@@ -15,13 +15,12 @@ export default function StaffLogin() {
   // Check for any pending password resets or email confirmations
   useEffect(() => {
     const checkHash = async () => {
-      setProcessingAuth(true);
-      
       try {
         const hash = window.location.hash;
         
         // Handle password reset or email confirmation
         if (hash && (hash.includes("type=recovery") || hash.includes("type=signup"))) {
+          setProcessingAuth(true);
           const { data, error } = await supabase.auth.getSession();
           
           if (error) {
@@ -37,8 +36,6 @@ export default function StaffLogin() {
           } else {
             setProcessingAuth(false);
           }
-        } else {
-          setProcessingAuth(false);
         }
       } catch (error) {
         console.error("Hash check error:", error);
@@ -51,26 +48,17 @@ export default function StaffLogin() {
     // Check if user is already logged in
     const checkAuth = async () => {
       try {
-        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError) {
-          console.error("Session check error:", sessionError);
-          setProcessingAuth(false);
-          return;
-        }
+        setProcessingAuth(true);
+        const { data: sessionData } = await supabase.auth.getSession();
         
         if (sessionData.session) {
-          const { data, error } = await supabase.auth.getUser();
-          if (error) {
-            console.error("User data fetch error:", error);
-            setProcessingAuth(false);
-            return;
-          }
+          const { data } = await supabase.auth.getUser();
           
           if (data && data.user) {
             const metadata = data.user.user_metadata;
             // Check if user has staff or admin role
             if (metadata && (metadata.role === 'staff' || metadata.role === 'admin')) {
+              console.log("Staff/admin user detected, redirecting to shop-home");
               navigate("/shop-home");
             } else {
               // User is not staff or admin, sign them out

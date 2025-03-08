@@ -22,6 +22,7 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
     "/",
     "/login",
     "/admin",
+    "/staff-login",
     "/services",
     "/appointments",
   ];
@@ -40,15 +41,9 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
       return;
     }
 
-    // Simplified loading logic
+    // Simple loading logic
     if (loading) {
-      const timeout = setTimeout(() => {
-        setShowLocalLoading(true);
-      }, 300);
-      
-      return () => {
-        clearTimeout(timeout);
-      };
+      setShowLocalLoading(true);
     } else {
       setShowLocalLoading(false);
     }
