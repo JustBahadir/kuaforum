@@ -52,6 +52,7 @@ export function useLoginHandler(onSuccess: () => void) {
         toast.success("Giriş başarılı!");
         
         // Başarılı giriş işlemi
+        setLoading(false);
         onSuccess();
       } else {
         console.error("Kullanıcının rolü personel veya admin değil:", userRole);

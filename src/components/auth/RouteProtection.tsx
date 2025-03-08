@@ -18,16 +18,20 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
   const publicPages = ["/", "/login", "/admin", "/staff-login"];
 
   useEffect(() => {
+    let isMounted = true;
+    
     const checkSession = async () => {
-      console.log("RouteProtection: Checking session...");
+      console.log("RouteProtection: Checking session for path:", location.pathname);
       
       // Mevcut sayfanın erişime açık olup olmadığını kontrol et
-      const isPublicPage = publicPages.includes(location.pathname);
+      const isPublicPage = publicPages.some(page => 
+        location.pathname === page || location.pathname.startsWith(`${page}/`)
+      );
       
       // Kimlik doğrulaması gerekmeyen sayfalarda direkt göster
       if (isPublicPage) {
         console.log("RouteProtection: Public page, allowing access");
-        setChecking(false);
+        if (isMounted) setChecking(false);
         return;
       }
       
@@ -37,14 +41,14 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
         if (error) {
           console.error("RouteProtection: Session error", error);
           navigate('/login'); // Önemli: Hata durumunda genel login sayfasına yönlendir
-          setChecking(false);
+          if (isMounted) setChecking(false);
           return;
         }
         
         if (!data.session) {
           console.log("RouteProtection: No session, redirecting to login");
           navigate('/login'); // Oturum yoksa genel login sayfasına yönlendir
-          setChecking(false);
+          if (isMounted) setChecking(false);
           return;
         }
         
@@ -56,20 +60,34 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
           if (userRole !== 'admin' && userRole !== 'staff') {
             console.log("RouteProtection: Not staff/admin, redirecting to staff login");
             navigate('/staff-login');
-            setChecking(false);
+            if (isMounted) setChecking(false);
             return;
           }
         }
         
         console.log("RouteProtection: Access granted");
-        setChecking(false);
+        if (isMounted) setChecking(false);
       } catch (error) {
         console.error("RouteProtection: Unexpected error", error);
-        setChecking(false); // Hata durumunda bile checking'i false yap
+        if (isMounted) setChecking(false); // Hata durumunda bile checking'i false yap
       }
     };
     
+    // Maksimum 5 saniye sonra yükleme durumunu sonlandır
+    const timeoutId = setTimeout(() => {
+      if (isMounted && checking) {
+        console.log("RouteProtection: Timeout reached, ending checking state");
+        setChecking(false);
+      }
+    }, 5000);
+    
     checkSession();
+    
+    // Cleanup
+    return () => {
+      isMounted = false;
+      clearTimeout(timeoutId);
+    };
   }, [location.pathname, navigate]);
 
   if (checking) {

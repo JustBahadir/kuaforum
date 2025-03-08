@@ -16,11 +16,11 @@ export default function StaffLogin() {
     // Sayfa yüklendiğinde mevcut oturum kontrolü
     const checkSession = async () => {
       try {
-        setIsLoading(true);
+        console.log("StaffLogin: Oturum kontrolü başlatılıyor");
         const { data, error } = await supabase.auth.getSession();
         
         if (error) {
-          console.error("Oturum kontrolü hatası:", error);
+          console.error("StaffLogin: Oturum kontrolü hatası:", error);
           setIsLoading(false);
           return;
         }
@@ -28,25 +28,32 @@ export default function StaffLogin() {
         if (data?.session) {
           const role = data.session.user.user_metadata?.role;
           if (role === 'staff' || role === 'admin') {
-            console.log("Mevcut oturum bulundu, shop-home'a yönlendiriliyor.");
+            console.log("StaffLogin: Mevcut oturum bulundu, shop-home'a yönlendiriliyor");
             navigate("/shop-home");
             return;
           }
         }
         
+        console.log("StaffLogin: Personel oturumu bulunamadı, form gösteriliyor");
         setIsLoading(false);
       } catch (err) {
-        console.error("Beklenmeyen hata:", err);
+        console.error("StaffLogin: Beklenmeyen hata:", err);
         setIsLoading(false);
-      } finally {
-        // Yükleme durumunu her durumda kapat
-        setTimeout(() => {
-          setIsLoading(false);
-        }, 500);
       }
     };
     
+    // Maksimum 3 saniye bekle, sonra yükleme durumunu kapat
+    const loadingTimeout = setTimeout(() => {
+      if (isLoading) {
+        console.log("StaffLogin: Zaman aşımı, yükleme durumu kapatılıyor");
+        setIsLoading(false);
+      }
+    }, 3000);
+    
     checkSession();
+    
+    // Cleanup
+    return () => clearTimeout(loadingTimeout);
   }, [navigate]);
   
   const handleLoginSuccess = () => {
