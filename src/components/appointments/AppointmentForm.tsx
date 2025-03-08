@@ -9,22 +9,25 @@ import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { islemServisi, personelServisi, randevuServisi } from "@/lib/supabase";
+import { personelServisi, randevuServisi } from "@/lib/supabase";
+import { kategoriServisi } from "@/lib/supabase/services/kategoriServisi";
+import { islemServisi } from "@/lib/supabase/services/islemServisi";
 import { calismaSaatleriServisi } from "@/lib/supabase/services/calismaSaatleriServisi";
-import { CalismaSaati } from "@/lib/supabase/types";
+import { CalismaSaati, Randevu, RandevuDurumu } from "@/lib/supabase/types";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface AppointmentFormProps {
-  onAppointmentCreated: () => void;
+  onAppointmentCreated: (appointment: Randevu) => void;
   initialDate?: string;
+  initialServiceId?: number;
 }
 
-export function AppointmentForm({ onAppointmentCreated, initialDate }: AppointmentFormProps) {
+export function AppointmentForm({ onAppointmentCreated, initialDate, initialServiceId }: AppointmentFormProps) {
   const { dukkanId, userId } = useCustomerAuth();
   const [selectedDate, setSelectedDate] = useState(initialDate || format(new Date(), 'yyyy-MM-dd'));
   const [selectedTime, setSelectedTime] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
-  const [selectedService, setSelectedService] = useState<number | null>(null);
+  const [selectedService, setSelectedService] = useState<number | null>(initialServiceId || null);
   const [selectedPersonel, setSelectedPersonel] = useState<number | null>(null);
   const [notes, setNotes] = useState("");
   const [availableTimes, setAvailableTimes] = useState<string[]>([]);
@@ -38,7 +41,7 @@ export function AppointmentForm({ onAppointmentCreated, initialDate }: Appointme
   
   const { data: kategoriler = [], isLoading: isLoadingKategoriler } = useQuery({
     queryKey: ['kategoriler'],
-    queryFn: islemServisi.kategorileriGetir
+    queryFn: kategoriServisi.hepsiniGetir
   });
   
   const { data: islemler = [], isLoading: isLoadingIslemler } = useQuery({
@@ -126,16 +129,16 @@ export function AppointmentForm({ onAppointmentCreated, initialDate }: Appointme
         personel_id: selectedPersonel,
         tarih: selectedDate,
         saat: selectedTime,
-        durum: "onaylandi",
+        durum: "onaylandi" as RandevuDurumu,
         islemler: [selectedService],
         notlar: notes
       };
       
       return randevuServisi.ekle(randevuData);
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast.success("Randevu başarıyla oluşturuldu");
-      onAppointmentCreated();
+      onAppointmentCreated(data);
     },
     onError: (error: any) => {
       console.error("Randevu oluşturma hatası:", error);

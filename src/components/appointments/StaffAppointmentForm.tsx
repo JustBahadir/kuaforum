@@ -10,8 +10,10 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { islemServisi, musteriServisi, personelServisi, randevuServisi } from "@/lib/supabase";
-import { CalismaSaati } from "@/lib/supabase/types";
+import { musteriServisi, personelServisi, randevuServisi } from "@/lib/supabase";
+import { kategoriServisi } from "@/lib/supabase/services/kategoriServisi";
+import { islemServisi } from "@/lib/supabase/services/islemServisi";
+import { CalismaSaati, RandevuDurumu } from "@/lib/supabase/types";
 import { calismaSaatleriServisi } from "@/lib/supabase/services/calismaSaatleriServisi";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -62,7 +64,7 @@ export function StaffAppointmentForm({ onAppointmentCreated, initialDate }: Staf
   
   const { data: kategoriler = [], isLoading: isLoadingKategoriler } = useQuery({
     queryKey: ['kategoriler'],
-    queryFn: () => islemServisi.kategorileriGetir()
+    queryFn: () => kategoriServisi.hepsiniGetir()
   });
   
   const { data: islemler = [], isLoading: isLoadingIslemler } = useQuery({
@@ -146,7 +148,7 @@ export function StaffAppointmentForm({ onAppointmentCreated, initialDate }: Staf
       const randevuData = {
         ...data,
         dukkan_id: dukkanId,
-        durum: "onaylandi",
+        durum: "onaylandi" as RandevuDurumu,
       };
       
       return randevuServisi.ekle(randevuData);

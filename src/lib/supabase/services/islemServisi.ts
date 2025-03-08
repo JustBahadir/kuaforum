@@ -18,6 +18,39 @@ export const islemServisi = {
     }
   },
 
+  async kategorileriGetir() {
+    try {
+      const { data, error } = await supabase
+        .from('islem_kategorileri')
+        .select('*')
+        .order('sira');
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Kategorileri getirme hatası:', error);
+      throw error;
+    }
+  },
+
+  async kategoriIslemleriGetir(kategoriId: number) {
+    try {
+      if (!kategoriId) return [];
+      
+      const { data, error } = await supabase
+        .from('islemler')
+        .select('*')
+        .eq('kategori_id', kategoriId)
+        .order('sira');
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Kategori işlemlerini getirme hatası:', error);
+      throw error;
+    }
+  },
+
   async ekle(islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) {
     try {
       // Get the max sira value for the category
@@ -56,7 +89,6 @@ export const islemServisi = {
     }
   },
 
-  // This is causing the error - use ekle directly, don't try to reference this.ekle
   async islemEkle(islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) {
     try {
       return await this.ekle(islem);
