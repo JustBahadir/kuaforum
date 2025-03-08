@@ -39,15 +39,14 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
     console.log("RouteProtection: Is public page:", isPublicPage());
     console.log("RouteProtection: Auth state:", { isAuthenticated, userRole, loading });
     
-    // Skip loading for public pages entirely
-    if (isPublicPage()) {
-      setShowLocalLoading(false);
-      return;
-    }
-
-    // Simple loading logic
+    // For all pages, don't show loading for more than 1.5 seconds
     if (loading) {
       setShowLocalLoading(true);
+      const timer = setTimeout(() => {
+        setShowLocalLoading(false);
+      }, 1500);
+      
+      return () => clearTimeout(timer);
     } else {
       setShowLocalLoading(false);
     }
@@ -62,6 +61,13 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
     
     // Only perform redirects if not loading
     if (!loading) {
+      // For shop-home and shop-* paths, ensure the user is authenticated
+      if ((location.pathname === '/shop-home' || location.pathname.startsWith('/shop-')) 
+          && isAuthenticated && (userRole === 'staff' || userRole === 'admin')) {
+        console.log("Personel/admin için shop sayfalarına erişim izni verildi");
+        return;
+      }
+      
       if (shouldRedirect(isAuthenticated, userRole, location.pathname)) {
         const redirectPath = getRedirectPath(isAuthenticated, userRole, location.pathname);
         console.log(`Redirecting from ${location.pathname} to ${redirectPath}`);

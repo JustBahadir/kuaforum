@@ -56,24 +56,30 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       }
       
       if (data?.user) {
+        console.log("Kullanıcı bilgisi:", data.user);
         // Kullanıcı rolünü kontrol et
         const metadata = data.user.user_metadata;
+        console.log("Kullanıcı metadata:", metadata);
+        
         if (metadata?.role === 'staff' || metadata?.role === 'admin') {
-          console.log("Giriş başarılı, yönlendiriliyor");
+          console.log("Personel veya admin girişi başarılı, yönlendiriliyor");
           toast.success("Giriş başarılı!");
+          // Önce onSuccess çağrılıyor (yönlendirme için)
           onSuccess();
         } else {
+          console.error("Yetkisiz kullanıcı girişi", metadata);
           // Personel veya admin değilse çıkış yap
           await supabase.auth.signOut();
           setLoginError("Bu giriş sayfası sadece personel ve yöneticiler içindir.");
           setLoading(false);
         }
       } else {
+        console.error("Kullanıcı bilgisi bulunamadı");
         setLoginError("Giriş yapılamadı. Lütfen bilgilerinizi kontrol edin.");
         setLoading(false);
       }
     } catch (error: any) {
-      console.error("Giriş hatası:", error);
+      console.error("Giriş sırasında hata oluştu:", error);
       setLoginError("Giriş yapılamadı. Lütfen daha sonra tekrar deneyin.");
       setLoading(false);
     }

@@ -1,5 +1,4 @@
 
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,7 +9,8 @@ export default function StaffLogin() {
   const navigate = useNavigate();
   
   const handleLoginSuccess = () => {
-    // Redirect to shop home page
+    console.log("Login success detected, redirecting to shop home");
+    // Doğrudan yönlendirme
     navigate("/shop-home");
   };
 
