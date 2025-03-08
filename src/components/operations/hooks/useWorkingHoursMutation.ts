@@ -25,6 +25,7 @@ export function useWorkingHoursMutation(dukkanId: number | undefined) {
       toast.success("Çalışma saatleri başarıyla güncellendi");
       // Invalidate queries that depend on working hours
       queryClient.invalidateQueries({ queryKey: ['workingHours'] });
+      queryClient.invalidateQueries({ queryKey: ['dukkan_saatleri'] });
     },
     onError: (error: any) => {
       console.error("Çalışma saatleri güncellenirken hata:", error);
@@ -50,6 +51,7 @@ export function useWorkingHoursMutation(dukkanId: number | undefined) {
       await calismaSaatleriServisi.guncelle([day]);
       toast.success(`${day.gun} günü için çalışma saatleri güncellendi`);
       queryClient.invalidateQueries({ queryKey: ['workingHours'] });
+      queryClient.invalidateQueries({ queryKey: ['dukkan_saatleri'] });
       return true;
     } catch (error: any) {
       toast.error(`Güncelleme sırasında bir hata oluştu: ${error.message || "Bilinmeyen hata"}`);
