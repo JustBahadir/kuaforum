@@ -51,8 +51,7 @@ export const islemServisi = {
     }
   },
 
-  // Hizmet ekleme fonksiyonu - tamamen yeniden yazıldı
-  ekle: async function(islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) {
+  async ekle(islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) {
     try {
       // Get the max sira value for the category
       const query = supabase
@@ -90,13 +89,10 @@ export const islemServisi = {
     }
   },
 
-  // Ekleme fonksiyonu için yardımcı metod - arrow function kullanıldı
   islemEkle: async (islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) => {
     try {
       console.log("İşlem ekleniyor:", islem);
-      const result = await islemServisi.ekle(islem);
-      console.log("İşlem eklendi:", result);
-      return result;
+      return await islemServisi.ekle(islem);
     } catch (error) {
       console.error("İşlem eklenirken hata oluştu:", error);
       throw error;
@@ -120,7 +116,6 @@ export const islemServisi = {
     }
   },
 
-  // Güncelleme fonksiyonu için yardımcı metod - arrow function kullanıldı
   islemGuncelle: async (id: number, islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) => {
     try {
       return await islemServisi.guncelle(id, islem);
@@ -130,8 +125,7 @@ export const islemServisi = {
     }
   },
 
-  // Silme fonksiyonu - tamamen yeniden yazıldı
-  sil: async function(id: number) {
+  async sil(id: number) {
     try {
       console.log("Silinecek işlem ID:", id);
       
@@ -153,13 +147,10 @@ export const islemServisi = {
     }
   },
 
-  // Silme fonksiyonu için yardımcı metod - arrow function kullanıldı
   islemSil: async (id: number) => {
     try {
       console.log("İşlem silme isteği:", id);
-      const result = await islemServisi.sil(id);
-      console.log("İşlem silme sonucu:", result);
-      return result;
+      return await islemServisi.sil(id);
     } catch (error) {
       console.error("İşlem silinirken hata oluştu:", error);
       throw error;

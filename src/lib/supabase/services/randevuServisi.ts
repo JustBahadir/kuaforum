@@ -120,36 +120,35 @@ export const randevuServisi = {
     console.log("Eklenen randevu verisi:", insertData);
 
     try {
-      // Randevuyu ekle - .single() kullanmıyoruz ve hata ayıklama için daha fazla log ekliyoruz
-      const { data, error } = await supabase
+      // İlk önce randevuyu ekleyelim
+      const { error: insertError } = await supabase
         .from('randevular')
         .insert([insertData]);
 
-      if (error) {
-        console.error("Supabase randevu ekleme hatası:", error);
-        throw new Error(`Randevu eklenirken bir hata oluştu: ${error.message}`);
+      if (insertError) {
+        console.error("Randevu ekleme hatası:", insertError);
+        throw new Error(`Randevu eklenirken bir hata oluştu: ${insertError.message}`);
       }
       
-      // Eklenen randevuyu getir
-      if (!error) {
-        const { data: randevuData, error: getError } = await supabase
-          .from('randevular')
-          .select('*')
-          .eq('tarih', randevu.tarih)
-          .eq('saat', randevu.saat)
-          .eq('musteri_id', randevu.musteri_id)
-          .order('created_at', { ascending: false })
-          .limit(1);
-        
-        if (getError) {
-          console.error("Eklenen randevuyu getirme hatası:", getError);
-          throw new Error(`Randevu eklendi ancak veri getirilemedi: ${getError.message}`);
-        }
-        
-        if (randevuData && randevuData.length > 0) {
-          console.log("Randevu başarıyla oluşturuldu:", randevuData[0]);
-          return randevuData[0];
-        }
+      // Sonra eklenen randevuyu getirelim
+      const { data: randevuData, error: getError } = await supabase
+        .from('randevular')
+        .select('*')
+        .eq('tarih', randevu.tarih)
+        .eq('saat', randevu.saat)
+        .eq('musteri_id', randevu.musteri_id)
+        .order('created_at', { ascending: false })
+        .limit(1);
+      
+      if (getError) {
+        console.error("Eklenen randevuyu getirme hatası:", getError);
+        // Ama randevu eklendiği için başarılı sayalım
+        return { success: true, message: "Randevu oluşturuldu ancak detaylar getirilemedi" };
+      }
+      
+      if (randevuData && randevuData.length > 0) {
+        console.log("Randevu başarıyla oluşturuldu:", randevuData[0]);
+        return randevuData[0];
       }
       
       // Eğer veri bulunamadıysa genel bir başarı mesajı

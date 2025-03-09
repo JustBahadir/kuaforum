@@ -32,6 +32,8 @@ interface ServiceFormProps {
   onSubmit: (e: React.FormEvent) => void;
   onReset: () => void;
   puanlamaAktif: boolean;
+  // Yeni prop: Kategori seçimini gösterip göstermeyeceğini belirler
+  showCategorySelect?: boolean;
 }
 
 export function ServiceForm({
@@ -50,6 +52,8 @@ export function ServiceForm({
   onSubmit,
   onReset,
   puanlamaAktif,
+  // Varsayılan değeri true olacak
+  showCategorySelect = true,
 }: ServiceFormProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -60,27 +64,30 @@ export function ServiceForm({
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={onSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="kategori">Kategori</Label>
-            <Select
-              value={kategoriId?.toString() || ""}
-              onValueChange={(value) => setKategoriId(value ? Number(value) : null)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Kategori seçin" />
-              </SelectTrigger>
-              <SelectContent>
-                {kategoriler.map((kategori) => (
-                  <SelectItem
-                    key={kategori.id}
-                    value={kategori.id.toString()}
-                  >
-                    {kategori.kategori_adi}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Kategori seçimi, showCategorySelect true ise gösterilir */}
+          {showCategorySelect && (
+            <div className="space-y-2">
+              <Label htmlFor="kategori">Kategori</Label>
+              <Select
+                value={kategoriId?.toString() || ""}
+                onValueChange={(value) => setKategoriId(value ? Number(value) : null)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Kategori seçin" />
+                </SelectTrigger>
+                <SelectContent>
+                  {kategoriler.map((kategori) => (
+                    <SelectItem
+                      key={kategori.id}
+                      value={kategori.id.toString()}
+                    >
+                      {kategori.kategori_adi}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="islem_adi">Hizmet Adı</Label>
             <Input
