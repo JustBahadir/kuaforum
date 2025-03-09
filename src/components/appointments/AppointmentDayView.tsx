@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { format, addDays, subDays, isSameDay } from "date-fns";
+import { format, addDays, subDays, isSameDay, isYesterday, isToday, isTomorrow } from "date-fns";
 import { tr } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -39,6 +39,18 @@ export function AppointmentDayView({
     onDateChange(new Date());
   };
 
+  // Get the appropriate day label
+  const getDayLabel = (date: Date) => {
+    if (isToday(date)) {
+      return "Bugün";
+    } else if (isYesterday(date)) {
+      return "Dün";
+    } else if (isTomorrow(date)) {
+      return "Yarın";
+    }
+    return "";
+  };
+
   // Filter appointments for the selected date
   const filteredAppointments = appointments.filter(
     (appointment) => isSameDay(new Date(appointment.tarih), selectedDate)
@@ -48,6 +60,8 @@ export function AppointmentDayView({
   const sortedAppointments = [...filteredAppointments].sort((a, b) => {
     return a.saat.localeCompare(b.saat);
   });
+
+  const dayLabel = getDayLabel(selectedDate);
 
   return (
     <div className="space-y-4">
@@ -59,6 +73,7 @@ export function AppointmentDayView({
         <div className="flex space-x-2 items-center">
           <h2 className="text-xl font-semibold">
             {format(selectedDate, "d MMMM yyyy, EEEE", { locale: tr })}
+            {dayLabel && <span className="ml-2 text-muted-foreground">({dayLabel})</span>}
           </h2>
           <Button variant="outline" size="sm" onClick={handleToday}>
             Bugün

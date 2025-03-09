@@ -479,6 +479,77 @@ export type Database = {
           },
         ]
       }
+      randevular: {
+        Row: {
+          created_at: string
+          customer_id: string | null
+          dukkan_id: number | null
+          durum: string
+          id: number
+          islemler: Json
+          musteri_id: number | null
+          notlar: string | null
+          personel_id: number | null
+          saat: string
+          tarih: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id?: string | null
+          dukkan_id?: number | null
+          durum?: string
+          id?: number
+          islemler: Json
+          musteri_id?: number | null
+          notlar?: string | null
+          personel_id?: number | null
+          saat: string
+          tarih: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string | null
+          dukkan_id?: number | null
+          durum?: string
+          id?: number
+          islemler?: Json
+          musteri_id?: number | null
+          notlar?: string | null
+          personel_id?: number | null
+          saat?: string
+          tarih?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "randevular_dukkan_id_fkey"
+            columns: ["dukkan_id"]
+            isOneToOne: false
+            referencedRelation: "dukkanlar"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "randevular_musteri_id_fkey"
+            columns: ["musteri_id"]
+            isOneToOne: false
+            referencedRelation: "musteriler"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "randevular_personel_id_fkey"
+            columns: ["personel_id"]
+            isOneToOne: false
+            referencedRelation: "personel"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "randevular_personel_id_fkey"
+            columns: ["personel_id"]
+            isOneToOne: false
+            referencedRelation: "personel_performans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       personel_performans: {
