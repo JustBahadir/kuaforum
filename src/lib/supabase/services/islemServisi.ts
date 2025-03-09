@@ -144,7 +144,6 @@ export const islemServisi = {
 
   async islemSil(id: number) {
     try {
-      // Directly call sil method and return the result
       return await this.sil(id);
     } catch (error) {
       console.error('İşlem silme hatası (islemSil):', error);

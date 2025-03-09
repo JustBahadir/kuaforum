@@ -124,7 +124,7 @@ export const randevuServisi = {
       durum: randevu.durum || "onaylandi",
       notlar: randevu.notlar || "",
       islemler: islemler,
-      customer_id: randevu.customer_id || null // Müşteri ID'si varsa kullan, yoksa null olsun
+      customer_id: randevu.customer_id || null
     };
     
     console.log("Eklenen randevu verisi:", insertData);
@@ -134,7 +134,7 @@ export const randevuServisi = {
       const { data, error } = await supabase
         .from('randevular')
         .insert(insertData)
-        .select();
+        .select('*');
 
       if (error) {
         console.error("Supabase randevu ekleme hatası:", error);
@@ -171,7 +171,7 @@ export const randevuServisi = {
           musteri:musteriler(*),
           personel:personel(*)
         `)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error("Randevu güncelleme hatası:", error);

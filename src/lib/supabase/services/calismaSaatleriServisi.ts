@@ -59,12 +59,41 @@ export const calismaSaatleriServisi = {
   async guncelle(saatler: CalismaSaati[]) {
     try {
       console.log('calismaSaatleriServisi: Updating hours:', saatler);
+      
+      // Ensure proper data structure
+      const cleanedSaatler = saatler.map(saat => {
+        if (saat.kapali) {
+          return {
+            id: saat.id,
+            dukkan_id: saat.dukkan_id,
+            gun: saat.gun,
+            gun_sira: saat.gun_sira,
+            acilis: null,
+            kapanis: null,
+            kapali: true
+          };
+        }
+        return {
+          id: saat.id,
+          dukkan_id: saat.dukkan_id,
+          gun: saat.gun,
+          gun_sira: saat.gun_sira,
+          acilis: saat.acilis,
+          kapanis: saat.kapanis,
+          kapali: false
+        };
+      });
+      
       const { data, error } = await supabase
         .from('calisma_saatleri')
-        .upsert(saatler, { onConflict: 'id' })
+        .upsert(cleanedSaatler, { onConflict: 'id' })
         .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Update error details:', error);
+        throw error;
+      }
+      
       return data || [];
     } catch (error) {
       console.error('Çalışma saatleri güncelleme hatası:', error);
@@ -74,18 +103,24 @@ export const calismaSaatleriServisi = {
   
   async tekGuncelle(saat: CalismaSaati) {
     try {
+      const updateData = saat.kapali ? 
+        { acilis: null, kapanis: null, kapali: true } : 
+        { acilis: saat.acilis, kapanis: saat.kapanis, kapali: false };
+        
+      console.log('tekGuncelle - Updating with data:', updateData, 'for id:', saat.id);
+      
       const { data, error } = await supabase
         .from('calisma_saatleri')
-        .update({
-          acilis: saat.acilis,
-          kapanis: saat.kapanis,
-          kapali: saat.kapali
-        })
+        .update(updateData)
         .eq('id', saat.id)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Single update error details:', error);
+        throw error;
+      }
+      
       return data;
     } catch (error) {
       console.error('Çalışma saati güncelleme hatası:', error);
@@ -114,8 +149,8 @@ export const calismaSaatleriServisi = {
       dukkan_id: dukkanId,
       gun,
       gun_sira: index,
-      acilis: '09:00',
-      kapanis: '19:00',
+      acilis: index >= 5 ? null : '09:00',
+      kapanis: index >= 5 ? null : '19:00',
       kapali: index >= 5 // Only weekdays (first 5 days) are active by default
     }));
   }

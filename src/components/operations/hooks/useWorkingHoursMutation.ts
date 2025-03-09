@@ -30,16 +30,32 @@ export const useWorkingHoursMutation = (props: UseWorkingHoursMutationProps) => 
       }));
       
       // Remove any properties that might cause issues
-      const cleanedHours = hoursWithShopId.map(hour => ({
-        id: hour.id,
-        dukkan_id: hour.dukkan_id,
-        gun: hour.gun,
-        gun_sira: hour.gun_sira,
-        acilis: hour.acilis,
-        kapanis: hour.kapanis,
-        kapali: hour.kapali
-      }));
+      const cleanedHours = hoursWithShopId.map(hour => {
+        // For closed days, ensure opening and closing times are null
+        if (hour.kapali) {
+          return {
+            id: hour.id,
+            dukkan_id: hour.dukkan_id,
+            gun: hour.gun,
+            gun_sira: hour.gun_sira,
+            acilis: null,
+            kapanis: null,
+            kapali: true
+          };
+        }
+        
+        return {
+          id: hour.id,
+          dukkan_id: hour.dukkan_id,
+          gun: hour.gun,
+          gun_sira: hour.gun_sira,
+          acilis: hour.acilis,
+          kapanis: hour.kapanis,
+          kapali: false
+        };
+      });
       
+      console.log('Sending cleaned hours to server:', cleanedHours);
       await calismaSaatleriServisi.guncelle(cleanedHours);
       
       // Invalidate and refetch
@@ -65,16 +81,31 @@ export const useWorkingHoursMutation = (props: UseWorkingHoursMutationProps) => 
       setIsUpdating(true);
       
       // Clean the object before sending
-      const cleanedDay = {
-        id: day.id,
-        dukkan_id: dukkanId,
-        gun: day.gun,
-        gun_sira: day.gun_sira,
-        acilis: day.acilis,
-        kapanis: day.kapanis,
-        kapali: day.kapali
-      };
+      let cleanedDay;
       
+      if (day.kapali) {
+        cleanedDay = {
+          id: day.id,
+          dukkan_id: dukkanId,
+          gun: day.gun,
+          gun_sira: day.gun_sira,
+          acilis: null,
+          kapanis: null,
+          kapali: true
+        };
+      } else {
+        cleanedDay = {
+          id: day.id,
+          dukkan_id: dukkanId,
+          gun: day.gun,
+          gun_sira: day.gun_sira,
+          acilis: day.acilis,
+          kapanis: day.kapanis,
+          kapali: false
+        };
+      }
+      
+      console.log('Updating single day:', cleanedDay);
       await calismaSaatleriServisi.tekGuncelle(cleanedDay);
       
       // Invalidate and refetch
