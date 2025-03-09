@@ -51,7 +51,8 @@ export const islemServisi = {
     }
   },
 
-  async ekle(islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) {
+  // Hizmet ekleme fonksiyonu - tamamen yeniden yazıldı
+  ekle: async function(islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) {
     try {
       // Get the max sira value for the category
       const query = supabase
@@ -89,9 +90,17 @@ export const islemServisi = {
     }
   },
 
-  // Bu fonksiyon direkt ekle fonksiyonunu kullanacak
-  islemEkle(islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) {
-    return this.ekle(islem);
+  // Ekleme fonksiyonu için yardımcı metod - arrow function kullanıldı
+  islemEkle: async (islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) => {
+    try {
+      console.log("İşlem ekleniyor:", islem);
+      const result = await islemServisi.ekle(islem);
+      console.log("İşlem eklendi:", result);
+      return result;
+    } catch (error) {
+      console.error("İşlem eklenirken hata oluştu:", error);
+      throw error;
+    }
   },
 
   async guncelle(id: number, islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) {
@@ -111,13 +120,21 @@ export const islemServisi = {
     }
   },
 
-  // Bu fonksiyon direkt guncelle fonksiyonunu kullanacak
-  islemGuncelle(id: number, islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) {
-    return this.guncelle(id, islem);
+  // Güncelleme fonksiyonu için yardımcı metod - arrow function kullanıldı
+  islemGuncelle: async (id: number, islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) => {
+    try {
+      return await islemServisi.guncelle(id, islem);
+    } catch (error) {
+      console.error('İşlem güncellenirken hata oluştu:', error);
+      throw error;
+    }
   },
 
-  async sil(id: number) {
+  // Silme fonksiyonu - tamamen yeniden yazıldı
+  sil: async function(id: number) {
     try {
+      console.log("Silinecek işlem ID:", id);
+      
       const { error } = await supabase
         .from('islemler')
         .delete()
@@ -127,6 +144,8 @@ export const islemServisi = {
         console.error('İşlem silme hatası (detaylı):', error);
         throw error;
       }
+      
+      console.log("İşlem başarıyla silindi:", id);
       return { success: true };
     } catch (error) {
       console.error('İşlem silme hatası:', error);
@@ -134,9 +153,17 @@ export const islemServisi = {
     }
   },
 
-  // Bu fonksiyon direkt sil fonksiyonunu kullanacak, arrow function olarak tanımlayarak this bağlamı sorununu çözüyoruz
-  islemSil: function(id: number) {
-    return this.sil(id);
+  // Silme fonksiyonu için yardımcı metod - arrow function kullanıldı
+  islemSil: async (id: number) => {
+    try {
+      console.log("İşlem silme isteği:", id);
+      const result = await islemServisi.sil(id);
+      console.log("İşlem silme sonucu:", result);
+      return result;
+    } catch (error) {
+      console.error("İşlem silinirken hata oluştu:", error);
+      throw error;
+    }
   },
 
   async siraGuncelle(islemler: Islem[]) {

@@ -32,7 +32,7 @@ export function ServiceItem({ islem, isStaff, onEdit, onDelete, onRandevuAl, pua
   };
 
   const handleDelete = () => {
-    // Call the onDelete prop with the islem.id
+    console.log("ServiceItem - handleDelete çağrıldı, islem.id:", islem.id);
     onDelete(islem.id);
     setDeleteConfirmOpen(false);
   };

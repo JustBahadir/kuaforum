@@ -7,7 +7,7 @@ export const randevuServisi = {
     try {
       const { data, error } = await supabase
         .from('randevular')
-        .select('*, profiles(*), personel(*)')
+        .select('*')
         .order('tarih', { ascending: true })
         .order('saat', { ascending: true });
 
@@ -29,9 +29,10 @@ export const randevuServisi = {
     }
 
     try {
+      // İlişkiler yerine sadece temel veriyi getiriyoruz
       const { data, error } = await supabase
         .from('randevular')
-        .select('*, profiles(*), personel(*)')
+        .select('*')
         .eq('dukkan_id', dukkanId)
         .order('tarih', { ascending: true })
         .order('saat', { ascending: true });
@@ -55,9 +56,10 @@ export const randevuServisi = {
         throw new Error("Oturum açmış kullanıcı bulunamadı");
       }
 
+      // İlişkiler yerine sadece temel veriyi getiriyoruz
       const { data, error } = await supabase
         .from('randevular')
-        .select('*, profiles(*), personel(*)')
+        .select('*')
         .eq('customer_id', user.id)
         .order('tarih', { ascending: true })
         .order('saat', { ascending: true });
@@ -74,7 +76,7 @@ export const randevuServisi = {
     }
   },
 
-  async ekle(randevu: Omit<Randevu, 'id' | 'created_at' | 'musteri' | 'personel'>) {
+  async ekle(randevu: Omit<Randevu, 'id' | 'created_at'>) {
     console.log("Randevu ekle başlangıç, alınan veri:", randevu);
     
     if (!randevu.dukkan_id) {
@@ -118,24 +120,41 @@ export const randevuServisi = {
     console.log("Eklenen randevu verisi:", insertData);
 
     try {
-      // Randevuyu ekle
+      // Randevuyu ekle - .single() kullanmıyoruz ve hata ayıklama için daha fazla log ekliyoruz
       const { data, error } = await supabase
         .from('randevular')
-        .insert(insertData)
-        .select();
+        .insert([insertData]);
 
       if (error) {
         console.error("Supabase randevu ekleme hatası:", error);
-        throw new Error(error.message || "Randevu eklenirken bir hata oluştu");
+        throw new Error(`Randevu eklenirken bir hata oluştu: ${error.message}`);
       }
       
-      if (!data || data.length === 0) {
-        throw new Error("Randevu eklendi ancak veri döndürülemedi");
+      // Eklenen randevuyu getir
+      if (!error) {
+        const { data: randevuData, error: getError } = await supabase
+          .from('randevular')
+          .select('*')
+          .eq('tarih', randevu.tarih)
+          .eq('saat', randevu.saat)
+          .eq('musteri_id', randevu.musteri_id)
+          .order('created_at', { ascending: false })
+          .limit(1);
+        
+        if (getError) {
+          console.error("Eklenen randevuyu getirme hatası:", getError);
+          throw new Error(`Randevu eklendi ancak veri getirilemedi: ${getError.message}`);
+        }
+        
+        if (randevuData && randevuData.length > 0) {
+          console.log("Randevu başarıyla oluşturuldu:", randevuData[0]);
+          return randevuData[0];
+        }
       }
       
-      console.log("Randevu başarıyla oluşturuldu:", data[0]);
-      
-      return data[0];
+      // Eğer veri bulunamadıysa genel bir başarı mesajı
+      console.log("Randevu başarıyla oluşturuldu, ancak detaylar getirilemedi");
+      return { success: true, message: "Randevu başarıyla oluşturuldu" };
     } catch (error: any) {
       console.error("Randevu oluşturma hatası:", error);
       throw new Error(error?.message || "Randevu oluşturulurken bir hata oluştu");
@@ -154,7 +173,7 @@ export const randevuServisi = {
         .from('randevular')
         .update(randevu)
         .eq('id', id)
-        .select('*, profiles(*), personel(*)');
+        .select('*');
 
       if (error) {
         console.error("Randevu güncelleme hatası:", error);
