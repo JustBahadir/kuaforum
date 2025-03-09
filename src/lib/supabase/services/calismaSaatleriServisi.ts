@@ -60,7 +60,7 @@ export const calismaSaatleriServisi = {
     try {
       console.log('calismaSaatleriServisi: Updating hours:', saatler);
       
-      // Ensure proper data structure
+      // Ensure proper data structure - simplify the data we send
       const cleanedSaatler = saatler.map(saat => {
         if (saat.kapali) {
           return {
@@ -73,6 +73,7 @@ export const calismaSaatleriServisi = {
             kapali: true
           };
         }
+        
         return {
           id: saat.id,
           dukkan_id: saat.dukkan_id,
@@ -84,15 +85,31 @@ export const calismaSaatleriServisi = {
         };
       });
       
+      // Update one by one to avoid potential bulk update issues
+      for (const saat of cleanedSaatler) {
+        const { error } = await supabase
+          .from('calisma_saatleri')
+          .update({
+            acilis: saat.acilis,
+            kapanis: saat.kapanis,
+            kapali: saat.kapali
+          })
+          .eq('id', saat.id);
+          
+        if (error) {
+          console.error('Update error for item:', saat, error);
+          throw error;
+        }
+      }
+      
+      // Get updated records
       const { data, error } = await supabase
         .from('calisma_saatleri')
-        .upsert(cleanedSaatler, { onConflict: 'id' })
-        .select();
-
-      if (error) {
-        console.error('Update error details:', error);
-        throw error;
-      }
+        .select('*')
+        .in('id', saatler.map(s => s.id))
+        .order('gun_sira', { ascending: true });
+        
+      if (error) throw error;
       
       return data || [];
     } catch (error) {
@@ -103,9 +120,10 @@ export const calismaSaatleriServisi = {
   
   async tekGuncelle(saat: CalismaSaati) {
     try {
-      const updateData = saat.kapali ? 
-        { acilis: null, kapanis: null, kapali: true } : 
-        { acilis: saat.acilis, kapanis: saat.kapanis, kapali: false };
+      // Simplify: Only send what needs to be updated
+      const updateData = saat.kapali 
+        ? { acilis: null, kapanis: null, kapali: true } 
+        : { acilis: saat.acilis, kapanis: saat.kapanis, kapali: false };
         
       console.log('tekGuncelle - Updating with data:', updateData, 'for id:', saat.id);
       
@@ -113,15 +131,14 @@ export const calismaSaatleriServisi = {
         .from('calisma_saatleri')
         .update(updateData)
         .eq('id', saat.id)
-        .select()
-        .single();
+        .select();
 
       if (error) {
         console.error('Single update error details:', error);
         throw error;
       }
       
-      return data;
+      return data && data.length > 0 ? data[0] : null;
     } catch (error) {
       console.error('Çalışma saati güncelleme hatası:', error);
       throw error;

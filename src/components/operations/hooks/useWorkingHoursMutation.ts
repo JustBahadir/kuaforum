@@ -31,13 +31,16 @@ export const useWorkingHoursMutation = (props: UseWorkingHoursMutationProps) => 
       
       // Remove any properties that might cause issues
       const cleanedHours = hoursWithShopId.map(hour => {
-        // For closed days, ensure opening and closing times are null
+        const base = {
+          id: hour.id,
+          dukkan_id: hour.dukkan_id,
+          gun: hour.gun,
+          gun_sira: hour.gun_sira,
+        };
+
         if (hour.kapali) {
           return {
-            id: hour.id,
-            dukkan_id: hour.dukkan_id,
-            gun: hour.gun,
-            gun_sira: hour.gun_sira,
+            ...base,
             acilis: null,
             kapanis: null,
             kapali: true
@@ -45,10 +48,7 @@ export const useWorkingHoursMutation = (props: UseWorkingHoursMutationProps) => 
         }
         
         return {
-          id: hour.id,
-          dukkan_id: hour.dukkan_id,
-          gun: hour.gun,
-          gun_sira: hour.gun_sira,
+          ...base,
           acilis: hour.acilis,
           kapanis: hour.kapanis,
           kapali: false
@@ -56,7 +56,8 @@ export const useWorkingHoursMutation = (props: UseWorkingHoursMutationProps) => 
       });
       
       console.log('Sending cleaned hours to server:', cleanedHours);
-      await calismaSaatleriServisi.guncelle(cleanedHours);
+      const result = await calismaSaatleriServisi.guncelle(cleanedHours);
+      console.log('Update result:', result);
       
       // Invalidate and refetch
       await queryClient.invalidateQueries({ queryKey: ['calisma_saatleri', dukkanId] });
@@ -81,32 +82,20 @@ export const useWorkingHoursMutation = (props: UseWorkingHoursMutationProps) => 
       setIsUpdating(true);
       
       // Clean the object before sending
-      let cleanedDay;
+      const base = {
+        id: day.id,
+        dukkan_id: dukkanId,
+        gun: day.gun,
+        gun_sira: day.gun_sira,
+      };
       
-      if (day.kapali) {
-        cleanedDay = {
-          id: day.id,
-          dukkan_id: dukkanId,
-          gun: day.gun,
-          gun_sira: day.gun_sira,
-          acilis: null,
-          kapanis: null,
-          kapali: true
-        };
-      } else {
-        cleanedDay = {
-          id: day.id,
-          dukkan_id: dukkanId,
-          gun: day.gun,
-          gun_sira: day.gun_sira,
-          acilis: day.acilis,
-          kapanis: day.kapanis,
-          kapali: false
-        };
-      }
+      const cleanedDay = day.kapali
+        ? { ...base, acilis: null, kapanis: null, kapali: true }
+        : { ...base, acilis: day.acilis, kapanis: day.kapanis, kapali: false };
       
       console.log('Updating single day:', cleanedDay);
-      await calismaSaatleriServisi.tekGuncelle(cleanedDay);
+      const result = await calismaSaatleriServisi.tekGuncelle(cleanedDay);
+      console.log('Single day update result:', result);
       
       // Invalidate and refetch
       await queryClient.invalidateQueries({ queryKey: ['calisma_saatleri', dukkanId] });

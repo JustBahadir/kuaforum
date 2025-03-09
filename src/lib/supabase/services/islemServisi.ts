@@ -142,13 +142,10 @@ export const islemServisi = {
     }
   },
 
-  async islemSil(id: number) {
-    try {
-      return await this.sil(id);
-    } catch (error) {
-      console.error('İşlem silme hatası (islemSil):', error);
-      throw error;
-    }
+  // This is the function used by components - it must match the interface they expect
+  islemSil(id: number) {
+    console.log('islemSil called with id:', id);
+    return this.sil(id);
   },
 
   async siraGuncelle(islemler: Islem[]) {

@@ -7,11 +7,7 @@ export const randevuServisi = {
     try {
       const { data, error } = await supabase
         .from('randevular')
-        .select(`
-          *,
-          musteri:musteriler(*),
-          personel:personel(*)
-        `)
+        .select('*, profiles(*), personel(*)')
         .order('tarih', { ascending: true })
         .order('saat', { ascending: true });
 
@@ -35,11 +31,7 @@ export const randevuServisi = {
     try {
       const { data, error } = await supabase
         .from('randevular')
-        .select(`
-          *,
-          musteri:musteriler(*),
-          personel:personel(*)
-        `)
+        .select('*, profiles(*), personel(*)')
         .eq('dukkan_id', dukkanId)
         .order('tarih', { ascending: true })
         .order('saat', { ascending: true });
@@ -65,11 +57,7 @@ export const randevuServisi = {
 
       const { data, error } = await supabase
         .from('randevular')
-        .select(`
-          *,
-          musteri:musteriler(*),
-          personel:personel(*)
-        `)
+        .select('*, profiles(*), personel(*)')
         .eq('customer_id', user.id)
         .order('tarih', { ascending: true })
         .order('saat', { ascending: true });
@@ -134,7 +122,7 @@ export const randevuServisi = {
       const { data, error } = await supabase
         .from('randevular')
         .insert(insertData)
-        .select('*');
+        .select();
 
       if (error) {
         console.error("Supabase randevu ekleme hatası:", error);
@@ -166,12 +154,7 @@ export const randevuServisi = {
         .from('randevular')
         .update(randevu)
         .eq('id', id)
-        .select(`
-          *,
-          musteri:musteriler(*),
-          personel:personel(*)
-        `)
-        .maybeSingle();
+        .select('*, profiles(*), personel(*)');
 
       if (error) {
         console.error("Randevu güncelleme hatası:", error);
@@ -179,7 +162,7 @@ export const randevuServisi = {
       }
       
       console.log("Randevu güncelleme başarılı:", data);
-      return data;
+      return data && data.length > 0 ? data[0] : null;
     } catch (error: any) {
       console.error("Randevu güncelleme hatası:", error);
       throw new Error(error?.message || "Randevu güncellenirken bir hata oluştu");
