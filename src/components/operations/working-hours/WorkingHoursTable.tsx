@@ -1,5 +1,13 @@
 
-import { Table, TableHeader, TableRow, TableHead, TableBody } from "@/components/ui/table";
+import { 
+  Table, 
+  TableHeader, 
+  TableRow, 
+  TableHead, 
+  TableBody, 
+  TableCell 
+} from "@/components/ui/table";
+import { Label } from "@/components/ui/label";
 import { CalismaSaati } from "@/lib/supabase/types";
 import { gunSiralama, gunIsimleri } from "../constants/workingDays";
 import { WorkingHoursItem } from "./WorkingHoursItem";
