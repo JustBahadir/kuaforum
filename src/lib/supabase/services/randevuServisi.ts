@@ -101,19 +101,9 @@ export const randevuServisi = {
     }
 
     try {
-      // Randevu tablosunun var olup olmadığını kontrol et
-      const { error: tableCheckError } = await supabase
-        .from('randevular')
-        .select('id')
-        .limit(1);
-        
-      // Eğer tablo yoksa, mesaj ile bildir
-      if (tableCheckError && tableCheckError.code === '42P01') { // relation does not exist
-        console.error("Randevular tablosu bulunamadı. Tablo oluşturmanız gerekiyor.");
-        throw new Error("Randevu sistemi henüz kurulmamış. Lütfen sistem yöneticinizle iletişime geçin.");
-      }
-
-      // Kayıt için hazırla
+      // Kayıt için hazırla - customer_id için auth.uid() kullan
+      const { data: { user } } = await supabase.auth.getUser();
+      
       const insertData = {
         dukkan_id: randevu.dukkan_id,
         musteri_id: randevu.musteri_id || null,
@@ -123,7 +113,7 @@ export const randevuServisi = {
         durum: randevu.durum || "onaylandi",
         notlar: randevu.notlar || "",
         islemler: islemler,
-        customer_id: randevu.customer_id || null
+        customer_id: user?.id || null // Auth kullanıcı ID'sini kullan
       };
       
       console.log("Eklenen randevu verisi:", insertData);
@@ -164,7 +154,7 @@ export const randevuServisi = {
         islemler: islemler,
         notlar: randevu.notlar,
         created_at: new Date().toISOString(),
-        customer_id: randevu.customer_id
+        customer_id: user?.id || null
       };
     } catch (error: any) {
       console.error("Randevu oluşturma hatası:", error);
