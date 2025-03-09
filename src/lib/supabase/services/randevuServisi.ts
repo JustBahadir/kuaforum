@@ -134,21 +134,20 @@ export const randevuServisi = {
       const { data, error } = await supabase
         .from('randevular')
         .insert(insertData)
-        .select()
-        .single();
+        .select();
 
       if (error) {
         console.error("Supabase randevu ekleme hatası:", error);
-        throw new Error(`Randevu eklenirken bir hata oluştu: ${error.message}`);
+        throw new Error(error.message || "Randevu eklenirken bir hata oluştu");
       }
       
-      if (!data) {
+      if (!data || data.length === 0) {
         throw new Error("Randevu eklendi ancak veri döndürülemedi");
       }
       
-      console.log("Randevu başarıyla oluşturuldu:", data);
+      console.log("Randevu başarıyla oluşturuldu:", data[0]);
       
-      return data;
+      return data[0];
     } catch (error: any) {
       console.error("Randevu oluşturma hatası:", error);
       throw new Error(error?.message || "Randevu oluşturulurken bir hata oluştu");

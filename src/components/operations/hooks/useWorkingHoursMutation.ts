@@ -23,13 +23,24 @@ export const useWorkingHoursMutation = (props: UseWorkingHoursMutationProps) => 
       setIsLoading(true);
       console.log('Updating all hours for dukkan ID:', dukkanId);
       
-      // Ensure all hours have the correct dukkan_id
+      // Make sure all hours have the correct dukkan_id
       const hoursWithShopId = hours.map(hour => ({
         ...hour,
         dukkan_id: dukkanId
       }));
       
-      await calismaSaatleriServisi.guncelle(hoursWithShopId);
+      // Remove any properties that might cause issues
+      const cleanedHours = hoursWithShopId.map(hour => ({
+        id: hour.id,
+        dukkan_id: hour.dukkan_id,
+        gun: hour.gun,
+        gun_sira: hour.gun_sira,
+        acilis: hour.acilis,
+        kapanis: hour.kapanis,
+        kapali: hour.kapali
+      }));
+      
+      await calismaSaatleriServisi.guncelle(cleanedHours);
       
       // Invalidate and refetch
       await queryClient.invalidateQueries({ queryKey: ['calisma_saatleri', dukkanId] });
@@ -52,10 +63,19 @@ export const useWorkingHoursMutation = (props: UseWorkingHoursMutationProps) => 
   const updateSingleDay = useCallback(async (day: CalismaSaati) => {
     try {
       setIsUpdating(true);
-      await calismaSaatleriServisi.tekGuncelle({
-        ...day,
-        dukkan_id: dukkanId
-      });
+      
+      // Clean the object before sending
+      const cleanedDay = {
+        id: day.id,
+        dukkan_id: dukkanId,
+        gun: day.gun,
+        gun_sira: day.gun_sira,
+        acilis: day.acilis,
+        kapanis: day.kapanis,
+        kapali: day.kapali
+      };
+      
+      await calismaSaatleriServisi.tekGuncelle(cleanedDay);
       
       // Invalidate and refetch
       await queryClient.invalidateQueries({ queryKey: ['calisma_saatleri', dukkanId] });
