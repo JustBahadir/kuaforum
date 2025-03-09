@@ -1,16 +1,13 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { gunSiralama, gunIsimleri } from "./constants/workingDays";
 import { CalismaSaati } from "@/lib/supabase/types";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useWorkingHours } from "./hooks/useWorkingHours";
+import { WorkingHoursTable } from "./working-hours/WorkingHoursTable";
+import { WorkingHoursActions } from "./working-hours/WorkingHoursActions";
+import { WorkingHoursLoadingState } from "./working-hours/WorkingHoursLoadingState";
+import { WorkingHoursErrorState } from "./working-hours/WorkingHoursErrorState";
 
 interface WorkingHoursProps {
   isStaff?: boolean;
@@ -34,13 +31,6 @@ export function WorkingHours({ isStaff = true, dukkanId }: WorkingHoursProps) {
     dukkanId: dukkanId || 0,
     onMutationSuccess: () => setEditingMode(false)
   });
-
-  useEffect(() => {
-    if (dukkanId) {
-      console.log("WorkingHours component: dukkanId changed to:", dukkanId);
-      refetch();
-    }
-  }, [dukkanId, refetch]);
 
   const handleEdit = () => {
     setEditingMode(true);
@@ -72,7 +62,7 @@ export function WorkingHours({ isStaff = true, dukkanId }: WorkingHoursProps) {
           const kapanisDakika = kapanis[0] * 60 + kapanis[1];
           
           if (acilisDakika >= kapanisDakika) {
-            toast.error(`${gunIsimleri[saat.gun]} için açılış saati kapanış saatinden önce olmalıdır`);
+            toast.error(`${saat.gun} için açılış saati kapanış saatinden önce olmalıdır`);
             setIsSaving(false);
             return;
           }
@@ -109,47 +99,12 @@ export function WorkingHours({ isStaff = true, dukkanId }: WorkingHoursProps) {
     updateDay(index, updates);
   };
 
-  const formatTime = (time: string | null) => {
-    if (!time) return "-";
-    return time.substring(0, 5);
-  };
-
   if (isLoading) {
-    return (
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Çalışma Saatleri</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <Skeleton className="h-6 w-full" />
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-12 w-full" />
-          </div>
-        </CardContent>
-      </Card>
-    );
+    return <WorkingHoursLoadingState />;
   }
 
   if (isError) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Çalışma Saatleri</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="p-4 border border-red-300 bg-red-50 rounded-lg text-red-800">
-            Çalışma saatleri yüklenirken bir hata oluştu. Lütfen daha sonra tekrar deneyin.
-          </div>
-          <Button onClick={() => refetch()} className="mt-4">Yeniden Dene</Button>
-        </CardContent>
-      </Card>
-    );
+    return <WorkingHoursErrorState onRetry={refetch} />;
   }
 
   return (
@@ -157,129 +112,23 @@ export function WorkingHours({ isStaff = true, dukkanId }: WorkingHoursProps) {
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Çalışma Saatleri</CardTitle>
         <div className="flex space-x-2">
-          {!editingMode ? (
-            <Button variant="outline" onClick={handleEdit}>
-              Düzenle
-            </Button>
-          ) : (
-            <>
-              <Button 
-                variant="outline" 
-                onClick={handleCancel}
-                disabled={isSaving}
-              >
-                İptal
-              </Button>
-              <Button 
-                onClick={handleSave}
-                disabled={isSaving || !hasChanges()}
-              >
-                {isSaving ? "Kaydediliyor..." : "Kaydet"}
-              </Button>
-            </>
-          )}
+          <WorkingHoursActions
+            editingMode={editingMode}
+            onEdit={handleEdit}
+            onCancel={handleCancel}
+            onSave={handleSave}
+            isSaving={isSaving}
+            hasChanges={hasChanges()}
+          />
         </div>
       </CardHeader>
       <CardContent>
-        <div className="border rounded-lg overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[150px]">Gün</TableHead>
-                <TableHead>Açılış</TableHead>
-                <TableHead>Kapanış</TableHead>
-                <TableHead className="text-right">Durum</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {editingMode ? (
-                // Editing mode
-                hours.map((saat, index) => (
-                  <TableRow key={index}>
-                    <TableCell className="font-medium">
-                      {gunIsimleri[saat.gun] || saat.gun}
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="time"
-                        value={saat.acilis || ""}
-                        onChange={(e) => handleTimeChange(index, "acilis", e.target.value)}
-                        disabled={saat.kapali}
-                        className="w-32"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="time"
-                        value={saat.kapanis || ""}
-                        onChange={(e) => handleTimeChange(index, "kapanis", e.target.value)}
-                        disabled={saat.kapali}
-                        className="w-32"
-                      />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end space-x-2">
-                        <Label htmlFor={`closed-${index}`}>
-                          {saat.kapali ? "Kapalı" : "Açık"}
-                        </Label>
-                        <Switch
-                          id={`closed-${index}`}
-                          checked={saat.kapali}
-                          onCheckedChange={(value) => handleStatusChange(index, value)}
-                        />
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                // View mode
-                hours.length > 0 ? (
-                  hours.map((saat, index) => (
-                    <TableRow key={index}>
-                      <TableCell className="font-medium">
-                        {gunIsimleri[saat.gun] || saat.gun}
-                      </TableCell>
-                      {saat.kapali ? (
-                        <TableCell colSpan={2} className="text-center font-medium text-red-600">
-                          KAPALI
-                        </TableCell>
-                      ) : (
-                        <>
-                          <TableCell>{formatTime(saat.acilis)}</TableCell>
-                          <TableCell>{formatTime(saat.kapanis)}</TableCell>
-                        </>
-                      )}
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end space-x-2">
-                          <Label htmlFor={`status-${index}`}>
-                            {saat.kapali ? "Kapalı" : "Açık"}
-                          </Label>
-                          <div className={`h-4 w-4 rounded-full ${
-                            saat.kapali ? "bg-red-500" : "bg-green-500"
-                          }`}></div>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  gunSiralama.map((gun) => (
-                    <TableRow key={gun} className="hover:bg-gray-50">
-                      <TableCell className="font-medium">{gunIsimleri[gun]}</TableCell>
-                      <TableCell>09:00</TableCell>
-                      <TableCell>19:00</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end space-x-2">
-                          <Label>Açık</Label>
-                          <div className="h-4 w-4 rounded-full bg-green-500"></div>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )
-              )}
-            </TableBody>
-          </Table>
-        </div>
+        <WorkingHoursTable
+          hours={hours}
+          editingMode={editingMode}
+          onTimeChange={handleTimeChange}
+          onStatusChange={handleStatusChange}
+        />
       </CardContent>
     </Card>
   );
