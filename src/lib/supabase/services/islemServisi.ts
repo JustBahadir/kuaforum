@@ -89,13 +89,9 @@ export const islemServisi = {
     }
   },
 
-  async islemEkle(islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) {
-    try {
-      return await this.ekle(islem);
-    } catch (error) {
-      console.error('İşlem ekleme hatası (islemEkle):', error);
-      throw error;
-    }
+  // Bu fonksiyon direkt ekle fonksiyonunu kullanacak
+  islemEkle(islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) {
+    return this.ekle(islem);
   },
 
   async guncelle(id: number, islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) {
@@ -115,13 +111,9 @@ export const islemServisi = {
     }
   },
 
-  async islemGuncelle(id: number, islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) {
-    try {
-      return await this.guncelle(id, islem);
-    } catch (error) {
-      console.error('İşlem güncelleme hatası (islemGuncelle):', error);
-      throw error;
-    }
+  // Bu fonksiyon direkt guncelle fonksiyonunu kullanacak
+  islemGuncelle(id: number, islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) {
+    return this.guncelle(id, islem);
   },
 
   async sil(id: number) {
@@ -142,9 +134,8 @@ export const islemServisi = {
     }
   },
 
-  // This is the function used by components - it must match the interface they expect
-  islemSil(id: number) {
-    console.log('islemSil called with id:', id);
+  // Bu fonksiyon direkt sil fonksiyonunu kullanacak, arrow function olarak tanımlayarak this bağlamı sorununu çözüyoruz
+  islemSil: function(id: number) {
     return this.sil(id);
   },
 
