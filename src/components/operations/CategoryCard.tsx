@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, Edit, Trash2 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
+import { SortableContext, verticalListSortingStrategy, arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { ServiceForm } from "./ServiceForm";
 
 export function CategoryCard({ kategori, islemler, isStaff, onServiceEdit, onServiceDelete, onCategoryDelete, onCategoryEdit, onSiralamaChange, onRandevuAl, puanlamaAktif }) {
@@ -19,7 +19,7 @@ export function CategoryCard({ kategori, islemler, isStaff, onServiceEdit, onSer
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
-      coordinateGetter: verticalListSortingStrategy,
+      coordinateGetter: sortableKeyboardCoordinates,
     })
   );
   
