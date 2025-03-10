@@ -1,7 +1,8 @@
+
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { randevuServisi } from "@/lib/supabase/services/randevuServisi";
-import { Randevu, Personel, Musteri } from "@/lib/supabase/types";
+import { Randevu, Personel, Musteri, Profile } from "@/lib/supabase/types";
 import { toast } from "sonner";
 import { personelServisi } from "@/lib/supabase";
 import { supabase } from '@/lib/supabase/client';
@@ -115,7 +116,21 @@ export function useAppointments(dukkanId?: number) {
               .maybeSingle();
               
             if (data) {
-              appointment.musteri = data as unknown as Musteri;
+              // Use Musteri type instead of Profile - don't assign directly to appointment.musteri
+              const customerData = data as Musteri;
+              
+              // Now create a properly typed object - the key fix for the type error
+              appointment.musteri = {
+                id: customerData.id.toString(), // Convert to string as Profile.id is string
+                first_name: customerData.first_name,
+                last_name: customerData.last_name || '',
+                role: 'customer', // Add the required 'role' property
+                created_at: customerData.created_at,
+                phone: customerData.phone,
+                // Add other required Profile properties with default values
+                gender: null,
+                birthdate: customerData.birthdate
+              } as Profile;
             }
           } catch (error) {
             console.error(`Error fetching customer for appointment ${appointment.id}:`, error);
