@@ -48,37 +48,7 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
     enabled: !!selectedCategory
   });
   
-  const fetchAvailableTimes = async (date: string) => {
-    if (!dukkanId) return;
-    
-    try {
-      setIsFetchingTimes(true);
-      
-      const dayOfWeek = new Date(date).getDay();
-      const dayNames = ["pazar", "pazartesi", "sali", "carsamba", "persembe", "cuma", "cumartesi"];
-      const dayName = dayNames[dayOfWeek];
-      
-      const workingHours = await calismaSaatleriServisi.dukkanSaatleriGetir(dukkanId);
-      
-      const dayHours = workingHours.find((h: CalismaSaati) => h.gun === dayName);
-      
-      if (!dayHours || dayHours.kapali || !dayHours.acilis || !dayHours.kapanis) {
-        setAvailableTimes([]);
-        return;
-      }
-      
-      const slots = generateTimeSlots(dayHours.acilis, dayHours.kapanis);
-      setAvailableTimes(slots);
-    } catch (error) {
-      console.error("Error fetching available times:", error);
-      const defaultSlots = generateTimeSlots('09:00', '19:00');
-      setAvailableTimes(defaultSlots);
-    } finally {
-      setIsFetchingTimes(false);
-    }
-  };
-  
-  const generateTimeSlots = (openingTime: string, closingTime: string) => {
+  const generateTimeSlots = (openingTime: string, closingTime: string, isToday: boolean) => {
     const slots = [];
     const [openHour, openMinute] = openingTime.split(':').map(Number);
     const [closeHour, closeMinute] = closingTime.split(':').map(Number);
@@ -86,18 +56,10 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
     let currentMinutes = openHour * 60 + openMinute;
     const closingMinutes = closeHour * 60 + closeMinute;
     
-    const now = new Date();
-    const selected = new Date(selectedDate);
-    const isToday = now.getDate() === selected.getDate() && 
-                    now.getMonth() === selected.getMonth() && 
-                    now.getFullYear() === selected.getFullYear();
-    
     if (isToday) {
-      const currentHour = now.getHours();
-      const currentMinute = now.getMinutes();
-      const currentTotalMinutes = currentHour * 60 + currentMinute;
-      
-      const roundedMinutes = Math.ceil(currentTotalMinutes / 30) * 30 + 30;
+      const now = new Date();
+      const currentTimeMinutes = now.getHours() * 60 + now.getMinutes();
+      const roundedMinutes = Math.ceil((currentTimeMinutes + 30) / 30) * 30;
       currentMinutes = Math.max(currentMinutes, roundedMinutes);
     }
     
@@ -113,6 +75,42 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
     }
     
     return slots;
+  };
+  
+  const fetchAvailableTimes = async (date: string) => {
+    if (!dukkanId) return;
+    
+    try {
+      setIsFetchingTimes(true);
+      
+      const selected = new Date(date);
+      const now = new Date();
+      const isToday = selected.getDate() === now.getDate() && 
+                      selected.getMonth() === now.getMonth() && 
+                      selected.getFullYear() === now.getFullYear();
+      
+      const dayOfWeek = selected.getDay();
+      const dayNames = ["pazar", "pazartesi", "sali", "carsamba", "persembe", "cuma", "cumartesi"];
+      const dayName = dayNames[dayOfWeek];
+      
+      const workingHours = await calismaSaatleriServisi.dukkanSaatleriGetir(dukkanId);
+      const dayHours = workingHours.find((h: CalismaSaati) => h.gun === dayName);
+      
+      if (!dayHours || dayHours.kapali || !dayHours.acilis || !dayHours.kapanis) {
+        setAvailableTimes([]);
+        return;
+      }
+      
+      const slots = generateTimeSlots(dayHours.acilis, dayHours.kapanis, isToday);
+      setAvailableTimes(slots);
+    } catch (error) {
+      console.error("Error fetching available times:", error);
+      const isToday = new Date(date).toDateString() === new Date().toDateString();
+      const defaultSlots = generateTimeSlots('09:00', '19:00', isToday);
+      setAvailableTimes(defaultSlots);
+    } finally {
+      setIsFetchingTimes(false);
+    }
   };
   
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {

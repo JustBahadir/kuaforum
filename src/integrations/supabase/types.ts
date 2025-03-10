@@ -566,6 +566,12 @@ export type Database = {
       }
     }
     Functions: {
+      create_appointment: {
+        Args: {
+          appointment_data: Json
+        }
+        Returns: Json
+      }
       get_auth_user_role: {
         Args: Record<PropertyKey, never>
         Returns: string
