@@ -33,23 +33,16 @@ export const randevuServisi = {
     try {
       console.log(`Dükkan ID ${dukkanId} için randevular getiriliyor...`);
       
+      // Use the security definer function
       const { data, error } = await supabase
-        .from('randevular')
-        .select(`
-          *,
-          musteri:musteriler(*),
-          personel:personel(*)
-        `)
-        .eq('dukkan_id', dukkanId)
-        .order('tarih', { ascending: true })
-        .order('saat', { ascending: true });
-
+        .rpc('get_appointments_by_dukkan', { p_dukkan_id: dukkanId });
+        
       if (error) {
         console.error("Dükkan randevuları getirme hatası:", error);
         throw error;
       }
       
-      console.log(`${data?.length || 0} adet randevu bulundu:`, data);
+      console.log(`${data?.length || 0} adet randevu bulundu`);
       return data || [];
     } catch (err) {
       console.error("Dükkan randevuları getirme hatası:", err);
@@ -66,23 +59,16 @@ export const randevuServisi = {
 
       console.log(`Customer ID ${user.id} için randevular getiriliyor...`);
       
+      // Use the security definer function
       const { data, error } = await supabase
-        .from('randevular')
-        .select(`
-          *,
-          musteri:musteriler(*),
-          personel:personel(*)
-        `)
-        .eq('customer_id', user.id)
-        .order('tarih', { ascending: true })
-        .order('saat', { ascending: true });
-
+        .rpc('get_customer_appointments', { p_customer_id: user.id });
+        
       if (error) {
         console.error("Kendi randevularını getirme hatası:", error);
         throw error;
       }
       
-      console.log(`${data?.length || 0} adet randevu bulundu:`, data);
+      console.log(`${data?.length || 0} adet randevu bulundu`);
       return data || [];
     } catch (err) {
       console.error("Kendi randevularını getirme hatası:", err);
@@ -119,34 +105,19 @@ export const randevuServisi = {
         throw new Error("Oturum açmış kullanıcı bulunamadı");
       }
       
-      console.log("Calling create_appointment RPC with params:", {
-        p_dukkan_id: randevu.dukkan_id,
-        p_musteri_id: randevu.musteri_id || null,
-        p_personel_id: randevu.personel_id,
-        p_tarih: randevu.tarih,
-        p_saat: randevu.saat,
-        p_durum: randevu.durum || "onaylandi",
-        p_notlar: randevu.notlar || "",
-        p_islemler: islemler,
-        p_customer_id: user.id
-      });
-      
-      // Direct insert to avoid RPC errors
+      // Use the security definer function for inserting
       const { data, error } = await supabase
-        .from('randevular')
-        .insert({
-          dukkan_id: randevu.dukkan_id,
-          musteri_id: randevu.musteri_id || null,
-          personel_id: randevu.personel_id,
-          tarih: randevu.tarih,
-          saat: randevu.saat,
-          durum: randevu.durum || "onaylandi",
-          notlar: randevu.notlar || "",
-          islemler: islemler,
-          customer_id: user.id
-        })
-        .select('*')
-        .single();
+        .rpc('insert_appointment', {
+          p_dukkan_id: randevu.dukkan_id,
+          p_musteri_id: randevu.musteri_id || null,
+          p_personel_id: randevu.personel_id,
+          p_tarih: randevu.tarih,
+          p_saat: randevu.saat,
+          p_durum: randevu.durum || "onaylandi",
+          p_islemler: islemler,
+          p_notlar: randevu.notlar || "",
+          p_customer_id: user.id
+        });
       
       if (error) {
         console.error("Randevu ekleme hatası:", error);
@@ -171,30 +142,59 @@ export const randevuServisi = {
     try {
       console.log(`Randevu ${id} güncelleniyor:`, randevu);
       
-      const { data, error } = await supabase
-        .from('randevular')
-        .update(randevu)
-        .eq('id', id)
-        .select('*');
-
-      if (error) {
-        console.error("Randevu güncelleme hatası:", error);
-        throw new Error(`Randevu güncellenirken bir hata oluştu: ${error.message}`);
-      }
-      
-      console.log("Randevu güncelleme başarılı:", data);
-      
-      // If an appointment is marked as completed, create a personnel operation record
-      if (randevu.durum === "tamamlandi") {
-        try {
-          await this.randevuTamamlandi(id);
-        } catch (opError) {
-          console.error("İşlem kaydı oluşturma hatası:", opError);
-          // Don't fail the entire process if operation creation fails
+      // For status updates, use our specialized function to avoid infinite recursion
+      if (randevu.durum && Object.keys(randevu).length === 1) {
+        const { data, error } = await supabase
+          .rpc('update_appointment_status', { 
+            appointment_id: id, 
+            new_status: randevu.durum 
+          });
+          
+        if (error) {
+          console.error("Randevu durumu güncelleme hatası:", error);
+          throw new Error(`Randevu güncellenirken bir hata oluştu: ${error.message}`);
         }
+        
+        console.log("Randevu güncelleme başarılı:", data);
+        
+        // If an appointment is marked as completed, create a personnel operation record
+        if (randevu.durum === "tamamlandi") {
+          try {
+            await this.randevuTamamlandi(id);
+          } catch (opError) {
+            console.error("İşlem kaydı oluşturma hatası:", opError);
+            // Don't fail the entire process if operation creation fails
+          }
+        }
+        
+        return data;
+      } else {
+        // For other updates, use the regular update
+        const { data, error } = await supabase
+          .from('randevular')
+          .update(randevu)
+          .eq('id', id)
+          .select('*');
+
+        if (error) {
+          console.error("Randevu güncelleme hatası:", error);
+          throw new Error(`Randevu güncellenirken bir hata oluştu: ${error.message}`);
+        }
+        
+        console.log("Randevu güncelleme başarılı:", data);
+        
+        // If an appointment is marked as completed, create a personnel operation record
+        if (randevu.durum === "tamamlandi") {
+          try {
+            await this.randevuTamamlandi(id);
+          } catch (opError) {
+            console.error("İşlem kaydı oluşturma hatası:", opError);
+            // Don't fail the entire process if operation creation fails
+          }
+        }
+        
+        return data && data.length > 0 ? data[0] : null;
       }
-      
-      return data && data.length > 0 ? data[0] : null;
     } catch (error: any) {
       console.error("Randevu güncelleme hatası:", error);
       throw new Error(error?.message || "Randevu güncellenirken bir hata oluştu");

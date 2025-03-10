@@ -6,6 +6,7 @@ import { Randevu } from "@/lib/supabase/types";
 import { toast } from "sonner";
 import { personelServisi } from "@/lib/supabase";
 import { supabase } from '@/lib/supabase/client';
+import { musteriServisi } from "@/lib/supabase/services/musteriServisi";
 
 export function useAppointments(dukkanId?: number) {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -38,7 +39,7 @@ export function useAppointments(dukkanId?: number) {
   
   // Fetch appointments using the security definer functions
   const { 
-    data: appointments = [], 
+    data: appointmentsRaw = [], 
     isLoading,
     refetch,
     isError,
@@ -56,40 +57,6 @@ export function useAppointments(dukkanId?: number) {
             .rpc('get_appointments_by_dukkan', { p_dukkan_id: dukkanId });
             
           if (error) throw error;
-          
-          // Fetch customer and staff details separately to avoid recursion
-          if (randevular && randevular.length > 0) {
-            for (let i = 0; i < randevular.length; i++) {
-              const randevu = randevular[i];
-              
-              // Get customer details if customer_id exists
-              if (randevu.customer_id) {
-                const { data: musteriData } = await supabase
-                  .from('profiles')
-                  .select('first_name, last_name')
-                  .eq('id', randevu.customer_id)
-                  .maybeSingle();
-                  
-                if (musteriData) {
-                  randevu.musteri = musteriData;
-                }
-              }
-              
-              // Get personnel details if personel_id exists
-              if (randevu.personel_id) {
-                const { data: personelData } = await supabase
-                  .from('personel')
-                  .select('ad_soyad')
-                  .eq('id', randevu.personel_id)
-                  .maybeSingle();
-                  
-                if (personelData) {
-                  randevu.personel = personelData;
-                }
-              }
-            }
-          }
-          
           data = randevular || [];
         } else {
           // For regular customers
@@ -103,27 +70,6 @@ export function useAppointments(dukkanId?: number) {
             .rpc('get_customer_appointments', { p_customer_id: user.id });
             
           if (error) throw error;
-          
-          // Fetch personnel details separately to avoid recursion
-          if (randevular && randevular.length > 0) {
-            for (let i = 0; i < randevular.length; i++) {
-              const randevu = randevular[i];
-              
-              // Get personnel details if personel_id exists
-              if (randevu.personel_id) {
-                const { data: personelData } = await supabase
-                  .from('personel')
-                  .select('ad_soyad')
-                  .eq('id', randevu.personel_id)
-                  .maybeSingle();
-                  
-                if (personelData) {
-                  randevu.personel = personelData;
-                }
-              }
-            }
-          }
-          
           data = randevular || [];
         }
         
@@ -137,6 +83,61 @@ export function useAppointments(dukkanId?: number) {
     },
     enabled: true // Always enable the query
   });
+  
+  // Process fetched appointments to add customer and personnel info
+  const [appointments, setAppointments] = useState<Randevu[]>([]);
+  
+  useEffect(() => {
+    const enhanceAppointments = async () => {
+      if (!appointmentsRaw?.length) {
+        setAppointments([]);
+        return;
+      }
+      
+      const enhancedAppointments = [...appointmentsRaw];
+      
+      // Enhance with customer and personnel info in parallel
+      await Promise.all(enhancedAppointments.map(async (appointment) => {
+        // Get personnel info if not already fetched
+        if (appointment.personel_id && !appointment.personel) {
+          try {
+            const { data } = await supabase
+              .from('personel')
+              .select('ad_soyad')
+              .eq('id', appointment.personel_id)
+              .maybeSingle();
+              
+            if (data) {
+              appointment.personel = data;
+            }
+          } catch (error) {
+            console.error(`Error fetching personnel for appointment ${appointment.id}:`, error);
+          }
+        }
+        
+        // Get customer info if not already fetched
+        if (appointment.musteri_id && !appointment.musteri) {
+          try {
+            const { data } = await supabase
+              .from('musteriler')
+              .select('first_name, last_name')
+              .eq('id', appointment.musteri_id)
+              .maybeSingle();
+              
+            if (data) {
+              appointment.musteri = data;
+            }
+          } catch (error) {
+            console.error(`Error fetching customer for appointment ${appointment.id}:`, error);
+          }
+        }
+      }));
+      
+      setAppointments(enhancedAppointments);
+    };
+    
+    enhanceAppointments();
+  }, [appointmentsRaw]);
   
   // Mark appointment as complete
   const { mutate: completeAppointment } = useMutation({

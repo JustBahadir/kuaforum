@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,7 @@ import { tr } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CheckSquare, XSquare } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { supabase } from "@/lib/supabase/client";
 
 interface AppointmentCalendarViewProps {
   selectedDate: Date;
@@ -34,6 +35,41 @@ export function AppointmentCalendarView({
   onCompleteClick,
   onCancelClick
 }: AppointmentCalendarViewProps) {
+  const [serviceNames, setServiceNames] = useState<Record<number, string>>({});
+  
+  // Get service names
+  useEffect(() => {
+    const fetchServiceNames = async () => {
+      // Extract all service IDs from appointments
+      const serviceIds = appointments
+        .flatMap(appointment => 
+          Array.isArray(appointment.islemler) ? appointment.islemler : [])
+        .filter((id): id is number => typeof id === 'number');
+        
+      if (serviceIds.length === 0) return;
+      
+      try {
+        const { data } = await supabase
+          .from('islemler')
+          .select('id, islem_adi')
+          .in('id', [...new Set(serviceIds)]);
+          
+        if (data) {
+          const serviceMap = data.reduce((acc, service) => {
+            acc[service.id] = service.islem_adi;
+            return acc;
+          }, {} as Record<number, string>);
+          
+          setServiceNames(serviceMap);
+        }
+      } catch (error) {
+        console.error("Error fetching service names:", error);
+      }
+    };
+    
+    fetchServiceNames();
+  }, [appointments]);
+  
   // Generate a map of dates with appointment counts
   const appointmentDates = appointments.reduce((acc, appointment) => {
     // Handle both Date objects and ISO strings
@@ -127,10 +163,21 @@ export function AppointmentCalendarView({
                   
                   <div className="mt-2">
                     <div>
-                      <span className="text-muted-foreground">Müşteri:</span> {appointment.musteri?.first_name} {appointment.musteri?.last_name || "Belirtilmemiş"}
+                      <span className="text-muted-foreground">Müşteri:</span> {
+                        appointment.musteri 
+                          ? `${appointment.musteri.first_name} ${appointment.musteri.last_name || ""}`
+                          : "Belirtilmemiş"
+                      }
                     </div>
                     <div>
                       <span className="text-muted-foreground">Personel:</span> {appointment.personel?.ad_soyad || "Belirtilmemiş"}
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Hizmet:</span> {
+                        Array.isArray(appointment.islemler) && appointment.islemler.length > 0
+                          ? appointment.islemler.map(id => serviceNames[id] || `İşlem ${id}`).join(', ')
+                          : "Belirtilmemiş"
+                      }
                     </div>
                   </div>
                   

@@ -9,6 +9,9 @@ import { Randevu } from "@/lib/supabase/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge"; 
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { islemServisi } from "@/lib/supabase/services/islemServisi";
+import { useEffect } from "react";
+import { supabase } from "@/lib/supabase/client";
 
 interface AppointmentDayViewProps {
   selectedDate: Date;
@@ -33,6 +36,41 @@ export function AppointmentDayView({
   onCompleteClick,
   onCancelClick
 }: AppointmentDayViewProps) {
+  const [serviceNames, setServiceNames] = useState<Record<number, string>>({});
+  
+  // Get service names
+  useEffect(() => {
+    const fetchServiceNames = async () => {
+      // Extract all service IDs from appointments
+      const serviceIds = appointments
+        .flatMap(appointment => 
+          Array.isArray(appointment.islemler) ? appointment.islemler : [])
+        .filter((id): id is number => typeof id === 'number');
+        
+      if (serviceIds.length === 0) return;
+      
+      try {
+        const { data } = await supabase
+          .from('islemler')
+          .select('id, islem_adi')
+          .in('id', [...new Set(serviceIds)]);
+          
+        if (data) {
+          const serviceMap = data.reduce((acc, service) => {
+            acc[service.id] = service.islem_adi;
+            return acc;
+          }, {} as Record<number, string>);
+          
+          setServiceNames(serviceMap);
+        }
+      } catch (error) {
+        console.error("Error fetching service names:", error);
+      }
+    };
+    
+    fetchServiceNames();
+  }, [appointments]);
+
   const handlePrevDay = () => {
     onDateChange(subDays(selectedDate, 1));
   };
@@ -127,10 +165,11 @@ export function AppointmentDayView({
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Müşteri</p>
-                      <p className="font-medium">
-                        {appointment.musteri?.first_name} {appointment.musteri?.last_name}
-                      </p>
-                      {!appointment.musteri && (
+                      {appointment.musteri ? (
+                        <p className="font-medium">
+                          {appointment.musteri.first_name} {appointment.musteri.last_name}
+                        </p>
+                      ) : (
                         <p className="text-xs text-muted-foreground">Müşteri kaydı yok</p>
                       )}
                     </div>
@@ -139,7 +178,7 @@ export function AppointmentDayView({
                       <div className="flex flex-wrap gap-1 mt-1">
                         {Array.isArray(appointment.islemler) && appointment.islemler.map((islemId, idx) => (
                           <Badge key={`${islemId}-${idx}`} variant="outline" className="text-xs">
-                            İşlem {islemId}
+                            {serviceNames[islemId] || `İşlem ${islemId}`}
                           </Badge>
                         ))}
                       </div>
