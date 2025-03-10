@@ -587,7 +587,47 @@ export type Database = {
             }
             Returns: Json
           }
+      get_appointments_by_dukkan: {
+        Args: {
+          p_dukkan_id: number
+        }
+        Returns: {
+          created_at: string
+          customer_id: string | null
+          dukkan_id: number | null
+          durum: string
+          id: number
+          islemler: Json
+          musteri_id: number | null
+          notlar: string | null
+          personel_id: number | null
+          saat: string
+          tarih: string
+        }[]
+      }
       get_auth_user_role: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_customer_appointments: {
+        Args: {
+          p_customer_id: string
+        }
+        Returns: {
+          created_at: string
+          customer_id: string | null
+          dukkan_id: number | null
+          durum: string
+          id: number
+          islemler: Json
+          musteri_id: number | null
+          notlar: string | null
+          personel_id: number | null
+          saat: string
+          tarih: string
+        }[]
+      }
+      get_user_role: {
         Args: Record<PropertyKey, never>
         Returns: string
       }
