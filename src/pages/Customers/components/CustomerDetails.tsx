@@ -636,6 +636,7 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
                         <TableHead><CreditCard className="h-4 w-4 mr-2" /> Tutar</TableHead>
                         <TableHead><Award className="h-4 w-4 mr-2" /> Puan</TableHead>
                         <TableHead className="w-1/3"><MessageSquare className="h-4 w-4 mr-2" /> Açıklama</TableHead>
+                        <TableHead>Fotoğraf</TableHead>
                         <TableHead></TableHead>
                       </TableRow>
                     </TableHeader>
@@ -655,6 +656,16 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
                               className="resize-none min-h-[80px]"
                               rows={2}
                             />
+                          </TableCell>
+                          <TableCell>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="flex items-center gap-1"
+                            >
+                              <Camera className="h-4 w-4" />
+                              Ekle
+                            </Button>
                           </TableCell>
                           <TableCell>
                             <Button 

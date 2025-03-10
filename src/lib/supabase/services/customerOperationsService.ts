@@ -3,6 +3,7 @@ import { supabase } from '../client';
 import { randevuServisi } from './randevuServisi';
 import { personelServisi } from './personelServisi';
 import { islemServisi } from './islemServisi';
+import { personelIslemleriServisi } from './personelIslemleriServisi';
 
 export interface CustomerOperation {
   id: number;
@@ -13,46 +14,42 @@ export interface CustomerOperation {
   points: number;
   notes?: string;
   appointment_id?: number;
+  photos?: string[];
 }
 
 export const customerOperationsService = {
   async getCustomerOperations(customerId: string): Promise<CustomerOperation[]> {
     try {
-      // Fetch customer's appointments
-      const appointments = await randevuServisi.kendiRandevulariniGetir();
+      // Get customer's ID from the musteriler table
+      const { data: customerData } = await supabase
+        .from('musteriler')
+        .select('id')
+        .eq('auth_id', customerId)
+        .single();
       
-      // Fetch all services
-      const allServices = await islemServisi.hepsiniGetir();
+      if (!customerData) {
+        console.error("Customer not found in musteriler table");
+        return [];
+      }
       
-      // Fetch all personnel
-      const allPersonnel = await personelServisi.hepsiniGetir();
+      // Get operations for this customer directly from personel_islemleri
+      const operationsData = await personelIslemleriServisi.musteriIslemleriGetir(customerData.id);
       
-      // Create operations from the appointments
+      // Create operations from the personel_islemleri data
       const operations: CustomerOperation[] = [];
       
-      for (const appointment of appointments) {
-        // Only include completed appointments
-        if (appointment.durum === 'tamamlandi') {
-          // Handle multiple services in one appointment
-          const serviceIds = appointment.islemler || [];
-          
-          for (const serviceId of serviceIds) {
-            const service = allServices.find(s => s.id === serviceId);
-            const personnel = allPersonnel.find(p => p.id === appointment.personel_id);
-            
-            if (service) {
-              operations.push({
-                id: appointment.id,
-                date: appointment.tarih,
-                service_name: service.islem_adi,
-                personnel_name: personnel?.ad_soyad || 'Belirtilmemiş',
-                amount: parseFloat(service.fiyat),
-                points: parseFloat(service.puan),
-                notes: appointment.notlar || '',
-                appointment_id: appointment.id
-              });
-            }
-          }
+      for (const op of operationsData) {
+        if (op.islem) {
+          operations.push({
+            id: op.id,
+            date: op.created_at,
+            service_name: op.islem.islem_adi,
+            personnel_name: op.personel?.ad_soyad || 'Belirtilmemiş',
+            amount: parseFloat(op.tutar),
+            points: parseFloat(op.puan),
+            notes: op.aciklama || '',
+            photos: op.photos || []
+          });
         }
       }
       
@@ -64,17 +61,32 @@ export const customerOperationsService = {
     }
   },
   
-  async updateOperationNotes(appointmentId: number, notes: string): Promise<boolean> {
+  async updateOperationNotes(operationId: number, notes: string): Promise<boolean> {
     try {
       const { error } = await supabase
-        .from('randevular')
-        .update({ notlar: notes })
-        .eq('id', appointmentId);
+        .from('personel_islemleri')
+        .update({ aciklama: notes })
+        .eq('id', operationId);
       
       if (error) throw error;
       return true;
     } catch (error) {
       console.error('Error updating operation notes:', error);
+      return false;
+    }
+  },
+  
+  async updateOperationPhotos(operationId: number, photos: string[]): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('personel_islemleri')
+        .update({ photos })
+        .eq('id', operationId);
+      
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error updating operation photos:', error);
       return false;
     }
   }

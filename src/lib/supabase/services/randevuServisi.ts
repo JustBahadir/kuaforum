@@ -238,10 +238,13 @@ export const randevuServisi = {
         const personelIslem = {
           personel_id: randevu.personel_id,
           islem_id: islem.id,
+          musteri_id: randevu.musteri_id, // Set the customer ID correctly
           tutar: parseFloat(islem.fiyat),
+          odenen: 0, // Will be updated when payment is recorded
           puan: parseInt(islem.puan),
           prim_yuzdesi: randevu.personel?.prim_yuzdesi || 0,
-          aciklama: `Randevu #${randevuId} tamamlandı, ${islem.islem_adi} hizmeti verildi.`
+          aciklama: `Randevu #${randevuId} tamamlandı, ${islem.islem_adi} hizmeti verildi.`,
+          photos: [] // Initialize empty photos array
         };
         
         const { error: insertError } = await supabase
