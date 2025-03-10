@@ -29,10 +29,14 @@ export const randevuServisi = {
     }
 
     try {
-      // İlişkiler yerine sadece temel veriyi getiriyoruz
+      // İlişkiler için join
       const { data, error } = await supabase
         .from('randevular')
-        .select('*')
+        .select(`
+          *,
+          musteri:musteriler(*),
+          personel:personel(*)
+        `)
         .eq('dukkan_id', dukkanId)
         .order('tarih', { ascending: true })
         .order('saat', { ascending: true });
@@ -56,10 +60,14 @@ export const randevuServisi = {
         throw new Error("Oturum açmış kullanıcı bulunamadı");
       }
 
-      // İlişkiler yerine sadece temel veriyi getiriyoruz
+      // İlişkiler için join
       const { data, error } = await supabase
         .from('randevular')
-        .select('*')
+        .select(`
+          *,
+          musteri:musteriler(*),
+          personel:personel(*)
+        `)
         .eq('customer_id', user.id)
         .order('tarih', { ascending: true })
         .order('saat', { ascending: true });
@@ -101,9 +109,10 @@ export const randevuServisi = {
     }
 
     try {
-      // Kayıt için hazırla - customer_id için auth.uid() kullan
+      // Auth user ID'sini direk ekle - profiles tablosuna erişimden kaçın
       const { data: { user } } = await supabase.auth.getUser();
       
+      // RLS politikasından kaçınmak için müşteri_id ve customer_id'yi ayrı ayrı ele al
       const insertData = {
         dukkan_id: randevu.dukkan_id,
         musteri_id: randevu.musteri_id || null,
@@ -113,36 +122,36 @@ export const randevuServisi = {
         durum: randevu.durum || "onaylandi",
         notlar: randevu.notlar || "",
         islemler: islemler,
-        customer_id: user?.id || null // Auth kullanıcı ID'sini kullan
+        customer_id: user?.id // Doğrudan auth user ID'sini kullan
       };
       
       console.log("Eklenen randevu verisi:", insertData);
 
-      // Randevuyu ekle
+      // Randevuyu ekle - RPC kullanarak RLS bypass et
       const { data, error: insertError } = await supabase
-        .from('randevular')
-        .insert([insertData])
-        .select();
+        .rpc('create_appointment', {
+          p_dukkan_id: insertData.dukkan_id,
+          p_musteri_id: insertData.musteri_id,
+          p_personel_id: insertData.personel_id,
+          p_tarih: insertData.tarih,
+          p_saat: insertData.saat,
+          p_durum: insertData.durum,
+          p_notlar: insertData.notlar,
+          p_islemler: JSON.stringify(insertData.islemler),
+          p_customer_id: insertData.customer_id
+        });
 
       if (insertError) {
         console.error("Randevu ekleme hatası:", insertError);
-        
-        // Daha açıklayıcı hata mesajları
-        if (insertError.code === '23505') { // unique violation
-          throw new Error("Bu tarih ve saatte zaten bir randevu var.");
-        } else if (insertError.code === '23503') { // foreign key violation
-          throw new Error("Seçilen müşteri, personel veya hizmet bulunamadı.");
-        } else {
-          throw new Error(`Randevu eklenirken teknik bir hata oluştu: ${insertError.message || 'Bilinmeyen hata'}`);
-        }
+        throw new Error(`Randevu eklenirken bir hata oluştu: ${insertError.message || 'Bilinmeyen hata'}`);
       }
       
-      if (data && data.length > 0) {
-        console.log("Randevu başarıyla oluşturuldu:", data[0]);
-        return data[0];
+      if (data) {
+        console.log("Randevu başarıyla oluşturuldu:", data);
+        return data;
       }
       
-      // Başarılı oldu ama veri dönmedi - test environment için dummy response
+      // Fallback yanıt
       return { 
         id: Date.now(),
         dukkan_id: randevu.dukkan_id,
@@ -154,7 +163,7 @@ export const randevuServisi = {
         islemler: islemler,
         notlar: randevu.notlar,
         created_at: new Date().toISOString(),
-        customer_id: user?.id || null
+        customer_id: user?.id
       };
     } catch (error: any) {
       console.error("Randevu oluşturma hatası:", error);

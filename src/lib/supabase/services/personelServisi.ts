@@ -1,25 +1,49 @@
+
 import { supabase } from '../client';
 import { Personel } from '../types';
 
 export const personelServisi = {
   async hepsiniGetir() {
-    const { data, error } = await supabase
-      .from('personel')
-      .select('*');
+    try {
+      const { data, error } = await supabase
+        .from('personel')
+        .select('*');
 
-    if (error) throw error;
-    return data || [];
+      if (error) {
+        console.error("Personel listesi alınırken hata:", error);
+        throw error;
+      }
+      return data || [];
+    } catch (error) {
+      console.error("Personel listesi alınırken hata:", error);
+      throw error;
+    }
   },
 
   async getirById(id: number) {
-    const { data, error } = await supabase
-      .from('personel')
-      .select('*, dukkan(*)')
-      .eq('id', id)
-      .single();
+    try {
+      console.log("Personel getiriliyor, ID:", id);
+      
+      const { data, error } = await supabase
+        .from('personel')
+        .select('*')
+        .eq('id', id)
+        .single();
 
-    if (error) throw error;
-    return data;
+      if (error) {
+        console.error("Personel getirme hatası:", error);
+        throw error;
+      }
+      
+      if (!data) {
+        throw new Error("Personel bulunamadı");
+      }
+      
+      return data;
+    } catch (error) {
+      console.error("Personel getirme hatası:", error);
+      throw error;
+    }
   },
 
   async getirByAuthId(authId: string) {

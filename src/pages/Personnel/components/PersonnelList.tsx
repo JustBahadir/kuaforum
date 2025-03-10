@@ -5,8 +5,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Eye, Trash, Plus } from "lucide-react";
-import { PersonnelDialog } from "./PersonnelDialog";
+import { Eye, Trash } from "lucide-react";
 import { PersonnelDetailsDialog } from "./PersonnelDetailsDialog";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -25,7 +24,6 @@ import {
 
 export function PersonnelList() {
   const { userRole, refreshProfile } = useCustomerAuth();
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedPersonel, setSelectedPersonel] = useState<number | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -105,14 +103,7 @@ export function PersonnelList() {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Personel Listesi</CardTitle>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={() => setAddDialogOpen(true)}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Yeni Personel Ekle
-        </Button>
+        {/* "Yeni Personel Ekle" button removed as requested */}
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -186,11 +177,6 @@ export function PersonnelList() {
           </div>
         )}
         
-        <PersonnelDialog 
-          open={addDialogOpen} 
-          onOpenChange={setAddDialogOpen} 
-        />
-
         {selectedPersonel && (
           <PersonnelDetailsDialog
             open={detailsDialogOpen}
