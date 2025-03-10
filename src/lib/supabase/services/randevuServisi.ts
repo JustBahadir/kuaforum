@@ -74,7 +74,7 @@ export const randevuServisi = {
       throw err;
     }
   },
-
+  
   async ekle(randevu: Omit<Randevu, 'id' | 'created_at'>) {
     console.log("Randevu ekle başlangıç, alınan veri:", randevu);
     
@@ -242,7 +242,9 @@ export const randevuServisi = {
           prim_yuzdesi: randevu.personel?.prim_yuzdesi || 0,
           odenen: parseFloat(islem.fiyat) * (randevu.personel?.prim_yuzdesi || 0) / 100,
           aciklama: `Randevu #${randevuId} tamamlandı, ${islem.islem_adi} hizmeti verildi.${randevu.notlar ? ` Not: ${randevu.notlar}` : ''}`,
-          photos: []
+          photos: [],
+          musteri_id: randevu.musteri_id, // Add customer ID to track operations by customer
+          tarih: randevu.tarih // Add date for better tracking
         };
         
         const { error: insertError } = await supabase

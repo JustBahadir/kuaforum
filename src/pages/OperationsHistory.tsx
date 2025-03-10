@@ -7,7 +7,10 @@ import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { personelIslemleriServisi, islemServisi, personelServisi } from "@/lib/supabase";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { PersonelIslemi } from "@/lib/supabase/types";
-import { supabase } from "@/lib/supabase/client"; // Import supabase client
+import { supabase } from "@/lib/supabase/client"; 
+import { Button } from "@/components/ui/button";
+import { Camera, Eye } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export default function OperationsHistory() {
   const { userRole } = useCustomerAuth();
@@ -15,6 +18,9 @@ export default function OperationsHistory() {
     from: new Date(new Date().setDate(new Date().getDate() - 30)), // Default to last 30 days
     to: new Date()
   });
+  
+  const [viewPhotoDialogOpen, setViewPhotoDialogOpen] = useState(false);
+  const [currentPhotos, setCurrentPhotos] = useState<string[]>([]);
 
   // Get current user
   const { data: currentUser } = useQuery({
@@ -68,6 +74,13 @@ export default function OperationsHistory() {
     },
     enabled: userRole === 'admin' || !!personel
   });
+  
+  const handleViewPhotos = (photos: string[]) => {
+    if (photos && photos.length > 0) {
+      setCurrentPhotos(photos);
+      setViewPhotoDialogOpen(true);
+    }
+  };
 
   return (
     <StaffLayout>
@@ -100,6 +113,7 @@ export default function OperationsHistory() {
                       </>
                     )}
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Puan</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fotoğraflar</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -131,11 +145,25 @@ export default function OperationsHistory() {
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {islem.puan}
                         </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {islem.photos && islem.photos.length > 0 ? (
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => handleViewPhotos(islem.photos || [])}
+                            >
+                              <Camera className="h-4 w-4 mr-1" />
+                              {islem.photos.length}
+                            </Button>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={userRole === 'admin' ? 7 : 5} className="px-6 py-4 text-center text-sm text-gray-500">
+                      <td colSpan={userRole === 'admin' ? 8 : 6} className="px-6 py-4 text-center text-sm text-gray-500">
                         Seçilen tarih aralığında işlem bulunamadı
                       </td>
                     </tr>
@@ -146,6 +174,26 @@ export default function OperationsHistory() {
           </CardContent>
         </Card>
       </div>
+      
+      {/* Photo View Dialog */}
+      <Dialog open={viewPhotoDialogOpen} onOpenChange={setViewPhotoDialogOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>İşlem Fotoğrafları</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            {currentPhotos.map((photo, index) => (
+              <div key={index} className="border rounded-md overflow-hidden">
+                <img 
+                  src={photo} 
+                  alt={`Operation photo ${index + 1}`} 
+                  className="w-full h-auto object-contain"
+                />
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </StaffLayout>
   );
 }
