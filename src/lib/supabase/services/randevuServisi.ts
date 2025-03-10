@@ -1,3 +1,4 @@
+
 import { supabase } from '../client';
 import { Randevu } from '../types';
 import { toast } from 'sonner';
@@ -74,7 +75,7 @@ export const randevuServisi = {
       throw err;
     }
   },
-  
+
   async ekle(randevu: Omit<Randevu, 'id' | 'created_at'>) {
     console.log("Randevu ekle başlangıç, alınan veri:", randevu);
     
@@ -202,7 +203,7 @@ export const randevuServisi = {
 
   async randevuTamamlandi(randevuId: number) {
     try {
-      // Get the appointment details with all related information
+      // Get the appointment details
       const { data: randevu, error: randevuError } = await supabase
         .from('randevular')
         .select(`
@@ -240,11 +241,7 @@ export const randevuServisi = {
           tutar: parseFloat(islem.fiyat),
           puan: parseInt(islem.puan),
           prim_yuzdesi: randevu.personel?.prim_yuzdesi || 0,
-          odenen: parseFloat(islem.fiyat) * (randevu.personel?.prim_yuzdesi || 0) / 100,
-          aciklama: `Randevu #${randevuId} tamamlandı, ${islem.islem_adi} hizmeti verildi.${randevu.notlar ? ` Not: ${randevu.notlar}` : ''}`,
-          photos: [],
-          musteri_id: randevu.musteri_id, // Add customer ID to track operations by customer
-          tarih: randevu.tarih // Add date for better tracking
+          aciklama: `Randevu #${randevuId} tamamlandı, ${islem.islem_adi} hizmeti verildi.`
         };
         
         const { error: insertError } = await supabase
@@ -256,52 +253,10 @@ export const randevuServisi = {
         }
       }
       
-      // Update performance metrics
-      await this.updatePerformanceMetrics(randevu.personel_id);
-      
       return true;
     } catch (error: any) {
       console.error("Randevu tamamlandı işlemi hatası:", error);
       throw new Error(error?.message || "İşlem kayıtları oluşturulurken hata oluştu");
-    }
-  },
-
-  async updatePerformanceMetrics(personelId: number) {
-    try {
-      const { data: personel } = await supabase
-        .from('personel')
-        .select('*')
-        .eq('id', personelId)
-        .single();
-
-      if (!personel) return;
-
-      const { data: islemler } = await supabase
-        .from('personel_islemleri')
-        .select('*')
-        .eq('personel_id', personelId);
-
-      if (!islemler?.length) return;
-
-      const metrics = {
-        personel_id: personelId,
-        ad_soyad: personel.ad_soyad,
-        toplam_ciro: islemler.reduce((sum, islem) => sum + Number(islem.tutar), 0),
-        toplam_odenen: islemler.reduce((sum, islem) => sum + Number(islem.odenen), 0),
-        islem_sayisi: islemler.length,
-        ortalama_puan: islemler.reduce((sum, islem) => sum + Number(islem.puan), 0) / islemler.length,
-      };
-
-      await supabase
-        .from('personel_performans')
-        .upsert({
-          id: personelId,
-          ...metrics,
-          ciro_yuzdesi: metrics.toplam_odenen / metrics.toplam_ciro * 100
-        });
-
-    } catch (error) {
-      console.error("Performans metrikleri güncelleme hatası:", error);
     }
   },
 

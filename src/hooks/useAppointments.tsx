@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { randevuServisi } from "@/lib/supabase/services/randevuServisi";
-import { Randevu, Personel, Musteri, Profile } from "@/lib/supabase/types";
+import { Randevu, Personel, Musteri } from "@/lib/supabase/types";
 import { toast } from "sonner";
 import { personelServisi } from "@/lib/supabase";
 import { supabase } from '@/lib/supabase/client';
@@ -17,6 +17,7 @@ export function useAppointments(dukkanId?: number) {
   
   const queryClient = useQueryClient();
   
+  // Get current staff info if logged in as staff
   useEffect(() => {
     const fetchCurrentPersonnel = async () => {
       try {
@@ -36,6 +37,7 @@ export function useAppointments(dukkanId?: number) {
     fetchCurrentPersonnel();
   }, []);
   
+  // Fetch appointments using the security definer functions
   const { 
     data: appointmentsRaw = [], 
     isLoading,
@@ -50,17 +52,20 @@ export function useAppointments(dukkanId?: number) {
         let data: Randevu[] = [];
         
         if (dukkanId) {
+          // For staff/admin users - use the RPC function to avoid recursion
           const { data: randevular, error } = await supabase
             .rpc('get_appointments_by_dukkan', { p_dukkan_id: dukkanId });
             
           if (error) throw error;
           data = randevular || [];
         } else {
+          // For regular customers
           const { data: { user } } = await supabase.auth.getUser();
           if (!user) {
             throw new Error("Oturum açmış kullanıcı bulunamadı");
           }
 
+          // Use the RPC function to avoid recursion
           const { data: randevular, error } = await supabase
             .rpc('get_customer_appointments', { p_customer_id: user.id });
             
@@ -76,9 +81,10 @@ export function useAppointments(dukkanId?: number) {
         throw error;
       }
     },
-    enabled: true
+    enabled: true // Always enable the query
   });
   
+  // Process fetched appointments to add customer and personnel info
   const [appointments, setAppointments] = useState<Randevu[]>([]);
   
   useEffect(() => {
@@ -90,7 +96,9 @@ export function useAppointments(dukkanId?: number) {
       
       const enhancedAppointments = [...appointmentsRaw];
       
+      // Enhance with customer and personnel info in parallel
       await Promise.all(enhancedAppointments.map(async (appointment) => {
+        // Get personnel info if not already fetched
         if (appointment.personel_id && !appointment.personel) {
           try {
             const { data } = await supabase
@@ -107,6 +115,7 @@ export function useAppointments(dukkanId?: number) {
           }
         }
         
+        // Get customer info if not already fetched
         if (appointment.musteri_id && !appointment.musteri) {
           try {
             const { data } = await supabase
@@ -116,21 +125,7 @@ export function useAppointments(dukkanId?: number) {
               .maybeSingle();
               
             if (data) {
-              // Use Musteri type instead of Profile - don't assign directly to appointment.musteri
-              const customerData = data as Musteri;
-              
-              // Now create a properly typed object - the key fix for the type error
-              appointment.musteri = {
-                id: customerData.id.toString(), // Convert to string as Profile.id is string
-                first_name: customerData.first_name,
-                last_name: customerData.last_name || '',
-                role: 'customer', // Add the required 'role' property
-                created_at: customerData.created_at,
-                phone: customerData.phone,
-                // Add other required Profile properties with default values
-                gender: null,
-                birthdate: customerData.birthdate
-              } as Profile;
+              appointment.musteri = data as Musteri;
             }
           } catch (error) {
             console.error(`Error fetching customer for appointment ${appointment.id}:`, error);
@@ -144,6 +139,7 @@ export function useAppointments(dukkanId?: number) {
     enhanceAppointments();
   }, [appointmentsRaw]);
   
+  // Mark appointment as complete
   const { mutate: completeAppointment } = useMutation({
     mutationFn: async (appointmentId: number) => {
       return randevuServisi.guncelle(appointmentId, {
@@ -161,6 +157,7 @@ export function useAppointments(dukkanId?: number) {
     }
   });
   
+  // Cancel appointment
   const { mutate: cancelAppointment } = useMutation({
     mutationFn: async (appointmentId: number) => {
       return randevuServisi.guncelle(appointmentId, {
@@ -178,22 +175,26 @@ export function useAppointments(dukkanId?: number) {
     }
   });
   
+  // Handle complete button click
   const handleCompleteClick = (appointment: Randevu) => {
     setSelectedAppointment(appointment);
     setConfirmDialogOpen(true);
   };
   
+  // Handle cancel button click
   const handleCancelClick = (appointment: Randevu) => {
     setSelectedAppointment(appointment);
     setCancelDialogOpen(true);
   };
   
+  // Confirm completion
   const handleAppointmentComplete = () => {
     if (selectedAppointment) {
       completeAppointment(selectedAppointment.id);
     }
   };
   
+  // Confirm cancellation
   const handleAppointmentCancel = () => {
     if (selectedAppointment) {
       cancelAppointment(selectedAppointment.id);

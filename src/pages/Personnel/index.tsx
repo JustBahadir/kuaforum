@@ -44,7 +44,7 @@ export default function Personnel() {
               </div>
             </CardHeader>
             <CardContent>
-              <PersonnelHistoryTable personelId={undefined} />
+              <PersonnelHistoryTable />
             </CardContent>
           </Card>
         </TabsContent>

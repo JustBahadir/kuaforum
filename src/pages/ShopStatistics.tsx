@@ -51,8 +51,8 @@ export default function ShopStatistics() {
     if (islemler.length > 0 || randevular.length > 0) {
       setHasData(true);
       
-      // Toplam istatistikler - use actual operation amounts from islemler
-      const totalRevenue = islemler.reduce((sum, islem) => sum + (Number(islem.tutar) || 0), 0);
+      // Toplam istatistikler
+      const totalRevenue = islemler.reduce((sum, islem) => sum + (islem.tutar || 0), 0);
       const customerCount = [...new Set(randevular.map(r => r.customer_id))].length;
       const operationCount = islemler.length;
       const averageSpending = customerCount > 0 ? totalRevenue / customerCount : 0;
@@ -78,7 +78,7 @@ export default function ShopStatistics() {
           if (islem.created_at) {
             const date = new Date(islem.created_at);
             const dayIndex = date.getDay() === 0 ? 6 : date.getDay() - 1; // 0=Pazar -> 6, 1=Pazartesi -> 0
-            weeklyStats[dayIndex].ciro += Number(islem.tutar) || 0;
+            weeklyStats[dayIndex].ciro += islem.tutar || 0;
             weeklyStats[dayIndex].musteri += 1;
           }
         });
@@ -101,7 +101,7 @@ export default function ShopStatistics() {
             const date = new Date(islem.created_at);
             const weekOfMonth = Math.floor((date.getDate() - 1) / 7);
             if (weekOfMonth < 4) {
-              monthlyStats[weekOfMonth].ciro += Number(islem.tutar) || 0;
+              monthlyStats[weekOfMonth].ciro += islem.tutar || 0;
               monthlyStats[weekOfMonth].musteri += 1;
             }
           }
@@ -119,7 +119,7 @@ export default function ShopStatistics() {
           serviceStats[serviceName] = { count: 0, revenue: 0 };
         }
         serviceStats[serviceName].count += 1;
-        serviceStats[serviceName].revenue += Number(islem.tutar) || 0;
+        serviceStats[serviceName].revenue += islem.tutar || 0;
       });
       
       const servicePerformance = Object.keys(serviceStats).map(name => ({
