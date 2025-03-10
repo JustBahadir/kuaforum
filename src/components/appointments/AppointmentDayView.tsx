@@ -1,16 +1,13 @@
-
 import { useState } from "react";
 import { format, addDays, subDays, isSameDay, isYesterday, isToday, isTomorrow, parseISO } from "date-fns";
 import { tr } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronLeft, ChevronRight, CheckSquare, XSquare } from "lucide-react";
+import { ChevronLeft, ChevronRight, CheckSquare, XSquare, Eye } from "lucide-react";
 import { Randevu } from "@/lib/supabase/types";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge"; 
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { islemServisi } from "@/lib/supabase/services/islemServisi";
-import { useEffect } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/lib/supabase/client";
 
 interface AppointmentDayViewProps {
@@ -37,11 +34,11 @@ export function AppointmentDayView({
   onCancelClick
 }: AppointmentDayViewProps) {
   const [serviceNames, setServiceNames] = useState<Record<number, string>>({});
-  
-  // Get service names
+  const [selectedNote, setSelectedNote] = useState<string | null>(null);
+  const [noteDialogOpen, setNoteDialogOpen] = useState(false);
+
   useEffect(() => {
     const fetchServiceNames = async () => {
-      // Extract all service IDs from appointments
       const serviceIds = appointments
         .flatMap(appointment => 
           Array.isArray(appointment.islemler) ? appointment.islemler : [])
@@ -83,7 +80,6 @@ export function AppointmentDayView({
     onDateChange(new Date());
   };
 
-  // Get the appropriate day label
   const getDayLabel = (date: Date) => {
     if (isToday(date)) {
       return "Bugün";
@@ -95,7 +91,6 @@ export function AppointmentDayView({
     return "";
   };
 
-  // Filter appointments for the selected date
   const filteredAppointments = appointments.filter(appointment => {
     const appointmentDate = typeof appointment.tarih === 'string' 
       ? parseISO(appointment.tarih) 
@@ -103,7 +98,6 @@ export function AppointmentDayView({
     return isSameDay(appointmentDate, selectedDate);
   });
 
-  // Sort by time
   const sortedAppointments = [...filteredAppointments].sort((a, b) => {
     return a.saat.localeCompare(b.saat);
   });
@@ -158,7 +152,7 @@ export function AppointmentDayView({
                   appointment.durum === "iptal_edildi" ? "border-red-500" : 
                   "border-blue-500"
                 } p-4`}>
-                  <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4">
+                  <div className="flex-1 grid grid-cols-1 lg:grid-cols-5 gap-4">
                     <div>
                       <p className="text-sm text-muted-foreground">Saat</p>
                       <p className="font-medium">{appointment.saat.substring(0, 5)}</p>
@@ -174,18 +168,39 @@ export function AppointmentDayView({
                       )}
                     </div>
                     <div>
+                      <p className="text-sm text-muted-foreground">Personel</p>
+                      <p className="font-medium">
+                        {appointment.personel?.ad_soyad || "Atanmadı"}
+                      </p>
+                    </div>
+                    <div>
                       <p className="text-sm text-muted-foreground">Hizmetler</p>
                       <div className="flex flex-wrap gap-1 mt-1">
-                        {Array.isArray(appointment.islemler) && appointment.islemler.map((islemId, idx) => (
-                          <Badge key={`${islemId}-${idx}`} variant="outline" className="text-xs">
+                        {Array.isArray(appointment.islemler) && appointment.islemler.map((islemId) => (
+                          <Badge key={islemId} variant="outline" className="text-xs">
                             {serviceNames[islemId] || `İşlem ${islemId}`}
                           </Badge>
                         ))}
                       </div>
                     </div>
+                    <div className="flex items-center space-x-2">
+                      {appointment.notlar && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setSelectedNote(appointment.notlar || null);
+                            setNoteDialogOpen(true);
+                          }}
+                        >
+                          <Eye className="h-4 w-4 mr-1" />
+                          Notu Görüntüle
+                        </Button>
+                      )}
+                    </div>
                   </div>
                   
-                  <div className="mt-4 lg:mt-0 flex flex-col sm:flex-row gap-2">
+                  <div className="mt-4 lg:mt-0 lg:ml-4 flex flex-col sm:flex-row gap-2">
                     {appointment.durum === "onaylandi" && (
                       <>
                         <Button 
@@ -225,6 +240,17 @@ export function AppointmentDayView({
           ))}
         </div>
       )}
+
+      <Dialog open={noteDialogOpen} onOpenChange={setNoteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Randevu Notu</DialogTitle>
+          </DialogHeader>
+          <div className="mt-4">
+            <p className="text-sm">{selectedNote}</p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

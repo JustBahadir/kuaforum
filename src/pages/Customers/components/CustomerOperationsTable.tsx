@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { 
@@ -13,9 +12,10 @@ import { supabase } from "@/lib/supabase/client";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { OperationPhotoUpload } from "@/components/operations/OperationPhotoUpload";
 
 interface CustomerOperationsTableProps {
-  customerId: string;
+  customerId: number;
 }
 
 interface Operation {
@@ -26,6 +26,7 @@ interface Operation {
   amount: number;
   notes: string;
   points: number;
+  photos: string[];
 }
 
 export function CustomerOperationsTable({ customerId }: CustomerOperationsTableProps) {
@@ -35,8 +36,6 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
   const { data: operations = [], isLoading } = useQuery({
     queryKey: ['customerOperations', customerId],
     queryFn: async () => {
-      // In a real app, we would fetch operations specifically for this customer
-      // Here we'll simulate it with some mock data
       const mockOperations: Operation[] = [];
       
       for (let i = 0; i < 5; i++) {
@@ -47,7 +46,8 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
           personnel_name: [`Ahmet`, `Mehmet`, `Ayşe`, `Fatma`, `Ali`][i % 5],
           amount: Math.floor(Math.random() * 200) + 50,
           notes: `İşlem notu ${i + 1}`,
-          points: Math.floor(Math.random() * 10) + 1
+          points: Math.floor(Math.random() * 10) + 1,
+          photos: []
         });
       }
       
@@ -56,7 +56,6 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
     enabled: !!customerId
   });
 
-  // Calculate totals
   useEffect(() => {
     if (operations.length) {
       const points = operations.reduce((sum, op) => sum + op.points, 0);
@@ -73,6 +72,20 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
   if (operations.length === 0) {
     return <div className="text-center py-4">Bu müşteriye ait işlem bulunamadı.</div>;
   }
+
+  const handlePhotoUpdate = async (operationId: number, photos: string[]) => {
+    try {
+      const { error } = await supabase
+        .from('personel_islemleri')
+        .update({ photos })
+        .eq('id', operationId);
+
+      if (error) throw error;
+      toast.success("Fotoğraflar güncellendi");
+    } catch (error: any) {
+      toast.error(`Fotoğraflar güncellenirken hata oluştu: ${error.message}`);
+    }
+  };
 
   return (
     <div className="p-4 space-y-4">
@@ -119,6 +132,12 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
               <TableCell className="text-purple-600 font-semibold">{operation.points}</TableCell>
               <TableCell>{operation.amount.toFixed(2)} TL</TableCell>
               <TableCell className="max-w-xs truncate">{operation.notes}</TableCell>
+              <td className="p-4">
+                <OperationPhotoUpload
+                  existingPhotos={operation.photos || []}
+                  onPhotosUpdated={(photos) => handlePhotoUpdate(operation.id, photos)}
+                />
+              </td>
             </TableRow>
           ))}
         </TableBody>
