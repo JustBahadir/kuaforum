@@ -31,6 +31,8 @@ export default function Appointments() {
   const {
     appointments,
     isLoading,
+    isError,
+    error,
     selectedDate,
     setSelectedDate,
     currentPersonelId,
@@ -78,6 +80,8 @@ export default function Appointments() {
               selectedDate={selectedDate}
               appointments={appointments}
               isLoading={isLoading}
+              isError={isError}
+              error={error}
               currentPersonelId={currentPersonelId}
               onCompleteClick={handleCompleteClick}
               onCancelClick={handleCancelClick}
@@ -100,6 +104,8 @@ export default function Appointments() {
               selectedDate={selectedDate}
               appointments={appointments}
               isLoading={isLoading}
+              isError={isError}
+              error={error}
               currentPersonelId={currentPersonelId}
               onCompleteClick={handleCompleteClick}
               onCancelClick={handleCancelClick}

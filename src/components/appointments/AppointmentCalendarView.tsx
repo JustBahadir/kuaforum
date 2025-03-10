@@ -5,15 +5,18 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Randevu } from "@/lib/supabase/types";
-import { format, isSameDay } from "date-fns";
+import { format, isSameDay, parseISO } from "date-fns";
 import { tr } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CheckSquare, XSquare } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface AppointmentCalendarViewProps {
   selectedDate: Date;
   appointments: Randevu[];
   isLoading: boolean;
+  isError?: boolean;
+  error?: any;
   currentPersonelId?: number;
   onDateChange: (date: Date) => void;
   onCompleteClick: (appointment: Randevu) => void;
@@ -24,6 +27,8 @@ export function AppointmentCalendarView({
   selectedDate,
   appointments,
   isLoading,
+  isError,
+  error,
   currentPersonelId,
   onDateChange,
   onCompleteClick,
@@ -31,7 +36,11 @@ export function AppointmentCalendarView({
 }: AppointmentCalendarViewProps) {
   // Generate a map of dates with appointment counts
   const appointmentDates = appointments.reduce((acc, appointment) => {
-    const date = format(new Date(appointment.tarih), "yyyy-MM-dd");
+    // Handle both Date objects and ISO strings
+    const date = typeof appointment.tarih === 'string' 
+      ? format(parseISO(appointment.tarih), "yyyy-MM-dd")
+      : format(appointment.tarih, "yyyy-MM-dd");
+      
     if (!acc[date]) {
       acc[date] = 0;
     }
@@ -40,9 +49,12 @@ export function AppointmentCalendarView({
   }, {} as Record<string, number>);
   
   // Get appointments for the selected date
-  const dayAppointments = appointments.filter((appointment) => 
-    isSameDay(new Date(appointment.tarih), selectedDate)
-  ).sort((a, b) => a.saat.localeCompare(b.saat));
+  const dayAppointments = appointments.filter((appointment) => {
+    const appointmentDate = typeof appointment.tarih === 'string' 
+      ? parseISO(appointment.tarih) 
+      : new Date(appointment.tarih);
+    return isSameDay(appointmentDate, selectedDate);
+  }).sort((a, b) => a.saat.localeCompare(b.saat));
   
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -85,6 +97,12 @@ export function AppointmentCalendarView({
             <Skeleton className="h-16 w-full" />
             <Skeleton className="h-16 w-full" />
           </div>
+        ) : isError ? (
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>
+              Randevular yüklenirken bir hata oluştu: {error?.message || "Bilinmeyen hata"}
+            </AlertDescription>
+          </Alert>
         ) : dayAppointments.length === 0 ? (
           <div className="text-center py-8 bg-muted rounded-md">
             <p className="text-muted-foreground">Bu tarih için randevu bulunmamaktadır.</p>

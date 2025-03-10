@@ -131,24 +131,25 @@ export const randevuServisi = {
         p_customer_id: user.id
       });
       
-      // Use the updated RPC function with individual parameters
-      const { data, error } = await supabase.rpc(
-        'create_appointment',
-        { 
-          p_dukkan_id: randevu.dukkan_id,
-          p_musteri_id: randevu.musteri_id || null,
-          p_personel_id: randevu.personel_id,
-          p_tarih: randevu.tarih,
-          p_saat: randevu.saat,
-          p_durum: randevu.durum || "onaylandi",
-          p_notlar: randevu.notlar || "",
-          p_islemler: islemler,
-          p_customer_id: user.id
-        }
-      );
+      // Direct insert to avoid RPC errors
+      const { data, error } = await supabase
+        .from('randevular')
+        .insert({
+          dukkan_id: randevu.dukkan_id,
+          musteri_id: randevu.musteri_id || null,
+          personel_id: randevu.personel_id,
+          tarih: randevu.tarih,
+          saat: randevu.saat,
+          durum: randevu.durum || "onaylandi",
+          notlar: randevu.notlar || "",
+          islemler: islemler,
+          customer_id: user.id
+        })
+        .select('*')
+        .single();
       
       if (error) {
-        console.error("Randevu ekleme hatası (RPC):", error);
+        console.error("Randevu ekleme hatası:", error);
         throw new Error(`Randevu eklenirken bir hata oluştu: ${error.message || 'Bilinmeyen hata'}`);
       }
       

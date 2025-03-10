@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { format, addDays, subDays, isSameDay, isYesterday, isToday, isTomorrow } from "date-fns";
+import { format, addDays, subDays, isSameDay, isYesterday, isToday, isTomorrow, parseISO } from "date-fns";
 import { tr } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,11 +8,14 @@ import { ChevronLeft, ChevronRight, CheckSquare, XSquare } from "lucide-react";
 import { Randevu } from "@/lib/supabase/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge"; 
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface AppointmentDayViewProps {
   selectedDate: Date;
   appointments: Randevu[];
   isLoading: boolean;
+  isError?: boolean;
+  error?: any;
   currentPersonelId?: number;
   onDateChange: (date: Date) => void;
   onCompleteClick: (appointment: Randevu) => void;
@@ -23,6 +26,8 @@ export function AppointmentDayView({
   selectedDate,
   appointments,
   isLoading,
+  isError,
+  error,
   currentPersonelId,
   onDateChange,
   onCompleteClick,
@@ -53,9 +58,12 @@ export function AppointmentDayView({
   };
 
   // Filter appointments for the selected date
-  const filteredAppointments = appointments.filter(
-    (appointment) => isSameDay(new Date(appointment.tarih), selectedDate)
-  );
+  const filteredAppointments = appointments.filter(appointment => {
+    const appointmentDate = typeof appointment.tarih === 'string' 
+      ? parseISO(appointment.tarih) 
+      : new Date(appointment.tarih);
+    return isSameDay(appointmentDate, selectedDate);
+  });
 
   // Sort by time
   const sortedAppointments = [...filteredAppointments].sort((a, b) => {
@@ -92,6 +100,12 @@ export function AppointmentDayView({
           <Skeleton className="h-24 w-full" />
           <Skeleton className="h-24 w-full" />
         </div>
+      ) : isError ? (
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription>
+            Randevular yüklenirken bir hata oluştu: {error?.message || "Bilinmeyen hata"}
+          </AlertDescription>
+        </Alert>
       ) : sortedAppointments.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
           <p>Bu tarih için randevu bulunmamaktadır.</p>

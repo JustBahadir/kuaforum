@@ -40,24 +40,58 @@ export function useAppointments(dukkanId?: number) {
   const { 
     data: appointments = [], 
     isLoading,
-    refetch 
+    refetch,
+    isError,
+    error
   } = useQuery({
-    queryKey: ['appointments', dukkanId],
+    queryKey: ['appointments', dukkanId, selectedDate],
     queryFn: async () => {
       console.log("Randevuları getirme fonksiyonu çalıştırılıyor - Dükkan ID:", dukkanId);
       try {
-        const data = dukkanId
-          ? await randevuServisi.dukkanRandevulariniGetir(dukkanId)
-          : await randevuServisi.kendiRandevulariniGetir();
+        let data: Randevu[] = [];
+        
+        if (dukkanId) {
+          // For staff/admin users
+          const { data: randevular, error } = await supabase
+            .from('randevular')
+            .select(`
+              *,
+              musteri:musteriler(*),
+              personel:personel(*)
+            `)
+            .eq('dukkan_id', dukkanId);
+            
+          if (error) throw error;
+          data = randevular || [];
+        } else {
+          // For regular customers
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) {
+            throw new Error("Oturum açmış kullanıcı bulunamadı");
+          }
+
+          const { data: randevular, error } = await supabase
+            .from('randevular')
+            .select(`
+              *,
+              musteri:musteriler(*),
+              personel:personel(*)
+            `)
+            .eq('customer_id', user.id);
+            
+          if (error) throw error;
+          data = randevular || [];
+        }
+        
         console.log("Randevular başarıyla getirildi:", data);
         return data;
       } catch (error) {
         console.error("Randevuları getirme hatası:", error);
         toast.error("Randevular yüklenirken bir hata oluştu");
-        return [];
+        throw error;
       }
     },
-    enabled: dukkanId !== undefined
+    enabled: true // Always enable the query
   });
   
   // Mark appointment as complete
@@ -125,6 +159,8 @@ export function useAppointments(dukkanId?: number) {
   return {
     appointments,
     isLoading,
+    isError,
+    error,
     selectedDate,
     setSelectedDate,
     selectedAppointment,
