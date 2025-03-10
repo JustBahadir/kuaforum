@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Personel, personelServisi, profilServisi } from "@/lib/supabase";
@@ -31,23 +30,27 @@ interface PersonnelEditDialogProps {
 
 // IBAN formatter function
 const formatIBAN = (value: string) => {
-  // Strip all non-alphanumeric characters
-  const cleaned = value.replace(/[^A-Za-z0-9]/g, '');
+  // Ensure it starts with TR
+  let cleaned = value.replace(/[^A-Z0-9]/g, '');
   
-  // Check if it starts with TR, if not add it
-  const withTR = cleaned.startsWith('TR') ? cleaned : `TR${cleaned.substring(0, 24)}`;
+  // If it doesn't start with TR, add it
+  if (!cleaned.startsWith('TR')) {
+    cleaned = 'TR' + cleaned.replace(/\D/g, '');
+  }
+  
+  // Limit to 26 characters (TR + 24 digits)
+  cleaned = cleaned.substring(0, 26);
   
   // Format in groups of 4
   let formatted = '';
-  for (let i = 0; i < withTR.length; i++) {
+  for (let i = 0; i < cleaned.length; i++) {
     if (i > 0 && i % 4 === 0) {
       formatted += ' ';
     }
-    formatted += withTR[i];
+    formatted += cleaned[i];
   }
   
-  // Limit to 26 characters (TR + 24 digits) plus spaces
-  return formatted.substring(0, 36);
+  return formatted;
 };
 
 export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComplete }: PersonnelEditDialogProps) {
@@ -81,7 +84,9 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComp
 
   // Handle IBAN changes
   const handleIBANChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formattedValue = formatIBAN(e.target.value);
+    // Only allow TR and digits
+    const rawValue = e.target.value.replace(/[^0-9TR]/gi, '');
+    const formattedValue = formatIBAN(rawValue);
     setFormattedIBAN(formattedValue);
     
     // Update the personelDuzenle with the unformatted value for saving
@@ -113,13 +118,12 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComp
     if (personelDuzenle) {
       setIsSaving(true);
       
-      // Only send the fields that an admin should be able to edit
+      // Only send the fields that should be editable
       const { id } = personelDuzenle;
       const guncellenecekVeriler: Partial<Personel> = {
         maas: personelDuzenle.maas,
         calisma_sistemi: personelDuzenle.calisma_sistemi,
         prim_yuzdesi: personelDuzenle.prim_yuzdesi,
-        iban: personelDuzenle.iban?.replace(/\s/g, '')
       };
       
       // If the user is owner or admin, they can edit more fields
@@ -129,7 +133,8 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComp
           telefon: personelDuzenle.telefon,
           eposta: personelDuzenle.eposta,
           adres: personelDuzenle.adres,
-          personel_no: personelDuzenle.personel_no
+          personel_no: personelDuzenle.personel_no,
+          iban: personelDuzenle.iban?.replace(/\s/g, '')
         });
       }
       
@@ -300,6 +305,8 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComp
                 value={formattedIBAN}
                 onChange={handleIBANChange}
                 placeholder="TR00 0000 0000 0000 0000 0000 00"
+                disabled={!isAdmin}
+                className={!isAdmin ? "bg-gray-100" : ""}
                 maxLength={36}
               />
               <p className="text-xs text-gray-500">

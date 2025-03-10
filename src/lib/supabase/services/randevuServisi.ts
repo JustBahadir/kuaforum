@@ -1,6 +1,7 @@
 
 import { supabase } from '../client';
 import { Randevu } from '../types';
+import { toast } from 'sonner';
 
 export const randevuServisi = {
   async hepsiniGetir() {
@@ -109,13 +110,13 @@ export const randevuServisi = {
     }
 
     try {
-      // Auth user ID'sini direk ekle
+      // Get the current user directly from Supabase Auth
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         throw new Error("Oturum açmış kullanıcı bulunamadı");
       }
       
-      // Doğrudan insert kullan, RPC kullanma
+      // Prepare the insert data
       const insertData = {
         dukkan_id: randevu.dukkan_id,
         musteri_id: randevu.musteri_id || null,
@@ -125,17 +126,16 @@ export const randevuServisi = {
         durum: randevu.durum || "onaylandi",
         notlar: randevu.notlar || "",
         islemler: islemler,
-        customer_id: user.id // Doğrudan auth user ID'sini kullan
+        customer_id: user.id // Use auth.uid() directly
       };
       
       console.log("Eklenen randevu verisi:", insertData);
 
-      // Randevuyu ekle - doğrudan insert ile
+      // Direct insert without using RPC
       const { data, error: insertError } = await supabase
         .from('randevular')
         .insert(insertData)
-        .select('*')
-        .single();
+        .select();
 
       if (insertError) {
         console.error("Randevu ekleme hatası:", insertError);
@@ -143,7 +143,8 @@ export const randevuServisi = {
       }
       
       console.log("Randevu başarıyla oluşturuldu:", data);
-      return data;
+      toast.success("Randevu başarıyla oluşturuldu");
+      return data[0];
     } catch (error: any) {
       console.error("Randevu oluşturma hatası:", error);
       throw new Error(error?.message || "Randevu oluşturulurken bir hata oluştu");

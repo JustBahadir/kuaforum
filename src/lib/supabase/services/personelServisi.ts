@@ -1,6 +1,7 @@
-
 import { supabase } from '../client';
 import { Personel } from '../types';
+import { profilServisi } from './profilServisi';
+import { toast } from 'react-toastify';
 
 export const personelServisi = {
   async hepsiniGetir() {
@@ -26,8 +27,9 @@ export const personelServisi = {
       }) || [];
 
       // Now try to get IBAN data from profiles for each personnel with auth_id
-      for (const personel of transformedData) {
-        if (personel.auth_id) {
+      const fetchPromises = transformedData
+        .filter(personel => personel.auth_id)
+        .map(async personel => {
           try {
             const { data: profileData } = await supabase
               .from('profiles')
@@ -37,13 +39,21 @@ export const personelServisi = {
               
             if (profileData?.iban) {
               personel.iban = profileData.iban;
+              
+              // Update personel record if we got an IBAN from profile
+              await supabase
+                .from('personel')
+                .update({ iban: profileData.iban })
+                .eq('id', personel.id);
             }
           } catch (profileError) {
             // Just log the error but continue, this is non-critical
             console.warn("Personel için profil IBAN bilgisi alınamadı:", profileError);
           }
-        }
-      }
+        });
+        
+      // Wait for all profile data fetches to complete
+      await Promise.allSettled(fetchPromises);
 
       return transformedData;
     } catch (error) {
@@ -84,6 +94,14 @@ export const personelServisi = {
             
           if (profileData?.iban) {
             iban = profileData.iban;
+            
+            // Update personel record if we got an IBAN from profile
+            if (iban !== data.iban) {
+              await supabase
+                .from('personel')
+                .update({ iban })
+                .eq('id', id);
+            }
           }
         } catch (profileError) {
           // Non-critical, just log the error
@@ -196,6 +214,8 @@ export const personelServisi = {
           if (profileError) {
             console.warn("Profil IBAN güncellemesi başarısız:", profileError);
             // Continue anyway, personnel record is updated
+          } else {
+            console.log("Profil IBAN başarıyla güncellendi");
           }
         } catch (profileUpdateError) {
           console.warn("Profil IBAN güncellemesi hatası:", profileUpdateError);
@@ -203,9 +223,11 @@ export const personelServisi = {
         }
       }
       
+      toast.success("Personel bilgileri başarıyla güncellendi");
       return data;
     } catch (error) {
       console.error("Personel güncelleme hatası:", error);
+      toast.error("Personel güncellenirken bir hata oluştu: " + (error instanceof Error ? error.message : "Bilinmeyen hata"));
       throw error;
     }
   },
