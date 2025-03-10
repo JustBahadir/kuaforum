@@ -109,10 +109,13 @@ export const randevuServisi = {
     }
 
     try {
-      // Auth user ID'sini direk ekle - profiles tablosuna erişimden kaçın
+      // Auth user ID'sini direk ekle
       const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error("Oturum açmış kullanıcı bulunamadı");
+      }
       
-      // RLS politikasından kaçınmak için müşteri_id ve customer_id'yi ayrı ayrı ele al
+      // Doğrudan insert kullan, RPC kullanma
       const insertData = {
         dukkan_id: randevu.dukkan_id,
         musteri_id: randevu.musteri_id || null,
@@ -122,49 +125,25 @@ export const randevuServisi = {
         durum: randevu.durum || "onaylandi",
         notlar: randevu.notlar || "",
         islemler: islemler,
-        customer_id: user?.id // Doğrudan auth user ID'sini kullan
+        customer_id: user.id // Doğrudan auth user ID'sini kullan
       };
       
       console.log("Eklenen randevu verisi:", insertData);
 
-      // Randevuyu ekle - RPC kullanarak RLS bypass et
+      // Randevuyu ekle - doğrudan insert ile
       const { data, error: insertError } = await supabase
-        .rpc('create_appointment', {
-          p_dukkan_id: insertData.dukkan_id,
-          p_musteri_id: insertData.musteri_id,
-          p_personel_id: insertData.personel_id,
-          p_tarih: insertData.tarih,
-          p_saat: insertData.saat,
-          p_durum: insertData.durum,
-          p_notlar: insertData.notlar,
-          p_islemler: JSON.stringify(insertData.islemler),
-          p_customer_id: insertData.customer_id
-        });
+        .from('randevular')
+        .insert(insertData)
+        .select('*')
+        .single();
 
       if (insertError) {
         console.error("Randevu ekleme hatası:", insertError);
         throw new Error(`Randevu eklenirken bir hata oluştu: ${insertError.message || 'Bilinmeyen hata'}`);
       }
       
-      if (data) {
-        console.log("Randevu başarıyla oluşturuldu:", data);
-        return data;
-      }
-      
-      // Fallback yanıt
-      return { 
-        id: Date.now(),
-        dukkan_id: randevu.dukkan_id,
-        musteri_id: randevu.musteri_id,
-        personel_id: randevu.personel_id,
-        tarih: randevu.tarih,
-        saat: randevu.saat,
-        durum: randevu.durum || "onaylandi",
-        islemler: islemler,
-        notlar: randevu.notlar,
-        created_at: new Date().toISOString(),
-        customer_id: user?.id
-      };
+      console.log("Randevu başarıyla oluşturuldu:", data);
+      return data;
     } catch (error: any) {
       console.error("Randevu oluşturma hatası:", error);
       throw new Error(error?.message || "Randevu oluşturulurken bir hata oluştu");

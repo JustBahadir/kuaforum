@@ -2,7 +2,17 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.32.0";
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
 serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
   const supabaseClient = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
@@ -14,7 +24,7 @@ serve(async (req) => {
     if (!authHeader) {
       return new Response(
         JSON.stringify({ error: "No authorization header" }),
-        { headers: { "Content-Type": "application/json" }, status: 401 }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
       );
     }
 
@@ -23,8 +33,8 @@ serve(async (req) => {
     
     if (userError || !user) {
       return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { headers: { "Content-Type": "application/json" }, status: 401 }
+        JSON.stringify({ error: "Unauthorized", details: userError?.message }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
       );
     }
 
@@ -38,18 +48,22 @@ serve(async (req) => {
     if (profileError) {
       return new Response(
         JSON.stringify({ error: profileError.message }),
-        { headers: { "Content-Type": "application/json" }, status: 500 }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
       );
     }
 
     return new Response(
-      JSON.stringify({ role: profile.role }),
-      { headers: { "Content-Type": "application/json" }, status: 200 }
+      JSON.stringify({ 
+        role: profile.role,
+        userId: user.id 
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
   } catch (error) {
+    console.error("Error in get_current_user_role function:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      { headers: { "Content-Type": "application/json" }, status: 500 }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
     );
   }
 });

@@ -86,6 +86,9 @@ export function StaffAppointmentForm({ onAppointmentCreated, initialDate }: Staf
     try {
       setIsFetchingTimes(true);
       
+      // Determine if selected date is today
+      const isToday = format(new Date(), 'yyyy-MM-dd') === date;
+      
       // Get the day of the week (0 for Sunday, 1 for Monday, etc.)
       const dayOfWeek = new Date(date).getDay();
       // Convert to our internal format (pazartesi, sali, etc.)
@@ -106,27 +109,36 @@ export function StaffAppointmentForm({ onAppointmentCreated, initialDate }: Staf
       }
       
       // Generate time slots from opening to closing with 30-minute intervals
-      const slots = generateTimeSlots(dayHours.acilis, dayHours.kapanis);
+      const slots = generateTimeSlots(dayHours.acilis, dayHours.kapanis, isToday);
       console.log("Generated time slots:", slots);
       setAvailableTimes(slots);
     } catch (error) {
       console.error("Error fetching available times:", error);
       
       // Fallback - generate default time slots for the selected day
-      const defaultSlots = generateTimeSlots('09:00', '19:00');
+      const isToday = format(new Date(), 'yyyy-MM-dd') === date;
+      const defaultSlots = generateTimeSlots('09:00', '19:00', isToday);
       setAvailableTimes(defaultSlots);
     } finally {
       setIsFetchingTimes(false);
     }
   };
   
-  const generateTimeSlots = (openingTime: string, closingTime: string) => {
+  const generateTimeSlots = (openingTime: string, closingTime: string, isToday: boolean) => {
     const slots = [];
     const [openHour, openMinute] = openingTime.split(':').map(Number);
     const [closeHour, closeMinute] = closingTime.split(':').map(Number);
     
     let currentMinutes = openHour * 60 + openMinute;
     const closingMinutes = closeHour * 60 + closeMinute;
+    
+    // If today, start from current time (rounded to next 30 min)
+    if (isToday) {
+      const now = new Date();
+      const currentTimeMinutes = now.getHours() * 60 + now.getMinutes();
+      // No need to round to next slot for staff - they can book any time
+      currentMinutes = Math.max(currentMinutes, currentMinutes);
+    }
     
     // Generate slots until 30 minutes before closing time
     while (currentMinutes < closingMinutes - 30) {
