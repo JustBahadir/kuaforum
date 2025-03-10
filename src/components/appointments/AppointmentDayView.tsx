@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format, addDays, subDays, isSameDay, isYesterday, isToday, isTomorrow, parseISO } from "date-fns";
 import { tr } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/lib/supabase/client";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface AppointmentDayViewProps {
   selectedDate: Date;

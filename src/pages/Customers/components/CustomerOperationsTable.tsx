@@ -13,6 +13,7 @@ import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { OperationPhotoUpload } from "@/components/operations/OperationPhotoUpload";
+import { toast } from "sonner";
 
 interface CustomerOperationsTableProps {
   customerId: number;
