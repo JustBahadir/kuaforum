@@ -76,7 +76,7 @@ export function AppointmentDayView({
             {dayLabel && <span className="ml-2 text-muted-foreground">({dayLabel})</span>}
           </h2>
           <Button variant="outline" size="sm" onClick={handleToday}>
-            Bugün
+            Bugüne Git
           </Button>
         </div>
         

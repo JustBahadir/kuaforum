@@ -36,12 +36,8 @@ export function PersonnelList() {
   const { data: personeller = [], isLoading, error } = useQuery({
     queryKey: ['personel'],
     queryFn: () => personelServisi.hepsiniGetir(),
-    retry: 1,
-    meta: {
-      onError: (error: any) => {
-        console.error("Personel verisi alınırken hata:", error);
-      }
-    }
+    retry: 3,
+    refetchOnWindowFocus: false
   });
   
   const handleOpenDetailsDialog = (personelId: number) => {
@@ -141,7 +137,6 @@ export function PersonnelList() {
                       </Avatar>
                       <div>
                         <h3 className="text-lg font-medium">{personel.ad_soyad}</h3>
-                        {/* Personnel numbers completely hidden, not even for admin users */}
                       </div>
                     </div>
                     <div className="mt-4 space-y-2">
@@ -156,19 +151,11 @@ export function PersonnelList() {
                             <span className="truncate max-w-[150px]">{personel.eposta}</span>
                           </div>
                           <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">Prim:</span>
-                            <span>%{personel.prim_yuzdesi}</span>
-                          </div>
-                          <div className="flex justify-between text-sm">
                             <span className="text-muted-foreground">Çalışma:</span>
                             <span>{personel.calisma_sistemi === 'haftalik' ? 'Haftalık' : 'Aylık'}</span>
                           </div>
                         </>
                       )}
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Dükkan:</span>
-                        <span>{personel.dukkan?.ad || 'Atanmamış'}</span>
-                      </div>
                     </div>
                   </div>
                   <div className="flex border-t divide-x">

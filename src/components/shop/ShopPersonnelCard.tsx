@@ -21,7 +21,7 @@ export function ShopPersonnelCard({ personelListesi, userRole }: ShopPersonnelCa
             onClick={() => window.location.href = "/personnel"}
           >
             <PlusCircle className="h-4 w-4 mr-2" />
-            Personel Ekle
+            Personel Yönetimi
           </Button>
         )}
       </CardHeader>

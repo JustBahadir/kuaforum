@@ -41,13 +41,15 @@ export function PersonnelDetailsDialog({
   const { data: personel, isLoading, error } = useQuery({
     queryKey: ["personel", personelId],
     queryFn: () => personelId > 0 ? personelServisi.getirById(personelId) : null,
-    enabled: !!personelId && open && personelId > 0
+    enabled: !!personelId && open && personelId > 0,
+    retry: 3,
+    refetchOnWindowFocus: false
   });
 
   const { data: islemler = [], isLoading: islemleriYukluyor } = useQuery({
     queryKey: ["personel-islemleri", personelId],
     queryFn: () => personelIslemleriServisi.personelIslemleriGetir(personelId),
-    enabled: !!personelId && open && personelId > 0
+    enabled: !!personelId && open && personelId > 0 && isAdmin
   });
 
   const copyToClipboard = (text: string) => {
@@ -61,6 +63,7 @@ export function PersonnelDetailsDialog({
     queryClient.invalidateQueries({ queryKey: ["personel", personelId] });
   };
 
+  // Return improved loading state
   if (isLoading) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
