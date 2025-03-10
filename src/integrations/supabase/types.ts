@@ -627,9 +627,36 @@ export type Database = {
           tarih: string
         }[]
       }
+      get_customer_name_by_id: {
+        Args: {
+          p_musteri_id: number
+        }
+        Returns: string
+      }
       get_user_role: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      insert_appointment: {
+        Args: {
+          p_dukkan_id: number
+          p_musteri_id: number
+          p_personel_id: number
+          p_tarih: string
+          p_saat: string
+          p_durum: string
+          p_islemler: Json
+          p_notlar: string
+          p_customer_id: string
+        }
+        Returns: Json
+      }
+      update_appointment_status: {
+        Args: {
+          appointment_id: number
+          new_status: string
+        }
+        Returns: Json
       }
     }
     Enums: {

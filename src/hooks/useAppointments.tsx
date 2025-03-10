@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { randevuServisi } from "@/lib/supabase/services/randevuServisi";
-import { Randevu } from "@/lib/supabase/types";
+import { Randevu, Personel, Musteri } from "@/lib/supabase/types";
 import { toast } from "sonner";
 import { personelServisi } from "@/lib/supabase";
 import { supabase } from '@/lib/supabase/client';
@@ -103,12 +103,12 @@ export function useAppointments(dukkanId?: number) {
           try {
             const { data } = await supabase
               .from('personel')
-              .select('ad_soyad')
+              .select('id, ad_soyad, telefon, eposta, adres, personel_no, maas, calisma_sistemi, prim_yuzdesi')
               .eq('id', appointment.personel_id)
               .maybeSingle();
               
             if (data) {
-              appointment.personel = data;
+              appointment.personel = data as Personel;
             }
           } catch (error) {
             console.error(`Error fetching personnel for appointment ${appointment.id}:`, error);
@@ -120,12 +120,12 @@ export function useAppointments(dukkanId?: number) {
           try {
             const { data } = await supabase
               .from('musteriler')
-              .select('first_name, last_name')
+              .select('id, first_name, last_name, phone, birthdate, created_at, dukkan_id')
               .eq('id', appointment.musteri_id)
               .maybeSingle();
               
             if (data) {
-              appointment.musteri = data;
+              appointment.musteri = data as Musteri;
             }
           } catch (error) {
             console.error(`Error fetching customer for appointment ${appointment.id}:`, error);
