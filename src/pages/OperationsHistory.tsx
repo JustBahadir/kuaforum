@@ -7,7 +7,9 @@ import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { personelIslemleriServisi, islemServisi, personelServisi } from "@/lib/supabase";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { PersonelIslemi } from "@/lib/supabase/types";
-import { supabase } from "@/lib/supabase/client"; // Import supabase client
+import { supabase } from "@/lib/supabase/client";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Image } from "lucide-react";
 
 export default function OperationsHistory() {
   const { userRole } = useCustomerAuth();
@@ -15,6 +17,8 @@ export default function OperationsHistory() {
     from: new Date(new Date().setDate(new Date().getDate() - 30)), // Default to last 30 days
     to: new Date()
   });
+  const [selectedOperation, setSelectedOperation] = useState<PersonelIslemi | null>(null);
+  const [photosDialogOpen, setPhotosDialogOpen] = useState(false);
 
   // Get current user
   const { data: currentUser } = useQuery({
@@ -69,6 +73,11 @@ export default function OperationsHistory() {
     enabled: userRole === 'admin' || !!personel
   });
 
+  const handleViewPhotos = (operation: PersonelIslemi) => {
+    setSelectedOperation(operation);
+    setPhotosDialogOpen(true);
+  };
+
   return (
     <StaffLayout>
       <div className="container mx-auto">
@@ -100,6 +109,7 @@ export default function OperationsHistory() {
                       </>
                     )}
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Puan</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fotoğraflar</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -131,11 +141,24 @@ export default function OperationsHistory() {
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {islem.puan}
                         </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {islem.photos && islem.photos.length > 0 ? (
+                            <button
+                              onClick={() => handleViewPhotos(islem)}
+                              className="text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                            >
+                              <Image className="h-4 w-4" />
+                              {islem.photos.length} Fotoğraf
+                            </button>
+                          ) : (
+                            <span className="text-gray-400">Fotoğraf yok</span>
+                          )}
+                        </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={userRole === 'admin' ? 7 : 5} className="px-6 py-4 text-center text-sm text-gray-500">
+                      <td colSpan={userRole === 'admin' ? 8 : 6} className="px-6 py-4 text-center text-sm text-gray-500">
                         Seçilen tarih aralığında işlem bulunamadı
                       </td>
                     </tr>
@@ -146,6 +169,29 @@ export default function OperationsHistory() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Photos Dialog */}
+      <Dialog open={photosDialogOpen} onOpenChange={setPhotosDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>İşlem Fotoğrafları</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-4 mt-4">
+            {selectedOperation?.photos?.map((photo, index) => (
+              <a href={photo} target="_blank" rel="noopener noreferrer" key={index} className="block">
+                <img 
+                  src={photo} 
+                  alt={`İşlem fotoğrafı ${index + 1}`} 
+                  className="rounded-md object-cover w-full h-48"
+                />
+              </a>
+            ))}
+          </div>
+          {(!selectedOperation?.photos || selectedOperation.photos.length === 0) && (
+            <p className="text-center text-gray-500 py-8">Bu işleme ait fotoğraf bulunmamaktadır</p>
+          )}
+        </DialogContent>
+      </Dialog>
     </StaffLayout>
   );
 }

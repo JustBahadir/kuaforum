@@ -54,7 +54,8 @@ export const personelIslemleriServisi = {
   async ekle(islemi: Omit<PersonelIslemi, 'id' | 'created_at'> & { 
     musteri_id?: number; 
     tarih?: string; 
-    notlar?: string 
+    notlar?: string;
+    photos?: string[];
   }) {
     const { data, error } = await supabase
       .from('personel_islemleri')
@@ -96,5 +97,18 @@ export const personelIslemleriServisi = {
 
     if (error) throw error;
     return true;
+  },
+
+  // Update operation photos
+  async updatePhotos(id: number, photos: string[]) {
+    const { data, error } = await supabase
+      .from('personel_islemleri')
+      .update({ photos })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
   }
 };

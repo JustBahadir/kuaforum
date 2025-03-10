@@ -42,17 +42,16 @@ function App() {
     <ThemeProvider defaultTheme="light">
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
-          <RouteProtection>
-            <Routes>
-              {/* Landing Page */}
-              <Route path="/" element={<HomePage />} />
-              
-              {/* Auth Routes */}
-              <Route path="/login" element={<CustomerAuth />} />
-              <Route path="/staff-login" element={<StaffLogin />} />
-              <Route path="/admin" element={<StaffLogin />} />
-              <Route path="/admin/register" element={<StaffRegister />} />
-              
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/" element={<HomePage />} />
+            <Route path="/login" element={<CustomerAuth />} />
+            <Route path="/staff-login" element={<StaffLogin />} />
+            <Route path="/admin" element={<StaffLogin />} />
+            <Route path="/admin/register" element={<StaffRegister />} />
+            
+            {/* Protected Routes */}
+            <Route element={<RouteProtection />}>
               {/* Customer Routes */}
               <Route path="/customer-dashboard/*" element={<CustomerDashboard />} />
               <Route path="/customer-profile" element={<CustomerProfile />} />
@@ -73,13 +72,13 @@ function App() {
               <Route path="/admin/operations" element={<StaffOperations />} />
               <Route path="/admin/customers/new" element={<Customers />} />
               
-              {/* Public Routes */}
+              {/* Public Routes that need authentication */}
               <Route path="/services" element={<CustomerOperations />} />
               <Route path="/appointments" element={<Appointments />} />
-              
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </RouteProtection>
+            </Route>
+            
+            <Route path="*" element={<NotFound />} />
+          </Routes>
           <ReactQueryDevtools />
           <Toaster />
         </BrowserRouter>

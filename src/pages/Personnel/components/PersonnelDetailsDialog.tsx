@@ -14,7 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { BarChart, Calendar, ClipboardList, Edit, Copy } from "lucide-react";
+import { BarChart, Calendar, ClipboardList, Edit, Copy, Image } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { formatPhoneNumber } from "@/utils/phoneFormatter";
 import { toast } from "sonner";
@@ -34,6 +34,8 @@ export function PersonnelDetailsDialog({
 }: PersonnelDetailsDialogProps) {
   const [activeTab, setActiveTab] = useState("bilgiler");
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [photoDialogOpen, setPhotoDialogOpen] = useState(false);
+  const [selectedOperation, setSelectedOperation] = useState<any>(null);
   const queryClient = useQueryClient();
   const { userRole } = useCustomerAuth();
   const isAdmin = userRole === 'admin';
@@ -72,6 +74,11 @@ export function PersonnelDetailsDialog({
   const handleEditComplete = () => {
     setEditDialogOpen(false);
     queryClient.invalidateQueries({ queryKey: ["personel", personelId] });
+  };
+
+  const handleViewPhotos = (operation: any) => {
+    setSelectedOperation(operation);
+    setPhotoDialogOpen(true);
   };
 
   console.log("PersonnelDetailsDialog state:", { isLoading, error, personel });
@@ -270,6 +277,7 @@ export function PersonnelDetailsDialog({
                                   <th className="px-3 py-2 text-left">Tutar</th>
                                   <th className="px-3 py-2 text-left">Prim</th>
                                   <th className="px-3 py-2 text-left">Puan</th>
+                                  <th className="px-3 py-2 text-left">Fotoğraflar</th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -282,6 +290,21 @@ export function PersonnelDetailsDialog({
                                     <td className="px-3 py-2">{formatCurrency(islem.tutar)}</td>
                                     <td className="px-3 py-2">{formatCurrency(islem.odenen)}</td>
                                     <td className="px-3 py-2">{islem.puan}</td>
+                                    <td className="px-3 py-2">
+                                      {islem.photos && islem.photos.length > 0 ? (
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => handleViewPhotos(islem)}
+                                          className="flex items-center gap-1 text-blue-600 hover:text-blue-800"
+                                        >
+                                          <Image className="h-4 w-4" />
+                                          {islem.photos.length} Fotoğraf
+                                        </Button>
+                                      ) : (
+                                        <span className="text-gray-400">Fotoğraf yok</span>
+                                      )}
+                                    </td>
                                   </tr>
                                 ))}
                               </tbody>
@@ -338,6 +361,29 @@ export function PersonnelDetailsDialog({
           <DialogFooter>
             <Button onClick={() => onOpenChange(false)}>Kapat</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Photos Dialog */}
+      <Dialog open={photoDialogOpen} onOpenChange={setPhotoDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>İşlem Fotoğrafları</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-4 mt-4">
+            {selectedOperation?.photos?.map((photo: string, index: number) => (
+              <a href={photo} target="_blank" rel="noopener noreferrer" key={index} className="block">
+                <img 
+                  src={photo} 
+                  alt={`İşlem fotoğrafı ${index + 1}`} 
+                  className="rounded-md object-cover w-full h-48"
+                />
+              </a>
+            ))}
+          </div>
+          {(!selectedOperation?.photos || selectedOperation.photos.length === 0) && (
+            <p className="text-center text-gray-500 py-8">Bu işleme ait fotoğraf bulunmamaktadır</p>
+          )}
         </DialogContent>
       </Dialog>
 
