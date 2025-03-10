@@ -36,7 +36,7 @@ export function useAppointments(dukkanId?: number) {
     fetchCurrentPersonnel();
   }, []);
   
-  // Fetch appointments
+  // Fetch appointments using the security definer functions
   const { 
     data: appointments = [], 
     isLoading,
@@ -51,17 +51,45 @@ export function useAppointments(dukkanId?: number) {
         let data: Randevu[] = [];
         
         if (dukkanId) {
-          // For staff/admin users
+          // For staff/admin users - use the RPC function to avoid recursion
           const { data: randevular, error } = await supabase
-            .from('randevular')
-            .select(`
-              *,
-              musteri:musteriler(*),
-              personel:personel(*)
-            `)
-            .eq('dukkan_id', dukkanId);
+            .rpc('get_appointments_by_dukkan', { p_dukkan_id: dukkanId });
             
           if (error) throw error;
+          
+          // Fetch customer and staff details separately to avoid recursion
+          if (randevular && randevular.length > 0) {
+            for (let i = 0; i < randevular.length; i++) {
+              const randevu = randevular[i];
+              
+              // Get customer details if customer_id exists
+              if (randevu.customer_id) {
+                const { data: musteriData } = await supabase
+                  .from('profiles')
+                  .select('first_name, last_name')
+                  .eq('id', randevu.customer_id)
+                  .maybeSingle();
+                  
+                if (musteriData) {
+                  randevu.musteri = musteriData;
+                }
+              }
+              
+              // Get personnel details if personel_id exists
+              if (randevu.personel_id) {
+                const { data: personelData } = await supabase
+                  .from('personel')
+                  .select('ad_soyad')
+                  .eq('id', randevu.personel_id)
+                  .maybeSingle();
+                  
+                if (personelData) {
+                  randevu.personel = personelData;
+                }
+              }
+            }
+          }
+          
           data = randevular || [];
         } else {
           // For regular customers
@@ -70,16 +98,32 @@ export function useAppointments(dukkanId?: number) {
             throw new Error("Oturum açmış kullanıcı bulunamadı");
           }
 
+          // Use the RPC function to avoid recursion
           const { data: randevular, error } = await supabase
-            .from('randevular')
-            .select(`
-              *,
-              musteri:musteriler(*),
-              personel:personel(*)
-            `)
-            .eq('customer_id', user.id);
+            .rpc('get_customer_appointments', { p_customer_id: user.id });
             
           if (error) throw error;
+          
+          // Fetch personnel details separately to avoid recursion
+          if (randevular && randevular.length > 0) {
+            for (let i = 0; i < randevular.length; i++) {
+              const randevu = randevular[i];
+              
+              // Get personnel details if personel_id exists
+              if (randevu.personel_id) {
+                const { data: personelData } = await supabase
+                  .from('personel')
+                  .select('ad_soyad')
+                  .eq('id', randevu.personel_id)
+                  .maybeSingle();
+                  
+                if (personelData) {
+                  randevu.personel = personelData;
+                }
+              }
+            }
+          }
+          
           data = randevular || [];
         }
         
