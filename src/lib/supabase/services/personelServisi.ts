@@ -5,24 +5,45 @@ import { Personel } from '../types';
 export const personelServisi = {
   async hepsiniGetir() {
     try {
+      console.log("Personel listesi getiriliyor...");
+      
+      // Get all personnel without trying to join with profiles
       const { data, error } = await supabase
         .from('personel')
-        .select('*, profiles(iban)');
+        .select('*');
 
       if (error) {
         console.error("Personel listesi alınırken hata:", error);
         throw error;
       }
 
-      // Transform data to include IBAN from profiles if available
+      // Transform data to get a clean response
       const transformedData = data?.map(personel => {
-        const profileIban = personel.profiles?.iban || null;
         return {
           ...personel,
-          iban: personel.iban || profileIban,
-          profiles: undefined // Remove nested profiles object
+          iban: personel.iban || null
         };
       }) || [];
+
+      // Now try to get IBAN data from profiles for each personnel with auth_id
+      for (const personel of transformedData) {
+        if (personel.auth_id) {
+          try {
+            const { data: profileData } = await supabase
+              .from('profiles')
+              .select('iban')
+              .eq('id', personel.auth_id)
+              .maybeSingle();
+              
+            if (profileData?.iban) {
+              personel.iban = profileData.iban;
+            }
+          } catch (profileError) {
+            // Just log the error but continue, this is non-critical
+            console.warn("Personel için profil IBAN bilgisi alınamadı:", profileError);
+          }
+        }
+      }
 
       return transformedData;
     } catch (error) {
@@ -35,41 +56,44 @@ export const personelServisi = {
     try {
       console.log("Personel getiriliyor, ID:", id);
       
-      // First attempt - get personel with profiles join for IBAN
+      // Get personnel by ID without joining
       const { data, error } = await supabase
         .from('personel')
-        .select('*, profiles(iban)')
+        .select('*')
         .eq('id', id)
         .single();
 
       if (error) {
-        console.error("Personel getirme hatası (ilk deneme):", error);
-        
-        // Second attempt - get just personel without join
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('personel')
-          .select('*')
-          .eq('id', id)
-          .single();
-        
-        if (fallbackError) {
-          console.error("Personel getirme hatası (ikinci deneme):", fallbackError);
-          throw fallbackError;
-        }
-        
-        return fallbackData;
+        console.error("Personel getirme hatası:", error);
+        throw error;
       }
       
       if (!data) {
         throw new Error("Personel bulunamadı");
       }
       
-      // Transform data to include IBAN from profiles if available
-      const profileIban = data.profiles?.iban || null;
+      // Try to get IBAN from profiles if auth_id exists
+      let iban = data.iban;
+      if (data.auth_id) {
+        try {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('iban')
+            .eq('id', data.auth_id)
+            .maybeSingle();
+            
+          if (profileData?.iban) {
+            iban = profileData.iban;
+          }
+        } catch (profileError) {
+          // Non-critical, just log the error
+          console.warn("Personel için profil IBAN bilgisi alınamadı:", profileError);
+        }
+      }
+      
       const transformedData = {
         ...data,
-        iban: data.iban || profileIban,
-        profiles: undefined // Remove nested profiles object
+        iban
       };
       
       return transformedData;
@@ -81,10 +105,10 @@ export const personelServisi = {
 
   async getirByAuthId(authId: string) {
     try {
-      // Get personnel by auth ID with profiles join for IBAN
+      // Get personnel by auth ID without joining with dukkan
       const { data, error } = await supabase
         .from('personel')
-        .select('*, dukkan(*), profiles(iban)')
+        .select('*')
         .eq('auth_id', authId)
         .maybeSingle();
 
@@ -95,12 +119,26 @@ export const personelServisi = {
       
       if (!data) return null;
       
-      // Transform data to include IBAN from profiles if available
-      const profileIban = data.profiles?.iban || null;
+      // Try to get IBAN from profiles
+      let iban = data.iban;
+      try {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('iban')
+          .eq('id', authId)
+          .maybeSingle();
+          
+        if (profileData?.iban) {
+          iban = profileData.iban;
+        }
+      } catch (profileError) {
+        // Non-critical, just log the error
+        console.warn("Personel için profil IBAN bilgisi alınamadı:", profileError);
+      }
+      
       const transformedData = {
         ...data,
-        iban: data.iban || profileIban,
-        profiles: undefined // Remove nested profiles object
+        iban
       };
       
       return transformedData;

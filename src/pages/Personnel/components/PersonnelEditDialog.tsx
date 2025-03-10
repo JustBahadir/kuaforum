@@ -35,7 +35,7 @@ const formatIBAN = (value: string) => {
   const cleaned = value.replace(/[^A-Za-z0-9]/g, '');
   
   // Check if it starts with TR, if not add it
-  const withTR = cleaned.startsWith('TR') ? cleaned : `TR${cleaned}`;
+  const withTR = cleaned.startsWith('TR') ? cleaned : `TR${cleaned.substring(0, 24)}`;
   
   // Format in groups of 4
   let formatted = '';
@@ -302,6 +302,9 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComp
                 placeholder="TR00 0000 0000 0000 0000 0000 00"
                 maxLength={36}
               />
+              <p className="text-xs text-gray-500">
+                IBAN bilgisi personel profilinden senkronize edilecektir.
+              </p>
             </div>
           </div>
           <DialogFooter>

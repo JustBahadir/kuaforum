@@ -43,11 +43,11 @@ export interface ProfileEditFormProps {
 
 // Format IBAN as TR00 0000 0000 0000 0000 0000 00
 const formatIBAN = (value: string) => {
-  // Strip all non-alphanumeric characters
+  // First, strip all non-alphanumeric characters
   const cleaned = value.replace(/[^A-Za-z0-9]/g, '');
   
-  // Check if it starts with TR, if not add it
-  const withTR = cleaned.startsWith('TR') ? cleaned : `TR${cleaned}`;
+  // Make sure it starts with TR
+  const withTR = cleaned.startsWith('TR') ? cleaned : `TR${cleaned.substring(0, 24)}`;
   
   // Format in groups of 4
   let formatted = '';
@@ -133,6 +133,7 @@ export function ProfileEditForm({
               label=""
               bucketName="photos"
               folderPath="avatars"
+              maxFileSize={20 * 1024 * 1024} // 20MB limit
             />
           </div>
         </div>
