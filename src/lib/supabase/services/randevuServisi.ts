@@ -1,3 +1,4 @@
+
 import { supabase } from '../client';
 import { Randevu } from '../types';
 import { toast } from 'sonner';
@@ -111,6 +112,8 @@ export const randevuServisi = {
         throw new Error("Oturum açmış kullanıcı bulunamadı");
       }
       
+      // Bypass the RPC function since it's having type conversion issues
+      // Insert directly into the randevular table
       const insertData = {
         dukkan_id: randevu.dukkan_id,
         musteri_id: randevu.musteri_id || null,
@@ -125,18 +128,19 @@ export const randevuServisi = {
       
       console.log("Eklenen randevu verisi:", insertData);
 
-      const { data, error } = await supabase.rpc(
-        'create_appointment',
-        { appointment_data: insertData }
-      );
-
+      // Direct insert as a fallback
+      const { data, error } = await supabase
+        .from('randevular')
+        .insert(insertData)
+        .select();
+      
       if (error) {
-        console.error("Randevu ekleme hatası (RPC):", error);
+        console.error("Randevu ekleme hatası:", error);
         throw new Error(`Randevu eklenirken bir hata oluştu: ${error.message || 'Bilinmeyen hata'}`);
       }
       
       console.log("Randevu başarıyla oluşturuldu:", data);
-      return data;
+      return data[0];
     } catch (error: any) {
       console.error("Randevu oluşturma hatası:", error);
       throw new Error(error?.message || "Randevu oluşturulurken bir hata oluştu");
