@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,6 +60,7 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
     if (isToday) {
       const now = new Date();
       const currentTimeMinutes = now.getHours() * 60 + now.getMinutes();
+      // Add buffer to current time (30 min)
       const roundedMinutes = Math.ceil((currentTimeMinutes + 30) / 30) * 30;
       currentMinutes = Math.max(currentMinutes, roundedMinutes);
     }
@@ -105,6 +107,7 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
       setAvailableTimes(slots);
     } catch (error) {
       console.error("Error fetching available times:", error);
+      // Fallback
       const isToday = new Date(date).toDateString() === new Date().toDateString();
       const defaultSlots = generateTimeSlots('09:00', '19:00', isToday);
       setAvailableTimes(defaultSlots);
@@ -113,6 +116,7 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
     }
   };
   
+  // Force fetch times when date is selected initially
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const date = e.target.value;
     setSelectedDate(date);

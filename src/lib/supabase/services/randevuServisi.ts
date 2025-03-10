@@ -1,4 +1,3 @@
-
 import { supabase } from '../client';
 import { Randevu } from '../types';
 import { toast } from 'sonner';
@@ -30,7 +29,6 @@ export const randevuServisi = {
     }
 
     try {
-      // İlişkiler için join
       const { data, error } = await supabase
         .from('randevular')
         .select(`
@@ -61,7 +59,6 @@ export const randevuServisi = {
         throw new Error("Oturum açmış kullanıcı bulunamadı");
       }
 
-      // İlişkiler için join
       const { data, error } = await supabase
         .from('randevular')
         .select(`
@@ -100,7 +97,6 @@ export const randevuServisi = {
       throw new Error("Tarih ve saat seçimi zorunludur");
     }
 
-    // İşlemleri düzenle - tek işlem bile olsa array olarak sakla
     const islemler = Array.isArray(randevu.islemler) 
       ? randevu.islemler 
       : (randevu.islemler ? [randevu.islemler] : []);
@@ -110,13 +106,11 @@ export const randevuServisi = {
     }
 
     try {
-      // Get the current user directly from Supabase Auth
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         throw new Error("Oturum açmış kullanıcı bulunamadı");
       }
       
-      // Prepare the insert data
       const insertData = {
         dukkan_id: randevu.dukkan_id,
         musteri_id: randevu.musteri_id || null,
@@ -126,41 +120,22 @@ export const randevuServisi = {
         durum: randevu.durum || "onaylandi",
         notlar: randevu.notlar || "",
         islemler: islemler,
-        customer_id: user.id // Use auth.uid() directly
+        customer_id: user.id
       };
       
       console.log("Eklenen randevu verisi:", insertData);
 
-      // Use RPC call to bypass recursive policy issues
-      const { data, error: insertError } = await supabase.rpc(
+      const { data, error } = await supabase.rpc(
         'create_appointment',
-        {
-          appointment_data: insertData
-        }
+        { appointment_data: insertData }
       );
 
-      if (insertError) {
-        console.error("Randevu ekleme hatası:", insertError);
-        // Fallback to direct insert if RPC fails
-        console.log("RPC çağrısı başarısız oldu, doğrudan ekleme deneniyor...");
-        
-        const { data: directData, error: directError } = await supabase
-          .from('randevular')
-          .insert(insertData)
-          .select();
-        
-        if (directError) {
-          console.error("Doğrudan ekleme hatası:", directError);
-          throw new Error(`Randevu eklenirken bir hata oluştu: ${directError.message || 'Bilinmeyen hata'}`);
-        }
-        
-        console.log("Doğrudan ekleme başarılı:", directData);
-        toast.success("Randevu başarıyla oluşturuldu");
-        return directData[0];
+      if (error) {
+        console.error("Randevu ekleme hatası (RPC):", error);
+        throw new Error(`Randevu eklenirken bir hata oluştu: ${error.message || 'Bilinmeyen hata'}`);
       }
       
       console.log("Randevu başarıyla oluşturuldu:", data);
-      toast.success("Randevu başarıyla oluşturuldu");
       return data;
     } catch (error: any) {
       console.error("Randevu oluşturma hatası:", error);
