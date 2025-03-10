@@ -42,16 +42,15 @@ export interface ProfileEditFormProps {
 
 // Format IBAN as TR00 0000 0000 0000 0000 0000 00
 const formatIBAN = (value: string) => {
-  // First, ensure it starts with TR
+  // First remove all non-alphanumeric characters
   let cleaned = value.replace(/[^A-Z0-9]/g, '');
   
-  // If it doesn't start with TR, add it
+  // Ensure it starts with TR
   if (!cleaned.startsWith('TR')) {
-    cleaned = 'TR' + cleaned.replace(/\D/g, '');
+    cleaned = 'TR' + cleaned.substring(0, cleaned.startsWith('T') ? 25 : cleaned.startsWith('R') ? 25 : 24);
+  } else {
+    cleaned = cleaned.substring(0, 26); // Limit to 26 characters (TR + 24 digits)
   }
-  
-  // Limit to 26 characters (TR + 24 digits)
-  cleaned = cleaned.substring(0, 26);
   
   // Format in groups of 4
   let formatted = '';
@@ -113,7 +112,6 @@ export function ProfileEditForm({
         <CardTitle>Profili Düzenle</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Avatar Upload Section - Improved layout with photo on right */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-6">
           <div className="flex-1 order-2 md:order-1">
             <h3 className="text-lg font-medium mb-2">Profil Fotoğrafı</h3>
@@ -223,7 +221,6 @@ export function ProfileEditForm({
           </div>
         </div>
         
-        {/* Only show IBAN for staff or admin */}
         {(isStaff || isAdmin) && (
           <div className="space-y-2">
             <Label htmlFor="iban" className="flex items-center gap-2">

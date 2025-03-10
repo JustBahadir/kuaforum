@@ -1,7 +1,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MapPin, Phone, ExternalLink } from "lucide-react";
+import { MapPin, Phone, ExternalLink, Copy, PhoneCall } from "lucide-react";
 import { toast } from "sonner";
 import { formatPhoneNumber } from "@/utils/phoneFormatter";
 
@@ -18,6 +18,27 @@ export function ShopContactCard({ dukkanData }: ShopContactCardProps) {
     
     const encodedAddress = encodeURIComponent(dukkanData.acik_adres);
     window.open(`https://www.google.com/maps/search/?api=1&query=${encodedAddress}`, '_blank');
+  };
+
+  const callPhone = () => {
+    if (!dukkanData?.telefon) {
+      toast.error("Telefon numarası bulunamadı");
+      return;
+    }
+    
+    // Format for tel: link - remove all non-digit characters
+    const phoneNumber = dukkanData.telefon.replace(/\D/g, '');
+    window.location.href = `tel:${phoneNumber}`;
+  };
+
+  const copyPhoneNumber = () => {
+    if (!dukkanData?.telefon) {
+      toast.error("Telefon numarası bulunamadı");
+      return;
+    }
+    
+    navigator.clipboard.writeText(dukkanData.telefon);
+    toast.success("Telefon numarası kopyalandı");
   };
 
   return (
@@ -56,6 +77,30 @@ export function ShopContactCard({ dukkanData }: ShopContactCardProps) {
               : "Telefon bilgisi bulunmuyor"}
           </span>
         </div>
+        
+        {dukkanData.telefon && (
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="flex-1 flex items-center gap-2" 
+              onClick={callPhone}
+            >
+              <PhoneCall className="h-4 w-4" />
+              Ara
+            </Button>
+            
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="flex-1 flex items-center gap-2" 
+              onClick={copyPhoneNumber}
+            >
+              <Copy className="h-4 w-4" />
+              Kopyala
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

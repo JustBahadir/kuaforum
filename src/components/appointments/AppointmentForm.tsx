@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,7 +32,6 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
   const [availableTimes, setAvailableTimes] = useState<string[]>([]);
   const [isFetchingTimes, setIsFetchingTimes] = useState(false);
   
-  // Queries for data
   const { data: personeller = [], isLoading: isLoadingPersoneller } = useQuery({
     queryKey: ['personeller'],
     queryFn: personelServisi.hepsiniGetir
@@ -50,23 +48,18 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
     enabled: !!selectedCategory
   });
   
-  // Fetch available times when the date changes
   const fetchAvailableTimes = async (date: string) => {
     if (!dukkanId) return;
     
     try {
       setIsFetchingTimes(true);
       
-      // Get the day of the week
       const dayOfWeek = new Date(date).getDay();
-      // Convert to our internal format
       const dayNames = ["pazar", "pazartesi", "sali", "carsamba", "persembe", "cuma", "cumartesi"];
       const dayName = dayNames[dayOfWeek];
       
-      // Get working hours for this shop
       const workingHours = await calismaSaatleriServisi.dukkanSaatleriGetir(dukkanId);
       
-      // Find working hours for this day
       const dayHours = workingHours.find((h: CalismaSaati) => h.gun === dayName);
       
       if (!dayHours || dayHours.kapali || !dayHours.acilis || !dayHours.kapanis) {
@@ -74,12 +67,10 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
         return;
       }
       
-      // Generate time slots
       const slots = generateTimeSlots(dayHours.acilis, dayHours.kapanis);
       setAvailableTimes(slots);
     } catch (error) {
       console.error("Error fetching available times:", error);
-      // Fallback to default hours
       const defaultSlots = generateTimeSlots('09:00', '19:00');
       setAvailableTimes(defaultSlots);
     } finally {
@@ -95,7 +86,21 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
     let currentMinutes = openHour * 60 + openMinute;
     const closingMinutes = closeHour * 60 + closeMinute;
     
-    // Generate slots until 30 minutes before closing
+    const now = new Date();
+    const selected = new Date(selectedDate);
+    const isToday = now.getDate() === selected.getDate() && 
+                    now.getMonth() === selected.getMonth() && 
+                    now.getFullYear() === selected.getFullYear();
+    
+    if (isToday) {
+      const currentHour = now.getHours();
+      const currentMinute = now.getMinutes();
+      const currentTotalMinutes = currentHour * 60 + currentMinute;
+      
+      const roundedMinutes = Math.ceil(currentTotalMinutes / 30) * 30 + 30;
+      currentMinutes = Math.max(currentMinutes, roundedMinutes);
+    }
+    
     while (currentMinutes < closingMinutes - 30) {
       const hour = Math.floor(currentMinutes / 60);
       const minute = currentMinutes % 60;
@@ -104,21 +109,18 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
         `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
       );
       
-      // Add 30 minutes for next slot
       currentMinutes += 30;
     }
     
     return slots;
   };
   
-  // Handle date selection
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const date = e.target.value;
     setSelectedDate(date);
     fetchAvailableTimes(date);
   };
   
-  // Create appointment mutation
   const { mutate: createAppointment, isPending: isCreating } = useMutation({
     mutationFn: async () => {
       if (!dukkanId || !userId || !selectedPersonel || !selectedService) {

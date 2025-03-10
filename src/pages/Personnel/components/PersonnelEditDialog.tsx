@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Personel, personelServisi, profilServisi } from "@/lib/supabase";
@@ -123,10 +124,9 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComp
       const guncellenecekVeriler: Partial<Personel> = {
         maas: personelDuzenle.maas,
         calisma_sistemi: personelDuzenle.calisma_sistemi,
-        prim_yuzdesi: personelDuzenle.prim_yuzdesi,
       };
       
-      // If the user is owner or admin, they can edit more fields
+      // If the user is admin, they can edit more fields
       if (userRole === 'admin') {
         Object.assign(guncellenecekVeriler, {
           ad_soyad: personelDuzenle.ad_soyad,
@@ -281,22 +281,6 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComp
                   <SelectItem value="aylik">Aylık</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit_prim_yuzdesi">Prim Yüzdesi</Label>
-              <Input
-                id="edit_prim_yuzdesi"
-                type="number"
-                value={personelDuzenle.prim_yuzdesi}
-                onChange={(e) =>
-                  setPersonelDuzenle((prev) =>
-                    prev
-                      ? { ...prev, prim_yuzdesi: Number(e.target.value) }
-                      : null
-                  )
-                }
-                required
-              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit_iban">IBAN</Label>
