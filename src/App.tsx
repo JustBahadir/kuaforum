@@ -1,6 +1,6 @@
 
 import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import NotFound from './pages/NotFound';
 import Auth from './pages/Auth';
@@ -43,7 +43,7 @@ function App() {
         <Route path="/shop-home" element={<ShopHomePage />} />
         
         {/* Protected routes - require authentication */}
-        <Route element={<RouteProtection />}>
+        <Route element={<RouteProtection><Outlet /></RouteProtection>}>
           <Route path="/customer-dashboard/*" element={<CustomerDashboard />} />
           <Route path="/customer-profile" element={<CustomerProfile />} />
           <Route path="/staff-profile" element={<StaffProfile />} />
