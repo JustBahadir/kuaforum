@@ -4,9 +4,10 @@ import { format, addDays, subDays, isSameDay, isYesterday, isToday, isTomorrow }
 import { tr } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, CheckSquare, XSquare } from "lucide-react";
 import { Randevu } from "@/lib/supabase/types";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge"; 
 
 interface AppointmentDayViewProps {
   selectedDate: Date;
@@ -108,58 +109,63 @@ export function AppointmentDayView({
                   <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4">
                     <div>
                       <p className="text-sm text-muted-foreground">Saat</p>
-                      <p className="font-medium">{appointment.saat}</p>
+                      <p className="font-medium">{appointment.saat.substring(0, 5)}</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Müşteri</p>
                       <p className="font-medium">
                         {appointment.musteri?.first_name} {appointment.musteri?.last_name}
                       </p>
+                      {!appointment.musteri && (
+                        <p className="text-xs text-muted-foreground">Müşteri kaydı yok</p>
+                      )}
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Hizmet</p>
-                      <p className="font-medium">
-                        {Array.isArray(appointment.islemler) && appointment.islemler.length > 0 
-                          ? `${appointment.islemler.length} hizmet seçildi` 
-                          : "Hizmet belirtilmemiş"}
-                      </p>
+                      <p className="text-sm text-muted-foreground">Hizmetler</p>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {Array.isArray(appointment.islemler) && appointment.islemler.map((islemId, idx) => (
+                          <Badge key={`${islemId}-${idx}`} variant="outline" className="text-xs">
+                            İşlem {islemId}
+                          </Badge>
+                        ))}
+                      </div>
                     </div>
                   </div>
                   
-                  {appointment.durum === "onaylandi" && (
-                    <div className="flex items-center space-x-2 mt-4 lg:mt-0">
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        onClick={() => onCompleteClick(appointment)}
-                      >
+                  <div className="mt-4 lg:mt-0 flex flex-col sm:flex-row gap-2">
+                    {appointment.durum === "onaylandi" && (
+                      <>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          className="flex items-center gap-1" 
+                          onClick={() => onCompleteClick(appointment)}
+                        >
+                          <CheckSquare className="h-4 w-4" /> Tamamlandı
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="destructive"
+                          className="flex items-center gap-1" 
+                          onClick={() => onCancelClick(appointment)}
+                        >
+                          <XSquare className="h-4 w-4" /> İptal
+                        </Button>
+                      </>
+                    )}
+                    
+                    {appointment.durum === "tamamlandi" && (
+                      <Badge className="bg-green-100 text-green-800 border-green-200">
                         Tamamlandı
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="destructive" 
-                        onClick={() => onCancelClick(appointment)}
-                      >
-                        İptal
-                      </Button>
-                    </div>
-                  )}
-                  
-                  {appointment.durum === "tamamlandi" && (
-                    <div className="mt-4 lg:mt-0">
-                      <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">
-                        Tamamlandı
-                      </span>
-                    </div>
-                  )}
-                  
-                  {appointment.durum === "iptal_edildi" && (
-                    <div className="mt-4 lg:mt-0">
-                      <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs">
+                      </Badge>
+                    )}
+                    
+                    {appointment.durum === "iptal_edildi" && (
+                      <Badge className="bg-red-100 text-red-800 border-red-200">
                         İptal Edildi
-                      </span>
-                    </div>
-                  )}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               </CardContent>
             </Card>

@@ -26,10 +26,13 @@ export const randevuServisi = {
 
   async dukkanRandevulariniGetir(dukkanId: number) {
     if (!dukkanId) {
+      console.error("Geçersiz dükkan ID:", dukkanId);
       throw new Error("Dükkan ID gereklidir");
     }
 
     try {
+      console.log(`Dükkan ID ${dukkanId} için randevular getiriliyor...`);
+      
       const { data, error } = await supabase
         .from('randevular')
         .select(`
@@ -46,6 +49,7 @@ export const randevuServisi = {
         throw error;
       }
       
+      console.log(`${data?.length || 0} adet randevu bulundu:`, data);
       return data || [];
     } catch (err) {
       console.error("Dükkan randevuları getirme hatası:", err);
@@ -60,6 +64,8 @@ export const randevuServisi = {
         throw new Error("Oturum açmış kullanıcı bulunamadı");
       }
 
+      console.log(`Customer ID ${user.id} için randevular getiriliyor...`);
+      
       const { data, error } = await supabase
         .from('randevular')
         .select(`
@@ -76,6 +82,7 @@ export const randevuServisi = {
         throw error;
       }
       
+      console.log(`${data?.length || 0} adet randevu bulundu:`, data);
       return data || [];
     } catch (err) {
       console.error("Kendi randevularını getirme hatası:", err);
@@ -146,9 +153,11 @@ export const randevuServisi = {
       }
       
       console.log("Randevu başarıyla oluşturuldu:", data);
+      toast.success("Randevu başarıyla oluşturuldu");
       return data;
     } catch (error: any) {
       console.error("Randevu oluşturma hatası:", error);
+      toast.error(error?.message || "Randevu oluşturulurken bir hata oluştu");
       throw new Error(error?.message || "Randevu oluşturulurken bir hata oluştu");
     }
   },
@@ -173,10 +182,80 @@ export const randevuServisi = {
       }
       
       console.log("Randevu güncelleme başarılı:", data);
+      
+      // If an appointment is marked as completed, create a personnel operation record
+      if (randevu.durum === "tamamlandi") {
+        try {
+          await this.randevuTamamlandi(id);
+        } catch (opError) {
+          console.error("İşlem kaydı oluşturma hatası:", opError);
+          // Don't fail the entire process if operation creation fails
+        }
+      }
+      
       return data && data.length > 0 ? data[0] : null;
     } catch (error: any) {
       console.error("Randevu güncelleme hatası:", error);
       throw new Error(error?.message || "Randevu güncellenirken bir hata oluştu");
+    }
+  },
+
+  async randevuTamamlandi(randevuId: number) {
+    try {
+      // Get the appointment details
+      const { data: randevu, error: randevuError } = await supabase
+        .from('randevular')
+        .select(`
+          *,
+          musteri:musteriler(*),
+          personel:personel(*)
+        `)
+        .eq('id', randevuId)
+        .single();
+        
+      if (randevuError || !randevu) {
+        throw new Error(`Randevu bilgileri alınamadı: ${randevuError?.message || 'Randevu bulunamadı'}`);
+      }
+      
+      // Get services associated with the appointment
+      const islemIds = randevu.islemler || [];
+      if (!islemIds.length) {
+        throw new Error("Randevuda kayıtlı işlem bulunamadı");
+      }
+      
+      const { data: islemler, error: islemError } = await supabase
+        .from('islemler')
+        .select('*')
+        .in('id', islemIds);
+      
+      if (islemError) {
+        throw new Error(`İşlem detayları alınamadı: ${islemError.message}`);
+      }
+      
+      // Create a personnel operation record for each service
+      for (const islem of islemler || []) {
+        const personelIslem = {
+          personel_id: randevu.personel_id,
+          islem_id: islem.id,
+          tutar: parseFloat(islem.fiyat),
+          puan: parseInt(islem.puan),
+          prim_yuzdesi: randevu.personel?.prim_yuzdesi || 0,
+          aciklama: `Randevu #${randevuId} tamamlandı, ${islem.islem_adi} hizmeti verildi.`
+        };
+        
+        const { error: insertError } = await supabase
+          .from('personel_islemleri')
+          .insert(personelIslem);
+          
+        if (insertError) {
+          console.error("Personel işlemi ekleme hatası:", insertError);
+        }
+      }
+      
+      return true;
+    } catch (error: any) {
+      console.error("Randevu tamamlandı işlemi hatası:", error);
+      throw new Error(error?.message || "İşlem kayıtları oluşturulurken hata oluştu");
     }
   },
 

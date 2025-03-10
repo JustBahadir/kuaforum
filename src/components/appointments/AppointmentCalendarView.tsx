@@ -3,10 +3,12 @@ import { useState } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Randevu } from "@/lib/supabase/types";
 import { format, isSameDay } from "date-fns";
 import { tr } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CheckSquare, XSquare } from "lucide-react";
 
 interface AppointmentCalendarViewProps {
   selectedDate: Date;
@@ -88,12 +90,12 @@ export function AppointmentCalendarView({
             <p className="text-muted-foreground">Bu tarih için randevu bulunmamaktadır.</p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-2 max-h-[600px] overflow-y-auto pr-2">
             {dayAppointments.map((appointment) => (
               <Card key={appointment.id}>
                 <CardContent className="p-4">
                   <div className="flex justify-between">
-                    <div className="font-semibold">{appointment.saat}</div>
+                    <div className="font-semibold">{appointment.saat.substring(0, 5)}</div>
                     <Badge variant={
                       appointment.durum === "tamamlandi" ? "outline" : 
                       appointment.durum === "iptal_edildi" ? "destructive" : 
@@ -107,10 +109,10 @@ export function AppointmentCalendarView({
                   
                   <div className="mt-2">
                     <div>
-                      <span className="text-muted-foreground">Müşteri:</span> {appointment.musteri?.first_name} {appointment.musteri?.last_name}
+                      <span className="text-muted-foreground">Müşteri:</span> {appointment.musteri?.first_name} {appointment.musteri?.last_name || "Belirtilmemiş"}
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Personel:</span> {appointment.personel?.ad_soyad}
+                      <span className="text-muted-foreground">Personel:</span> {appointment.personel?.ad_soyad || "Belirtilmemiş"}
                     </div>
                   </div>
                   
@@ -125,16 +127,18 @@ export function AppointmentCalendarView({
                       <Button 
                         size="sm" 
                         variant="outline" 
+                        className="flex items-center gap-1"
                         onClick={() => onCompleteClick(appointment)}
                       >
-                        Tamamlandı
+                        <CheckSquare className="h-4 w-4" /> Tamamlandı
                       </Button>
                       <Button 
                         size="sm" 
                         variant="destructive" 
+                        className="flex items-center gap-1"
                         onClick={() => onCancelClick(appointment)}
                       >
-                        İptal
+                        <XSquare className="h-4 w-4" /> İptal
                       </Button>
                     </div>
                   )}
@@ -145,27 +149,5 @@ export function AppointmentCalendarView({
         )}
       </div>
     </div>
-  );
-}
-
-function Button({ children, variant, size, onClick }: any) {
-  const variantClasses = {
-    outline: "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50",
-    destructive: "bg-red-600 text-white hover:bg-red-700",
-    default: "bg-blue-600 text-white hover:bg-blue-700"
-  };
-  
-  const sizeClasses = {
-    sm: "py-1 px-2 text-xs",
-    md: "py-2 px-4 text-sm"
-  };
-  
-  return (
-    <button
-      className={`rounded font-medium transition-colors ${variantClasses[variant || "default"]} ${sizeClasses[size || "md"]}`}
-      onClick={onClick}
-    >
-      {children}
-    </button>
   );
 }

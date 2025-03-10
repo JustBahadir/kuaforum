@@ -5,6 +5,7 @@ import { randevuServisi } from "@/lib/supabase/services/randevuServisi";
 import { Randevu } from "@/lib/supabase/types";
 import { toast } from "sonner";
 import { personelServisi } from "@/lib/supabase";
+import { supabase } from '@/lib/supabase/client';
 
 export function useAppointments(dukkanId?: number) {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -23,6 +24,7 @@ export function useAppointments(dukkanId?: number) {
         if (data.user) {
           const personel = await personelServisi.getirByAuthId(data.user.id);
           if (personel) {
+            console.log("Mevcut personel bulundu:", personel);
             setCurrentPersonelId(personel.id);
           }
         }
@@ -41,10 +43,21 @@ export function useAppointments(dukkanId?: number) {
     refetch 
   } = useQuery({
     queryKey: ['appointments', dukkanId],
-    queryFn: () => dukkanId
-      ? randevuServisi.dukkanRandevulariniGetir(dukkanId)
-      : randevuServisi.kendiRandevulariniGetir(),
-    enabled: !!dukkanId
+    queryFn: async () => {
+      console.log("Randevuları getirme fonksiyonu çalıştırılıyor - Dükkan ID:", dukkanId);
+      try {
+        const data = dukkanId
+          ? await randevuServisi.dukkanRandevulariniGetir(dukkanId)
+          : await randevuServisi.kendiRandevulariniGetir();
+        console.log("Randevular başarıyla getirildi:", data);
+        return data;
+      } catch (error) {
+        console.error("Randevuları getirme hatası:", error);
+        toast.error("Randevular yüklenirken bir hata oluştu");
+        return [];
+      }
+    },
+    enabled: dukkanId !== undefined
   });
   
   // Mark appointment as complete
@@ -128,6 +141,3 @@ export function useAppointments(dukkanId?: number) {
     refetch
   };
 }
-
-// Helper for using Supabase in this hook
-import { supabase } from '@/lib/supabase/client';
