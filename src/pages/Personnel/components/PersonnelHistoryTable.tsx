@@ -1,146 +1,140 @@
 
-import { useState, useEffect } from "react";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Camera, PlusCircle } from "lucide-react";
-import { format } from "date-fns";
-import { tr } from "date-fns/locale";
+import { useState } from "react";
 import { personelIslemleriServisi } from "@/lib/supabase";
 import { PersonelIslemi } from "@/lib/supabase/types";
-import { OperationPhotoUpload } from "@/components/operations/OperationPhotoUpload";
+import { useQuery } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Camera, Eye } from "lucide-react";
 
-interface PersonnelHistoryTableProps {
-  personelId: number;
+export interface PersonnelHistoryTableProps {
+  personelId?: number;
 }
 
-export function PersonnelHistoryTable({ personelId }: PersonnelHistoryTableProps) {
-  const [operations, setOperations] = useState<PersonelIslemi[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [photoUploadOpen, setPhotoUploadOpen] = useState(false);
-  const [currentOperation, setCurrentOperation] = useState<PersonelIslemi | null>(null);
-  const [photoViewOpen, setPhotoViewOpen] = useState(false);
+export const PersonnelHistoryTable = ({ personelId }: PersonnelHistoryTableProps) => {
+  const [dateRange, setDateRange] = useState({
+    from: new Date(new Date().setDate(new Date().getDate() - 30)), // Default to last 30 days
+    to: new Date()
+  });
+
+  const [viewPhotoDialogOpen, setViewPhotoDialogOpen] = useState(false);
   const [currentPhotos, setCurrentPhotos] = useState<string[]>([]);
 
-  const fetchOperations = async () => {
-    setLoading(true);
-    try {
-      const data = await personelIslemleriServisi.personelIslemleriGetir(personelId);
-      setOperations(data);
-    } catch (error) {
-      console.error("Error fetching personnel operations:", error);
-    } finally {
-      setLoading(false);
+  const { data: islemGecmisi = [], isLoading } = useQuery({
+    queryKey: ['personelIslemleri', dateRange.from, dateRange.to, personelId],
+    queryFn: async () => {
+      let operations;
+      
+      if (personelId) {
+        operations = await personelIslemleriServisi.personelIslemleriGetir(personelId);
+      } else {
+        operations = await personelIslemleriServisi.hepsiniGetir();
+      }
+      
+      // Filter by date range
+      return operations.filter((islem: PersonelIslemi) => {
+        if (!islem.created_at) return true;
+        const islemDate = new Date(islem.created_at);
+        return islemDate >= dateRange.from && islemDate <= dateRange.to;
+      });
+    }
+  });
+
+  const handleViewPhotos = (photos: string[]) => {
+    if (photos && photos.length > 0) {
+      setCurrentPhotos(photos);
+      setViewPhotoDialogOpen(true);
     }
   };
 
-  useEffect(() => {
-    if (personelId) {
-      fetchOperations();
-    }
-  }, [personelId]);
-
-  const handleOpenPhotoUpload = (operation: PersonelIslemi) => {
-    setCurrentOperation(operation);
-    setPhotoUploadOpen(true);
-  };
-
-  const handleViewPhotos = (operation: PersonelIslemi) => {
-    if (operation.photos && operation.photos.length > 0) {
-      setCurrentPhotos(operation.photos);
-      setPhotoViewOpen(true);
-    }
-  };
-
-  const formatDate = (date: string | Date | null) => {
-    if (!date) return "-";
-    return format(new Date(date), "dd MMMM yyyy", { locale: tr });
-  };
+  if (isLoading) {
+    return (
+      <div className="flex justify-center p-12">
+        <div className="w-10 h-10 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <h3 className="text-lg font-medium mb-4">İşlem Geçmişi</h3>
-      
-      {loading ? (
-        <div className="py-8 text-center">
-          <div className="animate-spin h-6 w-6 border-4 border-blue-500 border-t-transparent rounded-full mx-auto"></div>
-          <p className="mt-2 text-sm text-gray-500">İşlemler yükleniyor...</p>
-        </div>
-      ) : operations.length === 0 ? (
-        <div className="py-8 text-center border rounded-md">
-          <p className="text-gray-500">Bu personele ait işlem bulunmamaktadır.</p>
-        </div>
-      ) : (
-        <div className="border rounded-md overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Tarih</TableHead>
-                <TableHead>Açıklama</TableHead>
-                <TableHead className="text-right">Tutar</TableHead>
-                <TableHead className="text-right">Prim (%)</TableHead>
-                <TableHead className="text-right">Ödenen</TableHead>
-                <TableHead className="text-right">Puan</TableHead>
-                <TableHead className="text-center">Fotoğraflar</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {operations.map((operation) => (
-                <TableRow key={operation.id}>
-                  <TableCell>{formatDate(operation.created_at!)}</TableCell>
-                  <TableCell className="max-w-xs truncate">{operation.aciklama}</TableCell>
-                  <TableCell className="text-right">{operation.tutar} ₺</TableCell>
-                  <TableCell className="text-right">%{operation.prim_yuzdesi}</TableCell>
-                  <TableCell className="text-right">{operation.odenen} ₺</TableCell>
-                  <TableCell className="text-right">{operation.puan}</TableCell>
-                  <TableCell className="text-center">
-                    {operation.photos && operation.photos.length > 0 ? (
+    <div className="space-y-4">
+      <div className="flex gap-4 items-center">
+        <span className="text-sm text-muted-foreground">Tarih aralığı seçin:</span>
+        <DateRangePicker 
+          from={dateRange.from}
+          to={dateRange.to}
+          onSelect={({from, to}) => setDateRange({from, to})}
+        />
+      </div>
+
+      <div className="rounded-md border">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tarih</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Personel</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlem</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tutar</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prim %</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ödenen</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Puan</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fotoğraflar</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {islemGecmisi.length > 0 ? (
+              islemGecmisi.map((islem: PersonelIslemi) => (
+                <tr key={islem.id}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {new Date(islem.created_at!).toLocaleDateString('tr-TR')}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {islem.personel?.ad_soyad}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {islem.aciklama}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {islem.tutar} TL
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    %{islem.prim_yuzdesi}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {islem.odenen} TL
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {islem.puan}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {islem.photos && islem.photos.length > 0 ? (
                       <Button 
                         variant="ghost" 
                         size="sm" 
-                        onClick={() => handleViewPhotos(operation)}
+                        onClick={() => handleViewPhotos(islem.photos || [])}
                       >
                         <Camera className="h-4 w-4 mr-1" />
-                        {operation.photos.length}
+                        {islem.photos.length}
                       </Button>
                     ) : (
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => handleOpenPhotoUpload(operation)}
-                      >
-                        <PlusCircle className="h-4 w-4" />
-                      </Button>
+                      <span className="text-gray-400">-</span>
                     )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
-
-      {/* Photo Upload Dialog */}
-      <Dialog open={photoUploadOpen} onOpenChange={setPhotoUploadOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>İşlem Fotoğrafı Ekle</DialogTitle>
-          </DialogHeader>
-          {currentOperation && (
-            <OperationPhotoUpload
-              personelId={personelId}
-              operationId={currentOperation.id}
-              onSuccess={() => {
-                setPhotoUploadOpen(false);
-                fetchOperations();
-              }}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={8} className="px-6 py-4 text-center text-sm text-gray-500">
+                  Seçilen tarih aralığında işlem bulunamadı
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
 
       {/* Photo View Dialog */}
-      <Dialog open={photoViewOpen} onOpenChange={setPhotoViewOpen}>
+      <Dialog open={viewPhotoDialogOpen} onOpenChange={setViewPhotoDialogOpen}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>İşlem Fotoğrafları</DialogTitle>
@@ -160,4 +154,6 @@ export function PersonnelHistoryTable({ personelId }: PersonnelHistoryTableProps
       </Dialog>
     </div>
   );
-}
+};
+
+export default PersonnelHistoryTable;

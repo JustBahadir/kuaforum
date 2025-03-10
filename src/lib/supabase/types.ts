@@ -75,6 +75,7 @@ export interface PersonelIslemi {
   created_at: string;
   islem?: Islem;
   personel?: Personel;
+  photos?: string[];
 }
 
 export interface Musteri {

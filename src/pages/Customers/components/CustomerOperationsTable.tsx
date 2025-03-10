@@ -1,148 +1,170 @@
-import { useState, useEffect } from "react";
+
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { 
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow 
-} from "@/components/ui/table";
-import { supabase } from "@/lib/supabase/client";
-import { format } from "date-fns";
+import { personelIslemleriServisi } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { OperationPhotoUpload } from "@/components/operations/OperationPhotoUpload";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Camera, Upload } from "lucide-react";
 import { toast } from "sonner";
+import OperationPhotoUpload from "@/components/operations/OperationPhotoUpload";
 
 interface CustomerOperationsTableProps {
-  customerId: number;
+  customerId?: number;
 }
 
-interface Operation {
-  id: number;
-  created_at: string;
-  operation_name: string;
-  personnel_name: string;
-  amount: number;
-  notes: string;
-  points: number;
-  photos: string[];
-}
+export const CustomerOperationsTable = ({ customerId }: CustomerOperationsTableProps) => {
+  const [selectedOperationId, setSelectedOperationId] = useState<number | null>(null);
+  const [viewPhotoDialogOpen, setViewPhotoDialogOpen] = useState(false);
+  const [uploadPhotoDialogOpen, setUploadPhotoDialogOpen] = useState(false);
+  const [currentPhotos, setCurrentPhotos] = useState<string[]>([]);
 
-export function CustomerOperationsTable({ customerId }: CustomerOperationsTableProps) {
-  const [totalPoints, setTotalPoints] = useState(0);
-  const [totalAmount, setTotalAmount] = useState(0);
-
-  const { data: operations = [], isLoading } = useQuery({
+  const { data: operations = [], isLoading, refetch } = useQuery({
     queryKey: ['customerOperations', customerId],
     queryFn: async () => {
-      const mockOperations: Operation[] = [];
-      
-      for (let i = 0; i < 5; i++) {
-        mockOperations.push({
-          id: i,
-          created_at: new Date(Date.now() - i * 86400000).toISOString(),
-          operation_name: [`Saç Kesimi`, `Sakal Traşı`, `Ense Traşı`, `Saç Boyama`, `Manikür`][i % 5],
-          personnel_name: [`Ahmet`, `Mehmet`, `Ayşe`, `Fatma`, `Ali`][i % 5],
-          amount: Math.floor(Math.random() * 200) + 50,
-          notes: `İşlem notu ${i + 1}`,
-          points: Math.floor(Math.random() * 10) + 1,
-          photos: []
-        });
-      }
-      
-      return mockOperations;
+      if (!customerId) return [];
+      return await personelIslemleriServisi.musteriIslemleriGetir(customerId);
     },
     enabled: !!customerId
   });
 
-  useEffect(() => {
-    if (operations.length) {
-      const points = operations.reduce((sum, op) => sum + op.points, 0);
-      const amount = operations.reduce((sum, op) => sum + op.amount, 0);
-      setTotalPoints(points);
-      setTotalAmount(amount);
-    }
-  }, [operations]);
-
-  if (isLoading) {
-    return <div className="text-center py-4">Yükleniyor...</div>;
-  }
-
-  if (operations.length === 0) {
-    return <div className="text-center py-4">Bu müşteriye ait işlem bulunamadı.</div>;
-  }
-
-  const handlePhotoUpdate = async (operationId: number, photos: string[]) => {
-    try {
-      const { error } = await supabase
-        .from('personel_islemleri')
-        .update({ photos })
-        .eq('id', operationId);
-
-      if (error) throw error;
-      toast.success("Fotoğraflar güncellendi");
-    } catch (error: any) {
-      toast.error(`Fotoğraflar güncellenirken hata oluştu: ${error.message}`);
+  const handleViewPhotos = (photos: string[] = []) => {
+    if (photos && photos.length > 0) {
+      setCurrentPhotos(photos);
+      setViewPhotoDialogOpen(true);
     }
   };
 
-  return (
-    <div className="p-4 space-y-4">
-      <div className="flex justify-between">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="border rounded-md p-3 bg-gray-50">
-            <div className="text-sm text-gray-500">TOPLAM PUAN</div>
-            <div className="text-xl font-bold text-purple-600">{totalPoints}</div>
-          </div>
-          <div className="border rounded-md p-3 bg-gray-50">
-            <div className="text-sm text-gray-500">TOPLAM TUTAR</div>
-            <div className="text-xl font-bold">{totalAmount.toFixed(2)} TL</div>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button variant="outline" size="sm">
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
+  const handleOpenUploadDialog = (operationId: number, photos: string[] = []) => {
+    setSelectedOperationId(operationId);
+    setCurrentPhotos(photos);
+    setUploadPhotoDialogOpen(true);
+  };
+
+  const handlePhotosUpdated = async (photos: string[]) => {
+    if (!selectedOperationId) return;
+    
+    try {
+      await personelIslemleriServisi.guncelle(selectedOperationId, { photos });
+      toast.success("Fotoğraflar başarıyla güncellendi");
+      refetch();
+      setUploadPhotoDialogOpen(false);
+    } catch (error) {
+      console.error("Error updating photos:", error);
+      toast.error("Fotoğraflar güncellenirken bir hata oluştu");
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center p-4">
+        <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
       </div>
-      
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Tarih</TableHead>
-            <TableHead>İşlem</TableHead>
-            <TableHead>Personel</TableHead>
-            <TableHead>Puan</TableHead>
-            <TableHead>Tutar</TableHead>
-            <TableHead>Açıklama</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {operations.map((operation) => (
-            <TableRow key={operation.id} className="hover:bg-gray-50">
-              <TableCell className="font-medium">
-                {format(new Date(operation.created_at), 'dd.MM.yyyy')}
-              </TableCell>
-              <TableCell>{operation.operation_name}</TableCell>
-              <TableCell>{operation.personnel_name}</TableCell>
-              <TableCell className="text-purple-600 font-semibold">{operation.points}</TableCell>
-              <TableCell>{operation.amount.toFixed(2)} TL</TableCell>
-              <TableCell className="max-w-xs truncate">{operation.notes}</TableCell>
-              <td className="p-4">
-                <OperationPhotoUpload
-                  existingPhotos={operation.photos || []}
-                  onPhotosUpdated={(photos) => handlePhotoUpdate(operation.id, photos)}
+    );
+  }
+
+  if (!operations.length) {
+    return (
+      <div className="text-center p-4 border rounded-md">
+        <p className="text-muted-foreground">Bu müşteriye ait işlem bulunmamaktadır.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-md border">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tarih</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Personel</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlem</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tutar</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Puan</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fotoğraflar</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {operations.map((operation) => (
+              <tr key={operation.id}>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                  {new Date(operation.created_at).toLocaleDateString('tr-TR')}
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                  {operation.personel?.ad_soyad}
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                  {operation.aciklama}
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                  {operation.tutar} TL
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                  {operation.puan}
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                  <div className="flex space-x-2">
+                    {operation.photos && operation.photos.length > 0 ? (
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => handleViewPhotos(operation.photos)}
+                      >
+                        <Camera className="h-4 w-4 mr-1" />
+                        {operation.photos.length}
+                      </Button>
+                    ) : (
+                      <span className="text-gray-400 mr-2">-</span>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleOpenUploadDialog(operation.id, operation.photos || [])}
+                    >
+                      <Upload className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* View Photos Dialog */}
+      <Dialog open={viewPhotoDialogOpen} onOpenChange={setViewPhotoDialogOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>İşlem Fotoğrafları</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            {currentPhotos.map((photo, index) => (
+              <div key={index} className="border rounded-md overflow-hidden">
+                <img 
+                  src={photo} 
+                  alt={`Operation photo ${index + 1}`} 
+                  className="w-full h-auto object-contain"
                 />
-              </td>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Upload Photos Dialog */}
+      <Dialog open={uploadPhotoDialogOpen} onOpenChange={setUploadPhotoDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Fotoğraf Ekle/Düzenle</DialogTitle>
+          </DialogHeader>
+          <OperationPhotoUpload 
+            existingPhotos={currentPhotos} 
+            onPhotosUpdated={handlePhotosUpdated} 
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
-}
+};
+
+export default CustomerOperationsTable;

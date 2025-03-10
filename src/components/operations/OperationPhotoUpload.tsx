@@ -1,164 +1,150 @@
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { toast } from "sonner";
-import { Camera, Upload, X } from "lucide-react";
-import { supabase } from "@/lib/supabase/client";
+import { useState, useCallback } from 'react';
+import { Button } from '@/components/ui/button';
+import { supabase } from '@/lib/supabase/client';
+import { toast } from 'sonner';
+import { Camera, Trash2, Upload } from 'lucide-react';
 
-interface OperationPhotoUploadProps {
-  personelId: number;
-  operationId: number;
-  onSuccess?: () => void;
+export interface OperationPhotoUploadProps {
+  existingPhotos?: string[];
+  onPhotosUpdated: (photos: string[]) => Promise<void>;
 }
 
-export function OperationPhotoUpload({ personelId, operationId, onSuccess }: OperationPhotoUploadProps) {
-  const [isUploading, setIsUploading] = useState(false);
-  const [preview, setPreview] = useState<string | null>(null);
-  const [file, setFile] = useState<File | null>(null);
+export const OperationPhotoUpload = ({ existingPhotos = [], onPhotosUpdated }: OperationPhotoUploadProps) => {
+  const [photos, setPhotos] = useState<string[]>(existingPhotos);
+  const [uploading, setUploading] = useState(false);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) {
-      setFile(null);
-      setPreview(null);
-      return;
-    }
-
-    const selectedFile = e.target.files[0];
-    setFile(selectedFile);
-
-    // Create a preview
-    const objectUrl = URL.createObjectURL(selectedFile);
-    setPreview(objectUrl);
-
-    // Clean up the object URL when component unmounts
-    return () => URL.revokeObjectURL(objectUrl);
-  };
-
-  const handleUpload = async () => {
-    if (!file) {
-      toast.error("Lütfen bir fotoğraf seçin");
-      return;
-    }
-
-    setIsUploading(true);
+  const uploadPhoto = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
-      // Upload to Supabase Storage
-      const fileName = `operation_${operationId}_${Date.now()}.${file.name.split('.').pop()}`;
-      
-      // First check if a storage bucket exists, create one if not
-      const { data: buckets } = await supabase.storage.listBuckets();
-      
-      if (!buckets?.find(bucket => bucket.name === 'operation-photos')) {
-        await supabase.storage.createBucket('operation-photos', {
-          public: true
-        });
+      setUploading(true);
+
+      if (!event.target.files || event.target.files.length === 0) {
+        throw new Error('Lütfen bir fotoğraf seçin');
       }
       
-      const { data, error } = await supabase.storage
+      const file = event.target.files[0];
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `${fileName}`;
+      
+      const { error: uploadError } = await supabase.storage
         .from('operation-photos')
-        .upload(fileName, file);
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data } = supabase.storage
+        .from('operation-photos')
+        .getPublicUrl(filePath);
+
+      const publicUrl = data.publicUrl;
+      
+      const updatedPhotos = [...photos, publicUrl];
+      setPhotos(updatedPhotos);
+      await onPhotosUpdated(updatedPhotos);
+      
+      toast.success('Fotoğraf başarıyla yüklendi');
+    } catch (error) {
+      console.error('Error uploading photo:', error);
+      toast.error('Fotoğraf yüklenirken bir hata oluştu');
+    } finally {
+      setUploading(false);
+      // Reset the input value so the same file can be uploaded again if needed
+      if (event.target) {
+        event.target.value = '';
+      }
+    }
+  }, [photos, onPhotosUpdated]);
+
+  const removePhoto = useCallback(async (photoUrl: string) => {
+    try {
+      // Extract file path from URL
+      const fileName = photoUrl.split('/').pop();
+      if (!fileName) return;
+
+      // Remove from storage
+      const { error } = await supabase.storage
+        .from('operation-photos')
+        .remove([fileName]);
 
       if (error) {
         throw error;
       }
 
-      // Get the public URL
-      const { data: publicUrlData } = supabase.storage
-        .from('operation-photos')
-        .getPublicUrl(fileName);
-
-      if (!publicUrlData.publicUrl) {
-        throw new Error("Public URL could not be retrieved");
-      }
-
-      // Update the operation with the photo URL
-      const { data: operationData, error: operationError } = await supabase
-        .from('personel_islemleri')
-        .select('photos')
-        .eq('id', operationId)
-        .single();
-
-      if (operationError) {
-        throw operationError;
-      }
-
-      const currentPhotos = operationData.photos || [];
+      // Update state and parent component
+      const updatedPhotos = photos.filter(p => p !== photoUrl);
+      setPhotos(updatedPhotos);
+      await onPhotosUpdated(updatedPhotos);
       
-      const { error: updateError } = await supabase
-        .from('personel_islemleri')
-        .update({
-          photos: [...currentPhotos, publicUrlData.publicUrl]
-        })
-        .eq('id', operationId);
-
-      if (updateError) {
-        throw updateError;
-      }
-
-      toast.success("Fotoğraf başarıyla yüklendi");
-      setFile(null);
-      setPreview(null);
-      
-      if (onSuccess) {
-        onSuccess();
-      }
-    } catch (error: any) {
-      console.error('Upload error:', error);
-      toast.error(`Fotoğraf yükleme hatası: ${error.message}`);
-    } finally {
-      setIsUploading(false);
+      toast.success('Fotoğraf başarıyla silindi');
+    } catch (error) {
+      console.error('Error removing photo:', error);
+      toast.error('Fotoğraf silinirken bir hata oluştu');
     }
-  };
-
-  const clearSelectedImage = () => {
-    setFile(null);
-    setPreview(null);
-  };
+  }, [photos, onPhotosUpdated]);
 
   return (
     <div className="space-y-4">
       <div className="flex items-center space-x-2">
-        <Input
+        <h3 className="text-lg font-medium">İşlem Fotoğrafları</h3>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={uploading}
+          className="flex items-center space-x-2"
+          onClick={() => document.getElementById('photo-upload')?.click()}
+        >
+          {uploading ? (
+            <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+          ) : (
+            <Camera className="h-4 w-4" />
+          )}
+          <span>Fotoğraf Ekle</span>
+        </Button>
+        <input
+          id="photo-upload"
           type="file"
           accept="image/*"
-          onChange={handleFileChange}
-          id={`photo-upload-${operationId}`}
+          onChange={uploadPhoto}
           className="hidden"
         />
-        <label
-          htmlFor={`photo-upload-${operationId}`}
-          className="cursor-pointer flex items-center space-x-2 px-4 py-2 border rounded-md hover:bg-gray-100"
-        >
-          <Camera className="h-4 w-4" />
-          <span>Fotoğraf Seç</span>
-        </label>
-        
-        <Button 
-          onClick={handleUpload} 
-          disabled={!file || isUploading}
-          size="sm"
-        >
-          <Upload className="h-4 w-4 mr-2" />
-          {isUploading ? "Yükleniyor..." : "Yükle"}
-        </Button>
       </div>
-      
-      {preview && (
-        <div className="relative">
-          <button 
-            onClick={clearSelectedImage}
-            className="absolute top-2 right-2 p-1 rounded-full bg-red-600 text-white"
-          >
-            <X className="h-4 w-4" />
-          </button>
-          <img 
-            src={preview} 
-            alt="Preview" 
-            className="mt-2 max-h-40 rounded-md" 
-          />
+
+      {photos.length > 0 ? (
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {photos.map((photo, index) => (
+            <div key={index} className="relative group border rounded-md overflow-hidden">
+              <img 
+                src={photo} 
+                alt={`Operation photo ${index + 1}`} 
+                className="w-full h-auto object-cover aspect-square"
+              />
+              <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <Button 
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => removePhoto(photo)}
+                  className="flex items-center space-x-1"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span>Sil</span>
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="border border-dashed rounded-md p-8 text-center">
+          <Upload className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+          <p className="text-sm text-gray-500">Henüz fotoğraf eklenmemiş</p>
         </div>
       )}
     </div>
   );
-}
+};
+
+export default OperationPhotoUpload;

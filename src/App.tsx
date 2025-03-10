@@ -5,7 +5,7 @@ import HomePage from './pages/HomePage';
 import NotFound from './pages/NotFound';
 import Auth from './pages/Auth';
 import CustomerDashboard from './pages/CustomerDashboard';
-import RouteProtection from './components/auth/RouteProtection';
+import { RouteProtection } from './components/auth/RouteProtection';
 import CustomerProfile from './pages/CustomerProfile';
 import Login from './pages/Login';
 import StaffLogin from './pages/StaffLogin';

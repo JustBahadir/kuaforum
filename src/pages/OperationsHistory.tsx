@@ -75,7 +75,7 @@ export default function OperationsHistory() {
     enabled: userRole === 'admin' || !!personel
   });
   
-  const handleViewPhotos = (photos: string[]) => {
+  const handleViewPhotos = (photos: string[] = []) => {
     if (photos && photos.length > 0) {
       setCurrentPhotos(photos);
       setViewPhotoDialogOpen(true);
@@ -150,7 +150,7 @@ export default function OperationsHistory() {
                             <Button 
                               variant="ghost" 
                               size="sm" 
-                              onClick={() => handleViewPhotos(islem.photos || [])}
+                              onClick={() => handleViewPhotos(islem.photos)}
                             >
                               <Camera className="h-4 w-4 mr-1" />
                               {islem.photos.length}
