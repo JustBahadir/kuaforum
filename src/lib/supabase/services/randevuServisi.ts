@@ -112,35 +112,29 @@ export const randevuServisi = {
         throw new Error("Oturum açmış kullanıcı bulunamadı");
       }
       
-      // Bypass the RPC function since it's having type conversion issues
-      // Insert directly into the randevular table
-      const insertData = {
-        dukkan_id: randevu.dukkan_id,
-        musteri_id: randevu.musteri_id || null,
-        personel_id: randevu.personel_id,
-        tarih: randevu.tarih,
-        saat: randevu.saat,
-        durum: randevu.durum || "onaylandi",
-        notlar: randevu.notlar || "",
-        islemler: islemler,
-        customer_id: user.id
-      };
-      
-      console.log("Eklenen randevu verisi:", insertData);
-
-      // Direct insert as a fallback
-      const { data, error } = await supabase
-        .from('randevular')
-        .insert(insertData)
-        .select();
+      // Use the updated RPC function with individual parameters instead of a JSON object
+      const { data, error } = await supabase.rpc(
+        'create_appointment',
+        { 
+          p_dukkan_id: randevu.dukkan_id,
+          p_musteri_id: randevu.musteri_id || null,
+          p_personel_id: randevu.personel_id,
+          p_tarih: randevu.tarih,
+          p_saat: randevu.saat,
+          p_durum: randevu.durum || "onaylandi",
+          p_notlar: randevu.notlar || "",
+          p_islemler: islemler,
+          p_customer_id: user.id
+        }
+      );
       
       if (error) {
-        console.error("Randevu ekleme hatası:", error);
+        console.error("Randevu ekleme hatası (RPC):", error);
         throw new Error(`Randevu eklenirken bir hata oluştu: ${error.message || 'Bilinmeyen hata'}`);
       }
       
       console.log("Randevu başarıyla oluşturuldu:", data);
-      return data[0];
+      return data;
     } catch (error: any) {
       console.error("Randevu oluşturma hatası:", error);
       throw new Error(error?.message || "Randevu oluşturulurken bir hata oluştu");
