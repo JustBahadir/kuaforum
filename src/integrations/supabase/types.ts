@@ -566,12 +566,27 @@ export type Database = {
       }
     }
     Functions: {
-      create_appointment: {
-        Args: {
-          appointment_data: Json
-        }
-        Returns: Json
-      }
+      create_appointment:
+        | {
+            Args: {
+              appointment_data: Json
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_dukkan_id: number
+              p_musteri_id: number
+              p_personel_id: number
+              p_tarih: string
+              p_saat: string
+              p_durum: string
+              p_notlar: string
+              p_islemler: Json
+              p_customer_id: string
+            }
+            Returns: Json
+          }
       get_auth_user_role: {
         Args: Record<PropertyKey, never>
         Returns: string
