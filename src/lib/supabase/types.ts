@@ -87,6 +87,8 @@ export interface Musteri {
   created_at: string;
   dukkan_id?: number;
   auth_id?: string;
+  // Adding role field to fix type error in useAppointments.tsx
+  role?: string;
 }
 
 export type RandevuDurumu = "beklemede" | "onaylandi" | "iptal_edildi" | "tamamlandi";
@@ -146,3 +148,4 @@ export interface CalismaSaati {
   created_at?: string;
   dukkan_id?: number;
 }
+

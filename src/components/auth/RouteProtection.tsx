@@ -1,13 +1,10 @@
 
 import { ReactNode, useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { supabase } from '@/lib/supabase/client';
 
-interface RouteProtectionProps {
-  children: ReactNode;
-}
-
-export const RouteProtection = ({ children }: RouteProtectionProps) => {
+// No props interface needed as we'll be using Outlet
+export const RouteProtection = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [checking, setChecking] = useState(true);
@@ -78,5 +75,6 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
     );
   }
 
-  return <>{children}</>;
+  // Return the Outlet component to render the nested routes
+  return <Outlet />;
 };

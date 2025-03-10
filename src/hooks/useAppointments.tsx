@@ -1,8 +1,7 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { randevuServisi } from "@/lib/supabase/services/randevuServisi";
-import { Randevu, Personel, Musteri } from "@/lib/supabase/types";
+import { Randevu, Personel, Musteri, Profile } from "@/lib/supabase/types";
 import { toast } from "sonner";
 import { personelServisi } from "@/lib/supabase";
 import { supabase } from '@/lib/supabase/client';
@@ -118,14 +117,28 @@ export function useAppointments(dukkanId?: number) {
         // Get customer info if not already fetched
         if (appointment.musteri_id && !appointment.musteri) {
           try {
+            // Fetch the customer from the customers table
             const { data } = await supabase
               .from('musteriler')
               .select('id, first_name, last_name, phone, birthdate, created_at, dukkan_id')
               .eq('id', appointment.musteri_id)
               .maybeSingle();
               
+            // If customer data is found, convert it to Profile type
             if (data) {
-              appointment.musteri = data as Musteri;
+              // Convert Musteri to Profile for compatibility
+              const customerProfile: Profile = {
+                id: data.id.toString(),
+                first_name: data.first_name,
+                last_name: data.last_name || '',
+                phone: data.phone,
+                role: 'customer', // Add the missing role property
+                gender: null,
+                birthdate: data.birthdate,
+                created_at: data.created_at,
+                dukkan_id: data.dukkan_id
+              };
+              appointment.musteri = customerProfile;
             }
           } catch (error) {
             console.error(`Error fetching customer for appointment ${appointment.id}:`, error);
