@@ -15,6 +15,7 @@ export interface CustomerOperation {
   notes?: string;
   appointment_id?: number;
   photos?: string[];
+  musteri_id?: number;
 }
 
 export const customerOperationsService = {
@@ -48,6 +49,7 @@ export const customerOperationsService = {
             amount: parseFloat(op.tutar),
             points: parseFloat(op.puan),
             notes: op.aciklama || '',
+            musteri_id: op.musteri_id,
             photos: op.photos || []
           });
         }

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { kategoriServisi, islemServisi, siralamaServisi, personelIslemleriServisi } from "@/lib/supabase";
@@ -240,7 +239,6 @@ export default function StaffOperations() {
     setPhotoUploadDialogOpen(true);
   };
 
-  // Check if storage bucket exists, if not, create it
   useEffect(() => {
     const checkAndCreateBucket = async () => {
       try {
@@ -270,7 +268,6 @@ export default function StaffOperations() {
         <Tabs defaultValue="hizmetler">
           <TabsList>
             <TabsTrigger value="hizmetler">Hizmetler</TabsTrigger>
-            <TabsTrigger value="islemler">İşlemler</TabsTrigger>
             <TabsTrigger value="calisma-saatleri">Çalışma Saatleri</TabsTrigger>
           </TabsList>
 
@@ -322,85 +319,82 @@ export default function StaffOperations() {
             />
           </TabsContent>
 
-          <TabsContent value="islemler">
-            <Card>
-              <CardHeader>
-                <CardTitle>İşlem Geçmişi ve Fotoğraflar</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {islemleriYukluyor ? (
-                  <div className="flex justify-center p-6">
-                    <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
-                  </div>
-                ) : personelIslemleri.length === 0 ? (
-                  <div className="text-center p-6 text-muted-foreground">
-                    Henüz işlem kaydı bulunmamaktadır.
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tarih</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Personel</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlem</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tutar</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prim</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fotoğraflar</th>
-                          <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {personelIslemleri.map((islem) => (
-                          <tr key={islem.id} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {new Date(islem.created_at).toLocaleDateString('tr-TR')}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {islem.personel?.ad_soyad}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {islem.aciklama}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {islem.tutar} TL
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {islem.odenen} TL
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {islem.photos && islem.photos.length > 0 ? (
-                                <span>{islem.photos.length} Fotoğraf</span>
-                              ) : (
-                                <span className="text-gray-400">Fotoğraf yok</span>
-                              )}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                              <Button 
-                                onClick={() => handleOperationPhotosClick(islem)} 
-                                variant="outline" 
-                                size="sm"
-                              >
-                                Fotoğraf Ekle
-                              </Button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
           <TabsContent value="calisma-saatleri">
             <WorkingHours isStaff={true} dukkanId={dukkanId} />
           </TabsContent>
         </Tabs>
+        
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle>İşlem Geçmişi ve Fotoğraflar</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {islemleriYukluyor ? (
+              <div className="flex justify-center p-6">
+                <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
+              </div>
+            ) : personelIslemleri.length === 0 ? (
+              <div className="text-center p-6 text-muted-foreground">
+                Henüz işlem kaydı bulunmamaktadır.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tarih</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Personel</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlem</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tutar</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prim</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fotoğraflar</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {personelIslemleri.map((islem) => (
+                      <tr key={islem.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {new Date(islem.created_at).toLocaleDateString('tr-TR')}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {islem.personel?.ad_soyad}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {islem.aciklama}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {islem.tutar} TL
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {islem.odenen} TL
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {islem.photos && islem.photos.length > 0 ? (
+                            <span>{islem.photos.length} Fotoğraf</span>
+                          ) : (
+                            <span className="text-gray-400">Fotoğraf yok</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <Button 
+                            onClick={() => handleOperationPhotosClick(islem)} 
+                            variant="outline" 
+                            size="sm"
+                          >
+                            Fotoğraf Ekle
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Photo Upload Dialog */}
       <Dialog open={photoUploadDialogOpen} onOpenChange={setPhotoUploadDialogOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>

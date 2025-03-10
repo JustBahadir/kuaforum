@@ -1,25 +1,34 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Upload, X, ImagePlus } from "lucide-react";
+import { Upload, X, ImagePlus, Camera } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export interface OperationPhotoUploadProps {
   existingPhotos?: string[];
   onPhotosUpdated: (photos: string[]) => Promise<void>;
+  maxPhotos?: number;
 }
 
 export function OperationPhotoUpload({ 
   existingPhotos = [], 
-  onPhotosUpdated 
+  onPhotosUpdated,
+  maxPhotos = 4
 }: OperationPhotoUploadProps) {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const [photoDialogOpen, setPhotoDialogOpen] = useState(false);
+  const [cameraActive, setCameraActive] = useState(false);
+  const [videoRef, setVideoRef] = useState<HTMLVideoElement | null>(null);
 
+  const remainingSlots = maxPhotos - existingPhotos.length;
+  
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const filesArray = Array.from(e.target.files);
+    if (e.target.files && remainingSlots > 0) {
+      // Only take up to the remaining slots
+      const filesArray = Array.from(e.target.files).slice(0, remainingSlots);
       setSelectedFiles(prev => [...prev, ...filesArray]);
       
       // Create preview URLs
@@ -103,60 +112,97 @@ export function OperationPhotoUpload({
     }
   };
 
+  const handlePhotoOption = () => {
+    setPhotoDialogOpen(true);
+  };
+
+  const startCamera = async () => {
+    setCameraActive(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      if (videoRef) {
+        videoRef.srcObject = stream;
+        videoRef.play();
+      }
+    } catch (error) {
+      console.error("Kamera erişiminde hata:", error);
+      toast.error("Kamera erişiminde bir hata oluştu");
+      setCameraActive(false);
+    }
+  };
+
+  const takePhoto = () => {
+    if (!videoRef) return;
+    
+    const canvas = document.createElement('canvas');
+    canvas.width = videoRef.videoWidth;
+    canvas.height = videoRef.videoHeight;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.drawImage(videoRef, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(async (blob) => {
+        if (blob) {
+          const file = new File([blob], `photo-${Date.now()}.jpg`, { type: 'image/jpeg' });
+          setSelectedFiles(prev => [...prev, file]);
+          
+          const previewUrl = URL.createObjectURL(blob);
+          setPreviewUrls(prev => [...prev, previewUrl]);
+        }
+      }, 'image/jpeg');
+    }
+    
+    // Stop the camera
+    stopCamera();
+  };
+
+  const stopCamera = () => {
+    if (videoRef && videoRef.srcObject) {
+      const stream = videoRef.srcObject as MediaStream;
+      const tracks = stream.getTracks();
+      tracks.forEach(track => track.stop());
+      videoRef.srcObject = null;
+    }
+    setCameraActive(false);
+    setPhotoDialogOpen(false);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-medium">İşlem Fotoğrafları</h3>
-        {selectedFiles.length > 0 && (
-          <Button 
-            onClick={uploadPhotos} 
-            disabled={uploading} 
-            variant="outline" 
-            size="sm"
-            className="flex items-center gap-1"
-          >
-            <Upload className="h-4 w-4" />
-            {uploading ? "Yükleniyor..." : "Fotoğrafları Yükle"}
-          </Button>
-        )}
+        <div className="flex gap-2">
+          {remainingSlots > 0 && (
+            <Button 
+              onClick={handlePhotoOption} 
+              variant="outline" 
+              size="sm"
+              className="flex items-center gap-1"
+            >
+              <ImagePlus className="h-4 w-4" />
+              Fotoğraf Ekle
+            </Button>
+          )}
+          
+          {selectedFiles.length > 0 && (
+            <Button 
+              onClick={uploadPhotos} 
+              disabled={uploading} 
+              variant="outline" 
+              size="sm"
+              className="flex items-center gap-1"
+            >
+              <Upload className="h-4 w-4" />
+              {uploading ? "Yükleniyor..." : "Yükle"}
+            </Button>
+          )}
+        </div>
       </div>
       
-      {/* File input */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <label className="border-2 border-dashed rounded-md p-4 h-32 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50">
-          <ImagePlus className="h-8 w-8 text-gray-400" />
-          <span className="mt-2 text-sm text-gray-500">Fotoğraf Ekle</span>
-          <input 
-            type="file" 
-            accept="image/*" 
-            multiple 
-            className="hidden" 
-            onChange={handleFileChange} 
-            disabled={uploading}
-          />
-        </label>
-        
-        {/* Preview of selected files */}
-        {previewUrls.map((url, idx) => (
-          <div key={`preview-${idx}`} className="relative h-32 group">
-            <img
-              src={url}
-              alt="Preview"
-              className="h-full w-full object-cover rounded-md"
-            />
-            <button
-              type="button"
-              onClick={() => removeFile(idx)}
-              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        ))}
-        
+      {/* Photo grid - display in a nice grid based on how many photos */}
+      <div className={`grid gap-2 ${existingPhotos.length + previewUrls.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
         {/* Existing photos */}
         {existingPhotos.map((photoUrl, idx) => (
-          <div key={`existing-${idx}`} className="relative h-32 group">
+          <div key={`existing-${idx}`} className="relative aspect-square group">
             <img
               src={photoUrl}
               alt={`İşlem fotoğrafı ${idx + 1}`}
@@ -171,7 +217,84 @@ export function OperationPhotoUpload({
             </button>
           </div>
         ))}
+        
+        {/* Preview of selected files */}
+        {previewUrls.map((url, idx) => (
+          <div key={`preview-${idx}`} className="relative aspect-square group">
+            <img
+              src={url}
+              alt="Preview"
+              className="h-full w-full object-cover rounded-md"
+            />
+            <button
+              type="button"
+              onClick={() => removeFile(idx)}
+              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        ))}
       </div>
+      
+      {/* Photo option dialog */}
+      <Dialog open={photoDialogOpen} onOpenChange={setPhotoDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Fotoğraf Ekle</DialogTitle>
+          </DialogHeader>
+          
+          {!cameraActive ? (
+            <div className="grid grid-cols-2 gap-4 py-4">
+              <Button 
+                variant="outline" 
+                onClick={startCamera}
+                className="flex flex-col items-center justify-center p-6 h-32"
+              >
+                <Camera className="h-8 w-8 mb-2" />
+                <span>Kamera</span>
+              </Button>
+              
+              <label className="flex flex-col items-center justify-center p-6 h-32 border rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800">
+                <ImagePlus className="h-8 w-8 mb-2" />
+                <span>Galeriden Seç</span>
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  multiple 
+                  className="hidden" 
+                  onChange={handleFileChange} 
+                  disabled={uploading}
+                />
+              </label>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center">
+              <video 
+                ref={ref => setVideoRef(ref)} 
+                className="w-full rounded-md"
+                autoPlay 
+                muted 
+                playsInline
+              />
+              <div className="flex gap-4 mt-4">
+                <Button
+                  variant="outline"
+                  onClick={stopCamera}
+                >
+                  İptal
+                </Button>
+                <Button
+                  variant="default"
+                  onClick={takePhoto}
+                >
+                  Fotoğraf Çek
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1,4 +1,3 @@
-
 import { supabase } from '../client';
 import { Randevu } from '../types';
 import { toast } from 'sonner';
@@ -238,7 +237,7 @@ export const randevuServisi = {
         const personelIslem = {
           personel_id: randevu.personel_id,
           islem_id: islem.id,
-          musteri_id: randevu.musteri_id, // Set the customer ID correctly
+          musteri_id: randevu.musteri_id, // Ensure the customer ID is properly assigned
           tutar: parseFloat(islem.fiyat),
           odenen: 0, // Will be updated when payment is recorded
           puan: parseInt(islem.puan),
@@ -247,12 +246,17 @@ export const randevuServisi = {
           photos: [] // Initialize empty photos array
         };
         
-        const { error: insertError } = await supabase
-          .from('personel_islemleri')
-          .insert(personelIslem);
-          
-        if (insertError) {
-          console.error("Personel işlemi ekleme hatası:", insertError);
+        // Only create the operation if we have a customer ID
+        if (randevu.musteri_id) {
+          const { error: insertError } = await supabase
+            .from('personel_islemleri')
+            .insert(personelIslem);
+            
+          if (insertError) {
+            console.error("Personel işlemi ekleme hatası:", insertError);
+          }
+        } else {
+          console.error("Müşteri ID bulunamadı, işlem kaydı oluşturulamadı");
         }
       }
       
