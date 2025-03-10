@@ -1,7 +1,8 @@
+
 import { supabase } from '../client';
 import { Personel } from '../types';
 import { profilServisi } from './profilServisi';
-import { toast } from 'react-toastify';
+import { toast } from "sonner";
 
 export const personelServisi = {
   async hepsiniGetir() {
