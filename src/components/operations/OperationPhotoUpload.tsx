@@ -258,19 +258,21 @@ export function OperationPhotoUpload({
           {photos.length > 0 ? (
             photos.map((photoUrl, index) => (
               <Card key={index} className="relative h-32 w-32 overflow-hidden">
-                <img 
-                  src={photoUrl} 
-                  alt={`İşlem fotoğrafı ${index + 1}`} 
-                  className="h-full w-full object-cover"
-                />
-                <Button
-                  variant="destructive"
-                  size="icon"
-                  className="absolute top-1 right-1 h-6 w-6 rounded-full"
-                  onClick={() => handleRemovePhoto(photoUrl)}
-                >
-                  <X className="h-3 w-3" />
-                </Button>
+                <CardContent className="p-0">
+                  <img 
+                    src={photoUrl} 
+                    alt={`İşlem fotoğrafı ${index + 1}`} 
+                    className="h-full w-full object-cover"
+                  />
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    className="absolute top-1 right-1 h-6 w-6 rounded-full"
+                    onClick={() => handleRemovePhoto(photoUrl)}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </CardContent>
               </Card>
             ))
           ) : (

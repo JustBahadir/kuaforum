@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -39,7 +40,7 @@ import { PhoneInputField } from "../components/FormFields/PhoneInputField";
 import { getHoroscope, getHoroscopeDescription, getDailyHoroscopeReading, HoroscopeSign } from "../utils/horoscopeUtils";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { formatCurrency } from "@/lib/utils";
-import { OperationPhotoUpload } from "../components/OperationPhotoUpload";
+import { OperationPhotoUpload } from "@/components/operations/OperationPhotoUpload";
 
 interface CustomerDetailsProps {
   customer: Musteri;
@@ -607,6 +608,7 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
                         ))}
                       </div>
                     )}
+                  </div>
                   
                   <div className="space-y-2">
                     <Label htmlFor="custom_notes">Notlar</Label>
