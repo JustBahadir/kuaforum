@@ -21,7 +21,7 @@ export interface CustomerOperation {
 export const customerOperationsService = {
   async getCustomerOperations(customerId: string): Promise<CustomerOperation[]> {
     try {
-      // Get customer's ID from the musteriler table
+      // Get customer's ID from the musteriler table using auth_id
       const { data: customerData } = await supabase
         .from('musteriler')
         .select('id')
@@ -29,11 +29,36 @@ export const customerOperationsService = {
         .single();
       
       if (!customerData) {
-        console.error("Customer not found in musteriler table");
+        console.log("Customer not found with auth_id, trying direct ID");
+        // Try direct ID in case customerId is already a musteri_id
+        const { data: operations } = await supabase
+          .from('personel_islemleri')
+          .select(`
+            *,
+            islem:islemler(*),
+            personel:personel(*)
+          `)
+          .eq('musteri_id', parseInt(customerId))
+          .order('created_at', { ascending: false });
+          
+        if (operations && operations.length > 0) {
+          return operations.map(op => ({
+            id: op.id,
+            date: op.created_at,
+            service_name: op.islem?.islem_adi || 'Bilinmeyen İşlem',
+            personnel_name: op.personel?.ad_soyad || 'Belirtilmemiş',
+            amount: parseFloat(op.tutar.toString()),
+            points: op.puan,
+            notes: op.aciklama,
+            musteri_id: op.musteri_id,
+            photos: op.photos || []
+          }));
+        }
+        
         return [];
       }
       
-      // Get operations for this customer directly from personel_islemleri
+      // Get operations for this customer from personel_islemleri
       const operationsData = await personelIslemleriServisi.musteriIslemleriGetir(customerData.id);
       
       // Create operations from the personel_islemleri data
@@ -46,8 +71,8 @@ export const customerOperationsService = {
             date: op.created_at,
             service_name: op.islem.islem_adi,
             personnel_name: op.personel?.ad_soyad || 'Belirtilmemiş',
-            amount: parseFloat(op.tutar),
-            points: parseFloat(op.puan),
+            amount: parseFloat(op.tutar.toString()),
+            points: op.puan,
             notes: op.aciklama || '',
             musteri_id: op.musteri_id,
             photos: op.photos || []

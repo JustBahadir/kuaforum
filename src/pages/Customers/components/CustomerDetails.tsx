@@ -370,6 +370,13 @@ export const CustomerDetails = ({ customer, dukkanId, onEdit, onDelete }: Custom
               </div>
             </div>
           </div>
+          
+          <div className="mt-4 p-3 bg-purple-50 rounded-md">
+            <h3 className="text-sm font-medium text-purple-700 flex items-center gap-1">
+              <Award className="h-4 w-4" /> TOPLAM PUANLAR
+            </h3>
+            <p className="mt-1 text-lg font-semibold text-purple-900">{totalPoints} Puan</p>
+          </div>
         </CardContent>
       </Card>
 
@@ -665,7 +672,6 @@ export const CustomerDetails = ({ customer, dukkanId, onEdit, onDelete }: Custom
                         <TableHead><Award className="h-4 w-4 mr-2" /> Puan</TableHead>
                         <TableHead className="w-1/3"><MessageSquare className="h-4 w-4 mr-2" /> Açıklama</TableHead>
                         <TableHead><Camera className="h-4 w-4 mr-2" /> Fotoğraf</TableHead>
-                        <TableHead></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -779,3 +785,4 @@ export const CustomerDetails = ({ customer, dukkanId, onEdit, onDelete }: Custom
     </div>
   );
 }
+

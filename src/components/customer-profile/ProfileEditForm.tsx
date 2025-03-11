@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import { FileUpload } from "@/components/ui/file-upload";
 import { toast } from "sonner";
+import { profilServisi } from "@/lib/supabase";
 
 export interface ProfileEditFormProps {
   profile: {
@@ -40,30 +41,6 @@ export interface ProfileEditFormProps {
   isUploading: boolean;
 }
 
-// Format IBAN as TR00 0000 0000 0000 0000 0000 00
-const formatIBAN = (value: string) => {
-  // First remove all non-alphanumeric characters
-  let cleaned = value.replace(/[^A-Z0-9]/g, '');
-  
-  // Ensure it starts with TR
-  if (!cleaned.startsWith('TR')) {
-    cleaned = 'TR' + cleaned.substring(0, cleaned.startsWith('T') ? 25 : cleaned.startsWith('R') ? 25 : 24);
-  } else {
-    cleaned = cleaned.substring(0, 26); // Limit to 26 characters (TR + 24 digits)
-  }
-  
-  // Format in groups of 4
-  let formatted = '';
-  for (let i = 0; i < cleaned.length; i++) {
-    if (i > 0 && i % 4 === 0) {
-      formatted += ' ';
-    }
-    formatted += cleaned[i];
-  }
-  
-  return formatted;
-};
-
 export function ProfileEditForm({ 
   profile, 
   handleChange, 
@@ -77,7 +54,7 @@ export function ProfileEditForm({
   
   useEffect(() => {
     if (profile.iban) {
-      setFormattedIBAN(formatIBAN(profile.iban));
+      setFormattedIBAN(profilServisi.formatIBAN(profile.iban));
     }
   }, [profile.iban]);
 
@@ -90,16 +67,30 @@ export function ProfileEditForm({
   const isStaff = profile.role === 'staff';
   
   const handleIBANChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Only allow TR and digits
-    const rawValue = e.target.value.replace(/[^0-9TR]/gi, '');
-    const formattedValue = formatIBAN(rawValue);
-    setFormattedIBAN(formattedValue);
+    // Start with TR if not present
+    let value = e.target.value;
+    if (!value.startsWith('TR')) {
+      value = 'TR' + value.replace(/[^0-9]/g, '');
+    } else {
+      value = 'TR' + value.substring(2).replace(/[^0-9]/g, '');
+    }
+    
+    // Format with spaces every 4 characters
+    let formatted = '';
+    for (let i = 0; i < value.length; i++) {
+      if (i > 0 && i % 4 === 0) {
+        formatted += ' ';
+      }
+      formatted += value[i];
+    }
+    
+    setFormattedIBAN(formatted);
     
     // Create a synthetic event to pass to the parent's handleChange
     const syntheticEvent = {
       target: {
         name: 'iban',
-        value: formattedValue.replace(/\s/g, '')  // Remove spaces for storage
+        value: formatted.replace(/\s/g, '')  // Remove spaces for storage
       }
     } as React.ChangeEvent<HTMLInputElement>;
     

@@ -67,7 +67,7 @@ export interface PersonelIslemi {
   id: number;
   personel_id: number;
   islem_id: number;
-  musteri_id?: number; // Add musteri_id to track which customer the operation belongs to
+  musteri_id?: number; // Added musteri_id to track which customer the operation belongs to
   tutar: number;
   odenen: number;
   prim_yuzdesi: number;

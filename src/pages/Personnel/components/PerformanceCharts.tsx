@@ -13,8 +13,17 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
   const performanceData = personeller.map(personel => {
     const personelIslemleri = islemGecmisi.filter(islem => islem.personel_id === personel.id);
     const islemSayisi = personelIslemleri.length;
-    const toplamCiro = personelIslemleri.reduce((sum, islem) => sum + parseFloat(islem.tutar.toString()), 0);
+    
+    // Calculate total revenue and convert to number if necessary
+    const toplamCiro = personelIslemleri.reduce((sum, islem) => {
+      const tutar = typeof islem.tutar === 'string' ? parseFloat(islem.tutar) : islem.tutar;
+      return sum + (isNaN(tutar) ? 0 : tutar);
+    }, 0);
+    
+    // Calculate total points
     const toplamPuan = personelIslemleri.reduce((sum, islem) => sum + (islem.puan || 0), 0);
+    
+    // Calculate average points
     const ortalamaPuan = islemSayisi > 0 ? toplamPuan / islemSayisi : 0;
 
     return {
@@ -22,6 +31,7 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
       islemSayisi,
       toplamCiro,
       ortalamaPuan,
+      toplamPuan,
     };
   });
 
@@ -36,7 +46,7 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
             <BarChart data={performanceData}>
               <XAxis dataKey="name" />
               <YAxis />
-              <Tooltip />
+              <Tooltip formatter={(value) => `${value.toFixed(2)} TL`} />
               <Legend />
               <Bar dataKey="toplamCiro" name="Toplam Ciro (TL)" fill="#8884d8" />
             </BarChart>
@@ -57,7 +67,7 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
               <Tooltip />
               <Legend />
               <Bar yAxisId="left" dataKey="islemSayisi" name="İşlem Sayısı" fill="#82ca9d" />
-              <Bar yAxisId="right" dataKey="ortalamaPuan" name="Ortalama Puan" fill="#ffc658" />
+              <Bar yAxisId="right" dataKey="toplamPuan" name="Toplam Puan" fill="#ffc658" />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
