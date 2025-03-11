@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Personel, personelServisi, profilServisi } from "@/lib/supabase";
@@ -29,31 +28,6 @@ interface PersonnelEditDialogProps {
   onEditComplete?: () => void;
 }
 
-// IBAN formatter function
-const formatIBAN = (value: string) => {
-  // Ensure it starts with TR
-  let cleaned = value.replace(/[^A-Z0-9]/g, '');
-  
-  // If it doesn't start with TR, add it
-  if (!cleaned.startsWith('TR')) {
-    cleaned = 'TR' + cleaned.replace(/\D/g, '');
-  }
-  
-  // Limit to 26 characters (TR + 24 digits)
-  cleaned = cleaned.substring(0, 26);
-  
-  // Format in groups of 4
-  let formatted = '';
-  for (let i = 0; i < cleaned.length; i++) {
-    if (i > 0 && i % 4 === 0) {
-      formatted += ' ';
-    }
-    formatted += cleaned[i];
-  }
-  
-  return formatted;
-};
-
 export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComplete }: PersonnelEditDialogProps) {
   const [personelDuzenle, setPersonelDuzenle] = useState<Personel | null>(null);
   const [formattedIBAN, setFormattedIBAN] = useState<string>('');
@@ -61,7 +35,6 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComp
   const { userRole } = useCustomerAuth();
   const queryClient = useQueryClient();
 
-  // Fetch personel data based on personelId
   const { data: personel, isLoading, refetch } = useQuery({
     queryKey: ['personel', personelId],
     queryFn: () => personelServisi.getirById(personelId),
@@ -70,11 +43,9 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComp
     retryDelay: 1000
   });
 
-  // Update personelDuzenle state when personel data is loaded
   useEffect(() => {
     if (personel) {
       setPersonelDuzenle(personel);
-      // Format IBAN if it exists
       if (personel.iban) {
         setFormattedIBAN(formatIBAN(personel.iban));
       } else {
@@ -83,14 +54,29 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComp
     }
   }, [personel]);
 
-  // Handle IBAN changes
+  const formatIBAN = (value: string) => {
+    let cleaned = value.replace(/[^A-Z0-9]/g, '');
+    if (!cleaned.startsWith('TR')) {
+      cleaned = 'TR' + cleaned.replace(/\D/g, '');
+    }
+    cleaned = cleaned.substring(0, 26);
+    let formatted = '';
+    for (let i = 0; i < cleaned.length; i++) {
+      if (i > 0 && i % 4 === 0) {
+        formatted += ' ';
+      }
+      formatted += cleaned[i];
+    }
+    return formatted;
+  };
+
   const handleIBANChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Only allow TR and digits
-    const rawValue = e.target.value.replace(/[^0-9TR]/gi, '');
-    const formattedValue = formatIBAN(rawValue);
+    let value = e.target.value.replace(/[^0-9TR]/gi, '');
+    if (!value.startsWith('TR')) {
+      value = 'TR' + value.substring(value.startsWith('T') ? 1 : value.startsWith('R') ? 1 : 0).replace(/\D/g, '');
+    }
+    const formattedValue = formatIBAN(value);
     setFormattedIBAN(formattedValue);
-    
-    // Update the personelDuzenle with the unformatted value for saving
     setPersonelDuzenle((prev) => 
       prev ? { ...prev, iban: formattedValue.replace(/\s/g, '') } : null
     );
@@ -118,26 +104,11 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComp
     e.preventDefault();
     if (personelDuzenle) {
       setIsSaving(true);
-      
-      // Only send the fields that should be editable
       const { id } = personelDuzenle;
       const guncellenecekVeriler: Partial<Personel> = {
         maas: personelDuzenle.maas,
         calisma_sistemi: personelDuzenle.calisma_sistemi,
       };
-      
-      // If the user is admin, they can edit more fields
-      if (userRole === 'admin') {
-        Object.assign(guncellenecekVeriler, {
-          ad_soyad: personelDuzenle.ad_soyad,
-          telefon: personelDuzenle.telefon,
-          eposta: personelDuzenle.eposta,
-          adres: personelDuzenle.adres,
-          personel_no: personelDuzenle.personel_no,
-          iban: personelDuzenle.iban?.replace(/\s/g, '')
-        });
-      }
-      
       personelGuncelle({ id, data: guncellenecekVeriler });
     }
   };
@@ -166,19 +137,24 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComp
           <DialogHeader>
             <DialogTitle>Personel Düzenle</DialogTitle>
           </DialogHeader>
+          
+          {isAdmin && (
+            <div className="p-4 bg-amber-50 rounded-lg mb-4">
+              <p className="text-sm text-amber-600">
+                Dükkan yöneticisi olarak, sadece maaş ve çalışma sistemi bilgilerini değiştirebilirsiniz.
+                Personel, kendi kişisel bilgilerini kendi profil sayfasından güncelleyebilir.
+              </p>
+            </div>
+          )}
+          
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="edit_ad_soyad">Ad Soyad</Label>
               <Input
                 id="edit_ad_soyad"
                 value={personelDuzenle.ad_soyad}
-                onChange={(e) =>
-                  setPersonelDuzenle((prev) =>
-                    prev ? { ...prev, ad_soyad: e.target.value } : null
-                  )
-                }
-                disabled={!isAdmin}
-                className={!isAdmin ? "bg-gray-100" : ""}
+                disabled={true}
+                className="bg-gray-100"
                 required
               />
             </div>
@@ -188,13 +164,8 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComp
                 id="edit_telefon"
                 type="tel"
                 value={personelDuzenle.telefon}
-                onChange={(e) =>
-                  setPersonelDuzenle((prev) =>
-                    prev ? { ...prev, telefon: e.target.value } : null
-                  )
-                }
-                disabled={!isAdmin}
-                className={!isAdmin ? "bg-gray-100" : ""}
+                disabled={true}
+                className="bg-gray-100"
                 required
               />
             </div>
@@ -204,13 +175,8 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComp
                 id="edit_eposta"
                 type="email"
                 value={personelDuzenle.eposta}
-                onChange={(e) =>
-                  setPersonelDuzenle((prev) =>
-                    prev ? { ...prev, eposta: e.target.value } : null
-                  )
-                }
-                disabled={!isAdmin}
-                className={!isAdmin ? "bg-gray-100" : ""}
+                disabled={true}
+                className="bg-gray-100"
                 required
               />
             </div>
@@ -219,13 +185,8 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComp
               <Input
                 id="edit_adres"
                 value={personelDuzenle.adres}
-                onChange={(e) =>
-                  setPersonelDuzenle((prev) =>
-                    prev ? { ...prev, adres: e.target.value } : null
-                  )
-                }
-                disabled={!isAdmin}
-                className={!isAdmin ? "bg-gray-100" : ""}
+                disabled={true}
+                className="bg-gray-100"
                 required
               />
             </div>
@@ -234,16 +195,12 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComp
               <Input
                 id="edit_personel_no"
                 value={personelDuzenle.personel_no}
-                onChange={(e) =>
-                  setPersonelDuzenle((prev) =>
-                    prev ? { ...prev, personel_no: e.target.value } : null
-                  )
-                }
-                disabled={!isAdmin}
-                className={!isAdmin ? "bg-gray-100" : ""}
+                disabled={true}
+                className="bg-gray-100"
                 required
               />
             </div>
+            
             <div className="space-y-2">
               <Label htmlFor="edit_maas">Maaş</Label>
               <Input
@@ -283,18 +240,17 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComp
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit_iban">IBAN</Label>
+              <Label htmlFor="edit_iban">IBAN (Personel tarafından güncellenir)</Label>
               <Input
                 id="edit_iban"
                 value={formattedIBAN}
-                onChange={handleIBANChange}
+                disabled={true}
+                className="bg-gray-100"
                 placeholder="TR00 0000 0000 0000 0000 0000 00"
-                disabled={!isAdmin}
-                className={!isAdmin ? "bg-gray-100" : ""}
                 maxLength={36}
               />
               <p className="text-xs text-gray-500">
-                IBAN bilgisi personel profilinden senkronize edilecektir.
+                IBAN bilgisi personel profilinden otomatik olarak senkronize edilir. Personel kendi profilinden bu bilgiyi güncelleyebilir.
               </p>
             </div>
           </div>

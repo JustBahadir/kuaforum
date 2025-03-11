@@ -68,6 +68,7 @@ export interface PersonelIslemi {
   personel_id: number;
   islem_id: number;
   musteri_id?: number; // Added musteri_id to track which customer the operation belongs to
+  randevu_id?: number; // Added to track which appointment this operation belongs to
   tutar: number;
   odenen: number;
   prim_yuzdesi: number;

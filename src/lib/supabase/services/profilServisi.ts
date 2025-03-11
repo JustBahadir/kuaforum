@@ -5,21 +5,33 @@ import { updateProfile, createOrUpdateProfile } from './profileServices/updatePr
 // Function to clean IBAN before sending to the server
 const cleanIBANForStorage = (iban?: string) => {
   if (!iban) return undefined;
-  // Remove all spaces and non-alphanumeric characters except for TR prefix
-  return iban.replace(/\s/g, '').replace(/[^A-Z0-9]/g, '');
+  
+  // Remove all spaces
+  let cleaned = iban.replace(/\s/g, '');
+  
+  // Ensure it starts with TR and contains only digits after that
+  if (!cleaned.startsWith('TR')) {
+    cleaned = 'TR' + cleaned.replace(/\D/g, '');
+  } else {
+    cleaned = 'TR' + cleaned.substring(2).replace(/\D/g, '');
+  }
+  
+  // Limit to TR + 24 digits maximum (26 chars total)
+  return cleaned.substring(0, 26);
 };
 
 // Function to format IBAN with TR prefix and proper spacing
 const formatIBAN = (iban: string) => {
   // Clean the IBAN first
-  let cleaned = iban.replace(/[^A-Z0-9]/g, '');
+  let cleaned = iban.replace(/\s/g, '');
   
   // Ensure it starts with TR
   if (!cleaned.startsWith('TR')) {
-    cleaned = 'TR' + cleaned.substring(0, cleaned.startsWith('T') ? 25 : cleaned.startsWith('R') ? 25 : 24);
-  } else {
-    cleaned = cleaned.substring(0, 26); // Limit to 26 characters (TR + 24 digits)
+    cleaned = 'TR' + cleaned.substring(0, cleaned.length).replace(/\D/g, '');
   }
+  
+  // Limit to 26 characters (TR + 24 digits)
+  cleaned = cleaned.substring(0, 26);
   
   // Format with spaces every 4 characters
   let formatted = '';
@@ -35,11 +47,13 @@ const formatIBAN = (iban: string) => {
 
 // Function to validate IBAN format
 const validateIBAN = (iban: string) => {
-  // Basic validation: ensure it has TR prefix
+  // Ensure it has TR prefix and only contains digits after that
   if (!iban.startsWith('TR')) {
-    return 'TR' + iban.replace(/[^0-9]/g, '');
+    return 'TR' + iban.replace(/\D/g, '');
   }
-  return iban;
+  
+  // Make sure there are only digits after TR
+  return 'TR' + iban.substring(2).replace(/\D/g, '');
 };
 
 // Export the profile service interface with IBAN formatting
@@ -48,7 +62,7 @@ export const profilServisi = {
   guncelle: (data: any) => {
     // Validate and clean IBAN if present
     if (data.iban) {
-      data.iban = validateIBAN(cleanIBANForStorage(data.iban));
+      data.iban = validateIBAN(cleanIBANForStorage(data.iban) || '');
     }
     return updateProfile(data);
   },
@@ -56,9 +70,11 @@ export const profilServisi = {
   createOrUpdateProfile: (userId: string, data: any) => {
     // Validate and clean IBAN if present
     if (data.iban) {
-      data.iban = validateIBAN(cleanIBANForStorage(data.iban));
+      data.iban = validateIBAN(cleanIBANForStorage(data.iban) || '');
     }
     return createOrUpdateProfile(userId, data);
   },
-  formatIBAN // Export the IBAN formatter for use in other components
+  formatIBAN, // Export the IBAN formatter for use in other components
+  validateIBAN, // Export the IBAN validator
+  cleanIBANForStorage // Export the IBAN cleaner
 };

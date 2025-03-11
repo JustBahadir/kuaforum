@@ -53,10 +53,16 @@ export const personelIslemleriServisi = {
   // Add a new operation
   async ekle(islemi: Omit<PersonelIslemi, 'id' | 'created_at'> & { 
     musteri_id?: number; 
+    randevu_id?: number;
     tarih?: string; 
     notlar?: string;
     photos?: string[];
   }) {
+    // Ensure we're not adding more than 4 photos
+    if (islemi.photos && islemi.photos.length > 4) {
+      islemi.photos = islemi.photos.slice(0, 4);
+    }
+    
     const { data, error } = await supabase
       .from('personel_islemleri')
       .insert([islemi])
@@ -73,6 +79,11 @@ export const personelIslemleriServisi = {
 
   // Update an operation
   async guncelle(id: number, updates: Partial<PersonelIslemi>) {
+    // Ensure we're not adding more than 4 photos
+    if (updates.photos && updates.photos.length > 4) {
+      updates.photos = updates.photos.slice(0, 4);
+    }
+    
     const { data, error } = await supabase
       .from('personel_islemleri')
       .update(updates)
@@ -101,6 +112,11 @@ export const personelIslemleriServisi = {
 
   // Update operation photos
   async updatePhotos(id: number, photos: string[]) {
+    // Ensure we're not adding more than 4 photos
+    if (photos.length > 4) {
+      photos = photos.slice(0, 4);
+    }
+    
     const { data, error } = await supabase
       .from('personel_islemleri')
       .update({ photos })
@@ -110,5 +126,21 @@ export const personelIslemleriServisi = {
 
     if (error) throw error;
     return data;
+  },
+  
+  // Get operations by appointment
+  async getByRandevuId(randevuId: number) {
+    const { data, error } = await supabase
+      .from('personel_islemleri')
+      .select(`
+        *,
+        islem:islemler(*),
+        personel:personel(*)
+      `)
+      .eq('randevu_id', randevuId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
   }
 };

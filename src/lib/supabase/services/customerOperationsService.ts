@@ -16,6 +16,7 @@ export interface CustomerOperation {
   appointment_id?: number;
   photos?: string[];
   musteri_id?: number;
+  randevu_id?: number; // Added to track operations related to appointments
 }
 
 export const customerOperationsService = {
@@ -51,6 +52,7 @@ export const customerOperationsService = {
             points: op.puan,
             notes: op.aciklama,
             musteri_id: op.musteri_id,
+            randevu_id: op.randevu_id,
             photos: op.photos || []
           }));
         }
@@ -75,6 +77,7 @@ export const customerOperationsService = {
             points: op.puan,
             notes: op.aciklama || '',
             musteri_id: op.musteri_id,
+            randevu_id: op.randevu_id,
             photos: op.photos || []
           });
         }
@@ -105,6 +108,11 @@ export const customerOperationsService = {
   
   async updateOperationPhotos(operationId: number, photos: string[]): Promise<boolean> {
     try {
+      // Make sure we don't exceed 4 photos
+      if (photos.length > 4) {
+        photos = photos.slice(0, 4);
+      }
+      
       const { error } = await supabase
         .from('personel_islemleri')
         .update({ photos })

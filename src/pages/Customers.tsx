@@ -15,12 +15,14 @@ import { NewCustomerForm } from "./Customers/components/NewCustomerForm";
 import { Toaster } from "sonner";
 import { useShopData } from "@/hooks/useShopData";
 import { Musteri } from "@/lib/supabase/types";
+import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 
 export default function Customers() {
   const [searchText, setSearchText] = useState("");
   const [isNewCustomerModalOpen, setIsNewCustomerModalOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Musteri | null>(null);
   const { dukkanData } = useShopData(null);
+  const { userRole } = useCustomerAuth();
   const location = useLocation();
   const navigate = useNavigate();
   
@@ -100,6 +102,8 @@ export default function Customers() {
     setSelectedCustomer(null); // Go back to list after deletion
   };
 
+  const isAdmin = userRole === 'admin';
+
   return (
     <StaffLayout>
       {/* Only use Sonner Toaster for notifications */}
@@ -122,6 +126,7 @@ export default function Customers() {
               onEdit={handleCustomerUpdated}
               onDelete={handleCustomerDeleted}
               dukkanId={dukkanData?.id}
+              isReadOnly={!isAdmin} // Staff can only view, not edit
             />
           </>
         ) : (
@@ -142,19 +147,26 @@ export default function Customers() {
                       onChange={(e) => setSearchText(e.target.value)}
                     />
                   </div>
-                  <Button 
-                    variant="outline" 
-                    className="gap-1"
-                    onClick={handleOpenNewCustomerModal}
-                    disabled={!dukkanData?.id}
-                  >
-                    <UserPlus className="h-4 w-4" />
-                    <span>Yeni Müşteri</span>
-                  </Button>
+                  {isAdmin && (
+                    <Button 
+                      variant="outline" 
+                      className="gap-1"
+                      onClick={handleOpenNewCustomerModal}
+                      disabled={!dukkanData?.id}
+                    >
+                      <UserPlus className="h-4 w-4" />
+                      <span>Yeni Müşteri</span>
+                    </Button>
+                  )}
                 </div>
-                {!dukkanData?.id && (
+                {!dukkanData?.id && isAdmin && (
                   <p className="text-sm text-red-500 mt-2">
                     Müşteri eklemek için dükkan yöneticisi olmanız gerekmektedir.
+                  </p>
+                )}
+                {!isAdmin && (
+                  <p className="text-sm text-purple-600 mt-2">
+                    Personel olarak müşteri bilgilerini görüntüleyebilirsiniz, ancak düzenleme yapamaz veya yeni müşteri ekleyemezsiniz.
                   </p>
                 )}
               </CardContent>
@@ -168,21 +180,23 @@ export default function Customers() {
           </>
         )}
 
-        <Dialog open={isNewCustomerModalOpen} onOpenChange={setIsNewCustomerModalOpen}>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>Yeni Müşteri Ekle</DialogTitle>
-              <DialogDescription>
-                Müşteri bilgilerini girerek yeni bir müşteri kaydı oluşturun.
-              </DialogDescription>
-            </DialogHeader>
-            <NewCustomerForm 
-              onSuccess={handleCustomerAdded} 
-              onCancel={handleCloseNewCustomerModal} 
-              dukkanId={dukkanData?.id}
-            />
-          </DialogContent>
-        </Dialog>
+        {isAdmin && (
+          <Dialog open={isNewCustomerModalOpen} onOpenChange={setIsNewCustomerModalOpen}>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>Yeni Müşteri Ekle</DialogTitle>
+                <DialogDescription>
+                  Müşteri bilgilerini girerek yeni bir müşteri kaydı oluşturun.
+                </DialogDescription>
+              </DialogHeader>
+              <NewCustomerForm 
+                onSuccess={handleCustomerAdded} 
+                onCancel={handleCloseNewCustomerModal} 
+                dukkanId={dukkanData?.id}
+              />
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
     </StaffLayout>
   );
