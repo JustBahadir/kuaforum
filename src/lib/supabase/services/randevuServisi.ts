@@ -32,7 +32,6 @@ export const randevuServisi = {
     try {
       console.log(`Dükkan ID ${dukkanId} için randevular getiriliyor...`);
       
-      // Use the security definer function
       const { data, error } = await supabase
         .rpc('get_appointments_by_dukkan', { p_dukkan_id: dukkanId });
         
@@ -58,7 +57,6 @@ export const randevuServisi = {
 
       console.log(`Customer ID ${user.id} için randevular getiriliyor...`);
       
-      // Use the security definer function
       const { data, error } = await supabase
         .rpc('get_customer_appointments', { p_customer_id: user.id });
         
@@ -71,6 +69,38 @@ export const randevuServisi = {
       return data || [];
     } catch (err) {
       console.error("Kendi randevularını getirme hatası:", err);
+      throw err;
+    }
+  },
+
+  async musteriRandevulariGetir(musteriId: number) {
+    if (!musteriId) {
+      console.error("Geçersiz müşteri ID:", musteriId);
+      throw new Error("Müşteri ID gereklidir");
+    }
+
+    try {
+      console.log(`Müşteri ID ${musteriId} için randevular getiriliyor...`);
+      
+      const { data, error } = await supabase
+        .from('randevular')
+        .select(`
+          *,
+          personel:personel(id, ad_soyad)
+        `)
+        .eq('musteri_id', musteriId)
+        .order('tarih', { ascending: false })
+        .order('saat', { ascending: true });
+        
+      if (error) {
+        console.error("Müşteri randevuları getirme hatası:", error);
+        throw error;
+      }
+      
+      console.log(`${data?.length || 0} adet randevu bulundu`);
+      return data || [];
+    } catch (err) {
+      console.error("Müşteri randevuları getirme hatası:", err);
       throw err;
     }
   },
@@ -104,7 +134,6 @@ export const randevuServisi = {
         throw new Error("Oturum açmış kullanıcı bulunamadı");
       }
       
-      // Use the security definer function for inserting
       const { data, error } = await supabase
         .rpc('insert_appointment', {
           p_dukkan_id: randevu.dukkan_id,
@@ -141,7 +170,6 @@ export const randevuServisi = {
     try {
       console.log(`Randevu ${id} güncelleniyor:`, randevu);
       
-      // For status updates, use our specialized function to avoid infinite recursion
       if (randevu.durum && Object.keys(randevu).length === 1) {
         const { data, error } = await supabase
           .rpc('update_appointment_status', { 
@@ -156,19 +184,16 @@ export const randevuServisi = {
         
         console.log("Randevu güncelleme başarılı:", data);
         
-        // If an appointment is marked as completed, create a personnel operation record
         if (randevu.durum === "tamamlandi") {
           try {
             await this.randevuTamamlandi(id);
           } catch (opError) {
             console.error("İşlem kaydı oluşturma hatası:", opError);
-            // Don't fail the entire process if operation creation fails
           }
         }
         
         return data;
       } else {
-        // For other updates, use the regular update
         const { data, error } = await supabase
           .from('randevular')
           .update(randevu)
@@ -182,13 +207,11 @@ export const randevuServisi = {
         
         console.log("Randevu güncelleme başarılı:", data);
         
-        // If an appointment is marked as completed, create a personnel operation record
         if (randevu.durum === "tamamlandi") {
           try {
             await this.randevuTamamlandi(id);
           } catch (opError) {
             console.error("İşlem kaydı oluşturma hatası:", opError);
-            // Don't fail the entire process if operation creation fails
           }
         }
         
@@ -202,7 +225,6 @@ export const randevuServisi = {
 
   async randevuTamamlandi(randevuId: number) {
     try {
-      // Get the appointment details
       const { data: randevu, error: randevuError } = await supabase
         .from('randevular')
         .select(`
@@ -218,7 +240,6 @@ export const randevuServisi = {
         throw new Error(`Randevu bilgileri alınamadı: ${randevuError?.message || 'Randevu bulunamadı'}`);
       }
 
-      // Insert personnel operation record for each service
       const islemler = Array.isArray(randevu.islemler) ? randevu.islemler : [];
       
       for (const islem of islemler) {
