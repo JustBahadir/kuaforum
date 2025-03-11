@@ -7,6 +7,19 @@ import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { v4 as uuidv4 } from 'uuid';
 
+// Add ImageCapture type definition
+declare global {
+  interface MediaTrackCapabilities {
+    torch?: boolean;
+  }
+  
+  class ImageCapture {
+    constructor(track: MediaStreamTrack);
+    takePhoto(): Promise<Blob>;
+    getPhotoCapabilities(): Promise<MediaTrackCapabilities>;
+  }
+}
+
 interface OperationPhotoUploadProps {
   existingPhotos: string[];
   onPhotosUpdated: (photos: string[]) => void;
