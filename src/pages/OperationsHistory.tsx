@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { StaffLayout } from "@/components/ui/staff-layout";
@@ -140,8 +139,6 @@ export default function OperationsHistory() {
                       </>
                     )}
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Puan</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fotoğraflar</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -173,33 +170,11 @@ export default function OperationsHistory() {
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {islem.puan}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {islem.photos && islem.photos.length > 0 ? (
-                            <button
-                              onClick={() => handleViewPhotos(islem)}
-                              className="text-blue-600 hover:text-blue-800 flex items-center gap-1"
-                            >
-                              <Image className="h-4 w-4" />
-                              {islem.photos.length} Fotoğraf
-                            </button>
-                          ) : (
-                            <span className="text-gray-400">Fotoğraf yok</span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                          <Button 
-                            onClick={() => handleAddPhotos(islem)} 
-                            variant="outline" 
-                            size="sm"
-                          >
-                            Fotoğraf Ekle
-                          </Button>
-                        </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={userRole === 'admin' ? 9 : 7} className="px-6 py-4 text-center text-sm text-gray-500">
+                      <td colSpan={userRole === 'admin' ? 7 : 5} className="px-6 py-4 text-center text-sm text-gray-500">
                         Seçilen tarih aralığında işlem bulunamadı
                       </td>
                     </tr>

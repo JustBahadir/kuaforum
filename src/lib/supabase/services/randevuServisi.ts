@@ -207,8 +207,9 @@ export const randevuServisi = {
         .from('randevular')
         .select(`
           *,
-          musteri:musteriler(*),
-          personel:personel(*)
+          islemler:islemler(id, islem_adi, fiyat, puan),
+          personel:personel(id, ad_soyad, prim_yuzdesi),
+          musteri:musteriler(id, first_name, last_name)
         `)
         .eq('id', randevuId)
         .single();
@@ -216,54 +217,36 @@ export const randevuServisi = {
       if (randevuError || !randevu) {
         throw new Error(`Randevu bilgileri alınamadı: ${randevuError?.message || 'Randevu bulunamadı'}`);
       }
+
+      // Insert personnel operation record for each service
+      const islemler = Array.isArray(randevu.islemler) ? randevu.islemler : [];
       
-      // Get services associated with the appointment
-      const islemIds = randevu.islemler || [];
-      if (!islemIds.length) {
-        throw new Error("Randevuda kayıtlı işlem bulunamadı");
-      }
-      
-      const { data: islemler, error: islemError } = await supabase
-        .from('islemler')
-        .select('*')
-        .in('id', islemIds);
-      
-      if (islemError) {
-        throw new Error(`İşlem detayları alınamadı: ${islemError.message}`);
-      }
-      
-      // Create a personnel operation record for each service
-      for (const islem of islemler || []) {
+      for (const islem of islemler) {
         const personelIslem = {
           personel_id: randevu.personel_id,
           islem_id: islem.id,
-          musteri_id: randevu.musteri_id, // Ensure the customer ID is properly assigned
+          musteri_id: randevu.musteri_id,
           tutar: parseFloat(islem.fiyat),
-          odenen: 0, // Will be updated when payment is recorded
+          odenen: parseFloat(islem.fiyat),
           puan: parseInt(islem.puan),
           prim_yuzdesi: randevu.personel?.prim_yuzdesi || 0,
-          aciklama: `Randevu #${randevuId} tamamlandı, ${islem.islem_adi} hizmeti verildi.`,
-          photos: [] // Initialize empty photos array
+          aciklama: `${randevu.musteri?.first_name || 'Müşteri'} için ${islem.islem_adi} hizmeti verildi`,
+          photos: []
         };
         
-        // Only create the operation if we have a customer ID
-        if (randevu.musteri_id) {
-          const { error: insertError } = await supabase
-            .from('personel_islemleri')
-            .insert(personelIslem);
-            
-          if (insertError) {
-            console.error("Personel işlemi ekleme hatası:", insertError);
-          }
-        } else {
-          console.error("Müşteri ID bulunamadı, işlem kaydı oluşturulamadı");
+        const { error: insertError } = await supabase
+          .from('personel_islemleri')
+          .insert(personelIslem);
+          
+        if (insertError) {
+          throw new Error(`İşlem kaydedilemedi: ${insertError.message}`);
         }
       }
       
       return true;
     } catch (error: any) {
       console.error("Randevu tamamlandı işlemi hatası:", error);
-      throw new Error(error?.message || "İşlem kayıtları oluşturulurken hata oluştu");
+      throw error;
     }
   },
 

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -49,7 +48,7 @@ interface CustomerDetailsProps {
   onDelete?: () => void;
 }
 
-export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: CustomerDetailsProps) {
+export const CustomerDetails = ({ customer, dukkanId, onEdit, onDelete }: CustomerDetailsProps) => {
   const [activeTab, setActiveTab] = useState<string>("basic");
   const [editMode, setEditMode] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -299,6 +298,8 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
       }
     }
   };
+
+  const totalPoints = customerOperations.reduce((sum, op) => sum + (op.points || 0), 0);
 
   return (
     <div className="space-y-6">
@@ -670,7 +671,7 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
                     <TableBody>
                       {customerOperations.map(operation => (
                         <TableRow key={operation.id}>
-                          <TableCell className="font-medium">{formatDate(operation.date)}</TableCell>
+                          <TableCell>{formatDate(operation.date)}</TableCell>
                           <TableCell>{operation.service_name}</TableCell>
                           <TableCell>{operation.personnel_name}</TableCell>
                           <TableCell>{formatCurrency(operation.amount)}</TableCell>
@@ -683,17 +684,6 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
                               className="resize-none min-h-[80px]"
                               rows={2}
                             />
-                          </TableCell>
-                          <TableCell>
-                            {operation.photos && operation.photos.length > 0 ? (
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                                  {operation.photos.length} Fotoğraf
-                                </span>
-                              </div>
-                            ) : (
-                              <span className="text-xs text-gray-500">Fotoğraf yok</span>
-                            )}
                           </TableCell>
                           <TableCell>
                             <div className="flex space-x-2">
