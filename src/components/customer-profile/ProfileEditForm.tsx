@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { 
   Card, 
@@ -55,9 +54,36 @@ export function ProfileEditForm({
   
   useEffect(() => {
     if (profile.iban) {
-      setFormattedIBAN(profilServisi.formatIBAN(profile.iban));
+      setFormattedIBAN(formatIBAN(profile.iban));
     }
   }, [profile.iban]);
+
+  const formatIBAN = (value: string) => {
+    // Remove all non-digit characters, but keep TR prefix if it exists
+    let cleaned = value.replace(/[^0-9TR]/gi, '');
+    
+    // Ensure it starts with TR
+    if (!cleaned.startsWith('TR')) {
+      cleaned = 'TR' + cleaned.replace(/\D/g, '');
+    } else {
+      // Keep TR but remove any non-digits after that
+      cleaned = 'TR' + cleaned.substring(2).replace(/\D/g, '');
+    }
+    
+    // Limit to 26 characters (TR + 24 digits)
+    cleaned = cleaned.substring(0, 26);
+    
+    // Format with spaces every 4 characters for readability
+    let formatted = '';
+    for (let i = 0; i < cleaned.length; i++) {
+      if (i > 0 && i % 4 === 0) {
+        formatted += ' ';
+      }
+      formatted += cleaned[i];
+    }
+    
+    return formatted;
+  };
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -68,30 +94,14 @@ export function ProfileEditForm({
   const isStaff = profile.role === 'staff';
   
   const handleIBANChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Only allow digits
-    let value = e.target.value.replace(/[^0-9TR]/gi, '');
-    
-    // Always ensure it starts with TR
-    if (!value.startsWith('TR')) {
-      value = 'TR' + value.substring(value.startsWith('T') ? 1 : value.startsWith('R') ? 1 : 0).replace(/\D/g, '');
-    }
-    
-    // Format with spaces every 4 characters
-    let formatted = '';
-    for (let i = 0; i < value.length; i++) {
-      if (i > 0 && i % 4 === 0) {
-        formatted += ' ';
-      }
-      formatted += value[i];
-    }
-    
-    setFormattedIBAN(formatted);
+    const formattedValue = formatIBAN(e.target.value);
+    setFormattedIBAN(formattedValue);
     
     // Create a synthetic event to pass to the parent's handleChange
     const syntheticEvent = {
       target: {
         name: 'iban',
-        value: formatted.replace(/\s/g, '')  // Remove spaces for storage
+        value: formattedValue.replace(/\s/g, '')  // Remove spaces for storage
       }
     } as React.ChangeEvent<HTMLInputElement>;
     

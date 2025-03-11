@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Button } from "@/components/ui/button";
@@ -18,7 +17,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { User, Phone, Mail, Calendar, MapPin, CreditCard, Camera, Trash2 } from "lucide-react";
+import { User, Phone, Mail, Calendar, MapPin, CreditCard, Camera, Trash2, Copy } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const StaffProfile = () => {
@@ -62,7 +61,7 @@ const StaffProfile = () => {
           const metaAvatarUrl = user.user_metadata.avatar_url;
 
           if (metaFirstName || metaLastName || metaPhone || metaGender || metaBirthdate) {
-            console.log("Kullanıcı metadata'sından profil verisi kullanılıyor");
+            console.log("Kullanıcı metadata'sinden profil verisi kullanılıyor");
             let formattedPhone = metaPhone ? formatPhoneNumber(metaPhone) : "";
 
             setFormData({
@@ -267,6 +266,43 @@ const StaffProfile = () => {
     }
   };
 
+  const formatIBAN = (value: string) => {
+    // Remove all non-digit characters, but keep TR prefix if it exists
+    let cleaned = value.replace(/[^0-9TR]/gi, '');
+    
+    // Ensure it starts with TR
+    if (!cleaned.startsWith('TR')) {
+      cleaned = 'TR' + cleaned.replace(/\D/g, '');
+    } else {
+      // Keep TR but remove any non-digits after that
+      cleaned = 'TR' + cleaned.substring(2).replace(/\D/g, '');
+    }
+    
+    // Limit to 26 characters (TR + 24 digits)
+    cleaned = cleaned.substring(0, 26);
+    
+    // Format with spaces every 4 characters for readability
+    let formatted = '';
+    for (let i = 0; i < cleaned.length; i++) {
+      if (i > 0 && i % 4 === 0) {
+        formatted += ' ';
+      }
+      formatted += cleaned[i];
+    }
+    
+    return formatted;
+  };
+
+  const handleIBANChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formattedValue = formatIBAN(e.target.value);
+    setFormData(prev => ({ ...prev, iban: formattedValue.replace(/\s/g, '') }));
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success("Kopyalandı");
+  };
+
   if (loading) {
     return (
       <StaffLayout>
@@ -288,7 +324,7 @@ const StaffProfile = () => {
           </CardHeader>
           <CardContent>
             <form id="profileForm" onSubmit={handleSubmit} className="space-y-6">
-              {/* Avatar Upload Section - Photo on right side now */}
+              {/* Avatar Upload Section */}
               <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-6">
                 <div className="flex-1 order-2 md:order-1">
                   <h3 className="text-lg font-medium mb-2">Profil Fotoğrafı</h3>
@@ -452,13 +488,29 @@ const StaffProfile = () => {
                   <CreditCard size={16} />
                   IBAN
                 </Label>
-                <Input
-                  id="iban"
-                  name="iban"
-                  value={formData.iban}
-                  onChange={handleChange}
-                  placeholder="TR00 0000 0000 0000 0000 0000 00"
-                />
+                <div className="relative flex">
+                  <Input
+                    id="iban"
+                    name="iban"
+                    value={formatIBAN(formData.iban)}
+                    onChange={handleIBANChange}
+                    placeholder="TR00 0000 0000 0000 0000 0000 00"
+                    className="flex-1"
+                    maxLength={36}
+                  />
+                  {formData.iban && (
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => copyToClipboard(formatIBAN(formData.iban))}
+                      className="ml-2"
+                    >
+                      <Copy size={16} />
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500">IBAN bilginiz dükkan yöneticisiyle otomatik olarak paylaşılacaktır.</p>
               </div>
               
               <div className="space-y-2">

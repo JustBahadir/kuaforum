@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
+import { Copy } from "lucide-react";
 
 interface PersonnelEditDialogProps {
   personelId: number;
@@ -55,9 +56,11 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComp
   }, [personel]);
 
   const formatIBAN = (value: string) => {
-    let cleaned = value.replace(/[^A-Z0-9]/g, '');
+    let cleaned = value.replace(/[^0-9TR]/gi, '');
     if (!cleaned.startsWith('TR')) {
       cleaned = 'TR' + cleaned.replace(/\D/g, '');
+    } else {
+      cleaned = 'TR' + cleaned.substring(2).replace(/\D/g, '');
     }
     cleaned = cleaned.substring(0, 26);
     let formatted = '';
@@ -70,16 +73,9 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComp
     return formatted;
   };
 
-  const handleIBANChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value.replace(/[^0-9TR]/gi, '');
-    if (!value.startsWith('TR')) {
-      value = 'TR' + value.substring(value.startsWith('T') ? 1 : value.startsWith('R') ? 1 : 0).replace(/\D/g, '');
-    }
-    const formattedValue = formatIBAN(value);
-    setFormattedIBAN(formattedValue);
-    setPersonelDuzenle((prev) => 
-      prev ? { ...prev, iban: formattedValue.replace(/\s/g, '') } : null
-    );
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success("Kopyalandı");
   };
 
   const { mutate: personelGuncelle } = useMutation({
@@ -241,14 +237,26 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComp
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit_iban">IBAN (Personel tarafından güncellenir)</Label>
-              <Input
-                id="edit_iban"
-                value={formattedIBAN}
-                disabled={true}
-                className="bg-gray-100"
-                placeholder="TR00 0000 0000 0000 0000 0000 00"
-                maxLength={36}
-              />
+              <div className="flex items-center gap-2">
+                <Input
+                  id="edit_iban"
+                  value={formattedIBAN}
+                  disabled={true}
+                  className="bg-gray-100 flex-1"
+                  placeholder="TR00 0000 0000 0000 0000 0000 00"
+                  maxLength={36}
+                />
+                {formattedIBAN && (
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => copyToClipboard(formattedIBAN)}
+                  >
+                    <Copy size={16} />
+                  </Button>
+                )}
+              </div>
               <p className="text-xs text-gray-500">
                 IBAN bilgisi personel profilinden otomatik olarak senkronize edilir. Personel kendi profilinden bu bilgiyi güncelleyebilir.
               </p>
