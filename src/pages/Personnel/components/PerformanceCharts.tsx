@@ -46,7 +46,12 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
             <BarChart data={performanceData}>
               <XAxis dataKey="name" />
               <YAxis />
-              <Tooltip formatter={(value) => `${value.toFixed(2)} TL`} />
+              <Tooltip 
+                formatter={(value: number | string) => {
+                  const numValue = typeof value === 'string' ? parseFloat(value) : value;
+                  return isNaN(numValue) ? '0.00 TL' : `${numValue.toFixed(2)} TL`;
+                }}
+              />
               <Legend />
               <Bar dataKey="toplamCiro" name="Toplam Ciro (TL)" fill="#8884d8" />
             </BarChart>
