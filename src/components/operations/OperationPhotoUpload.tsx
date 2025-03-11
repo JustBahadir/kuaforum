@@ -1,300 +1,294 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Upload, X, ImagePlus, Camera } from "lucide-react";
-import { supabase } from "@/lib/supabase/client";
-import { toast } from "sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
-export interface OperationPhotoUploadProps {
-  existingPhotos?: string[];
-  onPhotosUpdated: (photos: string[]) => Promise<void>;
+import { useState, useEffect } from "react";
+import { Camera, Upload, X, ImagePlus } from "lucide-react";
+import { supabase } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { Card, CardContent } from "@/components/ui/card";
+import { v4 as uuidv4 } from 'uuid';
+
+interface OperationPhotoUploadProps {
+  existingPhotos: string[];
+  onPhotosUpdated: (photos: string[]) => void;
   maxPhotos?: number;
 }
 
 export function OperationPhotoUpload({ 
   existingPhotos = [], 
   onPhotosUpdated,
-  maxPhotos = 4
+  maxPhotos = 4 
 }: OperationPhotoUploadProps) {
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [photos, setPhotos] = useState<string[]>(existingPhotos);
   const [uploading, setUploading] = useState(false);
-  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
-  const [photoDialogOpen, setPhotoDialogOpen] = useState(false);
-  const [cameraActive, setCameraActive] = useState(false);
-  const [videoRef, setVideoRef] = useState<HTMLVideoElement | null>(null);
+  const [showCamera, setShowCamera] = useState(false);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [imageCapture, setImageCapture] = useState<ImageCapture | null>(null);
 
-  const remainingSlots = maxPhotos - existingPhotos.length;
-  
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && remainingSlots > 0) {
-      // Only take up to the remaining slots
-      const filesArray = Array.from(e.target.files).slice(0, remainingSlots);
-      setSelectedFiles(prev => [...prev, ...filesArray]);
-      
-      // Create preview URLs
-      const newPreviewUrls = filesArray.map(file => URL.createObjectURL(file));
-      setPreviewUrls(prev => [...prev, ...newPreviewUrls]);
+  useEffect(() => {
+    setPhotos(existingPhotos);
+  }, [existingPhotos]);
+
+  useEffect(() => {
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [stream]);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) {
+      return;
     }
-  };
-
-  const removeFile = (index: number) => {
-    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
     
-    // Revoke the object URL to avoid memory leaks
-    URL.revokeObjectURL(previewUrls[index]);
-    setPreviewUrls(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const removeExistingPhoto = async (photoUrl: string) => {
-    try {
-      // Extract the file path from the URL
-      const path = photoUrl.split('/').slice(-2).join('/');
-      
-      // Delete from storage
-      const { error } = await supabase.storage
-        .from('operation-photos')
-        .remove([path]);
-      
-      if (error) throw error;
-      
-      // Update the parent component with the new list of photos
-      const updatedPhotos = existingPhotos.filter(p => p !== photoUrl);
-      await onPhotosUpdated(updatedPhotos);
-      
-      toast.success("Fotoğraf silindi");
-    } catch (error) {
-      console.error("Fotoğraf silinirken hata oluştu:", error);
-      toast.error("Fotoğraf silinirken bir hata oluştu");
+    const totalPhotos = photos.length + e.target.files.length;
+    if (totalPhotos > maxPhotos) {
+      toast.error(`En fazla ${maxPhotos} fotoğraf yükleyebilirsiniz`);
+      return;
     }
-  };
 
-  const uploadPhotos = async () => {
-    if (selectedFiles.length === 0) return;
-    
     setUploading(true);
+    
     try {
-      const uploadedUrls: string[] = [];
+      const newPhotos = [...photos];
       
-      for (const file of selectedFiles) {
+      for (let i = 0; i < e.target.files.length; i++) {
+        const file = e.target.files[i];
         const fileExt = file.name.split('.').pop();
-        const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
-        const filePath = `${Date.now()}/${fileName}`;
+        const fileName = `${uuidv4()}.${fileExt}`;
+        const filePath = `${fileName}`;
         
-        const { data, error } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from('operation-photos')
           .upload(filePath, file);
+          
+        if (uploadError) {
+          throw uploadError;
+        }
         
-        if (error) throw error;
-        
-        // Get public URL
-        const { data: urlData } = supabase.storage
+        const { data } = supabase.storage
           .from('operation-photos')
           .getPublicUrl(filePath);
-        
-        uploadedUrls.push(urlData.publicUrl);
+          
+        newPhotos.push(data.publicUrl);
       }
       
-      // Combine existing and new photos
-      const allPhotos = [...existingPhotos, ...uploadedUrls];
-      
-      // Update parent component
-      await onPhotosUpdated(allPhotos);
-      
-      // Reset state
-      setSelectedFiles([]);
-      setPreviewUrls([]);
-      toast.success("Fotoğraflar başarıyla yüklendi");
+      setPhotos(newPhotos);
+      onPhotosUpdated(newPhotos);
     } catch (error) {
-      console.error("Fotoğraf yüklenirken hata:", error);
+      console.error("Error uploading photos:", error);
       toast.error("Fotoğraf yüklenirken bir hata oluştu");
     } finally {
       setUploading(false);
     }
   };
 
-  const handlePhotoOption = () => {
-    setPhotoDialogOpen(true);
+  const startCamera = async () => {
+    try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'environment' } 
+      });
+      setStream(mediaStream);
+      
+      const videoTrack = mediaStream.getVideoTracks()[0];
+      if (videoTrack) {
+        const capture = new ImageCapture(videoTrack);
+        setImageCapture(capture);
+      }
+      
+      setShowCamera(true);
+    } catch (error) {
+      console.error('Error accessing camera:', error);
+      toast.error('Kameraya erişim sağlanamadı');
+    }
   };
 
-  const startCamera = async () => {
-    setCameraActive(true);
+  const takePicture = async () => {
+    if (!imageCapture) return;
+    
+    if (photos.length >= maxPhotos) {
+      toast.error(`En fazla ${maxPhotos} fotoğraf yükleyebilirsiniz`);
+      stopCamera();
+      return;
+    }
+    
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      if (videoRef) {
-        videoRef.srcObject = stream;
-        videoRef.play();
+      setUploading(true);
+      const blob = await imageCapture.takePhoto();
+      const file = new File([blob], `photo-${Date.now()}.jpg`, { type: 'image/jpeg' });
+      
+      const fileName = `${uuidv4()}.jpg`;
+      const filePath = `${fileName}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('operation-photos')
+        .upload(filePath, file);
+        
+      if (uploadError) {
+        throw uploadError;
+      }
+      
+      const { data } = supabase.storage
+        .from('operation-photos')
+        .getPublicUrl(filePath);
+        
+      const newPhotos = [...photos, data.publicUrl];
+      setPhotos(newPhotos);
+      onPhotosUpdated(newPhotos);
+      
+      if (newPhotos.length >= maxPhotos) {
+        stopCamera();
       }
     } catch (error) {
-      console.error("Kamera erişiminde hata:", error);
-      toast.error("Kamera erişiminde bir hata oluştu");
-      setCameraActive(false);
+      console.error('Error taking picture:', error);
+      toast.error('Fotoğraf çekilirken bir hata oluştu');
+    } finally {
+      setUploading(false);
     }
-  };
-
-  const takePhoto = () => {
-    if (!videoRef) return;
-    
-    const canvas = document.createElement('canvas');
-    canvas.width = videoRef.videoWidth;
-    canvas.height = videoRef.videoHeight;
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.drawImage(videoRef, 0, 0, canvas.width, canvas.height);
-      canvas.toBlob(async (blob) => {
-        if (blob) {
-          const file = new File([blob], `photo-${Date.now()}.jpg`, { type: 'image/jpeg' });
-          setSelectedFiles(prev => [...prev, file]);
-          
-          const previewUrl = URL.createObjectURL(blob);
-          setPreviewUrls(prev => [...prev, previewUrl]);
-        }
-      }, 'image/jpeg');
-    }
-    
-    // Stop the camera
-    stopCamera();
   };
 
   const stopCamera = () => {
-    if (videoRef && videoRef.srcObject) {
-      const stream = videoRef.srcObject as MediaStream;
-      const tracks = stream.getTracks();
-      tracks.forEach(track => track.stop());
-      videoRef.srcObject = null;
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
     }
-    setCameraActive(false);
-    setPhotoDialogOpen(false);
+    setShowCamera(false);
+  };
+
+  const handleRemovePhoto = async (url: string) => {
+    try {
+      // Extract filename from URL
+      const fileName = url.split('/').pop();
+      if (fileName) {
+        // Attempt to delete from storage - may fail if same file is used elsewhere
+        try {
+          await supabase.storage
+            .from('operation-photos')
+            .remove([fileName]);
+        } catch (err) {
+          console.log('File may be used elsewhere or not exist:', err);
+        }
+      }
+      
+      const updatedPhotos = photos.filter(photo => photo !== url);
+      setPhotos(updatedPhotos);
+      onPhotosUpdated(updatedPhotos);
+    } catch (error) {
+      console.error('Error removing photo:', error);
+      toast.error('Fotoğraf silinirken bir hata oluştu');
+    }
   };
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-medium">İşlem Fotoğrafları</h3>
-        <div className="flex gap-2">
-          {remainingSlots > 0 && (
+      {showCamera ? (
+        <div className="relative">
+          <video 
+            autoPlay 
+            playsInline
+            ref={(video) => {
+              if (video && stream) {
+                video.srcObject = stream;
+              }
+            }}
+            className="w-full rounded-lg border shadow-sm"
+          />
+          <div className="absolute bottom-4 left-0 right-0 flex justify-center">
             <Button 
-              onClick={handlePhotoOption} 
-              variant="outline" 
-              size="sm"
-              className="flex items-center gap-1"
+              variant="default" 
+              onClick={takePicture} 
+              disabled={uploading}
+              className="mx-2"
             >
-              <ImagePlus className="h-4 w-4" />
-              Fotoğraf Ekle
+              <Camera className="h-5 w-5 mr-2" />
+              {uploading ? 'Kaydediliyor...' : 'Fotoğraf Çek'}
             </Button>
-          )}
-          
-          {selectedFiles.length > 0 && (
             <Button 
-              onClick={uploadPhotos} 
-              disabled={uploading} 
               variant="outline" 
-              size="sm"
-              className="flex items-center gap-1"
+              onClick={stopCamera} 
+              className="mx-2"
             >
-              <Upload className="h-4 w-4" />
-              {uploading ? "Yükleniyor..." : "Yükle"}
+              <X className="h-5 w-5 mr-2" />
+              İptal
             </Button>
-          )}
+          </div>
         </div>
-      </div>
-      
-      {/* Photo grid - display in a nice grid based on how many photos */}
-      <div className={`grid gap-2 ${existingPhotos.length + previewUrls.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-        {/* Existing photos */}
-        {existingPhotos.map((photoUrl, idx) => (
-          <div key={`existing-${idx}`} className="relative aspect-square group">
-            <img
-              src={photoUrl}
-              alt={`İşlem fotoğrafı ${idx + 1}`}
-              className="h-full w-full object-cover rounded-md"
-            />
-            <button
-              type="button"
-              onClick={() => removeExistingPhoto(photoUrl)}
-              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+      ) : (
+        <div className="flex flex-wrap gap-4">
+          <div className="flex flex-col space-y-2">
+            <Button 
+              variant="outline" 
+              onClick={startCamera}
+              disabled={uploading || photos.length >= maxPhotos}
+              className="h-32 w-32"
             >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        ))}
-        
-        {/* Preview of selected files */}
-        {previewUrls.map((url, idx) => (
-          <div key={`preview-${idx}`} className="relative aspect-square group">
-            <img
-              src={url}
-              alt="Preview"
-              className="h-full w-full object-cover rounded-md"
-            />
-            <button
-              type="button"
-              onClick={() => removeFile(idx)}
-              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        ))}
-      </div>
-      
-      {/* Photo option dialog */}
-      <Dialog open={photoDialogOpen} onOpenChange={setPhotoDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Fotoğraf Ekle</DialogTitle>
-          </DialogHeader>
-          
-          {!cameraActive ? (
-            <div className="grid grid-cols-2 gap-4 py-4">
-              <Button 
-                variant="outline" 
-                onClick={startCamera}
-                className="flex flex-col items-center justify-center p-6 h-32"
-              >
+              <div className="flex flex-col items-center">
                 <Camera className="h-8 w-8 mb-2" />
                 <span>Kamera</span>
-              </Button>
-              
-              <label className="flex flex-col items-center justify-center p-6 h-32 border rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800">
-                <ImagePlus className="h-8 w-8 mb-2" />
-                <span>Galeriden Seç</span>
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  multiple 
-                  className="hidden" 
-                  onChange={handleFileChange} 
-                  disabled={uploading}
-                />
-              </label>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center">
-              <video 
-                ref={ref => setVideoRef(ref)} 
-                className="w-full rounded-md"
-                autoPlay 
-                muted 
-                playsInline
+              </div>
+            </Button>
+            <div className="flex justify-center">
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleFileChange}
+                className="hidden"
+                id="photo-upload"
+                disabled={uploading || photos.length >= maxPhotos}
               />
-              <div className="flex gap-4 mt-4">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  if (photos.length < maxPhotos) {
+                    document.getElementById('photo-upload')?.click();
+                  } else {
+                    toast.error(`En fazla ${maxPhotos} fotoğraf yükleyebilirsiniz`);
+                  }
+                }}
+                disabled={uploading || photos.length >= maxPhotos}
+                className="h-10 w-32"
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Yükle
+              </Button>
+            </div>
+          </div>
+          
+          {photos.length > 0 ? (
+            photos.map((photoUrl, index) => (
+              <Card key={index} className="relative h-32 w-32 overflow-hidden">
+                <img 
+                  src={photoUrl} 
+                  alt={`İşlem fotoğrafı ${index + 1}`} 
+                  className="h-full w-full object-cover"
+                />
                 <Button
-                  variant="outline"
-                  onClick={stopCamera}
+                  variant="destructive"
+                  size="icon"
+                  className="absolute top-1 right-1 h-6 w-6 rounded-full"
+                  onClick={() => handleRemovePhoto(photoUrl)}
                 >
-                  İptal
+                  <X className="h-3 w-3" />
                 </Button>
-                <Button
-                  variant="default"
-                  onClick={takePhoto}
-                >
-                  Fotoğraf Çek
-                </Button>
+              </Card>
+            ))
+          ) : (
+            <div className="flex items-center justify-center h-32 w-32 border border-dashed rounded-lg">
+              <div className="text-center text-gray-400">
+                <ImagePlus className="h-8 w-8 mx-auto mb-2" />
+                <p className="text-xs">Fotoğraf yok</p>
               </div>
             </div>
           )}
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
+      
+      {!showCamera && (
+        <p className="text-xs text-gray-500">
+          {photos.length}/{maxPhotos} fotoğraf ({maxPhotos - photos.length} daha ekleyebilirsiniz)
+        </p>
+      )}
     </div>
   );
 }

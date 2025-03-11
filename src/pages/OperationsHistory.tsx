@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
@@ -10,6 +10,9 @@ import { PersonelIslemi } from "@/lib/supabase/types";
 import { supabase } from "@/lib/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Image } from "lucide-react";
+import { OperationPhotoUpload } from "@/components/operations/OperationPhotoUpload";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 export default function OperationsHistory() {
   const { userRole } = useCustomerAuth();
@@ -19,6 +22,9 @@ export default function OperationsHistory() {
   });
   const [selectedOperation, setSelectedOperation] = useState<PersonelIslemi | null>(null);
   const [photosDialogOpen, setPhotosDialogOpen] = useState(false);
+  const [photoUploadDialogOpen, setPhotoUploadDialogOpen] = useState(false);
+  
+  const queryClient = useQueryClient();
 
   // Get current user
   const { data: currentUser } = useQuery({
@@ -73,9 +79,34 @@ export default function OperationsHistory() {
     enabled: userRole === 'admin' || !!personel
   });
 
+  const { mutate: updateOperationPhotos } = useMutation({
+    mutationFn: ({ id, photos }: { id: number; photos: string[] }) => 
+      personelIslemleriServisi.updatePhotos(id, photos),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['personelIslemleri'] });
+      toast.success("İşlem fotoğrafları güncellendi");
+      setPhotoUploadDialogOpen(false);
+    },
+    onError: (error) => {
+      console.error("Fotoğraf güncellenirken hata:", error);
+      toast.error("Fotoğraf güncellenirken hata oluştu: " + (error.message || "Bilinmeyen hata"));
+    }
+  });
+
   const handleViewPhotos = (operation: PersonelIslemi) => {
     setSelectedOperation(operation);
     setPhotosDialogOpen(true);
+  };
+
+  const handleAddPhotos = (operation: PersonelIslemi) => {
+    setSelectedOperation(operation);
+    setPhotoUploadDialogOpen(true);
+  };
+
+  const handlePhotosUpdated = async (photos: string[]) => {
+    if (selectedOperation) {
+      updateOperationPhotos({ id: selectedOperation.id, photos });
+    }
   };
 
   return (
@@ -110,6 +141,7 @@ export default function OperationsHistory() {
                     )}
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Puan</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fotoğraflar</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -154,11 +186,20 @@ export default function OperationsHistory() {
                             <span className="text-gray-400">Fotoğraf yok</span>
                           )}
                         </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                          <Button 
+                            onClick={() => handleAddPhotos(islem)} 
+                            variant="outline" 
+                            size="sm"
+                          >
+                            Fotoğraf Ekle
+                          </Button>
+                        </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={userRole === 'admin' ? 8 : 6} className="px-6 py-4 text-center text-sm text-gray-500">
+                      <td colSpan={userRole === 'admin' ? 9 : 7} className="px-6 py-4 text-center text-sm text-gray-500">
                         Seçilen tarih aralığında işlem bulunamadı
                       </td>
                     </tr>
@@ -170,7 +211,7 @@ export default function OperationsHistory() {
         </Card>
       </div>
 
-      {/* Photos Dialog */}
+      {/* Photos View Dialog */}
       <Dialog open={photosDialogOpen} onOpenChange={setPhotosDialogOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
@@ -190,6 +231,29 @@ export default function OperationsHistory() {
           {(!selectedOperation?.photos || selectedOperation.photos.length === 0) && (
             <p className="text-center text-gray-500 py-8">Bu işleme ait fotoğraf bulunmamaktadır</p>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Photo Upload Dialog */}
+      <Dialog open={photoUploadDialogOpen} onOpenChange={setPhotoUploadDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>İşlem Fotoğrafları</DialogTitle>
+          </DialogHeader>
+          
+          {selectedOperation && (
+            <OperationPhotoUpload
+              existingPhotos={selectedOperation.photos || []}
+              onPhotosUpdated={handlePhotosUpdated}
+              maxPhotos={4}
+            />
+          )}
+          
+          <div className="flex justify-end mt-4">
+            <Button variant="outline" onClick={() => setPhotoUploadDialogOpen(false)}>
+              Kapat
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </StaffLayout>

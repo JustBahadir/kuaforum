@@ -39,6 +39,7 @@ import { PhoneInputField } from "../components/FormFields/PhoneInputField";
 import { getHoroscope, getHoroscopeDescription, getDailyHoroscopeReading, HoroscopeSign } from "../utils/horoscopeUtils";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { formatCurrency } from "@/lib/utils";
+import { OperationPhotoUpload } from "../components/OperationPhotoUpload";
 
 interface CustomerDetailsProps {
   customer: Musteri;
@@ -77,6 +78,9 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
   });
 
   const [editingNotes, setEditingNotes] = useState<{ [key: number]: string }>({});
+
+  const [photoUploadDialogOpen, setPhotoUploadDialogOpen] = useState(false);
+  const [selectedOperation, setSelectedOperation] = useState<CustomerOperation | null>(null);
 
   useEffect(() => {
     if (formData.birthdate) {
@@ -270,6 +274,28 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
     } catch (error: any) {
       console.error("Error deleting customer:", error);
       toast.error(`Silme hatası: ${error.message}`);
+    }
+  };
+
+  const handleOperationPhotosClick = (operation: CustomerOperation) => {
+    setSelectedOperation(operation);
+    setPhotoUploadDialogOpen(true);
+  };
+
+  const handlePhotosUpdated = async (photos: string[]) => {
+    if (selectedOperation) {
+      const success = await customerOperationsService.updateOperationPhotos(
+        selectedOperation.id, 
+        photos
+      );
+      
+      if (success) {
+        toast.success("Fotoğraflar başarıyla güncellendi");
+        queryClient.invalidateQueries({ queryKey: ['customerOperations', customer.id] });
+        setPhotoUploadDialogOpen(false);
+      } else {
+        toast.error("Fotoğraflar güncellenirken bir hata oluştu");
+      }
     }
   };
 
@@ -581,7 +607,6 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
                         ))}
                       </div>
                     )}
-                  </div>
                   
                   <div className="space-y-2">
                     <Label htmlFor="custom_notes">Notlar</Label>
@@ -636,7 +661,7 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
                         <TableHead><CreditCard className="h-4 w-4 mr-2" /> Tutar</TableHead>
                         <TableHead><Award className="h-4 w-4 mr-2" /> Puan</TableHead>
                         <TableHead className="w-1/3"><MessageSquare className="h-4 w-4 mr-2" /> Açıklama</TableHead>
-                        <TableHead>Fotoğraf</TableHead>
+                        <TableHead><Camera className="h-4 w-4 mr-2" /> Fotoğraf</TableHead>
                         <TableHead></TableHead>
                       </TableRow>
                     </TableHeader>
@@ -658,24 +683,34 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
                             />
                           </TableCell>
                           <TableCell>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="flex items-center gap-1"
-                            >
-                              <Camera className="h-4 w-4" />
-                              Ekle
-                            </Button>
+                            {operation.photos && operation.photos.length > 0 ? (
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                                  {operation.photos.length} Fotoğraf
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-gray-500">Fotoğraf yok</span>
+                            )}
                           </TableCell>
                           <TableCell>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => handleSaveNotes(operation.id)}
-                              disabled={saveNotesMutation.isPending}
-                            >
-                              <Save className="h-4 w-4" />
-                            </Button>
+                            <div className="flex space-x-2">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleSaveNotes(operation.id)}
+                                disabled={saveNotesMutation.isPending}
+                              >
+                                <Save className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleOperationPhotosClick(operation)}
+                              >
+                                <Camera className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -727,6 +762,28 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={photoUploadDialogOpen} onOpenChange={setPhotoUploadDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>İşlem Fotoğrafları</DialogTitle>
+          </DialogHeader>
+          
+          {selectedOperation && (
+            <OperationPhotoUpload
+              existingPhotos={selectedOperation.photos || []}
+              onPhotosUpdated={handlePhotosUpdated}
+              maxPhotos={4}
+            />
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPhotoUploadDialogOpen(false)}>
+              Kapat
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
