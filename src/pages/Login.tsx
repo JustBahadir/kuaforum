@@ -6,7 +6,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { StaffCardHeader } from "@/components/staff/StaffCardHeader";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
-import { authenticationService } from "@/lib/auth/services/authenticationService";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
