@@ -12,7 +12,9 @@ import {
   Store, 
   LogOut,
   FileText,
-  UserCircle
+  UserCircle,
+  Award,
+  Star
 } from "lucide-react";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { buttonVariants } from "@/components/ui/button";
@@ -46,6 +48,7 @@ export function StaffSidebar() {
   const path = location.pathname;
 
   const isAdmin = userRole === 'admin';
+  const isStaff = userRole === 'staff';
 
   const navItems = [
     { href: "/shop-home", title: "Ana Sayfa", icon: <Home size={18} />, roles: ["admin", "staff"] },
@@ -55,7 +58,8 @@ export function StaffSidebar() {
     { href: "/customers", title: "Müşteriler", icon: <UserCircle size={18} />, roles: ["admin", "staff"] },
     { href: "/shop-settings", title: "Dükkan Ayarları", icon: <Store size={18} />, roles: ["admin"] },
     { href: "/shop-statistics", title: "Dükkan İstatistikleri", icon: <BarChart2 size={18} />, roles: ["admin"] },
-    { href: "/operations-history", title: "İşlem Geçmişi", icon: <FileText size={18} />, roles: ["admin", "staff"] },
+    { href: "/operations-history", title: "İşlem Geçmişi", icon: <FileText size={18} />, roles: ["admin"] },
+    { href: "/my-performance", title: "Performansım", icon: <Star size={18} />, roles: ["staff"] },
     { href: "/staff-profile", title: "Profilim", icon: <User size={18} />, roles: ["admin", "staff"] },
     { href: "/settings", title: "Ayarlar", icon: <Settings size={18} />, roles: ["admin", "staff"] },
   ];

@@ -61,6 +61,7 @@ export interface Personel {
   created_at: string;
   iban?: string;
   birthdate?: string | null;
+  dogum_tarihi?: string | null;
 }
 
 export interface PersonelIslemi {
@@ -89,7 +90,6 @@ export interface Musteri {
   created_at: string;
   dukkan_id?: number;
   auth_id?: string;
-  // Adding role field to fix type error in useAppointments.tsx
   role?: string;
 }
 
