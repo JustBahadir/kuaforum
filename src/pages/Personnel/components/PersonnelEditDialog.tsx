@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Personel, personelServisi, profilServisi } from "@/lib/supabase";
@@ -48,30 +49,12 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComp
     if (personel) {
       setPersonelDuzenle(personel);
       if (personel.iban) {
-        setFormattedIBAN(formatIBAN(personel.iban));
+        setFormattedIBAN(profilServisi.formatIBAN(personel.iban));
       } else {
         setFormattedIBAN('');
       }
     }
   }, [personel]);
-
-  const formatIBAN = (value: string) => {
-    let cleaned = value.replace(/[^0-9TR]/gi, '');
-    if (!cleaned.startsWith('TR')) {
-      cleaned = 'TR' + cleaned.replace(/\D/g, '');
-    } else {
-      cleaned = 'TR' + cleaned.substring(2).replace(/\D/g, '');
-    }
-    cleaned = cleaned.substring(0, 26);
-    let formatted = '';
-    for (let i = 0; i < cleaned.length; i++) {
-      if (i > 0 && i % 4 === 0) {
-        formatted += ' ';
-      }
-      formatted += cleaned[i];
-    }
-    return formatted;
-  };
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -184,6 +167,16 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComp
                 disabled={true}
                 className="bg-gray-100"
                 required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit_birthdate">Doğum Tarihi</Label>
+              <Input
+                id="edit_birthdate"
+                type="date"
+                value={personelDuzenle.birthdate || ""}
+                disabled={true}
+                className="bg-gray-100"
               />
             </div>
             <div className="space-y-2">

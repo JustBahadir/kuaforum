@@ -27,29 +27,49 @@ export const personelServisi = {
         };
       }) || [];
 
-      // Now try to get IBAN data from profiles for each personnel with auth_id
+      // Now try to get profile data from profiles for each personnel with auth_id
       const fetchPromises = transformedData
         .filter(personel => personel.auth_id)
         .map(async personel => {
           try {
             const { data: profileData } = await supabase
               .from('profiles')
-              .select('iban')
+              .select('iban, address, birthdate')
               .eq('id', personel.auth_id)
               .maybeSingle();
               
-            if (profileData?.iban) {
-              personel.iban = profileData.iban;
+            if (profileData) {
+              // Update personnel record with profile data
+              const updates: Partial<Personel> = {};
               
-              // Update personel record if we got an IBAN from profile
-              await supabase
-                .from('personel')
-                .update({ iban: profileData.iban })
-                .eq('id', personel.id);
+              if (profileData.iban) {
+                personel.iban = profileData.iban;
+                updates.iban = profileData.iban;
+              }
+              
+              if (profileData.address && profileData.address !== personel.adres) {
+                personel.adres = profileData.address;
+                updates.adres = profileData.address;
+              }
+              
+              if (profileData.birthdate) {
+                personel.birthdate = profileData.birthdate;
+                updates.birthdate = profileData.birthdate;
+              }
+              
+              // Only update if we have changes
+              if (Object.keys(updates).length > 0) {
+                await supabase
+                  .from('personel')
+                  .update(updates)
+                  .eq('id', personel.id);
+                
+                console.log(`Personel ${personel.id} profil verileriyle güncellendi:`, updates);
+              }
             }
           } catch (profileError) {
             // Just log the error but continue, this is non-critical
-            console.warn("Personel için profil IBAN bilgisi alınamadı:", profileError);
+            console.warn("Personel için profil bilgisi alınamadı:", profileError);
           }
         });
         
@@ -87,7 +107,7 @@ export const personelServisi = {
       let profileData = {
         iban: data.iban || "",
         address: data.adres || "",
-        birthdate: ""
+        birthdate: data.birthdate || ""
       };
       
       if (data.auth_id) {
@@ -102,22 +122,35 @@ export const personelServisi = {
             profileData = {
               iban: userData.iban || data.iban || "",
               address: userData.address || data.adres || "",
-              birthdate: userData.birthdate || ""
+              birthdate: userData.birthdate || data.birthdate || ""
             };
             
             // Update personel record with profile data for consistency
+            const updates: Record<string, any> = {};
+            let hasUpdates = false;
+            
             if (userData.iban && userData.iban !== data.iban) {
-              await supabase
-                .from('personel')
-                .update({ iban: userData.iban })
-                .eq('id', id);
+              updates.iban = userData.iban;
+              hasUpdates = true;
             }
             
             if (userData.address && userData.address !== data.adres) {
+              updates.adres = userData.address;
+              hasUpdates = true;
+            }
+            
+            if (userData.birthdate && userData.birthdate !== data.birthdate) {
+              updates.birthdate = userData.birthdate;
+              hasUpdates = true;
+            }
+            
+            if (hasUpdates) {
               await supabase
                 .from('personel')
-                .update({ adres: userData.address })
+                .update(updates)
                 .eq('id', id);
+                
+              console.log(`Personel ${id} profil verileriyle güncellendi:`, updates);
             }
           }
         } catch (profileError) {
@@ -155,26 +188,59 @@ export const personelServisi = {
       
       if (!data) return null;
       
-      // Try to get IBAN from profiles
+      // Try to get IBAN and other data from profiles
       let iban = data.iban;
+      let adres = data.adres;
+      let birthdate = data.birthdate;
+      
       try {
         const { data: profileData } = await supabase
           .from('profiles')
-          .select('iban')
+          .select('iban, address, birthdate')
           .eq('id', authId)
           .maybeSingle();
           
-        if (profileData?.iban) {
-          iban = profileData.iban;
+        if (profileData) {
+          iban = profileData.iban || iban;
+          adres = profileData.address || adres;
+          birthdate = profileData.birthdate || birthdate;
+          
+          // Update personel if profile data differs
+          const updates: Record<string, any> = {};
+          let hasUpdates = false;
+          
+          if (profileData.iban && profileData.iban !== data.iban) {
+            updates.iban = profileData.iban;
+            hasUpdates = true;
+          }
+          
+          if (profileData.address && profileData.address !== data.adres) {
+            updates.adres = profileData.address;
+            hasUpdates = true;
+          }
+          
+          if (profileData.birthdate && profileData.birthdate !== data.birthdate) {
+            updates.birthdate = profileData.birthdate;
+            hasUpdates = true;
+          }
+          
+          if (hasUpdates) {
+            await supabase
+              .from('personel')
+              .update(updates)
+              .eq('id', data.id);
+          }
         }
       } catch (profileError) {
         // Non-critical, just log the error
-        console.warn("Personel için profil IBAN bilgisi alınamadı:", profileError);
+        console.warn("Personel için profil bilgisi alınamadı:", profileError);
       }
       
       const transformedData = {
         ...data,
-        iban
+        iban,
+        adres,
+        birthdate
       };
       
       return transformedData;
@@ -221,12 +287,13 @@ export const personelServisi = {
         throw error;
       }
       
-      // If IBAN is included, also update the profile if auth_id exists
-      if ((personel.iban || personel.adres) && data.auth_id) {
+      // If IBAN, address or birthdate is included, also update the profile if auth_id exists
+      if ((personel.iban || personel.adres || personel.birthdate) && data.auth_id) {
         try {
-          const updateData: { iban?: string, address?: string } = {};
+          const updateData: Record<string, any> = {};
           if (personel.iban) updateData.iban = personel.iban;
           if (personel.adres) updateData.address = personel.adres;
+          if (personel.birthdate) updateData.birthdate = personel.birthdate;
           
           const { error: profileError } = await supabase
             .from('profiles')

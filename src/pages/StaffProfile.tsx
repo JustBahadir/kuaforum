@@ -232,6 +232,7 @@ const StaffProfile = () => {
 
     try {
       const phoneForSaving = formData.phone.replace(/\s/g, '');
+      const ibanForSaving = profilServisi.cleanIBANForStorage(formData.iban);
 
       await profilServisi.guncelle({
         first_name: formData.firstName,
@@ -240,7 +241,7 @@ const StaffProfile = () => {
         gender: formData.gender,
         birthdate: formData.birthdate,
         address: formData.address,
-        iban: formData.iban
+        iban: ibanForSaving
       });
 
       // Update user metadata for consistency
@@ -252,7 +253,7 @@ const StaffProfile = () => {
           gender: formData.gender,
           birthdate: formData.birthdate,
           address: formData.address,
-          iban: formData.iban
+          iban: ibanForSaving
         }
       });
 
@@ -266,36 +267,12 @@ const StaffProfile = () => {
     }
   };
 
-  const formatIBAN = (value: string) => {
-    // Remove all non-digit characters, but keep TR prefix if it exists
-    let cleaned = value.replace(/[^0-9TR]/gi, '');
-    
-    // Ensure it starts with TR
-    if (!cleaned.startsWith('TR')) {
-      cleaned = 'TR' + cleaned.replace(/\D/g, '');
-    } else {
-      // Keep TR but remove any non-digits after that
-      cleaned = 'TR' + cleaned.substring(2).replace(/\D/g, '');
-    }
-    
-    // Limit to 26 characters (TR + 24 digits)
-    cleaned = cleaned.substring(0, 26);
-    
-    // Format with spaces every 4 characters for readability
-    let formatted = '';
-    for (let i = 0; i < cleaned.length; i++) {
-      if (i > 0 && i % 4 === 0) {
-        formatted += ' ';
-      }
-      formatted += cleaned[i];
-    }
-    
-    return formatted;
-  };
-
   const handleIBANChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formattedValue = formatIBAN(e.target.value);
-    setFormData(prev => ({ ...prev, iban: formattedValue.replace(/\s/g, '') }));
+    // Use the profilServisi formatter
+    const formattedValue = profilServisi.formatIBAN(e.target.value);
+    // Only update the visual display, keep the cleaned version for form data
+    const cleanedValue = profilServisi.cleanIBANForStorage(formattedValue) || '';
+    setFormData(prev => ({ ...prev, iban: cleanedValue }));
   };
 
   const copyToClipboard = (text: string) => {
@@ -492,7 +469,7 @@ const StaffProfile = () => {
                   <Input
                     id="iban"
                     name="iban"
-                    value={formatIBAN(formData.iban)}
+                    value={profilServisi.formatIBAN(formData.iban)}
                     onChange={handleIBANChange}
                     placeholder="TR00 0000 0000 0000 0000 0000 00"
                     className="flex-1"
@@ -503,7 +480,7 @@ const StaffProfile = () => {
                       type="button" 
                       variant="ghost" 
                       size="icon"
-                      onClick={() => copyToClipboard(formatIBAN(formData.iban))}
+                      onClick={() => copyToClipboard(profilServisi.formatIBAN(formData.iban))}
                       className="ml-2"
                     >
                       <Copy size={16} />

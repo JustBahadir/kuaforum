@@ -1,3 +1,4 @@
+
 import { getProfile, getUserRole } from './profileServices/fetchProfile';
 import { updateProfile, createOrUpdateProfile } from './profileServices/updateProfile';
 
@@ -48,7 +49,7 @@ const formatIBAN = (iban: string) => {
   return formatted;
 };
 
-// Function to validate IBAN format
+// Function to validate and format IBAN input
 const validateIBAN = (iban: string) => {
   if (!iban) return '';
   

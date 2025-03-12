@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { 
   Card, 
@@ -54,36 +55,9 @@ export function ProfileEditForm({
   
   useEffect(() => {
     if (profile.iban) {
-      setFormattedIBAN(formatIBAN(profile.iban));
+      setFormattedIBAN(profilServisi.formatIBAN(profile.iban));
     }
   }, [profile.iban]);
-
-  const formatIBAN = (value: string) => {
-    // Remove all non-digit characters, but keep TR prefix if it exists
-    let cleaned = value.replace(/[^0-9TR]/gi, '');
-    
-    // Ensure it starts with TR
-    if (!cleaned.startsWith('TR')) {
-      cleaned = 'TR' + cleaned.replace(/\D/g, '');
-    } else {
-      // Keep TR but remove any non-digits after that
-      cleaned = 'TR' + cleaned.substring(2).replace(/\D/g, '');
-    }
-    
-    // Limit to 26 characters (TR + 24 digits)
-    cleaned = cleaned.substring(0, 26);
-    
-    // Format with spaces every 4 characters for readability
-    let formatted = '';
-    for (let i = 0; i < cleaned.length; i++) {
-      if (i > 0 && i % 4 === 0) {
-        formatted += ' ';
-      }
-      formatted += cleaned[i];
-    }
-    
-    return formatted;
-  };
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -94,14 +68,21 @@ export function ProfileEditForm({
   const isStaff = profile.role === 'staff';
   
   const handleIBANChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formattedValue = formatIBAN(e.target.value);
+    // Replace all non-TR and non-digit characters
+    let value = e.target.value;
+    
+    // Use the profilServisi IBAN formatter
+    const formattedValue = profilServisi.formatIBAN(value);
     setFormattedIBAN(formattedValue);
     
     // Create a synthetic event to pass to the parent's handleChange
+    // Store cleaned version without spaces
+    const cleanedValue = profilServisi.cleanIBANForStorage(formattedValue) || '';
+    
     const syntheticEvent = {
       target: {
         name: 'iban',
-        value: formattedValue.replace(/\s/g, '')  // Remove spaces for storage
+        value: cleanedValue
       }
     } as React.ChangeEvent<HTMLInputElement>;
     
