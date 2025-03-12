@@ -118,7 +118,7 @@ export function CustomerDetails({
     });
   };
 
-  // Create mock customer object based on provided props
+  // Create customer object based on provided props if no customer is passed
   const customerObject: Musteri = customer || {
     id: customerId,
     first_name: customerName.split(' ')[0],
@@ -126,8 +126,7 @@ export function CustomerDetails({
     auth_id: customerEmail,
     phone: customerPhone,
     dukkan_id: dukkanId,
-    created_at: '',
-    updated_at: ''
+    created_at: ''
   };
 
   // Handle refresh operations
