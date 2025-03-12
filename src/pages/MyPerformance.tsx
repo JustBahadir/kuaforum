@@ -1,208 +1,236 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { StaffLayout } from "@/components/ui/staff-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { personelIslemleriServisi, personelServisi } from "@/lib/supabase";
-import { useCustomerAuth } from "@/hooks/useCustomerAuth";
-import { format, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from "date-fns";
-import { tr } from "date-fns/locale";
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Star, Calendar, Clock, BarChart2, TrendingUp } from "lucide-react";
+import { Calendar, Clock, User, Activity, Award } from "lucide-react";
+import { supabase, personelIslemleriServisi } from "@/lib/supabase";
+import { format, startOfDay, subDays, subMonths, subYears, startOfWeek, startOfMonth, startOfYear } from "date-fns";
+import { tr } from "date-fns/locale";
+import { useCustomerAuth } from "@/hooks/useCustomerAuth";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function MyPerformance() {
-  const { userId } = useCustomerAuth();
-  const [timeframe, setTimeframe] = useState<"daily" | "weekly" | "monthly" | "yearly">("daily");
+  const { userId, userRole, dukkanId } = useCustomerAuth();
+  const [personelId, setPersonelId] = useState<number | null>(null);
+  const [timeRange, setTimeRange] = useState<"day" | "week" | "month" | "year">("day");
+  const [totalPoints, setTotalPoints] = useState(0);
   
-  // Get personnel ID from auth ID
+  const today = new Date();
+  
+  // Calculate date ranges
+  const getDateRange = () => {
+    const endDate = format(today, "yyyy-MM-dd");
+    let startDate;
+    
+    switch (timeRange) {
+      case "day":
+        startDate = format(startOfDay(today), "yyyy-MM-dd");
+        break;
+      case "week":
+        startDate = format(startOfWeek(today, { weekStartsOn: 1 }), "yyyy-MM-dd");
+        break;
+      case "month":
+        startDate = format(startOfMonth(today), "yyyy-MM-dd");
+        break;
+      case "year":
+        startDate = format(startOfYear(today), "yyyy-MM-dd");
+        break;
+      default:
+        startDate = format(subDays(today, 7), "yyyy-MM-dd");
+    }
+    
+    return { startDate, endDate };
+  };
+  
+  // Fetch personel_id for the current user
   const { data: personelData, isLoading: isLoadingPersonel } = useQuery({
-    queryKey: ['personel', 'auth', userId],
-    queryFn: () => personelServisi.getirByAuthId(userId),
-    enabled: !!userId,
+    queryKey: ['personel', userId],
+    queryFn: async () => {
+      if (!userId) return null;
+      
+      const { data, error } = await supabase
+        .from('personel')
+        .select('id, ad, soyad')
+        .eq('auth_id', userId)
+        .single();
+        
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!userId && userRole === "staff"
   });
   
-  // Calculate date range based on timeframe
-  const getDateRange = () => {
-    const now = new Date();
-    
-    switch (timeframe) {
-      case "daily":
-        return { 
-          start: format(now, "yyyy-MM-dd"), 
-          end: format(now, "yyyy-MM-dd"),
-          label: "Bugün" 
-        };
-      case "weekly":
-        return { 
-          start: format(startOfWeek(now, { locale: tr, weekStartsOn: 1 }), "yyyy-MM-dd"), 
-          end: format(endOfWeek(now, { locale: tr, weekStartsOn: 1 }), "yyyy-MM-dd"),
-          label: "Bu Hafta" 
-        };
-      case "monthly":
-        return { 
-          start: format(startOfMonth(now), "yyyy-MM-dd"), 
-          end: format(endOfMonth(now), "yyyy-MM-dd"),
-          label: "Bu Ay" 
-        };
-      case "yearly":
-        return { 
-          start: format(startOfYear(now), "yyyy-MM-dd"), 
-          end: format(endOfYear(now), "yyyy-MM-dd"),
-          label: "Bu Yıl" 
-        };
+  // Set personel ID when data is loaded
+  useEffect(() => {
+    if (personelData?.id) {
+      setPersonelId(personelData.id);
+    }
+  }, [personelData]);
+  
+  // Get date range for the query
+  const { startDate, endDate } = getDateRange();
+  
+  // Fetch operations for the current user in the selected time range
+  const { data: operations = [], isLoading: isLoadingOperations } = useQuery({
+    queryKey: ['personel-operations', personelId, timeRange, startDate, endDate],
+    queryFn: () => {
+      if (!personelId) return [];
+      return personelIslemleriServisi.tarihAraliginaGoreGetir(personelId, startDate, endDate);
+    },
+    enabled: !!personelId
+  });
+  
+  // Calculate total points from operations
+  useEffect(() => {
+    if (operations.length > 0) {
+      const points = operations.reduce((total, op) => {
+        return total + (op.islem?.puan || 0);
+      }, 0);
+      setTotalPoints(points);
+    } else {
+      setTotalPoints(0);
+    }
+  }, [operations]);
+  
+  // Format date based on selected time range
+  const formatOperationDate = (date: string) => {
+    try {
+      const dateObj = new Date(date);
+      
+      switch (timeRange) {
+        case "day":
+          return format(dateObj, "HH:mm", { locale: tr });
+        case "week":
+        case "month":
+          return format(dateObj, "d MMMM", { locale: tr });
+        case "year":
+          return format(dateObj, "MMMM yyyy", { locale: tr });
+        default:
+          return format(dateObj, "d MMMM yyyy", { locale: tr });
+      }
+    } catch (e) {
+      return date;
     }
   };
   
-  const dateRange = getDateRange();
-  
-  // Get personnel operations based on the timeframe
-  const { data: operations, isLoading: isLoadingOperations } = useQuery({
-    queryKey: ['personel-operations', personelData?.id, timeframe],
-    queryFn: () => personelIslemleriServisi.tarihAraliginaGoreGetir(
-      personelData?.id || 0,
-      dateRange.start,
-      dateRange.end
-    ),
-    enabled: !!personelData?.id,
-  });
-  
-  // Calculate total stats
-  const totalEarnings = operations?.reduce((sum, op) => sum + Number(op.tutar), 0) || 0;
-  const totalPoints = operations?.reduce((sum, op) => sum + Number(op.puan), 0) || 0;
-  const totalOperations = operations?.length || 0;
-  
-  return (
-    <StaffLayout>
-      <div className="container mx-auto p-4">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Performansım</h1>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="flex items-center gap-1 py-1 px-3">
-              <Star className="w-4 h-4 text-yellow-500" />
-              <span>Toplam Puan: {totalPoints}</span>
-            </Badge>
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-purple-500" />
-                İşlem Sayısı
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">{isLoadingOperations ? <Skeleton className="h-8 w-16" /> : totalOperations}</p>
-              <p className="text-sm text-muted-foreground">{dateRange.label}</p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-green-500" />
-                Toplam Ciro
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">
-                {isLoadingOperations ? <Skeleton className="h-8 w-24" /> : `₺${totalEarnings.toFixed(2)}`}
-              </p>
-              <p className="text-sm text-muted-foreground">{dateRange.label}</p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Star className="w-4 h-4 text-yellow-500" />
-                Toplam Puan
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">{isLoadingOperations ? <Skeleton className="h-8 w-16" /> : totalPoints}</p>
-              <p className="text-sm text-muted-foreground">{dateRange.label}</p>
-            </CardContent>
-          </Card>
+  // Loading states
+  if (isLoadingPersonel) {
+    return (
+      <div className="container mx-auto py-8">
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-3xl font-bold">Performansım</h1>
+          <Skeleton className="h-8 w-24" />
         </div>
         
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>İşlem Geçmişi</CardTitle>
-              <Tabs value={timeframe} onValueChange={(v) => setTimeframe(v as any)}>
-                <TabsList>
-                  <TabsTrigger value="daily" className="flex items-center gap-1">
-                    <Clock className="w-4 h-4" /> Günlük
-                  </TabsTrigger>
-                  <TabsTrigger value="weekly" className="flex items-center gap-1">
-                    <Calendar className="w-4 h-4" /> Haftalık
-                  </TabsTrigger>
-                  <TabsTrigger value="monthly" className="flex items-center gap-1">
-                    <BarChart2 className="w-4 h-4" /> Aylık
-                  </TabsTrigger>
-                  <TabsTrigger value="yearly" className="flex items-center gap-1">
-                    <TrendingUp className="w-4 h-4" /> Yıllık
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </div>
+            <Skeleton className="h-8 w-48 mb-2" />
           </CardHeader>
           <CardContent>
-            {isLoadingOperations ? (
-              <div className="space-y-4">
-                {Array(5).fill(0).map((_, i) => (
-                  <div key={i} className="flex items-center gap-4">
-                    <Skeleton className="h-4 w-28" />
-                    <Skeleton className="h-4 w-40" />
-                    <Skeleton className="h-4 w-16" />
-                    <Skeleton className="h-4 w-16" />
-                  </div>
-                ))}
-              </div>
-            ) : operations?.length === 0 ? (
-              <div className="py-8 text-center text-muted-foreground">
-                <p className="text-lg mb-2">İşlem kaydı bulunamadı</p>
-                <p className="text-sm">Seçilen tarih aralığında işlem kaydı bulunmamaktadır.</p>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Tarih</TableHead>
-                    <TableHead>İşlem</TableHead>
-                    <TableHead>Tutar</TableHead>
-                    <TableHead>Puan</TableHead>
-                    <TableHead>Açıklama</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {operations?.map((op) => (
-                    <TableRow key={op.id}>
-                      <TableCell>
-                        {format(new Date(op.created_at), "dd MMM yyyy", { locale: tr })}
-                      </TableCell>
-                      <TableCell>{op.islem?.islem_adi || "Tanımsız İşlem"}</TableCell>
-                      <TableCell className="font-medium">₺{op.tutar.toFixed(2)}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Star className="w-4 h-4 text-yellow-500" />
-                          <span>{op.puan}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="max-w-xs truncate">{op.aciklama || "-"}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
+            <Skeleton className="h-64 w-full" />
           </CardContent>
         </Card>
       </div>
-    </StaffLayout>
+    );
+  }
+  
+  // No staff ID found
+  if (!isLoadingPersonel && !personelId) {
+    return (
+      <div className="container mx-auto py-8">
+        <div className="flex flex-col items-center justify-center h-64">
+          <h1 className="text-2xl font-semibold text-gray-700 mb-4">Personel bilgisi bulunamadı</h1>
+          <p className="text-muted-foreground">
+            Bu sayfayı görüntülemek için personel olarak kayıtlı olmanız gerekmektedir.
+          </p>
+        </div>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="container mx-auto py-8">
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-3xl font-bold">Performansım</h1>
+        <Badge variant="outline" className="px-3 py-2 text-lg bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200">
+          <Award className="w-5 h-5 mr-2 text-purple-500" /> 
+          <span>Toplam Puan: <strong className="text-purple-700">{totalPoints}</strong></span>
+        </Badge>
+      </div>
+      
+      <Tabs defaultValue="day" value={timeRange} onValueChange={(value) => setTimeRange(value as any)}>
+        <TabsList className="mb-6 grid grid-cols-4 w-full md:w-1/2">
+          <TabsTrigger value="day">Günlük</TabsTrigger>
+          <TabsTrigger value="week">Haftalık</TabsTrigger>
+          <TabsTrigger value="month">Aylık</TabsTrigger>
+          <TabsTrigger value="year">Yıllık</TabsTrigger>
+        </TabsList>
+        
+        {/* All tab contents share the same view */}
+        {["day", "week", "month", "year"].map((period) => (
+          <TabsContent key={period} value={period}>
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  {period === "day" && "Bugünkü İşlemlerim"}
+                  {period === "week" && "Bu Haftaki İşlemlerim"}
+                  {period === "month" && "Bu Ayki İşlemlerim"}
+                  {period === "year" && "Bu Yılki İşlemlerim"}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isLoadingOperations ? (
+                  <div className="space-y-4">
+                    {[1, 2, 3].map((i) => (
+                      <Skeleton key={i} className="h-16 w-full" />
+                    ))}
+                  </div>
+                ) : operations.length > 0 ? (
+                  <div className="space-y-4">
+                    {operations.map((operation) => (
+                      <div 
+                        key={operation.id} 
+                        className="border rounded-lg p-4 flex items-start justify-between gap-4 hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="flex-1">
+                          <div className="font-medium text-lg">{operation.islem?.ad || "İşlem"}</div>
+                          <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                            <div className="flex items-center gap-1">
+                              <Calendar className="w-4 h-4" />
+                              {formatOperationDate(operation.created_at)}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <User className="w-4 h-4" />
+                              {operation.personel?.ad} {operation.personel?.soyad}
+                            </div>
+                            {operation.notlar && (
+                              <div className="flex items-center gap-1">
+                                <span className="text-gray-500">Not:</span> {operation.notlar}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-200">
+                          <Activity className="w-3 h-3 mr-1" /> 
+                          {operation.islem?.puan || 0} Puan
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-48 text-gray-500">
+                    <Activity className="w-12 h-12 mb-4 text-gray-300" />
+                    <p>Bu zaman aralığında işlem kaydı bulunmamaktadır.</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        ))}
+      </Tabs>
+    </div>
   );
 }

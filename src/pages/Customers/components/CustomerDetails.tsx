@@ -135,6 +135,16 @@ export function CustomerDetails({ customer, onEdit, onDelete, dukkanId, isReadOn
     
     // Here we would also update this in the database
   };
+
+  const handleSaveSpouse = () => {
+    // Save spouse name logic here
+    toast.success("Eş bilgisi kaydedildi");
+  };
+  
+  const handleSaveAllPersonalData = () => {
+    // Save all personal data
+    toast.success("Kişisel bilgiler güncellendi");
+  };
   
   const formatDate = (date?: string) => {
     if (!date) return "-";
@@ -333,10 +343,7 @@ export function CustomerDetails({ customer, onEdit, onDelete, dukkanId, isReadOn
                       <Button 
                         type="button" 
                         variant="outline" 
-                        onClick={() => {
-                          // Save spouse name logic here
-                          toast.success("Eş bilgisi kaydedildi");
-                        }}
+                        onClick={handleSaveSpouse}
                       >
                         Kaydet
                       </Button>
@@ -389,10 +396,7 @@ export function CustomerDetails({ customer, onEdit, onDelete, dukkanId, isReadOn
             {!isReadOnly && (
               <CardFooter>
                 <Button 
-                  onClick={() => {
-                    // Save all personal data
-                    toast.success("Kişisel bilgiler güncellendi");
-                  }}
+                  onClick={handleSaveAllPersonalData}
                   className="ml-auto"
                 >
                   Tüm Bilgileri Kaydet
