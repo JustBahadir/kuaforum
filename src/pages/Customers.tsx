@@ -122,11 +122,14 @@ export default function Customers() {
               <ArrowLeft className="h-4 w-4" /> Müşteri Listesine Dön
             </Button>
             <CustomerDetails 
-              customer={selectedCustomer} 
+              customerId={selectedCustomer.id}
+              customerName={`${selectedCustomer.first_name} ${selectedCustomer.last_name || ''}`}
+              customerEmail={selectedCustomer.auth_id}
+              customerPhone={selectedCustomer.phone}
               onEdit={handleCustomerUpdated}
               onDelete={handleCustomerDeleted}
               dukkanId={dukkanData?.id}
-              isReadOnly={!isAdmin} // Staff can only view, not edit
+              isReadOnly={!isAdmin}
             />
           </>
         ) : (

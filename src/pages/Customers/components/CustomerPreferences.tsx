@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, ReactNode } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +9,8 @@ import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
 
 interface CustomerPreferencesProps {
-  customerId: string;
+  customerId?: string;
+  children?: ReactNode;
 }
 
 interface Preference {
@@ -20,7 +20,7 @@ interface Preference {
   custom_preferences: Record<string, any> | null;
 }
 
-export function CustomerPreferences({ customerId }: CustomerPreferencesProps) {
+export function CustomerPreferences({ customerId, children }: CustomerPreferencesProps) {
   const queryClient = useQueryClient();
   const [editMode, setEditMode] = useState(false);
   const [preferences, setPreferences] = useState<Preference>({
@@ -30,10 +30,12 @@ export function CustomerPreferences({ customerId }: CustomerPreferencesProps) {
     custom_preferences: null
   });
 
-  // Fetch customer preferences
+  // Fetch customer preferences only if customerId is provided
   const { data: existingPreferences, isLoading } = useQuery({
     queryKey: ['customer_preferences', customerId],
     queryFn: async () => {
+      if (!customerId) return null;
+      
       const { data, error } = await supabase
         .from('customer_preferences')
         .select('*')
@@ -42,7 +44,8 @@ export function CustomerPreferences({ customerId }: CustomerPreferencesProps) {
         
       if (error) throw error;
       return data;
-    }
+    },
+    enabled: !!customerId
   });
 
   // Prefill form with existing data
@@ -60,6 +63,8 @@ export function CustomerPreferences({ customerId }: CustomerPreferencesProps) {
   // Update or create preferences
   const mutation = useMutation({
     mutationFn: async (data: Preference) => {
+      if (!customerId) return null;
+      
       if (existingPreferences) {
         // Update existing preferences
         const { error } = await supabase
@@ -90,9 +95,11 @@ export function CustomerPreferences({ customerId }: CustomerPreferencesProps) {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['customer_preferences', customerId]
-      });
+      if (customerId) {
+        queryClient.invalidateQueries({
+          queryKey: ['customer_preferences', customerId]
+        });
+      }
       setEditMode(false);
       toast.success("Müşteri tercihleri kaydedildi");
     },
@@ -112,6 +119,16 @@ export function CustomerPreferences({ customerId }: CustomerPreferencesProps) {
       [field]: value
     }));
   };
+
+  // If children are provided, just render them
+  if (children) {
+    return <div className="p-6 space-y-6">{children}</div>;
+  }
+
+  // Otherwise render the full preference editor (only when customerId is available)
+  if (!customerId) {
+    return <div className="p-6 text-center">Müşteri ID gereklidir</div>;
+  }
 
   if (isLoading) {
     return <div className="p-6 text-center">Tercihler yükleniyor...</div>;

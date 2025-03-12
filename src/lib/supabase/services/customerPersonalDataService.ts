@@ -1,6 +1,17 @@
 
 import { supabase } from "@/lib/supabase/client";
 
+export interface CustomerPersonalData {
+  custom_notes: string;
+  children_names: string[];
+  spouse_name: string;
+  preferences?: Record<string, any>;
+  id?: number;
+  musteri_id?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export const customerPersonalDataService = {
   /**
    * Müşterinin kişisel verilerini getirir

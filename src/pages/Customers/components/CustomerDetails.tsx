@@ -9,19 +9,30 @@ import { CustomerOperationsTable } from "./CustomerOperationsTable";
 import { CustomerPreferences } from "./CustomerPreferences";
 import { customerPersonalDataService } from "@/lib/supabase/services/customerPersonalDataService";
 import { toast } from "sonner";
+import { Musteri } from "@/lib/supabase/types";
 
 interface CustomerDetailsProps {
   customerId: number;
   customerName: string;
   customerEmail?: string;
   customerPhone?: string;
+  customer?: Musteri;
+  onEdit?: () => Promise<void>;
+  onDelete?: () => Promise<void>;
+  dukkanId?: number;
+  isReadOnly?: boolean;
 }
 
 export function CustomerDetails({
   customerId,
   customerName,
   customerEmail,
-  customerPhone
+  customerPhone,
+  customer,
+  onEdit,
+  onDelete,
+  dukkanId,
+  isReadOnly = false
 }: CustomerDetailsProps) {
   const queryClient = useQueryClient();
   const [spouseName, setSpouseName] = useState("");
@@ -111,7 +122,7 @@ export function CustomerDetails({
         
         <TabsContent value="info">
           <CustomerPersonalInfo
-            customerId={customerId}
+            customerId={customerId.toString()}
             customerName={customerName}
             customerEmail={customerEmail}
             customerPhone={customerPhone}
@@ -119,11 +130,11 @@ export function CustomerDetails({
         </TabsContent>
         
         <TabsContent value="history">
-          <CustomerOperationsTable customerId={customerId} />
+          <CustomerOperationsTable customerId={customerId.toString()} />
         </TabsContent>
         
         <TabsContent value="preferences">
-          <CustomerPreferences>
+          <div>
             {/* Eşinin Adı */}
             <div className="space-y-4">
               <h3 className="font-medium text-lg">Eşinin Adı</h3>
@@ -185,7 +196,7 @@ export function CustomerDetails({
                 <Button onClick={saveCustomNotes}>Kaydet</Button>
               </div>
             </div>
-          </CustomerPreferences>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
