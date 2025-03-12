@@ -1,164 +1,167 @@
 
-import { supabase } from '../client';
-import { PersonelIslemi } from '../types';
+import { supabase } from "@/lib/supabase/client";
 
 export const personelIslemleriServisi = {
-  // Get all staff operations
-  async hepsiniGetir() {
-    const { data, error } = await supabase
-      .from('personel_islemleri')
-      .select(`
-        *,
-        islem:islemler(*),
-        personel:personel(*)
-      `)
-      .order('created_at', { ascending: false });
+  /**
+   * Tüm personel işlemlerini getirir
+   */
+  hepsiniGetir: async () => {
+    try {
+      const { data, error } = await supabase
+        .from('personel_islemler')
+        .select(`
+          *,
+          personel:personel_id(id, ad, soyad, auth_id),
+          musteri:musteri_id(id, ad, soyad, auth_id),
+          islem:islem_id(id, ad, fiyat, sure, puan)
+        `)
+        .order('created_at', { ascending: false });
 
-    if (error) throw error;
-    return data || [];
-  },
+      if (error) {
+        console.error('Personel işlemlerini getirirken hata:', error);
+        throw error;
+      }
 
-  // Get operations for a specific staff member
-  async personelIslemleriGetir(personelId: number) {
-    const { data, error } = await supabase
-      .from('personel_islemleri')
-      .select(`
-        *,
-        islem:islemler(*),
-        personel:personel(*)
-      `)
-      .eq('personel_id', personelId)
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    return data || [];
-  },
-
-  // Get operations for a specific customer
-  async musteriIslemleriGetir(musteriId: number) {
-    const { data, error } = await supabase
-      .from('personel_islemleri')
-      .select(`
-        *,
-        islem:islemler(*),
-        personel:personel(*)
-      `)
-      .eq('musteri_id', musteriId)
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    return data || [];
-  },
-
-  // Add a new operation
-  async ekle(islemi: Omit<PersonelIslemi, 'id' | 'created_at'> & { 
-    musteri_id?: number; 
-    randevu_id?: number;
-    tarih?: string; 
-    notlar?: string;
-    photos?: string[];
-  }) {
-    // Ensure we're not adding more than 4 photos
-    if (islemi.photos && islemi.photos.length > 4) {
-      islemi.photos = islemi.photos.slice(0, 4);
+      return data || [];
+    } catch (error) {
+      console.error('Personel işlemlerini getirirken beklenmeyen hata:', error);
+      throw error;
     }
-    
-    const { data, error } = await supabase
-      .from('personel_islemleri')
-      .insert([islemi])
-      .select(`
-        *,
-        islem:islemler(*),
-        personel:personel(*)
-      `)
-      .single();
-
-    if (error) throw error;
-    return data;
   },
 
-  // Update an operation
-  async guncelle(id: number, updates: Partial<PersonelIslemi>) {
-    // Ensure we're not adding more than 4 photos
-    if (updates.photos && updates.photos.length > 4) {
-      updates.photos = updates.photos.slice(0, 4);
+  /**
+   * Belirli bir personelin işlemlerini getirir
+   */
+  personelIslemleriGetir: async (personelId: number) => {
+    try {
+      const { data, error } = await supabase
+        .from('personel_islemler')
+        .select(`
+          *,
+          personel:personel_id(id, ad, soyad, auth_id),
+          musteri:musteri_id(id, ad, soyad, auth_id),
+          islem:islem_id(id, ad, fiyat, sure, puan)
+        `)
+        .eq('personel_id', personelId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Personel işlemlerini getirirken hata:', error);
+        throw error;
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Personel işlemlerini getirirken beklenmeyen hata:', error);
+      throw error;
     }
-    
-    const { data, error } = await supabase
-      .from('personel_islemleri')
-      .update(updates)
-      .eq('id', id)
-      .select(`
-        *,
-        islem:islemler(*),
-        personel:personel(*)
-      `)
-      .single();
-
-    if (error) throw error;
-    return data;
   },
 
-  // Delete an operation
-  async sil(id: number) {
-    const { error } = await supabase
-      .from('personel_islemleri')
-      .delete()
-      .eq('id', id);
+  /**
+   * Belirli bir personelin belirli tarih aralığındaki işlemlerini getirir
+   */
+  tarihAraliginaGoreGetir: async (personelId: number, startDate: string, endDate: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('personel_islemler')
+        .select(`
+          *,
+          personel:personel_id(id, ad, soyad, auth_id),
+          musteri:musteri_id(id, ad, soyad, auth_id),
+          islem:islem_id(id, ad, fiyat, sure, puan)
+        `)
+        .eq('personel_id', personelId)
+        .gte('created_at', `${startDate}T00:00:00`)
+        .lte('created_at', `${endDate}T23:59:59`)
+        .order('created_at', { ascending: false });
 
-    if (error) throw error;
-    return true;
-  },
+      if (error) {
+        console.error('Tarih aralığına göre personel işlemlerini getirirken hata:', error);
+        throw error;
+      }
 
-  // Update operation photos
-  async updatePhotos(id: number, photos: string[]) {
-    // Ensure we're not adding more than 4 photos
-    if (photos.length > 4) {
-      photos = photos.slice(0, 4);
+      return data || [];
+    } catch (error) {
+      console.error('Tarih aralığına göre personel işlemlerini getirirken beklenmeyen hata:', error);
+      throw error;
     }
-    
-    const { data, error } = await supabase
-      .from('personel_islemleri')
-      .update({ photos })
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
   },
-  
-  // Get operations by appointment
-  async getByRandevuId(randevuId: number) {
-    const { data, error } = await supabase
-      .from('personel_islemleri')
-      .select(`
-        *,
-        islem:islemler(*),
-        personel:personel(*)
-      `)
-      .eq('randevu_id', randevuId)
-      .order('created_at', { ascending: false });
 
-    if (error) throw error;
-    return data || [];
+  /**
+   * Belirli bir müşterinin işlemlerini getirir
+   */
+  musteriIslemleriGetir: async (musteriId: number) => {
+    try {
+      const { data, error } = await supabase
+        .from('personel_islemler')
+        .select(`
+          *,
+          personel:personel_id(id, ad, soyad, auth_id),
+          musteri:musteri_id(id, ad, soyad, auth_id),
+          islem:islem_id(id, ad, fiyat, sure, puan)
+        `)
+        .eq('musteri_id', musteriId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Müşteri işlemlerini getirirken hata:', error);
+        throw error;
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Müşteri işlemlerini getirirken beklenmeyen hata:', error);
+      throw error;
+    }
   },
-  
-  // Get operations for a specific staff member within a date range
-  async tarihAraliginaGoreGetir(personelId: number, startDate: string, endDate: string) {
-    const { data, error } = await supabase
-      .from('personel_islemleri')
-      .select(`
-        *,
-        islem:islemler(*),
-        personel:personel(*)
-      `)
-      .eq('personel_id', personelId)
-      .gte('created_at', `${startDate}T00:00:00`)
-      .lte('created_at', `${endDate}T23:59:59`)
-      .order('created_at', { ascending: false });
 
-    if (error) throw error;
-    return data || [];
+  /**
+   * Yeni bir personel işlemi ekler
+   */
+  ekle: async (islem: any) => {
+    try {
+      const { data, error } = await supabase
+        .from('personel_islemler')
+        .insert([islem])
+        .select();
+
+      if (error) {
+        console.error('Personel işlemi eklerken hata:', error);
+        throw error;
+      }
+
+      return data ? data[0] : null;
+    } catch (error) {
+      console.error('Personel işlemi eklerken beklenmeyen hata:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Randevu ID'sine göre işlem getirir
+   */
+  getByRandevuId: async (randevuId: number) => {
+    try {
+      const { data, error } = await supabase
+        .from('personel_islemler')
+        .select(`
+          *,
+          personel:personel_id(id, ad, soyad, auth_id),
+          musteri:musteri_id(id, ad, soyad, auth_id),
+          islem:islem_id(id, ad, fiyat, sure, puan)
+        `)
+        .eq('randevu_id', randevuId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Randevu ID\'sine göre işlem getirirken hata:', error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Randevu ID\'sine göre işlem getirirken beklenmeyen hata:', error);
+      throw error;
+    }
   }
 };

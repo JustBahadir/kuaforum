@@ -1,91 +1,104 @@
 
-import { supabase } from '../client';
-
-export interface CustomerPersonalData {
-  id?: number;
-  customer_id: string;
-  birth_date: Date | string | null;
-  anniversary_date: Date | string | null;
-  horoscope: string | null;
-  horoscope_description: string | null;
-  children_names: string[];
-  custom_notes: string | null;
-  daily_horoscope_reading?: string | null;
-  created_at?: string;
-  updated_at?: string;
-}
+import { supabase } from "@/lib/supabase/client";
 
 export const customerPersonalDataService = {
-  async getByCustomerId(customerId: string): Promise<CustomerPersonalData | null> {
+  /**
+   * Müşterinin kişisel verilerini getirir
+   */
+  getCustomerPersonalData: async (customerId: number) => {
     try {
-      // Use numeric ID directly without trying to treat it as a UUID
       const { data, error } = await supabase
-        .from('customer_personal_data')
+        .from('musteri_verileri')
         .select('*')
-        .eq('customer_id', customerId)
-        .maybeSingle();
+        .eq('musteri_id', customerId)
+        .single();
 
-      if (error) throw error;
-      return data;
+      if (error && error.code !== 'PGRST116') {
+        console.error('Müşteri verileri getirilirken hata:', error);
+        throw error;
+      }
+
+      // Veri yoksa boş obje döndür
+      return data || { 
+        custom_notes: '', 
+        children_names: [], 
+        spouse_name: '',
+        preferences: {} 
+      };
     } catch (error) {
-      console.error('Error fetching customer personal data:', error);
-      return null;
+      console.error('Müşteri verileri getirilirken beklenmeyen hata:', error);
+      return { 
+        custom_notes: '', 
+        children_names: [], 
+        spouse_name: '',
+        preferences: {} 
+      };
     }
   },
 
-  async upsert(data: CustomerPersonalData): Promise<CustomerPersonalData | null> {
+  /**
+   * Müşterinin kişisel verilerini günceller
+   */
+  updateCustomerPersonalData: async (customerId: number, data: any) => {
     try {
-      // Check if record exists
-      const { data: existingData } = await supabase
-        .from('customer_personal_data')
+      // Önce veri var mı diye kontrol et
+      const { data: existingData, error: checkError } = await supabase
+        .from('musteri_verileri')
         .select('id')
-        .eq('customer_id', data.customer_id)
-        .maybeSingle();
+        .eq('musteri_id', customerId)
+        .single();
 
-      let result;
-      
-      if (existingData?.id) {
-        // Update
-        const { data: updatedData, error } = await supabase
-          .from('customer_personal_data')
-          .update({
-            birth_date: data.birth_date,
-            anniversary_date: data.anniversary_date,
-            horoscope: data.horoscope,
-            horoscope_description: data.horoscope_description,
-            children_names: data.children_names,
-            custom_notes: data.custom_notes,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existingData.id)
-          .select()
-          .single();
-
-        if (error) throw error;
-        result = updatedData;
-      } else {
-        // Insert
-        const { data: newData, error } = await supabase
-          .from('customer_personal_data')
-          .insert([{
-            customer_id: data.customer_id,
-            birth_date: data.birth_date,
-            anniversary_date: data.anniversary_date,
-            horoscope: data.horoscope,
-            horoscope_description: data.horoscope_description,
-            children_names: data.children_names,
-            custom_notes: data.custom_notes
-          }])
-          .select()
-          .single();
-
-        if (error) throw error;
-        result = newData;
+      if (checkError && checkError.code !== 'PGRST116') {
+        console.error('Müşteri verisi kontrolünde hata:', checkError);
+        throw checkError;
       }
 
-      return result;
+      // Mevcut veriyi al ve güncelle
+      const { data: currentData } = await supabase
+        .from('musteri_verileri')
+        .select('*')
+        .eq('musteri_id', customerId)
+        .single();
+
+      const updatedData = {
+        ...currentData,
+        ...data,
+        musteri_id: customerId
+      };
+
+      let result;
+
+      // Veri varsa güncelle, yoksa oluştur
+      if (existingData) {
+        const { data: updateResult, error: updateError } = await supabase
+          .from('musteri_verileri')
+          .update(updatedData)
+          .eq('musteri_id', customerId)
+          .select();
+
+        if (updateError) {
+          console.error('Müşteri verisi güncellenirken hata:', updateError);
+          throw updateError;
+        }
+
+        result = updateResult;
+      } else {
+        const { data: insertResult, error: insertError } = await supabase
+          .from('musteri_verileri')
+          .insert([updatedData])
+          .select();
+
+        if (insertError) {
+          console.error('Müşteri verisi eklenirken hata:', insertError);
+          throw insertError;
+        }
+
+        result = insertResult;
+      }
+
+      return result ? result[0] : null;
     } catch (error) {
-      console.error('Error saving customer personal data:', error);
+      console.error('Müşteri verisi güncellenirken beklenmeyen hata:', error);
       throw error;
     }
   }

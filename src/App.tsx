@@ -44,6 +44,7 @@ function App() {
       <Route path="/staff-profile" element={<StaffProfile />} />
       <Route path="/personnel" element={<Personnel />} />
       <Route path="/customer-dashboard/*" element={<CustomerDashboard />} />
+      <Route path="/profile" element={<Navigate to="/staff-profile" replace />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
