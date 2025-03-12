@@ -10,6 +10,7 @@ import { CustomerPreferences } from "./CustomerPreferences";
 import { customerPersonalDataService } from "@/lib/supabase/services/customerPersonalDataService";
 import { toast } from "sonner";
 import { Musteri } from "@/lib/supabase/types";
+import { customerOperationsService } from "@/lib/supabase/services/customerOperationsService";
 
 interface CustomerDetailsProps {
   customerId: number;
@@ -49,6 +50,12 @@ export function CustomerDetails({
       children_names: [],
       spouse_name: ""
     }
+  });
+
+  // Fetch customer operations
+  const { data: operations = [], isLoading: isLoadingOperations, refetch: refetchOperations } = useQuery({
+    queryKey: ["customer-operations", customerId],
+    queryFn: () => customerOperationsService.getCustomerOperations(customerId.toString()),
   });
 
   // Update state when data is loaded
@@ -111,6 +118,23 @@ export function CustomerDetails({
     });
   };
 
+  // Create mock customer object based on provided props
+  const customerObject: Musteri = customer || {
+    id: customerId,
+    first_name: customerName.split(' ')[0],
+    last_name: customerName.split(' ').slice(1).join(' '),
+    auth_id: customerEmail,
+    phone: customerPhone,
+    dukkan_id: dukkanId,
+    created_at: '',
+    updated_at: ''
+  };
+
+  // Handle refresh operations
+  const handleRefreshOperations = () => {
+    refetchOperations();
+  };
+
   return (
     <div className="space-y-6">
       <Tabs defaultValue="info">
@@ -123,14 +147,17 @@ export function CustomerDetails({
         <TabsContent value="info">
           <CustomerPersonalInfo
             customerId={customerId.toString()}
-            customerName={customerName}
-            customerEmail={customerEmail}
-            customerPhone={customerPhone}
+            customer={customerObject}
+            editMode={!isReadOnly}
           />
         </TabsContent>
         
         <TabsContent value="history">
-          <CustomerOperationsTable customerId={customerId.toString()} />
+          <CustomerOperationsTable 
+            customerId={customerId.toString()} 
+            operations={operations} 
+            onRefresh={handleRefreshOperations} 
+          />
         </TabsContent>
         
         <TabsContent value="preferences">

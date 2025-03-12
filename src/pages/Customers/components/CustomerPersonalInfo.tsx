@@ -22,7 +22,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { getHoroscope, getHoroscopeDescription } from "../utils/horoscopeUtils";
 
-interface CustomerPersonalInfoProps {
+export interface CustomerPersonalInfoProps {
   customerId: string;
   customer: Musteri;
   editMode: boolean;

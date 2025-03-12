@@ -27,7 +27,7 @@ import { Image } from "lucide-react";
 import { OperationPhotoUpload } from "@/components/operations/OperationPhotoUpload";
 import { toast } from "sonner";
 
-interface CustomerOperationsTableProps {
+export interface CustomerOperationsTableProps {
   customerId: string;
   operations: CustomerOperation[];
   onRefresh: () => void;
@@ -35,7 +35,7 @@ interface CustomerOperationsTableProps {
 
 export function CustomerOperationsTable({ 
   customerId, 
-  operations, 
+  operations = [], 
   onRefresh 
 }: CustomerOperationsTableProps) {
   const [selectedOperation, setSelectedOperation] = useState<CustomerOperation | null>(null);

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -26,19 +25,16 @@ export default function Customers() {
   const location = useLocation();
   const navigate = useNavigate();
   
-  // Check if we should open the new customer dialog based on URL parameter
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
     const shouldOpenNewCustomer = searchParams.get('new') === 'true';
     
     if (shouldOpenNewCustomer) {
       setIsNewCustomerModalOpen(true);
-      // Remove the parameter from the URL without refreshing the page
       navigate(location.pathname, { replace: true });
     }
   }, [location, navigate]);
   
-  // Query with shop context
   const { 
     data: customers = [], 
     isLoading, 
@@ -58,12 +54,11 @@ export default function Customers() {
       }
     },
     refetchOnWindowFocus: false,
-    staleTime: 30000, // 30 seconds
+    staleTime: 30000,
     retry: 1,
-    enabled: !!dukkanData?.id // Only run query when shop data is available
+    enabled: !!dukkanData?.id
   });
 
-  // Filter customers based on search text
   const filteredCustomers = searchText
     ? customers.filter((customer: Musteri) => 
         `${customer.first_name} ${customer.last_name || ''}`.toLowerCase().includes(searchText.toLowerCase()) ||
@@ -94,19 +89,17 @@ export default function Customers() {
 
   const handleCustomerUpdated = async () => {
     await refetch();
-    // Keep the customer selected but refresh the data
   };
 
   const handleCustomerDeleted = async () => {
     await refetch();
-    setSelectedCustomer(null); // Go back to list after deletion
+    setSelectedCustomer(null);
   };
 
   const isAdmin = userRole === 'admin';
 
   return (
     <StaffLayout>
-      {/* Only use Sonner Toaster for notifications */}
       <Toaster position="bottom-right" richColors />
       
       <div className="container mx-auto p-4">
@@ -126,6 +119,7 @@ export default function Customers() {
               customerName={`${selectedCustomer.first_name} ${selectedCustomer.last_name || ''}`}
               customerEmail={selectedCustomer.auth_id}
               customerPhone={selectedCustomer.phone}
+              customer={selectedCustomer}
               onEdit={handleCustomerUpdated}
               onDelete={handleCustomerDeleted}
               dukkanId={dukkanData?.id}
