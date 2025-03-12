@@ -44,7 +44,7 @@ export function CustomerDetails({ customer, onEdit, onDelete, dukkanId, isReadOn
   const { userRole } = useCustomerAuth();
   
   // Get customer personal data
-  const { data: personalData, isLoading: isLoadingPersonalData } = useQuery({
+  const { data: personalData } = useQuery({
     queryKey: ['customer-personal-data', customer.id],
     queryFn: async () => {
       // This is a placeholder - we would need to implement this service
@@ -56,13 +56,6 @@ export function CustomerDetails({ customer, onEdit, onDelete, dukkanId, isReadOn
         spouse_name: "Mehmet"
       };
     },
-    onSuccess: (data) => {
-      if (data) {
-        setPersonalNotes(data.custom_notes || "");
-        setChildrenNames(data.children_names || []);
-        setSpouseName(data.spouse_name || "");
-      }
-    }
   });
   
   // Update form data when customer changes
@@ -75,6 +68,15 @@ export function CustomerDetails({ customer, onEdit, onDelete, dukkanId, isReadOn
     });
     setIsEditMode(false);
   }, [customer]);
+  
+  // Update state from personalData when it loads
+  useEffect(() => {
+    if (personalData) {
+      setPersonalNotes(personalData.custom_notes || "");
+      setChildrenNames(personalData.children_names || []);
+      setSpouseName(personalData.spouse_name || "");
+    }
+  }, [personalData]);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;

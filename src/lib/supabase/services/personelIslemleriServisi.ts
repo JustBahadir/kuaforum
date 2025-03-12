@@ -142,5 +142,23 @@ export const personelIslemleriServisi = {
 
     if (error) throw error;
     return data || [];
+  },
+  
+  // Get operations for a specific staff member within a date range
+  async tarihAraliginaGoreGetir(personelId: number, startDate: string, endDate: string) {
+    const { data, error } = await supabase
+      .from('personel_islemleri')
+      .select(`
+        *,
+        islem:islemler(*),
+        personel:personel(*)
+      `)
+      .eq('personel_id', personelId)
+      .gte('created_at', `${startDate}T00:00:00`)
+      .lte('created_at', `${endDate}T23:59:59`)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
   }
 };
