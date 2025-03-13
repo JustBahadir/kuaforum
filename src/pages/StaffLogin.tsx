@@ -20,6 +20,7 @@ export default function StaffLogin() {
         if (data?.session) {
           const role = data.session.user.user_metadata?.role;
           if (role === 'staff' || role === 'admin') {
+            console.log("Active session detected, redirecting to shop-home");
             navigate("/shop-home");
             return;
           }
@@ -42,6 +43,7 @@ export default function StaffLogin() {
   }, [navigate]);
   
   const handleLoginSuccess = () => {
+    console.log("Login successful, redirecting to shop-home page");
     navigate("/shop-home");
   };
 
