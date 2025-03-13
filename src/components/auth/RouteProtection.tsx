@@ -14,6 +14,9 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
 
   // Public pages that don't require authentication
   const publicPages = ["/", "/login", "/admin", "/staff-login"];
+  
+  // Check if we're in preview mode
+  const isPreviewMode = window.location.href.includes('preview-');
 
   useEffect(() => {
     let isMounted = true;
@@ -21,6 +24,12 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
     
     const checkSession = async () => {
       try {
+        // If in preview mode, skip authentication checks
+        if (isPreviewMode) {
+          if (isMounted) setChecking(false);
+          return;
+        }
+        
         // If it's a public page, no need for session check
         const isPublicPage = publicPages.some(page => 
           location.pathname === page || location.pathname.startsWith(`${page}/`)
@@ -68,9 +77,9 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
       isMounted = false;
       clearTimeout(timeout);
     };
-  }, [location.pathname, navigate]);
+  }, [location.pathname, navigate, isPreviewMode]);
 
-  if (checking && !publicPages.includes(location.pathname)) {
+  if (checking && !publicPages.includes(location.pathname) && !isPreviewMode) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>

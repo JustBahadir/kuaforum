@@ -12,10 +12,22 @@ export function useCustomerAuth() {
   const [dukkanId, setDukkanId] = useState<number>(0);
   const [dukkanAdi, setDukkanAdi] = useState<string>('');
   const [userId, setUserId] = useState<string>('');
+  
+  // Check if we're in preview mode
+  const isPreviewMode = window.location.href.includes('preview-');
 
   const fetchUserSession = async () => {
     try {
       setLoading(true);
+      
+      // If in preview mode, set default values and skip auth check
+      if (isPreviewMode) {
+        setUserName('Önizleme Modu');
+        setUserRole('preview');
+        setIsAuthenticated(true);
+        setLoading(false);
+        return;
+      }
       
       // Get session
       const { data, error } = await supabase.auth.getSession();
@@ -88,6 +100,9 @@ export function useCustomerAuth() {
   useEffect(() => {
     fetchUserSession();
 
+    // In preview mode, skip auth state change listener
+    if (isPreviewMode) return;
+
     // Set up auth state change listener
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -110,9 +125,12 @@ export function useCustomerAuth() {
     return () => {
       authListener?.subscription?.unsubscribe();
     };
-  }, []);
+  }, [isPreviewMode]);
 
   const handleLogout = async () => {
+    // In preview mode, do nothing
+    if (isPreviewMode) return;
+    
     try {
       setLoading(true);
       const { error } = await supabase.auth.signOut();

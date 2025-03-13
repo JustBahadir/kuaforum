@@ -40,12 +40,15 @@ const queryClient = new QueryClient({
 
 function App() {
   // Check if we're in a standalone window/preview
-  const isStandalonePreview = window.location.href.includes('preview-');
+  const isPreviewMode = window.location.href.includes('preview-');
+  
+  // Determine the correct basename based on preview mode
+  const basename = isPreviewMode ? "/preview-kuaforum" : "/";
 
   return (
     <ThemeProvider defaultTheme="light">
       <QueryClientProvider client={queryClient}>
-        <BrowserRouter basename={isStandalonePreview ? "/preview-kuaforum" : "/"}>
+        <BrowserRouter basename={basename}>
           <RouteProtection>
             <Routes>
               {/* Landing Page */}
@@ -85,7 +88,7 @@ function App() {
               <Route path="*" element={<NotFound />} />
             </Routes>
           </RouteProtection>
-          <ReactQueryDevtools />
+          {!isPreviewMode && <ReactQueryDevtools />}
           <Toaster />
         </BrowserRouter>
       </QueryClientProvider>
