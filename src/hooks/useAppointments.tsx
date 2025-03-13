@@ -125,7 +125,13 @@ export function useAppointments(dukkanId?: number) {
               .maybeSingle();
               
             if (data) {
-              appointment.musteri = data as Musteri;
+              // Fix here: Instead of directly assigning to musteri, create an object that matches expectations
+              // Without requiring the 'role' property that's causing the type error
+              appointment.musteri = {
+                ...data,
+                id: data.id.toString(),
+                role: 'customer' // Add the missing role property
+              };
             }
           } catch (error) {
             console.error(`Error fetching customer for appointment ${appointment.id}:`, error);
