@@ -11,6 +11,7 @@ import { dukkanServisi } from "@/lib/supabase/services/dukkanServisi";
 import { shopService } from "@/lib/auth/services/shopService";
 import { authService } from "@/lib/auth/authService";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
+import { calismaSaatleriServisi } from "@/lib/supabase/services/calismaSaatleriServisi";
 import {
   Select,
   SelectContent,
@@ -31,8 +32,8 @@ import {
 } from "@/components/ui/form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { gunSiralama } from "@/components/operations/constants/workingDays";
 
-// Şehir ve ilçeler için tip tanımlamaları
 interface City {
   name: string;
   value: string;
@@ -44,7 +45,6 @@ interface District {
   value: string;
 }
 
-// Form şeması
 const shopSchema = z.object({
   shopName: z.string().min(3, { message: "Dükkan adı en az 3 karakter olmalıdır" }),
   city: z.string().min(1, { message: "Lütfen bir il seçin" }),
@@ -57,7 +57,6 @@ export default function CreateShop() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
-  // Türkiye'nin başlıca şehirleri ve ilçeleri (basitleştirilmiş)
   const cities: City[] = [
     {
       name: "İstanbul",
@@ -113,13 +112,11 @@ export default function CreateShop() {
   const selectedCity = form.watch("city");
   const selectedDistricts = cities.find(city => city.value === selectedCity)?.districts || [];
 
-  // Dükkan oluşturma fonksiyonu
   const onSubmit = async (values: z.infer<typeof shopSchema>) => {
     setLoading(true);
     setErrorMessage(null);
     
     try {
-      // Kullanıcı kimliğini al
       const user = await authService.getCurrentUser();
       
       if (!user) {
@@ -127,16 +124,13 @@ export default function CreateShop() {
         return;
       }
       
-      // Dükkan kodu oluştur
       const shopCode = shopService.generateShopCode(values.shopName);
       
-      // Dükkan adresi oluştur
       const cityInfo = cities.find(c => c.value === values.city);
       const districtInfo = selectedDistricts.find(d => d.value === values.district);
       
       const address = `${districtInfo?.name || values.district}, ${cityInfo?.name || values.city}`;
       
-      // Dükkanı oluştur
       const newShop = await dukkanServisi.ekle({
         ad: values.shopName,
         adres: address,
@@ -145,12 +139,28 @@ export default function CreateShop() {
         active: true
       });
       
+      if (newShop && newShop.id) {
+        try {
+          // Create default working hours with 09:00 opening and 18:00 closing
+          const defaultHours = gunSiralama.map(gun => ({
+            gun,
+            acilis: "09:00",
+            kapanis: "18:00",
+            kapali: false,
+            dukkan_id: newShop.id
+          }));
+          
+          await calismaSaatleriServisi.guncelle(defaultHours);
+          console.log("Varsayılan çalışma saatleri oluşturuldu");
+        } catch (workingHoursError) {
+          console.error("Varsayılan çalışma saatleri oluşturulurken hata:", workingHoursError);
+        }
+      }
+      
       toast.success("Dükkan başarıyla oluşturuldu!");
       
-      // Profil bilgilerini yenile (dükkan bilgilerini güncellemek için)
       await refreshProfile();
       
-      // Personel sayfasına yönlendir
       navigate("/personnel");
       
     } catch (error: any) {

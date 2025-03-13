@@ -18,6 +18,39 @@ export const islemServisi = {
     }
   },
 
+  async kategorileriGetir() {
+    try {
+      const { data, error } = await supabase
+        .from('islem_kategorileri')
+        .select('*')
+        .order('sira');
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Kategorileri getirme hatası:', error);
+      throw error;
+    }
+  },
+
+  async kategoriIslemleriGetir(kategoriId: number) {
+    try {
+      if (!kategoriId) return [];
+      
+      const { data, error } = await supabase
+        .from('islemler')
+        .select('*')
+        .eq('kategori_id', kategoriId)
+        .order('sira');
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Kategori işlemlerini getirme hatası:', error);
+      throw error;
+    }
+  },
+
   async ekle(islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) {
     try {
       // Get the max sira value for the category
@@ -56,12 +89,12 @@ export const islemServisi = {
     }
   },
 
-  // This is causing the error - use ekle directly, don't try to reference this.ekle
-  async islemEkle(islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) {
+  islemEkle: async (islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) => {
     try {
-      return await this.ekle(islem);
+      console.log("İşlem ekleniyor:", islem);
+      return await islemServisi.ekle(islem);
     } catch (error) {
-      console.error('İşlem ekleme hatası (islemEkle):', error);
+      console.error("İşlem eklenirken hata oluştu:", error);
       throw error;
     }
   },
@@ -83,17 +116,19 @@ export const islemServisi = {
     }
   },
 
-  async islemGuncelle(id: number, islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) {
+  islemGuncelle: async (id: number, islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) => {
     try {
-      return await this.guncelle(id, islem);
+      return await islemServisi.guncelle(id, islem);
     } catch (error) {
-      console.error('İşlem güncelleme hatası (islemGuncelle):', error);
+      console.error('İşlem güncellenirken hata oluştu:', error);
       throw error;
     }
   },
 
   async sil(id: number) {
     try {
+      console.log("Silinecek işlem ID:", id);
+      
       const { error } = await supabase
         .from('islemler')
         .delete()
@@ -103,6 +138,8 @@ export const islemServisi = {
         console.error('İşlem silme hatası (detaylı):', error);
         throw error;
       }
+      
+      console.log("İşlem başarıyla silindi:", id);
       return { success: true };
     } catch (error) {
       console.error('İşlem silme hatası:', error);
@@ -110,11 +147,12 @@ export const islemServisi = {
     }
   },
 
-  async islemSil(id: number) {
+  islemSil: async (id: number) => {
     try {
-      return await this.sil(id);
+      console.log("İşlem silme isteği:", id);
+      return await islemServisi.sil(id);
     } catch (error) {
-      console.error('İşlem silme hatası (islemSil):', error);
+      console.error("İşlem silinirken hata oluştu:", error);
       throw error;
     }
   },

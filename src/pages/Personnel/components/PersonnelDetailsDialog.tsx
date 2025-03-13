@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { personelServisi, personelIslemleriServisi } from "@/lib/supabase";
 import {
@@ -38,16 +38,29 @@ export function PersonnelDetailsDialog({
   const { userRole } = useCustomerAuth();
   const isAdmin = userRole === 'admin';
 
+  console.log("PersonnelDetailsDialog: Opening for personnel ID:", personelId);
+
   const { data: personel, isLoading, error } = useQuery({
     queryKey: ["personel", personelId],
-    queryFn: () => personelId > 0 ? personelServisi.getirById(personelId) : null,
-    enabled: !!personelId && open && personelId > 0
+    queryFn: () => {
+      console.log("Fetching personnel with ID:", personelId);
+      if (!personelId || personelId <= 0) {
+        console.error("Invalid personel ID:", personelId);
+        return Promise.reject(new Error("Geçersiz personel ID"));
+      }
+      return personelServisi.getirById(personelId);
+    },
+    enabled: !!personelId && open && personelId > 0,
+    retry: 5,
+    retryDelay: 1000,
+    refetchOnWindowFocus: false,
+    staleTime: 30000
   });
 
   const { data: islemler = [], isLoading: islemleriYukluyor } = useQuery({
     queryKey: ["personel-islemleri", personelId],
     queryFn: () => personelIslemleriServisi.personelIslemleriGetir(personelId),
-    enabled: !!personelId && open && personelId > 0
+    enabled: !!personelId && open && personelId > 0 && isAdmin && !!personel
   });
 
   const copyToClipboard = (text: string) => {
@@ -61,6 +74,9 @@ export function PersonnelDetailsDialog({
     queryClient.invalidateQueries({ queryKey: ["personel", personelId] });
   };
 
+  console.log("PersonnelDetailsDialog state:", { isLoading, error, personel });
+
+  // Return improved loading state
   if (isLoading) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -77,6 +93,7 @@ export function PersonnelDetailsDialog({
   }
 
   if (error || !personel) {
+    console.error("Personnel details error:", error);
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent>
@@ -86,6 +103,7 @@ export function PersonnelDetailsDialog({
           <Alert variant="destructive">
             <AlertDescription>
               Personel bilgileri alınamadı. Lütfen tekrar deneyin.
+              {error instanceof Error && ` Hata: ${error.message}`}
             </AlertDescription>
           </Alert>
           <DialogFooter className="mt-4">

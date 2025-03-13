@@ -15,6 +15,7 @@ interface ShopProfilePhotoUploadProps {
   currentImageUrl?: string;
   className?: string;
   updateUserProfile?: boolean;
+  acceptVideoFiles?: boolean;
 }
 
 export function ShopProfilePhotoUpload({ 
@@ -24,14 +25,22 @@ export function ShopProfilePhotoUpload({
   onSuccess,
   currentImageUrl,
   className,
-  updateUserProfile = true
+  updateUserProfile = true,
+  acceptVideoFiles = false
 }: ShopProfilePhotoUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
 
   const handleClick = () => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = 'image/*';
+    
+    // Accept videos if galleryMode and acceptVideoFiles are both true
+    if (galleryMode && acceptVideoFiles) {
+      input.accept = 'image/*, video/mp4, video/webm, video/ogg';
+    } else {
+      input.accept = 'image/*';
+    }
+    
     input.onchange = handleFileChange;
     input.click();
   };
@@ -41,13 +50,19 @@ export function ShopProfilePhotoUpload({
     if (!files || files.length === 0) return;
 
     const file = files[0];
-    if (!file.type.startsWith('image/')) {
-      toast.error('Lütfen sadece resim dosyası yükleyin');
+    
+    // Check if the file is an image or a video
+    const isImage = file.type.startsWith('image/');
+    const isVideo = file.type.startsWith('video/');
+    
+    if (!(isImage || (acceptVideoFiles && isVideo && galleryMode))) {
+      toast.error('Lütfen sadece resim veya video dosyası yükleyin');
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Dosya boyutu 5MB\'ı geçemez');
+    // 20MB limit for all files
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error('Dosya boyutu 20MB\'ı geçemez');
       return;
     }
 
@@ -83,9 +98,9 @@ export function ShopProfilePhotoUpload({
       
       if (galleryMode) {
         onSuccess(publicUrl.publicUrl);
-        toast.success('Galeri fotoğrafı başarıyla yüklendi');
+        toast.success(isVideo ? 'Galeri videosu başarıyla yüklendi' : 'Galeri fotoğrafı başarıyla yüklendi');
       } else {
-        // Update shop logo
+        // Only update shop logo for images, not videos
         const { error: updateError } = await supabase
           .from('dukkanlar')
           .update({ logo_url: publicUrl.publicUrl })
@@ -118,7 +133,7 @@ export function ShopProfilePhotoUpload({
       }
     } catch (error) {
       console.error('Yükleme işlemi sırasında hata:', error);
-      toast.error('Fotoğraf yüklenirken bir hata oluştu: ' + (error instanceof Error ? error.message : String(error)));
+      toast.error('Dosya yüklenirken bir hata oluştu: ' + (error instanceof Error ? error.message : String(error)));
     } finally {
       setIsUploading(false);
     }

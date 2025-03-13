@@ -22,7 +22,8 @@ export default function ShopHomePage() {
     loading, 
     error, 
     personelListesi, 
-    calisma_saatleri 
+    calisma_saatleri,
+    isLoadingSaatler
   } = useShopData(dukkanId);
 
   if (loading) {
@@ -85,7 +86,8 @@ export default function ShopHomePage() {
             <ShopContactCard dukkanData={dukkanData} />
             <ShopWorkingHoursCard 
               calisma_saatleri={calisma_saatleri} 
-              userRole={userRole} 
+              userRole={userRole}
+              dukkanId={dukkanData.id}
             />
           </div>
           

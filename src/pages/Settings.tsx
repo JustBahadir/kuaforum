@@ -11,7 +11,7 @@ import { Sun, Moon, Bell, Mail, Phone } from "lucide-react";
 import { useTheme } from "next-themes";
 
 export default function Settings() {
-  const { resetSession } = useCustomerAuth();
+  const { handleLogout } = useCustomerAuth();
   const { theme, setTheme } = useTheme();
   
   const [mounted, setMounted] = useState(false);
@@ -171,19 +171,19 @@ export default function Settings() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-2">
-                <h3 className="font-medium">Oturumu Sıfırla</h3>
+                <h3 className="font-medium">Çıkış Yap</h3>
                 <p className="text-sm text-muted-foreground">
-                  Tüm oturum verilerini temizler ve sizi tekrar giriş sayfasına yönlendirir.
+                  Sistemden çıkış yaparak giriş sayfasına yönlendirilirsiniz.
                 </p>
                 <Button 
                   variant="destructive" 
                   onClick={() => {
-                    if (confirm("Oturumu sıfırlamak istediğinize emin misiniz?")) {
-                      resetSession();
+                    if (confirm("Çıkış yapmak istediğinize emin misiniz?")) {
+                      handleLogout();
                     }
                   }}
                 >
-                  Oturumu Sıfırla
+                  Çıkış Yap
                 </Button>
               </div>
             </CardContent>

@@ -181,14 +181,13 @@ const generateMusteriler = async (dukkanId: number) => {
         last_name: lastName,
         phone: faker.phone.number(),
         birthdate: faker.date.birthdate().toISOString().split('T')[0],
-        dukkan_id: dukkanId,
-        role: 'customer'
+        dukkan_id: dukkanId
       });
     }
 
-    // Insert into profiles table which now holds customer data
+    // Insert into musteriler table
     const { data, error } = await supabase
-      .from('profiles')
+      .from('musteriler')
       .insert(musteriler)
       .select();
 

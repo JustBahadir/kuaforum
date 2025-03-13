@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,10 +16,41 @@ export default function Auth() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
 
+  // Check if user is already logged in - with a short timeout
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error("Session check error:", error);
+          return;
+        }
+        
+        if (data.session) {
+          // Redirect to dashboard if already logged in
+          const metadata = data.session.user?.user_metadata;
+          const userRole = metadata?.role || 'customer';
+          
+          if (userRole === 'customer') {
+            navigate('/customer-dashboard');
+          } else if (userRole === 'admin' || userRole === 'staff') {
+            navigate('/admin/dashboard');
+          }
+        }
+      } catch (err) {
+        console.error("Session check failed:", err);
+      }
+    };
+    
+    checkSession();
+  }, [navigate]);
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
+      // Simple signup flow
       const { error } = await supabase.auth.signUp({
         email,
         password,
@@ -47,12 +77,17 @@ export default function Auth() {
     e.preventDefault();
     setLoading(true);
     try {
+      // Simple direct login with minimal error handling
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
       
-      if (error) throw error;
+      if (error) {
+        toast.error(error.message);
+        setLoading(false);
+        return;
+      }
       
       // Check if user is a customer
       const metadata = data.user?.user_metadata;
@@ -64,8 +99,8 @@ export default function Auth() {
         return;
       }
       
-      navigate('/customer-dashboard');
       toast.success('Giriş başarılı!');
+      navigate('/customer-dashboard');
     } catch (error: any) {
       toast.error(error.message);
     } finally {

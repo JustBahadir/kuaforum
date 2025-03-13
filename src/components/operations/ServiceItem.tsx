@@ -31,6 +31,12 @@ export function ServiceItem({ islem, isStaff, onEdit, onDelete, onRandevuAl, pua
     }).format(price);
   };
 
+  const handleDelete = () => {
+    console.log("ServiceItem - handleDelete çağrıldı, islem.id:", islem.id);
+    onDelete(islem.id);
+    setDeleteConfirmOpen(false);
+  };
+
   return (
     <div 
       ref={setNodeRef} 
@@ -65,7 +71,7 @@ export function ServiceItem({ islem, isStaff, onEdit, onDelete, onRandevuAl, pua
               type="button"
               variant="ghost"
               size="icon"
-              onClick={onEdit}
+              onClick={() => onEdit(islem)}
               className="text-gray-500 hover:text-gray-700"
             >
               <Edit className="h-4 w-4" />
@@ -107,10 +113,7 @@ export function ServiceItem({ islem, isStaff, onEdit, onDelete, onRandevuAl, pua
           <AlertDialogFooter>
             <AlertDialogCancel>İptal</AlertDialogCancel>
             <AlertDialogAction 
-              onClick={() => {
-                onDelete();
-                setDeleteConfirmOpen(false);
-              }}
+              onClick={handleDelete}
               className="bg-red-500 hover:bg-red-600"
             >
               Sil

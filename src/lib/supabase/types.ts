@@ -13,6 +13,7 @@ export interface Profile {
   avatar_url?: string;
   address?: string;
   iban?: string;
+  dukkan_id?: number | null;
 }
 
 export interface Dukkan {
@@ -77,15 +78,14 @@ export interface PersonelIslemi {
 }
 
 export interface Musteri {
-  id: number | string;
+  id: number;
   first_name: string;
   last_name?: string;
   phone?: string;
   birthdate?: string | null;
   created_at: string;
   dukkan_id?: number;
-  role?: string;
-  total_services?: number;
+  auth_id?: string;
 }
 
 export type RandevuDurumu = "beklemede" | "onaylandi" | "iptal_edildi" | "tamamlandi";
@@ -136,9 +136,12 @@ export interface Notification {
 }
 
 export interface CalismaSaati {
-  id: number;
+  id?: number;
   gun: string;
-  acilis?: string;
-  kapanis?: string;
-  kapali?: boolean;
+  acilis: string | null;
+  kapanis: string | null;
+  kapali: boolean;
+  gun_sira?: number;
+  created_at?: string;
+  dukkan_id?: number;
 }

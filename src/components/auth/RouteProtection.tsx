@@ -1,47 +1,79 @@
 
-import React, { ReactNode, useEffect } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { shouldRedirect, getRedirectPath } from '@/lib/auth/routeProtection';
-import { useCustomerAuth } from '@/hooks/useCustomerAuth';
-import { toast } from 'sonner';
+import { supabase } from '@/lib/supabase/client';
 
 interface RouteProtectionProps {
   children: ReactNode;
 }
 
-/**
- * RouteProtection component to handle authentication redirection
- */
 export const RouteProtection = ({ children }: RouteProtectionProps) => {
-  const { isAuthenticated, userRole, loading, handleLogout } = useCustomerAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const [checking, setChecking] = useState(true);
+
+  // Public pages that don't require authentication
+  const publicPages = ["/", "/login", "/admin", "/staff-login"];
 
   useEffect(() => {
-    // Automatically log out users when they return to home page if they were authenticated
-    if (location.pathname === "/" && isAuthenticated) {
-      // We don't auto-logout here, we just notify the user they can use the logout button
-      // as per user's request
-      if (userRole === 'admin' || userRole === 'staff') {
-        toast.info("Personel panelinden çıkmak için lütfen çıkış yapın");
-      }
-    }
+    let isMounted = true;
+    let timeout: NodeJS.Timeout;
     
-    if (!loading) {
-      if (shouldRedirect(isAuthenticated, userRole, location.pathname)) {
-        const redirectPath = getRedirectPath(isAuthenticated, userRole, location.pathname);
-        console.log(`Redirecting from ${location.pathname} to ${redirectPath}`);
-        navigate(redirectPath);
+    const checkSession = async () => {
+      try {
+        // If it's a public page, no need for session check
+        const isPublicPage = publicPages.some(page => 
+          location.pathname === page || location.pathname.startsWith(`${page}/`)
+        );
+        
+        if (isPublicPage) {
+          if (isMounted) setChecking(false);
+          return;
+        }
+        
+        const { data, error } = await supabase.auth.getSession();
+        
+        if (error || !data.session) {
+          if (isMounted) navigate('/login');
+          return;
+        }
+        
+        const userRole = data.session.user.user_metadata?.role;
+        
+        // Check admin/staff routes access
+        if (location.pathname.startsWith('/shop-') || 
+            location.pathname === '/shop-home' || 
+            location.pathname.startsWith('/admin') ||
+            location.pathname === '/admin/operations') {
+          if (userRole !== 'admin' && userRole !== 'staff') {
+            if (isMounted) navigate('/staff-login');
+            return;
+          }
+        }
+      } catch (error) {
+        console.error("RouteProtection: Unexpected error", error);
+      } finally {
+        if (isMounted) setChecking(false);
       }
-    }
-  }, [isAuthenticated, userRole, location.pathname, navigate, loading, handleLogout]);
+    };
+    
+    checkSession();
+    
+    // Set a maximum timeout to avoid infinite loading
+    timeout = setTimeout(() => {
+      if (isMounted) setChecking(false);
+    }, 1500);
+    
+    return () => {
+      isMounted = false;
+      clearTimeout(timeout);
+    };
+  }, [location.pathname, navigate]);
 
-  // If loading, show a loading indicator
-  if (loading) {
+  if (checking && !publicPages.includes(location.pathname)) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="w-12 h-12 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin mb-4"></div>
-        <p className="text-gray-600 ml-3">Yükleniyor...</p>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
       </div>
     );
   }

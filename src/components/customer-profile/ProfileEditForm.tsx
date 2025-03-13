@@ -1,5 +1,4 @@
-
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { 
   Card, 
   CardHeader, 
@@ -41,6 +40,30 @@ export interface ProfileEditFormProps {
   isUploading: boolean;
 }
 
+// Format IBAN as TR00 0000 0000 0000 0000 0000 00
+const formatIBAN = (value: string) => {
+  // First remove all non-alphanumeric characters
+  let cleaned = value.replace(/[^A-Z0-9]/g, '');
+  
+  // Ensure it starts with TR
+  if (!cleaned.startsWith('TR')) {
+    cleaned = 'TR' + cleaned.substring(0, cleaned.startsWith('T') ? 25 : cleaned.startsWith('R') ? 25 : 24);
+  } else {
+    cleaned = cleaned.substring(0, 26); // Limit to 26 characters (TR + 24 digits)
+  }
+  
+  // Format in groups of 4
+  let formatted = '';
+  for (let i = 0; i < cleaned.length; i++) {
+    if (i > 0 && i % 4 === 0) {
+      formatted += ' ';
+    }
+    formatted += cleaned[i];
+  }
+  
+  return formatted;
+};
+
 export function ProfileEditForm({ 
   profile, 
   handleChange, 
@@ -50,6 +73,14 @@ export function ProfileEditForm({
   isSaving,
   isUploading
 }: ProfileEditFormProps) {
+  const [formattedIBAN, setFormattedIBAN] = useState<string>('');
+  
+  useEffect(() => {
+    if (profile.iban) {
+      setFormattedIBAN(formatIBAN(profile.iban));
+    }
+  }, [profile.iban]);
+
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast.success("Kopyalandı");
@@ -57,6 +88,23 @@ export function ProfileEditForm({
   
   const isAdmin = profile.role === 'admin';
   const isStaff = profile.role === 'staff';
+  
+  const handleIBANChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Only allow TR and digits
+    const rawValue = e.target.value.replace(/[^0-9TR]/gi, '');
+    const formattedValue = formatIBAN(rawValue);
+    setFormattedIBAN(formattedValue);
+    
+    // Create a synthetic event to pass to the parent's handleChange
+    const syntheticEvent = {
+      target: {
+        name: 'iban',
+        value: formattedValue.replace(/\s/g, '')  // Remove spaces for storage
+      }
+    } as React.ChangeEvent<HTMLInputElement>;
+    
+    handleChange(syntheticEvent);
+  };
 
   return (
     <Card>
@@ -64,12 +112,11 @@ export function ProfileEditForm({
         <CardTitle>Profili Düzenle</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Avatar Upload Section - Improved layout with photo on right */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-6">
           <div className="flex-1 order-2 md:order-1">
             <h3 className="text-lg font-medium mb-2">Profil Fotoğrafı</h3>
             <p className="text-sm text-gray-500 mb-4">
-              PNG, JPG, GIF dosyası yükleyin (max 5MB)
+              PNG, JPG, GIF dosyası yükleyin
             </p>
             <Button 
               variant="outline"
@@ -89,6 +136,7 @@ export function ProfileEditForm({
               label=""
               bucketName="photos"
               folderPath="avatars"
+              maxFileSize={20 * 1024 * 1024} // 20MB limit
             />
           </div>
         </div>
@@ -173,8 +221,7 @@ export function ProfileEditForm({
           </div>
         </div>
         
-        {/* Only show IBAN for staff profiles, not for admin/shop owner */}
-        {isStaff && (
+        {(isStaff || isAdmin) && (
           <div className="space-y-2">
             <Label htmlFor="iban" className="flex items-center gap-2">
               <Mail size={16} />
@@ -184,17 +231,18 @@ export function ProfileEditForm({
               <Input
                 id="iban"
                 name="iban"
-                value={profile.iban || ""}
-                onChange={handleChange}
-                placeholder="TRXX XXXX XXXX XXXX XXXX XX"
+                value={formattedIBAN}
+                onChange={handleIBANChange}
+                placeholder="TR00 0000 0000 0000 0000 0000 00"
                 className="flex-1"
+                maxLength={36}
               />
-              {profile.iban && (
+              {formattedIBAN && (
                 <Button 
                   type="button" 
                   variant="ghost" 
                   size="icon"
-                  onClick={() => copyToClipboard(profile.iban || "")}
+                  onClick={() => copyToClipboard(formattedIBAN)}
                   className="ml-2"
                 >
                   <Copy size={16} />

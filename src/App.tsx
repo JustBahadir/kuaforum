@@ -47,40 +47,31 @@ function App() {
               {/* Landing Page */}
               <Route path="/" element={<HomePage />} />
               
-              {/* Customer Routes */}
+              {/* Auth Routes */}
               <Route path="/login" element={<CustomerAuth />} />
+              <Route path="/staff-login" element={<StaffLogin />} />
+              <Route path="/admin" element={<StaffLogin />} />
+              <Route path="/admin/register" element={<StaffRegister />} />
+              
+              {/* Customer Routes */}
               <Route path="/customer-dashboard/*" element={<CustomerDashboard />} />
               <Route path="/customer-profile" element={<CustomerProfile />} />
               <Route path="/customer-services" element={<CustomerOperations />} />
               <Route path="/customer-appointments" element={<Appointments />} />
               
-              {/* Staff Routes */}
-              <Route path="/admin" element={<StaffLogin />} />
-              <Route path="/admin/register" element={<StaffRegister />} />
-              <Route path="/admin/dashboard" element={<Dashboard />} />
-              <Route path="/admin/shop" element={<ShopHomePage />} />
-              <Route path="/admin/services" element={<Services />} />
-              <Route path="/admin/personnel" element={<Personnel />} />
-              <Route path="/admin/appointments" element={<Appointments />} />
-              <Route path="/admin/customers" element={<Customers />} />
-              <Route path="/admin/profile" element={<StaffProfile />} />
-              <Route path="/admin/create-shop" element={<CreateShop />} />
-              <Route path="/admin/statistics" element={<ShopStatistics />} />
-              <Route path="/admin/settings" element={<Settings />} />
-              <Route path="/admin/shop-settings" element={<ShopSettings />} />
-              <Route path="/admin/operations-history" element={<OperationsHistory />} />
-              <Route path="/admin/operations" element={<StaffOperations />} />
-              
-              {/* Shortcut Routes for Admin/Staff */}
+              {/* Shop/Staff Routes */}
               <Route path="/personnel" element={<Personnel />} />
               <Route path="/shop-home" element={<ShopHomePage />} />
               <Route path="/shop-settings" element={<ShopSettings />} />
               <Route path="/shop-statistics" element={<ShopStatistics />} />
               <Route path="/operations-history" element={<OperationsHistory />} />
               <Route path="/staff-profile" element={<StaffProfile />} />
-              <Route path="/staff-login" element={<StaffLogin />} />
               <Route path="/customers" element={<Customers />} />
               <Route path="/settings" element={<Settings />} />
+              
+              {/* Admin Operations Routes */}
+              <Route path="/admin/operations" element={<StaffOperations />} />
+              <Route path="/admin/customers/new" element={<Customers />} />
               
               {/* Public Routes */}
               <Route path="/services" element={<CustomerOperations />} />

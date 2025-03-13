@@ -12,26 +12,43 @@ export type Database = {
       calisma_saatleri: {
         Row: {
           acilis: string | null
+          created_at: string | null
+          dukkan_id: number | null
           gun: string
+          gun_sira: number
           id: number
           kapali: boolean | null
           kapanis: string | null
         }
         Insert: {
           acilis?: string | null
+          created_at?: string | null
+          dukkan_id?: number | null
           gun: string
-          id?: number
+          gun_sira: number
+          id?: never
           kapali?: boolean | null
           kapanis?: string | null
         }
         Update: {
           acilis?: string | null
+          created_at?: string | null
+          dukkan_id?: number | null
           gun?: string
-          id?: number
+          gun_sira?: number
+          id?: never
           kapali?: boolean | null
           kapanis?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "calisma_saatleri_dukkan_id_fkey"
+            columns: ["dukkan_id"]
+            isOneToOne: false
+            referencedRelation: "dukkanlar"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       customer_personal_data: {
         Row: {
@@ -230,33 +247,41 @@ export type Database = {
       }
       musteriler: {
         Row: {
-          ad_soyad: string
-          adres: string
+          birthdate: string | null
           created_at: string
-          eposta: string
+          dukkan_id: number | null
+          first_name: string
           id: number
-          musteri_no: string
-          telefon: string
+          last_name: string | null
+          phone: string | null
         }
         Insert: {
-          ad_soyad: string
-          adres: string
+          birthdate?: string | null
           created_at?: string
-          eposta: string
+          dukkan_id?: number | null
+          first_name: string
           id?: number
-          musteri_no: string
-          telefon: string
+          last_name?: string | null
+          phone?: string | null
         }
         Update: {
-          ad_soyad?: string
-          adres?: string
+          birthdate?: string | null
           created_at?: string
-          eposta?: string
+          dukkan_id?: number | null
+          first_name?: string
           id?: number
-          musteri_no?: string
-          telefon?: string
+          last_name?: string | null
+          phone?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "musteriler_dukkan_id_fkey"
+            columns: ["dukkan_id"]
+            isOneToOne: false
+            referencedRelation: "dukkanlar"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notifications: {
         Row: {
@@ -290,13 +315,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "notifications_related_appointment_id_fkey"
-            columns: ["related_appointment_id"]
-            isOneToOne: false
-            referencedRelation: "randevular"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "notifications_user_id_fkey"
             columns: ["user_id"]
@@ -463,16 +481,12 @@ export type Database = {
       }
       randevular: {
         Row: {
-          admin_notes: string | null
-          counter_proposal_date: string | null
-          counter_proposal_time: string | null
           created_at: string
-          customer_accepted: boolean | null
           customer_id: string | null
           dukkan_id: number | null
           durum: string
           id: number
-          islemler: number[] | null
+          islemler: Json
           musteri_id: number | null
           notlar: string | null
           personel_id: number | null
@@ -480,16 +494,12 @@ export type Database = {
           tarih: string
         }
         Insert: {
-          admin_notes?: string | null
-          counter_proposal_date?: string | null
-          counter_proposal_time?: string | null
           created_at?: string
-          customer_accepted?: boolean | null
           customer_id?: string | null
           dukkan_id?: number | null
           durum?: string
           id?: number
-          islemler?: number[] | null
+          islemler: Json
           musteri_id?: number | null
           notlar?: string | null
           personel_id?: number | null
@@ -497,16 +507,12 @@ export type Database = {
           tarih: string
         }
         Update: {
-          admin_notes?: string | null
-          counter_proposal_date?: string | null
-          counter_proposal_time?: string | null
           created_at?: string
-          customer_accepted?: boolean | null
           customer_id?: string | null
           dukkan_id?: number | null
           durum?: string
           id?: number
-          islemler?: number[] | null
+          islemler?: Json
           musteri_id?: number | null
           notlar?: string | null
           personel_id?: number | null
@@ -514,13 +520,6 @@ export type Database = {
           tarih?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "randevular_customer_id_fkey"
-            columns: ["customer_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "randevular_dukkan_id_fkey"
             columns: ["dukkan_id"]
@@ -567,9 +566,97 @@ export type Database = {
       }
     }
     Functions: {
+      create_appointment:
+        | {
+            Args: {
+              appointment_data: Json
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_dukkan_id: number
+              p_musteri_id: number
+              p_personel_id: number
+              p_tarih: string
+              p_saat: string
+              p_durum: string
+              p_notlar: string
+              p_islemler: Json
+              p_customer_id: string
+            }
+            Returns: Json
+          }
+      get_appointments_by_dukkan: {
+        Args: {
+          p_dukkan_id: number
+        }
+        Returns: {
+          created_at: string
+          customer_id: string | null
+          dukkan_id: number | null
+          durum: string
+          id: number
+          islemler: Json
+          musteri_id: number | null
+          notlar: string | null
+          personel_id: number | null
+          saat: string
+          tarih: string
+        }[]
+      }
       get_auth_user_role: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_customer_appointments: {
+        Args: {
+          p_customer_id: string
+        }
+        Returns: {
+          created_at: string
+          customer_id: string | null
+          dukkan_id: number | null
+          durum: string
+          id: number
+          islemler: Json
+          musteri_id: number | null
+          notlar: string | null
+          personel_id: number | null
+          saat: string
+          tarih: string
+        }[]
+      }
+      get_customer_name_by_id: {
+        Args: {
+          p_musteri_id: number
+        }
+        Returns: string
+      }
+      get_user_role: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      insert_appointment: {
+        Args: {
+          p_dukkan_id: number
+          p_musteri_id: number
+          p_personel_id: number
+          p_tarih: string
+          p_saat: string
+          p_durum: string
+          p_islemler: Json
+          p_notlar: string
+          p_customer_id: string
+        }
+        Returns: Json
+      }
+      update_appointment_status: {
+        Args: {
+          appointment_id: number
+          new_status: string
+        }
+        Returns: Json
       }
     }
     Enums: {

@@ -69,7 +69,8 @@ export function StaffSidebar() {
         
         <div className="text-center py-2 mb-2">
           <p className="text-sm text-muted-foreground">Hoşgeldiniz</p>
-          <p className="font-medium">{userName}</p>
+          <p className="font-medium">{userName || "Kullanıcı"}</p>
+          <p className="text-xs text-muted-foreground mt-1">{userRole === 'admin' ? 'Dükkan Sahibi' : 'Personel'}</p>
         </div>
         
         <nav className="flex flex-col gap-1">

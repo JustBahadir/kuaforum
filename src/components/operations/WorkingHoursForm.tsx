@@ -1,115 +1,225 @@
 
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
-import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
-import { CalismaSaati } from '@/lib/supabase/types';
-import { calismaSaatleriServisi } from '@/lib/supabase';
-import { gunSiralama, gunIsimleri } from './constants/workingDays';
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { CalismaSaati } from "@/lib/supabase/types";
+import { useCustomerAuth } from "@/hooks/useCustomerAuth";
+import { calismaSaatleriServisi } from "@/lib/supabase/services/calismaSaatleriServisi";
+import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
+import { gunSiralama } from "./constants/workingDays";
 
-export const WorkingHoursForm = () => {
-  const queryClient = useQueryClient();
-  const [loading, setLoading] = useState(false);
-  
-  const defaultCalismaSaatleri = [
-    { gun: "pazartesi", acilis: "09:00", kapanis: "18:00", kapali: false },
-    { gun: "sali", acilis: "09:00", kapanis: "18:00", kapali: false },
-    { gun: "carsamba", acilis: "09:00", kapanis: "18:00", kapali: false },
-    { gun: "persembe", acilis: "09:00", kapanis: "18:00", kapali: false },
-    { gun: "cuma", acilis: "09:00", kapanis: "18:00", kapali: false },
-    { gun: "cumartesi", acilis: "10:00", kapanis: "16:00", kapali: false },
-    { gun: "pazar", acilis: "10:00", kapanis: "14:00", kapali: true }
-  ] as Omit<CalismaSaati, "id">[];
-  
-  const { data: calismaSaatleri = [], isLoading: saatlerLoading } = useQuery({
-    queryKey: ['calisma_saatleri'],
-    queryFn: async () => {
-      try {
-        const data = await calismaSaatleriServisi.hepsiniGetir();
-        return data.sort((a, b) => gunSiralama.indexOf(a.gun) - gunSiralama.indexOf(b.gun));
-      } catch (error) {
-        toast.error("Çalışma saatleri yüklenirken bir hata oluştu.");
-        return [];
-      }
+export function WorkingHoursForm() {
+  const { dukkanId } = useCustomerAuth();
+  const [workingHours, setWorkingHours] = useState<CalismaSaati[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [originalHours, setOriginalHours] = useState<CalismaSaati[]>([]);
+
+  useEffect(() => {
+    if (dukkanId) {
+      loadWorkingHours();
     }
-  });
+  }, [dukkanId]);
 
-  const [saatler, setSaatler] = useState<(CalismaSaati | Omit<CalismaSaati, "id">)[]>(
-    calismaSaatleri.length > 0
-      ? calismaSaatleri.sort((a, b) => gunSiralama.indexOf(a.gun) - gunSiralama.indexOf(b.gun))
-      : defaultCalismaSaatleri
-  );
-
-  const handleSaat = (index: number, field: keyof CalismaSaati, value: any) => {
-    const newSaatler = [...saatler];
-    (newSaatler[index] as any)[field] = value;
-
-    // Günleri sıralı tut
-    newSaatler.sort((a, b) => gunSiralama.indexOf(a.gun) - gunSiralama.indexOf(b.gun));
-    setSaatler(newSaatler);
-  };
-
-  const handleSubmit = async () => {
-    setLoading(true);
+  const loadWorkingHours = async () => {
+    if (!dukkanId) return;
+    
     try {
-      if (calismaSaatleri.length === 0) {
-        // Yeni kayıtlar oluştur
-        for (const saat of saatler) {
-          await calismaSaatleriServisi.ekle(saat as Omit<CalismaSaati, "id">);
-        }
-      } else {
-        // Mevcut kayıtları güncelle
-        await calismaSaatleriServisi.guncelle(saatler as CalismaSaati[]);
-      }
-      
-      queryClient.invalidateQueries({ queryKey: ['calisma_saatleri'] });
-      toast.success("Çalışma saatleri başarıyla kaydedildi.");
+      setIsLoading(true);
+      const hours = await calismaSaatleriServisi.dukkanSaatleriGetir(dukkanId);
+      // Sort by day order
+      const sortedHours = [...hours].sort((a, b) => {
+        return gunSiralama.indexOf(a.gun) - gunSiralama.indexOf(b.gun);
+      });
+      setWorkingHours(sortedHours);
+      setOriginalHours(JSON.parse(JSON.stringify(sortedHours))); // Deep copy for reset
     } catch (error) {
-      console.error(error);
-      toast.error("Çalışma saatleri kaydedilirken bir hata oluştu.");
+      console.error("Çalışma saatleri yüklenirken hata:", error);
+      toast.error("Çalışma saatleri yüklenirken bir hata oluştu");
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  if (saatlerLoading) {
-    return <div>Yükleniyor...</div>;
+  const handleCancel = () => {
+    setWorkingHours(JSON.parse(JSON.stringify(originalHours))); // Restore from backup
+    setIsEditing(false);
+  };
+
+  const handleSave = async () => {
+    if (!dukkanId) {
+      toast.error("Dükkan bilgisi bulunamadı");
+      return;
+    }
+    
+    try {
+      // Make sure all entries have dukkan_id
+      const hoursWithShopId = workingHours.map(hour => ({
+        ...hour,
+        dukkan_id: dukkanId
+      }));
+      
+      const result = await calismaSaatleriServisi.guncelle(hoursWithShopId);
+      
+      if (result && result.length > 0) {
+        toast.success("Çalışma saatleri başarıyla güncellendi");
+        setWorkingHours(result);
+        setOriginalHours(JSON.parse(JSON.stringify(result)));
+        setIsEditing(false);
+      } else {
+        toast.error("Çalışma saatleri güncellenirken bir hata oluştu");
+      }
+    } catch (error) {
+      console.error("Çalışma saatleri güncellenirken hata:", error);
+      toast.error("Çalışma saatleri güncellenirken bir hata oluştu");
+    }
+  };
+
+  const handleOpeningTimeChange = (index: number, time: string) => {
+    const updatedHours = [...workingHours];
+    updatedHours[index] = { ...updatedHours[index], acilis: time };
+    setWorkingHours(updatedHours);
+  };
+
+  const handleClosingTimeChange = (index: number, time: string) => {
+    const updatedHours = [...workingHours];
+    updatedHours[index] = { ...updatedHours[index], kapanis: time };
+    setWorkingHours(updatedHours);
+  };
+
+  const handleStatusChange = (index: number, closed: boolean) => {
+    const updatedHours = [...workingHours];
+    updatedHours[index] = { 
+      ...updatedHours[index], 
+      kapali: closed,
+      acilis: closed ? null : (updatedHours[index].acilis || "09:00"),
+      kapanis: closed ? null : (updatedHours[index].kapanis || "19:00")
+    };
+    setWorkingHours(updatedHours);
+  };
+
+  const getDayName = (dayCode: string) => {
+    const dayMap: Record<string, string> = {
+      pazartesi: "Pazartesi",
+      sali: "Salı",
+      carsamba: "Çarşamba",
+      persembe: "Perşembe",
+      cuma: "Cuma",
+      cumartesi: "Cumartesi",
+      pazar: "Pazar"
+    };
+    return dayMap[dayCode] || dayCode;
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+          <h2 className="text-lg font-semibold">Çalışma Saatleri</h2>
+          <Skeleton className="h-9 w-24" />
+        </div>
+        <div className="border rounded-md">
+          <div className="grid grid-cols-4 gap-4 p-4 border-b bg-muted">
+            <div className="font-medium">Gün</div>
+            <div className="font-medium">Açılış</div>
+            <div className="font-medium">Kapanış</div>
+            <div className="font-medium text-right">Durum</div>
+          </div>
+          {Array.from({ length: 7 }).map((_, i) => (
+            <div key={i} className="grid grid-cols-4 gap-4 p-4 border-b last:border-0">
+              <Skeleton className="h-6 w-full" />
+              <Skeleton className="h-6 w-full" />
+              <Skeleton className="h-6 w-full" />
+              <Skeleton className="h-6 w-full" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-lg font-medium">Çalışma Saatleri</h2>
-      <div className="grid gap-4">
-        {saatler.map((saat, index) => (
-          <div key={index} className="grid grid-cols-4 gap-4 items-center">
-            <div className="font-medium">{gunIsimleri[saat.gun] || saat.gun}</div>
-            <Input
-              type="time"
-              value={saat.acilis || ""}
-              onChange={(e) => handleSaat(index, 'acilis', e.target.value)}
-              disabled={saat.kapali}
-            />
-            <Input
-              type="time"
-              value={saat.kapanis || ""}
-              onChange={(e) => handleSaat(index, 'kapanis', e.target.value)}
-              disabled={saat.kapali}
-            />
-            <div className="flex items-center gap-2">
-              <Switch
-                checked={!saat.kapali}
-                onCheckedChange={(checked) => handleSaat(index, 'kapali', !checked)}
-              />
-              <span>{saat.kapali ? 'Kapalı' : 'Açık'}</span>
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h2 className="text-lg font-semibold">Çalışma Saatleri</h2>
+        
+        {isEditing ? (
+          <div className="flex space-x-2">
+            <Button variant="outline" onClick={handleCancel}>
+              İptal
+            </Button>
+            <Button onClick={handleSave}>
+              Kaydet
+            </Button>
+          </div>
+        ) : (
+          <Button onClick={() => setIsEditing(true)}>
+            Düzenle
+          </Button>
+        )}
+      </div>
+      
+      <div className="border rounded-md">
+        <div className="grid grid-cols-4 gap-4 p-4 border-b bg-muted">
+          <div className="font-medium">Gün</div>
+          <div className="font-medium">Açılış</div>
+          <div className="font-medium">Kapanış</div>
+          <div className="font-medium text-right">Durum</div>
+        </div>
+        
+        {workingHours.map((day, index) => (
+          <div key={day.gun} className="grid grid-cols-4 gap-4 p-4 border-b last:border-0 items-center">
+            <div>{getDayName(day.gun)}</div>
+            
+            <div>
+              {isEditing ? (
+                <Input
+                  type="time"
+                  value={day.acilis || ""}
+                  onChange={(e) => handleOpeningTimeChange(index, e.target.value)}
+                  disabled={day.kapali}
+                  className="w-full"
+                />
+              ) : (
+                <span>{day.kapali ? "-" : day.acilis}</span>
+              )}
+            </div>
+            
+            <div>
+              {isEditing ? (
+                <Input
+                  type="time"
+                  value={day.kapanis || ""}
+                  onChange={(e) => handleClosingTimeChange(index, e.target.value)}
+                  disabled={day.kapali}
+                  className="w-full"
+                />
+              ) : (
+                <span>{day.kapali ? "-" : day.kapanis}</span>
+              )}
+            </div>
+            
+            <div className="flex justify-end items-center">
+              {isEditing ? (
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    checked={day.kapali}
+                    onCheckedChange={(checked) => handleStatusChange(index, checked)}
+                  />
+                  <Label className="text-sm">{day.kapali ? "Kapalı" : "Açık"}</Label>
+                </div>
+              ) : (
+                <span className={day.kapali ? "text-red-500" : "text-green-600"}>
+                  {day.kapali ? "Kapalı" : "Açık"}
+                </span>
+              )}
             </div>
           </div>
         ))}
       </div>
-      <Button onClick={handleSubmit} disabled={loading}>
-        {loading ? "Kaydediliyor..." : "Kaydet"}
-      </Button>
     </div>
   );
-};
+}
