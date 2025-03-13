@@ -6,11 +6,11 @@ export const SalonOwnerSection = () => {
   const navigate = useNavigate();
 
   const handleRegisterClick = () => {
-    navigate("/staff-login");
+    navigate("/admin");
   };
 
   const handleLoginClick = () => {
-    navigate("/staff-login");
+    navigate("/admin");
   };
 
   return (

@@ -1,11 +1,9 @@
-
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
 import { dukkanServisi } from "@/lib/supabase";
 import { authService } from "@/lib/auth/authService";
 import { gunSiralama } from "@/components/operations/constants/workingDays";
-import { calismaSaatleriServisi } from "@/lib/supabase/services/calismaSaatleriServisi";
 
 export function useShopData(dukkanId: number | null) {
   const [dukkanData, setDukkanData] = useState<any>(null);
@@ -54,10 +52,10 @@ export function useShopData(dukkanId: number | null) {
   }, [dukkanId]);
 
   const { data: personelListesi = [] } = useQuery({
-    queryKey: ['personel', dukkanData?.id || dukkanId],
+    queryKey: ['personel', dukkanData?.id],
     queryFn: async () => {
+      if (!dukkanId && !dukkanData?.id) return [];
       const shopId = dukkanId || dukkanData?.id;
-      if (!shopId) return [];
       
       try {
         const { data, error } = await supabase
@@ -73,20 +71,16 @@ export function useShopData(dukkanId: number | null) {
               try {
                 const { data: profileData } = await supabase
                   .from('profiles')
-                  .select('*')
+                  .select('avatar_url')
                   .eq('id', personel.auth_id)
                   .maybeSingle();
                 
-                if (profileData) {
+                if (profileData?.avatar_url) {
                   personel.avatar_url = profileData.avatar_url;
                 } else {
-                  try {
-                    const { data: { user } } = await supabase.auth.admin.getUserById(personel.auth_id);
-                    if (user?.user_metadata?.avatar_url) {
-                      personel.avatar_url = user.user_metadata.avatar_url;
-                    }
-                  } catch (authError) {
-                    console.error("Auth profile data fetch error:", authError);
+                  const { data: { user } } = await supabase.auth.admin.getUserById(personel.auth_id);
+                  if (user?.user_metadata?.avatar_url) {
+                    personel.avatar_url = user.user_metadata.avatar_url;
                   }
                 }
               } catch (profileError) {
@@ -105,38 +99,30 @@ export function useShopData(dukkanId: number | null) {
         return [];
       }
     },
-    enabled: !!(dukkanData?.id || dukkanId)
+    enabled: !!dukkanId || !!dukkanData?.id
   });
 
-  const { data: calisma_saatleri = [], isLoading: isLoadingSaatler } = useQuery({
-    queryKey: ['dukkan_saatleri', dukkanData?.id || dukkanId],
+  const { data: calisma_saatleri = [] } = useQuery({
+    queryKey: ['calisma_saatleri'],
     queryFn: async () => {
       try {
-        const shopId = dukkanData?.id || dukkanId;
-        if (!shopId) return [];
+        const { data, error } = await supabase
+          .from('calisma_saatleri')
+          .select('*');
+          
+        if (error) throw error;
         
-        console.log("useShopData: Fetching working hours for shop ID:", shopId);
-        const data = await calismaSaatleriServisi.dukkanSaatleriGetir(shopId);
-        console.log("useShopData: Fetched working hours:", data);
-        
-        return data;
+        return data.sort((a, b) => {
+          const aIndex = gunSiralama.indexOf(a.gun);
+          const bIndex = gunSiralama.indexOf(b.gun);
+          return aIndex - bIndex;
+        });
       } catch (error) {
         console.error("Çalışma saatleri alınırken hata:", error);
         return [];
       }
-    },
-    enabled: !!(dukkanData?.id || dukkanId),
-    staleTime: 30000, // Refresh every 30 seconds
-    retry: 3          // Retry 3 times on failure
+    }
   });
 
-  return { 
-    dukkanData, 
-    setDukkanData, 
-    loading, 
-    error, 
-    personelListesi, 
-    calisma_saatleri,
-    isLoadingSaatler
-  };
+  return { dukkanData, setDukkanData, loading, error, personelListesi, calisma_saatleri };
 }

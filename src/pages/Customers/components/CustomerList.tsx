@@ -1,20 +1,14 @@
 
-import { useState } from "react";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Musteri } from "@/lib/supabase/types";
-import { format } from "date-fns";
-import { tr } from "date-fns/locale";
-import { formatPhoneNumber } from "@/utils/phoneFormatter";
 
 interface CustomerListProps {
-  customers: Musteri[];
+  customers: any[];
   isLoading: boolean;
-  onSelectCustomer?: (customer: Musteri) => void;
 }
 
-export function CustomerList({ customers, isLoading, onSelectCustomer }: CustomerListProps) {
+export function CustomerList({ customers, isLoading }: CustomerListProps) {
   // Show loading state
   if (isLoading) {
     return (
@@ -35,16 +29,6 @@ export function CustomerList({ customers, isLoading, onSelectCustomer }: Custome
       </Card>
     );
   }
-
-  // Format date for display
-  const formatDate = (dateString?: string | null) => {
-    if (!dateString) return "-";
-    try {
-      return format(new Date(dateString), "dd MMMM yyyy", { locale: tr });
-    } catch (error) {
-      return "-";
-    }
-  };
 
   // Show empty state or customer list
   return (
@@ -67,15 +51,16 @@ export function CustomerList({ customers, isLoading, onSelectCustomer }: Custome
             </TableHeader>
             <TableBody>
               {customers.map((customer) => (
-                <TableRow key={customer.id} 
-                  className="cursor-pointer hover:bg-gray-50"
-                  onClick={() => onSelectCustomer && onSelectCustomer(customer)}>
+                <TableRow key={customer.id} className="cursor-pointer hover:bg-gray-50"
+                  onClick={() => {
+                    console.log("Müşteri seçildi:", customer);
+                  }}>
                   <TableCell className="font-medium">
-                    {customer.first_name} {customer.last_name || ""}
+                    {customer.first_name} {customer.last_name}
                   </TableCell>
-                  <TableCell>{customer.phone ? formatPhoneNumber(customer.phone) : "-"}</TableCell>
-                  <TableCell>{formatDate(customer.birthdate)}</TableCell>
-                  <TableCell>{formatDate(customer.created_at)}</TableCell>
+                  <TableCell>{customer.phone || "-"}</TableCell>
+                  <TableCell>{customer.birthdate ? new Date(customer.birthdate).toLocaleDateString('tr-TR') : "-"}</TableCell>
+                  <TableCell>{customer.created_at ? new Date(customer.created_at).toLocaleDateString('tr-TR') : "-"}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

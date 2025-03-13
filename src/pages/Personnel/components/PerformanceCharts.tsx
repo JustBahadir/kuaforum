@@ -1,7 +1,9 @@
 
-import { Bar, BarChart, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { PersonelIslemi, Personel } from "@/lib/supabase/types";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
+import { PersonelIslemi, Personel } from "@/lib/supabase";
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
 interface PerformanceChartsProps {
   personeller: Personel[];
@@ -9,52 +11,42 @@ interface PerformanceChartsProps {
 }
 
 export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChartsProps) {
-  // Calculate performance metrics
-  const performanceData = personeller.map(personel => {
-    const personelIslemleri = islemGecmisi.filter(islem => islem.personel_id === personel.id);
-    const islemSayisi = personelIslemleri.length;
-    
-    // Calculate total revenue and convert to number if necessary
-    const toplamCiro = personelIslemleri.reduce((sum, islem) => {
-      const tutar = typeof islem.tutar === 'string' ? parseFloat(islem.tutar) : islem.tutar;
-      return sum + (isNaN(tutar) ? 0 : tutar);
-    }, 0);
-    
-    // Calculate total points
-    const toplamPuan = personelIslemleri.reduce((sum, islem) => sum + (islem.puan || 0), 0);
-    
-    // Calculate average points
-    const ortalamaPuan = islemSayisi > 0 ? toplamPuan / islemSayisi : 0;
-
+  const performansVerileri = personeller.map(personel => {
+    const islemler = islemGecmisi.filter(i => i.personel_id === personel.id);
+    const toplamCiro = islemler.reduce((sum, i) => sum + i.tutar, 0);
     return {
       name: personel.ad_soyad,
-      islemSayisi,
-      toplamCiro,
-      ortalamaPuan,
-      toplamPuan,
+      ciro: toplamCiro,
+      islemSayisi: islemler.length,
+      ortalamaPuan: islemler.reduce((sum, i) => sum + i.prim_yuzdesi, 0) / (islemler.length || 1)
     };
   });
 
   return (
-    <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+    <div className="grid gap-4 md:grid-cols-2">
       <Card>
         <CardHeader>
           <CardTitle>Ciro Dağılımı</CardTitle>
         </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={performanceData}>
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip 
-                formatter={(value: number | string) => {
-                  const numValue = typeof value === 'string' ? parseFloat(value) : value;
-                  return isNaN(numValue) ? '0.00 TL' : `${numValue.toFixed(2)} TL`;
-                }}
-              />
+        <CardContent className="h-[400px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={performansVerileri}
+                dataKey="ciro"
+                nameKey="name"
+                cx="50%"
+                cy="50%"
+                outerRadius={100}
+                label={({name, percent}) => `${name} ${(percent * 100).toFixed(0)}%`}
+              >
+                {performansVerileri.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip />
               <Legend />
-              <Bar dataKey="toplamCiro" name="Toplam Ciro (TL)" fill="#8884d8" />
-            </BarChart>
+            </PieChart>
           </ResponsiveContainer>
         </CardContent>
       </Card>
@@ -63,16 +55,15 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
         <CardHeader>
           <CardTitle>Personel Performans Karşılaştırması</CardTitle>
         </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={performanceData}>
+        <CardContent className="h-[400px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={performansVerileri}>
               <XAxis dataKey="name" />
-              <YAxis yAxisId="left" />
-              <YAxis yAxisId="right" orientation="right" />
+              <YAxis />
               <Tooltip />
               <Legend />
-              <Bar yAxisId="left" dataKey="islemSayisi" name="İşlem Sayısı" fill="#82ca9d" />
-              <Bar yAxisId="right" dataKey="toplamPuan" name="Toplam Puan" fill="#ffc658" />
+              <Bar dataKey="islemSayisi" name="İşlem Sayısı" fill="#0088FE" />
+              <Bar dataKey="ortalamaPuan" name="Ortalama Puan" fill="#00C49F" />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>

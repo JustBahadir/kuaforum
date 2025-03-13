@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
-import { Personel, personelServisi, profilServisi } from "@/lib/supabase";
+import { Personel, personelServisi } from "@/lib/supabase";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -20,8 +20,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useCustomerAuth } from "@/hooks/useCustomerAuth";
-import { Copy } from "lucide-react";
 
 interface PersonnelEditDialogProps {
   personelId: number;
@@ -32,62 +30,39 @@ interface PersonnelEditDialogProps {
 
 export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComplete }: PersonnelEditDialogProps) {
   const [personelDuzenle, setPersonelDuzenle] = useState<Personel | null>(null);
-  const [formattedIBAN, setFormattedIBAN] = useState<string>('');
-  const [isSaving, setIsSaving] = useState(false);
-  const { userRole } = useCustomerAuth();
   const queryClient = useQueryClient();
 
-  const { data: personel, isLoading, refetch } = useQuery({
+  // Fetch personel data based on personelId
+  const { data: personel, isLoading } = useQuery({
     queryKey: ['personel', personelId],
     queryFn: () => personelServisi.getirById(personelId),
-    enabled: open && personelId > 0,
-    retry: 3,
-    retryDelay: 1000
+    enabled: open && personelId > 0
   });
 
+  // Update personelDuzenle state when personel data is loaded
   useEffect(() => {
     if (personel) {
       setPersonelDuzenle(personel);
-      if (personel.iban) {
-        setFormattedIBAN(profilServisi.formatIBAN(personel.iban));
-      } else {
-        setFormattedIBAN('');
-      }
     }
   }, [personel]);
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast.success("Kopyalandı");
-  };
 
   const { mutate: personelGuncelle } = useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<Personel> }) =>
       personelServisi.guncelle(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['personel'] });
-      setIsSaving(false);
       toast.success("Personel başarıyla güncellendi.");
       onOpenChange(false);
       if (onEditComplete) {
         onEditComplete();
       }
     },
-    onError: (error) => {
-      setIsSaving(false);
-      toast.error("Personel güncellenirken bir hata oluştu: " + (error as Error).message);
-    }
   });
 
   const handleUpdate = (e: React.FormEvent) => {
     e.preventDefault();
     if (personelDuzenle) {
-      setIsSaving(true);
-      const { id } = personelDuzenle;
-      const guncellenecekVeriler: Partial<Personel> = {
-        maas: personelDuzenle.maas,
-        calisma_sistemi: personelDuzenle.calisma_sistemi,
-      };
+      const { id, created_at, dukkan, ...guncellenecekVeriler } = personelDuzenle;
       personelGuncelle({ id, data: guncellenecekVeriler });
     }
   };
@@ -100,14 +75,12 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComp
             <DialogTitle>Personel Düzenle</DialogTitle>
           </DialogHeader>
           <div className="flex justify-center p-4">
-            <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
+            <span className="loading loading-spinner"></span>
           </div>
         </DialogContent>
       </Dialog>
     );
   }
-
-  const isAdmin = userRole === 'admin';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -116,24 +89,17 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComp
           <DialogHeader>
             <DialogTitle>Personel Düzenle</DialogTitle>
           </DialogHeader>
-          
-          {isAdmin && (
-            <div className="p-4 bg-amber-50 rounded-lg mb-4">
-              <p className="text-sm text-amber-600">
-                Dükkan yöneticisi olarak, sadece maaş ve çalışma sistemi bilgilerini değiştirebilirsiniz.
-                Personel, kendi kişisel bilgilerini kendi profil sayfasından güncelleyebilir.
-              </p>
-            </div>
-          )}
-          
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="edit_ad_soyad">Ad Soyad</Label>
               <Input
                 id="edit_ad_soyad"
                 value={personelDuzenle.ad_soyad}
-                disabled={true}
-                className="bg-gray-100"
+                onChange={(e) =>
+                  setPersonelDuzenle((prev) =>
+                    prev ? { ...prev, ad_soyad: e.target.value } : null
+                  )
+                }
                 required
               />
             </div>
@@ -143,8 +109,11 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComp
                 id="edit_telefon"
                 type="tel"
                 value={personelDuzenle.telefon}
-                disabled={true}
-                className="bg-gray-100"
+                onChange={(e) =>
+                  setPersonelDuzenle((prev) =>
+                    prev ? { ...prev, telefon: e.target.value } : null
+                  )
+                }
                 required
               />
             </div>
@@ -154,8 +123,11 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComp
                 id="edit_eposta"
                 type="email"
                 value={personelDuzenle.eposta}
-                disabled={true}
-                className="bg-gray-100"
+                onChange={(e) =>
+                  setPersonelDuzenle((prev) =>
+                    prev ? { ...prev, eposta: e.target.value } : null
+                  )
+                }
                 required
               />
             </div>
@@ -164,19 +136,12 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComp
               <Input
                 id="edit_adres"
                 value={personelDuzenle.adres}
-                disabled={true}
-                className="bg-gray-100"
+                onChange={(e) =>
+                  setPersonelDuzenle((prev) =>
+                    prev ? { ...prev, adres: e.target.value } : null
+                  )
+                }
                 required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit_birthdate">Doğum Tarihi</Label>
-              <Input
-                id="edit_birthdate"
-                type="date"
-                value={personelDuzenle.birthdate || ""}
-                disabled={true}
-                className="bg-gray-100"
               />
             </div>
             <div className="space-y-2">
@@ -184,12 +149,14 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComp
               <Input
                 id="edit_personel_no"
                 value={personelDuzenle.personel_no}
-                disabled={true}
-                className="bg-gray-100"
+                onChange={(e) =>
+                  setPersonelDuzenle((prev) =>
+                    prev ? { ...prev, personel_no: e.target.value } : null
+                  )
+                }
                 required
               />
             </div>
-            
             <div className="space-y-2">
               <Label htmlFor="edit_maas">Maaş</Label>
               <Input
@@ -229,36 +196,36 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComp
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit_iban">IBAN (Personel tarafından güncellenir)</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  id="edit_iban"
-                  value={formattedIBAN}
-                  disabled={true}
-                  className="bg-gray-100 flex-1"
-                  placeholder="TR00 0000 0000 0000 0000 0000 00"
-                  maxLength={36}
-                />
-                {formattedIBAN && (
-                  <Button 
-                    type="button" 
-                    variant="ghost" 
-                    size="icon"
-                    onClick={() => copyToClipboard(formattedIBAN)}
-                  >
-                    <Copy size={16} />
-                  </Button>
-                )}
-              </div>
-              <p className="text-xs text-gray-500">
-                IBAN bilgisi personel profilinden otomatik olarak senkronize edilir. Personel kendi profilinden bu bilgiyi güncelleyebilir.
-              </p>
+              <Label htmlFor="edit_prim_yuzdesi">Prim Yüzdesi</Label>
+              <Input
+                id="edit_prim_yuzdesi"
+                type="number"
+                value={personelDuzenle.prim_yuzdesi}
+                onChange={(e) =>
+                  setPersonelDuzenle((prev) =>
+                    prev
+                      ? { ...prev, prim_yuzdesi: Number(e.target.value) }
+                      : null
+                  )
+                }
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit_iban">IBAN</Label>
+              <Input
+                id="edit_iban"
+                value={personelDuzenle.iban || ''}
+                onChange={(e) =>
+                  setPersonelDuzenle((prev) =>
+                    prev ? { ...prev, iban: e.target.value } : null
+                  )
+                }
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={isSaving}>
-              {isSaving ? "Kaydediliyor..." : "Değişiklikleri Kaydet"}
-            </Button>
+            <Button type="submit">Değişiklikleri Kaydet</Button>
           </DialogFooter>
         </form>
       </DialogContent>

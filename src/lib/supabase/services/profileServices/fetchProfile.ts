@@ -1,5 +1,5 @@
 
-import { supabase } from '../../client';
+import { supabase, supabaseAdmin } from '../../client';
 import { Profile } from '../../types';
 
 /**
@@ -34,21 +34,26 @@ export async function getProfile(): Promise<Profile | null> {
       }
     }
     
+    // Önce profili doğrudan admin istemcisinden almayı dene (RLS'yi bypass eder)
     try {
-      // Try to get profile directly without RLS policy
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from('profiles')
-        .select('id, first_name, last_name, phone, gender, birthdate, role, created_at, avatar_url, dukkan_id')
+        .select('id, first_name, last_name, phone, gender, birthdate, role, created_at')
         .eq('id', user.id)
         .maybeSingle();
       
       if (!error && data) {
-        return data as Profile;
+        // Profilde yoksa avatar_url'i kullanıcı meta verisinden ekle
+        const avatar_url = user.user_metadata?.avatar_url || '';
+        return {
+          ...data,
+          avatar_url: avatar_url
+        };
       }
       
-      console.warn("Profil veritabanından alınamadı, kullanıcı meta verisine dönülüyor:", error);
+      console.warn("Profil bulunamadı veya hata, meta veri kullanılıyor:", error);
     } catch (err) {
-      console.error("Profil getirme hatası:", err);
+      console.error("Admin istemci ile profil getirme hatası:", err);
     }
     
     // Profil yoksa veya hata varsa, kullanıcı meta verisini profil verisi olarak kullan
@@ -63,7 +68,6 @@ export async function getProfile(): Promise<Profile | null> {
       gender: user.user_metadata?.gender || '',
       birthdate: user.user_metadata?.birthdate || null,
       avatar_url: avatar_url,
-      dukkan_id: user.user_metadata?.dukkan_id || null,
       created_at: new Date().toISOString()
     };
   } catch (err) {
@@ -98,14 +102,14 @@ export async function getUserRole(): Promise<string | null> {
       }
     }
     
-    // Rolü doğrudan kullanıcı meta verisinden almayı dene
+    // Önce rolü kullanıcı meta verisinden almayı dene
     if (user.user_metadata?.role) {
       return user.user_metadata.role;
     }
     
-    // Yeterli yetki varsa profiles tablosundan almayı dene
+    // Rolü doğrudan admin istemcisi ile almayı dene
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from('profiles')
         .select('role')
         .eq('id', user.id)
@@ -114,8 +118,10 @@ export async function getUserRole(): Promise<string | null> {
       if (!error && data?.role) {
         return data.role;
       }
+      
+      console.warn("Profilde rol bulunamadı, varsayılan kullanılıyor:", error);
     } catch (err) {
-      console.error("Profiles tablosundan rol getirme hatası:", err);
+      console.error("Admin istemci ile rol getirme hatası:", err);
     }
     
     return 'customer'; // Varsayılan rol

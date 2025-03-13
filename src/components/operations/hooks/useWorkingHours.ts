@@ -1,127 +1,124 @@
-
-import { useState, useEffect, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase/client';
+import { toast } from 'sonner';
 import { CalismaSaati } from '@/lib/supabase/types';
 import { calismaSaatleriServisi } from '@/lib/supabase/services/calismaSaatleriServisi';
-import { useWorkingHoursMutation, UseWorkingHoursMutationProps } from './useWorkingHoursMutation';
 import { gunSiralama } from '../constants/workingDays';
 
-interface UseWorkingHoursProps {
-  dukkanId: number;
-  onMutationSuccess?: () => void;
-}
+export function useWorkingHours(
+  isStaff: boolean = true,
+  providedGunler: CalismaSaati[] = [],
+  onChange?: (index: number, field: keyof CalismaSaati, value: any) => void
+) {
+  const [editing, setEditing] = useState<number | null>(null);
+  const [tempChanges, setTempChanges] = useState<Record<number, Partial<CalismaSaati>>>({});
+  const queryClient = useQueryClient();
 
-export const useWorkingHours = ({ dukkanId, onMutationSuccess }: UseWorkingHoursProps) => {
-  const [hours, setHours] = useState<CalismaSaati[]>([]);
-  const [originalHours, setOriginalHours] = useState<CalismaSaati[]>([]);
-  
-  // Use the mutation hook for updates
-  const mutation = useWorkingHoursMutation({ dukkanId, onMutationSuccess });
-  const { updateAllHours, updateSingleDay, isLoading: isMutationLoading, isUpdating } = mutation;
-
-  // Fetch working hours with React Query
-  const { 
-    data: fetchedHours = [], 
-    isLoading, 
-    isError, 
-    error,
-    refetch
-  } = useQuery({
-    queryKey: ['calisma_saatleri', dukkanId],
-    queryFn: async () => {
-      console.log('useWorkingHours: Fetching hours for shop ID:', dukkanId);
-      if (!dukkanId) return [];
-      
-      try {
-        const result = await calismaSaatleriServisi.dukkanSaatleriGetir(dukkanId);
-        console.log('useWorkingHours: Fetched hours:', result);
-        return result;
-      } catch (err) {
-        console.error('useWorkingHours: Error fetching hours:', err);
-        throw err;
-      }
-    },
-    enabled: !!dukkanId,
+  const { data: fetchedCalismaSaatleri = [] } = useQuery({
+    queryKey: ['calisma_saatleri'],
+    queryFn: calismaSaatleriServisi.hepsiniGetir,
+    enabled: providedGunler.length === 0
   });
 
-  // Update local state when fetched data changes
-  useEffect(() => {
-    if (fetchedHours && fetchedHours.length > 0) {
-      // Sort by our predefined day order
-      const sortedHours = [...fetchedHours].sort((a, b) => {
-        const aIndex = gunSiralama.indexOf(a.gun);
-        const bIndex = gunSiralama.indexOf(b.gun);
-        return aIndex - bIndex;
-      });
-      
-      setHours(sortedHours);
-      setOriginalHours(JSON.parse(JSON.stringify(sortedHours)));
-    } else if (dukkanId && !isLoading && fetchedHours.length === 0) {
-      // If we have a dukkanId but no hours, create default hours
-      const defaultHours = calismaSaatleriServisi.defaultWorkingHours(dukkanId);
-      setHours(defaultHours);
-      setOriginalHours(JSON.parse(JSON.stringify(defaultHours)));
+  // Use the provided working hours if available, otherwise use the fetched ones
+  const calismaSaatleri = [...(providedGunler.length > 0 ? providedGunler : fetchedCalismaSaatleri)];
+
+  // IMPORTANT: Always sort by predefined day order and never resort after editing
+  const sortedSaatler = [...calismaSaatleri].sort((a, b) => {
+    const aIndex = gunSiralama.indexOf(a.gun);
+    const bIndex = gunSiralama.indexOf(b.gun);
+    return aIndex - bIndex;
+  });
+
+  const { mutate: saatGuncelle } = useMutation({
+    mutationFn: async ({ id, updates }: { id: number; updates: any }) => {
+      const { error } = await supabase
+        .from('calisma_saatleri')
+        .update(updates)
+        .eq('id', id);
+      if (error) throw error;
+      return { id, updates };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['calisma_saatleri'] });
+      toast.success('Çalışma saati güncellendi');
+    },
+    onError: (error) => {
+      console.error("Çalışma saati güncellenirken hata:", error);
+      toast.error('Güncelleme sırasında bir hata oluştu');
     }
-  }, [fetchedHours, isLoading, dukkanId]);
+  });
 
-  // Update a single day
-  const updateDay = useCallback((index: number, updates: Partial<CalismaSaati>) => {
-    setHours(current => {
-      const updated = [...current];
-      updated[index] = { ...updated[index], ...updates };
-      return updated;
-    });
-  }, []);
+  const startEditing = (id: number) => {
+    setEditing(id);
+    setTempChanges(prev => ({
+      ...prev,
+      [id]: {}
+    }));
+  };
 
-  // Save current hours to the database
-  const saveHours = useCallback(async () => {
-    if (hours.length === 0) return;
-    
-    try {
-      console.log('useWorkingHours: Saving hours:', hours);
-      await updateAllHours(hours);
-      setOriginalHours(JSON.parse(JSON.stringify(hours)));
-    } catch (error) {
-      console.error('useWorkingHours: Error saving hours:', error);
-      throw error;
-    }
-  }, [hours, updateAllHours]);
+  const handleTempChange = (id: number, field: keyof CalismaSaati, value: any) => {
+    setTempChanges(prev => ({
+      ...prev,
+      [id]: {
+        ...prev[id],
+        [field]: value
+      }
+    }));
+  };
 
-  // Reset to original state
-  const resetHours = useCallback(() => {
-    setHours(JSON.parse(JSON.stringify(originalHours)));
-  }, [originalHours]);
+  const saveChanges = (id: number) => {
+    const saat = calismaSaatleri.find(s => (s.id || 0) === id);
+    if (!saat) return;
 
-  // Check if there are unsaved changes
-  const hasChanges = useCallback(() => {
-    if (hours.length !== originalHours.length) return true;
-    
-    for (let i = 0; i < hours.length; i++) {
-      const current = hours[i];
-      const original = originalHours[i];
-      
-      if (current.kapali !== original.kapali) return true;
-      if (!current.kapali && !original.kapali) {
-        if (current.acilis !== original.acilis) return true;
-        if (current.kapanis !== original.kapanis) return true;
+    if (onChange) {
+      const index = calismaSaatleri.findIndex(s => (s.id || 0) === id);
+      if (index !== -1 && tempChanges[id]) {
+        Object.keys(tempChanges[id]).forEach(key => {
+          onChange(index, key as keyof CalismaSaati, tempChanges[id][key as keyof CalismaSaati]);
+        });
+      }
+    } else {
+      if (tempChanges[id] && Object.keys(tempChanges[id]).length > 0) {
+        saatGuncelle({ 
+          id, 
+          updates: {
+            ...tempChanges[id],
+            // If shop is marked as closed, ensure times are cleared if they were modified
+            ...(tempChanges[id].kapali ? { 
+              acilis: null, 
+              kapanis: null 
+            } : {})
+          } 
+        });
       }
     }
     
-    return false;
-  }, [hours, originalHours]);
+    setEditing(null);
+    setTempChanges(prev => {
+      const updated = {...prev};
+      delete updated[id];
+      return updated;
+    });
+  };
+
+  const cancelEditing = (id: number) => {
+    setEditing(null);
+    setTempChanges(prev => {
+      const updated = {...prev};
+      delete updated[id];
+      return updated;
+    });
+  };
 
   return {
-    hours,
-    setHours,
-    updateDay,
-    saveHours,
-    resetHours,
-    isLoading,
-    isError,
-    error,
-    hasChanges,
-    refetch,
-    isMutationLoading,
-    isUpdating
+    calismaSaatleri: sortedSaatler, // Always return the sorted array
+    editing,
+    tempChanges,
+    startEditing,
+    handleTempChange,
+    saveChanges,
+    cancelEditing
   };
-};
+}

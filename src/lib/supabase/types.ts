@@ -1,3 +1,4 @@
+
 import { PostgrestError } from '@supabase/supabase-js';
 
 export interface Profile {
@@ -12,7 +13,6 @@ export interface Profile {
   avatar_url?: string;
   address?: string;
   iban?: string;
-  dukkan_id?: number | null;
 }
 
 export interface Dukkan {
@@ -60,16 +60,12 @@ export interface Personel {
   dukkan?: Dukkan;
   created_at: string;
   iban?: string;
-  birthdate?: string | null;
-  dogum_tarihi?: string | null;
 }
 
 export interface PersonelIslemi {
   id: number;
   personel_id: number;
   islem_id: number;
-  musteri_id?: number; // Added musteri_id to track which customer the operation belongs to
-  randevu_id?: number; // Added to track which appointment this operation belongs to
   tutar: number;
   odenen: number;
   prim_yuzdesi: number;
@@ -78,19 +74,18 @@ export interface PersonelIslemi {
   created_at: string;
   islem?: Islem;
   personel?: Personel;
-  photos?: string[];
 }
 
 export interface Musteri {
-  id: number;
+  id: number | string;
   first_name: string;
   last_name?: string;
   phone?: string;
   birthdate?: string | null;
   created_at: string;
   dukkan_id?: number;
-  auth_id?: string;
   role?: string;
+  total_services?: number;
 }
 
 export type RandevuDurumu = "beklemede" | "onaylandi" | "iptal_edildi" | "tamamlandi";
@@ -141,12 +136,9 @@ export interface Notification {
 }
 
 export interface CalismaSaati {
-  id?: number;
+  id: number;
   gun: string;
-  acilis: string | null;
-  kapanis: string | null;
-  kapali: boolean;
-  gun_sira?: number;
-  created_at?: string;
-  dukkan_id?: number;
+  acilis?: string;
+  kapanis?: string;
+  kapali?: boolean;
 }

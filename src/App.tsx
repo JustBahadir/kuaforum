@@ -1,58 +1,99 @@
 
-import { Routes, Route, Navigate } from 'react-router-dom';
-import "./App.css";
-import HomePage from './pages/HomePage';
-import Login from './pages/Login';
-import Index from './pages/Index';
-import Dashboard from './pages/Dashboard';
-import StaffLogin from './pages/StaffLogin';
-import StaffRegister from './pages/StaffRegister';
-import CreateShop from './pages/CreateShop';
-import ShopHomePage from './ShopHomePage';
-import ShopSettings from './pages/ShopSettings';
-import NotFound from './pages/NotFound';
-import Appointments from './pages/Appointments';
-import Customers from './pages/Customers';
-import Services from './pages/Services';
-import CustomerDashboard from './pages/CustomerDashboard';
-import Settings from './pages/Settings';
-import ShopStatistics from './pages/ShopStatistics';
-import StaffProfile from './pages/StaffProfile';
-import Personnel from './pages/Personnel';
-import OperationsHistory from './pages/OperationsHistory';
-import MyPerformance from './pages/MyPerformance';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { Toaster } from "@/components/ui/sonner";
+import { RouteProtection } from "@/components/auth/RouteProtection";
+import HomePage from "./pages/HomePage";
+import StaffLogin from "./pages/StaffLogin";
+import StaffRegister from "./pages/StaffRegister";
+import CustomerAuth from "./pages/Auth";
+import Dashboard from "./pages/Dashboard";
+import CreateShop from "./pages/CreateShop";
+import Services from "./pages/Services";
+import Personnel from "./pages/Personnel";
+import Appointments from "./pages/Appointments";
+import CustomerDashboard from "./pages/CustomerDashboard";
+import Customers from "./pages/Customers";
+import CustomerProfile from "./pages/CustomerProfile";
+import ShopHomePage from "./pages/ShopHomePage";
+import StaffProfile from "./pages/StaffProfile";
+import NotFound from "./pages/NotFound";
+import ShopStatistics from "./pages/ShopStatistics";
+import Settings from "./pages/Settings";
+import ShopSettings from "./pages/ShopSettings";
+import OperationsHistory from "./pages/OperationsHistory";
+import CustomerOperations from "./pages/operations/CustomerOperations";
+import StaffOperations from "./pages/operations/StaffOperations";
+import { ThemeProvider } from "./components/ui/theme-provider";
 
-// Create a client
-const queryClient = new QueryClient();
+// Create the query client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      retry: 1,
+    },
+  },
+});
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <Routes>
-        <Route path="/" element={<Index />} />
-        <Route path="/home" element={<HomePage />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/staff-login" element={<StaffLogin />} />
-        <Route path="/staff-register" element={<StaffRegister />} />
-        <Route path="/create-shop" element={<CreateShop />} />
-        <Route path="/shop-home" element={<ShopHomePage />} />
-        <Route path="/shop-settings" element={<ShopSettings />} />
-        <Route path="/shop-statistics" element={<ShopStatistics />} />
-        <Route path="/appointments" element={<Appointments />} />
-        <Route path="/customers" element={<Customers />} />
-        <Route path="/admin/operations" element={<Services />} />
-        <Route path="/operations-history" element={<OperationsHistory />} />
-        <Route path="/my-performance" element={<MyPerformance />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/staff-profile" element={<StaffProfile />} />
-        <Route path="/personnel" element={<Personnel />} />
-        <Route path="/customer-dashboard/*" element={<CustomerDashboard />} />
-        <Route path="/profile" element={<Navigate to="/staff-profile" replace />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </QueryClientProvider>
+    <ThemeProvider defaultTheme="light">
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <RouteProtection>
+            <Routes>
+              {/* Landing Page */}
+              <Route path="/" element={<HomePage />} />
+              
+              {/* Customer Routes */}
+              <Route path="/login" element={<CustomerAuth />} />
+              <Route path="/customer-dashboard/*" element={<CustomerDashboard />} />
+              <Route path="/customer-profile" element={<CustomerProfile />} />
+              <Route path="/customer-services" element={<CustomerOperations />} />
+              <Route path="/customer-appointments" element={<Appointments />} />
+              
+              {/* Staff Routes */}
+              <Route path="/admin" element={<StaffLogin />} />
+              <Route path="/admin/register" element={<StaffRegister />} />
+              <Route path="/admin/dashboard" element={<Dashboard />} />
+              <Route path="/admin/shop" element={<ShopHomePage />} />
+              <Route path="/admin/services" element={<Services />} />
+              <Route path="/admin/personnel" element={<Personnel />} />
+              <Route path="/admin/appointments" element={<Appointments />} />
+              <Route path="/admin/customers" element={<Customers />} />
+              <Route path="/admin/profile" element={<StaffProfile />} />
+              <Route path="/admin/create-shop" element={<CreateShop />} />
+              <Route path="/admin/statistics" element={<ShopStatistics />} />
+              <Route path="/admin/settings" element={<Settings />} />
+              <Route path="/admin/shop-settings" element={<ShopSettings />} />
+              <Route path="/admin/operations-history" element={<OperationsHistory />} />
+              <Route path="/admin/operations" element={<StaffOperations />} />
+              
+              {/* Shortcut Routes for Admin/Staff */}
+              <Route path="/personnel" element={<Personnel />} />
+              <Route path="/shop-home" element={<ShopHomePage />} />
+              <Route path="/shop-settings" element={<ShopSettings />} />
+              <Route path="/shop-statistics" element={<ShopStatistics />} />
+              <Route path="/operations-history" element={<OperationsHistory />} />
+              <Route path="/staff-profile" element={<StaffProfile />} />
+              <Route path="/staff-login" element={<StaffLogin />} />
+              <Route path="/customers" element={<Customers />} />
+              <Route path="/settings" element={<Settings />} />
+              
+              {/* Public Routes */}
+              <Route path="/services" element={<CustomerOperations />} />
+              <Route path="/appointments" element={<Appointments />} />
+              
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </RouteProtection>
+          <ReactQueryDevtools />
+          <Toaster />
+        </BrowserRouter>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }
 

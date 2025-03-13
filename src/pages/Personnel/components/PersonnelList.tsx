@@ -5,7 +5,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Eye, Trash } from "lucide-react";
+import { Eye, Trash, Plus } from "lucide-react";
+import { PersonnelDialog } from "./PersonnelDialog";
 import { PersonnelDetailsDialog } from "./PersonnelDetailsDialog";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -24,6 +25,7 @@ import {
 
 export function PersonnelList() {
   const { userRole, refreshProfile } = useCustomerAuth();
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedPersonel, setSelectedPersonel] = useState<number | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -34,8 +36,12 @@ export function PersonnelList() {
   const { data: personeller = [], isLoading, error } = useQuery({
     queryKey: ['personel'],
     queryFn: () => personelServisi.hepsiniGetir(),
-    retry: 3,
-    refetchOnWindowFocus: false
+    retry: 1,
+    meta: {
+      onError: (error: any) => {
+        console.error("Personel verisi alınırken hata:", error);
+      }
+    }
   });
   
   const handleOpenDetailsDialog = (personelId: number) => {
@@ -103,7 +109,14 @@ export function PersonnelList() {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Personel Listesi</CardTitle>
-        {/* "Yeni Personel Ekle" button removed as requested */}
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => setAddDialogOpen(true)}
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Yeni Personel Ekle
+        </Button>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -128,6 +141,7 @@ export function PersonnelList() {
                       </Avatar>
                       <div>
                         <h3 className="text-lg font-medium">{personel.ad_soyad}</h3>
+                        {/* Personnel numbers completely hidden, not even for admin users */}
                       </div>
                     </div>
                     <div className="mt-4 space-y-2">
@@ -142,11 +156,19 @@ export function PersonnelList() {
                             <span className="truncate max-w-[150px]">{personel.eposta}</span>
                           </div>
                           <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Prim:</span>
+                            <span>%{personel.prim_yuzdesi}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
                             <span className="text-muted-foreground">Çalışma:</span>
                             <span>{personel.calisma_sistemi === 'haftalik' ? 'Haftalık' : 'Aylık'}</span>
                           </div>
                         </>
                       )}
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Dükkan:</span>
+                        <span>{personel.dukkan?.ad || 'Atanmamış'}</span>
+                      </div>
                     </div>
                   </div>
                   <div className="flex border-t divide-x">
@@ -177,6 +199,11 @@ export function PersonnelList() {
           </div>
         )}
         
+        <PersonnelDialog 
+          open={addDialogOpen} 
+          onOpenChange={setAddDialogOpen} 
+        />
+
         {selectedPersonel && (
           <PersonnelDetailsDialog
             open={detailsDialogOpen}

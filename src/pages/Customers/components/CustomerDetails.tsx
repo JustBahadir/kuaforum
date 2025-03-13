@@ -1,230 +1,116 @@
 
-import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { CustomerPersonalInfo } from "./CustomerPersonalInfo";
 import { CustomerOperationsTable } from "./CustomerOperationsTable";
 import { CustomerPreferences } from "./CustomerPreferences";
-import { customerPersonalDataService } from "@/lib/supabase/services/customerPersonalDataService";
-import { toast } from "sonner";
 import { Musteri } from "@/lib/supabase/types";
-import { customerOperationsService } from "@/lib/supabase/services/customerOperationsService";
+import { formatPhoneNumber } from "@/utils/phoneFormatter";
+import { Button } from "@/components/ui/button";
+import { Pencil, User, Calendar, Gift, Star } from "lucide-react";
+import { CustomerPersonalInfo } from "./CustomerPersonalInfo";
 
 interface CustomerDetailsProps {
-  customerId: number;
-  customerName: string;
-  customerEmail?: string;
-  customerPhone?: string;
-  customer?: Musteri;
-  onEdit?: () => Promise<void>;
-  onDelete?: () => Promise<void>;
-  dukkanId?: number;
-  isReadOnly?: boolean;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  customer: Musteri | null;
 }
 
-export function CustomerDetails({
-  customerId,
-  customerName,
-  customerEmail,
-  customerPhone,
-  customer,
-  onEdit,
-  onDelete,
-  dukkanId,
-  isReadOnly = false
-}: CustomerDetailsProps) {
-  const queryClient = useQueryClient();
-  const [spouseName, setSpouseName] = useState("");
-  const [childrenNames, setChildrenNames] = useState<string[]>([]);
-  const [newChildName, setNewChildName] = useState("");
-  const [customNotes, setCustomNotes] = useState("");
-
-  // Fetch customer custom data (notes, children, etc.)
-  const { data: customData, isLoading: isLoadingCustomData } = useQuery({
-    queryKey: ["customer-custom-data", customerId],
-    queryFn: () => customerPersonalDataService.getCustomerPersonalData(customerId),
-    initialData: {
-      custom_notes: "",
-      children_names: [],
-      spouse_name: ""
+export function CustomerDetails({ open, onOpenChange, customer }: CustomerDetailsProps) {
+  const [editMode, setEditMode] = useState(false);
+  const [activeTab, setActiveTab] = useState("islemler");
+  
+  const toggleEditMode = () => {
+    setEditMode(!editMode);
+    if (!editMode) {
+      setActiveTab("kisiBilgileri");
     }
-  });
-
-  // Fetch customer operations
-  const { data: operations = [], isLoading: isLoadingOperations, refetch: refetchOperations } = useQuery({
-    queryKey: ["customer-operations", customerId],
-    queryFn: () => customerOperationsService.getCustomerOperations(customerId.toString()),
-  });
-
-  // Update state when data is loaded
-  useEffect(() => {
-    if (customData) {
-      setCustomNotes(customData.custom_notes || "");
-      setChildrenNames(customData.children_names || []);
-      setSpouseName(customData.spouse_name || "");
-    }
-  }, [customData]);
-
-  // Update customer personal data mutation
-  const updateCustomDataMutation = useMutation({
-    mutationFn: (data: any) => 
-      customerPersonalDataService.updateCustomerPersonalData(customerId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["customer-custom-data", customerId] });
-      toast.success("Müşteri bilgileri güncellendi");
-    },
-    onError: (error) => {
-      console.error("Müşteri bilgisi güncellenemedi:", error);
-      toast.error("Müşteri bilgileri güncellenirken bir hata oluştu");
-    }
-  });
-
-  // Save customer notes
-  const saveCustomNotes = () => {
-    updateCustomDataMutation.mutate({
-      custom_notes: customNotes
-    });
-  };
-
-  // Add child name
-  const addChildName = () => {
-    if (!newChildName.trim()) return;
-    
-    const updatedNames = [...childrenNames, newChildName.trim()];
-    setChildrenNames(updatedNames);
-    setNewChildName("");
-    
-    updateCustomDataMutation.mutate({
-      children_names: updatedNames
-    });
-  };
-
-  // Update spouse name
-  const updateSpouseName = () => {
-    updateCustomDataMutation.mutate({
-      spouse_name: spouseName
-    });
-  };
-
-  // Remove child name
-  const removeChildName = (index: number) => {
-    const updatedNames = childrenNames.filter((_, i) => i !== index);
-    setChildrenNames(updatedNames);
-    
-    updateCustomDataMutation.mutate({
-      children_names: updatedNames
-    });
-  };
-
-  // Create customer object based on provided props if no customer is passed
-  const customerObject: Musteri = customer || {
-    id: customerId,
-    first_name: customerName.split(' ')[0],
-    last_name: customerName.split(' ').slice(1).join(' '),
-    auth_id: customerEmail,
-    phone: customerPhone,
-    dukkan_id: dukkanId,
-    created_at: ''
-  };
-
-  // Handle refresh operations
-  const handleRefreshOperations = () => {
-    refetchOperations();
   };
 
   return (
-    <div className="space-y-6">
-      <Tabs defaultValue="info">
-        <TabsList className="grid grid-cols-3 w-full">
-          <TabsTrigger value="info">Kişisel Bilgiler</TabsTrigger>
-          <TabsTrigger value="history">İşlem Geçmişi</TabsTrigger>
-          <TabsTrigger value="preferences">Notlar ve Tercihler</TabsTrigger>
-        </TabsList>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl">
+        <DialogHeader className="flex flex-row items-center justify-between">
+          <DialogTitle>Müşteri Detayları</DialogTitle>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={toggleEditMode}
+            className="flex items-center gap-1"
+          >
+            <Pencil className="h-4 w-4" />
+            {editMode ? "Düzenlemeyi Bitir" : "Düzenle"}
+          </Button>
+        </DialogHeader>
         
-        <TabsContent value="info">
-          <CustomerPersonalInfo
-            customerId={customerId.toString()}
-            customer={customerObject}
-            editMode={!isReadOnly}
-          />
-        </TabsContent>
-        
-        <TabsContent value="history">
-          <CustomerOperationsTable 
-            customerId={customerId.toString()} 
-            operations={operations} 
-            onRefresh={handleRefreshOperations} 
-          />
-        </TabsContent>
-        
-        <TabsContent value="preferences">
-          <div>
-            {/* Eşinin Adı */}
-            <div className="space-y-4">
-              <h3 className="font-medium text-lg">Eşinin Adı</h3>
-              <div className="flex items-center space-x-2">
-                <Input
-                  placeholder="Eşinin adı"
-                  value={spouseName}
-                  onChange={(e) => setSpouseName(e.target.value)}
-                />
-                <Button onClick={updateSpouseName}>Kaydet</Button>
+        {customer && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <h3 className="text-sm font-medium text-gray-500">AD SOYAD</h3>
+                <p className="mt-1 text-base">
+                  {customer.first_name} {customer.last_name || ''} 
+                </p>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-gray-500">TELEFON</h3>
+                <p className="mt-1 text-base">
+                  {customer.phone && formatPhoneNumber(customer.phone) || '-'}
+                </p>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-gray-500">KAYIT TARİHİ</h3>
+                <p className="mt-1 text-base">
+                  {customer.created_at 
+                    ? new Date(customer.created_at).toLocaleDateString('tr-TR') 
+                    : '-'}
+                </p>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-gray-500">TOPLAM İŞLEM</h3>
+                <p className="mt-1 text-base">{customer.total_services || 0}</p>
               </div>
             </div>
 
-            {/* Çocukların İsimleri */}
-            <div className="space-y-4">
-              <h3 className="font-medium text-lg">Çocukların İsimleri</h3>
-              <div className="flex items-center space-x-2">
-                <Input
-                  placeholder="Çocuk adı"
-                  value={newChildName}
-                  onChange={(e) => setNewChildName(e.target.value)}
-                  onKeyPress={(e) => e.key === "Enter" && addChildName()}
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="w-full">
+                <TabsTrigger value="islemler" className="flex-1 flex items-center gap-1">
+                  <Star className="h-4 w-4" />
+                  İşlem Geçmişi
+                </TabsTrigger>
+                <TabsTrigger value="randevular" className="flex-1 flex items-center gap-1">
+                  <Calendar className="h-4 w-4" />
+                  Randevu Geçmişi
+                </TabsTrigger>
+                <TabsTrigger value="tercihler" className="flex-1 flex items-center gap-1">
+                  <Gift className="h-4 w-4" />
+                  Kişisel Tercihler
+                </TabsTrigger>
+                <TabsTrigger value="kisiBilgileri" className="flex-1 flex items-center gap-1">
+                  <User className="h-4 w-4" />
+                  Kişisel Bilgiler
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="islemler" className="border rounded-md mt-4">
+                <CustomerOperationsTable customerId={String(customer.id)} />
+              </TabsContent>
+              <TabsContent value="randevular" className="border rounded-md p-4 mt-4">
+                <div className="text-center py-4">Randevu geçmişi burada gösterilecek.</div>
+              </TabsContent>
+              <TabsContent value="tercihler" className="border rounded-md mt-4">
+                <CustomerPreferences customerId={String(customer.id)} />
+              </TabsContent>
+              <TabsContent value="kisiBilgileri" className="border rounded-md mt-4">
+                <CustomerPersonalInfo 
+                  customerId={String(customer.id)} 
+                  customer={customer} 
+                  editMode={editMode}
                 />
-                <Button onClick={addChildName}>Ekle</Button>
-              </div>
-              
-              {childrenNames.length > 0 ? (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {childrenNames.map((name, index) => (
-                    <div
-                      key={index}
-                      className="px-3 py-1 bg-gray-100 rounded-full flex items-center gap-2"
-                    >
-                      <span>{name}</span>
-                      <button
-                        onClick={() => removeChildName(index)}
-                        className="text-gray-500 hover:text-red-500"
-                      >
-                        &times;
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-gray-500 text-sm">Henüz çocuk bilgisi eklenmemiş.</p>
-              )}
-            </div>
-            
-            {/* Özel Notlar */}
-            <div className="space-y-4">
-              <h3 className="font-medium text-lg">Özel Notlar</h3>
-              <div className="space-y-2">
-                <textarea
-                  className="w-full min-h-[100px] border rounded-md p-2"
-                  placeholder="Müşteri hakkında notlar..."
-                  value={customNotes}
-                  onChange={(e) => setCustomNotes(e.target.value)}
-                />
-                <Button onClick={saveCustomNotes}>Kaydet</Button>
-              </div>
-            </div>
+              </TabsContent>
+            </Tabs>
           </div>
-        </TabsContent>
-      </Tabs>
-    </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -22,7 +22,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
 import { Info, Plus } from "lucide-react";
 
 interface ServicesContentProps {
@@ -105,7 +104,6 @@ export function ServicesContent({
   setPuanlamaAktif,
 }: ServicesContentProps) {
   const [openCategories, setOpenCategories] = useState<string[]>([]);
-  const [infoDialogOpen, setInfoDialogOpen] = useState(false);
   
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -153,15 +151,24 @@ export function ServicesContent({
                 onCheckedChange={setPuanlamaAktif} 
               />
               <Label htmlFor="puanlama-modu" className="text-sm">Puanlama Sistemi</Label>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-8 w-8 p-0"
-                onClick={() => setInfoDialogOpen(true)}
-              >
-                <Info className="h-4 w-4" />
-                <span className="sr-only">Puanlama Sistemi Bilgisi</span>
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 p-0">
+                      <Info className="h-4 w-4" />
+                      <span className="sr-only">Puanlama Sistemi Bilgisi</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs p-4">
+                    <p>
+                      Puanlama sayesinde sizin belirleyeceğiniz sayıda puana ulaşan müşterilerinize indirim, 
+                      hediye veya sizin seçeceğiniz bir ödül sistemi olarak kullanmak için ekledik. 
+                      Aynı şekilde bunu personellerinize prim vermek için de kullanabilirsiniz.
+                      Bu sistemin kullanımı tamamen sizin tercihlerinize bağlıdır.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
             
             <div className="flex gap-2">
@@ -257,28 +264,6 @@ export function ServicesContent({
           </SortableContext>
         </DndContext>
       </div>
-
-      {/* Information Dialog */}
-      <Dialog open={infoDialogOpen} onOpenChange={setInfoDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Puanlama Sistemi Hakkında</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-2 py-4">
-            <p>
-              Puanlama sayesinde sizin belirleyeceğiniz sayıda puana ulaşan müşterilerinize indirim, 
-              hediye veya sizin seçeceğiniz bir ödül sistemi olarak kullanmak için ekledik. 
-              Aynı şekilde bunu personellerinize prim vermek için de kullanabilirsiniz.
-              Bu sistemin kullanımı tamamen sizin tercihlerinize bağlıdır.
-            </p>
-          </div>
-          <DialogFooter className="flex justify-center">
-            <DialogClose asChild>
-              <Button type="button" variant="default">Kapat</Button>
-            </DialogClose>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }

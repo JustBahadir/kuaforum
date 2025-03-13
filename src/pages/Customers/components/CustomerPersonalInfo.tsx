@@ -22,7 +22,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { getHoroscope, getHoroscopeDescription } from "../utils/horoscopeUtils";
 
-export interface CustomerPersonalInfoProps {
+interface CustomerPersonalInfoProps {
   customerId: string;
   customer: Musteri;
   editMode: boolean;
@@ -32,7 +32,6 @@ interface PersonalData {
   birth_date: string | null;
   anniversary_date: string | null;
   children_names: string[];
-  spouse_name: string | null;
   horoscope: string | null;
   horoscope_description: string | null;
   custom_notes: string | null;
@@ -46,7 +45,6 @@ export function CustomerPersonalInfo({ customerId, customer, editMode }: Custome
     birth_date: null,
     anniversary_date: null,
     children_names: [],
-    spouse_name: null,
     horoscope: null,
     horoscope_description: null,
     custom_notes: null
@@ -75,7 +73,6 @@ export function CustomerPersonalInfo({ customerId, customer, editMode }: Custome
         birth_date: existingData.birth_date,
         anniversary_date: existingData.anniversary_date,
         children_names: existingData.children_names || [],
-        spouse_name: existingData.spouse_name || null,
         horoscope: existingData.horoscope,
         horoscope_description: existingData.horoscope_description,
         custom_notes: existingData.custom_notes
@@ -100,7 +97,6 @@ export function CustomerPersonalInfo({ customerId, customer, editMode }: Custome
             birth_date: data.birth_date,
             anniversary_date: data.anniversary_date,
             children_names: data.children_names,
-            spouse_name: data.spouse_name,
             horoscope: data.horoscope,
             horoscope_description: data.horoscope_description,
             custom_notes: data.custom_notes,
@@ -117,7 +113,6 @@ export function CustomerPersonalInfo({ customerId, customer, editMode }: Custome
             birth_date: data.birth_date,
             anniversary_date: data.anniversary_date,
             children_names: data.children_names,
-            spouse_name: data.spouse_name,
             horoscope: data.horoscope,
             horoscope_description: data.horoscope_description,
             custom_notes: data.custom_notes
@@ -282,17 +277,6 @@ export function CustomerPersonalInfo({ customerId, customer, editMode }: Custome
                 />
               </PopoverContent>
             </Popover>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="spouseName">Eş Adı</Label>
-            <Input
-              id="spouseName"
-              value={personalData.spouse_name || ""}
-              onChange={(e) => setPersonalData(prev => ({ ...prev, spouse_name: e.target.value }))}
-              disabled={!editMode}
-              placeholder="Eşinin adını girin"
-            />
           </div>
         </div>
         

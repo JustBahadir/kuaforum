@@ -1,14 +1,13 @@
 
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { personelIslemleriServisi, islemServisi, personelServisi } from "@/lib/supabase";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { PersonelIslemi } from "@/lib/supabase/types";
-import { supabase } from "@/lib/supabase/client";
-import { toast } from "sonner";
+import { supabase } from "@/lib/supabase/client"; // Import supabase client
 
 export default function OperationsHistory() {
   const { userRole } = useCustomerAuth();
@@ -16,8 +15,6 @@ export default function OperationsHistory() {
     from: new Date(new Date().setDate(new Date().getDate() - 30)), // Default to last 30 days
     to: new Date()
   });
-  
-  const queryClient = useQueryClient();
 
   // Get current user
   const { data: currentUser } = useQuery({
@@ -50,11 +47,13 @@ export default function OperationsHistory() {
     queryFn: async () => {
       // If staff, only get their operations
       if (userRole === 'staff' && personel) {
-        const allOperations = await personelIslemleriServisi.personelIslemleriGetir(personel.id);
+        const allOperations = await personelIslemleriServisi.hepsiniGetir();
         return allOperations.filter(islem => {
           if (!islem.created_at) return false;
           const islemDate = new Date(islem.created_at);
-          return islemDate >= dateRange.from && islemDate <= dateRange.to;
+          return islemDate >= dateRange.from && 
+                islemDate <= dateRange.to && 
+                islem.personel_id === personel.id;
         });
       } 
       // If admin, get all operations

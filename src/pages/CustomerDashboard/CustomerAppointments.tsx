@@ -87,7 +87,8 @@ export default function CustomerAppointments() {
     }
   };
   
-  const handleAppointmentCreated = () => {
+  const handleAppointmentCreated = (appointment: Randevu) => {
+    setAppointments(prev => [...prev, appointment]);
     setDialogOpen(false);
     toast.success("Randevunuz başarıyla oluşturuldu");
     loadAppointments(); // Reload all appointments to get the newest data

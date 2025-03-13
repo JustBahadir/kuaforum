@@ -7,7 +7,9 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
+import { Plus } from "lucide-react";
 
 interface CategoryFormProps {
   isOpen: boolean;
@@ -26,6 +28,12 @@ export function CategoryForm({
 }: CategoryFormProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogTrigger asChild>
+        <Button variant="outline">
+          <Plus className="mr-2" />
+          Yeni Kategori
+        </Button>
+      </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Yeni Kategori Ekle</DialogTitle>

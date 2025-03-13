@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { StaffCardHeader } from "@/components/staff/StaffCardHeader";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
+import { authenticationService } from "@/lib/auth/services/authenticationService";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -65,26 +66,13 @@ export default function Login() {
   const onLoginSubmit = async (values: z.infer<typeof loginSchema>) => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email: values.email,
         password: values.password,
       });
 
       if (error) {
         toast.error("Giriş yapılamadı: " + error.message);
-        setLoading(false);
-        return;
-      }
-
-      // Kullanıcı rolünü kontrol et
-      const userRole = data.user?.user_metadata?.role;
-      
-      if (userRole && (userRole === 'staff' || userRole === 'admin')) {
-        // Bu bir personel/admin hesabı, staff-login sayfasına yönlendir
-        toast.error("Bu bir personel hesabıdır. Lütfen dükkan girişi sayfasını kullanın.");
-        await supabase.auth.signOut();
-        navigate("/staff-login");
-        setLoading(false);
         return;
       }
 

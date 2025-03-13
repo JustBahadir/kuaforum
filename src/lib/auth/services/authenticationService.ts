@@ -11,8 +11,6 @@ export const authenticationService = {
    */
   signIn: async (email: string, password: string) => {
     try {
-      console.log("Attempting login with:", email);
-      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
@@ -26,7 +24,6 @@ export const authenticationService = {
         throw error;
       }
       
-      console.log("Login successful, user data:", data.user?.id);
       return data;
     } catch (error) {
       console.error("Giriş yapılırken hata:", error);
@@ -39,6 +36,9 @@ export const authenticationService = {
    */
   signUp: async (email: string, password: string, metadata: any) => {
     try {
+      // We're no longer checking for existing users here as we'll handle this via 
+      // the Supabase Auth API response instead
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -110,34 +110,24 @@ export const authenticationService = {
    * Get current session
    */
   getSession: async () => {
-    try {
-      const { data, error } = await supabase.auth.getSession();
-      if (error) {
-        console.error("Oturum bilgisi alınırken hata:", error);
-        return null;
-      }
-      return data.session;
-    } catch (error) {
+    const { data, error } = await supabase.auth.getSession();
+    if (error) {
       console.error("Oturum bilgisi alınırken hata:", error);
       return null;
     }
+    return data.session;
   },
 
   /**
    * Get current user
    */
   getCurrentUser: async () => {
-    try {
-      const { data, error } = await supabase.auth.getUser();
-      if (error) {
-        console.error("Kullanıcı bilgisi alınırken hata:", error);
-        return null;
-      }
-      return data.user;
-    } catch (error) {
+    const { data, error } = await supabase.auth.getUser();
+    if (error) {
       console.error("Kullanıcı bilgisi alınırken hata:", error);
       return null;
     }
+    return data.user;
   },
 
   /**
@@ -153,13 +143,31 @@ export const authenticationService = {
    */
   deleteUserByEmail: async (email: string) => {
     try {
+      // Daha güçlü bir silme işlemi için doğrudan RPC çağrısı kullanıyoruz
       const { data, error } = await supabase.rpc('completely_delete_user', { 
         target_email: email 
       });
       
       if (error) {
         console.error("Kullanıcı silme hatası (RPC):", error);
-        throw new Error(`Kullanıcı silinemedi: ${error.message}`);
+        
+        // Alternatif yöntem olarak doğrudan auth.users tablosundan silmeyi deneyelim
+        try {
+          // Kullanıcıyı auth tablosundan silme
+          const { error: deleteError } = await supabase.functions.invoke("delete-user", {
+            body: { email }
+          });
+          
+          if (deleteError) {
+            console.error("Alternatif silme işlemi başarısız:", deleteError);
+            throw new Error(`Kullanıcı silinemedi: ${deleteError.message}`);
+          }
+          
+          return { success: true, message: `${email} başarıyla silindi.` };
+        } catch (alternativeError) {
+          console.error("Alternatif silme hatası:", alternativeError);
+          throw alternativeError;
+        }
       }
       
       return { success: true, message: `${email} başarıyla silindi.` };

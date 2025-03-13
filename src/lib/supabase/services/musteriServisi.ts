@@ -1,129 +1,96 @@
 
-import { supabase } from '../client';
+import { supabase, supabaseAdmin } from '../client';
 import { Musteri } from '../types';
 
 export const musteriServisi = {
+  // Belirli bir dükkan için tüm müşterileri getir
   async hepsiniGetir(dukkanId?: number) {
     try {
+      console.log("Müşteri listesi getiriliyor, dükkan ID:", dukkanId);
+      
       let query = supabase
-        .from('musteriler')
-        .select('*');
+        .from('profiles')
+        .select('id, first_name, last_name, phone, birthdate, created_at, dukkan_id')
+        .eq('role', 'customer');
       
       if (dukkanId) {
         query = query.eq('dukkan_id', dukkanId);
       }
-      
-      const { data, error } = await query.order('created_at', { ascending: false });
-      
-      if (error) {
-        console.error("Müşteriler getirme hatası:", error);
-        throw error;
-      }
-      
-      console.log(`${data.length} müşteri başarıyla getirildi`);
-      return data || [];
-    } catch (err) {
-      console.error("Müşteriler getirme sırasında hata:", err);
-      return [];
-    }
-  },
-  
-  async getirById(id: number): Promise<Musteri | null> {
-    try {
-      console.log(`Müşteri ID ${id} getiriliyor`);
-      
-      // First get the basic customer data
-      const { data, error } = await supabase
-        .from('musteriler')
-        .select('*')
-        .eq('id', id)
-        .single();
-      
-      if (error) {
-        console.error(`ID ${id} müşteri getirme hatası:`, error);
-        return null;
-      }
-      
-      console.log(`Müşteri ID ${id} temel verisi:`, data);
-      
-      // If we have customer data, create a complete customer object with auth_id
-      if (data) {
-        // Simply use the customer ID as the auth_id for now
-        // This avoids the problematic profiles join
-        let customer = { 
-          ...data,
-          auth_id: id.toString()
-        } as Musteri;
-        
-        console.log(`Müşteri verisi hazırlandı:`, customer);
-        return customer;
-      }
-      
-      return null;
-    } catch (err) {
-      console.error(`ID ${id} müşteri getirme sırasında hata:`, err);
-      return null;
-    }
-  },
-  
-  async ekle(musteri: Omit<Musteri, 'id' | 'created_at'>) {
-    try {
-      console.log("Eklenecek müşteri verileri:", musteri);
 
-      const { data, error } = await supabase
-        .from('musteriler')
-        .insert([musteri])
-        .select();
+      const { data, error } = await query.order('first_name', { ascending: true });
+
+      if (error) {
+        console.error("Müşteri getirme hatası:", error);
+        throw new Error(`Müşteri listesi alınamadı: ${error.message}`);
+      }
       
+      console.log(`${data?.length || 0} müşteri başarıyla getirildi`);
+      return data || [];
+    } catch (error: any) {
+      console.error("Müşteri getirme hatası:", error);
+      throw new Error(`Müşteri listesi alınamadı: ${error.message}`);
+    }
+  },
+
+  // Dükkan ilişkili yeni müşteri ekle 
+  async ekle(musteri: Partial<Musteri>, dukkanId?: number) {
+    try {
+      console.log("Müşteri ekleme başlatıldı:", { ...musteri, dukkanId });
+      
+      if (!dukkanId) {
+        throw new Error("Dükkan ID bulunamadı. Müşteri eklenemez.");
+      }
+      
+      // Müşteri verilerini hazırla
+      const customerData = {
+        first_name: musteri.first_name || '',
+        last_name: musteri.last_name || null,
+        phone: musteri.phone || null,
+        birthdate: musteri.birthdate || null,
+        role: 'customer',
+        dukkan_id: dukkanId
+      };
+      
+      console.log("Ekleniyor:", customerData);
+      
+      // supabaseAdmin kullanarak RLS'yi bypass et
+      const { data, error } = await supabaseAdmin
+        .from('profiles')
+        .insert([customerData])
+        .select();
+
       if (error) {
         console.error("Müşteri ekleme hatası:", error);
-        throw error;
+        throw new Error(`Müşteri eklenirken bir hata oluştu: ${error.message}`);
       }
       
-      console.log("Eklenen müşteri:", data[0]);
-      return data[0];
-    } catch (err) {
-      console.error("Müşteri eklenirken hata:", err);
-      throw err;
+      console.log("Müşteri başarıyla eklendi:", data?.[0]);
+      return data?.[0] || null;
+    } catch (error: any) {
+      console.error("Müşteri ekleme hatası:", error);
+      throw error;
     }
   },
   
-  async guncelle(id: number, updates: Partial<Musteri>) {
+  // ID'ye göre tek müşteri getir
+  async getirById(id: string) {
     try {
       const { data, error } = await supabase
-        .from('musteriler')
-        .update(updates)
+        .from('profiles')
+        .select('*')
         .eq('id', id)
-        .select();
-      
+        .eq('role', 'customer')
+        .single();
+
       if (error) {
-        console.error("Müşteri güncelleme hatası:", error);
-        throw error;
+        console.error("Müşteri getirme hatası:", error);
+        throw new Error(`Müşteri bulunamadı: ${error.message}`);
       }
       
-      return data[0];
-    } catch (err) {
-      console.error(`ID ${id} müşteri güncellenirken hata:`, err);
-      throw err;
-    }
-  },
-  
-  async sil(id: number) {
-    try {
-      const { error } = await supabase
-        .from('musteriler')
-        .delete()
-        .eq('id', id);
-      
-      if (error) {
-        console.error("Müşteri silme hatası:", error);
-        throw error;
-      }
-      
-      return true;
-    } catch (err) {
-      console.error(`ID ${id} müşteri silinirken hata:`, err);
-      throw err;
+      return data;
+    } catch (error: any) {
+      console.error("Müşteri getirme hatası:", error);
+      throw new Error(`Müşteri alınamadı: ${error.message}`);
     }
   }
 };

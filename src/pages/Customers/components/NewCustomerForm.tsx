@@ -63,13 +63,13 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFo
         last_name: lastName || null,
         phone: phone ? formatPhoneForSubmission(phone) : null,
         birthdate: birthdate ? format(birthdate, 'yyyy-MM-dd') : null,
-        dukkan_id: dukkanId // Include dukkan_id in the customer data
       };
       
       console.log("Müşteri verileri:", customerData);
+      console.log("Dükkan ID:", dukkanId);
       
-      // Call the service to add customer with a single argument
-      const result = await musteriServisi.ekle(customerData);
+      // Call the service to add customer
+      const result = await musteriServisi.ekle(customerData, dukkanId);
       
       if (result) {
         toast.success("Müşteri başarıyla eklendi");

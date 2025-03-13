@@ -62,7 +62,7 @@ export default function HomePage() {
                 <Link to="/login">
                   <Button variant="secondary">Müşteri Girişi</Button>
                 </Link>
-                <Link to="/staff-login">
+                <Link to="/admin">
                   <Button variant="outline" className="bg-white/20">Dükkan Girişi</Button>
                 </Link>
               </div>
@@ -141,7 +141,7 @@ export default function HomePage() {
               <ul className="space-y-2">
                 <li><Link to="/" className="text-gray-400 hover:text-white">Ana Sayfa</Link></li>
                 <li><Link to="/login" className="text-gray-400 hover:text-white">Müşteri Girişi</Link></li>
-                <li><Link to="/staff-login" className="text-gray-400 hover:text-white">Dükkan Girişi</Link></li>
+                <li><Link to="/admin" className="text-gray-400 hover:text-white">Dükkan Girişi</Link></li>
               </ul>
             </div>
           </div>

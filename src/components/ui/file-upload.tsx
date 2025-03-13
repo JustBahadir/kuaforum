@@ -14,7 +14,6 @@ interface FileUploadProps {
   bucketName?: string;
   folderPath?: string;
   acceptedFileTypes?: string;
-  maxFileSize?: number; // In bytes
 }
 
 export function FileUpload({
@@ -24,8 +23,7 @@ export function FileUpload({
   label = "Resim Yükle",
   bucketName = "photos",
   folderPath = "avatars",
-  acceptedFileTypes = "image/*",
-  maxFileSize = 20 * 1024 * 1024 // Default to 20MB
+  acceptedFileTypes = "image/*"
 }: FileUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(currentImageUrl || null);
@@ -35,9 +33,9 @@ export function FileUpload({
     
     if (!file) return;
     
-    // Validate file size
-    if (file.size > maxFileSize) {
-      toast.error(`Dosya boyutu çok büyük! Maksimum ${Math.round(maxFileSize / (1024 * 1024))}MB olmalıdır.`);
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Dosya boyutu çok büyük! Maksimum 5MB olmalıdır.");
       return;
     }
     
@@ -68,7 +66,7 @@ export function FileUpload({
       // Update preview
       setPreviewUrl(publicUrl);
       
-      // Call callback with the URL
+      // Call callback with the URL instead of the file
       onUploadComplete(publicUrl);
       
       toast.success("Dosya başarıyla yüklendi");
@@ -110,7 +108,7 @@ export function FileUpload({
         <div className="border-2 border-dashed border-gray-300 rounded-md p-6 flex flex-col items-center justify-center h-48 bg-gray-50">
           <Image className="h-10 w-10 text-gray-400 mb-2" />
           <p className="text-sm text-gray-500">PNG, JPG, GIF dosyası yükleyin</p>
-          <p className="text-xs text-gray-400 mt-1">Max {Math.round(maxFileSize / (1024 * 1024))}MB</p>
+          <p className="text-xs text-gray-400 mt-1">Max 5MB</p>
         </div>
       )}
       

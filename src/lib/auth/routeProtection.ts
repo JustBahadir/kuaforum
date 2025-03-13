@@ -12,7 +12,6 @@ export const shouldRedirect = (
     pathname === "/" || 
     pathname === "/login" || 
     pathname === "/admin" ||
-    pathname === "/staff-login" ||
     pathname === "/services" ||
     pathname === "/appointments"
   ) {
@@ -27,7 +26,6 @@ export const shouldRedirect = (
       pathname !== "/" && 
       pathname !== "/login" && 
       pathname !== "/admin" &&
-      pathname !== "/staff-login" &&
       pathname !== "/services" &&
       pathname !== "/appointments"
     ) {
@@ -52,7 +50,7 @@ export const shouldRedirect = (
     }
     
     // Admin trying to access login pages
-    if (pathname === "/login" || pathname === "/admin" || pathname === "/staff-login") {
+    if (pathname === "/login" || pathname === "/admin") {
       return true;
     }
     
@@ -74,7 +72,7 @@ export const shouldRedirect = (
   }
   
   // Staff trying to access login pages
-  if (userRole === 'staff' && (pathname === "/login" || pathname === "/admin" || pathname === "/staff-login")) {
+  if (userRole === 'staff' && (pathname === "/login" || pathname === "/admin")) {
     return true;
   }
   
@@ -136,7 +134,7 @@ export const getRedirectPath = (
   
   // Admin redirect based on path
   if (userRole === 'admin') {
-    if (currentPath === "/admin" || currentPath === "/login" || currentPath === "/staff-login") {
+    if (currentPath === "/admin" || currentPath === "/login") {
       return "/shop-home";
     }
     
@@ -148,7 +146,7 @@ export const getRedirectPath = (
   
   // Staff redirect based on path
   if (userRole === 'staff') {
-    if (currentPath === "/admin" || currentPath === "/login" || currentPath === "/staff-login") {
+    if (currentPath === "/admin" || currentPath === "/login") {
       return "/shop-home";
     }
     
@@ -172,7 +170,7 @@ export const getRedirectPath = (
     }
     
     // Customer on login pages should go to customer dashboard
-    if (currentPath === "/admin" || currentPath === "/login" || currentPath === "/staff-login") {
+    if (currentPath === "/admin" || currentPath === "/login") {
       return "/customer-dashboard";
     }
   }

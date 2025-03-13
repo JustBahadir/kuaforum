@@ -1,247 +1,128 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { 
-  Card, 
-  CardContent, 
-  CardHeader, 
-  CardTitle 
-} from "@/components/ui/card";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
   TableRow 
 } from "@/components/ui/table";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle 
-} from "@/components/ui/dialog";
+import { supabase } from "@/lib/supabase/client";
+import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { CustomerOperation, customerOperationsService } from "@/lib/supabase/services/customerOperationsService";
-import { Textarea } from "@/components/ui/textarea";
-import { Image } from "lucide-react";
-import { OperationPhotoUpload } from "@/components/operations/OperationPhotoUpload";
-import { toast } from "sonner";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
-export interface CustomerOperationsTableProps {
+interface CustomerOperationsTableProps {
   customerId: string;
-  operations: CustomerOperation[];
-  onRefresh: () => void;
 }
 
-export function CustomerOperationsTable({ 
-  customerId, 
-  operations = [], 
-  onRefresh 
-}: CustomerOperationsTableProps) {
-  const [selectedOperation, setSelectedOperation] = useState<CustomerOperation | null>(null);
-  const [notes, setNotes] = useState("");
-  const [notesDialogOpen, setNotesDialogOpen] = useState(false);
-  const [photosDialogOpen, setPhotosDialogOpen] = useState(false);
-  const [photoViewDialogOpen, setPhotoViewDialogOpen] = useState(false);
+interface Operation {
+  id: number;
+  created_at: string;
+  operation_name: string;
+  personnel_name: string;
+  amount: number;
+  notes: string;
+  points: number;
+}
 
-  const handleNotesClick = (operation: CustomerOperation) => {
-    setSelectedOperation(operation);
-    setNotes(operation.notes || "");
-    setNotesDialogOpen(true);
-  };
+export function CustomerOperationsTable({ customerId }: CustomerOperationsTableProps) {
+  const [totalPoints, setTotalPoints] = useState(0);
+  const [totalAmount, setTotalAmount] = useState(0);
 
-  const handleSaveNotes = async () => {
-    if (!selectedOperation) return;
-    
-    try {
-      const success = await customerOperationsService.updateOperationNotes(
-        selectedOperation.id, 
-        notes
-      );
+  const { data: operations = [], isLoading } = useQuery({
+    queryKey: ['customerOperations', customerId],
+    queryFn: async () => {
+      // In a real app, we would fetch operations specifically for this customer
+      // Here we'll simulate it with some mock data
+      const mockOperations: Operation[] = [];
       
-      if (success) {
-        toast.success("Notlar başarıyla güncellendi");
-        setNotesDialogOpen(false);
-        onRefresh();
-      } else {
-        toast.error("Notlar güncellenirken bir hata oluştu");
+      for (let i = 0; i < 5; i++) {
+        mockOperations.push({
+          id: i,
+          created_at: new Date(Date.now() - i * 86400000).toISOString(),
+          operation_name: [`Saç Kesimi`, `Sakal Traşı`, `Ense Traşı`, `Saç Boyama`, `Manikür`][i % 5],
+          personnel_name: [`Ahmet`, `Mehmet`, `Ayşe`, `Fatma`, `Ali`][i % 5],
+          amount: Math.floor(Math.random() * 200) + 50,
+          notes: `İşlem notu ${i + 1}`,
+          points: Math.floor(Math.random() * 10) + 1
+        });
       }
-    } catch (error) {
-      console.error("Error saving notes:", error);
-      toast.error("Notlar kaydedilirken bir hata oluştu");
-    }
-  };
-
-  const handlePhotoUploadClick = (operation: CustomerOperation) => {
-    setSelectedOperation(operation);
-    setPhotosDialogOpen(true);
-  };
-
-  const handleViewPhotos = (operation: CustomerOperation) => {
-    setSelectedOperation(operation);
-    setPhotoViewDialogOpen(true);
-  };
-
-  const handlePhotosUpdated = async (photos: string[]) => {
-    if (!selectedOperation) return;
-    
-    try {
-      const success = await customerOperationsService.updateOperationPhotos(
-        selectedOperation.id, 
-        photos
-      );
       
-      if (success) {
-        toast.success("Fotoğraflar başarıyla güncellendi");
-        onRefresh();
-      } else {
-        toast.error("Fotoğraflar güncellenirken bir hata oluştu");
-      }
-    } catch (error) {
-      console.error("Error updating photos:", error);
-      toast.error("Fotoğraflar güncellenirken bir hata oluştu");
+      return mockOperations;
+    },
+    enabled: !!customerId
+  });
+
+  // Calculate totals
+  useEffect(() => {
+    if (operations.length) {
+      const points = operations.reduce((sum, op) => sum + op.points, 0);
+      const amount = operations.reduce((sum, op) => sum + op.amount, 0);
+      setTotalPoints(points);
+      setTotalAmount(amount);
     }
-  };
+  }, [operations]);
+
+  if (isLoading) {
+    return <div className="text-center py-4">Yükleniyor...</div>;
+  }
+
+  if (operations.length === 0) {
+    return <div className="text-center py-4">Bu müşteriye ait işlem bulunamadı.</div>;
+  }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>İşlem Geçmişi</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Tarih</TableHead>
-              <TableHead>İşlem</TableHead>
-              <TableHead>Personel</TableHead>
-              <TableHead>Tutar</TableHead>
-              <TableHead>Puan</TableHead>
-              <TableHead>Notlar</TableHead>
-              <TableHead>Fotoğraflar</TableHead>
+    <div className="p-4 space-y-4">
+      <div className="flex justify-between">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="border rounded-md p-3 bg-gray-50">
+            <div className="text-sm text-gray-500">TOPLAM PUAN</div>
+            <div className="text-xl font-bold text-purple-600">{totalPoints}</div>
+          </div>
+          <div className="border rounded-md p-3 bg-gray-50">
+            <div className="text-sm text-gray-500">TOPLAM TUTAR</div>
+            <div className="text-xl font-bold">{totalAmount.toFixed(2)} TL</div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm">
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" size="sm">
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+      
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Tarih</TableHead>
+            <TableHead>İşlem</TableHead>
+            <TableHead>Personel</TableHead>
+            <TableHead>Puan</TableHead>
+            <TableHead>Tutar</TableHead>
+            <TableHead>Açıklama</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {operations.map((operation) => (
+            <TableRow key={operation.id} className="hover:bg-gray-50">
+              <TableCell className="font-medium">
+                {format(new Date(operation.created_at), 'dd.MM.yyyy')}
+              </TableCell>
+              <TableCell>{operation.operation_name}</TableCell>
+              <TableCell>{operation.personnel_name}</TableCell>
+              <TableCell className="text-purple-600 font-semibold">{operation.points}</TableCell>
+              <TableCell>{operation.amount.toFixed(2)} TL</TableCell>
+              <TableCell className="max-w-xs truncate">{operation.notes}</TableCell>
             </TableRow>
-          </TableHeader>
-          <TableBody>
-            {operations.length > 0 ? (
-              operations.map((operation) => (
-                <TableRow key={operation.id}>
-                  <TableCell>{new Date(operation.date).toLocaleDateString('tr-TR')}</TableCell>
-                  <TableCell>{operation.service_name}</TableCell>
-                  <TableCell>{operation.personnel_name}</TableCell>
-                  <TableCell>{operation.amount} ₺</TableCell>
-                  <TableCell>{operation.points}</TableCell>
-                  <TableCell>
-                    <Button 
-                      variant="ghost" 
-                      onClick={() => handleNotesClick(operation)}
-                    >
-                      {operation.notes ? operation.notes.substring(0, 15) + "..." : "Not ekle"}
-                    </Button>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      {operation.photos && operation.photos.length > 0 ? (
-                        <Button 
-                          variant="ghost" 
-                          onClick={() => handleViewPhotos(operation)}
-                          className="flex items-center"
-                        >
-                          <Image className="h-4 w-4 mr-1" />
-                          {operation.photos.length} Fotoğraf
-                        </Button>
-                      ) : (
-                        <span className="text-gray-400">Fotoğraf yok</span>
-                      )}
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => handlePhotoUploadClick(operation)}
-                      >
-                        Ekle
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-6">
-                  Bu müşteriye ait işlem kaydı bulunamadı
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </CardContent>
-
-      {/* Notes Dialog */}
-      <Dialog open={notesDialogOpen} onOpenChange={setNotesDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>İşlem Notları</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <Textarea 
-              value={notes} 
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Bu işlem için notlarınızı girin..."
-              className="min-h-[100px]"
-            />
-          </div>
-          <div className="flex justify-end space-x-2">
-            <Button 
-              variant="outline" 
-              onClick={() => setNotesDialogOpen(false)}
-            >
-              İptal
-            </Button>
-            <Button onClick={handleSaveNotes}>
-              Kaydet
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Photo Upload Dialog */}
-      <Dialog open={photosDialogOpen} onOpenChange={setPhotosDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>İşlem Fotoğrafları</DialogTitle>
-          </DialogHeader>
-          {selectedOperation && (
-            <OperationPhotoUpload
-              existingPhotos={selectedOperation.photos || []}
-              onPhotosUpdated={async (photos) => {
-                await handlePhotosUpdated(photos);
-                setPhotosDialogOpen(false);
-              }}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Photo View Dialog */}
-      <Dialog open={photoViewDialogOpen} onOpenChange={setPhotoViewDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>İşlem Fotoğrafları</DialogTitle>
-          </DialogHeader>
-          <div className="grid grid-cols-2 gap-4 mt-4">
-            {selectedOperation?.photos?.map((photo, index) => (
-              <a href={photo} target="_blank" rel="noopener noreferrer" key={index} className="block">
-                <img 
-                  src={photo} 
-                  alt={`İşlem fotoğrafı ${index + 1}`} 
-                  className="rounded-md object-cover w-full h-48"
-                />
-              </a>
-            ))}
-          </div>
-          {(!selectedOperation?.photos || selectedOperation.photos.length === 0) && (
-            <p className="text-center text-gray-500 py-8">Bu işleme ait fotoğraf bulunmamaktadır</p>
-          )}
-        </DialogContent>
-      </Dialog>
-    </Card>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
 }

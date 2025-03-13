@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { 
   Card, 
   CardHeader, 
@@ -20,7 +20,6 @@ import {
 } from "@/components/ui/select";
 import { FileUpload } from "@/components/ui/file-upload";
 import { toast } from "sonner";
-import { profilServisi } from "@/lib/supabase";
 
 export interface ProfileEditFormProps {
   profile: {
@@ -51,14 +50,6 @@ export function ProfileEditForm({
   isSaving,
   isUploading
 }: ProfileEditFormProps) {
-  const [formattedIBAN, setFormattedIBAN] = useState<string>('');
-  
-  useEffect(() => {
-    if (profile.iban) {
-      setFormattedIBAN(profilServisi.formatIBAN(profile.iban));
-    }
-  }, [profile.iban]);
-
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast.success("Kopyalandı");
@@ -66,28 +57,6 @@ export function ProfileEditForm({
   
   const isAdmin = profile.role === 'admin';
   const isStaff = profile.role === 'staff';
-  
-  const handleIBANChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Replace all non-TR and non-digit characters
-    let value = e.target.value;
-    
-    // Use the profilServisi IBAN formatter
-    const formattedValue = profilServisi.formatIBAN(value);
-    setFormattedIBAN(formattedValue);
-    
-    // Create a synthetic event to pass to the parent's handleChange
-    // Store cleaned version without spaces
-    const cleanedValue = profilServisi.cleanIBANForStorage(formattedValue) || '';
-    
-    const syntheticEvent = {
-      target: {
-        name: 'iban',
-        value: cleanedValue
-      }
-    } as React.ChangeEvent<HTMLInputElement>;
-    
-    handleChange(syntheticEvent);
-  };
 
   return (
     <Card>
@@ -95,11 +64,12 @@ export function ProfileEditForm({
         <CardTitle>Profili Düzenle</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Avatar Upload Section - Improved layout with photo on right */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-6">
           <div className="flex-1 order-2 md:order-1">
             <h3 className="text-lg font-medium mb-2">Profil Fotoğrafı</h3>
             <p className="text-sm text-gray-500 mb-4">
-              PNG, JPG, GIF dosyası yükleyin
+              PNG, JPG, GIF dosyası yükleyin (max 5MB)
             </p>
             <Button 
               variant="outline"
@@ -119,137 +89,120 @@ export function ProfileEditForm({
               label=""
               bucketName="photos"
               folderPath="avatars"
-              maxFileSize={20 * 1024 * 1024} // 20MB limit
             />
           </div>
         </div>
         
-        {/* Non-staff users can edit their personal info */}
-        {!isStaff && (
-          <>
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="firstName" className="flex items-center gap-2">
-                  <User size={16} />
-                  Adınız
-                </Label>
-                <Input
-                  id="firstName"
-                  name="firstName"
-                  value={profile.firstName}
-                  onChange={handleChange}
-                  placeholder="Adınız"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="lastName" className="flex items-center gap-2">
-                  <User size={16} />
-                  Soyadınız
-                </Label>
-                <Input
-                  id="lastName"
-                  name="lastName"
-                  value={profile.lastName}
-                  onChange={handleChange}
-                  placeholder="Soyadınız"
-                />
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="phone" className="flex items-center gap-2">
-                <Phone size={16} />
-                Telefon Numaranız
-              </Label>
-              <Input
-                id="phone"
-                name="phone"
-                value={profile.phone}
-                onChange={handleChange}
-                placeholder="05XX XXX XX XX"
-                maxLength={14}
-              />
-            </div>
-            
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="gender" className="flex items-center gap-2">
-                  <User size={16} />
-                  Cinsiyet
-                </Label>
-                <Select
-                  value={profile.gender || ""}
-                  onValueChange={(value) => handleSelectChange("gender", value)}
-                >
-                  <SelectTrigger id="gender">
-                    <SelectValue placeholder="Cinsiyet seçin" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="erkek">Erkek</SelectItem>
-                    <SelectItem value="kadın">Kadın</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="birthdate" className="flex items-center gap-2">
-                  <Calendar size={16} />
-                  Doğum Tarihi
-                </Label>
-                <Input
-                  id="birthdate"
-                  name="birthdate"
-                  type="date"
-                  value={profile.birthdate || ""}
-                  onChange={handleChange}
-                />
-              </div>
-            </div>
-          </>
-        )}
-        
-        {/* Staff only edits IBAN */}
-        {isStaff && (
-          <div className="p-4 bg-purple-50 rounded-lg mb-4">
-            <p className="text-sm text-purple-600 mb-2">
-              Personel olarak, yalnızca IBAN bilgilerinizi güncelleyebilirsiniz. Diğer bilgiler için dükkan yöneticinizle iletişime geçin.
-            </p>
-          </div>
-        )}
-        
-        {/* IBAN section for both staff and admin */}
-        <div className="space-y-2">
-          <Label htmlFor="iban" className="flex items-center gap-2">
-            <Mail size={16} />
-            IBAN
-          </Label>
-          <div className="relative flex">
+        <div className="grid md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="firstName" className="flex items-center gap-2">
+              <User size={16} />
+              Adınız
+            </Label>
             <Input
-              id="iban"
-              name="iban"
-              value={formattedIBAN}
-              onChange={handleIBANChange}
-              placeholder="TR00 0000 0000 0000 0000 0000 00"
-              className="flex-1"
-              maxLength={36}
+              id="firstName"
+              name="firstName"
+              value={profile.firstName}
+              onChange={handleChange}
+              placeholder="Adınız"
             />
-            {formattedIBAN && (
-              <Button 
-                type="button" 
-                variant="ghost" 
-                size="icon"
-                onClick={() => copyToClipboard(formattedIBAN)}
-                className="ml-2"
-              >
-                <Copy size={16} />
-              </Button>
-            )}
           </div>
-          {isStaff && (
-            <p className="text-xs text-gray-500">IBAN bilginiz dükkan yöneticisiyle otomatik olarak paylaşılacaktır.</p>
-          )}
+          
+          <div className="space-y-2">
+            <Label htmlFor="lastName" className="flex items-center gap-2">
+              <User size={16} />
+              Soyadınız
+            </Label>
+            <Input
+              id="lastName"
+              name="lastName"
+              value={profile.lastName}
+              onChange={handleChange}
+              placeholder="Soyadınız"
+            />
+          </div>
         </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="phone" className="flex items-center gap-2">
+            <Phone size={16} />
+            Telefon Numaranız
+          </Label>
+          <Input
+            id="phone"
+            name="phone"
+            value={profile.phone}
+            onChange={handleChange}
+            placeholder="05XX XXX XX XX"
+            maxLength={14}
+          />
+        </div>
+        
+        <div className="grid md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="gender" className="flex items-center gap-2">
+              <User size={16} />
+              Cinsiyet
+            </Label>
+            <Select
+              value={profile.gender || ""}
+              onValueChange={(value) => handleSelectChange("gender", value)}
+            >
+              <SelectTrigger id="gender">
+                <SelectValue placeholder="Cinsiyet seçin" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="erkek">Erkek</SelectItem>
+                <SelectItem value="kadın">Kadın</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="birthdate" className="flex items-center gap-2">
+              <Calendar size={16} />
+              Doğum Tarihi
+            </Label>
+            <Input
+              id="birthdate"
+              name="birthdate"
+              type="date"
+              value={profile.birthdate || ""}
+              onChange={handleChange}
+            />
+          </div>
+        </div>
+        
+        {/* Only show IBAN for staff profiles, not for admin/shop owner */}
+        {isStaff && (
+          <div className="space-y-2">
+            <Label htmlFor="iban" className="flex items-center gap-2">
+              <Mail size={16} />
+              IBAN
+            </Label>
+            <div className="flex">
+              <Input
+                id="iban"
+                name="iban"
+                value={profile.iban || ""}
+                onChange={handleChange}
+                placeholder="TRXX XXXX XXXX XXXX XXXX XX"
+                className="flex-1"
+              />
+              {profile.iban && (
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => copyToClipboard(profile.iban || "")}
+                  className="ml-2"
+                >
+                  <Copy size={16} />
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
         
         <div className="space-y-2">
           <Label htmlFor="email" className="flex items-center gap-2 opacity-70">

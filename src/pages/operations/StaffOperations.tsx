@@ -7,7 +7,6 @@ import { ServicesContent } from "@/components/operations/ServicesContent";
 import { WorkingHours } from "@/components/operations/WorkingHours";
 import { toast } from "sonner";
 import { StaffLayout } from "@/components/ui/staff-layout";
-import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 
 export default function StaffOperations() {
   const [islemAdi, setIslemAdi] = useState("");
@@ -22,7 +21,6 @@ export default function StaffOperations() {
   const [duzenleKategoriAdi, setDuzenleKategoriAdi] = useState("");
   const [kategoriDuzenleDialogAcik, setKategoriDuzenleDialogAcik] = useState(false);
   const [puanlamaAktif, setPuanlamaAktif] = useState(true);
-  const { dukkanId } = useCustomerAuth();
 
   const queryClient = useQueryClient();
 
@@ -260,7 +258,7 @@ export default function StaffOperations() {
           </TabsContent>
 
           <TabsContent value="calisma-saatleri">
-            <WorkingHours isStaff={true} dukkanId={dukkanId} />
+            <WorkingHours isStaff={true} />
           </TabsContent>
         </Tabs>
       </div>
