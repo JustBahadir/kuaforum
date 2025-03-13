@@ -22,18 +22,9 @@ export function useAuthCheck(
   location: {pathname: string}
 ) {
   const navigate = useNavigate();
-  // Check if we're in preview mode
-  const isPreviewMode = window.location.href.includes('preview-');
 
   // Perform initial auth check
   useEffect(() => {
-    // Skip auth check in preview mode
-    if (isPreviewMode) {
-      setLoading(false);
-      setInitialLoadDone(true);
-      return;
-    }
-    
     // Eğer auth check zaten devam ediyorsa, çift kontrolü önle
     if (authCheckInProgress) return;
     
@@ -90,5 +81,5 @@ export function useAuthCheck(
     }
     
     checkAuthStatus();
-  }, [navigate, location.pathname, initialLoadDone, authCheckInProgress, isPreviewMode]);
+  }, [navigate, location.pathname, initialLoadDone, authCheckInProgress]);
 }

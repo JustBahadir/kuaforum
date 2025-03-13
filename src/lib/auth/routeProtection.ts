@@ -7,14 +7,6 @@ export const shouldRedirect = (
   userRole: string | null,
   pathname: string
 ): boolean => {
-  // Check if we're in a standalone window/preview
-  const isStandalonePreview = window.location.href.includes('preview-');
-  
-  // If this is a standalone preview, don't redirect
-  if (isStandalonePreview) {
-    return false;
-  }
-
   // Public pages that anyone can access
   if (
     pathname === "/" || 
@@ -127,14 +119,6 @@ export const getRedirectPath = (
   userRole: string | null,
   currentPath: string
 ): string => {
-  // Check if we're in a standalone window/preview
-  const isStandalonePreview = window.location.href.includes('preview-');
-  
-  // If this is a standalone preview, don't redirect
-  if (isStandalonePreview) {
-    return currentPath;
-  }
-  
   if (!isAuthenticated) {
     // If not authenticated and trying to access a secured route, redirect to login
     if (currentPath.includes('admin') || currentPath === "/admin/dashboard") {
