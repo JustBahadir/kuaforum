@@ -1,6 +1,6 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { Toaster } from "@/components/ui/sonner";
 import { RouteProtection } from "@/components/auth/RouteProtection";
@@ -27,21 +27,25 @@ import CustomerOperations from "./pages/operations/CustomerOperations";
 import StaffOperations from "./pages/operations/StaffOperations";
 import { ThemeProvider } from "./components/ui/theme-provider";
 
-// Create the query client
+// Create the query client with base configuration
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 5 * 60 * 1000, // 5 minutes
       retry: 1,
+      refetchOnWindowFocus: false, // Disable automatic refetching when window regains focus
     },
   },
 });
 
 function App() {
+  // Check if we're in a standalone window/preview
+  const isStandalonePreview = window.location.href.includes('preview-');
+
   return (
     <ThemeProvider defaultTheme="light">
       <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
+        <BrowserRouter basename={isStandalonePreview ? "/preview-kuaforum" : "/"}>
           <RouteProtection>
             <Routes>
               {/* Landing Page */}
@@ -77,6 +81,7 @@ function App() {
               <Route path="/services" element={<CustomerOperations />} />
               <Route path="/appointments" element={<Appointments />} />
               
+              {/* Handle unknown routes with NotFound */}
               <Route path="*" element={<NotFound />} />
             </Routes>
           </RouteProtection>

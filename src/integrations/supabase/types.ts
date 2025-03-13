@@ -383,10 +383,13 @@ export type Database = {
           created_at: string
           id: number
           islem_id: number | null
+          musteri_id: number | null
           odenen: number
           personel_id: number | null
+          photos: string[] | null
           prim_yuzdesi: number
           puan: number
+          randevu_id: number | null
           tutar: number
         }
         Insert: {
@@ -394,10 +397,13 @@ export type Database = {
           created_at?: string
           id?: number
           islem_id?: number | null
+          musteri_id?: number | null
           odenen?: number
           personel_id?: number | null
+          photos?: string[] | null
           prim_yuzdesi: number
           puan?: number
+          randevu_id?: number | null
           tutar: number
         }
         Update: {
@@ -405,10 +411,13 @@ export type Database = {
           created_at?: string
           id?: number
           islem_id?: number | null
+          musteri_id?: number | null
           odenen?: number
           personel_id?: number | null
+          photos?: string[] | null
           prim_yuzdesi?: number
           puan?: number
+          randevu_id?: number | null
           tutar?: number
         }
         Relationships: [

@@ -10,7 +10,7 @@ export function LoginError({ error }: LoginErrorProps) {
   if (!error) return null;
   
   return (
-    <Alert variant="destructive" className="mb-4 border-red-500">
+    <Alert variant="destructive" className="mb-4 border-red-500 animate-in fade-in-50">
       <AlertCircle className="h-5 w-5" />
       <AlertTitle className="font-semibold">Giriş Hatası</AlertTitle>
       <AlertDescription>{error}</AlertDescription>
