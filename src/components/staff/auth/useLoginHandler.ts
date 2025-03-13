@@ -53,6 +53,8 @@ export function useLoginHandler(onSuccess: () => void) {
       } else {
         console.error("Kullanıcının rolü personel veya admin değil:", userRole);
         setLoginError("Bu hesap personel girişi için yetkilendirilmemiş. Lütfen personel hesabınızla giriş yapın.");
+        // Kullanıcıyı çıkış yaptır
+        await supabase.auth.signOut();
         setLoading(false);
       }
     } catch (error: any) {
