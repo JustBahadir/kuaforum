@@ -75,8 +75,8 @@ export function PersonnelPerformance() {
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip formatter={(value) => formatCurrency(value)} />
-              <Legend formatter={(value) => value} />
+              <Tooltip formatter={(value: any) => formatCurrency(Number(value))} />
+              <Legend formatter={(value: any) => value} />
             </PieChart>
           </ResponsiveContainer>
         </CardContent>
@@ -92,9 +92,9 @@ export function PersonnelPerformance() {
               <XAxis dataKey="name" />
               <YAxis />
               <Tooltip 
-                formatter={(value, name) => {
-                  if (name === 'ciro') return formatCurrency(value);
-                  if (name === 'prim') return formatCurrency(value);
+                formatter={(value: any, name: any) => {
+                  if (name === 'ciro') return formatCurrency(Number(value));
+                  if (name === 'prim') return formatCurrency(Number(value));
                   return value;
                 }}
               />

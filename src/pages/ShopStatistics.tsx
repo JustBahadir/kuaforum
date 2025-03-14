@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -45,7 +44,6 @@ export default function ShopStatistics() {
     enabled: !!dukkanId
   });
 
-  // İşlemler ve randevulardan gerçek verileri hazırlama
   const [weeklyData, setWeeklyData] = useState<any[]>([]);
   const [monthlyData, setMonthlyData] = useState<any[]>([]);
   const [servicePerformanceData, setServicePerformanceData] = useState<any[]>([]);
@@ -61,11 +59,9 @@ export default function ShopStatistics() {
   const isLoading = isLoadingIslemler || isLoadingRandevular || isLoadingPersoneller;
 
   useEffect(() => {
-    // Veriler yüklendikten sonra istatistikleri hesapla
     if (!isLoading) {
       setHasData(islemler.length > 0 || randevular.length > 0);
       
-      // Toplam istatistikler
       const totalRevenue = islemler.reduce((sum, islem) => sum + (islem.tutar || 0), 0);
       const customerCount = [...new Set(randevular.map(r => r.musteri_id).filter(Boolean))].length;
       const operationCount = islemler.length;
@@ -80,7 +76,6 @@ export default function ShopStatistics() {
         completedAppointments
       });
       
-      // Haftalık veriler
       const weekDays = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
       const weeklyStats = weekDays.map(day => ({
         name: day,
@@ -88,11 +83,10 @@ export default function ShopStatistics() {
         musteri: 0
       }));
       
-      // İşlemlerden haftalık verileri hesapla
       islemler.forEach(islem => {
         if (islem.created_at) {
           const date = new Date(islem.created_at);
-          const dayIndex = date.getDay() === 0 ? 6 : date.getDay() - 1; // 0=Pazar -> 6, 1=Pazartesi -> 0
+          const dayIndex = date.getDay() === 0 ? 6 : date.getDay() - 1;
           weeklyStats[dayIndex].ciro += islem.tutar || 0;
           weeklyStats[dayIndex].musteri += 1;
         }
@@ -100,7 +94,6 @@ export default function ShopStatistics() {
       
       setWeeklyData(weeklyStats);
       
-      // Aylık veriler
       const monthlyStats = [
         { name: 'Hafta 1', ciro: 0, musteri: 0 },
         { name: 'Hafta 2', ciro: 0, musteri: 0 },
@@ -108,7 +101,6 @@ export default function ShopStatistics() {
         { name: 'Hafta 4', ciro: 0, musteri: 0 },
       ];
       
-      // İşlemlerden aylık verileri hesapla
       islemler.forEach(islem => {
         if (islem.created_at) {
           const date = new Date(islem.created_at);
@@ -122,7 +114,6 @@ export default function ShopStatistics() {
       
       setMonthlyData(monthlyStats);
       
-      // Hizmet performansı istatistikleri
       const serviceStats: Record<string, { count: number, revenue: number }> = {};
       
       islemler.forEach(islem => {
@@ -147,7 +138,6 @@ export default function ShopStatistics() {
       
       setServicePerformanceData(servicePerformance);
       
-      // Personel performans istatistikleri
       const personnelPerformance = personeller.map(personel => {
         const personelIslemleri = islemler.filter(islem => islem.personel_id === personel.id);
         const totalRevenue = personelIslemleri.reduce((sum, islem) => sum + (islem.tutar || 0), 0);
@@ -262,7 +252,6 @@ export default function ShopStatistics() {
             </div>
             
             <TabsContent value="weekly" className="space-y-4">
-              {/* Haftalık Performans Grafiği */}
               <Card>
                 <CardHeader>
                   <CardTitle>Haftalık Performans</CardTitle>
@@ -274,7 +263,7 @@ export default function ShopStatistics() {
                       <XAxis dataKey="name" />
                       <YAxis yAxisId="left" />
                       <YAxis yAxisId="right" orientation="right" />
-                      <Tooltip formatter={(value) => typeof value === 'number' ? value.toFixed(2) : value} />
+                      <Tooltip formatter={(value: any) => formatCurrency(Number(value))} />
                       <Legend />
                       <Line 
                         yAxisId="left" 
@@ -297,7 +286,6 @@ export default function ShopStatistics() {
               </Card>
               
               <div className="grid md:grid-cols-2 gap-4">
-                {/* Hizmet Performansı */}
                 <Card>
                   <CardHeader>
                     <CardTitle>Hizmet Performansı</CardTitle>
@@ -310,9 +298,8 @@ export default function ShopStatistics() {
                           <XAxis dataKey="name" />
                           <YAxis />
                           <Tooltip 
-                            formatter={(value, name) => {
-                              if (name === 'revenue') return formatCurrency(value);
-                              return value;
+                            formatter={(value: any, name: any) => {
+                              return formatValue(Number(value));
                             }}
                           />
                           <Legend />
@@ -328,7 +315,6 @@ export default function ShopStatistics() {
                   </CardContent>
                 </Card>
                 
-                {/* Personel Performansı */}
                 <Card>
                   <CardHeader>
                     <CardTitle>Personel Performansı</CardTitle>
@@ -376,7 +362,7 @@ export default function ShopStatistics() {
                       <XAxis dataKey="name" />
                       <YAxis yAxisId="left" />
                       <YAxis yAxisId="right" orientation="right" />
-                      <Tooltip formatter={(value) => typeof value === 'number' ? value.toFixed(2) : value} />
+                      <Tooltip formatter={(value: any) => typeof value === 'number' ? value.toFixed(2) : value} />
                       <Legend />
                       <Line 
                         yAxisId="left" 

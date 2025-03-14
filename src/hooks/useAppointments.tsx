@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { randevuServisi } from "@/lib/supabase/services/randevuServisi";
@@ -125,7 +124,11 @@ export function useAppointments(dukkanId?: number) {
               .maybeSingle();
               
             if (data) {
-              appointment.musteri = data as Musteri;
+              const customerProfile: Profile = {
+                ...data,
+                role: 'customer'
+              };
+              appointment.musteri = customerProfile as Musteri;
             }
           } catch (error) {
             console.error(`Error fetching customer for appointment ${appointment.id}:`, error);
