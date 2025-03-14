@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
 
 interface DailyData {
-  name: string;
+  name?: string;
   ciro: number;
   musteri: number;
   saat?: string;
