@@ -319,8 +319,8 @@ export default function ShopStatistics() {
                           <XAxis dataKey="name" />
                           <YAxis />
                           <Tooltip 
-                            formatter={(value: any): string => {
-                              return formatValue(Number(value));
+                            formatter={(value: any) => {
+                              return formatValue(Number(value)).toString();
                             }}
                           />
                           <Legend />
@@ -357,7 +357,7 @@ export default function ShopStatistics() {
                               <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                             ))}
                           </Pie>
-                          <Tooltip formatter={(value) => formatCurrency(value)} />
+                          <Tooltip formatter={(value: any) => formatCurrency(value as number)} />
                           <Legend />
                         </PieChart>
                       </ResponsiveContainer>
@@ -384,11 +384,11 @@ export default function ShopStatistics() {
                       <YAxis yAxisId="left" />
                       <YAxis yAxisId="right" orientation="right" />
                       <Tooltip 
-                        formatter={(value: any): any => {
+                        formatter={(value: any) => {
                           if (typeof value === 'number') {
                             return formatCurrency(value);
                           }
-                          return value;
+                          return value.toString();
                         }}
                       />
                       <Legend />

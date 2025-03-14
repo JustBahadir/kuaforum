@@ -59,12 +59,12 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
         
         if (!data || data.length === 0) return [];
         
-        // Transform the data
+        // Transform the data with proper type casting
         return data.map(item => ({
           id: item.id,
           date: item.created_at,
-          service_name: item.islem ? item.islem.islem_adi : item.aciklama.split(' hizmeti verildi')[0],
-          personnel_name: item.personel ? item.personel.ad_soyad : 'Belirtilmemiş',
+          service_name: item.islem ? (item.islem as { islem_adi: string }).islem_adi : item.aciklama.split(' hizmeti verildi')[0],
+          personnel_name: item.personel ? (item.personel as { ad_soyad: string }).ad_soyad : 'Belirtilmemiş',
           amount: item.tutar,
           notes: item.notlar || '',
           points: item.puan
