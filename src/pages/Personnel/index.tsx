@@ -12,6 +12,9 @@ export default function Personnel() {
     from: new Date(),
     to: new Date()
   });
+  
+  // Default personelId for the PersonnelPerformance component
+  const [selectedPersonnelId, setSelectedPersonnelId] = useState<number | null>(null);
 
   return (
     <div className="container mx-auto py-6">
@@ -27,7 +30,7 @@ export default function Personnel() {
             <div className="flex justify-between items-center mb-6">
               <h1 className="text-2xl font-bold">Personel Yönetimi</h1>
             </div>
-            <PersonnelList />
+            <PersonnelList onPersonnelSelect={setSelectedPersonnelId} />
           </div>
         </TabsContent>
 
@@ -50,7 +53,15 @@ export default function Personnel() {
         </TabsContent>
 
         <TabsContent value="raporlar">
-          <PersonnelPerformance />
+          {selectedPersonnelId ? (
+            <PersonnelPerformance personnelId={selectedPersonnelId} />
+          ) : (
+            <Card>
+              <CardContent className="p-6 text-center">
+                <p className="text-muted-foreground">Lütfen performans raporlarını görüntülemek için personel listesinden bir personel seçin.</p>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
     </div>

@@ -22,7 +22,11 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-export function PersonnelList() {
+interface PersonnelListProps {
+  onPersonnelSelect?: (personelId: number) => void;
+}
+
+export function PersonnelList({ onPersonnelSelect }: PersonnelListProps = {}) {
   const { userRole, refreshProfile } = useCustomerAuth();
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedPersonel, setSelectedPersonel] = useState<number | null>(null);
@@ -41,6 +45,10 @@ export function PersonnelList() {
   const handleOpenDetailsDialog = (personelId: number) => {
     setSelectedPersonel(personelId);
     setDetailsDialogOpen(true);
+    // Call the parent's onPersonnelSelect handler if provided
+    if (onPersonnelSelect) {
+      onPersonnelSelect(personelId);
+    }
   };
 
   const handleCloseDetailsDialog = () => {
