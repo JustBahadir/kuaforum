@@ -36,17 +36,33 @@ export const customerOperationsService = {
       
       if (!data || data.length === 0) return [];
       
-      // Transform the data
-      return data.map(item => ({
-        id: item.id,
-        date: item.created_at,
-        service_name: item.islem ? (item.islem as { islem_adi: string }).islem_adi : item.aciklama.split(' hizmeti verildi')[0],
-        personnel_name: item.personel ? (item.personel as { ad_soyad: string }).ad_soyad : 'Belirtilmemiş',
-        amount: item.tutar,
-        notes: item.notlar || '',
-        points: item.puan,
-        appointment_id: item.randevu_id
-      }));
+      // Transform the data with proper type handling
+      return data.map(item => {
+        const islemObj = item.islem as unknown;
+        const personelObj = item.personel as unknown;
+        
+        // Extract values carefully with proper type checking
+        let serviceName = item.aciklama.split(' hizmeti verildi')[0];
+        if (islemObj && typeof islemObj === 'object' && 'islem_adi' in islemObj) {
+          serviceName = (islemObj as { islem_adi: string }).islem_adi;
+        }
+        
+        let personnelName = 'Belirtilmemiş';
+        if (personelObj && typeof personelObj === 'object' && 'ad_soyad' in personelObj) {
+          personnelName = (personelObj as { ad_soyad: string }).ad_soyad;
+        }
+        
+        return {
+          id: item.id,
+          date: item.created_at,
+          service_name: serviceName,
+          personnel_name: personnelName,
+          amount: item.tutar,
+          notes: item.notlar || '',
+          points: item.puan,
+          appointment_id: item.randevu_id
+        };
+      });
     } catch (error) {
       console.error('Error getting customer operations:', error);
       return [];

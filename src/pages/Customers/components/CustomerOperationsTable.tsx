@@ -39,36 +39,8 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
     queryKey: ['customerOperations', customerId],
     queryFn: async () => {
       try {
-        // Fetch operations from the personel_islemleri table for this specific customer
-        const { data, error } = await supabase
-          .from('personel_islemleri')
-          .select(`
-            id,
-            created_at,
-            aciklama,
-            tutar,
-            puan,
-            notlar,
-            personel:personel(ad_soyad),
-            islem:islemler(islem_adi)
-          `)
-          .eq('musteri_id', customerId)
-          .order('created_at', { ascending: false });
-          
-        if (error) throw error;
-        
-        if (!data || data.length === 0) return [];
-        
-        // Transform the data with proper type casting
-        return data.map(item => ({
-          id: item.id,
-          date: item.created_at,
-          service_name: item.islem ? (item.islem as { islem_adi: string }).islem_adi : item.aciklama.split(' hizmeti verildi')[0],
-          personnel_name: item.personel ? (item.personel as { ad_soyad: string }).ad_soyad : 'Belirtilmemiş',
-          amount: item.tutar,
-          notes: item.notlar || '',
-          points: item.puan
-        }));
+        // Use the customerOperationsService instead of direct Supabase query
+        return await customerOperationsService.getCustomerOperations(customerId);
       } catch (error) {
         console.error('Error fetching customer operations:', error);
         return [];
