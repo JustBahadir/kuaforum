@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { personelServisi, personelIslemleriServisi } from "@/lib/supabase";
 import {
@@ -60,7 +60,7 @@ export function PersonnelDetailsDialog({
   const { data: islemler = [], isLoading: islemleriYukluyor } = useQuery({
     queryKey: ["personel-islemleri", personelId],
     queryFn: () => personelIslemleriServisi.personelIslemleriGetir(personelId),
-    enabled: !!personelId && open && personelId > 0 && isAdmin && !!personel
+    enabled: !!personelId && open && personelId > 0 && !!personel
   });
 
   const copyToClipboard = (text: string) => {
@@ -75,6 +75,7 @@ export function PersonnelDetailsDialog({
   };
 
   console.log("PersonnelDetailsDialog state:", { isLoading, error, personel });
+  console.log("Personnel operations:", islemler);
 
   // Return improved loading state
   if (isLoading) {
@@ -113,6 +114,12 @@ export function PersonnelDetailsDialog({
       </Dialog>
     );
   }
+
+  // Calculate performance metrics
+  const totalRevenue = islemler.reduce((sum, islem) => sum + (islem.tutar || 0), 0);
+  const totalCommission = islemler.reduce((sum, islem) => sum + (islem.odenen || 0), 0);
+  const totalPoints = islemler.reduce((sum, islem) => sum + (islem.puan || 0), 0);
+  const averagePoints = islemler.length > 0 ? totalPoints / islemler.length : 0;
 
   return (
     <>
@@ -156,18 +163,14 @@ export function PersonnelDetailsDialog({
                   <ClipboardList className="mr-2 h-4 w-4" />
                   Bilgiler
                 </TabsTrigger>
-                {isAdmin && (
-                  <>
-                    <TabsTrigger value="islemler" className="flex-1">
-                      <Calendar className="mr-2 h-4 w-4" />
-                      İşlemler
-                    </TabsTrigger>
-                    <TabsTrigger value="performans" className="flex-1">
-                      <BarChart className="mr-2 h-4 w-4" />
-                      Performans
-                    </TabsTrigger>
-                  </>
-                )}
+                <TabsTrigger value="islemler" className="flex-1">
+                  <Calendar className="mr-2 h-4 w-4" />
+                  İşlemler
+                </TabsTrigger>
+                <TabsTrigger value="performans" className="flex-1">
+                  <BarChart className="mr-2 h-4 w-4" />
+                  Performans
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="bilgiler">
@@ -244,94 +247,90 @@ export function PersonnelDetailsDialog({
                 </Card>
               </TabsContent>
 
-              {isAdmin && (
-                <>
-                  <TabsContent value="islemler">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Personel İşlemleri</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        {islemleriYukluyor ? (
-                          <div className="flex justify-center p-4">
-                            <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
-                          </div>
-                        ) : islemler.length === 0 ? (
-                          <div className="text-center p-4 text-muted-foreground">
-                            Bu personele ait işlem bulunmamaktadır.
-                          </div>
-                        ) : (
-                          <div className="overflow-x-auto">
-                            <table className="w-full">
-                              <thead>
-                                <tr className="border-b">
-                                  <th className="px-3 py-2 text-left">Tarih</th>
-                                  <th className="px-3 py-2 text-left">İşlem</th>
-                                  <th className="px-3 py-2 text-left">Tutar</th>
-                                  <th className="px-3 py-2 text-left">Prim</th>
-                                  <th className="px-3 py-2 text-left">Puan</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {islemler.map((islem) => (
-                                  <tr key={islem.id} className="border-b hover:bg-gray-50">
-                                    <td className="px-3 py-2">
-                                      {new Date(islem.created_at).toLocaleDateString('tr-TR')}
-                                    </td>
-                                    <td className="px-3 py-2">{islem.islem?.islem_adi || islem.aciklama}</td>
-                                    <td className="px-3 py-2">{formatCurrency(islem.tutar)}</td>
-                                    <td className="px-3 py-2">{formatCurrency(islem.odenen)}</td>
-                                    <td className="px-3 py-2">{islem.puan}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
+              <TabsContent value="islemler">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Personel İşlemleri</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {islemleriYukluyor ? (
+                      <div className="flex justify-center p-4">
+                        <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
+                      </div>
+                    ) : islemler.length === 0 ? (
+                      <div className="text-center p-4 text-muted-foreground">
+                        Bu personele ait işlem bulunmamaktadır.
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead>
+                            <tr className="border-b">
+                              <th className="px-3 py-2 text-left">Tarih</th>
+                              <th className="px-3 py-2 text-left">İşlem</th>
+                              <th className="px-3 py-2 text-left">Tutar</th>
+                              <th className="px-3 py-2 text-left">Prim %</th>
+                              <th className="px-3 py-2 text-left">Prim</th>
+                              <th className="px-3 py-2 text-left">Puan</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {islemler.map((islem) => (
+                              <tr key={islem.id} className="border-b hover:bg-gray-50">
+                                <td className="px-3 py-2">
+                                  {new Date(islem.created_at).toLocaleDateString('tr-TR')}
+                                </td>
+                                <td className="px-3 py-2">{islem.aciklama}</td>
+                                <td className="px-3 py-2">{formatCurrency(islem.tutar)}</td>
+                                <td className="px-3 py-2">%{islem.prim_yuzdesi}</td>
+                                <td className="px-3 py-2">{formatCurrency(islem.odenen)}</td>
+                                <td className="px-3 py-2">{islem.puan}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
-                  <TabsContent value="performans">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Personel Performans</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="grid grid-cols-2 gap-6">
-                          <div className="bg-gray-50 p-4 rounded-lg">
-                            <h3 className="font-semibold text-gray-800 mb-2">Toplam İşlem</h3>
-                            <p className="text-3xl font-bold">{islemler.length}</p>
-                          </div>
-                          
-                          <div className="bg-gray-50 p-4 rounded-lg">
-                            <h3 className="font-semibold text-gray-800 mb-2">Toplam Ciro</h3>
-                            <p className="text-3xl font-bold">
-                              {formatCurrency(islemler.reduce((total, islem) => total + parseFloat(islem.tutar), 0))}
-                            </p>
-                          </div>
-                          
-                          <div className="bg-gray-50 p-4 rounded-lg">
-                            <h3 className="font-semibold text-gray-800 mb-2">Toplam Prim</h3>
-                            <p className="text-3xl font-bold">
-                              {formatCurrency(islemler.reduce((total, islem) => total + parseFloat(islem.odenen), 0))}
-                            </p>
-                          </div>
-                          
-                          <div className="bg-gray-50 p-4 rounded-lg">
-                            <h3 className="font-semibold text-gray-800 mb-2">Ortalama Puan</h3>
-                            <p className="text-3xl font-bold">
-                              {islemler.length > 0
-                                ? (islemler.reduce((total, islem) => total + islem.puan, 0) / islemler.length).toFixed(1)
-                                : '0'}
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
-                </>
-              )}
+              <TabsContent value="performans">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Personel Performans</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <h3 className="font-semibold text-gray-800 mb-2">Toplam İşlem</h3>
+                        <p className="text-3xl font-bold">{islemler.length}</p>
+                      </div>
+                      
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <h3 className="font-semibold text-gray-800 mb-2">Toplam Ciro</h3>
+                        <p className="text-3xl font-bold">
+                          {formatCurrency(totalRevenue)}
+                        </p>
+                      </div>
+                      
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <h3 className="font-semibold text-gray-800 mb-2">Toplam Prim</h3>
+                        <p className="text-3xl font-bold">
+                          {formatCurrency(totalCommission)}
+                        </p>
+                      </div>
+                      
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <h3 className="font-semibold text-gray-800 mb-2">Ortalama Puan</h3>
+                        <p className="text-3xl font-bold">
+                          {averagePoints.toFixed(1)}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
             </Tabs>
           </div>
 

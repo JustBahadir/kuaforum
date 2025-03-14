@@ -203,6 +203,8 @@ export const randevuServisi = {
 
   async randevuTamamlandi(randevuId: number) {
     try {
+      console.log(`Randevu ${randevuId} tamamlandı olarak işleniyor...`);
+      
       // Get the appointment details
       const { data: randevu, error: randevuError } = await supabase
         .from('randevular')
@@ -233,29 +235,50 @@ export const randevuServisi = {
         throw new Error(`İşlem detayları alınamadı: ${islemError.message}`);
       }
       
+      console.log(`${islemler?.length || 0} adet işlem işlenecek:`, islemler);
+      
       // Create a personnel operation record for each service
+      const createdOperations = [];
       for (const islem of islemler || []) {
+        // Calculate the commission amount based on service price and personnel's commission percentage
+        const tutar = parseFloat(islem.fiyat);
+        const primYuzdesi = randevu.personel?.prim_yuzdesi || 0;
+        const odenenPrim = (tutar * primYuzdesi) / 100;
+        
         const personelIslem = {
           personel_id: randevu.personel_id,
           islem_id: islem.id,
-          tutar: parseFloat(islem.fiyat),
+          tutar: tutar,
           puan: parseInt(islem.puan),
-          prim_yuzdesi: randevu.personel?.prim_yuzdesi || 0,
-          aciklama: `Randevu #${randevuId} tamamlandı, ${islem.islem_adi} hizmeti verildi.`
+          prim_yuzdesi: primYuzdesi,
+          odenen: odenenPrim,
+          musteri_id: randevu.musteri_id,
+          randevu_id: randevuId,
+          aciklama: `${islem.islem_adi} hizmeti verildi. Randevu #${randevuId}`
         };
         
-        const { error: insertError } = await supabase
+        console.log("Oluşturulan personel işlemi:", personelIslem);
+        
+        const { data: createdOp, error: insertError } = await supabase
           .from('personel_islemleri')
-          .insert(personelIslem);
+          .insert(personelIslem)
+          .select();
           
         if (insertError) {
           console.error("Personel işlemi ekleme hatası:", insertError);
+          throw new Error(`Personel işlemi eklenirken hata: ${insertError.message}`);
         }
+        
+        createdOperations.push(createdOp);
+        console.log("İşlem kaydı başarıyla oluşturuldu:", createdOp);
       }
       
-      return true;
+      console.log(`Toplam ${createdOperations.length} adet işlem kaydı oluşturuldu`);
+      toast.success(`Randevu tamamlandı ve ${createdOperations.length} işlem kaydedildi`);
+      return createdOperations;
     } catch (error: any) {
       console.error("Randevu tamamlandı işlemi hatası:", error);
+      toast.error(`İşlem kaydedilemedi: ${error.message}`);
       throw new Error(error?.message || "İşlem kayıtları oluşturulurken hata oluştu");
     }
   },
