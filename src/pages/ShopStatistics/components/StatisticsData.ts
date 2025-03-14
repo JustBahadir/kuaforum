@@ -25,3 +25,16 @@ export const servicePerformanceData = [
   { name: 'Manikür', count: 25, revenue: 1250 },
   { name: 'Pedikür', count: 20, revenue: 1000 },
 ];
+
+export const dailyData = [
+  { saat: '09:00', ciro: 150, musteri: 2 },
+  { saat: '10:00', ciro: 300, musteri: 3 },
+  { saat: '11:00', ciro: 450, musteri: 4 },
+  { saat: '12:00', ciro: 200, musteri: 2 },
+  { saat: '13:00', ciro: 100, musteri: 1 },
+  { saat: '14:00', ciro: 350, musteri: 3 },
+  { saat: '15:00', ciro: 400, musteri: 4 },
+  { saat: '16:00', ciro: 500, musteri: 5 },
+  { saat: '17:00', ciro: 450, musteri: 4 },
+  { saat: '18:00', ciro: 300, musteri: 3 },
+];

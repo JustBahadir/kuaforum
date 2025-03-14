@@ -12,13 +12,27 @@ import { WeeklyPerformanceChart } from "./components/WeeklyPerformanceChart";
 import { MonthlyPerformanceChart } from "./components/MonthlyPerformanceChart";
 import { ServicePerformanceChart } from "./components/ServicePerformanceChart";
 import { YearlyStatisticsPlaceholder } from "./components/YearlyStatisticsPlaceholder";
+import { DailyPerformanceChart } from "./components/DailyPerformanceChart";
 
 // Import data
-import { lastWeekData, lastMonthData, servicePerformanceData } from "./components/StatisticsData";
+import { 
+  lastWeekData, 
+  lastMonthData, 
+  servicePerformanceData, 
+  dailyData 
+} from "./components/StatisticsData";
+
+// Define tooltip formatter that safely handles different value types
+const formatTooltipValue = (value: any): string => {
+  if (typeof value === 'number') {
+    return value.toFixed(2) + ' TL';
+  }
+  return String(value);
+};
 
 export default function ShopStatistics() {
   const { userRole, dukkanId } = useCustomerAuth();
-  const [period, setPeriod] = useState<string>("weekly");
+  const [period, setPeriod] = useState<string>("daily"); // Default to daily view
   
   const { data: islemler = [], isLoading } = useQuery({
     queryKey: ['personel-islemleri'],
@@ -36,6 +50,7 @@ export default function ShopStatistics() {
         <Tabs defaultValue={period} onValueChange={setPeriod} className="space-y-4">
           <div className="flex justify-between items-center">
             <TabsList>
+              <TabsTrigger value="daily">Günlük</TabsTrigger>
               <TabsTrigger value="weekly">Haftalık</TabsTrigger>
               <TabsTrigger value="monthly">Aylık</TabsTrigger>
               <TabsTrigger value="yearly">Yıllık</TabsTrigger>
@@ -43,6 +58,10 @@ export default function ShopStatistics() {
           </div>
           
           <MetricsCards />
+          
+          <TabsContent value="daily" className="space-y-4">
+            <DailyPerformanceChart data={dailyData} />
+          </TabsContent>
           
           <TabsContent value="weekly" className="space-y-4">
             <WeeklyPerformanceChart data={lastWeekData} />

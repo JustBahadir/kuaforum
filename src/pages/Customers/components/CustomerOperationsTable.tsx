@@ -9,7 +9,6 @@ import {
   TableHeader,
   TableRow 
 } from "@/components/ui/table";
-import { supabase } from "@/lib/supabase/client";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -17,16 +16,6 @@ import { customerOperationsService } from "@/lib/supabase/services/customerOpera
 
 interface CustomerOperationsTableProps {
   customerId: string;
-}
-
-interface Operation {
-  id: number;
-  date: string;
-  service_name: string;
-  personnel_name: string;
-  amount: number;
-  notes?: string;
-  points: number;
 }
 
 export function CustomerOperationsTable({ customerId }: CustomerOperationsTableProps) {

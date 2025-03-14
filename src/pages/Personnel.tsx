@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { PersonelIslemi, islemServisi, personelIslemleriServisi, personelServisi } from "@/lib/supabase";
@@ -6,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { PersonnelList } from "./Personnel/components/PersonnelList";
 import { PerformanceCharts } from "./Personnel/components/PerformanceCharts";
+import { PersonnelPerformanceReports } from "./Personnel/components/PersonnelPerformanceReports";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -98,7 +100,8 @@ export default function Personnel() {
           <TabsList>
             <TabsTrigger value="personel">Personel Yönetimi</TabsTrigger>
             <TabsTrigger value="islemler">İşlem Geçmişi</TabsTrigger>
-            <TabsTrigger value="raporlar">Performans Raporları</TabsTrigger>
+            <TabsTrigger value="performans">Performans Raporları</TabsTrigger>
+            <TabsTrigger value="raporlar">Grafik Raporları</TabsTrigger>
           </TabsList>
 
           <TabsContent value="personel">
@@ -193,6 +196,17 @@ export default function Personnel() {
                     </table>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="performans">
+            <Card>
+              <CardHeader>
+                <CardTitle>Personel Performans Çizelgeleri</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <PersonnelPerformanceReports />
               </CardContent>
             </Card>
           </TabsContent>
