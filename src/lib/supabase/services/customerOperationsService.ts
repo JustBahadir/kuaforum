@@ -1,8 +1,5 @@
 
 import { supabase } from '../client';
-import { randevuServisi } from './randevuServisi';
-import { personelServisi } from './personelServisi';
-import { islemServisi } from './islemServisi';
 
 export interface CustomerOperation {
   id: number;
@@ -18,46 +15,38 @@ export interface CustomerOperation {
 export const customerOperationsService = {
   async getCustomerOperations(customerId: string): Promise<CustomerOperation[]> {
     try {
-      // Fetch customer's appointments
-      const appointments = await randevuServisi.kendiRandevulariniGetir();
+      // Fetch operations directly from the personel_islemleri table
+      const { data, error } = await supabase
+        .from('personel_islemleri')
+        .select(`
+          id,
+          created_at,
+          aciklama,
+          tutar,
+          puan,
+          notlar,
+          randevu_id,
+          personel:personel(ad_soyad),
+          islem:islemler(islem_adi)
+        `)
+        .eq('musteri_id', customerId)
+        .order('created_at', { ascending: false });
+        
+      if (error) throw error;
       
-      // Fetch all services
-      const allServices = await islemServisi.hepsiniGetir();
+      if (!data || data.length === 0) return [];
       
-      // Fetch all personnel
-      const allPersonnel = await personelServisi.hepsiniGetir();
-      
-      // Create operations from the appointments
-      const operations: CustomerOperation[] = [];
-      
-      for (const appointment of appointments) {
-        // Only include completed appointments
-        if (appointment.durum === 'tamamlandi') {
-          // Handle multiple services in one appointment
-          const serviceIds = appointment.islemler || [];
-          
-          for (const serviceId of serviceIds) {
-            const service = allServices.find(s => s.id === serviceId);
-            const personnel = allPersonnel.find(p => p.id === appointment.personel_id);
-            
-            if (service) {
-              operations.push({
-                id: appointment.id,
-                date: appointment.tarih,
-                service_name: service.islem_adi,
-                personnel_name: personnel?.ad_soyad || 'Belirtilmemiş',
-                amount: parseFloat(service.fiyat),
-                points: parseFloat(service.puan),
-                notes: appointment.notlar || '',
-                appointment_id: appointment.id
-              });
-            }
-          }
-        }
-      }
-      
-      // Sort by date descending
-      return operations.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      // Transform the data
+      return data.map(item => ({
+        id: item.id,
+        date: item.created_at,
+        service_name: item.islem?.islem_adi || item.aciklama.split(' hizmeti verildi')[0],
+        personnel_name: item.personel?.ad_soyad || 'Belirtilmemiş',
+        amount: item.tutar,
+        notes: item.notlar || '',
+        points: item.puan,
+        appointment_id: item.randevu_id
+      }));
     } catch (error) {
       console.error('Error getting customer operations:', error);
       return [];

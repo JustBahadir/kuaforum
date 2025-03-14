@@ -372,10 +372,10 @@ export default function ShopStatistics() {
                       <Tooltip 
                         formatter={(value: any): any => {
                           if (typeof value === 'number') {
-                            return value.toFixed(2);
+                            return formatCurrency(value);
                           }
                           return value;
-                        }} 
+                        }}
                       />
                       <Legend />
                       <Line 

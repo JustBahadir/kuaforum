@@ -1,7 +1,6 @@
-
-import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { personelServisi, personelIslemleriServisi } from "@/lib/supabase";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { personelServisi } from "@/lib/supabase";
 import {
   Dialog,
   DialogContent,
@@ -14,12 +13,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { BarChart, Calendar, ClipboardList, Edit, Copy } from "lucide-react";
+import { ClipboardList, Calendar, BarChart, Edit, Copy } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { formatPhoneNumber } from "@/utils/phoneFormatter";
 import { toast } from "sonner";
 import { PersonnelEditDialog } from "./PersonnelEditDialog";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
+import { PersonnelOperationsTable } from "./PersonnelOperationsTable";
 
 interface PersonnelDetailsDialogProps {
   open: boolean;
@@ -77,7 +77,6 @@ export function PersonnelDetailsDialog({
   console.log("PersonnelDetailsDialog state:", { isLoading, error, personel });
   console.log("Personnel operations:", islemler);
 
-  // Return improved loading state
   if (isLoading) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -115,7 +114,6 @@ export function PersonnelDetailsDialog({
     );
   }
 
-  // Calculate performance metrics
   const totalRevenue = islemler.reduce((sum, islem) => sum + (islem.tutar || 0), 0);
   const totalCommission = islemler.reduce((sum, islem) => sum + (islem.odenen || 0), 0);
   const totalPoints = islemler.reduce((sum, islem) => sum + (islem.puan || 0), 0);
@@ -253,44 +251,7 @@ export function PersonnelDetailsDialog({
                     <CardTitle>Personel İşlemleri</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {islemleriYukluyor ? (
-                      <div className="flex justify-center p-4">
-                        <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
-                      </div>
-                    ) : islemler.length === 0 ? (
-                      <div className="text-center p-4 text-muted-foreground">
-                        Bu personele ait işlem bulunmamaktadır.
-                      </div>
-                    ) : (
-                      <div className="overflow-x-auto">
-                        <table className="w-full">
-                          <thead>
-                            <tr className="border-b">
-                              <th className="px-3 py-2 text-left">Tarih</th>
-                              <th className="px-3 py-2 text-left">İşlem</th>
-                              <th className="px-3 py-2 text-left">Tutar</th>
-                              <th className="px-3 py-2 text-left">Prim %</th>
-                              <th className="px-3 py-2 text-left">Prim</th>
-                              <th className="px-3 py-2 text-left">Puan</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {islemler.map((islem) => (
-                              <tr key={islem.id} className="border-b hover:bg-gray-50">
-                                <td className="px-3 py-2">
-                                  {new Date(islem.created_at).toLocaleDateString('tr-TR')}
-                                </td>
-                                <td className="px-3 py-2">{islem.aciklama}</td>
-                                <td className="px-3 py-2">{formatCurrency(islem.tutar)}</td>
-                                <td className="px-3 py-2">%{islem.prim_yuzdesi}</td>
-                                <td className="px-3 py-2">{formatCurrency(islem.odenen)}</td>
-                                <td className="px-3 py-2">{islem.puan}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
+                    <PersonnelOperationsTable personnelId={personelId} />
                   </CardContent>
                 </Card>
               </TabsContent>
