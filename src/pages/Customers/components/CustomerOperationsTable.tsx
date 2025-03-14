@@ -28,6 +28,7 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
     queryKey: ['customerOperations', customerId],
     queryFn: async () => {
       try {
+        console.log(`Fetching operations for customer ID: ${customerId}`);
         // Use the customerOperationsService instead of direct Supabase query
         return await customerOperationsService.getCustomerOperations(customerId);
       } catch (error) {

@@ -1,111 +1,49 @@
 
 import { useQuery } from "@tanstack/react-query";
-import { personelIslemleriServisi, personelServisi } from "@/lib/supabase";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
+import { personelIslemleriServisi } from "@/lib/supabase/services/personelIslemleriServisi";
 import { formatCurrency } from "@/lib/utils";
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ff7300'];
+interface PersonnelPerformanceProps {
+  personnelId: number;
+}
 
-export function PersonnelPerformance() {
-  const { data: islemGecmisi = [], isLoading: islemlerLoading } = useQuery({
-    queryKey: ['personelIslemleri'],
-    queryFn: () => personelIslemleriServisi.hepsiniGetir()
+export function PersonnelPerformance({ personnelId }: PersonnelPerformanceProps) {
+  const { data: operations = [], isLoading } = useQuery({
+    queryKey: ['personnelOperations', personnelId],
+    queryFn: () => personelIslemleriServisi.personelIslemleriGetir(personnelId),
+    enabled: !!personnelId
   });
 
-  const { data: personeller = [], isLoading: personellerLoading } = useQuery({
-    queryKey: ['personel'],
-    queryFn: () => personelServisi.hepsiniGetir()
-  });
-
-  const performansVerileri = personeller?.map(personel => {
-    const islemler = islemGecmisi.filter(i => i.personel_id === personel.id);
-    const toplamCiro = islemler.reduce((sum, i) => sum + (i.tutar || 0), 0);
-    const toplamPrim = islemler.reduce((sum, i) => sum + (i.odenen || 0), 0);
-    const toplamPuan = islemler.reduce((sum, i) => sum + (i.puan || 0), 0);
-    
-    return {
-      name: personel.ad_soyad,
-      ciro: toplamCiro,
-      islemSayisi: islemler.length,
-      prim: toplamPrim,
-      ortalamaPuan: islemler.length > 0 ? toplamPuan / islemler.length : 0
-    };
-  }).filter(item => item.islemSayisi > 0) || [];
-
-  const isLoading = islemlerLoading || personellerLoading;
-  const hasData = performansVerileri.length > 0;
+  // Calculate totals
+  const totalRevenue = operations.reduce((sum, op) => sum + (op.tutar || 0), 0);
+  const operationCount = operations.length;
+  const totalCommission = operations.reduce((sum, op) => sum + (op.odenen || 0), 0);
+  const totalPoints = operations.reduce((sum, op) => sum + (op.puan || 0), 0);
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center p-12">
-        <div className="w-10 h-10 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
-      </div>
-    );
-  }
-
-  if (!hasData) {
-    return (
-      <div className="text-center p-8 bg-gray-50 rounded-lg border">
-        <p className="text-muted-foreground">Henüz yeterli performans verisi bulunmamaktadır.</p>
-        <p className="text-sm text-muted-foreground mt-2">Tamamlanan randevular sonrasında personel performans verileri burada görüntülenecektir.</p>
-      </div>
-    );
+    return <div className="p-4 text-center">Yükleniyor...</div>;
   }
 
   return (
-    <div className="grid gap-6 md:grid-cols-2">
-      <Card>
-        <CardHeader>
-          <CardTitle>Ciro Dağılımı</CardTitle>
-        </CardHeader>
-        <CardContent className="h-[400px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={performansVerileri}
-                dataKey="ciro"
-                nameKey="name"
-                cx="50%"
-                cy="50%"
-                outerRadius={100}
-                label={({name, percent}) => `${name} ${(percent * 100).toFixed(0)}%`}
-              >
-                {performansVerileri.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(value: any): string | number => formatCurrency(Number(value))} />
-              <Legend formatter={(value: any): string => value} />
-            </PieChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Personel Performans Karşılaştırması</CardTitle>
-        </CardHeader>
-        <CardContent className="h-[400px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={performansVerileri}>
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip 
-                formatter={(value: any, name: any): string | number => {
-                  if (name === 'ciro') return formatCurrency(Number(value));
-                  if (name === 'prim') return formatCurrency(Number(value));
-                  return value;
-                }}
-              />
-              <Legend />
-              <Bar dataKey="islemSayisi" name="İşlem Sayısı" fill="#0088FE" />
-              <Bar dataKey="ortalamaPuan" name="Ortalama Puan" fill="#00C49F" />
-              <Bar dataKey="prim" name="Toplam Prim" fill="#FFBB28" />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <h3 className="text-sm text-gray-600">Toplam İşlem</h3>
+          <p className="text-2xl font-bold">{operationCount}</p>
+        </div>
+        <div>
+          <h3 className="text-sm text-gray-600">Toplam Ciro</h3>
+          <p className="text-2xl font-bold">{formatCurrency(totalRevenue)}</p>
+        </div>
+        <div>
+          <h3 className="text-sm text-gray-600">Toplam Prim</h3>
+          <p className="text-2xl font-bold">{formatCurrency(totalCommission)}</p>
+        </div>
+        <div>
+          <h3 className="text-sm text-gray-600">Toplam Puan</h3>
+          <p className="text-2xl font-bold">{totalPoints}</p>
+        </div>
+      </div>
     </div>
   );
 }

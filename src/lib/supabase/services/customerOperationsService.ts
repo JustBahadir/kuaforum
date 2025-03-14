@@ -15,6 +15,8 @@ export interface CustomerOperation {
 export const customerOperationsService = {
   async getCustomerOperations(customerId: string): Promise<CustomerOperation[]> {
     try {
+      console.log(`Fetching operations for customer ID: ${customerId}`);
+      
       // Fetch operations directly from the personel_islemleri table
       const { data, error } = await supabase
         .from('personel_islemleri')
@@ -32,24 +34,32 @@ export const customerOperationsService = {
         .eq('musteri_id', customerId)
         .order('created_at', { ascending: false });
         
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching customer operations:", error);
+        throw error;
+      }
       
-      if (!data || data.length === 0) return [];
+      if (!data || data.length === 0) {
+        console.log(`No operations found for customer ID: ${customerId}`);
+        return [];
+      }
+      
+      console.log(`Found ${data.length} operations for customer ID: ${customerId}`);
       
       // Transform the data with proper type handling
       return data.map(item => {
-        const islemObj = item.islem as unknown;
-        const personelObj = item.personel as unknown;
+        // Default values in case the relations are null
+        let serviceName = item.aciklama;
+        let personnelName = 'Belirtilmemiş';
         
-        // Extract values carefully with proper type checking
-        let serviceName = item.aciklama.split(' hizmeti verildi')[0];
-        if (islemObj && typeof islemObj === 'object' && 'islem_adi' in islemObj) {
-          serviceName = (islemObj as { islem_adi: string }).islem_adi;
+        // Safely extract islem_adi if available
+        if (item.islem && typeof item.islem === 'object') {
+          serviceName = (item.islem as any).islem_adi || serviceName;
         }
         
-        let personnelName = 'Belirtilmemiş';
-        if (personelObj && typeof personelObj === 'object' && 'ad_soyad' in personelObj) {
-          personnelName = (personelObj as { ad_soyad: string }).ad_soyad;
+        // Safely extract ad_soyad if available
+        if (item.personel && typeof item.personel === 'object') {
+          personnelName = (item.personel as any).ad_soyad || personnelName;
         }
         
         return {
@@ -57,9 +67,9 @@ export const customerOperationsService = {
           date: item.created_at,
           service_name: serviceName,
           personnel_name: personnelName,
-          amount: item.tutar,
+          amount: item.tutar || 0,
           notes: item.notlar || '',
-          points: item.puan,
+          points: item.puan || 0,
           appointment_id: item.randevu_id
         };
       });

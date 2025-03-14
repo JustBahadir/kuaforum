@@ -22,14 +22,6 @@ import {
   dailyData 
 } from "./components/StatisticsData";
 
-// Define tooltip formatter that safely handles different value types
-const formatTooltipValue = (value: any): string => {
-  if (typeof value === 'number') {
-    return value.toFixed(2) + ' TL';
-  }
-  return String(value);
-};
-
 export default function ShopStatistics() {
   const { userRole, dukkanId } = useCustomerAuth();
   const [period, setPeriod] = useState<string>("daily"); // Default to daily view

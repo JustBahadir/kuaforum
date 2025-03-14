@@ -28,6 +28,8 @@ export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTab
     enabled: !!personnelId
   });
 
+  console.log("Personnel operations:", operations);
+
   // Calculate totals
   const totalRevenue = operations.reduce((sum, op) => sum + (op.tutar || 0), 0);
   const totalCommission = operations.reduce((sum, op) => sum + (op.odenen || 0), 0);
