@@ -21,6 +21,20 @@ const formatValue = (value: number | string): string | number => {
   return value;
 };
 
+const formatTooltipValue = (value: any): string => {
+  if (typeof value === 'number') {
+    return formatCurrency(value);
+  }
+  if (Array.isArray(value)) {
+    return formatCurrency(value[1] as number - (value[0] as number));
+  }
+  return String(value);
+};
+
+const tooltipFormatter = (value: any): string => {
+  return formatTooltipValue(value);
+};
+
 export default function ShopStatistics() {
   const { userRole, dukkanId } = useCustomerAuth();
   const [period, setPeriod] = useState<string>("weekly");
@@ -270,7 +284,7 @@ export default function ShopStatistics() {
                       <XAxis dataKey="name" />
                       <YAxis yAxisId="left" />
                       <YAxis yAxisId="right" orientation="right" />
-                      <Tooltip formatter={(value: any): string | number => formatCurrency(Number(value))} />
+                      <Tooltip formatter={tooltipFormatter} />
                       <Legend />
                       <Line 
                         yAxisId="left" 
@@ -305,7 +319,7 @@ export default function ShopStatistics() {
                           <XAxis dataKey="name" />
                           <YAxis />
                           <Tooltip 
-                            formatter={(value: any): string | number => {
+                            formatter={(value: any): string => {
                               return formatValue(Number(value));
                             }}
                           />

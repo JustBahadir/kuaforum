@@ -63,8 +63,8 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
         return data.map(item => ({
           id: item.id,
           date: item.created_at,
-          service_name: item.islem?.islem_adi || item.aciklama.split(' hizmeti verildi')[0],
-          personnel_name: item.personel?.ad_soyad || 'Belirtilmemiş',
+          service_name: item.islem ? item.islem.islem_adi : item.aciklama.split(' hizmeti verildi')[0],
+          personnel_name: item.personel ? item.personel.ad_soyad : 'Belirtilmemiş',
           amount: item.tutar,
           notes: item.notlar || '',
           points: item.puan

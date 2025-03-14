@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { randevuServisi } from "@/lib/supabase/services/randevuServisi";
@@ -115,7 +116,12 @@ export function useAppointments(dukkanId?: number) {
               .maybeSingle();
               
             if (data) {
-              appointment.musteri = data as unknown as Musteri;
+              // Add a role property to make it compatible with Profile type
+              const customerWithRole = {
+                ...data,
+                role: 'customer' // Add the missing role property
+              };
+              appointment.musteri = customerWithRole as unknown as any;
             }
           } catch (error) {
             console.error(`Error fetching customer for appointment ${appointment.id}:`, error);

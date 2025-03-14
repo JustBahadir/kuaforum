@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { personelServisi } from "@/lib/supabase";
+import { personelIslemleriServisi } from "@/lib/supabase/services/personelIslemleriServisi";
 import {
   Dialog,
   DialogContent,
