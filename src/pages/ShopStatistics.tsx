@@ -14,6 +14,13 @@ import { formatCurrency } from "@/lib/utils";
 
 const CHART_COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ff7300'];
 
+const formatValue = (value: number | string): string | number => {
+  if (typeof value === 'number') {
+    return formatCurrency(value);
+  }
+  return value;
+};
+
 export default function ShopStatistics() {
   const { userRole, dukkanId } = useCustomerAuth();
   const [period, setPeriod] = useState<string>("weekly");
@@ -263,7 +270,7 @@ export default function ShopStatistics() {
                       <XAxis dataKey="name" />
                       <YAxis yAxisId="left" />
                       <YAxis yAxisId="right" orientation="right" />
-                      <Tooltip formatter={(value: any) => formatCurrency(Number(value))} />
+                      <Tooltip formatter={(value: any): string | number => formatCurrency(Number(value))} />
                       <Legend />
                       <Line 
                         yAxisId="left" 
@@ -298,7 +305,7 @@ export default function ShopStatistics() {
                           <XAxis dataKey="name" />
                           <YAxis />
                           <Tooltip 
-                            formatter={(value: any, name: any) => {
+                            formatter={(value: any): string | number => {
                               return formatValue(Number(value));
                             }}
                           />
@@ -362,7 +369,7 @@ export default function ShopStatistics() {
                       <XAxis dataKey="name" />
                       <YAxis yAxisId="left" />
                       <YAxis yAxisId="right" orientation="right" />
-                      <Tooltip formatter={(value: any) => typeof value === 'number' ? value.toFixed(2) : value} />
+                      <Tooltip formatter={(value: any): string | number => typeof value === 'number' ? value.toFixed(2) : value} />
                       <Legend />
                       <Line 
                         yAxisId="left" 

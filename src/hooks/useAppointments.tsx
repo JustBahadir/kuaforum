@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { randevuServisi } from "@/lib/supabase/services/randevuServisi";
@@ -124,9 +125,9 @@ export function useAppointments(dukkanId?: number) {
               .maybeSingle();
               
             if (data) {
-              const customerProfile: Profile = {
+              const customerProfile = {
                 ...data,
-                role: 'customer'
+                role: 'customer' // Add the required role property
               };
               appointment.musteri = customerProfile as Musteri;
             }
