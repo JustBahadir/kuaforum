@@ -369,7 +369,14 @@ export default function ShopStatistics() {
                       <XAxis dataKey="name" />
                       <YAxis yAxisId="left" />
                       <YAxis yAxisId="right" orientation="right" />
-                      <Tooltip formatter={(value: any): string | number => typeof value === 'number' ? value.toFixed(2) : value} />
+                      <Tooltip 
+                        formatter={(value: any): any => {
+                          if (typeof value === 'number') {
+                            return value.toFixed(2);
+                          }
+                          return value;
+                        }} 
+                      />
                       <Legend />
                       <Line 
                         yAxisId="left" 

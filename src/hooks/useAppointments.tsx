@@ -125,11 +125,14 @@ export function useAppointments(dukkanId?: number) {
               .maybeSingle();
               
             if (data) {
+              // Create a customer object with required Profile properties
               const customerProfile = {
                 ...data,
-                role: 'customer' // Add the required role property
+                role: 'customer', // Add the required role property
+                // Ensure any other required Profile properties are present
+                id: data.id.toString() // Convert the id to string if needed for Profile type
               };
-              appointment.musteri = customerProfile as Musteri;
+              appointment.musteri = customerProfile as unknown as Musteri;
             }
           } catch (error) {
             console.error(`Error fetching customer for appointment ${appointment.id}:`, error);
