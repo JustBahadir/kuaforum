@@ -86,10 +86,38 @@ export const personelIslemleriServisi = {
   async ekle(islemi: Omit<PersonelIslemi, 'id' | 'created_at'> & { 
     musteri_id?: number; 
     tarih?: string; 
-    notlar?: string 
+    notlar?: string;
+    randevu_id?: number;
   }) {
     try {
       console.log("Adding new personnel operation:", islemi);
+      
+      // Check if an operation with this randevu_id and islem_id already exists
+      if (islemi.randevu_id && islemi.islem_id) {
+        const { data: existingOps } = await supabase
+          .from('personel_islemleri')
+          .select('id')
+          .eq('randevu_id', islemi.randevu_id)
+          .eq('islem_id', islemi.islem_id);
+          
+        if (existingOps && existingOps.length > 0) {
+          console.log(`Operation already exists for randevu ID ${islemi.randevu_id} and islem ID ${islemi.islem_id}. Skipping.`);
+          
+          // Return the existing record
+          const { data: existingOp } = await supabase
+            .from('personel_islemleri')
+            .select(`
+              *,
+              islem:islemler(*),
+              personel:personel(*)
+            `)
+            .eq('id', existingOps[0].id)
+            .single();
+            
+          return existingOp;
+        }
+      }
+      
       const { data, error } = await supabase
         .from('personel_islemleri')
         .insert([islemi])
@@ -114,7 +142,7 @@ export const personelIslemleriServisi = {
   },
 
   // Update an operation
-  async guncelle(id: number, updates: Partial<PersonelIslemi>) {
+  async guncelle(id: number, updates: Partial<PersonelIslemi> & { notlar?: string }) {
     try {
       console.log(`Updating operation ID ${id}:`, updates);
       const { data, error } = await supabase
