@@ -27,6 +27,7 @@ export const customerOperationsService = {
           tutar,
           puan,
           randevu_id,
+          notlar,
           personel:personel(ad_soyad),
           islem:islemler(islem_adi)
         `)
