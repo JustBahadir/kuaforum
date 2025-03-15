@@ -43,6 +43,7 @@ export function PersonnelPerformanceReports() {
     const totalRevenue = personelIslemleri.reduce((sum, islem) => sum + (islem.tutar || 0), 0);
     const totalCommission = personelIslemleri.reduce((sum, islem) => sum + (islem.odenen || 0), 0);
     const operationCount = personelIslemleri.length;
+    const totalPoints = personelIslemleri.reduce((sum, islem) => sum + (islem.puan || 0), 0);
     
     return {
       id: personel.id,
@@ -51,7 +52,7 @@ export function PersonnelPerformanceReports() {
       commission: totalCommission,
       operationCount: operationCount,
       averageRevenue: operationCount > 0 ? totalRevenue / operationCount : 0,
-      commissionRate: totalRevenue > 0 ? (totalCommission / totalRevenue) * 100 : 0
+      totalPoints: totalPoints
     };
   }).filter(p => p.operationCount > 0);
   

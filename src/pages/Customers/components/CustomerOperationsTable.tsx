@@ -15,7 +15,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { customerOperationsService } from "@/lib/supabase/services/customerOperationsService";
 
 interface CustomerOperationsTableProps {
-  customerId: string;
+  customerId: string | number;
 }
 
 export function CustomerOperationsTable({ customerId }: CustomerOperationsTableProps) {
@@ -118,7 +118,6 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
             <TableHead>Personel</TableHead>
             <TableHead>Puan</TableHead>
             <TableHead>Tutar</TableHead>
-            <TableHead>Açıklama</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -131,7 +130,6 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
               <TableCell>{operation.personnel_name}</TableCell>
               <TableCell className="text-purple-600 font-semibold">{operation.points}</TableCell>
               <TableCell>{operation.amount.toFixed(2)} TL</TableCell>
-              <TableCell className="max-w-xs truncate">{operation.notes}</TableCell>
             </TableRow>
           ))}
         </TableBody>

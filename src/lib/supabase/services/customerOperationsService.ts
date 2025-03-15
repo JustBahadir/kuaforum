@@ -13,7 +13,7 @@ export interface CustomerOperation {
 }
 
 export const customerOperationsService = {
-  async getCustomerOperations(customerId: string): Promise<CustomerOperation[]> {
+  async getCustomerOperations(customerId: number | string): Promise<CustomerOperation[]> {
     try {
       console.log(`Fetching operations for customer ID: ${customerId}`);
       
@@ -26,7 +26,6 @@ export const customerOperationsService = {
           aciklama,
           tutar,
           puan,
-          notlar,
           randevu_id,
           personel:personel(ad_soyad),
           islem:islemler(islem_adi)
@@ -68,7 +67,6 @@ export const customerOperationsService = {
           service_name: serviceName,
           personnel_name: personnelName,
           amount: item.tutar || 0,
-          notes: item.notlar || '',
           points: item.puan || 0,
           appointment_id: item.randevu_id
         };

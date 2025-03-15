@@ -13,12 +13,14 @@ interface PerformanceChartsProps {
 export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChartsProps) {
   const performansVerileri = personeller.map(personel => {
     const islemler = islemGecmisi.filter(i => i.personel_id === personel.id);
-    const toplamCiro = islemler.reduce((sum, i) => sum + i.tutar, 0);
+    const toplamCiro = islemler.reduce((sum, i) => sum + (i.tutar || 0), 0);
+    const toplamPuan = islemler.reduce((sum, i) => sum + (i.puan || 0), 0);
+    
     return {
       name: personel.ad_soyad,
       ciro: toplamCiro,
       islemSayisi: islemler.length,
-      ortalamaPuan: islemler.reduce((sum, i) => sum + i.prim_yuzdesi, 0) / (islemler.length || 1)
+      toplamPuan: toplamPuan
     };
   });
 
@@ -63,7 +65,7 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
               <Tooltip />
               <Legend />
               <Bar dataKey="islemSayisi" name="İşlem Sayısı" fill="#0088FE" />
-              <Bar dataKey="ortalamaPuan" name="Ortalama Puan" fill="#00C49F" />
+              <Bar dataKey="toplamPuan" name="Toplam Puan" fill="#00C49F" />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>

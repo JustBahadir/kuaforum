@@ -1,4 +1,3 @@
-
 import { supabase } from '../client';
 import { Randevu } from '../types';
 import { toast } from 'sonner';
