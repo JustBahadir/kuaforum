@@ -24,7 +24,7 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
-  const { data: operations = [], isLoading } = useQuery({
+  const { data: operations = [], isLoading, refetch } = useQuery({
     queryKey: ['customerOperations', customerId],
     queryFn: async () => {
       try {

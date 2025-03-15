@@ -1,4 +1,3 @@
-
 import { supabase } from '../client';
 import { Randevu } from '../types';
 import { toast } from 'sonner';
@@ -245,6 +244,25 @@ export const randevuServisi = {
         const primYuzdesi = randevu.personel?.prim_yuzdesi || 0;
         const odenenPrim = (tutar * primYuzdesi) / 100;
         
+        // Check if operation already exists for this appointment and service
+        const { data: existingOps, error: checkError } = await supabase
+          .from('personel_islemleri')
+          .select('id')
+          .eq('randevu_id', randevuId)
+          .eq('islem_id', islem.id);
+          
+        if (checkError) {
+          console.error("İşlem kontrolü hatası:", checkError);
+          continue; // Skip to next iteration on error
+        }
+        
+        // If operation already exists, skip creating a new one
+        if (existingOps && existingOps.length > 0) {
+          console.log(`İşlem kaydı zaten mevcut, atlıyoruz. Randevu ID: ${randevuId}, İşlem ID: ${islem.id}`);
+          createdOperations.push(existingOps[0]);
+          continue;
+        }
+        
         const personelIslem = {
           personel_id: randevu.personel_id,
           islem_id: islem.id,
@@ -254,7 +272,8 @@ export const randevuServisi = {
           odenen: odenenPrim,
           musteri_id: randevu.musteri_id,
           randevu_id: randevuId,
-          aciklama: `${islem.islem_adi} hizmeti verildi. Randevu #${randevuId}`
+          aciklama: `${islem.islem_adi} hizmeti verildi. Randevu #${randevuId}`,
+          notlar: randevu.notlar || '' // Add notes from appointment
         };
         
         console.log("Oluşturulan personel işlemi:", personelIslem);

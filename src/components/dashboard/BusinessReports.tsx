@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
-import { PersonelIslemi, Randevu, islemServisi, randevuServisi, personelIslemleriServisi } from "@/lib/supabase";
+import { islemServisi, randevuServisi, personelIslemleriServisi } from "@/lib/supabase";
+import { formatCurrency } from "@/lib/utils";
 
 const CHART_COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
@@ -23,57 +24,157 @@ export function BusinessReports() {
 
   const { data: personelIslemleri = [] } = useQuery({
     queryKey: ['personelIslemleri'],
-    queryFn: () => personelIslemleriServisi.hepsiniGetir()
+    queryFn: async () => {
+      const result = await personelIslemleriServisi.hepsiniGetir();
+      console.log("Retrieved all personnel operations for reports:", result);
+      return result;
+    }
   });
 
-  // Gelir raporu verileri
-  const gelirVerileri = personelIslemleri.reduce((acc: any[], islem) => {
-    const date = new Date(islem.created_at!);
-    const key = timeRange === 'daily' ? date.toLocaleDateString() :
-               timeRange === 'weekly' ? `Hafta ${Math.ceil(date.getDate() / 7)}` :
-               `${date.getMonth() + 1}. Ay`;
+  // Filter operations by date range
+  const filterOperationsByTimeRange = () => {
+    const now = new Date();
+    const filtered = personelIslemleri.filter(islem => {
+      if (!islem.created_at) return false;
+      
+      const date = new Date(islem.created_at);
+      
+      if (timeRange === 'daily') {
+        // Current day
+        return date.getDate() === now.getDate() && 
+               date.getMonth() === now.getMonth() && 
+               date.getFullYear() === now.getFullYear();
+      } else if (timeRange === 'weekly') {
+        // Current week (last 7 days)
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(now.getDate() - 7);
+        return date >= sevenDaysAgo;
+      } else {
+        // Current month
+        return date.getMonth() === now.getMonth() && 
+               date.getFullYear() === now.getFullYear();
+      }
+    });
     
-    const existingEntry = acc.find(item => item.date === key);
-    if (existingEntry) {
-      existingEntry.gelir += islem.tutar;
+    return filtered;
+  };
+
+  const filteredOperations = filterOperationsByTimeRange();
+
+  // Gelir raporu verileri
+  const gelirVerileri = (() => {
+    // Group by date according to time range
+    const grouped = filteredOperations.reduce((acc: any[], islem) => {
+      if (!islem.created_at) return acc;
+      
+      const date = new Date(islem.created_at);
+      let key;
+      
+      if (timeRange === 'daily') {
+        // Group by hour
+        key = `${date.getHours()}:00`;
+      } else if (timeRange === 'weekly') {
+        // Group by day of week
+        const days = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
+        key = days[date.getDay()];
+      } else {
+        // Group by day of month
+        key = date.getDate().toString();
+      }
+      
+      const existingEntry = acc.find(item => item.date === key);
+      if (existingEntry) {
+        existingEntry.gelir += islem.tutar || 0;
+      } else {
+        acc.push({ date: key, gelir: islem.tutar || 0 });
+      }
+      return acc;
+    }, []);
+    
+    // Sort by date
+    if (timeRange === 'daily') {
+      // Sort by hour
+      return grouped.sort((a, b) => parseInt(a.date) - parseInt(b.date));
+    } else if (timeRange === 'weekly') {
+      // Sort by day of week
+      const dayOrder = { 'Pazartesi': 0, 'Salı': 1, 'Çarşamba': 2, 'Perşembe': 3, 'Cuma': 4, 'Cumartesi': 5, 'Pazar': 6 };
+      return grouped.sort((a, b) => dayOrder[a.date as keyof typeof dayOrder] - dayOrder[b.date as keyof typeof dayOrder]);
     } else {
-      acc.push({ date: key, gelir: islem.tutar });
+      // Sort by day of month
+      return grouped.sort((a, b) => parseInt(a.date) - parseInt(b.date));
     }
-    return acc;
-  }, []);
+  })();
 
   // En popüler hizmetler
-  const popularHizmetler = islemler.map(islem => ({
-    name: islem.islem_adi,
-    count: personelIslemleri.filter(pi => pi.islem_id === islem.id).length,
-    gelir: personelIslemleri
-      .filter(pi => pi.islem_id === islem.id)
-      .reduce((sum, pi) => sum + pi.tutar, 0)
-  })).sort((a, b) => b.count - a.count);
+  const popularHizmetler = islemler.map(islem => {
+    const islemOperations = filteredOperations.filter(op => op.islem_id === islem.id);
+    return {
+      name: islem.islem_adi,
+      count: islemOperations.length,
+      gelir: islemOperations.reduce((sum, op) => sum + (op.tutar || 0), 0)
+    };
+  }).filter(item => item.count > 0).sort((a, b) => b.count - a.count);
 
   // Randevu doluluk oranları
-  const dolulukOrani = randevular.reduce((acc: any[], randevu) => {
-    const date = new Date(randevu.tarih);
-    const key = timeRange === 'daily' ? date.toLocaleDateString() :
-               timeRange === 'weekly' ? `Hafta ${Math.ceil(date.getDate() / 7)}` :
-               `${date.getMonth() + 1}. Ay`;
+  const dolulukOrani = (() => {
+    // Filter appointments by date range
+    const filteredAppointments = randevular.filter(randevu => {
+      const date = new Date(randevu.tarih);
+      
+      if (timeRange === 'daily') {
+        // Current day
+        const now = new Date();
+        return date.getDate() === now.getDate() && 
+               date.getMonth() === now.getMonth() && 
+               date.getFullYear() === now.getFullYear();
+      } else if (timeRange === 'weekly') {
+        // Current week (last 7 days)
+        const sevenDaysAgo = new Date();
+        const now = new Date();
+        sevenDaysAgo.setDate(now.getDate() - 7);
+        return date >= sevenDaysAgo && date <= now;
+      } else {
+        // Current month
+        const now = new Date();
+        return date.getMonth() === now.getMonth() && 
+               date.getFullYear() === now.getFullYear();
+      }
+    });
     
-    const existingEntry = acc.find(item => item.date === key);
-    if (existingEntry) {
-      existingEntry.total++;
-      if (randevu.durum === 'tamamlandi') existingEntry.completed++;
-    } else {
-      acc.push({
-        date: key,
-        total: 1,
-        completed: randevu.durum === 'tamamlandi' ? 1 : 0
-      });
-    }
-    return acc;
-  }, []).map(item => ({
-    ...item,
-    dolulukOrani: (item.completed / item.total) * 100
-  }));
+    // Group by date according to time range
+    return filteredAppointments.reduce((acc: any[], randevu) => {
+      const date = new Date(randevu.tarih);
+      let key;
+      
+      if (timeRange === 'daily') {
+        // Group by hour
+        key = `${randevu.saat.split(':')[0]}:00`;
+      } else if (timeRange === 'weekly') {
+        // Group by day of week
+        const days = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
+        key = days[date.getDay()];
+      } else {
+        // Group by day of month
+        key = date.getDate().toString();
+      }
+      
+      const existingEntry = acc.find(item => item.date === key);
+      if (existingEntry) {
+        existingEntry.total++;
+        if (randevu.durum === 'tamamlandi') existingEntry.completed++;
+      } else {
+        acc.push({
+          date: key,
+          total: 1,
+          completed: randevu.durum === 'tamamlandi' ? 1 : 0
+        });
+      }
+      return acc;
+    }, []).map(item => ({
+      ...item,
+      dolulukOrani: item.total > 0 ? (item.completed / item.total) * 100 : 0
+    }));
+  })();
 
   return (
     <div className="space-y-6">
@@ -102,7 +203,7 @@ export function BusinessReports() {
               <LineChart data={gelirVerileri}>
                 <XAxis dataKey="date" />
                 <YAxis />
-                <Tooltip />
+                <Tooltip formatter={(value: number) => formatCurrency(value)} />
                 <Legend />
                 <Line type="monotone" dataKey="gelir" stroke="#0088FE" name="Gelir (TL)" />
               </LineChart>
@@ -127,7 +228,7 @@ export function BusinessReports() {
                   outerRadius={80}
                   label={({name, percent}) => `${name} (${(percent * 100).toFixed(0)}%)`}
                 >
-                  {popularHizmetler.map((entry, index) => (
+                  {popularHizmetler.slice(0, 5).map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                   ))}
                 </Pie>
@@ -162,16 +263,22 @@ export function BusinessReports() {
             <CardTitle>Personel Maliyet Analizi</CardTitle>
           </CardHeader>
           <CardContent className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={personelIslemleri}>
-                <XAxis dataKey="personel_id" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="tutar" name="Gelir" fill="#0088FE" />
-                <Bar dataKey="odenen" name="Maliyet" fill="#FF8042" />
-              </BarChart>
-            </ResponsiveContainer>
+            {filteredOperations.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={filteredOperations}>
+                  <XAxis dataKey="personel_id" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="tutar" name="Gelir" fill="#0088FE" />
+                  <Bar dataKey="odenen" name="Maliyet" fill="#FF8042" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full text-muted-foreground">
+                Seçilen zaman aralığında veri bulunamadı
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
