@@ -68,12 +68,34 @@ export const customerOperationsService = {
           personnel_name: personnelName,
           amount: Number(item.tutar) || 0,
           points: Number(item.puan) || 0,
-          appointment_id: item.randevu_id
+          appointment_id: item.randevu_id,
+          notes: item.notlar
         };
       });
     } catch (error) {
       console.error('Error getting customer operations:', error);
       return [];
+    }
+  },
+
+  async updateOperationNotes(operationId: number, notes: string): Promise<void> {
+    try {
+      console.log(`Updating notes for operation ID: ${operationId}`, notes);
+      
+      const { error } = await supabase
+        .from('personel_islemleri')
+        .update({ notlar: notes })
+        .eq('id', operationId);
+        
+      if (error) {
+        console.error("Error updating operation notes:", error);
+        throw error;
+      }
+      
+      console.log(`Successfully updated notes for operation ID: ${operationId}`);
+    } catch (error) {
+      console.error('Error updating operation notes:', error);
+      throw error;
     }
   }
 };
