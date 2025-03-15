@@ -1,15 +1,16 @@
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { personelIslemleriServisi } from "@/lib/supabase/services/personelIslemleriServisi";
-import {
+import { personelIslemleriServisi, islemServisi, personelServisi } from "@/lib/supabase";
+import { format } from "date-fns";
+import { 
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
-  TableRow,
+  TableRow 
 } from "@/components/ui/table";
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
@@ -20,22 +21,29 @@ interface PersonnelOperationsTableProps {
 
 export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 5;
 
+  // Get operations for this specific personnel
   const { data: operations = [], isLoading } = useQuery({
     queryKey: ['personnelOperations', personnelId],
-    queryFn: () => personelIslemleriServisi.personelIslemleriGetir(personnelId),
-    enabled: !!personnelId
+    queryFn: async () => {
+      try {
+        console.log(`Fetching operations for personnel ID: ${personnelId}`);
+        return await personelIslemleriServisi.personelIslemleriGetir(personnelId);
+      } catch (error) {
+        console.error('Error fetching personnel operations:', error);
+        return [];
+      }
+    },
+    enabled: !!personnelId,
   });
 
-  console.log("Personnel operations:", operations);
-
   // Calculate totals
-  const totalRevenue = operations.reduce((sum, op) => sum + (op.tutar || 0), 0);
-  const totalCommission = operations.reduce((sum, op) => sum + (op.odenen || 0), 0);
   const totalPoints = operations.reduce((sum, op) => sum + (op.puan || 0), 0);
+  const totalAmount = operations.reduce((sum, op) => sum + (op.tutar || 0), 0);
+  const totalPaid = operations.reduce((sum, op) => sum + (op.odenen || 0), 0);
 
-  // Pagination
+  // Calculate pagination
   const totalPages = Math.ceil(operations.length / itemsPerPage);
   const paginatedOperations = operations.slice(
     (currentPage - 1) * itemsPerPage,
@@ -55,57 +63,55 @@ export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTab
   };
 
   if (isLoading) {
-    return <div className="flex justify-center p-4">
-      <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
-    </div>;
-  }
-
-  if (operations.length === 0) {
-    return <div className="text-center p-4 text-muted-foreground">
-      Bu personele ait işlem bulunamadı.
-    </div>;
+    return <div className="text-center py-4">Yükleniyor...</div>;
   }
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-        <div className="bg-gray-50 p-4 rounded-lg">
-          <h3 className="font-semibold text-gray-800 mb-2">Toplam Ciro</h3>
-          <p className="text-2xl font-bold">{formatCurrency(totalRevenue)}</p>
+    <div className="p-2 space-y-4">
+      <div className="flex justify-between">
+        <div className="grid grid-cols-3 gap-4">
+          <div className="border rounded-md p-3 bg-gray-50">
+            <div className="text-sm text-gray-500">TOPLAM PUAN</div>
+            <div className="text-xl font-bold text-purple-600">{totalPoints}</div>
+          </div>
+          <div className="border rounded-md p-3 bg-gray-50">
+            <div className="text-sm text-gray-500">TOPLAM TUTAR</div>
+            <div className="text-xl font-bold">{formatCurrency(totalAmount)}</div>
+          </div>
+          <div className="border rounded-md p-3 bg-gray-50">
+            <div className="text-sm text-gray-500">TOPLAM ÖDENEN</div>
+            <div className="text-xl font-bold text-green-600">{formatCurrency(totalPaid)}</div>
+          </div>
         </div>
-        <div className="bg-gray-50 p-4 rounded-lg">
-          <h3 className="font-semibold text-gray-800 mb-2">Toplam Prim</h3>
-          <p className="text-2xl font-bold">{formatCurrency(totalCommission)}</p>
-        </div>
-        <div className="bg-gray-50 p-4 rounded-lg">
-          <h3 className="font-semibold text-gray-800 mb-2">Toplam Puan</h3>
-          <p className="text-2xl font-bold">{totalPoints}</p>
-        </div>
+        
+        {totalPages > 1 && (
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={goToPreviousPage}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-sm">{currentPage} / {totalPages || 1}</span>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={goToNextPage}
+              disabled={currentPage === totalPages || totalPages === 0}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </div>
       
-      {operations.length > itemsPerPage && (
-        <div className="flex justify-end items-center gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={goToPreviousPage}
-            disabled={currentPage === 1}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <span className="text-sm">{currentPage} / {totalPages}</span>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={goToNextPage}
-            disabled={currentPage === totalPages}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+      {operations.length === 0 ? (
+        <div className="text-center py-6 text-muted-foreground">
+          Bu personele ait işlem bulunamadı.
         </div>
-      )}
-      
-      <div className="rounded-md border">
+      ) : (
         <Table>
           <TableHeader>
             <TableRow>
@@ -118,21 +124,21 @@ export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTab
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedOperations.map((islem) => (
-              <TableRow key={islem.id}>
-                <TableCell>
-                  {new Date(islem.created_at!).toLocaleDateString('tr-TR')}
+            {paginatedOperations.map((operation) => (
+              <TableRow key={operation.id} className="hover:bg-gray-50">
+                <TableCell className="font-medium">
+                  {operation.created_at ? format(new Date(operation.created_at), 'dd.MM.yyyy') : '-'}
                 </TableCell>
-                <TableCell>{islem.aciklama}</TableCell>
-                <TableCell>{formatCurrency(islem.tutar)}</TableCell>
-                <TableCell>%{islem.prim_yuzdesi}</TableCell>
-                <TableCell>{formatCurrency(islem.odenen)}</TableCell>
-                <TableCell>{islem.puan}</TableCell>
+                <TableCell>{operation.aciklama}</TableCell>
+                <TableCell>{formatCurrency(operation.tutar)}</TableCell>
+                <TableCell>%{operation.prim_yuzdesi}</TableCell>
+                <TableCell>{formatCurrency(operation.odenen)}</TableCell>
+                <TableCell className="text-purple-600 font-semibold">{operation.puan}</TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
-      </div>
+      )}
     </div>
   );
 }
