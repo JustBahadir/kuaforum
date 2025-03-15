@@ -43,7 +43,7 @@ export const customerOperationsService = {
         return [];
       }
       
-      console.log(`Found ${data.length} operations for customer ID: ${customerId}`);
+      console.log(`Found ${data.length} operations for customer ID: ${customerId}`, data);
       
       // Transform the data with proper type handling
       return data.map(item => {
@@ -66,29 +66,14 @@ export const customerOperationsService = {
           date: item.created_at,
           service_name: serviceName,
           personnel_name: personnelName,
-          amount: item.tutar || 0,
-          points: item.puan || 0,
+          amount: Number(item.tutar) || 0,
+          points: Number(item.puan) || 0,
           appointment_id: item.randevu_id
         };
       });
     } catch (error) {
       console.error('Error getting customer operations:', error);
       return [];
-    }
-  },
-  
-  async updateOperationNotes(appointmentId: number, notes: string): Promise<boolean> {
-    try {
-      const { error } = await supabase
-        .from('randevular')
-        .update({ notlar: notes })
-        .eq('id', appointmentId);
-      
-      if (error) throw error;
-      return true;
-    } catch (error) {
-      console.error('Error updating operation notes:', error);
-      return false;
     }
   }
 };

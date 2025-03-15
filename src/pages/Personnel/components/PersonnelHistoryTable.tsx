@@ -24,9 +24,15 @@ export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProp
 
   const { data: islemGecmisi = [], isLoading } = useQuery({
     queryKey: ['personelIslemleri', personnelId],
-    queryFn: () => personnelId 
-      ? personelIslemleriServisi.personelIslemleriGetir(personnelId)
-      : personelIslemleriServisi.hepsiniGetir()
+    queryFn: async () => {
+      console.log("Fetching personnel operations for ID:", personnelId);
+      const result = personnelId 
+        ? await personelIslemleriServisi.personelIslemleriGetir(personnelId)
+        : await personelIslemleriServisi.hepsiniGetir();
+      console.log("Retrieved operations:", result);
+      return result;
+    },
+    refetchOnWindowFocus: false
   });
 
   const { data: personeller = [] } = useQuery({
@@ -112,9 +118,9 @@ export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProp
                   {personeller?.find(p => p.id === islem.personel_id)?.ad_soyad}
                 </TableCell>
                 <TableCell>{islem.aciklama}</TableCell>
-                <TableCell>{formatCurrency(islem.tutar)}</TableCell>
+                <TableCell>{formatCurrency(islem.tutar || 0)}</TableCell>
                 <TableCell>%{islem.prim_yuzdesi}</TableCell>
-                <TableCell>{formatCurrency(islem.odenen)}</TableCell>
+                <TableCell>{formatCurrency(islem.odenen || 0)}</TableCell>
                 <TableCell>{islem.puan}</TableCell>
               </TableRow>
             ))}

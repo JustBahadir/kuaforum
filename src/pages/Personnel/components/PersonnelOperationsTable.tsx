@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { personelIslemleriServisi, islemServisi, personelServisi } from "@/lib/supabase";
+import { personelIslemleriServisi } from "@/lib/supabase";
 import { format } from "date-fns";
 import { 
   Table,
@@ -29,7 +29,9 @@ export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTab
     queryFn: async () => {
       try {
         console.log(`Fetching operations for personnel ID: ${personnelId}`);
-        return await personelIslemleriServisi.personelIslemleriGetir(personnelId);
+        const result = await personelIslemleriServisi.personelIslemleriGetir(personnelId);
+        console.log("Retrieved personnel operations:", result);
+        return result;
       } catch (error) {
         console.error('Error fetching personnel operations:', error);
         return [];
@@ -130,9 +132,9 @@ export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTab
                   {operation.created_at ? format(new Date(operation.created_at), 'dd.MM.yyyy') : '-'}
                 </TableCell>
                 <TableCell>{operation.aciklama}</TableCell>
-                <TableCell>{formatCurrency(operation.tutar)}</TableCell>
+                <TableCell>{formatCurrency(operation.tutar || 0)}</TableCell>
                 <TableCell>%{operation.prim_yuzdesi}</TableCell>
-                <TableCell>{formatCurrency(operation.odenen)}</TableCell>
+                <TableCell>{formatCurrency(operation.odenen || 0)}</TableCell>
                 <TableCell className="text-purple-600 font-semibold">{operation.puan}</TableCell>
               </TableRow>
             ))}

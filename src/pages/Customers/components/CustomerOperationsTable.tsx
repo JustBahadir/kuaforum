@@ -29,7 +29,9 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
     queryFn: async () => {
       try {
         console.log(`Fetching operations for customer ID: ${customerId}`);
-        return await customerOperationsService.getCustomerOperations(customerId);
+        const result = await customerOperationsService.getCustomerOperations(customerId);
+        console.log("Retrieved customer operations:", result);
+        return result;
       } catch (error) {
         console.error('Error fetching customer operations:', error);
         return [];
