@@ -1,7 +1,7 @@
-
 import { supabase } from '../client';
 import { Randevu } from '../types';
 import { toast } from 'sonner';
+import { personelIslemleriServisi } from './personelIslemleriServisi';
 
 export const randevuServisi = {
   async hepsiniGetir() {
@@ -258,33 +258,7 @@ export const randevuServisi = {
           const primYuzdesi = randevu.personel.prim_yuzdesi || 0;
           const odenenPrim = (tutar * primYuzdesi) / 100;
           
-          // Check if operation already exists for this appointment and service
-          const { data: existingOps, error: checkError } = await supabase
-            .from('personel_islemleri')
-            .select('id')
-            .eq('randevu_id', randevuId)
-            .eq('islem_id', islem.id);
-            
-          if (checkError) {
-            console.error("İşlem kontrolü hatası:", checkError);
-            continue; // Skip to next iteration on error
-          }
-          
-          // If operation already exists, log it and skip
-          if (existingOps && existingOps.length > 0) {
-            console.log(`İşlem kaydı zaten mevcut, atlıyoruz. Randevu ID: ${randevuId}, İşlem ID: ${islem.id}`);
-            
-            // Get the existing operation details
-            const { data: existingOp } = await supabase
-              .from('personel_islemleri')
-              .select('*')
-              .eq('id', existingOps[0].id)
-              .single();
-              
-            createdOperations.push(existingOp);
-            continue;
-          }
-          
+          // Create the personnel operation object
           const personelIslem = {
             personel_id: randevu.personel_id,
             islem_id: islem.id,
@@ -300,19 +274,12 @@ export const randevuServisi = {
           
           console.log("Creating personnel operation:", personelIslem);
           
-          const { data: createdOp, error: insertError } = await supabase
-            .from('personel_islemleri')
-            .insert(personelIslem)
-            .select();
-            
-          if (insertError) {
-            console.error("Personel işlemi ekleme hatası:", insertError);
-            throw new Error(`Personel işlemi eklenirken hata: ${insertError.message}`);
-          }
+          // Try to add the operation record
+          const createdOp = await personelIslemleriServisi.ekle(personelIslem);
           
-          if (createdOp && createdOp.length > 0) {
-            createdOperations.push(createdOp[0]);
-            console.log("Created personnel operation:", createdOp[0]);
+          if (createdOp) {
+            createdOperations.push(createdOp);
+            console.log("Created personnel operation:", createdOp);
           }
         } catch (serviceError) {
           console.error(`Error processing service ID ${islem.id}:`, serviceError);

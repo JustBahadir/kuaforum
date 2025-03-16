@@ -24,7 +24,7 @@ export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTab
   const itemsPerPage = 5;
 
   // Get operations for this specific personnel
-  const { data: operations = [], isLoading } = useQuery({
+  const { data: operations = [], isLoading, refetch } = useQuery({
     queryKey: ['personnelOperations', personnelId],
     queryFn: async () => {
       try {
