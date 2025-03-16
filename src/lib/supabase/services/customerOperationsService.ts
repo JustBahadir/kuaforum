@@ -142,12 +142,20 @@ export const customerOperationsService = {
             continue;
           }
           
+          // Fix: Correctly access personel object properties
+          const personnelName = appointment.personel ? 
+            (typeof appointment.personel === 'object' ? 
+              // Check if appointment.personel is an object with ad_soyad property
+              (appointment.personel as any).ad_soyad || 'Belirtilmemiş' 
+              : 'Belirtilmemiş')
+            : 'Belirtilmemiş';
+          
           for (const service of servicesData) {
             operations.push({
               id: appointment.id * 1000 + service.id, // Create unique ID
               date: appointment.created_at,
               service_name: service.islem_adi,
-              personnel_name: appointment.personel?.ad_soyad || 'Belirtilmemiş',
+              personnel_name: personnelName,
               amount: Number(service.fiyat) || 0,
               points: Number(service.puan) || 0,
               appointment_id: appointment.id,
@@ -202,10 +210,16 @@ export const customerOperationsService = {
         return;
       }
       
+      // Fix: Correctly access personel object properties for prim_yuzdesi
+      const primYuzdesi = appointment.personel ? 
+        (typeof appointment.personel === 'object' ? 
+          (appointment.personel as any).prim_yuzdesi || 0 
+          : 0)
+        : 0;
+      
       // Create operation records
       for (const service of servicesData) {
         const tutar = parseFloat(service.fiyat);
-        const primYuzdesi = appointment.personel?.prim_yuzdesi || 0;
         const odenenPrim = (tutar * primYuzdesi) / 100;
         
         const personelIslem = {
