@@ -34,7 +34,8 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
     data: operations = [], 
     isLoading, 
     isRefetching,
-    refetch 
+    refetch,
+    error
   } = useQuery({
     queryKey: ['customerOperations', customerId],
     queryFn: async () => {
@@ -80,6 +81,10 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
         notesMap[op.id] = op.notes || '';
       });
       setEditedNotes(notesMap);
+    } else {
+      setTotalPoints(0);
+      setTotalAmount(0);
+      setEditedNotes({});
     }
   }, [operations]);
 
