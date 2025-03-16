@@ -33,7 +33,6 @@ export const randevuServisi = {
     try {
       console.log(`Dükkan ID ${dukkanId} için randevular getiriliyor...`);
       
-      // Use the security definer function
       const { data, error } = await supabase
         .rpc('get_appointments_by_dukkan', { p_dukkan_id: dukkanId });
         
@@ -59,7 +58,6 @@ export const randevuServisi = {
 
       console.log(`Customer ID ${user.id} için randevular getiriliyor...`);
       
-      // Use the security definer function
       const { data, error } = await supabase
         .rpc('get_customer_appointments', { p_customer_id: user.id });
         
@@ -105,7 +103,6 @@ export const randevuServisi = {
         throw new Error("Oturum açmış kullanıcı bulunamadı");
       }
       
-      // Use the security definer function for inserting
       const { data, error } = await supabase
         .rpc('insert_appointment', {
           p_dukkan_id: randevu.dukkan_id,
@@ -142,7 +139,6 @@ export const randevuServisi = {
     try {
       console.log(`Randevu ${id} güncelleniyor:`, randevu);
       
-      // For status updates, use our specialized function to avoid infinite recursion
       if (randevu.durum && Object.keys(randevu).length === 1) {
         const { data, error } = await supabase
           .rpc('update_appointment_status', { 
@@ -157,19 +153,16 @@ export const randevuServisi = {
         
         console.log("Randevu güncelleme başarılı:", data);
         
-        // If an appointment is marked as completed, create a personnel operation record
         if (randevu.durum === "tamamlandi") {
           try {
             await this.randevuTamamlandi(id);
           } catch (opError) {
             console.error("İşlem kaydı oluşturma hatası:", opError);
-            // Don't fail the entire process if operation creation fails
           }
         }
         
         return data;
       } else {
-        // For other updates, use the regular update
         const { data, error } = await supabase
           .from('randevular')
           .update(randevu)
@@ -183,13 +176,11 @@ export const randevuServisi = {
         
         console.log("Randevu güncelleme başarılı:", data);
         
-        // If an appointment is marked as completed, create a personnel operation record
         if (randevu.durum === "tamamlandi") {
           try {
             await this.randevuTamamlandi(id);
           } catch (opError) {
             console.error("İşlem kaydı oluşturma hatası:", opError);
-            // Don't fail the entire process if operation creation fails
           }
         }
         
@@ -205,7 +196,6 @@ export const randevuServisi = {
     try {
       console.log(`Randevu ${randevuId} tamamlandı olarak işleniyor...`);
       
-      // Get the appointment details with full relations
       const { data: randevu, error: randevuError } = await supabase
         .from('randevular')
         .select(`
@@ -223,7 +213,6 @@ export const randevuServisi = {
       
       console.log("Retrieved appointment details:", randevu);
       
-      // Get services associated with the appointment
       const islemIds = randevu.islemler || [];
       if (!islemIds.length) {
         console.error("Randevuda kayıtlı işlem bulunamadı");
@@ -249,16 +238,13 @@ export const randevuServisi = {
         throw new Error("Personel bilgisi bulunamadı");
       }
       
-      // Create a personnel operation record for each service
       const createdOperations = [];
       for (const islem of islemler) {
         try {
-          // Calculate the commission amount based on service price and personnel's commission percentage
           const tutar = parseFloat(islem.fiyat);
           const primYuzdesi = randevu.personel.prim_yuzdesi || 0;
           const odenenPrim = (tutar * primYuzdesi) / 100;
           
-          // Create the personnel operation object
           const personelIslem = {
             personel_id: randevu.personel_id,
             islem_id: islem.id,
@@ -269,12 +255,11 @@ export const randevuServisi = {
             musteri_id: randevu.musteri_id,
             randevu_id: randevuId,
             aciklama: `${islem.islem_adi} hizmeti verildi. Randevu #${randevuId}`,
-            notlar: randevu.notlar || '' // Include notes from appointment
+            notlar: randevu.notlar || ''
           };
           
           console.log("Creating personnel operation:", personelIslem);
           
-          // Try to add the operation record
           const createdOp = await personelIslemleriServisi.ekle(personelIslem);
           
           if (createdOp) {
@@ -283,7 +268,6 @@ export const randevuServisi = {
           }
         } catch (serviceError) {
           console.error(`Error processing service ID ${islem.id}:`, serviceError);
-          // Continue with other services
         }
       }
       

@@ -13,6 +13,7 @@ import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { customerOperationsService } from "@/lib/supabase/services/customerOperationsService";
+import { formatCurrency } from "@/lib/utils";
 
 interface CustomerOperationsTableProps {
   customerId: string | number;
@@ -87,7 +88,7 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
           </div>
           <div className="border rounded-md p-3 bg-gray-50">
             <div className="text-sm text-gray-500">TOPLAM TUTAR</div>
-            <div className="text-xl font-bold">{totalAmount.toFixed(2)} TL</div>
+            <div className="text-xl font-bold">{formatCurrency(totalAmount)}</div>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -117,8 +118,9 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
             <TableHead>Tarih</TableHead>
             <TableHead>İşlem</TableHead>
             <TableHead>Personel</TableHead>
-            <TableHead>Puan</TableHead>
             <TableHead>Tutar</TableHead>
+            <TableHead>Puan</TableHead>
+            <TableHead>Açıklama</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -129,8 +131,16 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
               </TableCell>
               <TableCell>{operation.service_name}</TableCell>
               <TableCell>{operation.personnel_name}</TableCell>
+              <TableCell>{formatCurrency(operation.amount)}</TableCell>
               <TableCell className="text-purple-600 font-semibold">{operation.points}</TableCell>
-              <TableCell>{operation.amount.toFixed(2)} TL</TableCell>
+              <TableCell>
+                <textarea 
+                  className="w-full p-2 border rounded text-sm"
+                  value={operation.notes || ''}
+                  readOnly
+                  rows={2}
+                />
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>

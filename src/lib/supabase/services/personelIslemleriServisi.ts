@@ -118,9 +118,23 @@ export const personelIslemleriServisi = {
         }
       }
       
+      // Prepare the insertion object
+      const insertData = {
+        personel_id: islemi.personel_id,
+        islem_id: islemi.islem_id,
+        tutar: islemi.tutar,
+        puan: islemi.puan,
+        prim_yuzdesi: islemi.prim_yuzdesi,
+        odenen: islemi.odenen,
+        aciklama: islemi.aciklama,
+        musteri_id: islemi.musteri_id,
+        notlar: islemi.notlar,
+        randevu_id: islemi.randevu_id
+      };
+      
       const { data, error } = await supabase
         .from('personel_islemleri')
-        .insert([islemi])
+        .insert([insertData])
         .select(`
           *,
           islem:islemler(*),
