@@ -384,6 +384,7 @@ export type Database = {
           id: number
           islem_id: number | null
           musteri_id: number | null
+          notlar: string | null
           odenen: number
           personel_id: number | null
           photos: string[] | null
@@ -398,6 +399,7 @@ export type Database = {
           id?: number
           islem_id?: number | null
           musteri_id?: number | null
+          notlar?: string | null
           odenen?: number
           personel_id?: number | null
           photos?: string[] | null
@@ -412,6 +414,7 @@ export type Database = {
           id?: number
           islem_id?: number | null
           musteri_id?: number | null
+          notlar?: string | null
           odenen?: number
           personel_id?: number | null
           photos?: string[] | null

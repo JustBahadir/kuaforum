@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   Table,
   TableBody,
@@ -11,9 +11,11 @@ import {
 } from "@/components/ui/table";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Save } from "lucide-react";
 import { customerOperationsService } from "@/lib/supabase/services/customerOperationsService";
 import { formatCurrency } from "@/lib/utils";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 
 interface CustomerOperationsTableProps {
   customerId: string | number;
@@ -23,7 +25,9 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
   const [totalPoints, setTotalPoints] = useState(0);
   const [totalAmount, setTotalAmount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
+  const [editedNotes, setEditedNotes] = useState<Record<number, string>>({});
   const itemsPerPage = 5;
+  const queryClient = useQueryClient();
 
   const { data: operations = [], isLoading, refetch } = useQuery({
     queryKey: ['customerOperations', customerId],
@@ -41,6 +45,21 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
     enabled: !!customerId
   });
 
+  // Mutation for updating notes
+  const updateNotesMutation = useMutation({
+    mutationFn: async ({ operationId, notes }: { operationId: number, notes: string }) => {
+      return await customerOperationsService.updateOperationNotes(operationId, notes);
+    },
+    onSuccess: () => {
+      toast.success("Notlar başarıyla kaydedildi");
+      queryClient.invalidateQueries({ queryKey: ['customerOperations', customerId] });
+    },
+    onError: (error) => {
+      toast.error("Notlar kaydedilirken bir hata oluştu");
+      console.error("Error updating notes:", error);
+    }
+  });
+
   // Calculate totals and pagination
   useEffect(() => {
     if (operations.length) {
@@ -48,6 +67,13 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
       const amount = operations.reduce((sum, op) => sum + op.amount, 0);
       setTotalPoints(points);
       setTotalAmount(amount);
+
+      // Initialize edited notes
+      const notesMap: Record<number, string> = {};
+      operations.forEach(op => {
+        notesMap[op.id] = op.notes || '';
+      });
+      setEditedNotes(notesMap);
     }
   }, [operations]);
 
@@ -68,6 +94,18 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
     if (currentPage > 1) {
       setCurrentPage(currentPage - 1);
     }
+  };
+
+  const handleNotesChange = (operationId: number, value: string) => {
+    setEditedNotes(prev => ({
+      ...prev,
+      [operationId]: value
+    }));
+  };
+
+  const saveNotes = (operationId: number) => {
+    const notes = editedNotes[operationId] || '';
+    updateNotesMutation.mutate({ operationId, notes });
   };
 
   if (isLoading) {
@@ -120,7 +158,8 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
             <TableHead>Personel</TableHead>
             <TableHead>Tutar</TableHead>
             <TableHead>Puan</TableHead>
-            <TableHead>Açıklama</TableHead>
+            <TableHead>Notlar</TableHead>
+            <TableHead></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -134,12 +173,22 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
               <TableCell>{formatCurrency(operation.amount)}</TableCell>
               <TableCell className="text-purple-600 font-semibold">{operation.points}</TableCell>
               <TableCell>
-                <textarea 
-                  className="w-full p-2 border rounded text-sm"
-                  value={operation.notes || ''}
-                  readOnly
+                <Textarea 
+                  className="w-full text-sm min-h-[60px]"
+                  value={editedNotes[operation.id] || ''}
+                  onChange={(e) => handleNotesChange(operation.id, e.target.value)}
                   rows={2}
                 />
+              </TableCell>
+              <TableCell>
+                <Button 
+                  size="sm" 
+                  variant="ghost"
+                  onClick={() => saveNotes(operation.id)}
+                  disabled={updateNotesMutation.isPending}
+                >
+                  <Save className="h-4 w-4" />
+                </Button>
               </TableCell>
             </TableRow>
           ))}
