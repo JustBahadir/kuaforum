@@ -140,6 +140,10 @@ export const randevuServisi = {
     try {
       console.log(`Randevu ${id} güncelleniyor:`, randevu);
       
+      if (randevu.durum === "tamamlandi") {
+        console.log(`Randevu ${id} tamamlandı olarak işaretleniyor...`);
+      }
+      
       if (randevu.durum && Object.keys(randevu).length === 1) {
         const { data, error } = await supabase
           .rpc('update_appointment_status', { 
@@ -159,6 +163,10 @@ export const randevuServisi = {
             console.log(`Randevu ${id} tamamlandı olarak işaretlendi, işlemler oluşturuluyor...`);
             const operationResults = await this.randevuTamamlandi(id);
             console.log(`İşlem kayıtları oluşturuldu:`, operationResults);
+            
+            // Update shop statistics
+            await personelIslemleriServisi.updateShopStatistics();
+            
             return { ...data, operationResults };
           } catch (opError) {
             console.error("İşlem kaydı oluşturma hatası:", opError);
@@ -187,6 +195,10 @@ export const randevuServisi = {
             console.log(`Randevu ${id} tamamlandı olarak işaretlendi, işlemler oluşturuluyor...`);
             const operationResults = await this.randevuTamamlandi(id);
             console.log(`İşlem kayıtları oluşturuldu:`, operationResults);
+            
+            // Update shop statistics
+            await personelIslemleriServisi.updateShopStatistics();
+            
             return { ...data[0], operationResults };
           } catch (opError) {
             console.error("İşlem kaydı oluşturma hatası:", opError);
@@ -324,6 +336,9 @@ export const randevuServisi = {
       }
       
       console.log(`Toplam ${createdOperations.length} adet işlem kaydı oluşturuldu`);
+      
+      // Update shop statistics
+      await personelIslemleriServisi.updateShopStatistics();
       
       if (createdOperations.length > 0) {
         toast.success(`Randevu tamamlandı ve ${createdOperations.length} işlem kaydedildi`);

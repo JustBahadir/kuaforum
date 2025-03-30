@@ -186,6 +186,7 @@ export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTab
             <TableRow>
               <TableHead>Tarih</TableHead>
               <TableHead>İşlem</TableHead>
+              <TableHead>Müşteri</TableHead>
               <TableHead>Tutar</TableHead>
               <TableHead>Prim %</TableHead>
               <TableHead>Ödenen</TableHead>
@@ -199,6 +200,11 @@ export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTab
                   {operation.created_at ? formatDate(operation.created_at) : '-'}
                 </TableCell>
                 <TableCell>{operation.aciklama || (operation.islem?.islem_adi) || '-'}</TableCell>
+                <TableCell>
+                  {operation.musteri ? 
+                    `${operation.musteri.first_name || ''} ${operation.musteri.last_name || ''}`.trim() : 
+                    (operation.aciklama ? operation.aciklama.split(' - ')[1]?.replace(/\(Randevu #\d+\)/, '').trim() : '-')}
+                </TableCell>
                 <TableCell>{formatCurrency(operation.tutar || 0)}</TableCell>
                 <TableCell>%{operation.prim_yuzdesi}</TableCell>
                 <TableCell>{formatCurrency(operation.odenen || 0)}</TableCell>
