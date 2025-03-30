@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { randevuServisi } from "@/lib/supabase/services/randevuServisi";
@@ -84,7 +83,7 @@ export function useAppointments(dukkanId?: number) {
     for (const appointment of enhancedAppointments) {
       if (appointment.personel_id && !appointment.personel) {
         try {
-          const personel = await personelServisi.getir(appointment.personel_id);
+          const personel = await personelServisi.getirById(appointment.personel_id);
           if (personel) {
             appointment.personel = personel as Personel;
           }
@@ -95,7 +94,7 @@ export function useAppointments(dukkanId?: number) {
       
       if (appointment.musteri_id && !appointment.musteri) {
         try {
-          const musteri = await musteriServisi.getir(appointment.musteri_id);
+          const musteri = await musteriServisi.getirById(appointment.musteri_id);
           if (musteri) {
             // Add a role property to make it compatible with Profile type
             const customerWithRole = {
