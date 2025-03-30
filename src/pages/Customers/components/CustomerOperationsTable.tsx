@@ -46,6 +46,7 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
         return result;
       } catch (error) {
         console.error('Error fetching customer operations:', error);
+        toast.error("Müşteri işlemleri yüklenirken bir hata oluştu");
         return [];
       }
     },

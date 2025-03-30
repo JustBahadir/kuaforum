@@ -1,39 +1,44 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { personelIslemleriServisi } from "@/lib/supabase";
-import { format } from "date-fns";
-import { 
+import {
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
-  TableRow 
+  TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { format } from "date-fns";
+import { toast } from "sonner";
 
 interface PersonnelOperationsTableProps {
-  personnelId: number;
+  personnelId: number | string;
 }
 
 export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPoints, setTotalPoints] = useState(0);
+  const [totalAmount, setTotalAmount] = useState(0);
+  const [totalPaid, setTotalPaid] = useState(0);
   const itemsPerPage = 5;
 
   // Get operations for this specific personnel
-  const { data: operations = [], isLoading, refetch } = useQuery({
+  const { data: operations = [], isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['personnelOperations', personnelId],
     queryFn: async () => {
       try {
         console.log(`Fetching operations for personnel ID: ${personnelId}`);
-        const result = await personelIslemleriServisi.personelIslemleriGetir(personnelId);
+        const result = await personelIslemleriServisi.personelIslemleriGetir(Number(personnelId));
         console.log("Retrieved personnel operations:", result);
         return result;
       } catch (error) {
         console.error('Error fetching personnel operations:', error);
+        toast.error("Personel işlemleri yüklenirken bir hata oluştu");
         return [];
       }
     },
@@ -41,9 +46,17 @@ export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTab
   });
 
   // Calculate totals
-  const totalPoints = operations.reduce((sum, op) => sum + (op.puan || 0), 0);
-  const totalAmount = operations.reduce((sum, op) => sum + (op.tutar || 0), 0);
-  const totalPaid = operations.reduce((sum, op) => sum + (op.odenen || 0), 0);
+  useEffect(() => {
+    if (operations?.length) {
+      setTotalPoints(operations.reduce((sum, op) => sum + (op.puan || 0), 0));
+      setTotalAmount(operations.reduce((sum, op) => sum + (op.tutar || 0), 0));
+      setTotalPaid(operations.reduce((sum, op) => sum + (op.odenen || 0), 0));
+    } else {
+      setTotalPoints(0);
+      setTotalAmount(0);
+      setTotalPaid(0);
+    }
+  }, [operations]);
 
   // Calculate pagination
   const totalPages = Math.ceil(operations.length / itemsPerPage);
@@ -61,6 +74,19 @@ export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTab
   const goToPreviousPage = () => {
     if (currentPage > 1) {
       setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const handleRefresh = () => {
+    refetch();
+    toast.info("İşlem geçmişi yenileniyor...");
+  };
+
+  const formatDate = (dateString: string) => {
+    try {
+      return format(new Date(dateString), 'dd.MM.yyyy');
+    } catch (e) {
+      return dateString || '-';
     }
   };
 
@@ -86,27 +112,38 @@ export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTab
           </div>
         </div>
         
-        {totalPages > 1 && (
-          <div className="flex items-center gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={goToPreviousPage}
-              disabled={currentPage === 1}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <span className="text-sm">{currentPage} / {totalPages || 1}</span>
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={goToNextPage}
-              disabled={currentPage === totalPages || totalPages === 0}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleRefresh}
+            disabled={isRefetching}
+          >
+            <RefreshCw className={`h-4 w-4 ${isRefetching ? 'animate-spin' : ''}`} />
+          </Button>
+          
+          {totalPages > 1 && (
+            <>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={goToPreviousPage}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-sm">{currentPage} / {totalPages || 1}</span>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={goToNextPage}
+                disabled={currentPage === totalPages || totalPages === 0}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </>
+          )}
+        </div>
       </div>
       
       {operations.length === 0 ? (
@@ -129,9 +166,9 @@ export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTab
             {paginatedOperations.map((operation) => (
               <TableRow key={operation.id} className="hover:bg-gray-50">
                 <TableCell className="font-medium">
-                  {operation.created_at ? format(new Date(operation.created_at), 'dd.MM.yyyy') : '-'}
+                  {operation.created_at ? formatDate(operation.created_at) : '-'}
                 </TableCell>
-                <TableCell>{operation.aciklama}</TableCell>
+                <TableCell>{operation.aciklama || (operation.islem?.islem_adi) || '-'}</TableCell>
                 <TableCell>{formatCurrency(operation.tutar || 0)}</TableCell>
                 <TableCell>%{operation.prim_yuzdesi}</TableCell>
                 <TableCell>{formatCurrency(operation.odenen || 0)}</TableCell>

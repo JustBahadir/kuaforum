@@ -93,28 +93,43 @@ export const personelIslemleriServisi = {
       console.log("Adding new personnel operation:", islemi);
       
       // Check if an operation with this randevu_id and islem_id already exists
-      if (islemi.randevu_id && islemi.islem_id) {
+      if (islemi.randevu_id && islemi.islem_id && islemi.personel_id) {
         const { data: existingOps } = await supabase
           .from('personel_islemleri')
           .select('id')
           .eq('randevu_id', islemi.randevu_id)
-          .eq('islem_id', islemi.islem_id);
+          .eq('islem_id', islemi.islem_id)
+          .eq('personel_id', islemi.personel_id);
           
         if (existingOps && existingOps.length > 0) {
-          console.log(`Operation already exists for randevu ID ${islemi.randevu_id} and islem ID ${islemi.islem_id}. Skipping.`);
+          console.log(`Operation already exists for randevu ID ${islemi.randevu_id} and islem ID ${islemi.islem_id}. Updating.`);
           
-          // Return the existing record
-          const { data: existingOp } = await supabase
+          // Update the existing record
+          const { data: updatedOp, error: updateError } = await supabase
             .from('personel_islemleri')
+            .update({
+              tutar: islemi.tutar,
+              puan: islemi.puan,
+              prim_yuzdesi: islemi.prim_yuzdesi,
+              odenen: islemi.odenen,
+              aciklama: islemi.aciklama,
+              notlar: islemi.notlar
+            })
+            .eq('id', existingOps[0].id)
             .select(`
               *,
               islem:islemler(*),
               personel:personel(*)
             `)
-            .eq('id', existingOps[0].id)
             .single();
             
-          return existingOp;
+          if (updateError) {
+            console.error("Error updating existing operation:", updateError);
+            throw updateError;
+          }
+            
+          console.log("Successfully updated existing operation:", updatedOp);
+          return updatedOp;
         }
       }
       
