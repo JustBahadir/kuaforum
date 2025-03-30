@@ -16,6 +16,7 @@ import { MonthlyPerformanceChart } from "./components/MonthlyPerformanceChart";
 import { ServicePerformanceChart } from "./components/ServicePerformanceChart";
 import { YearlyStatisticsPlaceholder } from "./components/YearlyStatisticsPlaceholder";
 import { DailyPerformanceChart } from "./components/DailyPerformanceChart";
+import { HourlyPerformanceChart } from "./components/HourlyPerformanceChart";
 
 // Define interfaces for chart data
 interface ChartDataItem {
@@ -32,7 +33,7 @@ interface ServiceDataItem {
 
 export default function ShopStatistics() {
   const { userRole, dukkanId } = useCustomerAuth();
-  const [period, setPeriod] = useState<string>("daily"); // Default to daily view
+  const [period, setPeriod] = useState<string>("daily"); // Changed default to daily view
   
   const { data: shopStats, isLoading: isStatsLoading, refetch: refetchStats, isRefetching } = useQuery({
     queryKey: ['shop-statistics'],
@@ -60,6 +61,7 @@ export default function ShopStatistics() {
   });
   
   // Calculate data for charts based on operations
+  const [hourlyData, setHourlyData] = useState<ChartDataItem[]>([]);
   const [dailyData, setDailyData] = useState<ChartDataItem[]>([]);
   const [weeklyData, setWeeklyData] = useState<ChartDataItem[]>([]);
   const [monthlyData, setMonthlyData] = useState<ChartDataItem[]>([]);
@@ -70,6 +72,10 @@ export default function ShopStatistics() {
     if (!islemler || islemler.length === 0) return;
     
     try {
+      // Prepare hourly data (today's operations by hour)
+      const hourlyStats = prepareHourlyData(islemler);
+      setHourlyData(hourlyStats);
+      
       // Prepare daily data (last 7 days)
       const dailyStats = prepareDailyData(islemler);
       setDailyData(dailyStats);
@@ -89,6 +95,45 @@ export default function ShopStatistics() {
       console.error("Error preparing chart data:", error);
     }
   }, [islemler]);
+  
+  const prepareHourlyData = (operations: any[]): ChartDataItem[] => {
+    // Group operations by hour for today
+    const hours: ChartDataItem[] = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Set to beginning of today
+    
+    // Initialize hours array with all 24 hours
+    for (let i = 0; i < 24; i++) {
+      hours.push({
+        name: `${i}:00`,
+        ciro: 0,
+        islemSayisi: 0
+      });
+    }
+    
+    // Aggregate data for today only
+    operations.forEach(op => {
+      try {
+        if (!op.created_at) return;
+        
+        const opDate = new Date(op.created_at);
+        const opDay = new Date(opDate);
+        opDay.setHours(0, 0, 0, 0);
+        
+        // Check if operation happened today
+        if (opDay.getTime() === today.getTime()) {
+          const hourIndex = opDate.getHours();
+          
+          hours[hourIndex].ciro += (op.tutar || 0);
+          hours[hourIndex].islemSayisi += 1;
+        }
+      } catch (e) {
+        console.error("Error processing operation for hourly chart:", e);
+      }
+    });
+    
+    return hours;
+  };
   
   const prepareDailyData = (operations: any[]): ChartDataItem[] => {
     // Group operations by day for the last 7 days
@@ -312,6 +357,7 @@ export default function ShopStatistics() {
           />
           
           <TabsContent value="daily" className="space-y-4">
+            <HourlyPerformanceChart data={hourlyData} isLoading={isLoading} />
             <DailyPerformanceChart data={dailyData} isLoading={isLoading} />
           </TabsContent>
           
