@@ -226,6 +226,20 @@ export const customerOperationsService = {
       // Extract prim_yuzdesi safely
       const primYuzdesi = this.extractPrimYuzdesi(appointment);
       
+      // Fetch customer details for better description
+      let customerName = "Belirtilmemiş";
+      if (appointment.musteri_id) {
+        const { data: customer } = await supabase
+          .from('musteriler')
+          .select('first_name, last_name')
+          .eq('id', appointment.musteri_id)
+          .single();
+          
+        if (customer) {
+          customerName = `${customer.first_name || ''} ${customer.last_name || ''}`.trim();
+        }
+      }
+      
       // Create operation records
       for (const service of servicesData) {
         const tutar = parseFloat(service.fiyat) || 0;
@@ -240,7 +254,7 @@ export const customerOperationsService = {
           odenen: odenenPrim,
           musteri_id: appointment.musteri_id,
           randevu_id: appointment.id,
-          aciklama: `${service.islem_adi} hizmeti verildi. Randevu #${appointment.id}`,
+          aciklama: `${service.islem_adi} hizmeti verildi - ${customerName} (Randevu #${appointment.id})`,
           notlar: appointment.notlar || ''
         };
         
@@ -289,6 +303,57 @@ export const customerOperationsService = {
       console.log(`Successfully updated notes for operation ID: ${operationId}`);
     } catch (error) {
       console.error('Error updating operation notes:', error);
+      throw error;
+    }
+  },
+
+  // Force conversion of appointments to operations
+  async forceConvertAppointmentsToOperations(customerId: number | string): Promise<void> {
+    try {
+      console.log(`Forcing conversion of appointments to operations for customer ID: ${customerId}`);
+      
+      // Get all completed appointments for this customer
+      const { data: appointments, error } = await supabase
+        .from('randevular')
+        .select(`
+          id,
+          created_at,
+          tarih,
+          saat,
+          islemler,
+          notlar,
+          personel_id,
+          musteri_id,
+          personel:personel(*)
+        `)
+        .eq('musteri_id', customerId)
+        .eq('durum', 'tamamlandi');
+        
+      if (error) {
+        console.error("Error fetching appointments for conversion:", error);
+        throw error;
+      }
+      
+      if (!appointments || appointments.length === 0) {
+        console.log(`No completed appointments found for customer ID: ${customerId}`);
+        return;
+      }
+      
+      console.log(`Found ${appointments.length} completed appointments to convert`);
+      
+      // Process each appointment
+      for (const appointment of appointments) {
+        try {
+          await this.convertAppointmentToOperations(appointment);
+          console.log(`Processed appointment ID: ${appointment.id}`);
+        } catch (err) {
+          console.error(`Error processing appointment ID ${appointment.id}:`, err);
+        }
+      }
+      
+      console.log(`Completed force conversion for customer ID: ${customerId}`);
+    } catch (error) {
+      console.error('Error in forceConvertAppointmentsToOperations:', error);
       throw error;
     }
   }

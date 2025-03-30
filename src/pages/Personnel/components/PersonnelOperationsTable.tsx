@@ -59,7 +59,7 @@ export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTab
   }, [operations]);
 
   // Calculate pagination
-  const totalPages = Math.ceil(operations.length / itemsPerPage);
+  const totalPages = Math.ceil((operations?.length || 0) / itemsPerPage);
   const paginatedOperations = operations.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
@@ -90,8 +90,29 @@ export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTab
     }
   };
 
+  const handleForceRecover = async () => {
+    try {
+      toast.info("Tamamlanan randevular işleniyor...");
+      
+      // Force recovery from appointments
+      await personelIslemleriServisi.recoverOperationsFromAppointments(Number(personnelId));
+      
+      // Refetch data
+      refetch();
+      
+      toast.success("İşlem geçmişi yenilendi");
+    } catch (error) {
+      console.error("Error recovering operations:", error);
+      toast.error("İşlem geçmişi yenilenirken bir hata oluştu");
+    }
+  };
+
   if (isLoading) {
-    return <div className="text-center py-4">Yükleniyor...</div>;
+    return (
+      <div className="flex justify-center p-4">
+        <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
+      </div>
+    );
   }
 
   return (
@@ -114,12 +135,13 @@ export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTab
         
         <div className="flex items-center gap-2">
           <Button 
-            variant="outline" 
+            variant="default" 
             size="sm" 
-            onClick={handleRefresh}
+            onClick={handleForceRecover}
             disabled={isRefetching}
           >
-            <RefreshCw className={`h-4 w-4 ${isRefetching ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-4 w-4 mr-1 ${isRefetching ? 'animate-spin' : ''}`} />
+            Veriyi Yenile
           </Button>
           
           {totalPages > 1 && (
@@ -148,7 +170,15 @@ export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTab
       
       {operations.length === 0 ? (
         <div className="text-center py-6 text-muted-foreground">
-          Bu personele ait işlem bulunamadı.
+          <p className="mb-2">Bu personele ait işlem bulunamadı.</p>
+          <Button 
+            variant="outline" 
+            onClick={handleForceRecover}
+            disabled={isRefetching}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isRefetching ? 'animate-spin' : ''}`} />
+            Tamamlanan Randevulardan İşlemleri Oluştur
+          </Button>
         </div>
       ) : (
         <Table>

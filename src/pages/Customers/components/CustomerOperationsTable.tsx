@@ -125,6 +125,23 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
     toast.info("İşlem geçmişi yenileniyor...");
   };
 
+  const handleForceRecover = async () => {
+    try {
+      toast.info("Tamamlanan randevular işleniyor...");
+      
+      // Force recovery from appointments
+      await customerOperationsService.forceConvertAppointmentsToOperations(customerId);
+      
+      // Refetch data
+      refetch();
+      
+      toast.success("İşlem geçmişi yenilendi");
+    } catch (error) {
+      console.error("Error recovering operations:", error);
+      toast.error("İşlem geçmişi yenilenirken bir hata oluştu");
+    }
+  };
+
   const formatDate = (dateString: string) => {
     try {
       return format(new Date(dateString), 'dd.MM.yyyy');
@@ -163,30 +180,36 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
         </div>
         <div className="flex items-center gap-2">
           <Button 
-            variant="outline" 
+            variant="default" 
             size="sm" 
-            onClick={handleRefresh}
+            onClick={handleForceRecover}
             disabled={isRefetching}
           >
-            <RefreshCw className={`h-4 w-4 ${isRefetching ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-4 w-4 mr-1 ${isRefetching ? 'animate-spin' : ''}`} />
+            Veriyi Yenile
           </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={goToPreviousPage}
-            disabled={currentPage === 1}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <span className="text-sm">{currentPage} / {totalPages || 1}</span>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={goToNextPage}
-            disabled={currentPage === totalPages || totalPages === 0}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+          
+          {totalPages > 1 && (
+            <>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={goToPreviousPage}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-sm">{currentPage} / {totalPages || 1}</span>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={goToNextPage}
+                disabled={currentPage === totalPages || totalPages === 0}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </>
+          )}
         </div>
       </div>
       
@@ -198,11 +221,10 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
           <Button 
             variant="outline" 
             className="mt-4"
-            onClick={handleRefresh}
-            disabled={isRefetching}
+            onClick={handleForceRecover}
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${isRefetching ? 'animate-spin' : ''}`} />
-            Yenile
+            Tamamlanan Randevulardan İşlemleri Oluştur
           </Button>
         </div>
       ) : (

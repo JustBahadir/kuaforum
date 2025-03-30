@@ -48,6 +48,30 @@ export const personelIslemleriServisi = {
       }
       
       console.log(`Retrieved ${data?.length || 0} operations for personnel ID: ${personelId}`);
+      
+      // If no operations found, attempt to recover from randevular table
+      if (!data || data.length === 0) {
+        console.log("No operations found, attempting to recover from appointments...");
+        await this.recoverOperationsFromAppointments(personelId);
+        
+        // Try again after recovery attempt
+        const { data: retryData, error: retryError } = await supabase
+          .from('personel_islemleri')
+          .select(`
+            *,
+            islem:islemler(*),
+            personel:personel(*)
+          `)
+          .eq('personel_id', personelId)
+          .order('created_at', { ascending: false });
+          
+        if (retryError) {
+          console.error(`Error on retry fetching operations:`, retryError);
+        }
+        
+        return retryData || [];
+      }
+      
       return data || [];
     } catch (error) {
       console.error("Error in personelIslemleriGetir:", error);
@@ -75,6 +99,30 @@ export const personelIslemleriServisi = {
       }
       
       console.log(`Retrieved ${data?.length || 0} operations for customer ID: ${musteriId}`);
+      
+      // If no operations found, attempt to recover from randevular table
+      if (!data || data.length === 0) {
+        console.log("No operations found, attempting to recover from appointments...");
+        await this.recoverOperationsFromCustomerAppointments(musteriId);
+        
+        // Try again after recovery attempt
+        const { data: retryData, error: retryError } = await supabase
+          .from('personel_islemleri')
+          .select(`
+            *,
+            islem:islemler(*),
+            personel:personel(*)
+          `)
+          .eq('musteri_id', musteriId)
+          .order('created_at', { ascending: false });
+          
+        if (retryError) {
+          console.error(`Error on retry fetching operations:`, retryError);
+        }
+        
+        return retryData || [];
+      }
+      
       return data || [];
     } catch (error) {
       console.error("Error in musteriIslemleriGetir:", error);
@@ -217,6 +265,215 @@ export const personelIslemleriServisi = {
     } catch (error) {
       console.error("Error in sil:", error);
       throw error;
+    }
+  },
+
+  // Recover operations from completed appointments for personnel
+  async recoverOperationsFromAppointments(personelId: number) {
+    try {
+      console.log(`Attempting to recover operations for personnel ID: ${personelId} from completed appointments`);
+      
+      // Get all completed appointments for this personnel
+      const { data: appointments, error } = await supabase
+        .from('randevular')
+        .select(`
+          *,
+          musteri:musteriler(*),
+          personel:personel(*)
+        `)
+        .eq('personel_id', personelId)
+        .eq('durum', 'tamamlandi');
+        
+      if (error || !appointments || appointments.length === 0) {
+        console.log(`No completed appointments found for personnel ID: ${personelId}`);
+        return [];
+      }
+      
+      console.log(`Found ${appointments.length} completed appointments for personnel recovery`);
+      
+      // Process each appointment
+      for (const appointment of appointments) {
+        try {
+          // Get service IDs
+          const islemIds = appointment.islemler || [];
+          if (!islemIds || islemIds.length === 0) continue;
+          
+          // Get service details
+          const { data: services } = await supabase
+            .from('islemler')
+            .select('*')
+            .in('id', islemIds);
+            
+          if (!services || services.length === 0) continue;
+          
+          const personelData = appointment.personel;
+          const primYuzdesi = personelData?.prim_yuzdesi || 0;
+          
+          // Create customer name
+          let musteriAdi = "Belirtilmemiş";
+          if (appointment.musteri) {
+            musteriAdi = `${appointment.musteri.first_name || ''} ${appointment.musteri.last_name || ''}`.trim();
+          }
+          
+          // Create operation records
+          for (const service of services) {
+            const tutar = parseFloat(service.fiyat) || 0;
+            const odenenPrim = (tutar * primYuzdesi) / 100;
+            
+            // Check if operation already exists
+            const { data: existing } = await supabase
+              .from('personel_islemleri')
+              .select('id')
+              .eq('randevu_id', appointment.id)
+              .eq('islem_id', service.id)
+              .eq('personel_id', personelId);
+              
+            if (existing && existing.length > 0) {
+              console.log(`Operation already exists, skipping: ${existing[0].id}`);
+              continue;
+            }
+            
+            // Create new operation
+            const personelIslem = {
+              personel_id: personelId,
+              islem_id: service.id,
+              tutar: tutar,
+              puan: parseInt(service.puan) || 0,
+              prim_yuzdesi: primYuzdesi,
+              odenen: odenenPrim,
+              musteri_id: appointment.musteri_id,
+              randevu_id: appointment.id,
+              aciklama: `${service.islem_adi} hizmeti verildi - ${musteriAdi} (Randevu #${appointment.id})`,
+              notlar: appointment.notlar || ''
+            };
+            
+            console.log("Creating recovered personnel operation:", personelIslem);
+            
+            const { error: insertError } = await supabase
+              .from('personel_islemleri')
+              .insert([personelIslem]);
+              
+            if (insertError) {
+              console.error("Error creating recovered operation:", insertError);
+            } else {
+              console.log("Successfully created recovered operation");
+            }
+          }
+        } catch (appError) {
+          console.error(`Error processing appointment ID ${appointment.id}:`, appError);
+        }
+      }
+      
+      console.log("Recovery operation completed for personnel");
+      return [];
+    } catch (error) {
+      console.error("Error in recoverOperationsFromAppointments:", error);
+      return [];
+    }
+  },
+
+  // Recover operations from completed appointments for customer
+  async recoverOperationsFromCustomerAppointments(musteriId: number) {
+    try {
+      console.log(`Attempting to recover operations for customer ID: ${musteriId} from completed appointments`);
+      
+      // Get all completed appointments for this customer
+      const { data: appointments, error } = await supabase
+        .from('randevular')
+        .select(`
+          *,
+          musteri:musteriler(*),
+          personel:personel(*)
+        `)
+        .eq('musteri_id', musteriId)
+        .eq('durum', 'tamamlandi');
+        
+      if (error || !appointments || appointments.length === 0) {
+        console.log(`No completed appointments found for customer ID: ${musteriId}`);
+        return [];
+      }
+      
+      console.log(`Found ${appointments.length} completed appointments for customer recovery`);
+      
+      // Process each appointment
+      for (const appointment of appointments) {
+        try {
+          // Get service IDs
+          const islemIds = appointment.islemler || [];
+          if (!islemIds || islemIds.length === 0) continue;
+          
+          // Get service details
+          const { data: services } = await supabase
+            .from('islemler')
+            .select('*')
+            .in('id', islemIds);
+            
+          if (!services || services.length === 0) continue;
+          
+          const personelData = appointment.personel;
+          const primYuzdesi = personelData?.prim_yuzdesi || 0;
+          const personelId = appointment.personel_id;
+          
+          // Create customer name
+          let musteriAdi = "Belirtilmemiş";
+          if (appointment.musteri) {
+            musteriAdi = `${appointment.musteri.first_name || ''} ${appointment.musteri.last_name || ''}`.trim();
+          }
+          
+          // Create operation records
+          for (const service of services) {
+            const tutar = parseFloat(service.fiyat) || 0;
+            const odenenPrim = (tutar * primYuzdesi) / 100;
+            
+            // Check if operation already exists
+            const { data: existing } = await supabase
+              .from('personel_islemleri')
+              .select('id')
+              .eq('randevu_id', appointment.id)
+              .eq('islem_id', service.id)
+              .eq('personel_id', personelId);
+              
+            if (existing && existing.length > 0) {
+              console.log(`Operation already exists, skipping: ${existing[0].id}`);
+              continue;
+            }
+            
+            // Create new operation
+            const personelIslem = {
+              personel_id: personelId,
+              islem_id: service.id,
+              tutar: tutar,
+              puan: parseInt(service.puan) || 0,
+              prim_yuzdesi: primYuzdesi,
+              odenen: odenenPrim,
+              musteri_id: musteriId,
+              randevu_id: appointment.id,
+              aciklama: `${service.islem_adi} hizmeti verildi - ${musteriAdi} (Randevu #${appointment.id})`,
+              notlar: appointment.notlar || ''
+            };
+            
+            console.log("Creating recovered personnel operation:", personelIslem);
+            
+            const { error: insertError } = await supabase
+              .from('personel_islemleri')
+              .insert([personelIslem]);
+              
+            if (insertError) {
+              console.error("Error creating recovered operation:", insertError);
+            } else {
+              console.log("Successfully created recovered operation");
+            }
+          }
+        } catch (appError) {
+          console.error(`Error processing appointment ID ${appointment.id}:`, appError);
+        }
+      }
+      
+      console.log("Recovery operation completed for customer");
+      return [];
+    } catch (error) {
+      console.error("Error in recoverOperationsFromCustomerAppointments:", error);
+      return [];
     }
   }
 };
