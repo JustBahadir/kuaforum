@@ -33,7 +33,7 @@ interface ServiceDataItem {
 
 export default function ShopStatistics() {
   const { userRole, dukkanId } = useCustomerAuth();
-  const [period, setPeriod] = useState<string>("daily"); // Changed default to daily view
+  const [period, setPeriod] = useState<string>("daily"); // Default to daily view
   
   const { data: shopStats, isLoading: isStatsLoading, refetch: refetchStats, isRefetching } = useQuery({
     queryKey: ['shop-statistics'],
