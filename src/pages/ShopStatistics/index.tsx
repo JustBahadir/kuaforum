@@ -49,7 +49,9 @@ export default function ShopStatistics() {
         return null;
       }
     },
-    enabled: !!dukkanId
+    enabled: !!dukkanId,
+    refetchOnWindowFocus: false,
+    staleTime: 60000 // Consider data fresh for 1 minute
   });
   
   const { data: islemler = [], isLoading: isIslemlerLoading, refetch: refetchIslemler } = useQuery({
@@ -57,7 +59,9 @@ export default function ShopStatistics() {
     queryFn: async () => {
       return await personelIslemleriServisi.hepsiniGetir();
     },
-    enabled: !!dukkanId
+    enabled: !!dukkanId,
+    refetchOnWindowFocus: false,
+    staleTime: 60000 // Consider data fresh for 1 minute
   });
   
   // Calculate data for charts based on operations

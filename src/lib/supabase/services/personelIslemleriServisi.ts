@@ -1,3 +1,4 @@
+
 import { supabase } from '../client';
 import { PersonelIslemi } from '../types';
 
@@ -50,6 +51,8 @@ export const personelIslemleriServisi = {
   async personelIslemleriGetir(personelId: number) {
     try {
       console.log(`Fetching operations for personnel ID: ${personelId}`);
+      
+      // Try to fetch existing operations first
       const { data, error } = await supabase
         .from('personel_islemleri')
         .select(`
@@ -68,26 +71,32 @@ export const personelIslemleriServisi = {
       
       console.log(`Retrieved ${data?.length || 0} operations for personnel ID: ${personelId}`);
       
+      // If no operations found, try to recover them from appointments
       if (!data || data.length === 0) {
         console.log("No operations found, attempting to recover from appointments...");
-        await this.recoverOperationsFromAppointments(personelId);
+        const recoveredOps = await this.recoverOperationsFromAppointments(personelId);
         
-        const { data: retryData, error: retryError } = await supabase
-          .from('personel_islemleri')
-          .select(`
-            *,
-            islem:islemler(*),
-            personel:personel(*),
-            musteri:musteriler(*)
-          `)
-          .eq('personel_id', personelId)
-          .order('created_at', { ascending: false });
+        if (recoveredOps && recoveredOps.length > 0) {
+          console.log(`Recovered ${recoveredOps.length} operations from appointments`);
           
-        if (retryError) {
-          console.error(`Error on retry fetching operations:`, retryError);
+          // Fetch the recovered operations with all their details
+          const { data: retryData, error: retryError } = await supabase
+            .from('personel_islemleri')
+            .select(`
+              *,
+              islem:islemler(*),
+              personel:personel(*),
+              musteri:musteriler(*)
+            `)
+            .eq('personel_id', personelId)
+            .order('created_at', { ascending: false });
+            
+          if (retryError) {
+            console.error(`Error on retry fetching operations:`, retryError);
+          }
+          
+          return retryData || [];
         }
-        
-        return retryData || [];
       }
       
       return data || [];
@@ -100,6 +109,8 @@ export const personelIslemleriServisi = {
   async musteriIslemleriGetir(musteriId: number) {
     try {
       console.log(`Fetching operations for customer ID: ${musteriId}`);
+      
+      // Try to fetch existing operations first
       const { data, error } = await supabase
         .from('personel_islemleri')
         .select(`
@@ -118,26 +129,32 @@ export const personelIslemleriServisi = {
       
       console.log(`Retrieved ${data?.length || 0} operations for customer ID: ${musteriId}`);
       
+      // If no operations found, try to recover them from appointments
       if (!data || data.length === 0) {
         console.log("No operations found, attempting to recover from appointments...");
-        await this.recoverOperationsFromCustomerAppointments(musteriId);
+        const recoveredOps = await this.recoverOperationsFromCustomerAppointments(musteriId);
         
-        const { data: retryData, error: retryError } = await supabase
-          .from('personel_islemleri')
-          .select(`
-            *,
-            islem:islemler(*),
-            personel:personel(*),
-            musteri:musteriler(*)
-          `)
-          .eq('musteri_id', musteriId)
-          .order('created_at', { ascending: false });
+        if (recoveredOps && recoveredOps.length > 0) {
+          console.log(`Recovered ${recoveredOps.length} operations from appointments`);
           
-        if (retryError) {
-          console.error(`Error on retry fetching operations:`, retryError);
+          // Fetch the recovered operations with all their details
+          const { data: retryData, error: retryError } = await supabase
+            .from('personel_islemleri')
+            .select(`
+              *,
+              islem:islemler(*),
+              personel:personel(*),
+              musteri:musteriler(*)
+            `)
+            .eq('musteri_id', musteriId)
+            .order('created_at', { ascending: false });
+            
+          if (retryError) {
+            console.error(`Error on retry fetching operations:`, retryError);
+          }
+          
+          return retryData || [];
         }
-        
-        return retryData || [];
       }
       
       return data || [];
@@ -156,6 +173,7 @@ export const personelIslemleriServisi = {
     try {
       console.log("Adding new personnel operation:", islemi);
       
+      // Check if an operation already exists for this randevu and islem
       if (islemi.randevu_id && islemi.islem_id && islemi.personel_id) {
         const { data: existingOps } = await supabase
           .from('personel_islemleri')
@@ -167,6 +185,7 @@ export const personelIslemleriServisi = {
         if (existingOps && existingOps.length > 0) {
           console.log(`Operation already exists for randevu ID ${islemi.randevu_id} and islem ID ${islemi.islem_id}. Updating.`);
           
+          // Update the existing operation
           const { data: updatedOp, error: updateError } = await supabase
             .from('personel_islemleri')
             .update({
@@ -193,10 +212,15 @@ export const personelIslemleriServisi = {
           }
             
           console.log("Successfully updated existing operation:", updatedOp);
+          
+          // Update shop statistics after the operation is updated
+          await this.updateShopStatistics();
+          
           return updatedOp;
         }
       }
       
+      // No existing operation found, create a new one
       const insertData = {
         personel_id: islemi.personel_id,
         islem_id: islemi.islem_id,
@@ -227,6 +251,10 @@ export const personelIslemleriServisi = {
       }
       
       console.log("Successfully added personnel operation:", data);
+      
+      // Update shop statistics after a new operation is added
+      await this.updateShopStatistics();
+      
       return data;
     } catch (error) {
       console.error("Error in ekle:", error);
@@ -255,6 +283,10 @@ export const personelIslemleriServisi = {
       }
       
       console.log(`Successfully updated operation ID ${id}:`, data);
+      
+      // Update shop statistics after an operation is updated
+      await this.updateShopStatistics();
+      
       return data;
     } catch (error) {
       console.error("Error in guncelle:", error);
@@ -276,6 +308,10 @@ export const personelIslemleriServisi = {
       }
       
       console.log(`Successfully deleted operation ID: ${id}`);
+      
+      // Update shop statistics after an operation is deleted
+      await this.updateShopStatistics();
+      
       return true;
     } catch (error) {
       console.error("Error in sil:", error);
@@ -287,6 +323,7 @@ export const personelIslemleriServisi = {
     try {
       console.log(`Attempting to recover operations for personnel ID: ${personelId} from completed appointments`);
       
+      // Get all completed appointments for this personnel
       const { data: appointments, error } = await supabase
         .from('randevular')
         .select(`
@@ -299,10 +336,32 @@ export const personelIslemleriServisi = {
         
       if (error || !appointments || appointments.length === 0) {
         console.log(`No completed appointments found for personnel ID: ${personelId}`);
-        return [];
+        
+        // Also check for appointments with status "onaylandi" (confirmed) that are in the past
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const { data: pastAppointments, error: pastError } = await supabase
+          .from('randevular')
+          .select(`
+            *,
+            musteri:musteriler(*),
+            personel:personel(*)
+          `)
+          .eq('personel_id', personelId)
+          .eq('durum', 'onaylandi')
+          .lt('tarih', today.toISOString().split('T')[0]);
+          
+        if (pastError || !pastAppointments || pastAppointments.length === 0) {
+          console.log(`No past confirmed appointments found for personnel ID: ${personelId}`);
+          return [];
+        }
+        
+        appointments = pastAppointments;
+        console.log(`Found ${appointments.length} past confirmed appointments for personnel recovery`);
+      } else {
+        console.log(`Found ${appointments.length} completed appointments for personnel recovery`);
       }
-      
-      console.log(`Found ${appointments.length} completed appointments for personnel recovery`);
       
       const createdOperations = [];
       for (const appointment of appointments) {
@@ -310,6 +369,7 @@ export const personelIslemleriServisi = {
           const islemIds = appointment.islemler || [];
           if (!islemIds || islemIds.length === 0) continue;
           
+          // Get service details for each service in the appointment
           const { data: services } = await supabase
             .from('islemler')
             .select('*')
@@ -330,6 +390,7 @@ export const personelIslemleriServisi = {
               const tutar = parseFloat(service.fiyat) || 0;
               const odenenPrim = (tutar * primYuzdesi) / 100;
               
+              // Check if operation already exists
               const { data: existing } = await supabase
                 .from('personel_islemleri')
                 .select('id')
@@ -340,6 +401,7 @@ export const personelIslemleriServisi = {
               if (existing && existing.length > 0) {
                 console.log(`Operation already exists, updating: ${existing[0].id}`);
                 
+                // Update existing operation
                 const { data: updatedOp } = await supabase
                   .from('personel_islemleri')
                   .update({
@@ -362,6 +424,7 @@ export const personelIslemleriServisi = {
                 continue;
               }
               
+              // Create new operation record
               const personelIslem = {
                 personel_id: personelId,
                 islem_id: service.id,
@@ -397,6 +460,11 @@ export const personelIslemleriServisi = {
         }
       }
       
+      // Update shop statistics after recovering operations
+      if (createdOperations.length > 0) {
+        await this.updateShopStatistics();
+      }
+      
       console.log("Recovery operation completed for personnel, created:", createdOperations.length);
       return createdOperations;
     } catch (error) {
@@ -409,6 +477,7 @@ export const personelIslemleriServisi = {
     try {
       console.log(`Attempting to recover operations for customer ID: ${musteriId} from completed appointments`);
       
+      // Get all completed appointments for this customer
       const { data: appointments, error } = await supabase
         .from('randevular')
         .select(`
@@ -421,10 +490,32 @@ export const personelIslemleriServisi = {
         
       if (error || !appointments || appointments.length === 0) {
         console.log(`No completed appointments found for customer ID: ${musteriId}`);
-        return [];
+        
+        // Also check for appointments with status "onaylandi" (confirmed) that are in the past
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const { data: pastAppointments, error: pastError } = await supabase
+          .from('randevular')
+          .select(`
+            *,
+            musteri:musteriler(*),
+            personel:personel(*)
+          `)
+          .eq('musteri_id', musteriId)
+          .eq('durum', 'onaylandi')
+          .lt('tarih', today.toISOString().split('T')[0]);
+          
+        if (pastError || !pastAppointments || pastAppointments.length === 0) {
+          console.log(`No past confirmed appointments found for customer ID: ${musteriId}`);
+          return [];
+        }
+        
+        appointments = pastAppointments;
+        console.log(`Found ${appointments.length} past confirmed appointments for customer recovery`);
+      } else {
+        console.log(`Found ${appointments.length} completed appointments for customer recovery`);
       }
-      
-      console.log(`Found ${appointments.length} completed appointments for customer recovery`);
       
       const createdOperations = [];
       for (const appointment of appointments) {
@@ -432,6 +523,7 @@ export const personelIslemleriServisi = {
           const islemIds = appointment.islemler || [];
           if (!islemIds || islemIds.length === 0) continue;
           
+          // Get service details for each service in the appointment
           const { data: services } = await supabase
             .from('islemler')
             .select('*')
@@ -458,6 +550,7 @@ export const personelIslemleriServisi = {
               const tutar = parseFloat(service.fiyat) || 0;
               const odenenPrim = (tutar * primYuzdesi) / 100;
               
+              // Check if operation already exists
               const { data: existing } = await supabase
                 .from('personel_islemleri')
                 .select('id')
@@ -468,6 +561,7 @@ export const personelIslemleriServisi = {
               if (existing && existing.length > 0) {
                 console.log(`Operation already exists, updating: ${existing[0].id}`);
                 
+                // Update existing operation
                 const { data: updatedOp } = await supabase
                   .from('personel_islemleri')
                   .update({
@@ -490,6 +584,7 @@ export const personelIslemleriServisi = {
                 continue;
               }
               
+              // Create new operation record
               const personelIslem = {
                 personel_id: personelId,
                 islem_id: service.id,
@@ -525,6 +620,11 @@ export const personelIslemleriServisi = {
         }
       }
       
+      // Update shop statistics after recovering operations
+      if (createdOperations.length > 0) {
+        await this.updateShopStatistics();
+      }
+      
       console.log("Recovery operation completed for customer, created:", createdOperations.length);
       return createdOperations;
     } catch (error) {
@@ -533,10 +633,12 @@ export const personelIslemleriServisi = {
     }
   },
 
+  // Get shop statistics for the dashboard
   async getShopStatistics(): Promise<ShopStatistics> {
     try {
       console.log("Fetching shop statistics");
       
+      // Fetch all operations with their related data
       const { data: operations, error } = await supabase
         .from('personel_islemleri')
         .select(`
@@ -552,16 +654,19 @@ export const personelIslemleriServisi = {
         throw error;
       }
       
+      // Calculate total metrics
       const totalRevenue = operations?.reduce((sum, op) => sum + (op.tutar || 0), 0) || 0;
       const totalServices = operations?.length || 0;
       const totalPoints = operations?.reduce((sum, op) => sum + (op.puan || 0), 0) || 0;
       const totalPaid = operations?.reduce((sum, op) => sum + (op.odenen || 0), 0) || 0;
       
+      // Track unique customers
       const uniqueCustomers = new Set();
       operations?.forEach(op => {
         if (op.musteri_id) uniqueCustomers.add(op.musteri_id);
       });
       
+      // Calculate performance by personnel
       const personnelStats: Record<string, PersonPerformance> = {};
       operations?.forEach(op => {
         if (op.personel_id && op.personel) {
@@ -586,6 +691,7 @@ export const personelIslemleriServisi = {
       
       const personnelPerformance = Object.values(personnelStats);
       
+      // Calculate additional performance metrics
       personnelPerformance.forEach(person => {
         person.ciro_yuzdesi = totalRevenue > 0 
           ? (person.toplam_ciro / totalRevenue * 100) 
@@ -593,6 +699,14 @@ export const personelIslemleriServisi = {
         person.ortalama_puan = person.islem_sayisi > 0 
           ? (person.toplam_puan / person.islem_sayisi) 
           : 0;
+      });
+      
+      console.log("Shop statistics calculated:", { 
+        totalRevenue, 
+        totalServices, 
+        totalPoints, 
+        totalPaid, 
+        uniqueCustomers: uniqueCustomers.size 
       });
       
       return {
@@ -616,20 +730,25 @@ export const personelIslemleriServisi = {
     }
   },
 
+  // Update shop statistics in the database
   async updateShopStatistics() {
     try {
       console.log("Updating shop statistics");
       
+      // First, get current statistics
       const stats = await this.getShopStatistics();
       
+      // Update personnel performance records
       for (const person of stats.personnelPerformance) {
         try {
+          // Check if record exists
           const { data: existing } = await supabase
             .from('personel_performans')
             .select('id')
             .eq('id', person.id);
             
           if (existing && existing.length > 0) {
+            // Update existing record
             await supabase
               .from('personel_performans')
               .update({
@@ -641,7 +760,10 @@ export const personelIslemleriServisi = {
                 ciro_yuzdesi: person.ciro_yuzdesi
               })
               .eq('id', person.id);
+              
+            console.log(`Updated performance for personnel ID ${person.id}`);
           } else {
+            // Create new record
             await supabase
               .from('personel_performans')
               .insert([{
@@ -653,6 +775,8 @@ export const personelIslemleriServisi = {
                 ortalama_puan: person.ortalama_puan,
                 ciro_yuzdesi: person.ciro_yuzdesi
               }]);
+              
+            console.log(`Created new performance record for personnel ID ${person.id}`);
           }
         } catch (personError) {
           console.error(`Error updating performance for personnel ${person.id}:`, personError);

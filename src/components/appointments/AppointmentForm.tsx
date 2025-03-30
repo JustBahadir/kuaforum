@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { personelServisi, randevuServisi } from "@/lib/supabase";
@@ -15,6 +15,7 @@ import { islemServisi } from "@/lib/supabase/services/islemServisi";
 import { calismaSaatleriServisi } from "@/lib/supabase/services/calismaSaatleriServisi";
 import { CalismaSaati, Randevu, RandevuDurumu } from "@/lib/supabase/types";
 import { Skeleton } from "@/components/ui/skeleton";
+import { personelIslemleriServisi } from "@/lib/supabase/services/personelIslemleriServisi";
 
 interface AppointmentFormProps {
   onAppointmentCreated: (appointment: Randevu) => void;
@@ -24,6 +25,7 @@ interface AppointmentFormProps {
 
 export function AppointmentForm({ onAppointmentCreated, initialDate, initialServiceId }: AppointmentFormProps) {
   const { dukkanId, userId } = useCustomerAuth();
+  const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState(initialDate || format(new Date(), 'yyyy-MM-dd'));
   const [selectedTime, setSelectedTime] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
@@ -35,18 +37,21 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
   
   const { data: personeller = [], isLoading: isLoadingPersoneller } = useQuery({
     queryKey: ['personeller'],
-    queryFn: personelServisi.hepsiniGetir
+    queryFn: personelServisi.hepsiniGetir,
+    staleTime: 300000 // 5 minutes
   });
   
   const { data: kategoriler = [], isLoading: isLoadingKategoriler } = useQuery({
     queryKey: ['kategoriler'],
-    queryFn: kategoriServisi.hepsiniGetir
+    queryFn: kategoriServisi.hepsiniGetir,
+    staleTime: 300000 // 5 minutes
   });
   
   const { data: islemler = [], isLoading: isLoadingIslemler } = useQuery({
     queryKey: ['islemler', selectedCategory],
     queryFn: () => islemServisi.kategoriIslemleriGetir(selectedCategory || 0),
-    enabled: !!selectedCategory
+    enabled: !!selectedCategory,
+    staleTime: 300000 // 5 minutes
   });
   
   const generateTimeSlots = (openingTime: string, closingTime: string, isToday: boolean) => {
@@ -143,6 +148,15 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
       return randevuServisi.ekle(randevuData);
     },
     onSuccess: (data) => {
+      // Force update shop statistics
+      personelIslemleriServisi.updateShopStatistics().catch(error => {
+        console.error("Error updating statistics after appointment creation:", error);
+      });
+      
+      // Invalidate all relevant queries
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['shop-statistics'] });
+      
       toast.success("Randevu başarıyla oluşturuldu");
       onAppointmentCreated(data);
     },

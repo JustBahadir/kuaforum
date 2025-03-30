@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { personelServisi } from "@/lib/supabase";
 import { supabase } from '@/lib/supabase/client';
 import { musteriServisi } from "@/lib/supabase/services/musteriServisi";
+import { personelIslemleriServisi } from "@/lib/supabase/services/personelIslemleriServisi";
 
 export function useAppointments(dukkanId?: number) {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -76,7 +77,9 @@ export function useAppointments(dukkanId?: number) {
         throw error;
       }
     },
-    enabled: true
+    enabled: true,
+    refetchOnWindowFocus: false, // Prevent unnecessary refetches
+    staleTime: 30000, // Consider data fresh for 30 seconds
   });
   
   const [appointments, setAppointments] = useState<Randevu[]>([]);
@@ -135,14 +138,29 @@ export function useAppointments(dukkanId?: number) {
     enhanceAppointments();
   }, [appointmentsRaw]);
   
-  const { mutate: completeAppointment } = useMutation({
+  const { mutate: completeAppointment, isPending: isCompletingAppointment } = useMutation({
     mutationFn: async (appointmentId: number) => {
-      return randevuServisi.guncelle(appointmentId, {
-        durum: "tamamlandi"
-      });
+      try {
+        // First mark the appointment as completed
+        const result = await randevuServisi.guncelle(appointmentId, {
+          durum: "tamamlandi"
+        });
+        
+        // Force update shop statistics
+        await personelIslemleriServisi.updateShopStatistics();
+        
+        return result;
+      } catch (error) {
+        console.error("Error during appointment completion:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
+      // Invalidate all relevant queries
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['personnelOperations'] });
+      queryClient.invalidateQueries({ queryKey: ['shop-statistics'] });
+      
       toast.success("Randevu tamamlandı olarak işaretlendi");
       setConfirmDialogOpen(false);
     },
@@ -152,7 +170,7 @@ export function useAppointments(dukkanId?: number) {
     }
   });
   
-  const { mutate: cancelAppointment } = useMutation({
+  const { mutate: cancelAppointment, isPending: isCancelingAppointment } = useMutation({
     mutationFn: async (appointmentId: number) => {
       return randevuServisi.guncelle(appointmentId, {
         durum: "iptal_edildi"
@@ -160,6 +178,8 @@ export function useAppointments(dukkanId?: number) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['shop-statistics'] });
+      
       toast.success("Randevu iptal edildi");
       setCancelDialogOpen(false);
     },
@@ -209,6 +229,8 @@ export function useAppointments(dukkanId?: number) {
     handleCancelClick,
     handleAppointmentComplete,
     handleAppointmentCancel,
+    isCompletingAppointment,
+    isCancelingAppointment,
     refetch
   };
 }

@@ -104,6 +104,7 @@ export const randevuServisi = {
         throw new Error("Oturum açmış kullanıcı bulunamadı");
       }
       
+      // Using the Supabase RPC function to insert the appointment
       const { data, error } = await supabase
         .rpc('insert_appointment', {
           p_dukkan_id: randevu.dukkan_id,
@@ -123,6 +124,15 @@ export const randevuServisi = {
       }
       
       console.log("Randevu başarıyla oluşturuldu:", data);
+      
+      // Force update shop statistics after adding a new appointment
+      try {
+        await personelIslemleriServisi.updateShopStatistics();
+      } catch (statsError) {
+        console.error("İstatistik güncelleme hatası:", statsError);
+        // Non-blocking - doesn't affect the appointment creation success
+      }
+      
       toast.success("Randevu başarıyla oluşturuldu");
       return data;
     } catch (error: any) {
@@ -145,6 +155,7 @@ export const randevuServisi = {
       }
       
       if (randevu.durum && Object.keys(randevu).length === 1) {
+        // Only updating the status
         const { data, error } = await supabase
           .rpc('update_appointment_status', { 
             appointment_id: id, 
@@ -177,6 +188,7 @@ export const randevuServisi = {
         
         return data;
       } else {
+        // Updating more than just the status
         const { data, error } = await supabase
           .from('randevular')
           .update(randevu)
@@ -205,6 +217,14 @@ export const randevuServisi = {
             toast.error("İşlem kaydı oluşturulurken bir hata oluştu. Lütfen sistem yöneticinize başvurun.");
             throw opError; // Rethrow to ensure the caller knows there was an error
           }
+        }
+        
+        // Force update shop statistics after any appointment update
+        try {
+          await personelIslemleriServisi.updateShopStatistics();
+        } catch (statsError) {
+          console.error("İstatistik güncelleme hatası:", statsError);
+          // Non-blocking - doesn't affect the appointment update success
         }
         
         return data && data.length > 0 ? data[0] : null;

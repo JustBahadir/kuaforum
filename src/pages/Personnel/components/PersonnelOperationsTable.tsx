@@ -43,6 +43,8 @@ export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTab
       }
     },
     enabled: !!personnelId,
+    refetchOnWindowFocus: false, // Prevent unnecessary refetches
+    staleTime: 30000, // Consider data fresh for 30 seconds
   });
 
   // Calculate totals
@@ -143,76 +145,83 @@ export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTab
             <RefreshCw className={`h-4 w-4 mr-1 ${isRefetching ? 'animate-spin' : ''}`} />
             Veriyi Yenile
           </Button>
-          
-          {totalPages > 1 && (
-            <>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={goToPreviousPage}
-                disabled={currentPage === 1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <span className="text-sm">{currentPage} / {totalPages || 1}</span>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={goToNextPage}
-                disabled={currentPage === totalPages || totalPages === 0}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </>
-          )}
         </div>
       </div>
       
       {operations.length === 0 ? (
-        <div className="text-center py-6 text-muted-foreground">
-          <p className="mb-2">Bu personele ait işlem bulunamadı.</p>
-          <Button 
-            variant="outline" 
-            onClick={handleForceRecover}
-            disabled={isRefetching}
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isRefetching ? 'animate-spin' : ''}`} />
-            Tamamlanan Randevulardan İşlemleri Oluştur
-          </Button>
+        <div className="text-center py-8 text-gray-500">
+          Henüz kayıtlı işlem bulunmamaktadır.
+          <div className="mt-2">
+            <Button size="sm" variant="outline" onClick={handleForceRecover}>
+              Tamamlanmış Randevulardan İşlemleri Oluştur
+            </Button>
+          </div>
         </div>
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Tarih</TableHead>
-              <TableHead>İşlem</TableHead>
-              <TableHead>Müşteri</TableHead>
-              <TableHead>Tutar</TableHead>
-              <TableHead>Prim %</TableHead>
-              <TableHead>Ödenen</TableHead>
-              <TableHead>Puan</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paginatedOperations.map((operation) => (
-              <TableRow key={operation.id} className="hover:bg-gray-50">
-                <TableCell className="font-medium">
-                  {operation.created_at ? formatDate(operation.created_at) : '-'}
-                </TableCell>
-                <TableCell>{operation.aciklama || (operation.islem?.islem_adi) || '-'}</TableCell>
-                <TableCell>
-                  {operation.musteri ? 
-                    `${operation.musteri.first_name || ''} ${operation.musteri.last_name || ''}`.trim() : 
-                    (operation.aciklama ? operation.aciklama.split(' - ')[1]?.replace(/\(Randevu #\d+\)/, '').trim() : '-')}
-                </TableCell>
-                <TableCell>{formatCurrency(operation.tutar || 0)}</TableCell>
-                <TableCell>%{operation.prim_yuzdesi}</TableCell>
-                <TableCell>{formatCurrency(operation.odenen || 0)}</TableCell>
-                <TableCell className="text-purple-600 font-semibold">{operation.puan}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <>
+          <div className="border rounded-md overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Tarih</TableHead>
+                  <TableHead>İşlem</TableHead>
+                  <TableHead>Müşteri</TableHead>
+                  <TableHead className="text-right">Tutar</TableHead>
+                  <TableHead className="text-right">Prim</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paginatedOperations.map((operation) => (
+                  <TableRow key={operation.id}>
+                    <TableCell className="font-medium">
+                      {formatDate(operation.created_at)}
+                    </TableCell>
+                    <TableCell>
+                      {operation.islem?.islem_adi || 'Bilinmeyen İşlem'}
+                    </TableCell>
+                    <TableCell>
+                      {operation.musteri 
+                        ? `${operation.musteri.first_name || ''} ${operation.musteri.last_name || ''}`.trim() 
+                        : 'Bilinmeyen Müşteri'}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {formatCurrency(operation.tutar || 0)}
+                    </TableCell>
+                    <TableCell className="text-right text-green-600">
+                      {formatCurrency(operation.odenen || 0)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-gray-500">
+                Sayfa {currentPage} / {totalPages}
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={goToPreviousPage}
+                  disabled={currentPage <= 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={goToNextPage}
+                  disabled={currentPage >= totalPages}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
