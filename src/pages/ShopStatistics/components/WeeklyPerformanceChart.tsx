@@ -1,6 +1,6 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, Legend, TooltipProps } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/lib/utils";
 
@@ -9,15 +9,21 @@ interface WeeklyPerformanceChartProps {
   isLoading: boolean;
 }
 
+type CustomTooltipProps = TooltipProps<number, string> & {
+  active?: boolean;
+  payload?: any[];
+  label?: string;
+}
+
 export function WeeklyPerformanceChart({ data, isLoading }: WeeklyPerformanceChartProps) {
-  const formatYAxisTick = (value) => {
+  const formatYAxisTick = (value: number) => {
     if (value >= 1000) {
       return `${(value / 1000).toFixed(1)}k`;
     }
     return value;
   };
   
-  const CustomTooltip = ({ active, payload, label }) => {
+  const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-white p-4 border rounded shadow">

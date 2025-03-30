@@ -1,9 +1,27 @@
-
 import { supabase } from '../client';
 import { PersonelIslemi } from '../types';
 
+interface PersonPerformance {
+  id: number;
+  ad_soyad: string;
+  islem_sayisi: number;
+  toplam_ciro: number;
+  toplam_odenen: number;
+  toplam_puan: number;
+  ciro_yuzdesi?: number;
+  ortalama_puan?: number;
+}
+
+interface ShopStatistics {
+  totalRevenue: number;
+  totalServices: number;
+  totalPoints: number;
+  totalPaid: number;
+  uniqueCustomerCount: number;
+  personnelPerformance: PersonPerformance[];
+}
+
 export const personelIslemleriServisi = {
-  // Get all staff operations
   async hepsiniGetir() {
     try {
       const { data, error } = await supabase
@@ -29,7 +47,6 @@ export const personelIslemleriServisi = {
     }
   },
 
-  // Get operations for a specific staff member
   async personelIslemleriGetir(personelId: number) {
     try {
       console.log(`Fetching operations for personnel ID: ${personelId}`);
@@ -51,12 +68,10 @@ export const personelIslemleriServisi = {
       
       console.log(`Retrieved ${data?.length || 0} operations for personnel ID: ${personelId}`);
       
-      // If no operations found, attempt to recover from randevular table
       if (!data || data.length === 0) {
         console.log("No operations found, attempting to recover from appointments...");
         await this.recoverOperationsFromAppointments(personelId);
         
-        // Try again after recovery attempt
         const { data: retryData, error: retryError } = await supabase
           .from('personel_islemleri')
           .select(`
@@ -82,7 +97,6 @@ export const personelIslemleriServisi = {
     }
   },
 
-  // Get operations for a specific customer
   async musteriIslemleriGetir(musteriId: number) {
     try {
       console.log(`Fetching operations for customer ID: ${musteriId}`);
@@ -104,12 +118,10 @@ export const personelIslemleriServisi = {
       
       console.log(`Retrieved ${data?.length || 0} operations for customer ID: ${musteriId}`);
       
-      // If no operations found, attempt to recover from randevular table
       if (!data || data.length === 0) {
         console.log("No operations found, attempting to recover from appointments...");
         await this.recoverOperationsFromCustomerAppointments(musteriId);
         
-        // Try again after recovery attempt
         const { data: retryData, error: retryError } = await supabase
           .from('personel_islemleri')
           .select(`
@@ -135,7 +147,6 @@ export const personelIslemleriServisi = {
     }
   },
 
-  // Add a new operation
   async ekle(islemi: Omit<PersonelIslemi, 'id' | 'created_at'> & { 
     musteri_id?: number; 
     tarih?: string; 
@@ -145,7 +156,6 @@ export const personelIslemleriServisi = {
     try {
       console.log("Adding new personnel operation:", islemi);
       
-      // Check if an operation with this randevu_id and islem_id already exists
       if (islemi.randevu_id && islemi.islem_id && islemi.personel_id) {
         const { data: existingOps } = await supabase
           .from('personel_islemleri')
@@ -157,7 +167,6 @@ export const personelIslemleriServisi = {
         if (existingOps && existingOps.length > 0) {
           console.log(`Operation already exists for randevu ID ${islemi.randevu_id} and islem ID ${islemi.islem_id}. Updating.`);
           
-          // Update the existing record
           const { data: updatedOp, error: updateError } = await supabase
             .from('personel_islemleri')
             .update({
@@ -188,7 +197,6 @@ export const personelIslemleriServisi = {
         }
       }
       
-      // Prepare the insertion object
       const insertData = {
         personel_id: islemi.personel_id,
         islem_id: islemi.islem_id,
@@ -226,7 +234,6 @@ export const personelIslemleriServisi = {
     }
   },
 
-  // Update an operation
   async guncelle(id: number, updates: Partial<PersonelIslemi> & { notlar?: string }) {
     try {
       console.log(`Updating operation ID ${id}:`, updates);
@@ -255,7 +262,6 @@ export const personelIslemleriServisi = {
     }
   },
 
-  // Delete an operation
   async sil(id: number) {
     try {
       console.log(`Deleting operation ID: ${id}`);
@@ -277,12 +283,10 @@ export const personelIslemleriServisi = {
     }
   },
 
-  // Recover operations from completed appointments for personnel
   async recoverOperationsFromAppointments(personelId: number) {
     try {
       console.log(`Attempting to recover operations for personnel ID: ${personelId} from completed appointments`);
       
-      // Get all completed appointments for this personnel
       const { data: appointments, error } = await supabase
         .from('randevular')
         .select(`
@@ -300,15 +304,12 @@ export const personelIslemleriServisi = {
       
       console.log(`Found ${appointments.length} completed appointments for personnel recovery`);
       
-      // Process each appointment
       const createdOperations = [];
       for (const appointment of appointments) {
         try {
-          // Get service IDs
           const islemIds = appointment.islemler || [];
           if (!islemIds || islemIds.length === 0) continue;
           
-          // Get service details
           const { data: services } = await supabase
             .from('islemler')
             .select('*')
@@ -319,19 +320,16 @@ export const personelIslemleriServisi = {
           const personelData = appointment.personel;
           const primYuzdesi = personelData?.prim_yuzdesi || 0;
           
-          // Create customer name
           let musteriAdi = "Belirtilmemiş";
           if (appointment.musteri) {
             musteriAdi = `${appointment.musteri.first_name || ''} ${appointment.musteri.last_name || ''}`.trim();
           }
           
-          // Create operation records
           for (const service of services) {
             try {
               const tutar = parseFloat(service.fiyat) || 0;
               const odenenPrim = (tutar * primYuzdesi) / 100;
               
-              // Check if operation already exists
               const { data: existing } = await supabase
                 .from('personel_islemleri')
                 .select('id')
@@ -342,7 +340,6 @@ export const personelIslemleriServisi = {
               if (existing && existing.length > 0) {
                 console.log(`Operation already exists, updating: ${existing[0].id}`);
                 
-                // Update the existing record
                 const { data: updatedOp } = await supabase
                   .from('personel_islemleri')
                   .update({
@@ -365,7 +362,6 @@ export const personelIslemleriServisi = {
                 continue;
               }
               
-              // Create new operation
               const personelIslem = {
                 personel_id: personelId,
                 islem_id: service.id,
@@ -409,12 +405,10 @@ export const personelIslemleriServisi = {
     }
   },
 
-  // Recover operations from completed appointments for customer
   async recoverOperationsFromCustomerAppointments(musteriId: number) {
     try {
       console.log(`Attempting to recover operations for customer ID: ${musteriId} from completed appointments`);
       
-      // Get all completed appointments for this customer
       const { data: appointments, error } = await supabase
         .from('randevular')
         .select(`
@@ -432,15 +426,12 @@ export const personelIslemleriServisi = {
       
       console.log(`Found ${appointments.length} completed appointments for customer recovery`);
       
-      // Process each appointment
       const createdOperations = [];
       for (const appointment of appointments) {
         try {
-          // Get service IDs
           const islemIds = appointment.islemler || [];
           if (!islemIds || islemIds.length === 0) continue;
           
-          // Get service details
           const { data: services } = await supabase
             .from('islemler')
             .select('*')
@@ -457,19 +448,16 @@ export const personelIslemleriServisi = {
             continue;
           }
           
-          // Create customer name
           let musteriAdi = "Belirtilmemiş";
           if (appointment.musteri) {
             musteriAdi = `${appointment.musteri.first_name || ''} ${appointment.musteri.last_name || ''}`.trim();
           }
           
-          // Create operation records
           for (const service of services) {
             try {
               const tutar = parseFloat(service.fiyat) || 0;
               const odenenPrim = (tutar * primYuzdesi) / 100;
               
-              // Check if operation already exists
               const { data: existing } = await supabase
                 .from('personel_islemleri')
                 .select('id')
@@ -480,7 +468,6 @@ export const personelIslemleriServisi = {
               if (existing && existing.length > 0) {
                 console.log(`Operation already exists, updating: ${existing[0].id}`);
                 
-                // Update the existing record
                 const { data: updatedOp } = await supabase
                   .from('personel_islemleri')
                   .update({
@@ -503,7 +490,6 @@ export const personelIslemleriServisi = {
                 continue;
               }
               
-              // Create new operation
               const personelIslem = {
                 personel_id: personelId,
                 islem_id: service.id,
@@ -546,13 +532,11 @@ export const personelIslemleriServisi = {
       return [];
     }
   },
-  
-  // Get statistics for shop dashboard
-  async getShopStatistics() {
+
+  async getShopStatistics(): Promise<ShopStatistics> {
     try {
       console.log("Fetching shop statistics");
       
-      // Get all operations
       const { data: operations, error } = await supabase
         .from('personel_islemleri')
         .select(`
@@ -568,20 +552,17 @@ export const personelIslemleriServisi = {
         throw error;
       }
       
-      // Calculate basic statistics
       const totalRevenue = operations?.reduce((sum, op) => sum + (op.tutar || 0), 0) || 0;
       const totalServices = operations?.length || 0;
       const totalPoints = operations?.reduce((sum, op) => sum + (op.puan || 0), 0) || 0;
       const totalPaid = operations?.reduce((sum, op) => sum + (op.odenen || 0), 0) || 0;
       
-      // Get unique customer count
       const uniqueCustomers = new Set();
       operations?.forEach(op => {
         if (op.musteri_id) uniqueCustomers.add(op.musteri_id);
       });
       
-      // Personnel performance
-      const personnelStats = {};
+      const personnelStats: Record<string, PersonPerformance> = {};
       operations?.forEach(op => {
         if (op.personel_id && op.personel) {
           const personelId = op.personel_id;
@@ -603,10 +584,8 @@ export const personelIslemleriServisi = {
         }
       });
       
-      // Get personnel performance data as array
       const personnelPerformance = Object.values(personnelStats);
       
-      // Calculate percentage of total revenue for each personnel
       personnelPerformance.forEach(person => {
         person.ciro_yuzdesi = totalRevenue > 0 
           ? (person.toplam_ciro / totalRevenue * 100) 
@@ -636,26 +615,21 @@ export const personelIslemleriServisi = {
       };
     }
   },
-  
-  // Update shop statistics or create if not exists
+
   async updateShopStatistics() {
     try {
       console.log("Updating shop statistics");
       
-      // Get statistics
       const stats = await this.getShopStatistics();
       
-      // Update personnel_performans table
       for (const person of stats.personnelPerformance) {
         try {
-          // Check if record exists
           const { data: existing } = await supabase
             .from('personel_performans')
             .select('id')
             .eq('id', person.id);
             
           if (existing && existing.length > 0) {
-            // Update
             await supabase
               .from('personel_performans')
               .update({
@@ -668,7 +642,6 @@ export const personelIslemleriServisi = {
               })
               .eq('id', person.id);
           } else {
-            // Insert
             await supabase
               .from('personel_performans')
               .insert([{

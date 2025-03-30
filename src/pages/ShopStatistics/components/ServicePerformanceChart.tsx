@@ -1,6 +1,6 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, Cell } from "recharts";
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, Cell, TooltipProps } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/lib/utils";
 
@@ -9,19 +9,32 @@ interface ServicePerformanceChartProps {
   isLoading: boolean;
 }
 
+interface ServiceData {
+  name: string;
+  count: number;
+  revenue: number;
+}
+
+type CustomTooltipProps = TooltipProps<number, string> & {
+  active?: boolean;
+  payload?: any[];
+  label?: string;
+}
+
 export function ServicePerformanceChart({ data, isLoading }: ServicePerformanceChartProps) {
   const colors = ["#3b82f6", "#22c55e", "#8b5cf6", "#f97316", "#ef4444", "#06b6d4", "#ec4899", "#f59e0b", "#10b981", "#6366f1"];
   
-  const CustomTooltip = ({ active, payload, label }) => {
+  const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
     if (active && payload && payload.length) {
+      const data = payload[0].payload as ServiceData;
       return (
         <div className="bg-white p-4 border rounded shadow">
-          <p className="text-sm font-medium">{payload[0].payload.name}</p>
+          <p className="text-sm font-medium">{data.name}</p>
           <p className="text-sm">
-            İşlem Sayısı: {payload[0].payload.count}
+            İşlem Sayısı: {data.count}
           </p>
           <p className="text-sm font-semibold">
-            Toplam Ciro: {formatCurrency(payload[0].payload.revenue)}
+            Toplam Ciro: {formatCurrency(data.revenue)}
           </p>
         </div>
       );

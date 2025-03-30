@@ -17,6 +17,19 @@ import { ServicePerformanceChart } from "./components/ServicePerformanceChart";
 import { YearlyStatisticsPlaceholder } from "./components/YearlyStatisticsPlaceholder";
 import { DailyPerformanceChart } from "./components/DailyPerformanceChart";
 
+// Define interfaces for chart data
+interface ChartDataItem {
+  name: string;
+  ciro: number;
+  islemSayisi: number;
+}
+
+interface ServiceDataItem {
+  name: string;
+  count: number;
+  revenue: number;
+}
+
 export default function ShopStatistics() {
   const { userRole, dukkanId } = useCustomerAuth();
   const [period, setPeriod] = useState<string>("daily"); // Default to daily view
@@ -47,10 +60,10 @@ export default function ShopStatistics() {
   });
   
   // Calculate data for charts based on operations
-  const [dailyData, setDailyData] = useState([]);
-  const [weeklyData, setWeeklyData] = useState([]);
-  const [monthlyData, setMonthlyData] = useState([]);
-  const [serviceData, setServiceData] = useState([]);
+  const [dailyData, setDailyData] = useState<ChartDataItem[]>([]);
+  const [weeklyData, setWeeklyData] = useState<ChartDataItem[]>([]);
+  const [monthlyData, setMonthlyData] = useState<ChartDataItem[]>([]);
+  const [serviceData, setServiceData] = useState<ServiceDataItem[]>([]);
   
   // Generate chart data based on operations
   useEffect(() => {
@@ -77,9 +90,9 @@ export default function ShopStatistics() {
     }
   }, [islemler]);
   
-  const prepareDailyData = (operations) => {
+  const prepareDailyData = (operations: any[]): ChartDataItem[] => {
     // Group operations by day for the last 7 days
-    const days = [];
+    const days: ChartDataItem[] = [];
     const today = new Date();
     for (let i = 6; i >= 0; i--) {
       const date = new Date(today);
@@ -118,9 +131,12 @@ export default function ShopStatistics() {
     return days;
   };
   
-  const prepareWeeklyData = (operations) => {
+  const prepareWeeklyData = (operations: any[]): ChartDataItem[] => {
     // Group operations by week for the last 4 weeks
-    const weeks = [];
+    const weeks: (ChartDataItem & {
+      startDate: string;
+      endDate: string;
+    })[] = [];
     const today = new Date();
     for (let i = 3; i >= 0; i--) {
       const startDate = new Date(today);
@@ -161,9 +177,12 @@ export default function ShopStatistics() {
     return weeks.map(({ name, ciro, islemSayisi }) => ({ name, ciro, islemSayisi }));
   };
   
-  const prepareMonthlyData = (operations) => {
+  const prepareMonthlyData = (operations: any[]): ChartDataItem[] => {
     // Group operations by month for the last 6 months
-    const months = [];
+    const months: (ChartDataItem & {
+      month: number;
+      year: number;
+    })[] = [];
     const today = new Date();
     for (let i = 5; i >= 0; i--) {
       const date = new Date(today);
@@ -202,9 +221,9 @@ export default function ShopStatistics() {
     return months.map(({ name, ciro, islemSayisi }) => ({ name, ciro, islemSayisi }));
   };
   
-  const prepareServiceData = (operations) => {
+  const prepareServiceData = (operations: any[]): ServiceDataItem[] => {
     // Group operations by service type
-    const services = {};
+    const services: Record<string, ServiceDataItem> = {};
     
     operations.forEach(op => {
       try {
