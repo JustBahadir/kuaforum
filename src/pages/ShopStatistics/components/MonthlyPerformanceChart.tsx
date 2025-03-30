@@ -16,11 +16,11 @@ type CustomTooltipProps = TooltipProps<number, string> & {
 }
 
 export function MonthlyPerformanceChart({ data, isLoading }: MonthlyPerformanceChartProps) {
-  const formatYAxisTick = (value: number) => {
+  const formatYAxisTick = (value: number): string => {
     if (value >= 1000) {
       return `${(value / 1000).toFixed(1)}k`;
     }
-    return value;
+    return value.toString();
   };
   
   const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
