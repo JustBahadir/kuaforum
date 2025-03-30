@@ -324,7 +324,7 @@ export const personelIslemleriServisi = {
       console.log(`Attempting to recover operations for personnel ID: ${personelId} from completed appointments`);
       
       // Get all completed appointments for this personnel
-      const { data: appointments, error } = await supabase
+      const { data: completedAppointments, error } = await supabase
         .from('randevular')
         .select(`
           *,
@@ -334,7 +334,7 @@ export const personelIslemleriServisi = {
         .eq('personel_id', personelId)
         .eq('durum', 'tamamlandi');
         
-      if (error || !appointments || appointments.length === 0) {
+      if (error || !completedAppointments || completedAppointments.length === 0) {
         console.log(`No completed appointments found for personnel ID: ${personelId}`);
         
         // Also check for appointments with status "onaylandi" (confirmed) that are in the past
@@ -357,116 +357,18 @@ export const personelIslemleriServisi = {
           return [];
         }
         
-        appointments = pastAppointments;
-        console.log(`Found ${appointments.length} past confirmed appointments for personnel recovery`);
+        // Use a new variable instead of reassigning to completedAppointments
+        const appointmentsToProcess = pastAppointments;
+        console.log(`Found ${appointmentsToProcess.length} past confirmed appointments for personnel recovery`);
+        
+        const createdOperations = await this.processAppointmentsForRecovery(appointmentsToProcess, personelId);
+        return createdOperations;
       } else {
-        console.log(`Found ${appointments.length} completed appointments for personnel recovery`);
+        console.log(`Found ${completedAppointments.length} completed appointments for personnel recovery`);
+        
+        const createdOperations = await this.processAppointmentsForRecovery(completedAppointments, personelId);
+        return createdOperations;
       }
-      
-      const createdOperations = [];
-      for (const appointment of appointments) {
-        try {
-          const islemIds = appointment.islemler || [];
-          if (!islemIds || islemIds.length === 0) continue;
-          
-          // Get service details for each service in the appointment
-          const { data: services } = await supabase
-            .from('islemler')
-            .select('*')
-            .in('id', islemIds);
-            
-          if (!services || services.length === 0) continue;
-          
-          const personelData = appointment.personel;
-          const primYuzdesi = personelData?.prim_yuzdesi || 0;
-          
-          let musteriAdi = "Belirtilmemiş";
-          if (appointment.musteri) {
-            musteriAdi = `${appointment.musteri.first_name || ''} ${appointment.musteri.last_name || ''}`.trim();
-          }
-          
-          for (const service of services) {
-            try {
-              const tutar = parseFloat(service.fiyat) || 0;
-              const odenenPrim = (tutar * primYuzdesi) / 100;
-              
-              // Check if operation already exists
-              const { data: existing } = await supabase
-                .from('personel_islemleri')
-                .select('id')
-                .eq('randevu_id', appointment.id)
-                .eq('islem_id', service.id)
-                .eq('personel_id', personelId);
-                
-              if (existing && existing.length > 0) {
-                console.log(`Operation already exists, updating: ${existing[0].id}`);
-                
-                // Update existing operation
-                const { data: updatedOp } = await supabase
-                  .from('personel_islemleri')
-                  .update({
-                    tutar: tutar,
-                    puan: parseInt(service.puan) || 0,
-                    prim_yuzdesi: primYuzdesi,
-                    odenen: odenenPrim,
-                    aciklama: `${service.islem_adi} hizmeti verildi - ${musteriAdi} (Randevu #${appointment.id})`,
-                    notlar: appointment.notlar || '',
-                    musteri_id: appointment.musteri_id
-                  })
-                  .eq('id', existing[0].id)
-                  .select('*');
-                  
-                if (updatedOp) {
-                  createdOperations.push(updatedOp);
-                  console.log("Updated existing operation:", updatedOp);
-                }
-                
-                continue;
-              }
-              
-              // Create new operation record
-              const personelIslem = {
-                personel_id: personelId,
-                islem_id: service.id,
-                tutar: tutar,
-                puan: parseInt(service.puan) || 0,
-                prim_yuzdesi: primYuzdesi,
-                odenen: odenenPrim,
-                musteri_id: appointment.musteri_id,
-                randevu_id: appointment.id,
-                aciklama: `${service.islem_adi} hizmeti verildi - ${musteriAdi} (Randevu #${appointment.id})`,
-                notlar: appointment.notlar || ''
-              };
-              
-              console.log("Creating recovered personnel operation:", personelIslem);
-              
-              const { data: insertedOp, error: insertError } = await supabase
-                .from('personel_islemleri')
-                .insert([personelIslem])
-                .select('*');
-                
-              if (insertError) {
-                console.error("Error creating recovered operation:", insertError);
-              } else if (insertedOp) {
-                console.log("Successfully created recovered operation:", insertedOp);
-                createdOperations.push(insertedOp[0]);
-              }
-            } catch (serviceError) {
-              console.error(`Error processing service ID ${service.id} for appointment ${appointment.id}:`, serviceError);
-            }
-          }
-        } catch (appError) {
-          console.error(`Error processing appointment ID ${appointment.id}:`, appError);
-        }
-      }
-      
-      // Update shop statistics after recovering operations
-      if (createdOperations.length > 0) {
-        await this.updateShopStatistics();
-      }
-      
-      console.log("Recovery operation completed for personnel, created:", createdOperations.length);
-      return createdOperations;
     } catch (error) {
       console.error("Error in recoverOperationsFromAppointments:", error);
       return [];
@@ -478,7 +380,7 @@ export const personelIslemleriServisi = {
       console.log(`Attempting to recover operations for customer ID: ${musteriId} from completed appointments`);
       
       // Get all completed appointments for this customer
-      const { data: appointments, error } = await supabase
+      const { data: completedAppointments, error } = await supabase
         .from('randevular')
         .select(`
           *,
@@ -488,7 +390,7 @@ export const personelIslemleriServisi = {
         .eq('musteri_id', musteriId)
         .eq('durum', 'tamamlandi');
         
-      if (error || !appointments || appointments.length === 0) {
+      if (error || !completedAppointments || completedAppointments.length === 0) {
         console.log(`No completed appointments found for customer ID: ${musteriId}`);
         
         // Also check for appointments with status "onaylandi" (confirmed) that are in the past
@@ -511,126 +413,246 @@ export const personelIslemleriServisi = {
           return [];
         }
         
-        appointments = pastAppointments;
-        console.log(`Found ${appointments.length} past confirmed appointments for customer recovery`);
+        // Use a new variable instead of reassigning to completedAppointments
+        const appointmentsToProcess = pastAppointments;
+        console.log(`Found ${appointmentsToProcess.length} past confirmed appointments for customer recovery`);
+        
+        const createdOperations = await this.processAppointmentsForCustomerRecovery(appointmentsToProcess, musteriId);
+        return createdOperations;
       } else {
-        console.log(`Found ${appointments.length} completed appointments for customer recovery`);
+        console.log(`Found ${completedAppointments.length} completed appointments for customer recovery`);
+        
+        const createdOperations = await this.processAppointmentsForCustomerRecovery(completedAppointments, musteriId);
+        return createdOperations;
       }
-      
-      const createdOperations = [];
-      for (const appointment of appointments) {
-        try {
-          const islemIds = appointment.islemler || [];
-          if (!islemIds || islemIds.length === 0) continue;
-          
-          // Get service details for each service in the appointment
-          const { data: services } = await supabase
-            .from('islemler')
-            .select('*')
-            .in('id', islemIds);
-            
-          if (!services || services.length === 0) continue;
-          
-          const personelData = appointment.personel;
-          const primYuzdesi = personelData?.prim_yuzdesi || 0;
-          const personelId = appointment.personel_id;
-          
-          if (!personelId) {
-            console.log(`No personnel assigned to appointment ${appointment.id}, skipping`);
-            continue;
-          }
-          
-          let musteriAdi = "Belirtilmemiş";
-          if (appointment.musteri) {
-            musteriAdi = `${appointment.musteri.first_name || ''} ${appointment.musteri.last_name || ''}`.trim();
-          }
-          
-          for (const service of services) {
-            try {
-              const tutar = parseFloat(service.fiyat) || 0;
-              const odenenPrim = (tutar * primYuzdesi) / 100;
-              
-              // Check if operation already exists
-              const { data: existing } = await supabase
-                .from('personel_islemleri')
-                .select('id')
-                .eq('randevu_id', appointment.id)
-                .eq('islem_id', service.id)
-                .eq('personel_id', personelId);
-                
-              if (existing && existing.length > 0) {
-                console.log(`Operation already exists, updating: ${existing[0].id}`);
-                
-                // Update existing operation
-                const { data: updatedOp } = await supabase
-                  .from('personel_islemleri')
-                  .update({
-                    tutar: tutar,
-                    puan: parseInt(service.puan) || 0,
-                    prim_yuzdesi: primYuzdesi,
-                    odenen: odenenPrim,
-                    aciklama: `${service.islem_adi} hizmeti verildi - ${musteriAdi} (Randevu #${appointment.id})`,
-                    notlar: appointment.notlar || '',
-                    musteri_id: musteriId
-                  })
-                  .eq('id', existing[0].id)
-                  .select('*');
-                  
-                if (updatedOp) {
-                  createdOperations.push(updatedOp);
-                  console.log("Updated existing operation:", updatedOp);
-                }
-                
-                continue;
-              }
-              
-              // Create new operation record
-              const personelIslem = {
-                personel_id: personelId,
-                islem_id: service.id,
-                tutar: tutar,
-                puan: parseInt(service.puan) || 0,
-                prim_yuzdesi: primYuzdesi,
-                odenen: odenenPrim,
-                musteri_id: musteriId,
-                randevu_id: appointment.id,
-                aciklama: `${service.islem_adi} hizmeti verildi - ${musteriAdi} (Randevu #${appointment.id})`,
-                notlar: appointment.notlar || ''
-              };
-              
-              console.log("Creating recovered personnel operation:", personelIslem);
-              
-              const { data: insertedOp, error: insertError } = await supabase
-                .from('personel_islemleri')
-                .insert([personelIslem])
-                .select('*');
-                
-              if (insertError) {
-                console.error("Error creating recovered operation:", insertError);
-              } else if (insertedOp) {
-                console.log("Successfully created recovered operation:", insertedOp);
-                createdOperations.push(insertedOp[0]);
-              }
-            } catch (serviceError) {
-              console.error(`Error processing service ID ${service.id} for appointment ${appointment.id}:`, serviceError);
-            }
-          }
-        } catch (appError) {
-          console.error(`Error processing appointment ID ${appointment.id}:`, appError);
-        }
-      }
-      
-      // Update shop statistics after recovering operations
-      if (createdOperations.length > 0) {
-        await this.updateShopStatistics();
-      }
-      
-      console.log("Recovery operation completed for customer, created:", createdOperations.length);
-      return createdOperations;
     } catch (error) {
       console.error("Error in recoverOperationsFromCustomerAppointments:", error);
       return [];
     }
+  },
+
+  // Helper function to process appointments for personnel recovery
+  async processAppointmentsForRecovery(appointments: any[], personelId: number) {
+    const createdOperations = [];
+    
+    for (const appointment of appointments) {
+      try {
+        const islemIds = appointment.islemler || [];
+        if (!islemIds || islemIds.length === 0) continue;
+        
+        // Get service details for each service in the appointment
+        const { data: services } = await supabase
+          .from('islemler')
+          .select('*')
+          .in('id', islemIds);
+          
+        if (!services || services.length === 0) continue;
+        
+        const personelData = appointment.personel;
+        const primYuzdesi = personelData?.prim_yuzdesi || 0;
+        
+        let musteriAdi = "Belirtilmemiş";
+        if (appointment.musteri) {
+          musteriAdi = `${appointment.musteri.first_name || ''} ${appointment.musteri.last_name || ''}`.trim();
+        }
+        
+        for (const service of services) {
+          try {
+            const tutar = parseFloat(service.fiyat) || 0;
+            const odenenPrim = (tutar * primYuzdesi) / 100;
+            
+            // Check if operation already exists
+            const { data: existing } = await supabase
+              .from('personel_islemleri')
+              .select('id')
+              .eq('randevu_id', appointment.id)
+              .eq('islem_id', service.id)
+              .eq('personel_id', personelId);
+              
+            if (existing && existing.length > 0) {
+              console.log(`Operation already exists, updating: ${existing[0].id}`);
+              
+              // Update existing operation
+              const { data: updatedOp } = await supabase
+                .from('personel_islemleri')
+                .update({
+                  tutar: tutar,
+                  puan: parseInt(service.puan) || 0,
+                  prim_yuzdesi: primYuzdesi,
+                  odenen: odenenPrim,
+                  aciklama: `${service.islem_adi} hizmeti verildi - ${musteriAdi} (Randevu #${appointment.id})`,
+                  notlar: appointment.notlar || '',
+                  musteri_id: appointment.musteri_id
+                })
+                .eq('id', existing[0].id)
+                .select('*');
+                
+              if (updatedOp) {
+                createdOperations.push(updatedOp);
+                console.log("Updated existing operation:", updatedOp);
+              }
+              
+              continue;
+            }
+            
+            // Create new operation record
+            const personelIslem = {
+              personel_id: personelId,
+              islem_id: service.id,
+              tutar: tutar,
+              puan: parseInt(service.puan) || 0,
+              prim_yuzdesi: primYuzdesi,
+              odenen: odenenPrim,
+              musteri_id: appointment.musteri_id,
+              randevu_id: appointment.id,
+              aciklama: `${service.islem_adi} hizmeti verildi - ${musteriAdi} (Randevu #${appointment.id})`,
+              notlar: appointment.notlar || ''
+            };
+            
+            console.log("Creating recovered personnel operation:", personelIslem);
+            
+            const { data: insertedOp, error: insertError } = await supabase
+              .from('personel_islemleri')
+              .insert([personelIslem])
+              .select('*');
+              
+            if (insertError) {
+              console.error("Error creating recovered operation:", insertError);
+            } else if (insertedOp) {
+              console.log("Successfully created recovered operation:", insertedOp);
+              createdOperations.push(insertedOp[0]);
+            }
+          } catch (serviceError) {
+            console.error(`Error processing service ID ${service.id} for appointment ${appointment.id}:`, serviceError);
+          }
+        }
+      } catch (appError) {
+        console.error(`Error processing appointment ID ${appointment.id}:`, appError);
+      }
+    }
+    
+    // Update shop statistics after recovering operations
+    if (createdOperations.length > 0) {
+      await this.updateShopStatistics();
+    }
+    
+    console.log("Recovery operation completed for personnel, created:", createdOperations.length);
+    return createdOperations;
+  },
+
+  // Helper function to process appointments for customer recovery
+  async processAppointmentsForCustomerRecovery(appointments: any[], musteriId: number) {
+    const createdOperations = [];
+    
+    for (const appointment of appointments) {
+      try {
+        const islemIds = appointment.islemler || [];
+        if (!islemIds || islemIds.length === 0) continue;
+        
+        // Get service details for each service in the appointment
+        const { data: services } = await supabase
+          .from('islemler')
+          .select('*')
+          .in('id', islemIds);
+          
+        if (!services || services.length === 0) continue;
+        
+        const personelData = appointment.personel;
+        const primYuzdesi = personelData?.prim_yuzdesi || 0;
+        const personelId = appointment.personel_id;
+        
+        if (!personelId) {
+          console.log(`No personnel assigned to appointment ${appointment.id}, skipping`);
+          continue;
+        }
+        
+        let musteriAdi = "Belirtilmemiş";
+        if (appointment.musteri) {
+          musteriAdi = `${appointment.musteri.first_name || ''} ${appointment.musteri.last_name || ''}`.trim();
+        }
+        
+        for (const service of services) {
+          try {
+            const tutar = parseFloat(service.fiyat) || 0;
+            const odenenPrim = (tutar * primYuzdesi) / 100;
+            
+            // Check if operation already exists
+            const { data: existing } = await supabase
+              .from('personel_islemleri')
+              .select('id')
+              .eq('randevu_id', appointment.id)
+              .eq('islem_id', service.id)
+              .eq('personel_id', personelId);
+              
+            if (existing && existing.length > 0) {
+              console.log(`Operation already exists, updating: ${existing[0].id}`);
+              
+              // Update existing operation
+              const { data: updatedOp } = await supabase
+                .from('personel_islemleri')
+                .update({
+                  tutar: tutar,
+                  puan: parseInt(service.puan) || 0,
+                  prim_yuzdesi: primYuzdesi,
+                  odenen: odenenPrim,
+                  aciklama: `${service.islem_adi} hizmeti verildi - ${musteriAdi} (Randevu #${appointment.id})`,
+                  notlar: appointment.notlar || '',
+                  musteri_id: musteriId
+                })
+                .eq('id', existing[0].id)
+                .select('*');
+                
+              if (updatedOp) {
+                createdOperations.push(updatedOp);
+                console.log("Updated existing operation:", updatedOp);
+              }
+              
+              continue;
+            }
+            
+            // Create new operation record
+            const personelIslem = {
+              personel_id: personelId,
+              islem_id: service.id,
+              tutar: tutar,
+              puan: parseInt(service.puan) || 0,
+              prim_yuzdesi: primYuzdesi,
+              odenen: odenenPrim,
+              musteri_id: musteriId,
+              randevu_id: appointment.id,
+              aciklama: `${service.islem_adi} hizmeti verildi - ${musteriAdi} (Randevu #${appointment.id})`,
+              notlar: appointment.notlar || ''
+            };
+            
+            console.log("Creating recovered personnel operation:", personelIslem);
+            
+            const { data: insertedOp, error: insertError } = await supabase
+              .from('personel_islemleri')
+              .insert([personelIslem])
+              .select('*');
+              
+            if (insertError) {
+              console.error("Error creating recovered operation:", insertError);
+            } else if (insertedOp) {
+              console.log("Successfully created recovered operation:", insertedOp);
+              createdOperations.push(insertedOp[0]);
+            }
+          } catch (serviceError) {
+            console.error(`Error processing service ID ${service.id} for appointment ${appointment.id}:`, serviceError);
+          }
+        }
+      } catch (appError) {
+        console.error(`Error processing appointment ID ${appointment.id}:`, appError);
+      }
+    }
+    
+    // Update shop statistics after recovering operations
+    if (createdOperations.length > 0) {
+      await this.updateShopStatistics();
+    }
+    
+    console.log("Recovery operation completed for customer, created:", createdOperations.length);
+    return createdOperations;
   },
 
   // Get shop statistics for the dashboard
