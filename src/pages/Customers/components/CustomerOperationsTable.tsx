@@ -50,7 +50,8 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
         return [];
       }
     },
-    enabled: !!customerId
+    enabled: !!customerId,
+    refetchInterval: 30000 // Refetch every 30 seconds to ensure data is up to date
   });
 
   // Mutation for updating notes

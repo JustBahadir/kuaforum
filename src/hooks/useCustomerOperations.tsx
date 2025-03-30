@@ -44,7 +44,8 @@ export function useCustomerOperations(customerId?: number) {
         return [];
       }
     },
-    enabled: !!customerId
+    enabled: !!customerId,
+    refetchInterval: 30000 // Refetch every 30 seconds
   });
   
   const handleForceRecover = async () => {
@@ -77,6 +78,13 @@ export function useCustomerOperations(customerId?: number) {
     acc.totalPaid += (op.odenen || 0);
     return acc;
   }, { totalAmount: 0, totalPoints: 0, totalPaid: 0 });
+
+  // Automatically recover operations on first load
+  useEffect(() => {
+    if (customerId && operations.length === 0 && !isLoading) {
+      handleForceRecover();
+    }
+  }, [customerId, isLoading, operations.length]);
 
   return { 
     operations,

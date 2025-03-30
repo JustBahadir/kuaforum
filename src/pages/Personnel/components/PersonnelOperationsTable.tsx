@@ -43,8 +43,9 @@ export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTab
       }
     },
     enabled: !!personnelId,
-    refetchOnWindowFocus: false, // Prevent unnecessary refetches
+    refetchOnWindowFocus: false,
     staleTime: 30000, // Consider data fresh for 30 seconds
+    refetchInterval: 60000 // Refetch every minute
   });
 
   // Calculate totals

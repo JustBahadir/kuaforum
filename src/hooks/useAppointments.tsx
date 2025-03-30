@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { randevuServisi } from "@/lib/supabase/services/randevuServisi";
 import { Randevu, Personel, Musteri } from "@/lib/supabase/types";
@@ -15,6 +15,7 @@ export function useAppointments(dukkanId?: number) {
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [currentPersonelId, setCurrentPersonelId] = useState<number | undefined>(undefined);
+  const [appointmentData, setAppointmentData] = useState<Randevu[]>([]);
   
   const queryClient = useQueryClient();
   
@@ -51,21 +52,10 @@ export function useAppointments(dukkanId?: number) {
         let data: Randevu[] = [];
         
         if (dukkanId) {
-          const { data: randevular, error } = await supabase
-            .rpc('get_appointments_by_dukkan', { p_dukkan_id: dukkanId });
-            
-          if (error) throw error;
+          const randevular = await randevuServisi.dukkanRandevulariniGetir(dukkanId);
           data = randevular || [];
         } else {
-          const { data: { user } } = await supabase.auth.getUser();
-          if (!user) {
-            throw new Error("Oturum açmış kullanıcı bulunamadı");
-          }
-
-          const { data: randevular, error } = await supabase
-            .rpc('get_customer_appointments', { p_customer_id: user.id });
-            
-          if (error) throw error;
+          const randevular = await randevuServisi.kendiRandevulariniGetir();
           data = randevular || [];
         }
         
@@ -78,65 +68,54 @@ export function useAppointments(dukkanId?: number) {
       }
     },
     enabled: true,
-    refetchOnWindowFocus: false, // Prevent unnecessary refetches
-    staleTime: 30000, // Consider data fresh for 30 seconds
+    refetchOnWindowFocus: false,
+    staleTime: 30000, 
+    refetchInterval: 60000 // Refetch every minute to keep data fresh
   });
   
-  const [appointments, setAppointments] = useState<Randevu[]>([]);
-  
-  useEffect(() => {
-    const enhanceAppointments = async () => {
-      if (!appointmentsRaw?.length) {
-        setAppointments([]);
-        return;
+  const enhanceAppointments = useCallback(async () => {
+    if (!appointmentsRaw?.length) {
+      setAppointmentData([]);
+      return;
+    }
+    
+    const enhancedAppointments = [...appointmentsRaw];
+    
+    for (const appointment of enhancedAppointments) {
+      if (appointment.personel_id && !appointment.personel) {
+        try {
+          const personel = await personelServisi.getir(appointment.personel_id);
+          if (personel) {
+            appointment.personel = personel as Personel;
+          }
+        } catch (error) {
+          console.error(`Error fetching personnel for appointment ${appointment.id}:`, error);
+        }
       }
       
-      const enhancedAppointments = [...appointmentsRaw];
-      
-      await Promise.all(enhancedAppointments.map(async (appointment) => {
-        if (appointment.personel_id && !appointment.personel) {
-          try {
-            const { data } = await supabase
-              .from('personel')
-              .select('id, ad_soyad, telefon, eposta, adres, personel_no, maas, calisma_sistemi, prim_yuzdesi')
-              .eq('id', appointment.personel_id)
-              .maybeSingle();
-              
-            if (data) {
-              appointment.personel = data as Personel;
-            }
-          } catch (error) {
-            console.error(`Error fetching personnel for appointment ${appointment.id}:`, error);
+      if (appointment.musteri_id && !appointment.musteri) {
+        try {
+          const musteri = await musteriServisi.getir(appointment.musteri_id);
+          if (musteri) {
+            // Add a role property to make it compatible with Profile type
+            const customerWithRole = {
+              ...musteri,
+              role: 'customer' // Add the missing role property
+            };
+            appointment.musteri = customerWithRole as unknown as any;
           }
+        } catch (error) {
+          console.error(`Error fetching customer for appointment ${appointment.id}:`, error);
         }
-        
-        if (appointment.musteri_id && !appointment.musteri) {
-          try {
-            const { data } = await supabase
-              .from('musteriler')
-              .select('id, first_name, last_name, phone, birthdate, created_at, dukkan_id')
-              .eq('id', appointment.musteri_id)
-              .maybeSingle();
-              
-            if (data) {
-              // Add a role property to make it compatible with Profile type
-              const customerWithRole = {
-                ...data,
-                role: 'customer' // Add the missing role property
-              };
-              appointment.musteri = customerWithRole as unknown as any;
-            }
-          } catch (error) {
-            console.error(`Error fetching customer for appointment ${appointment.id}:`, error);
-          }
-        }
-      }));
-      
-      setAppointments(enhancedAppointments);
-    };
+      }
+    }
     
-    enhanceAppointments();
+    setAppointmentData(enhancedAppointments);
   }, [appointmentsRaw]);
+  
+  useEffect(() => {
+    enhanceAppointments();
+  }, [appointmentsRaw, enhanceAppointments]);
   
   const { mutate: completeAppointment, isPending: isCompletingAppointment } = useMutation({
     mutationFn: async (appointmentId: number) => {
@@ -159,6 +138,7 @@ export function useAppointments(dukkanId?: number) {
       // Invalidate all relevant queries
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
       queryClient.invalidateQueries({ queryKey: ['personnelOperations'] });
+      queryClient.invalidateQueries({ queryKey: ['customerOperations'] });
       queryClient.invalidateQueries({ queryKey: ['shop-statistics'] });
       
       toast.success("Randevu tamamlandı olarak işaretlendi");
@@ -212,7 +192,7 @@ export function useAppointments(dukkanId?: number) {
   };
 
   return {
-    appointments,
+    appointments: appointmentData,
     isLoading,
     isError,
     error,

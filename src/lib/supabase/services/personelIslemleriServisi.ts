@@ -357,7 +357,7 @@ export const personelIslemleriServisi = {
           return [];
         }
         
-        // Use a new variable instead of reassigning to completedAppointments
+        // Use a new variable to store the appointments to process
         const appointmentsToProcess = pastAppointments;
         console.log(`Found ${appointmentsToProcess.length} past confirmed appointments for personnel recovery`);
         
@@ -413,7 +413,7 @@ export const personelIslemleriServisi = {
           return [];
         }
         
-        // Use a new variable instead of reassigning to completedAppointments
+        // Use a new variable to store the appointments to process
         const appointmentsToProcess = pastAppointments;
         console.log(`Found ${appointmentsToProcess.length} past confirmed appointments for customer recovery`);
         
@@ -432,10 +432,10 @@ export const personelIslemleriServisi = {
   },
 
   // Helper function to process appointments for personnel recovery
-  async processAppointmentsForRecovery(appointments: any[], personelId: number) {
+  async processAppointmentsForRecovery(appointmentsToProcess: any[], personelId: number) {
     const createdOperations = [];
     
-    for (const appointment of appointments) {
+    for (const appointment of appointmentsToProcess) {
       try {
         const islemIds = appointment.islemler || [];
         if (!islemIds || islemIds.length === 0) continue;
@@ -541,10 +541,10 @@ export const personelIslemleriServisi = {
   },
 
   // Helper function to process appointments for customer recovery
-  async processAppointmentsForCustomerRecovery(appointments: any[], musteriId: number) {
+  async processAppointmentsForCustomerRecovery(appointmentsToProcess: any[], musteriId: number) {
     const createdOperations = [];
     
-    for (const appointment of appointments) {
+    for (const appointment of appointmentsToProcess) {
       try {
         const islemIds = appointment.islemler || [];
         if (!islemIds || islemIds.length === 0) continue;
