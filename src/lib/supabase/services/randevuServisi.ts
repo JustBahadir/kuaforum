@@ -1,3 +1,4 @@
+
 import { supabase, supabaseAdmin } from '../client';
 import { Randevu } from '../types';
 import { toast } from 'sonner';
@@ -56,6 +57,9 @@ export const randevuServisi = {
 
   async ekle(randevu: Omit<Randevu, 'id' | 'created_at'>) {
     try {
+      console.log("Randevu eklenmeye çalışılıyor:", randevu);
+      
+      // Use the create_appointment RPC function to bypass RLS policies
       const { data, error } = await supabase
         .rpc('create_appointment', {
           p_dukkan_id: randevu.dukkan_id,
@@ -74,6 +78,7 @@ export const randevuServisi = {
         throw error;
       }
 
+      console.log("Randevu başarıyla eklendi:", data);
       return data;
     } catch (error) {
       console.error("Randevu eklenirken hata oluştu:", error);
