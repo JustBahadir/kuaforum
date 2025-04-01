@@ -57,28 +57,17 @@ export const randevuServisi = {
 
   async ekle(randevu: Omit<Randevu, 'id' | 'created_at'>) {
     try {
-      console.log("Randevu eklenmeye çalışılıyor:", randevu);
-      
-      // Use the create_appointment RPC function to bypass RLS policies
       const { data, error } = await supabase
-        .rpc('create_appointment', {
-          p_dukkan_id: randevu.dukkan_id,
-          p_musteri_id: randevu.musteri_id,
-          p_personel_id: randevu.personel_id,
-          p_tarih: randevu.tarih,
-          p_saat: randevu.saat,
-          p_durum: randevu.durum,
-          p_notlar: randevu.notlar || '',
-          p_islemler: randevu.islemler,
-          p_customer_id: randevu.customer_id
-        });
+        .from('randevular')
+        .insert([randevu])
+        .select()
+        .single();
 
       if (error) {
         console.error("Randevu eklenirken hata oluştu:", error);
         throw error;
       }
 
-      console.log("Randevu başarıyla eklendi:", data);
       return data;
     } catch (error) {
       console.error("Randevu eklenirken hata oluştu:", error);
@@ -199,6 +188,7 @@ export const randevuServisi = {
     }
   },
 
+  // Add missing methods
   async dukkanRandevulariniGetir(dukkanId: number) {
     try {
       const { data, error } = await supabase
@@ -255,10 +245,12 @@ export const randevuServisi = {
   }
 };
 
+// Randevu durum güncelleme
 export async function randevuDurumGuncelle(id: number, durum: string) {
   try {
     console.log(`Randevu #${id} durumu güncelleniyor: ${durum}`);
     
+    // Update the appointment status
     const { data, error } = await supabase
       .from('randevular')
       .update({ durum })
@@ -273,12 +265,14 @@ export async function randevuDurumGuncelle(id: number, durum: string) {
     
     console.log(`Randevu durumu güncellendi:`, data);
     
+    // If the appointment is marked as completed, create personnel operations
     if (durum === 'tamamlandi') {
       try {
         console.log("Tamamlanan randevu için personel işlemleri oluşturuluyor...");
         
         const randevu = data as Randevu;
         
+        // Get appointment details
         const { personel_id, musteri_id, islemler: islemIdsJson } = randevu;
         
         if (!personel_id) {
@@ -291,6 +285,7 @@ export async function randevuDurumGuncelle(id: number, durum: string) {
           return data;
         }
         
+        // Parse işlemler array
         const islemIds = Array.isArray(islemIdsJson) ? islemIdsJson : JSON.parse(islemIdsJson as any);
         
         if (!islemIds || islemIds.length === 0) {
@@ -298,12 +293,14 @@ export async function randevuDurumGuncelle(id: number, durum: string) {
           return data;
         }
         
+        // Get personnel details
         const personel = await personelServisi.getirById(personel_id);
         if (!personel) {
           console.warn(`Personel bilgisi bulunamadı (ID: ${personel_id})`);
           return data;
         }
         
+        // Get customer info
         let musteriAdi = "Belirtilmemiş Müşteri";
         if (musteri_id) {
           const musteri = await musteriServisi.getirById(musteri_id);
@@ -312,8 +309,10 @@ export async function randevuDurumGuncelle(id: number, durum: string) {
           }
         }
         
+        // Get service details and create operations
         for (const islemId of islemIds) {
           try {
+            // Fix: Change to islemServisi.getirById
             const islem = await islemServisi.getirById(islemId);
             
             if (!islem) {
@@ -326,6 +325,7 @@ export async function randevuDurumGuncelle(id: number, durum: string) {
             const odenen = (tutar * primYuzdesi) / 100;
             const puan = Number(islem.puan) || 0;
             
+            // Create operation record
             await personelIslemleriServisi.ekle({
               personel_id,
               islem_id: islemId,
@@ -347,6 +347,7 @@ export async function randevuDurumGuncelle(id: number, durum: string) {
           }
         }
         
+        // Update shop statistics
         await personelIslemleriServisi.updateShopStatistics();
         
         console.log("Tüm işlemler başarıyla kaydedildi.");
@@ -363,6 +364,7 @@ export async function randevuDurumGuncelle(id: number, durum: string) {
   }
 }
 
+// Staff tarafından randevu durumu güncelleme 
 export async function staffRandevuDurumGuncelle(id: number, durum: string) {
   try {
     console.log(`Staff randevu #${id} durumu güncelleniyor: ${durum}`);
@@ -380,10 +382,12 @@ export async function staffRandevuDurumGuncelle(id: number, durum: string) {
     
     console.log(`Staff randevu durumu güncellendi:`, data);
     
+    // İşlem tamamlandı olarak işaretlendiyse, personel işlemi oluştur
     if (durum === 'tamamlandi') {
       try {
         console.log("Tamamlanan randevu için personel işlemleri oluşturuluyor...");
         
+        // Randevu detaylarını getir
         const { data: randevu, error: randevuError } = await supabase
           .from('randevular')
           .select('*')
@@ -407,6 +411,7 @@ export async function staffRandevuDurumGuncelle(id: number, durum: string) {
           return data;
         }
         
+        // Parse işlemler array
         const islemIds = Array.isArray(islemIdsJson) ? islemIdsJson : JSON.parse(islemIdsJson as any);
         
         if (!islemIds || islemIds.length === 0) {
@@ -414,12 +419,14 @@ export async function staffRandevuDurumGuncelle(id: number, durum: string) {
           return data;
         }
         
+        // Get personnel details
         const personel = await personelServisi.getirById(personel_id);
         if (!personel) {
           console.warn(`Personel bilgisi bulunamadı (ID: ${personel_id})`);
           return data;
         }
         
+        // Get customer info
         let musteriAdi = "Belirtilmemiş Müşteri";
         if (musteri_id) {
           const musteri = await musteriServisi.getirById(musteri_id);
@@ -428,8 +435,10 @@ export async function staffRandevuDurumGuncelle(id: number, durum: string) {
           }
         }
         
+        // Get service details and create operations
         for (const islemId of islemIds) {
           try {
+            // Fix: Change to islemServisi.getirById
             const islem = await islemServisi.getirById(islemId);
             
             if (!islem) {
@@ -442,6 +451,7 @@ export async function staffRandevuDurumGuncelle(id: number, durum: string) {
             const odenen = (tutar * primYuzdesi) / 100;
             const puan = Number(islem.puan) || 0;
             
+            // Önce işlemin zaten var olup olmadığını kontrol et
             const { data: existingOp } = await supabase
               .from('personel_islemleri')
               .select('id')
@@ -452,6 +462,7 @@ export async function staffRandevuDurumGuncelle(id: number, durum: string) {
             if (existingOp && existingOp.length > 0) {
               console.log(`İşlem zaten kaydedilmiş, güncelleniyor: ${islem.islem_adi}`);
               
+              // Update existing operation
               await supabase
                 .from('personel_islemleri')
                 .update({
@@ -466,6 +477,7 @@ export async function staffRandevuDurumGuncelle(id: number, durum: string) {
             } else {
               console.log(`Yeni işlem kaydediliyor: ${islem.islem_adi}`);
               
+              // Create operation record
               await personelIslemleriServisi.ekle({
                 personel_id,
                 islem_id: islemId,
@@ -488,6 +500,7 @@ export async function staffRandevuDurumGuncelle(id: number, durum: string) {
           }
         }
         
+        // Update shop statistics
         await personelIslemleriServisi.updateShopStatistics();
         
         console.log("Tüm işlemler başarıyla kaydedildi.");
