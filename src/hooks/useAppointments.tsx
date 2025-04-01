@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { randevuServisi } from "@/lib/supabase/services/randevuServisi";
@@ -120,6 +119,7 @@ export function useAppointments(dukkanId?: number) {
   const { mutate: completeAppointment, isPending: isCompletingAppointment } = useMutation({
     mutationFn: async (appointmentId: number) => {
       try {
+        console.log(`Completing appointment with ID: ${appointmentId}`);
         // First mark the appointment as completed
         const result = await randevuServisi.guncelle(appointmentId, {
           durum: "tamamlandi"
@@ -140,6 +140,7 @@ export function useAppointments(dukkanId?: number) {
       queryClient.invalidateQueries({ queryKey: ['personnelOperations'] });
       queryClient.invalidateQueries({ queryKey: ['customerOperations'] });
       queryClient.invalidateQueries({ queryKey: ['shop-statistics'] });
+      queryClient.invalidateQueries({ queryKey: ['personelIslemleri'] });
       
       // Tamamlanan randevudan kaç işlem oluşturulduğunu kontrol et
       const operationCount = result?.operationResults?.length || 0;

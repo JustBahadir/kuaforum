@@ -52,7 +52,7 @@ export const personelIslemleriServisi = {
     try {
       console.log(`Fetching operations for personnel ID: ${personelId}`);
       
-      // Try to fetch existing operations first
+      // Using a direct query with no join to profiles to avoid recursion
       const { data, error } = await supabase
         .from('personel_islemleri')
         .select(`
@@ -233,6 +233,8 @@ export const personelIslemleriServisi = {
         notlar: islemi.notlar,
         randevu_id: islemi.randevu_id
       };
+
+      console.log("Inserting new personnel operation:", insertData);
       
       const { data, error } = await supabase
         .from('personel_islemleri')

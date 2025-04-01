@@ -43,7 +43,7 @@ export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTab
         const result = await personelIslemleriServisi.personelIslemleriGetir(Number(personnelId));
         console.log("Retrieved personnel operations:", result);
         
-        // Tarih aralığına göre filtreleme
+        // Filter by date range
         return result.filter(op => {
           if (!op.created_at) return false;
           const opDate = new Date(op.created_at);
@@ -91,11 +91,6 @@ export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTab
     if (currentPage > 1) {
       setCurrentPage(currentPage - 1);
     }
-  };
-
-  const handleRefresh = () => {
-    refetch();
-    toast.info("İşlem geçmişi yenileniyor...");
   };
 
   const formatDate = (dateString: string) => {
