@@ -1,4 +1,3 @@
-
 import { supabase } from '../client';
 import { PersonelIslemi } from '../types';
 
@@ -25,13 +24,13 @@ interface ShopStatistics {
 export const personelIslemleriServisi = {
   async hepsiniGetir() {
     try {
+      // Avoid infinite recursion by not joining the profiles table
       const { data, error } = await supabase
         .from('personel_islemleri')
         .select(`
           *,
           islem:islemler(*),
-          personel:personel(*),
-          musteri:musteriler(*)
+          personel:personel(*)
         `)
         .order('created_at', { ascending: false });
 
@@ -52,14 +51,13 @@ export const personelIslemleriServisi = {
     try {
       console.log(`Fetching operations for personnel ID: ${personelId}`);
       
-      // Using a direct query with no join to profiles to avoid recursion
+      // Avoid infinite recursion by not joining the profiles table
       const { data, error } = await supabase
         .from('personel_islemleri')
         .select(`
           *,
           islem:islemler(*),
-          personel:personel(*),
-          musteri:musteriler(*)
+          personel:personel(*)
         `)
         .eq('personel_id', personelId)
         .order('created_at', { ascending: false });
@@ -69,7 +67,7 @@ export const personelIslemleriServisi = {
         throw error;
       }
       
-      console.log(`Retrieved ${data?.length || 0} operations for personnel ID: ${personelId}`);
+      console.log(`Retrieved ${data?.length || 0} operations for personnel ID: ${personnelId}`);
       
       // If no operations found, try to recover them from appointments
       if (!data || data.length === 0) {
@@ -85,8 +83,7 @@ export const personelIslemleriServisi = {
             .select(`
               *,
               islem:islemler(*),
-              personel:personel(*),
-              musteri:musteriler(*)
+              personel:personel(*)
             `)
             .eq('personel_id', personelId)
             .order('created_at', { ascending: false });
@@ -143,8 +140,7 @@ export const personelIslemleriServisi = {
             .select(`
               *,
               islem:islemler(*),
-              personel:personel(*),
-              musteri:musteriler(*)
+              personel:personel(*)
             `)
             .eq('musteri_id', musteriId)
             .order('created_at', { ascending: false });
@@ -198,12 +194,7 @@ export const personelIslemleriServisi = {
               musteri_id: islemi.musteri_id
             })
             .eq('id', existingOps[0].id)
-            .select(`
-              *,
-              islem:islemler(*),
-              personel:personel(*),
-              musteri:musteriler(*)
-            `)
+            .select()
             .single();
             
           if (updateError) {
@@ -239,12 +230,7 @@ export const personelIslemleriServisi = {
       const { data, error } = await supabase
         .from('personel_islemleri')
         .insert([insertData])
-        .select(`
-          *,
-          islem:islemler(*),
-          personel:personel(*),
-          musteri:musteriler(*)
-        `)
+        .select()
         .single();
 
       if (error) {

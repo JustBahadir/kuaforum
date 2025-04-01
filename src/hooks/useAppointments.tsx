@@ -142,6 +142,12 @@ export function useAppointments(dukkanId?: number) {
       queryClient.invalidateQueries({ queryKey: ['shop-statistics'] });
       queryClient.invalidateQueries({ queryKey: ['personelIslemleri'] });
       
+      // Manually trigger a refetch of personnel operations
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['personnelOperations'] });
+        queryClient.invalidateQueries({ queryKey: ['personelIslemleri'] });
+      }, 1000);
+      
       // Tamamlanan randevudan kaç işlem oluşturulduğunu kontrol et
       const operationCount = result?.operationResults?.length || 0;
       
@@ -156,6 +162,7 @@ export function useAppointments(dukkanId?: number) {
     onError: (error: any) => {
       console.error("Error completing appointment:", error);
       toast.error(`Randevu tamamlanırken bir hata oluştu: ${error.message || "Bilinmeyen hata"}`);
+      setConfirmDialogOpen(false);
     }
   });
   

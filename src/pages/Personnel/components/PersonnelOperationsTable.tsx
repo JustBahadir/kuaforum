@@ -26,6 +26,7 @@ export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTab
   const [totalPoints, setTotalPoints] = useState(0);
   const [totalAmount, setTotalAmount] = useState(0);
   const [totalPaid, setTotalPaid] = useState(0);
+  const [isRecovering, setIsRecovering] = useState(false);
   const itemsPerPage = 5;
   
   // Adjust date range to include March 2024 (when the appointments were completed)
@@ -57,8 +58,8 @@ export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTab
     },
     enabled: !!personnelId,
     refetchOnWindowFocus: false,
-    staleTime: 30000, // Consider data fresh for 30 seconds
-    refetchInterval: 60000 // Refetch every minute
+    staleTime: 0, // Don't cache this data
+    refetchInterval: 30000 // Refetch every 30 seconds automatically
   });
 
   // Calculate totals
@@ -103,19 +104,28 @@ export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTab
 
   const handleForceRecover = async () => {
     try {
+      setIsRecovering(true);
       toast.info("Tamamlanan randevular işleniyor...");
       
       // Force recovery from appointments
       await personelIslemleriServisi.recoverOperationsFromAppointments(Number(personnelId));
       
       // Refetch data
-      refetch();
+      await refetch();
       
       toast.success("İşlem geçmişi yenilendi");
     } catch (error) {
       console.error("Error recovering operations:", error);
       toast.error("İşlem geçmişi yenilenirken bir hata oluştu");
+    } finally {
+      setIsRecovering(false);
     }
+  };
+
+  const handleRefresh = async () => {
+    toast.info("İşlem geçmişi yenileniyor...");
+    await refetch();
+    toast.success("İşlem geçmişi yenilendi");
   };
 
   if (isLoading) {
@@ -138,19 +148,29 @@ export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTab
               to={dateRange.to}
               onSelect={({ from, to }) => {
                 setDateRange({ from, to });
-                setCurrentPage(1); // Sayfa numarasını sıfırla
+                setCurrentPage(1); // Reset page number
               }}
             />
           </div>
           
           <div className="flex items-center gap-2">
             <Button 
-              variant="default" 
+              variant="outline" 
               size="sm" 
-              onClick={handleForceRecover}
+              onClick={handleRefresh}
               disabled={isRefetching}
             >
               <RefreshCw className={`h-4 w-4 mr-1 ${isRefetching ? 'animate-spin' : ''}`} />
+              Yenile
+            </Button>
+            
+            <Button 
+              variant="default" 
+              size="sm" 
+              onClick={handleForceRecover}
+              disabled={isRecovering || isRefetching}
+            >
+              <RefreshCw className={`h-4 w-4 mr-1 ${isRecovering ? 'animate-spin' : ''}`} />
               Randevulardan Güncelle
             </Button>
           </div>
@@ -176,8 +196,15 @@ export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTab
         <div className="text-center py-8 text-gray-500">
           Seçilen tarih aralığında kayıtlı işlem bulunmamaktadır.
           <div className="mt-2">
-            <Button size="sm" variant="outline" onClick={handleForceRecover}>
-              Tamamlanmış Randevulardan İşlemleri Oluştur
+            <Button size="sm" variant="outline" onClick={handleForceRecover} disabled={isRecovering}>
+              {isRecovering ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-t-purple-600 border-purple-200 rounded-full animate-spin mr-2"></div>
+                  İşleniyor...
+                </>
+              ) : (
+                "Tamamlanmış Randevulardan İşlemleri Oluştur"
+              )}
             </Button>
           </div>
         </div>
@@ -204,8 +231,8 @@ export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTab
                       {operation.islem?.islem_adi || operation.aciklama || 'Bilinmeyen İşlem'}
                     </TableCell>
                     <TableCell>
-                      {operation.musteri 
-                        ? `${operation.musteri.first_name || ''} ${operation.musteri.last_name || ''}`.trim() 
+                      {operation.aciklama && operation.aciklama.includes('-') 
+                        ? operation.aciklama.split('-')[1]?.split('(')[0]?.trim() 
                         : 'Bilinmeyen Müşteri'}
                     </TableCell>
                     <TableCell className="text-right">
