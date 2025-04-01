@@ -1,4 +1,3 @@
-
 import { supabase, supabaseAdmin } from '../client';
 import { Randevu } from '../types';
 import { toast } from 'sonner';
@@ -186,62 +185,6 @@ export const randevuServisi = {
       console.error(`Tarih aralığına göre randevular getirilirken hata oluştu:`, error);
       return [];
     }
-  },
-
-  // Add missing methods
-  async dukkanRandevulariniGetir(dukkanId: number) {
-    try {
-      const { data, error } = await supabase
-        .from('randevular')
-        .select(`
-          *,
-          musteri:musteriler(*),
-          personel:personel(*)
-        `)
-        .eq('dukkan_id', dukkanId)
-        .order('tarih', { ascending: false });
-
-      if (error) {
-        console.error(`Dükkan #${dukkanId} için randevular getirilirken hata oluştu:`, error);
-        throw error;
-      }
-
-      return data || [];
-    } catch (error) {
-      console.error(`Dükkan #${dukkanId} için randevular getirilirken hata oluştu:`, error);
-      return [];
-    }
-  },
-
-  async kendiRandevulariniGetir() {
-    try {
-      const { data: user } = await supabase.auth.getUser();
-      
-      if (!user || !user.user) {
-        console.error("Kullanıcı oturumu bulunamadı");
-        return [];
-      }
-
-      const { data, error } = await supabase
-        .from('randevular')
-        .select(`
-          *,
-          musteri:musteriler(*),
-          personel:personel(*)
-        `)
-        .eq('customer_id', user.user.id)
-        .order('tarih', { ascending: false });
-
-      if (error) {
-        console.error("Kendi randevularını getirirken hata oluştu:", error);
-        throw error;
-      }
-
-      return data || [];
-    } catch (error) {
-      console.error("Kendi randevularını getirirken hata oluştu:", error);
-      return [];
-    }
   }
 };
 
@@ -312,7 +255,6 @@ export async function randevuDurumGuncelle(id: number, durum: string) {
         // Get service details and create operations
         for (const islemId of islemIds) {
           try {
-            // Fix: Change to islemServisi.getirById
             const islem = await islemServisi.getirById(islemId);
             
             if (!islem) {
@@ -438,7 +380,6 @@ export async function staffRandevuDurumGuncelle(id: number, durum: string) {
         // Get service details and create operations
         for (const islemId of islemIds) {
           try {
-            // Fix: Change to islemServisi.getirById
             const islem = await islemServisi.getirById(islemId);
             
             if (!islem) {
