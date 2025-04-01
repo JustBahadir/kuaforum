@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { randevuServisi } from "@/lib/supabase/services/randevuServisi";
@@ -133,14 +134,22 @@ export function useAppointments(dukkanId?: number) {
         throw error;
       }
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       // Invalidate all relevant queries
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
       queryClient.invalidateQueries({ queryKey: ['personnelOperations'] });
       queryClient.invalidateQueries({ queryKey: ['customerOperations'] });
       queryClient.invalidateQueries({ queryKey: ['shop-statistics'] });
       
-      toast.success("Randevu tamamlandı olarak işaretlendi");
+      // Tamamlanan randevudan kaç işlem oluşturulduğunu kontrol et
+      const operationCount = result?.operationResults?.length || 0;
+      
+      if (operationCount > 0) {
+        toast.success(`Randevu tamamlandı ve ${operationCount} işlem kaydedildi`);
+      } else {
+        toast.success("Randevu tamamlandı olarak işaretlendi");
+      }
+      
       setConfirmDialogOpen(false);
     },
     onError: (error: any) => {

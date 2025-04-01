@@ -8,6 +8,10 @@ import { supabase } from "@/lib/supabase/client";
 
 export function useCustomerOperations(customerId?: number) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [dateRange, setDateRange] = useState({
+    from: new Date(new Date().setDate(new Date().getDate() - 90)), // Default to last 90 days
+    to: new Date()
+  });
   const queryClient = useQueryClient();
   
   const { 
@@ -17,7 +21,7 @@ export function useCustomerOperations(customerId?: number) {
     isError,
     error
   } = useQuery({
-    queryKey: ['customerOperations', customerId, selectedDate],
+    queryKey: ['customerOperations', customerId, dateRange.from, dateRange.to],
     queryFn: async () => {
       if (!customerId) return [];
       
@@ -27,17 +31,28 @@ export function useCustomerOperations(customerId?: number) {
         // First try to get operations directly
         const operations = await personelIslemleriServisi.musteriIslemleriGetir(customerId);
         
-        if (!operations || operations.length === 0) {
+        // Tarih aralığına göre filtreleme
+        const filteredOperations = operations.filter(op => {
+          if (!op.created_at) return false;
+          const opDate = new Date(op.created_at);
+          return opDate >= dateRange.from && opDate <= dateRange.to;
+        });
+        
+        if (!filteredOperations || filteredOperations.length === 0) {
           // If no operations, try to recover from appointments
           console.log("No operations found, trying to recover from appointments");
           await personelIslemleriServisi.recoverOperationsFromCustomerAppointments(customerId);
           
           // Try to get operations again
           const retryOperations = await personelIslemleriServisi.musteriIslemleriGetir(customerId);
-          return retryOperations || [];
+          return retryOperations.filter(op => {
+            if (!op.created_at) return false;
+            const opDate = new Date(op.created_at);
+            return opDate >= dateRange.from && opDate <= dateRange.to;
+          }) || [];
         }
         
-        return operations;
+        return filteredOperations;
       } catch (error) {
         console.error("Error fetching customer operations:", error);
         toast.error("Müşteri işlemleri yüklenirken bir hata oluştu");
@@ -93,6 +108,8 @@ export function useCustomerOperations(customerId?: number) {
     error,
     selectedDate,
     setSelectedDate,
+    dateRange,
+    setDateRange,
     handleForceRecover,
     refetch,
     totals
