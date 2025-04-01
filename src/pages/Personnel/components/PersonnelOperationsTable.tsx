@@ -28,9 +28,9 @@ export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTab
   const [totalPaid, setTotalPaid] = useState(0);
   const itemsPerPage = 5;
   
-  // Adjust date range to include March 2024 (when the appointments were completed)
+  // Tarih aralığını bugünden geriye doğru 90 gün olarak ayarlayalım (daha geniş aralık)
   const [dateRange, setDateRange] = useState({
-    from: new Date(2024, 2, 1), // March 1, 2024
+    from: new Date(new Date().setDate(new Date().getDate() - 90)), 
     to: new Date()
   });
 
@@ -58,7 +58,7 @@ export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTab
     enabled: !!personnelId,
     refetchOnWindowFocus: false,
     staleTime: 30000, // Consider data fresh for 30 seconds
-    refetchInterval: 60000 // Refetch every minute
+    refetchInterval: 30000 // Her 30 saniyede bir otomatik yenile
   });
 
   // Calculate totals
@@ -73,6 +73,14 @@ export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTab
       setTotalPaid(0);
     }
   }, [operations]);
+
+  // Otomatik olarak recovery işlemini gerçekleştir (sayfa yüklendiğinde)
+  useEffect(() => {
+    // Sayfa ilk yüklendiğinde otomatik olarak bir kez güncelleme yap
+    if (personnelId && !isLoading) {
+      handleForceRecover();
+    }
+  }, [personnelId]);
 
   // Calculate pagination
   const totalPages = Math.ceil((operations?.length || 0) / itemsPerPage);
@@ -98,14 +106,6 @@ export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTab
     toast.info("İşlem geçmişi yenileniyor...");
   };
 
-  const formatDate = (dateString: string) => {
-    try {
-      return format(new Date(dateString), 'dd.MM.yyyy');
-    } catch (e) {
-      return dateString || '-';
-    }
-  };
-
   const handleForceRecover = async () => {
     try {
       toast.info("Tamamlanan randevular işleniyor...");
@@ -120,6 +120,14 @@ export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTab
     } catch (error) {
       console.error("Error recovering operations:", error);
       toast.error("İşlem geçmişi yenilenirken bir hata oluştu");
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    try {
+      return format(new Date(dateString), 'dd.MM.yyyy');
+    } catch (e) {
+      return dateString || '-';
     }
   };
 
