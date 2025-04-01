@@ -37,7 +37,8 @@ export default function StaffOperations() {
   });
 
   const { mutate: islemEkle } = useMutation({
-    mutationFn: islemServisi.islemEkle,
+    mutationFn: (islem: { islem_adi: string, fiyat: number, puan: number, kategori_id?: number }) => 
+      islemServisi.islemEkle(islem),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['islemler'] });
       toast.success("İşlem başarıyla eklendi");

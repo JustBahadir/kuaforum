@@ -121,6 +121,19 @@ export const islemServisi = {
     }
   },
 
+  // Add aliases for the methods that StaffOperations.tsx is trying to use
+  islemEkle: function(islem: { islem_adi: string, fiyat: number, puan: number, kategori_id?: number }) {
+    return this.ekle(islem);
+  },
+
+  islemGuncelle: function(id: number, updates: Partial<Islem>) {
+    return this.guncelle(id, updates);
+  },
+
+  islemSil: function(id: number) {
+    return this.sil(id);
+  },
+
   async kategoriEkle(kategori: { kategori_adi: string }) {
     try {
       const { data, error } = await supabase
