@@ -158,7 +158,7 @@ export function AppointmentDayView({
                   appointment.durum === "iptal_edildi" ? "border-red-500" : 
                   "border-blue-500"
                 } p-4`}>
-                  <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4">
+                  <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-4">
                     <div>
                       <p className="text-sm text-muted-foreground">Saat</p>
                       <p className="font-medium">{appointment.saat.substring(0, 5)}</p>
@@ -172,6 +172,12 @@ export function AppointmentDayView({
                       ) : (
                         <p className="text-xs text-muted-foreground">Müşteri kaydı yok</p>
                       )}
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Personel</p>
+                      <p className="font-medium">
+                        {appointment.personel ? appointment.personel.ad_soyad : "Atanmamış"}
+                      </p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Hizmetler</p>

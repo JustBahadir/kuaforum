@@ -115,7 +115,7 @@ export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProp
                   {new Date(islem.created_at!).toLocaleDateString('tr-TR')}
                 </TableCell>
                 <TableCell>
-                  {personeller?.find(p => p.id === islem.personel_id)?.ad_soyad}
+                  {personeller?.find(p => p.id === islem.personel_id)?.ad_soyad || islem.personel?.ad_soyad}
                 </TableCell>
                 <TableCell>{islem.aciklama}</TableCell>
                 <TableCell>{formatCurrency(islem.tutar || 0)}</TableCell>
