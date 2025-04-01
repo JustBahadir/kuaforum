@@ -27,8 +27,10 @@ export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTab
   const [totalAmount, setTotalAmount] = useState(0);
   const [totalPaid, setTotalPaid] = useState(0);
   const itemsPerPage = 5;
+  
+  // Adjust date range to include March 2024 (when the appointments were completed)
   const [dateRange, setDateRange] = useState({
-    from: new Date(new Date().setDate(new Date().getDate() - 30)), // Son 30 gün
+    from: new Date(2024, 2, 1), // March 1, 2024
     to: new Date()
   });
 

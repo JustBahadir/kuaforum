@@ -182,7 +182,7 @@ export const randevuServisi = {
           } catch (opError) {
             console.error("İşlem kaydı oluşturma hatası:", opError);
             toast.error("İşlem kaydı oluşturulurken bir hata oluştu. Lütfen sistem yöneticinize başvurun.");
-            throw opError; // Rethrow to ensure the caller knows there was an error
+            throw opError;
           }
         }
         
@@ -215,7 +215,7 @@ export const randevuServisi = {
           } catch (opError) {
             console.error("İşlem kaydı oluşturma hatası:", opError);
             toast.error("İşlem kaydı oluşturulurken bir hata oluştu. Lütfen sistem yöneticinize başvurun.");
-            throw opError; // Rethrow to ensure the caller knows there was an error
+            throw opError;
           }
         }
         
