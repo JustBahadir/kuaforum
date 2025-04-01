@@ -10,11 +10,15 @@ export const islemServisi = {
         .select('*')
         .order('sira', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error("İşlemler getirilirken hata oluştu:", error);
+        throw error;
+      }
+
       return data || [];
     } catch (error) {
-      console.error('İşlemleri getirme hatası:', error);
-      throw error;
+      console.error("İşlemler getirilirken hata oluştu:", error);
+      return [];
     }
   },
 
@@ -23,161 +27,194 @@ export const islemServisi = {
       const { data, error } = await supabase
         .from('islem_kategorileri')
         .select('*')
-        .order('sira');
+        .order('sira', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error("İşlem kategorileri getirilirken hata oluştu:", error);
+        throw error;
+      }
+
       return data || [];
     } catch (error) {
-      console.error('Kategorileri getirme hatası:', error);
-      throw error;
+      console.error("İşlem kategorileri getirilirken hata oluştu:", error);
+      return [];
     }
   },
 
   async kategoriIslemleriGetir(kategoriId: number) {
     try {
-      if (!kategoriId) return [];
-      
       const { data, error } = await supabase
         .from('islemler')
         .select('*')
         .eq('kategori_id', kategoriId)
-        .order('sira');
+        .order('sira', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error(`Kategori #${kategoriId} işlemleri getirilirken hata oluştu:`, error);
+        throw error;
+      }
+
       return data || [];
     } catch (error) {
-      console.error('Kategori işlemlerini getirme hatası:', error);
-      throw error;
+      console.error(`Kategori #${kategoriId} işlemleri getirilirken hata oluştu:`, error);
+      return [];
     }
   },
 
-  async ekle(islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) {
+  async ekle(islem: { islem_adi: string, fiyat: number, puan: number, kategori_id?: number }) {
     try {
-      // Get the max sira value for the category
-      const query = supabase
-        .from('islemler')
-        .select('sira');
-        
-      if (islem.kategori_id) {
-        query.eq('kategori_id', islem.kategori_id);
-      } else {
-        query.is('kategori_id', null);
-      }
-      
-      const { data: maxSiraData, error: maxSiraError } = await query
-        .order('sira', { ascending: false })
-        .limit(1);
-      
-      if (maxSiraError) throw maxSiraError;
-      
-      const maxSira = maxSiraData && maxSiraData.length > 0 ? maxSiraData[0].sira || 0 : 0;
-      
       const { data, error } = await supabase
         .from('islemler')
-        .insert([{
-          ...islem,
-          sira: maxSira + 1
-        }])
+        .insert([islem])
         .select()
         .single();
 
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('İşlem ekleme hatası:', error);
-      throw error;
-    }
-  },
+      if (error) {
+        console.error("İşlem eklenirken hata oluştu:", error);
+        throw error;
+      }
 
-  islemEkle: async (islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) => {
-    try {
-      console.log("İşlem ekleniyor:", islem);
-      return await islemServisi.ekle(islem);
+      return data;
     } catch (error) {
       console.error("İşlem eklenirken hata oluştu:", error);
       throw error;
     }
   },
 
-  async guncelle(id: number, islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) {
+  async guncelle(id: number, updates: Partial<Islem>) {
     try {
       const { data, error } = await supabase
         .from('islemler')
-        .update(islem)
+        .update(updates)
         .eq('id', id)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error(`İşlem #${id} güncellenirken hata oluştu:`, error);
+        throw error;
+      }
+
       return data;
     } catch (error) {
-      console.error('İşlem güncelleme hatası:', error);
-      throw error;
-    }
-  },
-
-  islemGuncelle: async (id: number, islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) => {
-    try {
-      return await islemServisi.guncelle(id, islem);
-    } catch (error) {
-      console.error('İşlem güncellenirken hata oluştu:', error);
+      console.error(`İşlem #${id} güncellenirken hata oluştu:`, error);
       throw error;
     }
   },
 
   async sil(id: number) {
     try {
-      console.log("Silinecek işlem ID:", id);
-      
       const { error } = await supabase
         .from('islemler')
         .delete()
         .eq('id', id);
 
       if (error) {
-        console.error('İşlem silme hatası (detaylı):', error);
+        console.error(`İşlem #${id} silinirken hata oluştu:`, error);
         throw error;
       }
-      
-      console.log("İşlem başarıyla silindi:", id);
-      return { success: true };
+
+      return true;
     } catch (error) {
-      console.error('İşlem silme hatası:', error);
+      console.error(`İşlem #${id} silinirken hata oluştu:`, error);
       throw error;
     }
   },
 
-  islemSil: async (id: number) => {
+  async kategoriEkle(kategori: { kategori_adi: string }) {
     try {
-      console.log("İşlem silme isteği:", id);
-      return await islemServisi.sil(id);
+      const { data, error } = await supabase
+        .from('islem_kategorileri')
+        .insert([kategori])
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Kategori eklenirken hata oluştu:", error);
+        throw error;
+      }
+
+      return data;
     } catch (error) {
-      console.error("İşlem silinirken hata oluştu:", error);
+      console.error("Kategori eklenirken hata oluştu:", error);
+      throw error;
+    }
+  },
+
+  async kategoriGuncelle(id: number, updates: { kategori_adi: string }) {
+    try {
+      const { data, error } = await supabase
+        .from('islem_kategorileri')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error(`Kategori #${id} güncellenirken hata oluştu:`, error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error(`Kategori #${id} güncellenirken hata oluştu:`, error);
+      throw error;
+    }
+  },
+
+  async kategoriSil(id: number) {
+    try {
+      const { error } = await supabase
+        .from('islem_kategorileri')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error(`Kategori #${id} silinirken hata oluştu:`, error);
+        throw error;
+      }
+
+      return true;
+    } catch (error) {
+      console.error(`Kategori #${id} silinirken hata oluştu:`, error);
       throw error;
     }
   },
 
   async siraGuncelle(islemler: Islem[]) {
     try {
-      // Update each item with its new position
-      const updates = islemler.map((islem, index) => ({
-        id: islem.id,
-        sira: index,
-        islem_adi: islem.islem_adi,
-        fiyat: islem.fiyat,
-        puan: islem.puan,
-        kategori_id: islem.kategori_id
-      }));
+      // Loop through the services and update their order
+      for (const [index, islem] of islemler.entries()) {
+        await supabase
+          .from('islemler')
+          .update({ sira: index })
+          .eq('id', islem.id);
+      }
+      
+      return true;
+    } catch (error) {
+      console.error("İşlem sırası güncellenirken hata oluştu:", error);
+      throw error;
+    }
+  },
 
+  // Add the missing getirById method
+  async getirById(id: number) {
+    try {
       const { data, error } = await supabase
         .from('islemler')
-        .upsert(updates, { onConflict: 'id' })
-        .select();
+        .select('*')
+        .eq('id', id)
+        .single();
 
-      if (error) throw error;
-      return data || [];
+      if (error) {
+        console.error(`İşlem #${id} getirilirken hata oluştu:`, error);
+        throw error;
+      }
+
+      return data;
     } catch (error) {
-      console.error('İşlem sıralama hatası:', error);
+      console.error(`İşlem #${id} getirilirken hata oluştu:`, error);
       throw error;
     }
   }
