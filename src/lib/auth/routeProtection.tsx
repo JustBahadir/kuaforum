@@ -1,8 +1,7 @@
 
-import React, { ReactNode, useEffect, useState } from 'react';
+import React, { ReactNode, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useCustomerAuth } from '@/hooks/useCustomerAuth';
-import { shouldRedirect, getRedirectPath } from './routeProtection.ts';
 
 interface RouteProtectionProps {
   children: ReactNode;
@@ -15,28 +14,6 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
   const { isAuthenticated, userRole, loading } = useCustomerAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const [showLoading, setShowLoading] = useState(true);
-
-  // Yükleme ekranını 2 saniye sonra gizle
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowLoading(false);
-    }, 2000);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Services sayfasında takılma durumunda ana sayfaya yönlendir
-  useEffect(() => {
-    if (location.pathname === '/services' && loading) {
-      const redirectTimer = setTimeout(() => {
-        console.log("Services sayfasında uzun süre bekleme tespit edildi, ana sayfaya yönlendiriliyor");
-        navigate('/', { replace: true });
-      }, 3000);
-
-      return () => clearTimeout(redirectTimer);
-    }
-  }, [location.pathname, loading, navigate]);
 
   useEffect(() => {
     if (!loading) {
@@ -48,24 +25,180 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
     }
   }, [isAuthenticated, userRole, location.pathname, navigate, loading]);
 
-  // Yükleme göstergesini 2 saniye sonra gizle, yönlendirmeleri etkilememek için children'ı göster
-  if (loading && showLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500 mb-4"></div>
-        <p className="text-gray-600">Yükleniyor...</p>
-        <button 
-          onClick={() => navigate('/')} 
-          className="mt-4 text-purple-600 hover:text-purple-800 underline"
-        >
-          Ana Sayfaya Git
-        </button>
-      </div>
-    );
+  // If loading, show a loading indicator or nothing
+  if (loading) {
+    return <div className="flex items-center justify-center h-screen">Loading...</div>;
   }
 
   return <>{children}</>;
 };
 
-// Re-export the utility functions to maintain backward compatibility
-export { shouldRedirect, getRedirectPath } from './routeProtection.ts';
+/**
+ * Determine if the current route should redirect
+ */
+export const shouldRedirect = (
+  isAuthenticated: boolean,
+  userRole: string | null,
+  pathname: string
+): boolean => {
+  // Public pages that anyone can access
+  if (
+    pathname === "/" || 
+    pathname === "/login" || 
+    pathname === "/admin" ||
+    pathname === "/staff-login" ||
+    pathname === "/services" ||
+    pathname === "/appointments"
+  ) {
+    return false;
+  }
+
+  // Not authenticated
+  if (!isAuthenticated) {
+    // Only allow access to public routes when not authenticated
+    if (
+      pathname !== "/" && 
+      pathname !== "/login" && 
+      pathname !== "/admin" &&
+      pathname !== "/staff-login" &&
+      pathname !== "/services" &&
+      pathname !== "/appointments"
+    ) {
+      return true;
+    }
+    return false;
+  }
+
+  // Admin users have full access to admin pages
+  if (userRole === 'admin') {
+    // If admin is on customer dashboard, redirect to admin dashboard
+    if (pathname.includes('/customer-dashboard')) {
+      return true;
+    }
+    
+    // Admin on homepage should be redirected to shop-home
+    if (pathname === "/") {
+      return false; // Don't redirect, show logout button instead
+    }
+    
+    // Admin trying to access login pages
+    if (pathname === "/login" || pathname === "/admin" || pathname === "/staff-login") {
+      return true;
+    }
+    
+    return false;
+  }
+
+  // Staff can't access customer-specific pages
+  if (userRole === 'staff' && 
+      pathname.includes('/customer-dashboard')) {
+    return true;
+  } 
+  
+  // Staff on homepage should be redirected to shop-home
+  if (userRole === 'staff' && pathname === "/") {
+    return false; // Don't redirect, show logout button instead
+  }
+  
+  // Staff trying to access login pages
+  if (userRole === 'staff' && (pathname === "/login" || pathname === "/admin" || pathname === "/staff-login")) {
+    return true;
+  }
+  
+  // Staff attempting to access shop-home without authentication
+  if (!isAuthenticated && 
+      (pathname === "/shop-home" || 
+       pathname === "/shop-settings" || 
+       pathname === "/personnel")) {
+    return true;
+  }
+  
+  // Customers can't access staff pages
+  if (userRole === 'customer' && 
+      (pathname.includes('/admin') || 
+       pathname.includes('/shop-home') || 
+       pathname.includes('/shop-settings') ||
+       pathname.includes('/shop-statistics') ||
+       pathname.includes('/admin/services') ||
+       pathname.includes('/operations-history') ||
+       pathname.includes('/admin/appointments') ||
+       pathname === "/personnel")) { 
+    return true;
+  }
+
+  // Customer on homepage stays on homepage - no redirect needed
+  if (userRole === 'customer' && pathname === "/") {
+    return false;
+  }
+
+  return false;
+};
+
+/**
+ * Get the appropriate redirect path based on user role
+ */
+export const getRedirectPath = (
+  isAuthenticated: boolean,
+  userRole: string | null,
+  currentPath: string
+): string => {
+  if (!isAuthenticated) {
+    // If not authenticated and trying to access a secured route, redirect to login
+    if (currentPath.includes('admin') || currentPath === "/admin/dashboard") {
+      return "/admin";
+    } else if (currentPath.includes('customer-dashboard')) {
+      return "/login";
+    } else if (currentPath === "/personnel" || 
+              currentPath === "/shop-home" || 
+              currentPath === "/shop-settings" ||
+              currentPath === "/shop-statistics") {
+      return "/admin";
+    }
+    return "/login"; // Default to login page for unauthenticated users
+  }
+  
+  // Admin redirect based on path
+  if (userRole === 'admin') {
+    if (currentPath === "/admin" || currentPath === "/login" || currentPath === "/staff-login") {
+      return "/shop-home";
+    }
+    
+    // Admin trying to access customer-specific pages
+    if (currentPath.includes('/customer-dashboard')) {
+      return "/shop-home";
+    }
+  }
+  
+  // Staff redirect based on path
+  if (userRole === 'staff') {
+    if (currentPath === "/admin" || currentPath === "/login" || currentPath === "/staff-login") {
+      return "/shop-home";
+    }
+    
+    // Staff trying to access customer-specific pages
+    if (currentPath.includes('/customer-dashboard')) {
+      return "/shop-home";
+    }
+  }
+  
+  if (userRole === 'customer') {
+    // Customer trying to access staff pages
+    if (currentPath.includes('/admin') || 
+        currentPath.includes('/shop-home') ||
+        currentPath.includes('/shop-settings') ||
+        currentPath.includes('/shop-statistics') ||
+        currentPath.includes('/admin/services') ||
+        currentPath.includes('/operations-history') ||
+        currentPath.includes('/admin/appointments') ||
+        currentPath === "/personnel") {
+      return "/customer-dashboard";
+    }
+    
+    // Customer on login pages should go to customer dashboard
+    if (currentPath === "/admin" || currentPath === "/login" || currentPath === "/staff-login") {
+      return "/customer-dashboard";
+    }
+  }
+  
+  return currentPath;
+};

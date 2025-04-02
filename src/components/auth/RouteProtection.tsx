@@ -1,4 +1,4 @@
 
-import { RouteProtection as OriginalRouteProtection } from "@/lib/auth/routeProtection.tsx";
+import { RouteProtection as OriginalRouteProtection } from "@/lib/auth/routeProtection";
 
 export const RouteProtection = OriginalRouteProtection;
