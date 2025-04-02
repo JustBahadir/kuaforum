@@ -201,3 +201,6 @@ export const getRedirectPath = (
   
   return currentPath;
 };
+
+// Export utility functions from the component file as well for backward compatibility
+export { shouldRedirect, getRedirectPath } from './routeProtection.ts';
