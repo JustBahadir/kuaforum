@@ -29,19 +29,27 @@ export function ThemeProvider({
   storageKey = "theme",
   ...props
 }: ThemeProviderProps) {
-  const [theme, setTheme] = React.useState<Theme>(() => {
-    if (typeof window === 'undefined') return defaultTheme;
-    try {
-      return (localStorage.getItem(storageKey) as Theme) || defaultTheme;
-    } catch (e) {
-      console.warn('Failed to access localStorage:', e);
-      return defaultTheme;
-    }
-  });
-
+  const [theme, setTheme] = React.useState<Theme>(defaultTheme);
+  
+  // Initialize theme from localStorage on mount
   React.useEffect(() => {
-    const root = window.document.documentElement;
+    if (typeof window === "undefined") return;
+    
+    try {
+      const savedTheme = localStorage.getItem(storageKey) as Theme;
+      if (savedTheme) {
+        setTheme(savedTheme);
+      }
+    } catch (e) {
+      console.warn("Failed to access localStorage:", e);
+    }
+  }, [storageKey]);
 
+  // Apply theme class to document
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    
+    const root = window.document.documentElement;
     root.classList.remove("light", "dark");
 
     if (theme === "system") {
@@ -57,17 +65,24 @@ export function ThemeProvider({
     root.classList.add(theme);
   }, [theme]);
 
-  const value = {
-    theme,
-    setTheme: (theme: Theme) => {
-      try {
-        localStorage.setItem(storageKey, theme);
-      } catch (e) {
-        console.warn('Failed to save theme to localStorage:', e);
-      }
-      setTheme(theme);
-    },
-  };
+  // Save theme to localStorage when it changes
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    
+    try {
+      localStorage.setItem(storageKey, theme);
+    } catch (e) {
+      console.warn("Failed to save theme to localStorage:", e);
+    }
+  }, [theme, storageKey]);
+
+  const value = React.useMemo(
+    () => ({
+      theme,
+      setTheme,
+    }),
+    [theme]
+  );
 
   return (
     <ThemeProviderContext.Provider {...props} value={value}>
