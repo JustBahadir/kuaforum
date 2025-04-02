@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   Table,
   TableBody,
@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Save, RefreshCw } from "lucide-react";
 import { customerOperationsService } from "@/lib/supabase/services/customerOperationsService";
 import { formatCurrency } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
@@ -28,27 +28,20 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
   const [currentPage, setCurrentPage] = useState(1);
   const [editedNotes, setEditedNotes] = useState<Record<number, string>>({});
   const itemsPerPage = 5;
+  const queryClient = useQueryClient();
 
   const { 
     data: operations = [], 
     isLoading, 
-    isRefetching
+    isRefetching,
+    refetch,
+    error
   } = useQuery({
     queryKey: ['customerOperations', customerId],
     queryFn: async () => {
       try {
         console.log(`Fetching operations for customer ID: ${customerId}`);
-        
-        // First attempt to get operations
-        let result = await customerOperationsService.getCustomerOperations(customerId);
-        
-        // If no operations found, try to recover them automatically
-        if (!result || result.length === 0) {
-          console.log("No operations found, attempting to recover from appointments...");
-          await customerOperationsService.forceConvertAppointmentsToOperations(customerId);
-          result = await customerOperationsService.getCustomerOperations(customerId);
-        }
-        
+        const result = await customerOperationsService.getCustomerOperations(customerId);
         console.log("Retrieved customer operations:", result);
         return result;
       } catch (error) {
@@ -58,9 +51,22 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
       }
     },
     enabled: !!customerId,
-    refetchOnWindowFocus: false,
-    staleTime: 1000, // Cache for 1 second to avoid immediate refetches
-    refetchInterval: 10000 // Refetch every 10 seconds to ensure data is up to date
+    refetchInterval: 30000 // Refetch every 30 seconds to ensure data is up to date
+  });
+
+  // Mutation for updating notes
+  const updateNotesMutation = useMutation({
+    mutationFn: async ({ operationId, notes }: { operationId: number, notes: string }) => {
+      return await customerOperationsService.updateOperationNotes(operationId, notes);
+    },
+    onSuccess: () => {
+      toast.success("Notlar başarıyla kaydedildi");
+      queryClient.invalidateQueries({ queryKey: ['customerOperations', customerId] });
+    },
+    onError: (error) => {
+      toast.error("Notlar kaydedilirken bir hata oluştu");
+      console.error("Error updating notes:", error);
+    }
   });
 
   // Calculate totals and pagination
@@ -110,14 +116,30 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
     }));
   };
 
-  const saveNotes = async (operationId: number) => {
+  const saveNotes = (operationId: number) => {
     const notes = editedNotes[operationId] || '';
+    updateNotesMutation.mutate({ operationId, notes });
+  };
+
+  const handleRefresh = () => {
+    refetch();
+    toast.info("İşlem geçmişi yenileniyor...");
+  };
+
+  const handleForceRecover = async () => {
     try {
-      await customerOperationsService.updateOperationNotes(operationId, notes);
-      toast.success("Notlar başarıyla kaydedildi");
+      toast.info("Tamamlanan randevular işleniyor...");
+      
+      // Force recovery from appointments
+      await customerOperationsService.forceConvertAppointmentsToOperations(customerId);
+      
+      // Refetch data
+      refetch();
+      
+      toast.success("İşlem geçmişi yenilendi");
     } catch (error) {
-      console.error("Error updating notes:", error);
-      toast.error("Notlar kaydedilirken bir hata oluştu");
+      console.error("Error recovering operations:", error);
+      toast.error("İşlem geçmişi yenilenirken bir hata oluştu");
     }
   };
 
@@ -137,6 +159,7 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
             <Skeleton className="h-20 w-full" />
             <Skeleton className="h-20 w-full" />
           </div>
+          <Skeleton className="h-10 w-32" />
         </div>
         <Skeleton className="h-[300px] w-full" />
       </div>
@@ -156,28 +179,39 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
             <div className="text-xl font-bold">{formatCurrency(totalAmount)}</div>
           </div>
         </div>
-
-        {totalPages > 1 && (
-          <div className="flex items-center gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={goToPreviousPage}
-              disabled={currentPage === 1}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <span className="text-sm">{currentPage} / {totalPages || 1}</span>
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={goToNextPage}
-              disabled={currentPage === totalPages || totalPages === 0}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="default" 
+            size="sm" 
+            onClick={handleForceRecover}
+            disabled={isRefetching}
+          >
+            <RefreshCw className={`h-4 w-4 mr-1 ${isRefetching ? 'animate-spin' : ''}`} />
+            Veriyi Yenile
+          </Button>
+          
+          {totalPages > 1 && (
+            <>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={goToPreviousPage}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-sm">{currentPage} / {totalPages || 1}</span>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={goToNextPage}
+                disabled={currentPage === totalPages || totalPages === 0}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </>
+          )}
+        </div>
       </div>
       
       {operations.length === 0 ? (
@@ -185,6 +219,14 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
           <div className="text-5xl mb-4 opacity-20">📋</div>
           <p className="text-lg text-gray-500">Henüz kayıtlı işlem bulunmuyor</p>
           <p className="text-sm text-gray-400 mt-2">Tamamlanan randevular burada görüntülenecektir</p>
+          <Button 
+            variant="outline" 
+            className="mt-4"
+            onClick={handleForceRecover}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isRefetching ? 'animate-spin' : ''}`} />
+            Tamamlanan Randevulardan İşlemleri Oluştur
+          </Button>
         </div>
       ) : (
         <Table>
@@ -222,8 +264,9 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
                     size="sm" 
                     variant="ghost"
                     onClick={() => saveNotes(operation.id)}
+                    disabled={updateNotesMutation.isPending}
                   >
-                    Kaydet
+                    <Save className="h-4 w-4" />
                   </Button>
                 </TableCell>
               </TableRow>

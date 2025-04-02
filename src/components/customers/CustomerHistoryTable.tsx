@@ -1,5 +1,5 @@
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { personelIslemleriServisi } from "@/lib/supabase";
 import {
   Table,
@@ -9,9 +9,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Image, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, RefreshCw, Upload, Search, Image, X } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -27,6 +27,7 @@ interface CustomerHistoryTableProps {
 
 export function CustomerHistoryTable({ customerId }: CustomerHistoryTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
+  const [isRecovering, setIsRecovering] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [selectedOperation, setSelectedOperation] = useState<any>(null);
@@ -34,25 +35,17 @@ export function CustomerHistoryTable({ customerId }: CustomerHistoryTableProps) 
   const [photoNote, setPhotoNote] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   
+  const queryClient = useQueryClient();
   const itemsPerPage = 10;
 
-  const { data: islemGecmisi = [], isLoading } = useQuery({
+  const { data: islemGecmisi = [], isLoading, refetch } = useQuery({
     queryKey: ['customerOperations', customerId],
     queryFn: async () => {
       console.log("Fetching customer operations for ID:", customerId);
       try {
-        if (!customerId) return [];
-        
-        // First attempt to get operations
-        let result = await personelIslemleriServisi.musteriIslemleriGetir(customerId);
-        
-        // If no operations found, try to recover them automatically
-        if (!result || result.length === 0) {
-          console.log("No operations found, attempting to recover from appointments...");
-          await personelIslemleriServisi.recoverOperationsFromCustomerAppointments(customerId);
-          result = await personelIslemleriServisi.musteriIslemleriGetir(customerId);
-        }
-        
+        const result = customerId 
+          ? await personelIslemleriServisi.musteriIslemleriGetir(customerId)
+          : [];
         console.log("Retrieved customer operations:", result);
         return result;
       } catch (error) {
@@ -62,9 +55,7 @@ export function CustomerHistoryTable({ customerId }: CustomerHistoryTableProps) 
       }
     },
     refetchOnWindowFocus: false,
-    staleTime: 1000, // Cache for 1 second to avoid immediate refetches
-    refetchInterval: 10000, // Refetch every 10 seconds
-    enabled: !!customerId
+    staleTime: 0 // Don't cache this data
   });
 
   // Filter operations based on search query
@@ -82,11 +73,6 @@ export function CustomerHistoryTable({ customerId }: CustomerHistoryTableProps) 
     currentPage * itemsPerPage
   );
 
-  // Effect to reset to first page when search query changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery]);
-
   const goToNextPage = () => {
     if (currentPage < totalPages) {
       setCurrentPage(currentPage + 1);
@@ -96,6 +82,34 @@ export function CustomerHistoryTable({ customerId }: CustomerHistoryTableProps) 
   const goToPreviousPage = () => {
     if (currentPage > 1) {
       setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const handleRefresh = async () => {
+    toast.info("İşlem geçmişi yenileniyor...");
+    await refetch();
+    toast.success("İşlem geçmişi yenilendi");
+  };
+
+  const handleRecoverOperations = async () => {
+    if (!customerId) return;
+    
+    try {
+      setIsRecovering(true);
+      toast.info("Tamamlanan randevular işleniyor...");
+      
+      // Force recovery from appointments
+      await personelIslemleriServisi.recoverOperationsFromCustomerAppointments(customerId);
+      
+      // Refetch data
+      await refetch();
+      
+      toast.success("İşlem geçmişi yenilendi");
+    } catch (error) {
+      console.error("Error recovering operations:", error);
+      toast.error("İşlem geçmişi yenilenirken bir hata oluştu");
+    } finally {
+      setIsRecovering(false);
     }
   };
 
@@ -117,76 +131,89 @@ export function CustomerHistoryTable({ customerId }: CustomerHistoryTableProps) 
     setUploadedPhotos(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleUploadSubmit = async () => {
-    if (!selectedOperation || uploadedPhotos.length === 0) return;
-    
-    setIsUploading(true);
-    
-    const operation = selectedOperation;
-    const uploadedPhotoUrls: string[] = [];
-    
-    try {
-      // Upload each photo
-      for (const photo of uploadedPhotos) {
-        const timestamp = new Date().getTime();
-        const operationDate = new Date(operation.created_at);
-        const dateStr = format(operationDate, 'yyyy-MM-dd', { locale: tr });
-        
-        // Create a descriptive filename
-        const serviceNamePart = operation.islem?.islem_adi ? 
-          `${operation.islem.islem_adi.replace(/\s+/g, '-')}_` : '';
-        const notePart = photoNote ? 
-          `_${photoNote.slice(0, 20).replace(/\s+/g, '-')}` : '';
-        
-        const fileName = `${dateStr}_${serviceNamePart}${notePart}_${timestamp}`;
-        const fileExt = photo.name.split('.').pop();
-        const fullPath = `customer_photos/${operation.musteri_id}/${fileName}.${fileExt}`;
-        
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('customer-photos')
-          .upload(fullPath, photo, {
-            cacheControl: '3600',
-            upsert: false,
-          });
+  const uploadPhotoMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedOperation || uploadedPhotos.length === 0) return null;
+      
+      setIsUploading(true);
+      
+      const operation = selectedOperation;
+      const uploadedPhotoUrls: string[] = [];
+      
+      try {
+        // Upload each photo
+        for (const photo of uploadedPhotos) {
+          const timestamp = new Date().getTime();
+          const operationDate = new Date(operation.created_at);
+          const dateStr = format(operationDate, 'yyyy-MM-dd', { locale: tr });
           
-        if (uploadError) {
-          console.error("Error uploading photo:", uploadError);
-          throw uploadError;
+          // Create a descriptive filename
+          const serviceNamePart = operation.islem?.islem_adi ? 
+            `${operation.islem.islem_adi.replace(/\s+/g, '-')}_` : '';
+          const notePart = photoNote ? 
+            `_${photoNote.slice(0, 20).replace(/\s+/g, '-')}` : '';
+          
+          const fileName = `${dateStr}_${serviceNamePart}${notePart}_${timestamp}`;
+          const fileExt = photo.name.split('.').pop();
+          const fullPath = `customer_photos/${operation.musteri_id}/${fileName}.${fileExt}`;
+          
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('customer-photos')
+            .upload(fullPath, photo, {
+              cacheControl: '3600',
+              upsert: false,
+            });
+            
+          if (uploadError) {
+            console.error("Error uploading photo:", uploadError);
+            throw uploadError;
+          }
+          
+          if (uploadData?.path) {
+            uploadedPhotoUrls.push(uploadData.path);
+          }
         }
         
-        if (uploadData?.path) {
-          uploadedPhotoUrls.push(uploadData.path);
-        }
-      }
-      
-      // Update the operation with the new photos
-      const currentPhotos = operation.photos || [];
-      const updatedPhotos = [...currentPhotos, ...uploadedPhotoUrls];
-      
-      console.log("Updating operation with photos:", updatedPhotos);
-      
-      const { data: updatedOp, error: updateError } = await supabase
-        .from('personel_islemleri')
-        .update({ 
-          photos: updatedPhotos,
-          notlar: photoNote ? (operation.notlar ? `${operation.notlar}\n${photoNote}` : photoNote) : operation.notlar
-        })
-        .eq('id', operation.id)
-        .select();
+        // Update the operation with the new photos
+        const currentPhotos = operation.photos || [];
+        const updatedPhotos = [...currentPhotos, ...uploadedPhotoUrls];
         
-      if (updateError) {
-        console.error("Error updating operation with photos:", updateError);
-        throw updateError;
+        console.log("Updating operation with photos:", updatedPhotos);
+        
+        const { data: updatedOp, error: updateError } = await supabase
+          .from('personel_islemleri')
+          .update({ 
+            photos: updatedPhotos,
+            notlar: photoNote ? (operation.notlar ? `${operation.notlar}\n${photoNote}` : photoNote) : operation.notlar
+          })
+          .eq('id', operation.id)
+          .select();
+          
+        if (updateError) {
+          console.error("Error updating operation with photos:", updateError);
+          throw updateError;
+        }
+        
+        return updatedOp;
+      } catch (error) {
+        console.error("Error in photo upload process:", error);
+        throw error;
+      } finally {
+        setIsUploading(false);
       }
-      
+    },
+    onSuccess: (data) => {
       toast.success("Fotoğraflar başarıyla yüklendi");
       setUploadDialogOpen(false);
-    } catch (error) {
-      console.error("Error in photo upload process:", error);
-      toast.error(`Fotoğraf yüklenirken bir hata oluştu: ${error instanceof Error ? error.message : "Bilinmeyen hata"}`);
-    } finally {
-      setIsUploading(false);
+      queryClient.invalidateQueries({ queryKey: ['customerOperations', customerId] });
+    },
+    onError: (error: any) => {
+      toast.error(`Fotoğraf yüklenirken bir hata oluştu: ${error.message || "Bilinmeyen hata"}`);
     }
+  });
+
+  const handleUploadSubmit = () => {
+    uploadPhotoMutation.mutate();
   };
 
   if (isLoading) {
@@ -205,6 +232,29 @@ export function CustomerHistoryTable({ customerId }: CustomerHistoryTableProps) 
           : customerId 
             ? "Bu müşteriye ait işlem bulunamadı." 
             : "Henüz işlem kaydı bulunmamaktadır."}
+        
+        {customerId && !searchQuery.trim() && (
+          <div className="mt-4 flex justify-center gap-2">
+            <Button size="sm" variant="outline" onClick={handleRefresh}>
+              <RefreshCw className="h-4 w-4 mr-1" />
+              Yenile
+            </Button>
+            
+            <Button size="sm" variant="default" onClick={handleRecoverOperations} disabled={isRecovering}>
+              {isRecovering ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-t-purple-600 border-purple-200 rounded-full animate-spin mr-2"></div>
+                  İşleniyor...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-1" />
+                  Randevulardan Oluştur
+                </>
+              )}
+            </Button>
+          </div>
+        )}
       </div>
     );
   }
@@ -218,15 +268,38 @@ export function CustomerHistoryTable({ customerId }: CustomerHistoryTableProps) 
         
         <div className="flex gap-2 w-full sm:w-auto">
           <div className="relative flex-1 sm:w-64">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="İşlem ara..."
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
+                setCurrentPage(1); // Reset to first page on search
               }}
-              className="pl-3"
+              className="pl-8"
             />
           </div>
+          
+          <Button size="sm" variant="outline" onClick={handleRefresh}>
+            <RefreshCw className="h-4 w-4 mr-1" />
+            Yenile
+          </Button>
+          
+          {customerId && (
+            <Button size="sm" variant="default" onClick={handleRecoverOperations} disabled={isRecovering}>
+              {isRecovering ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-t-purple-600 border-purple-200 rounded-full animate-spin mr-2"></div>
+                  İşleniyor...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-1" />
+                  Randevulardan Güncelle
+                </>
+              )}
+            </Button>
+          )}
         </div>
       </div>
       
@@ -294,7 +367,7 @@ export function CustomerHistoryTable({ customerId }: CustomerHistoryTableProps) 
                         variant="outline"
                         onClick={() => openUploadDialog(islem)}
                       >
-                        <Image className="h-4 w-4" />
+                        <Upload className="h-4 w-4" />
                       </Button>
                     </div>
                   </TableCell>
