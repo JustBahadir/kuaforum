@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { randevuServisi } from "@/lib/supabase/services/randevuServisi";
@@ -125,9 +126,6 @@ export function useAppointments(dukkanId?: number) {
           durum: "tamamlandi"
         });
         
-        // Force update shop statistics
-        await personelIslemleriServisi.updateShopStatistics();
-        
         return result;
       } catch (error) {
         console.error("Error during appointment completion:", error);
@@ -135,17 +133,25 @@ export function useAppointments(dukkanId?: number) {
       }
     },
     onSuccess: (result) => {
-      // Invalidate all relevant queries
+      // Invalidate all relevant queries to ensure fresh data everywhere
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
       queryClient.invalidateQueries({ queryKey: ['personnelOperations'] });
       queryClient.invalidateQueries({ queryKey: ['customerOperations'] });
       queryClient.invalidateQueries({ queryKey: ['shop-statistics'] });
       queryClient.invalidateQueries({ queryKey: ['personelIslemleri'] });
       
+      // Force update shop statistics
+      personelIslemleriServisi.updateShopStatistics().then(() => {
+        console.log("Shop statistics updated successfully after appointment completion");
+      }).catch(err => {
+        console.error("Error updating shop statistics:", err);
+      });
+      
       // Manually trigger a refetch of personnel operations
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ['personnelOperations'] });
         queryClient.invalidateQueries({ queryKey: ['personelIslemleri'] });
+        queryClient.invalidateQueries({ queryKey: ['customerHistory'] });
       }, 1000);
       
       // Tamamlanan randevudan kaç işlem oluşturulduğunu kontrol et

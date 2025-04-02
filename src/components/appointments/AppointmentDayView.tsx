@@ -158,12 +158,15 @@ export function AppointmentDayView({
                   appointment.durum === "iptal_edildi" ? "border-red-500" : 
                   "border-blue-500"
                 } p-4`}>
-                  <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-4">
-                    <div>
+                  <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4">
+                    {/* Time Column - 2 columns */}
+                    <div className="lg:col-span-2">
                       <p className="text-sm text-muted-foreground">Saat</p>
                       <p className="font-medium">{appointment.saat.substring(0, 5)}</p>
                     </div>
-                    <div>
+                    
+                    {/* Customer Column - 3 columns */}
+                    <div className="lg:col-span-3">
                       <p className="text-sm text-muted-foreground">Müşteri</p>
                       {appointment.musteri ? (
                         <p className="font-medium">
@@ -173,13 +176,17 @@ export function AppointmentDayView({
                         <p className="text-xs text-muted-foreground">Müşteri kaydı yok</p>
                       )}
                     </div>
-                    <div>
+                    
+                    {/* Staff Column - 3 columns */}
+                    <div className="lg:col-span-3">
                       <p className="text-sm text-muted-foreground">Personel</p>
                       <p className="font-medium">
                         {appointment.personel ? appointment.personel.ad_soyad : "Atanmamış"}
                       </p>
                     </div>
-                    <div>
+                    
+                    {/* Services Column - 4 columns */}
+                    <div className="lg:col-span-4">
                       <p className="text-sm text-muted-foreground">Hizmetler</p>
                       <div className="flex flex-wrap gap-1 mt-1">
                         {Array.isArray(appointment.islemler) && appointment.islemler.map((islemId, idx) => (
@@ -191,7 +198,7 @@ export function AppointmentDayView({
                     </div>
                   </div>
                   
-                  <div className="mt-4 lg:mt-0 flex flex-col sm:flex-row gap-2">
+                  <div className="mt-4 lg:mt-0 flex flex-col sm:flex-row gap-2 min-w-[180px] justify-end">
                     {appointment.durum === "onaylandi" && (
                       <>
                         <Button 
