@@ -1,11 +1,12 @@
 
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { StaffCardHeader } from "@/components/staff/StaffCardHeader";
 import { LoginTabs } from "@/components/staff/LoginTabs";
-import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
+import { toast } from "sonner";
 
 export default function StaffLogin() {
   const navigate = useNavigate();
@@ -20,12 +21,18 @@ export default function StaffLogin() {
         if (data?.session) {
           const role = data.session.user.user_metadata?.role;
           if (role === 'staff' || role === 'admin') {
-            navigate("/shop-home");
+            // Rota değişikliğinin tamamlanması için biraz zaman tanıyalım
+            // ve ardından doğrudan navigasyon yapalım
+            setTimeout(() => {
+              console.log("Redirecting to shop-home from StaffLogin");
+              navigate("/shop-home", { replace: true });
+            }, 100);
             return;
           }
         }
       } catch (err) {
         console.error("StaffLogin: Beklenmeyen hata:", err);
+        toast.error("Oturum kontrolü sırasında bir hata oluştu.");
       } finally {
         setIsLoading(false);
       }
@@ -36,13 +43,15 @@ export default function StaffLogin() {
     // Yükleme ekranında sonsuz kalması durumuna karşı bir güvenlik önlemi
     const timeout = setTimeout(() => {
       setIsLoading(false);
-    }, 2000);
+    }, 1500);
     
     return () => clearTimeout(timeout);
   }, [navigate]);
   
   const handleLoginSuccess = () => {
-    navigate("/shop-home");
+    console.log("Login success detected, navigating to shop-home");
+    // Başarılı girişten sonra doğrudan gezinme
+    navigate("/shop-home", { replace: true });
   };
 
   const handleBackClick = () => {

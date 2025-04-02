@@ -49,7 +49,11 @@ export function useLoginHandler(onSuccess: () => void) {
       if (userRole === 'staff' || userRole === 'admin') {
         console.log("Personel/admin girişi başarılı. Yönlendirme yapılacak.");
         toast.success("Giriş başarılı!");
-        onSuccess();
+        
+        // Başarılı giriş sonrası callback'i çağır
+        setTimeout(() => {
+          onSuccess();
+        }, 100);
       } else {
         console.error("Kullanıcının rolü personel veya admin değil:", userRole);
         setLoginError("Bu hesap personel girişi için yetkilendirilmemiş. Lütfen personel hesabınızla giriş yapın.");

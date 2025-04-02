@@ -1,5 +1,5 @@
 
-import { ReactNode, useEffect, useState } from 'react';
+import React, { ReactNode, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase/client';
 
@@ -34,11 +34,15 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
         const { data, error } = await supabase.auth.getSession();
         
         if (error || !data.session) {
-          if (isMounted) navigate('/login');
+          if (isMounted) {
+            console.log("No session, redirecting to login");
+            navigate('/login');
+          }
           return;
         }
         
         const userRole = data.session.user.user_metadata?.role;
+        console.log("Current user role:", userRole, "at pathname:", location.pathname);
         
         // Check admin/staff routes access
         if (location.pathname.startsWith('/shop-') || 
@@ -46,13 +50,17 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
             location.pathname.startsWith('/admin') ||
             location.pathname === '/admin/operations') {
           if (userRole !== 'admin' && userRole !== 'staff') {
-            if (isMounted) navigate('/staff-login');
+            if (isMounted) {
+              console.log("User is not staff/admin, redirecting to staff-login");
+              navigate('/staff-login');
+            }
             return;
           }
         }
+        
+        if (isMounted) setChecking(false);
       } catch (error) {
         console.error("RouteProtection: Unexpected error", error);
-      } finally {
         if (isMounted) setChecking(false);
       }
     };
