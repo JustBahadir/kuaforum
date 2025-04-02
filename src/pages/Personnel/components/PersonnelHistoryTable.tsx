@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -21,7 +21,6 @@ interface PersonnelHistoryTableProps {
 
 export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
-  const [isRecovering, setIsRecovering] = useState(false);
   const itemsPerPage = 10;
 
   const { data: islemGecmisi = [], isLoading, refetch } = useQuery({
@@ -40,8 +39,9 @@ export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProp
         return [];
       }
     },
-    refetchOnWindowFocus: false,
-    staleTime: 0 // Don't cache this data
+    refetchOnWindowFocus: true,
+    staleTime: 10000, // Reduced to 10 seconds for more frequent refresh
+    refetchInterval: 30000 // Set a refresh interval of 30 seconds
   });
 
   const { data: personeller = [] } = useQuery({
@@ -68,34 +68,6 @@ export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProp
     }
   };
 
-  const handleRefresh = async () => {
-    toast.info("İşlem geçmişi yenileniyor...");
-    await refetch();
-    toast.success("İşlem geçmişi yenilendi");
-  };
-
-  const handleRecoverOperations = async () => {
-    if (!personnelId) return;
-    
-    try {
-      setIsRecovering(true);
-      toast.info("Tamamlanan randevular işleniyor...");
-      
-      // Force recovery from appointments
-      await personelIslemleriServisi.recoverOperationsFromAppointments(personnelId);
-      
-      // Refetch data
-      await refetch();
-      
-      toast.success("İşlem geçmişi yenilendi");
-    } catch (error) {
-      console.error("Error recovering operations:", error);
-      toast.error("İşlem geçmişi yenilenirken bir hata oluştu");
-    } finally {
-      setIsRecovering(false);
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="flex justify-center p-4">
@@ -108,28 +80,6 @@ export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProp
     return (
       <div className="text-center p-4 text-muted-foreground">
         {personnelId ? "Bu personele ait işlem bulunamadı." : "Henüz işlem kaydı bulunmamaktadır."}
-        {personnelId && (
-          <div className="mt-4 flex justify-center gap-2">
-            <Button size="sm" variant="outline" onClick={handleRefresh}>
-              <RefreshCw className="h-4 w-4 mr-1" />
-              Yenile
-            </Button>
-            
-            <Button size="sm" variant="default" onClick={handleRecoverOperations} disabled={isRecovering}>
-              {isRecovering ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-t-purple-600 border-purple-200 rounded-full animate-spin mr-2"></div>
-                  İşleniyor...
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="h-4 w-4 mr-1" />
-                  Randevulardan Oluştur
-                </>
-              )}
-            </Button>
-          </div>
-        )}
       </div>
     );
   }
@@ -139,29 +89,6 @@ export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProp
       <div className="flex justify-between items-center">
         <div className="text-sm text-muted-foreground">
           Toplam {islemGecmisi.length} işlem bulundu
-        </div>
-        
-        <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={handleRefresh}>
-            <RefreshCw className="h-4 w-4 mr-1" />
-            Yenile
-          </Button>
-          
-          {personnelId && (
-            <Button size="sm" variant="default" onClick={handleRecoverOperations} disabled={isRecovering}>
-              {isRecovering ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-t-purple-600 border-purple-200 rounded-full animate-spin mr-2"></div>
-                  İşleniyor...
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="h-4 w-4 mr-1" />
-                  Randevulardan Güncelle
-                </>
-              )}
-            </Button>
-          )}
         </div>
       </div>
       

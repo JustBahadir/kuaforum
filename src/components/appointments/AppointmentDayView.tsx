@@ -153,12 +153,12 @@ export function AppointmentDayView({
           {sortedAppointments.map((appointment) => (
             <Card key={appointment.id} className="overflow-hidden">
               <CardContent className="p-0">
-                <div className={`flex flex-col lg:flex-row lg:items-center border-l-4 ${
+                <div className={`grid grid-cols-1 md:grid-cols-5 border-l-4 ${
                   appointment.durum === "tamamlandi" ? "border-green-500" : 
                   appointment.durum === "iptal_edildi" ? "border-red-500" : 
                   "border-blue-500"
                 } p-4`}>
-                  <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-4">
+                  <div className="col-span-4 grid grid-cols-4 gap-4">
                     <div>
                       <p className="text-sm text-muted-foreground">Saat</p>
                       <p className="font-medium">{appointment.saat.substring(0, 5)}</p>
@@ -191,9 +191,9 @@ export function AppointmentDayView({
                     </div>
                   </div>
                   
-                  <div className="mt-4 lg:mt-0 flex flex-col sm:flex-row gap-2">
+                  <div className="col-span-1 flex items-center justify-end">
                     {appointment.durum === "onaylandi" && (
-                      <>
+                      <div className="flex flex-col sm:flex-row gap-2">
                         <Button 
                           size="sm" 
                           variant="outline"
@@ -210,7 +210,7 @@ export function AppointmentDayView({
                         >
                           <XSquare className="h-4 w-4" /> İptal
                         </Button>
-                      </>
+                      </div>
                     )}
                     
                     {appointment.durum === "tamamlandi" && (

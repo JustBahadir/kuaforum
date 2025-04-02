@@ -69,22 +69,10 @@ export default function CustomerProfile({ isNewUser = false }: CustomerProfilePr
     } catch (error: any) {
       console.error("Profil güncelleme hatası:", error);
       
-      // Hataya rağmen kullanıcıyı randevu sayfasına yönlendirmek için kontrol
-      let shouldNavigate = false;
+      toast.error("Bilgileriniz kaydedilirken bir hata oluştu: " + (error.message || "Bilinmeyen hata"));
       
-      // Infinity recursion veya schema hatası gibi kritik hataları göster
-      if (error.code === '42P17' || error.message?.includes('infinite recursion') || error.message?.includes('occupation')) {
-        toast.error(
-          "Profil güncellenirken bir hata oluştu, ancak temel bilgileriniz kaydedildi. Daha sonra tekrar deneyebilirsiniz."
-        );
-        shouldNavigate = true; // Bu hatalara rağmen devam edebiliriz
-      } else {
-        toast.error("Bilgileriniz kaydedilirken bir hata oluştu: " + error.message);
-        shouldNavigate = false;
-      }
-      
-      // Kritik olmayan hatalarda bile yeni kullanıcıları yönlendir
-      if (shouldNavigate || isNewUser) {
+      // Yeni kullanıcılar için hatalarda bile randevu sayfasına yönlendir
+      if (isNewUser) {
         setTimeout(() => {
           navigate("/appointments");
         }, 2000);

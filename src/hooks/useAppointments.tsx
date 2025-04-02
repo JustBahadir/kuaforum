@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { randevuServisi } from "@/lib/supabase/services/randevuServisi";
@@ -67,9 +68,9 @@ export function useAppointments(dukkanId?: number) {
       }
     },
     enabled: true,
-    refetchOnWindowFocus: false,
-    staleTime: 30000, 
-    refetchInterval: 60000 // Refetch every minute to keep data fresh
+    refetchOnWindowFocus: true, // Changed to true for better real-time updates
+    staleTime: 10000, // Reduced to 10 seconds for more frequent refresh
+    refetchInterval: 30000 // Reduced to 30 seconds for more frequent refresh
   });
   
   const enhanceAppointments = useCallback(async () => {
@@ -120,10 +121,14 @@ export function useAppointments(dukkanId?: number) {
     mutationFn: async (appointmentId: number) => {
       try {
         console.log(`Completing appointment with ID: ${appointmentId}`);
+        
         // First mark the appointment as completed
         const result = await randevuServisi.guncelle(appointmentId, {
           durum: "tamamlandi"
         });
+        
+        // Make sure to create operations for personnel and customer
+        await randevuServisi.randevuTamamlandi(appointmentId);
         
         // Force update shop statistics
         await personelIslemleriServisi.updateShopStatistics();
@@ -134,30 +139,19 @@ export function useAppointments(dukkanId?: number) {
         throw error;
       }
     },
-    onSuccess: (result) => {
-      // Invalidate all relevant queries
+    onSuccess: () => {
+      // Invalidate all relevant queries to trigger refetches
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
       queryClient.invalidateQueries({ queryKey: ['personnelOperations'] });
       queryClient.invalidateQueries({ queryKey: ['customerOperations'] });
       queryClient.invalidateQueries({ queryKey: ['shop-statistics'] });
       queryClient.invalidateQueries({ queryKey: ['personelIslemleri'] });
       
-      // Manually trigger a refetch of personnel operations
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ['personnelOperations'] });
-        queryClient.invalidateQueries({ queryKey: ['personelIslemleri'] });
-      }, 1000);
-      
-      // Tamamlanan randevudan kaç işlem oluşturulduğunu kontrol et
-      const operationCount = result?.operationResults?.length || 0;
-      
-      if (operationCount > 0) {
-        toast.success(`Randevu tamamlandı ve ${operationCount} işlem kaydedildi`);
-      } else {
-        toast.success("Randevu tamamlandı olarak işaretlendi");
-      }
-      
+      toast.success("Randevu tamamlandı");
       setConfirmDialogOpen(false);
+      
+      // Immediately trigger a refetch
+      refetch();
     },
     onError: (error: any) => {
       console.error("Error completing appointment:", error);
@@ -178,6 +172,9 @@ export function useAppointments(dukkanId?: number) {
       
       toast.success("Randevu iptal edildi");
       setCancelDialogOpen(false);
+      
+      // Immediately trigger a refetch
+      refetch();
     },
     onError: (error: any) => {
       console.error("Error canceling appointment:", error);

@@ -1,3 +1,4 @@
+
 import { supabase } from '../client';
 import { Randevu } from '../types';
 import { toast } from 'sonner';
@@ -164,22 +165,6 @@ export const randevuServisi = {
         
         console.log("Randevu güncelleme başarılı:", data);
         
-        if (randevu.durum === "tamamlandi") {
-          try {
-            console.log(`Randevu ${id} tamamlandı olarak işaretlendi, işlemler oluşturuluyor...`);
-            const operationResults = await this.randevuTamamlandi(id);
-            console.log(`İşlem kayıtları oluşturuldu:`, operationResults);
-            
-            await personelIslemleriServisi.updateShopStatistics();
-            
-            return { ...data, operationResults };
-          } catch (opError) {
-            console.error("İşlem kaydı oluşturma hatası:", opError);
-            toast.error("İşlem kaydı oluşturulurken bir hata oluştu. Lütfen sistem yöneticinize başvurun.");
-            throw opError;
-          }
-        }
-        
         return data;
       } else {
         const { data, error } = await supabase
@@ -194,22 +179,6 @@ export const randevuServisi = {
         }
         
         console.log("Randevu güncelleme başarılı:", data);
-        
-        if (randevu.durum === "tamamlandi") {
-          try {
-            console.log(`Randevu ${id} tamamlandı olarak işaretlendi, işlemler oluşturuluyor...`);
-            const operationResults = await this.randevuTamamlandi(id);
-            console.log(`İşlem kayıtları oluşturuldu:`, operationResults);
-            
-            await personelIslemleriServisi.updateShopStatistics();
-            
-            return { ...data[0], operationResults };
-          } catch (opError) {
-            console.error("İşlem kaydı oluşturma hatası:", opError);
-            toast.error("İşlem kaydı oluşturulurken bir hata oluştu. Lütfen sistem yöneticinize başvurun.");
-            throw opError;
-          }
-        }
         
         try {
           await personelIslemleriServisi.updateShopStatistics();
@@ -278,6 +247,27 @@ export const randevuServisi = {
       }
       
       const createdOperations = [];
+      
+      // Başka bir yol deneyelim - doğrudan SQL RPC çağrısı
+      try {
+        const { data: rpcResult, error: rpcError } = await supabase.rpc(
+          'process_completed_appointment', 
+          { appointment_id: randevuId }
+        );
+        
+        if (rpcError) {
+          console.error("RPC error while processing completed appointment:", rpcError);
+          // RPC başarısız olursa yedek yönteme devam et
+        } else if (rpcResult) {
+          console.log("Successfully processed appointment via RPC:", rpcResult);
+          return rpcResult;
+        }
+      } catch (rpcException) {
+        console.error("Exception in RPC call:", rpcException);
+        // RPC başarısız olursa yedek yönteme devam et
+      }
+      
+      // RPC başarısız olursa manüel olarak işlemleri oluştur
       for (const islem of islemler) {
         try {
           const tutar = parseFloat(islem.fiyat) || 0;
@@ -298,6 +288,7 @@ export const randevuServisi = {
           
           console.log("Creating personnel operation:", personelIslem);
           
+          // Mevcut işlemleri kontrol et
           const { data: existingOps, error: checkError } = await supabase
             .from('personel_islemleri')
             .select('id')
@@ -312,7 +303,8 @@ export const randevuServisi = {
           if (existingOps && existingOps.length > 0) {
             console.log(`İşlem zaten var, güncelleniyor: ${existingOps[0].id}`);
             
-            const { data: updatedOp } = await supabase
+            // Varsa güncelle
+            const { data: updatedOp, error: updateError } = await supabase
               .from('personel_islemleri')
               .update({
                 tutar: tutar,
@@ -327,29 +319,46 @@ export const randevuServisi = {
               .select('*')
               .single();
               
-            if (updatedOp) {
+            if (updateError) {
+              console.error("Error updating operation:", updateError);
+            } else if (updatedOp) {
               createdOperations.push(updatedOp);
               console.log("Updated existing operation:", updatedOp);
             }
           } else {
+            // Yoksa yeni oluştur
             const { data: insertedOp, error: insertError } = await supabase
               .from('personel_islemleri')
               .insert([personelIslem])
-              .select('*')
-              .single();
+              .select('*');
               
             if (insertError) {
               console.error("Error creating new operation:", insertError);
               
-              const createdOp = await personelIslemleriServisi.ekle(personelIslem);
-              
-              if (createdOp) {
-                createdOperations.push(createdOp);
-                console.log("Created new personnel operation via service:", createdOp);
+              // Alternatif yöntem dene
+              const { data: alternativeOp, error: altError } = await supabase
+                .rpc('create_personnel_operation', {
+                  p_personel_id: randevu.personel_id,
+                  p_islem_id: islem.id,
+                  p_tutar: tutar,
+                  p_puan: parseInt(islem.puan) || 0,
+                  p_prim_yuzdesi: primYuzdesi,
+                  p_odenen: odenenPrim,
+                  p_musteri_id: randevu.musteri_id,
+                  p_randevu_id: randevuId,
+                  p_aciklama: `${islem.islem_adi} hizmeti verildi - ${musteriAdi} (Randevu #${randevuId})`,
+                  p_notlar: randevu.notlar || ''
+                });
+                
+              if (altError) {
+                console.error("Error creating operation via RPC:", altError);
+              } else if (alternativeOp) {
+                createdOperations.push(alternativeOp);
+                console.log("Created operation via RPC:", alternativeOp);
               }
-            } else if (insertedOp) {
-              createdOperations.push(insertedOp);
-              console.log("Created new personnel operation directly:", insertedOp);
+            } else if (insertedOp && insertedOp.length > 0) {
+              createdOperations.push(insertedOp[0]);
+              console.log("Created new personnel operation:", insertedOp[0]);
             }
           }
         } catch (serviceError) {
@@ -359,6 +368,7 @@ export const randevuServisi = {
       
       console.log(`Toplam ${createdOperations.length} adet işlem kaydı oluşturuldu`);
       
+      // İstatistikleri güncelle
       await personelIslemleriServisi.updateShopStatistics();
       
       if (createdOperations.length > 0) {
