@@ -1,5 +1,5 @@
 
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { shouldRedirect, getRedirectPath } from './routeProtection';
 import { useCustomerAuth } from '@/hooks/useCustomerAuth';
@@ -16,7 +16,7 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!loading) {
       if (shouldRedirect(isAuthenticated, userRole, location.pathname)) {
         const redirectPath = getRedirectPath(isAuthenticated, userRole, location.pathname);
