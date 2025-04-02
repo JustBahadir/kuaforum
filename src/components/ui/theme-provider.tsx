@@ -30,8 +30,8 @@ export function ThemeProvider({
   storageKey = "theme",
   ...props
 }: ThemeProviderProps) {
-  const [theme, setTheme] = React.useState<Theme>(
-    () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
+  const [theme, setTheme] = useState<Theme>(
+    () => (typeof localStorage !== 'undefined' ? (localStorage.getItem(storageKey) as Theme) : null) || defaultTheme
   );
 
   useEffect(() => {
