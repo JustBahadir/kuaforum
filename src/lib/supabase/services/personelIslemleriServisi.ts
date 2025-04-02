@@ -67,7 +67,7 @@ export const personelIslemleriServisi = {
         throw error;
       }
       
-      console.log(`Retrieved ${data?.length || 0} operations for personnel ID: ${personnelId}`);
+      console.log(`Retrieved ${data?.length || 0} operations for personnel ID: ${personelId}`);
       
       // If no operations found, try to recover them from appointments
       if (!data || data.length === 0) {
@@ -419,7 +419,6 @@ export const personelIslemleriServisi = {
     }
   },
 
-  // Helper function to process appointments for personnel recovery
   async processAppointmentsForRecovery(appointmentsToProcess: any[], personelId: number) {
     const createdOperations = [];
     
@@ -528,7 +527,6 @@ export const personelIslemleriServisi = {
     return createdOperations;
   },
 
-  // Helper function to process appointments for customer recovery
   async processAppointmentsForCustomerRecovery(appointmentsToProcess: any[], musteriId: number) {
     const createdOperations = [];
     
@@ -643,7 +641,6 @@ export const personelIslemleriServisi = {
     return createdOperations;
   },
 
-  // Get shop statistics for the dashboard
   async getShopStatistics(): Promise<ShopStatistics> {
     try {
       console.log("Fetching shop statistics");
@@ -740,7 +737,6 @@ export const personelIslemleriServisi = {
     }
   },
 
-  // Update shop statistics in the database
   async updateShopStatistics() {
     try {
       console.log("Updating shop statistics");
