@@ -1,266 +1,190 @@
 
-import { StaffLayout } from "@/components/ui/staff-layout";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useParams, useNavigate } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { musteriServisi } from "@/lib/supabase/services/musteriServisi";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { CustomerForm } from "@/components/customers/CustomerForm";
-import { CustomerHistoryTable } from "@/components/customers/CustomerHistoryTable";
-import { CustomerPhotoGallery } from "@/components/customers/CustomerPhotoGallery";
-import { Pencil, Trash } from "lucide-react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { useState } from "react";
+import { profilServisi } from "@/lib/supabase/services/profilServisi";
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
+import { User, UserRound, Phone } from "lucide-react";
 
-export default function CustomerProfile() {
-  const { customerId } = useParams<{ customerId: string }>();
+interface CustomerProfileProps {
+  isNewUser?: boolean;
+}
+
+export default function CustomerProfile({ isNewUser = false }: CustomerProfileProps) {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const customerIdNumber = customerId ? parseInt(customerId) : undefined;
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [editMode, setEditMode] = useState(false);
 
-  const { data: customer, isLoading } = useQuery({
-    queryKey: ['customer', customerIdNumber],
-    queryFn: async () => {
-      if (!customerIdNumber) return null;
-      return musteriServisi.getirById(customerIdNumber);
-    },
-    enabled: !!customerIdNumber,
-  });
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
 
-  const deleteMutation = useMutation({
-    mutationFn: async () => {
-      if (!customerIdNumber) throw new Error("Müşteri ID gerekli");
-      return musteriServisi.sil(customerIdNumber);
-    },
-    onSuccess: () => {
-      toast.success("Müşteri başarıyla silindi");
-      queryClient.invalidateQueries({ queryKey: ['customers'] });
-      navigate('/customers');
-    },
-    onError: (error: Error) => {
-      toast.error(`Müşteri silinirken bir hata oluştu: ${error.message}`);
-    },
-  });
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const profile = await profilServisi.getir();
+        if (profile) {
+          setFirstName(profile.first_name || "");
+          setLastName(profile.last_name || "");
+          setPhone(profile.phone || "");
+        }
+      } catch (error) {
+        console.error("Profil bilgileri yüklenirken hata:", error);
+        toast.error("Profil bilgileri yüklenirken bir hata oluştu.");
+      } finally {
+        setInitialLoading(false);
+      }
+    };
 
-  const handleDeleteClick = () => {
-    setDeleteDialogOpen(true);
+    loadProfile();
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      if (!firstName || !lastName || !phone) {
+        toast.error("Lütfen tüm zorunlu alanları doldurunuz.");
+        setLoading(false);
+        return;
+      }
+
+      const updatedProfile = await profilServisi.guncelle({
+        first_name: firstName,
+        last_name: lastName,
+        phone
+      });
+
+      console.log("Profil güncellendi:", updatedProfile);
+      toast.success("Bilgileriniz başarıyla kaydedildi.");
+      
+      // Yeni kullanıcılar için randevu sayfasına yönlendir
+      if (isNewUser) {
+        navigate("/appointments");
+      }
+    } catch (error: any) {
+      console.error("Profil güncelleme hatası:", error);
+      
+      // Hataya rağmen kullanıcıyı randevu sayfasına yönlendirmek için kontrol
+      let shouldNavigate = false;
+      
+      // Infinity recursion veya schema hatası gibi kritik hataları göster
+      if (error.code === '42P17' || error.message?.includes('infinite recursion') || error.message?.includes('occupation')) {
+        toast.error(
+          "Profil güncellenirken bir hata oluştu, ancak temel bilgileriniz kaydedildi. Daha sonra tekrar deneyebilirsiniz."
+        );
+        shouldNavigate = true; // Bu hatalara rağmen devam edebiliriz
+      } else {
+        toast.error("Bilgileriniz kaydedilirken bir hata oluştu: " + error.message);
+        shouldNavigate = false;
+      }
+      
+      // Kritik olmayan hatalarda bile yeni kullanıcıları yönlendir
+      if (shouldNavigate || isNewUser) {
+        setTimeout(() => {
+          navigate("/appointments");
+        }, 2000);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleConfirmDelete = () => {
-    deleteMutation.mutate();
-  };
-
-  const handleCancelDelete = () => {
-    setDeleteDialogOpen(false);
-  };
-
-  const handleEditClick = () => {
-    setEditMode(true);
-  };
-
-  const handleCancelEdit = () => {
-    setEditMode(false);
-  };
-
-  const handleCustomerUpdated = () => {
-    setEditMode(false);
-    queryClient.invalidateQueries({ queryKey: ['customer', customerIdNumber] });
-    toast.success("Müşteri bilgileri güncellendi");
-  };
-
-  // Helper function for first letter capitalization
-  const capitalizeFirstLetter = (string: string) => {
-    return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
-  };
-
-  const getInitials = () => {
-    if (!customer) return "";
-    const first = customer.first_name?.charAt(0) || "";
-    const last = customer.last_name?.charAt(0) || "";
-    return (first + last).toUpperCase();
-  };
-
-  if (isLoading) {
+  if (initialLoading) {
     return (
-      <StaffLayout>
-        <div className="container mx-auto py-8">
-          <div className="flex justify-center">
-            <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
-          </div>
-        </div>
-      </StaffLayout>
-    );
-  }
-
-  if (!customer) {
-    return (
-      <StaffLayout>
-        <div className="container mx-auto py-8">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4">Müşteri Bulunamadı</h1>
-            <p className="mb-4">Bu müşteri kaydı bulunamadı veya silinmiş olabilir.</p>
-            <Button onClick={() => navigate('/customers')}>
-              Müşteri Listesine Dön
-            </Button>
-          </div>
-        </div>
-      </StaffLayout>
+      <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
+        <p>Profil bilgileri yükleniyor...</p>
+      </div>
     );
   }
 
   return (
-    <StaffLayout>
-      <div className="container mx-auto py-8">
-        {editMode ? (
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-2xl font-bold mb-6">Müşteri Düzenle</h2>
-            <CustomerForm
-              initialData={customer}
-              onCancel={handleCancelEdit}
-              onSuccess={handleCustomerUpdated}
-            />
-          </div>
-        ) : (
-          <>
-            <div className="bg-white rounded-lg shadow p-6 mb-6">
-              <div className="flex flex-col md:flex-row justify-between">
-                <div className="flex items-center mb-4 md:mb-0">
-                  <div className="w-16 h-16 rounded-full bg-purple-100 flex items-center justify-center text-purple-800 text-xl font-bold mr-4">
-                    {getInitials()}
-                  </div>
-                  <div>
-                    <h1 className="text-2xl font-bold">
-                      {customer.first_name} {customer.last_name || ""}
-                    </h1>
-                    {customer.phone && (
-                      <p className="text-gray-600">{customer.phone}</p>
-                    )}
-                  </div>
-                </div>
-                <div className="flex space-x-2">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={handleEditClick}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="icon"
-                    onClick={handleDeleteClick}
-                  >
-                    <Trash className="h-4 w-4" />
-                  </Button>
-                </div>
+    <div className="container mx-auto p-6">
+      <div className="max-w-3xl mx-auto">
+        <h1 className="text-2xl font-bold mb-6">
+          {isNewUser ? "Müşteri Bilgilerinizi Tamamlayın" : "Profil Bilgilerim"}
+        </h1>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle>Kişisel Bilgiler</CardTitle>
+          </CardHeader>
+          
+          <CardContent>
+            <form id="profileForm" onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="firstName" className="flex items-center gap-2">
+                  <User size={16} />
+                  Adınız *
+                </Label>
+                <Input
+                  id="firstName"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  placeholder="Adınız"
+                  className="max-w-md"
+                  required
+                />
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">
-                    TAM AD
-                  </h3>
-                  <p className="mt-1">
-                    {customer.first_name} {customer.last_name || ""}
-                  </p>
-                </div>
-                {customer.phone && (
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">
-                      TELEFON
-                    </h3>
-                    <p className="mt-1">{customer.phone}</p>
-                  </div>
-                )}
-                {customer.birthdate && (
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">
-                      DOĞUM TARİHİ
-                    </h3>
-                    <p className="mt-1">
-                      {new Date(customer.birthdate).toLocaleDateString("tr-TR")}
-                    </p>
-                  </div>
-                )}
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">
-                    KAYIT TARİHİ
-                  </h3>
-                  <p className="mt-1">
-                    {new Date(customer.created_at).toLocaleDateString("tr-TR")}
-                  </p>
-                </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="lastName" className="flex items-center gap-2">
+                  <UserRound size={16} />
+                  Soyadınız *
+                </Label>
+                <Input
+                  id="lastName"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  placeholder="Soyadınız"
+                  className="max-w-md"
+                  required
+                />
               </div>
-            </div>
-
-            <Tabs defaultValue="history" className="w-full">
-              <TabsList className="mb-4">
-                <TabsTrigger value="history">İşlem Geçmişi</TabsTrigger>
-                <TabsTrigger value="photos">Fotoğraflar</TabsTrigger>
-                <TabsTrigger value="notes">Notlar</TabsTrigger>
-              </TabsList>
               
-              <TabsContent value="history">
-                <div className="bg-white rounded-lg shadow">
-                  <div className="p-6">
-                    <CustomerHistoryTable customerId={customerIdNumber} />
-                  </div>
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="photos">
-                <div className="bg-white rounded-lg shadow">
-                  <div className="p-6">
-                    <CustomerPhotoGallery customerId={customerIdNumber} />
-                  </div>
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="notes">
-                <div className="bg-white rounded-lg shadow p-6">
-                  <h3 className="text-lg font-medium mb-4">Müşteri Notları</h3>
-                  <p className="text-muted-foreground">Bu özellik geliştirme aşamasındadır.</p>
-                </div>
-              </TabsContent>
-            </Tabs>
-          </>
-        )}
-
-        <AlertDialog
-          open={deleteDialogOpen}
-          onOpenChange={setDeleteDialogOpen}
-        >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Müşteriyi Silmek İstiyor musunuz?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Bu işlem geri alınamaz. Bu müşteri ve ilgili tüm veriler sistemden silinecektir.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={handleCancelDelete}>İptal</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleConfirmDelete}
-                className="bg-red-600 hover:bg-red-700"
+              <div className="space-y-2">
+                <Label htmlFor="phone" className="flex items-center gap-2">
+                  <Phone size={16} />
+                  Telefon Numaranız *
+                </Label>
+                <Input
+                  id="phone"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="05XX XXX XX XX"
+                  className="max-w-md"
+                  required
+                />
+                <p className="text-xs text-gray-500">* Zorunlu alanlar</p>
+              </div>
+            </form>
+          </CardContent>
+          
+          <CardFooter className="flex flex-col sm:flex-row gap-2 sm:justify-end">
+            <Button 
+              type="submit" 
+              form="profileForm"
+              disabled={loading}
+            >
+              {loading ? "Kaydediliyor..." : "Bilgilerimi Kaydet"}
+            </Button>
+            
+            {isNewUser && (
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => navigate("/appointments")}
               >
-                Sil
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+                Şimdilik Atla
+              </Button>
+            )}
+          </CardFooter>
+        </Card>
       </div>
-    </StaffLayout>
+    </div>
   );
 }

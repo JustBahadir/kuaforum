@@ -1,4 +1,3 @@
-
 import { supabase } from '../client';
 import { Randevu } from '../types';
 import { toast } from 'sonner';
@@ -278,10 +277,6 @@ export const randevuServisi = {
         musteriAdi = `${randevu.musteri.first_name || ''} ${randevu.musteri.last_name || ''}`.trim();
       }
       
-      const tarih = new Date(randevu.tarih);
-      const formattedDate = `${tarih.getDate()}.${tarih.getMonth() + 1}.${tarih.getFullYear()}`;
-      const formattedTime = randevu.saat.slice(0, 5);
-      
       const createdOperations = [];
       for (const islem of islemler) {
         try {
@@ -297,7 +292,7 @@ export const randevuServisi = {
             odenen: odenenPrim,
             musteri_id: randevu.musteri_id,
             randevu_id: randevuId,
-            aciklama: `${islem.islem_adi} hizmeti verildi - ${musteriAdi} (${formattedDate} ${formattedTime})`,
+            aciklama: `${islem.islem_adi} hizmeti verildi - ${musteriAdi} (Randevu #${randevuId})`,
             notlar: randevu.notlar || ''
           };
           
@@ -324,7 +319,7 @@ export const randevuServisi = {
                 puan: parseInt(islem.puan) || 0,
                 prim_yuzdesi: primYuzdesi,
                 odenen: odenenPrim,
-                aciklama: `${islem.islem_adi} hizmeti verildi - ${musteriAdi} (${formattedDate} ${formattedTime})`,
+                aciklama: `${islem.islem_adi} hizmeti verildi - ${musteriAdi} (Randevu #${randevuId})`,
                 notlar: randevu.notlar || '',
                 musteri_id: randevu.musteri_id
               })

@@ -11,11 +11,9 @@ import {
 } from "@/components/ui/table";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, RefreshCw, Upload, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
-import { format } from "date-fns";
-import { tr } from "date-fns/locale";
 
 interface PersonnelHistoryTableProps {
   personnelId?: number;
@@ -194,8 +192,7 @@ export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProp
           <TableHeader>
             <TableRow>
               <TableHead>Tarih</TableHead>
-              <TableHead>Saat</TableHead>
-              <TableHead>Müşteri</TableHead>
+              <TableHead>Personel</TableHead>
               <TableHead>İşlem</TableHead>
               <TableHead>Tutar</TableHead>
               <TableHead>Prim %</TableHead>
@@ -204,28 +201,21 @@ export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProp
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedOperations.map((islem) => {
-              const createdAt = new Date(islem.created_at!);
-              const dateFormatted = format(createdAt, 'dd MMMM yyyy', { locale: tr });
-              const timeFormatted = format(createdAt, 'HH:mm', { locale: tr });
-              
-              return (
-                <TableRow key={islem.id}>
-                  <TableCell>{dateFormatted}</TableCell>
-                  <TableCell>{timeFormatted}</TableCell>
-                  <TableCell>
-                    {islem.musteri?.first_name 
-                      ? `${islem.musteri.first_name} ${islem.musteri.last_name || ''}`
-                      : 'Belirtilmemiş'}
-                  </TableCell>
-                  <TableCell>{islem.islem?.islem_adi || islem.aciklama}</TableCell>
-                  <TableCell>{formatCurrency(islem.tutar || 0)}</TableCell>
-                  <TableCell>%{islem.prim_yuzdesi}</TableCell>
-                  <TableCell>{formatCurrency(islem.odenen || 0)}</TableCell>
-                  <TableCell>{islem.puan}</TableCell>
-                </TableRow>
-              );
-            })}
+            {paginatedOperations.map((islem) => (
+              <TableRow key={islem.id}>
+                <TableCell>
+                  {new Date(islem.created_at!).toLocaleDateString('tr-TR')}
+                </TableCell>
+                <TableCell>
+                  {personeller?.find(p => p.id === islem.personel_id)?.ad_soyad || islem.personel?.ad_soyad}
+                </TableCell>
+                <TableCell>{islem.aciklama}</TableCell>
+                <TableCell>{formatCurrency(islem.tutar || 0)}</TableCell>
+                <TableCell>%{islem.prim_yuzdesi}</TableCell>
+                <TableCell>{formatCurrency(islem.odenen || 0)}</TableCell>
+                <TableCell>{islem.puan}</TableCell>
+              </TableRow>
+            ))}
           </TableBody>
         </Table>
       </div>
