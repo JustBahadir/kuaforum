@@ -50,7 +50,6 @@ export const shouldRedirect = (
     pathname === "/services" ||
     pathname === "/appointments"
   ) {
-    console.log("Genel erişimli sayfa, erişime izin verildi");
     return false;
   }
 
@@ -65,7 +64,6 @@ export const shouldRedirect = (
       pathname !== "/services" &&
       pathname !== "/appointments"
     ) {
-      console.log("Kimlik doğrulaması yapılmadı, şuradan yönlendiriliyor:", pathname);
       return true;
     }
     return false;
@@ -75,13 +73,11 @@ export const shouldRedirect = (
   if (userRole === 'admin') {
     // If admin is on customer dashboard, redirect to admin dashboard
     if (pathname.includes('/customer-dashboard')) {
-      console.log("Admin müşteri sayfasına erişmeye çalışıyor:", pathname);
       return true;
     }
     
     // Admin on homepage should be redirected to shop-home
     if (pathname === "/") {
-      console.log("Admin ana sayfada, dükkan ana sayfasına yönlendiriliyor");
       return false; // Don't redirect, show logout button instead
     }
     
@@ -90,20 +86,17 @@ export const shouldRedirect = (
       return true;
     }
     
-    console.log("Admin kullanıcı, yönlendirme gerekmez");
     return false;
   }
 
   // Staff can't access customer-specific pages
   if (userRole === 'staff' && 
       pathname.includes('/customer-dashboard')) {
-    console.log("Personel müşteri sayfasına erişmeye çalışıyor:", pathname);
     return true;
   } 
   
   // Staff on homepage should be redirected to shop-home
   if (userRole === 'staff' && pathname === "/") {
-    console.log("Personel ana sayfada, dükkan ana sayfasına yönlendiriliyor");
     return false; // Don't redirect, show logout button instead
   }
   
@@ -117,7 +110,6 @@ export const shouldRedirect = (
       (pathname === "/shop-home" || 
        pathname === "/shop-settings" || 
        pathname === "/personnel")) {
-    console.log("Kimlik doğrulaması yapılmamış kullanıcı personel sayfasına erişmeye çalışıyor:", pathname);
     return true;
   }
   
@@ -131,17 +123,14 @@ export const shouldRedirect = (
        pathname.includes('/operations-history') ||
        pathname.includes('/admin/appointments') ||
        pathname === "/personnel")) { 
-    console.log("Müşteri personel sayfasına erişmeye çalışıyor:", pathname);
     return true;
   }
 
   // Customer on homepage stays on homepage - no redirect needed
   if (userRole === 'customer' && pathname === "/") {
-    console.log("Müşteri ana sayfada, yönlendirme gerekmez");
     return false;
   }
 
-  console.log("Yönlendirme gerekmez:", pathname, "Rol:", userRole);
   return false;
 };
 

@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { personelIslemleriServisi } from "@/lib/supabase";
 import {
@@ -11,7 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, RefreshCw, Calendar } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -26,22 +26,31 @@ export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTab
   const [totalPoints, setTotalPoints] = useState(0);
   const [totalAmount, setTotalAmount] = useState(0);
   const [totalPaid, setTotalPaid] = useState(0);
-  const [isRecovering, setIsRecovering] = useState(false);
   const itemsPerPage = 5;
   
-  // Adjust date range to include March 2024 (when the appointments were completed)
+  // Adjust date range to include more history
   const [dateRange, setDateRange] = useState({
-    from: new Date(2024, 2, 1), // March 1, 2024
+    from: new Date(2023, 0, 1), // January 1, 2023
     to: new Date()
   });
 
   // Get operations for this specific personnel
-  const { data: operations = [], isLoading, refetch, isRefetching } = useQuery({
+  const { data: operations = [], isLoading } = useQuery({
     queryKey: ['personnelOperations', personnelId, dateRange.from, dateRange.to],
     queryFn: async () => {
       try {
         console.log(`Fetching operations for personnel ID: ${personnelId} from ${dateRange.from} to ${dateRange.to}`);
-        const result = await personelIslemleriServisi.personelIslemleriGetir(Number(personnelId));
+        
+        // Initial attempt to get operations
+        let result = await personelIslemleriServisi.personelIslemleriGetir(Number(personnelId));
+        
+        // If no operations found, try to recover them once
+        if (!result || result.length === 0) {
+          console.log("No operations found, attempting to recover from appointments...");
+          await personelIslemleriServisi.recoverOperationsFromAppointments(Number(personnelId));
+          result = await personelIslemleriServisi.personelIslemleriGetir(Number(personnelId));
+        }
+        
         console.log("Retrieved personnel operations:", result);
         
         // Filter by date range
@@ -58,8 +67,8 @@ export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTab
     },
     enabled: !!personnelId,
     refetchOnWindowFocus: false,
-    staleTime: 0, // Don't cache this data
-    refetchInterval: 30000 // Refetch every 30 seconds automatically
+    staleTime: 1000, // Cache for 1 second to avoid immediate refetches
+    refetchInterval: 10000 // Refetch every 10 seconds automatically for fresh data
   });
 
   // Calculate totals
@@ -102,32 +111,6 @@ export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTab
     }
   };
 
-  const handleForceRecover = async () => {
-    try {
-      setIsRecovering(true);
-      toast.info("Tamamlanan randevular işleniyor...");
-      
-      // Force recovery from appointments
-      await personelIslemleriServisi.recoverOperationsFromAppointments(Number(personnelId));
-      
-      // Refetch data
-      await refetch();
-      
-      toast.success("İşlem geçmişi yenilendi");
-    } catch (error) {
-      console.error("Error recovering operations:", error);
-      toast.error("İşlem geçmişi yenilenirken bir hata oluştu");
-    } finally {
-      setIsRecovering(false);
-    }
-  };
-
-  const handleRefresh = async () => {
-    toast.info("İşlem geçmişi yenileniyor...");
-    await refetch();
-    toast.success("İşlem geçmişi yenilendi");
-  };
-
   if (isLoading) {
     return (
       <div className="flex justify-center p-4">
@@ -141,7 +124,6 @@ export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTab
       <div className="flex flex-col gap-4">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm text-muted-foreground">Tarih aralığı:</span>
             <DateRangePicker
               from={dateRange.from}
@@ -151,28 +133,6 @@ export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTab
                 setCurrentPage(1); // Reset page number
               }}
             />
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleRefresh}
-              disabled={isRefetching}
-            >
-              <RefreshCw className={`h-4 w-4 mr-1 ${isRefetching ? 'animate-spin' : ''}`} />
-              Yenile
-            </Button>
-            
-            <Button 
-              variant="default" 
-              size="sm" 
-              onClick={handleForceRecover}
-              disabled={isRecovering || isRefetching}
-            >
-              <RefreshCw className={`h-4 w-4 mr-1 ${isRecovering ? 'animate-spin' : ''}`} />
-              Randevulardan Güncelle
-            </Button>
           </div>
         </div>
         
@@ -195,18 +155,6 @@ export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTab
       {operations.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
           Seçilen tarih aralığında kayıtlı işlem bulunmamaktadır.
-          <div className="mt-2">
-            <Button size="sm" variant="outline" onClick={handleForceRecover} disabled={isRecovering}>
-              {isRecovering ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-t-purple-600 border-purple-200 rounded-full animate-spin mr-2"></div>
-                  İşleniyor...
-                </>
-              ) : (
-                "Tamamlanmış Randevulardan İşlemleri Oluştur"
-              )}
-            </Button>
-          </div>
         </div>
       ) : (
         <>

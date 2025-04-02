@@ -1,4 +1,4 @@
 
-import { RouteProtection } from '@/lib/auth/routeProtection';
+import { RouteProtection as OriginalRouteProtection } from "@/lib/auth/routeProtection";
 
-export { RouteProtection };
+export const RouteProtection = OriginalRouteProtection;

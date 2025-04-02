@@ -52,11 +52,34 @@ export function useAppointments(dukkanId?: number) {
         let data: Randevu[] = [];
         
         if (dukkanId) {
-          const randevular = await randevuServisi.dukkanRandevulariniGetir(dukkanId);
-          data = randevular || [];
+          // Use direct database query for better reliability
+          const { data: directData, error: directError } = await supabase
+            .rpc('get_appointments_by_dukkan', { p_dukkan_id: dukkanId });
+            
+          if (directError) {
+            console.error("Direct RPC error:", directError);
+            // Fallback to service
+            const randevular = await randevuServisi.dukkanRandevulariniGetir(dukkanId);
+            data = randevular || [];
+          } else {
+            data = directData || [];
+          }
         } else {
-          const randevular = await randevuServisi.kendiRandevulariniGetir();
-          data = randevular || [];
+          // Use direct database query for better reliability
+          const { data: userData } = await supabase.auth.getUser();
+          if (userData.user) {
+            const { data: directData, error: directError } = await supabase
+              .rpc('get_customer_appointments', { p_customer_id: userData.user.id });
+              
+            if (directError) {
+              console.error("Direct RPC error:", directError);
+              // Fallback to service
+              const randevular = await randevuServisi.kendiRandevulariniGetir();
+              data = randevular || [];
+            } else {
+              data = directData || [];
+            }
+          }
         }
         
         console.log("Randevular başarıyla getirildi:", data);
@@ -68,9 +91,8 @@ export function useAppointments(dukkanId?: number) {
       }
     },
     enabled: true,
-    refetchOnWindowFocus: false,
-    staleTime: 30000, 
-    refetchInterval: 60000 // Refetch every minute to keep data fresh
+    staleTime: 1000, // 1 second
+    refetchInterval: 5000 // Refetch every 5 seconds to keep data fresh
   });
   
   const enhanceAppointments = useCallback(async () => {
@@ -147,14 +169,15 @@ export function useAppointments(dukkanId?: number) {
         console.error("Error updating shop statistics:", err);
       });
       
-      // Manually trigger a refetch of personnel operations
+      // Manually trigger a refetch of operations
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ['personnelOperations'] });
         queryClient.invalidateQueries({ queryKey: ['personelIslemleri'] });
         queryClient.invalidateQueries({ queryKey: ['customerHistory'] });
-      }, 1000);
+        queryClient.invalidateQueries({ queryKey: ['customerOperations'] });
+      }, 500);
       
-      // Tamamlanan randevudan kaç işlem oluşturulduğunu kontrol et
+      // Check how many operations were created from the completed appointment
       const operationCount = result?.operationResults?.length || 0;
       
       if (operationCount > 0) {
