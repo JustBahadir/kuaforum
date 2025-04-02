@@ -1,4 +1,3 @@
-
 import React, { ReactNode, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useCustomerAuth } from '@/hooks/useCustomerAuth';
