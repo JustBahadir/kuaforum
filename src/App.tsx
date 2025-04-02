@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Route, Routes } from "react-router-dom";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { Toaster } from "@/components/ui/sonner";
-import { RouteProtection } from "@/lib/auth/routeProtection";
+import { RouteProtection } from "@/components/auth/RouteProtection";
 import HomePage from "./pages/HomePage";
 import StaffLogin from "./pages/StaffLogin";
 import StaffRegister from "./pages/StaffRegister";
