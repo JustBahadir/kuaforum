@@ -1,3 +1,4 @@
+
 import { supabase } from '../client';
 import { Personel } from '../types';
 import { profilServisi } from './profilServisi';
@@ -26,7 +27,7 @@ export const personelServisi = {
         };
       }) || [];
 
-      // Now try to get IBAN data from profiles for each personnel with auth_id
+      // Now try to get profile data for each personnel with auth_id
       const fetchPromises = transformedData
         .filter(personel => personel.auth_id)
         .map(async personel => {
@@ -62,6 +63,11 @@ export const personelServisi = {
               if (profileData.address && profileData.address !== personel.adres) {
                 personel.adres = profileData.address;
                 updatedFields.adres = profileData.address;
+              }
+              
+              if (profileData.avatar_url) {
+                personel.avatar_url = profileData.avatar_url;
+                updatedFields.avatar_url = profileData.avatar_url;
               }
               
               // Only update if we have changes
@@ -152,7 +158,7 @@ export const personelServisi = {
             let updatedFields: any = {};
             let hasChanges = false;
             
-            if (iban !== data.iban) {
+            if (iban && iban !== data.iban) {
               updatedFields.iban = iban;
               hasChanges = true;
             }
@@ -169,6 +175,11 @@ export const personelServisi = {
             
             if (adres !== data.adres) {
               updatedFields.adres = adres;
+              hasChanges = true;
+            }
+            
+            if (avatar_url && avatar_url !== data.avatar_url) {
+              updatedFields.avatar_url = avatar_url;
               hasChanges = true;
             }
             

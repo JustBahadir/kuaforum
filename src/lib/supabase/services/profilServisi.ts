@@ -6,20 +6,28 @@ import { updateProfile, createOrUpdateProfile } from './profileServices/updatePr
 const cleanIBANForStorage = (iban?: string) => {
   if (!iban) return undefined;
   // Remove all spaces and non-alphanumeric characters except for TR prefix
-  return iban.replace(/\s/g, '').replace(/[^A-Z0-9]/g, '');
+  const cleaned = iban.replace(/\s/g, '');
+  // Ensure it starts with TR and has only digits after that
+  if (cleaned.startsWith('TR')) {
+    return 'TR' + cleaned.substring(2).replace(/\D/g, '');
+  }
+  return 'TR' + cleaned.replace(/\D/g, '');
 };
 
 // Function to format IBAN with TR prefix and proper spacing
 const formatIBAN = (iban: string) => {
-  // Clean the IBAN first
-  let cleaned = iban.replace(/[^A-Z0-9]/g, '');
+  if (!iban) return '';
   
-  // Ensure it starts with TR
-  if (!cleaned.startsWith('TR')) {
-    cleaned = 'TR' + cleaned.substring(0, cleaned.startsWith('T') ? 25 : cleaned.startsWith('R') ? 25 : 24);
+  // Ensure it starts with TR and contains only digits after TR
+  let cleaned = 'TR';
+  if (iban.startsWith('TR')) {
+    cleaned += iban.substring(2).replace(/\D/g, '');
   } else {
-    cleaned = cleaned.substring(0, 26); // Limit to 26 characters (TR + 24 digits)
+    cleaned += iban.replace(/\D/g, '');
   }
+  
+  // Limit to 26 characters (TR + 24 digits)
+  cleaned = cleaned.substring(0, 26);
   
   // Format with spaces every 4 characters
   let formatted = '';
@@ -35,11 +43,17 @@ const formatIBAN = (iban: string) => {
 
 // Function to validate IBAN format
 const validateIBAN = (iban: string) => {
-  // Basic validation: ensure it has TR prefix
-  if (!iban.startsWith('TR')) {
-    return 'TR' + iban.replace(/[^0-9]/g, '');
+  if (!iban) return '';
+  
+  // Ensure it has TR prefix and only digits after
+  let validated = 'TR';
+  if (iban.startsWith('TR')) {
+    validated += iban.substring(2).replace(/\D/g, '');
+  } else {
+    validated += iban.replace(/\D/g, '');
   }
-  return iban;
+  
+  return validated;
 };
 
 // Export the profile service interface with IBAN formatting

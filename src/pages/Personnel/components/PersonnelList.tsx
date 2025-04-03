@@ -4,7 +4,7 @@ import { personelServisi } from "@/lib/supabase";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Eye, Trash } from "lucide-react";
 import { PersonnelDetailsDialog } from "./PersonnelDetailsDialog";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
@@ -32,6 +32,7 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps = {}) {
   const [selectedPersonel, setSelectedPersonel] = useState<number | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [personelToDelete, setPersonelToDelete] = useState<number | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const queryClient = useQueryClient();
 
@@ -78,6 +79,15 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps = {}) {
     if (personelToDelete) {
       deletePersonelMutation.mutate(personelToDelete);
     }
+  };
+
+  const handleShowImagePreview = (imageUrl: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setPreviewImage(imageUrl);
+  };
+  
+  const handleCloseImagePreview = () => {
+    setPreviewImage(null);
   };
 
   // Force refresh profile to get latest userRole if there was an error
@@ -129,8 +139,14 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps = {}) {
                 <CardContent className="p-0">
                   <div className="p-6">
                     <div className="flex items-center gap-4">
-                      <Avatar>
-                        <AvatarFallback>
+                      <Avatar 
+                        className="h-12 w-12 cursor-pointer" 
+                        onClick={(e) => personel.avatar_url && handleShowImagePreview(personel.avatar_url, e)}
+                      >
+                        {personel.avatar_url ? (
+                          <AvatarImage src={personel.avatar_url} alt={personel.ad_soyad} />
+                        ) : null}
+                        <AvatarFallback className="bg-purple-100 text-purple-600">
                           {personel.ad_soyad.split(' ').map(name => name[0]).join('').substring(0, 2).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
@@ -213,6 +229,21 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps = {}) {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Image Preview Dialog */}
+        {previewImage && (
+          <Dialog open={!!previewImage} onOpenChange={handleCloseImagePreview}>
+            <DialogContent className="sm:max-w-md flex items-center justify-center">
+              <div className="relative">
+                <img 
+                  src={previewImage} 
+                  alt="Personel fotoğrafı" 
+                  className="max-h-[80vh] max-w-full object-contain"
+                />
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
       </CardContent>
     </Card>
   );

@@ -30,31 +30,6 @@ interface PersonnelEditDialogProps {
   onEditComplete?: () => void;
 }
 
-// IBAN formatter function
-const formatIBAN = (value: string) => {
-  // Ensure it starts with TR
-  let cleaned = value.replace(/[^A-Z0-9]/g, '');
-  
-  // If it doesn't start with TR, add it
-  if (!cleaned.startsWith('TR')) {
-    cleaned = 'TR' + cleaned.replace(/\D/g, '');
-  }
-  
-  // Limit to 26 characters (TR + 24 digits)
-  cleaned = cleaned.substring(0, 26);
-  
-  // Format in groups of 4
-  let formatted = '';
-  for (let i = 0; i < cleaned.length; i++) {
-    if (i > 0 && i % 4 === 0) {
-      formatted += ' ';
-    }
-    formatted += cleaned[i];
-  }
-  
-  return formatted;
-};
-
 export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComplete }: PersonnelEditDialogProps) {
   const [personelDuzenle, setPersonelDuzenle] = useState<Personel | null>(null);
   const [formattedIBAN, setFormattedIBAN] = useState<string>('');
@@ -77,7 +52,7 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComp
       setPersonelDuzenle(personel);
       // Format IBAN if it exists
       if (personel.iban) {
-        setFormattedIBAN(formatIBAN(personel.iban));
+        setFormattedIBAN(profilServisi.formatIBAN(personel.iban));
       } else {
         setFormattedIBAN('');
       }

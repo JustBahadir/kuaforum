@@ -40,29 +40,26 @@ export interface ProfileEditFormProps {
   isUploading: boolean;
 }
 
-// Format IBAN as TR00 0000 0000 0000 0000 0000 00
+// Format IBAN as TR00 0000 0000 0000 0000 0000 00 and limit to 26 characters (TR + 24 digits)
 const formatIBAN = (value: string) => {
-  // First remove all non-alphanumeric characters
-  let cleaned = value.replace(/[^A-Z0-9]/g, '');
+  // Start with TR
+  let result = "TR";
   
-  // Ensure it starts with TR
-  if (!cleaned.startsWith('TR')) {
-    cleaned = 'TR' + cleaned.replace(/\D/g, '');
-  }
+  // Get only digits from the input (ignore the TR prefix if it exists)
+  const digitsOnly = value.replace(/[^0-9]/g, '');
   
-  // Limit to 26 characters (TR + 24 digits)
-  cleaned = cleaned.substring(0, 26);
+  // Limit to 24 digits (plus 'TR' = 26 characters total)
+  const limitedDigits = digitsOnly.substring(0, 24);
   
-  // Format in groups of 4
-  let formatted = '';
-  for (let i = 0; i < cleaned.length; i++) {
+  // Format with spaces every 4 characters
+  for (let i = 0; i < limitedDigits.length; i++) {
     if (i > 0 && i % 4 === 0) {
-      formatted += ' ';
+      result += ' ';
     }
-    formatted += cleaned[i];
+    result += limitedDigits[i];
   }
   
-  return formatted;
+  return result;
 };
 
 export function ProfileEditForm({ 
@@ -79,6 +76,8 @@ export function ProfileEditForm({
   useEffect(() => {
     if (profile.iban) {
       setFormattedIBAN(formatIBAN(profile.iban));
+    } else {
+      setFormattedIBAN('TR');
     }
   }, [profile.iban]);
 
@@ -91,9 +90,8 @@ export function ProfileEditForm({
   const isStaff = profile.role === 'staff';
   
   const handleIBANChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Only allow TR and digits
-    const rawValue = e.target.value.replace(/[^0-9TR]/gi, '');
-    const formattedValue = formatIBAN(rawValue);
+    // Format the IBAN input value
+    const formattedValue = formatIBAN(e.target.value);
     setFormattedIBAN(formattedValue);
     
     // Create a synthetic event to pass to the parent's handleChange

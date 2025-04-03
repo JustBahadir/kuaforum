@@ -16,6 +16,7 @@ import { personelServisi } from "@/lib/supabase";
 import { useQuery } from "@tanstack/react-query";
 import { Personel } from "@/lib/supabase/types";
 import { PersonnelEditDialog } from "./PersonnelEditDialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface PersonnelDetailsDialogProps {
   open: boolean;
@@ -30,6 +31,7 @@ export function PersonnelDetailsDialog({
 }: PersonnelDetailsDialogProps) {
   const [activeTab, setActiveTab] = useState("bilgiler");
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const { data: personel, isLoading, refetch } = useQuery({
     queryKey: ['personel', personelId],
@@ -46,6 +48,14 @@ export function PersonnelDetailsDialog({
 
   const handleEditComplete = () => {
     refetch();
+  };
+
+  const handleShowImagePreview = (imageUrl: string) => {
+    setPreviewImage(imageUrl);
+  };
+  
+  const handleCloseImagePreview = () => {
+    setPreviewImage(null);
   };
 
   return (
@@ -74,7 +84,20 @@ export function PersonnelDetailsDialog({
                 </div>
               ) : personel ? (
                 <div className="space-y-4 py-4">
-                  <div className="flex justify-end mb-4">
+                  <div className="flex justify-between items-start mb-6">
+                    <div className="flex items-center gap-4">
+                      {personel.avatar_url && (
+                        <Avatar 
+                          className="h-16 w-16 cursor-pointer" 
+                          onClick={() => personel.avatar_url && handleShowImagePreview(personel.avatar_url)}
+                        >
+                          <AvatarImage src={personel.avatar_url} alt={personel.ad_soyad} />
+                          <AvatarFallback className="bg-purple-100 text-purple-600 text-lg">
+                            {personel.ad_soyad.split(' ').map(name => name[0]).join('').substring(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
+                    </div>
                     <Button 
                       variant="outline" 
                       onClick={() => setEditDialogOpen(true)}
@@ -82,14 +105,11 @@ export function PersonnelDetailsDialog({
                       Düzenle
                     </Button>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  
+                  <div className="grid grid-cols-1 gap-4">
                     <div className="space-y-2">
                       <h3 className="text-sm font-medium text-muted-foreground">Ad Soyad</h3>
                       <p>{personel.ad_soyad}</p>
-                    </div>
-                    <div className="space-y-2">
-                      <h3 className="text-sm font-medium text-muted-foreground">Personel No</h3>
-                      <p>{personel.personel_no}</p>
                     </div>
                   </div>
                   
@@ -127,7 +147,7 @@ export function PersonnelDetailsDialog({
                     </div>
                     <div className="space-y-2">
                       <h3 className="text-sm font-medium text-muted-foreground">IBAN</h3>
-                      <p>{personel.iban || "Tanımlanmamış"}</p>
+                      <p>{personel.iban ? profilServisi.formatIBAN(personel.iban) : "Tanımlanmamış"}</p>
                     </div>
                   </div>
                 </div>
@@ -155,6 +175,21 @@ export function PersonnelDetailsDialog({
         onOpenChange={setEditDialogOpen} 
         onEditComplete={handleEditComplete}
       />
+
+      {/* Image Preview Dialog */}
+      {previewImage && (
+        <Dialog open={!!previewImage} onOpenChange={handleCloseImagePreview}>
+          <DialogContent className="sm:max-w-md flex items-center justify-center">
+            <div className="relative">
+              <img 
+                src={previewImage} 
+                alt="Personel fotoğrafı" 
+                className="max-h-[80vh] max-w-full object-contain"
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </>
   );
 }
