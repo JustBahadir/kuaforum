@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { kategoriServisi, islemServisi, siralamaServisi } from "@/lib/supabase";
+import { kategoriServisi, islemServisi } from "@/lib/supabase";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ServicesContent } from "@/components/operations/ServicesContent";
 import { WorkingHours } from "@/components/operations/WorkingHours";
@@ -120,7 +119,9 @@ export default function StaffOperations() {
   });
 
   const { mutate: islemSiralamaGuncelle } = useMutation({
-    mutationFn: siralamaServisi.islemSiraGuncelle,
+    mutationFn: (yeniIslemler: any[]) => {
+      islemServisi.islemSiralaGuncelle(yeniIslemler);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['islemler'] });
       toast.success("İşlem sıralaması güncellendi");
@@ -132,7 +133,9 @@ export default function StaffOperations() {
   });
 
   const { mutate: kategoriSiralamaGuncelle } = useMutation({
-    mutationFn: siralamaServisi.kategoriSiraGuncelle,
+    mutationFn: (yeniKategoriler: any[]) => {
+      kategoriServisi.kategoriSiraGuncelle(yeniKategoriler);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['kategoriler'] });
       toast.success("Kategori sıralaması güncellendi");

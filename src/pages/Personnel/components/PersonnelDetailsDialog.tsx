@@ -1,195 +1,147 @@
-
-import { useState, useEffect } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogClose,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import React, { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PersonnelPerformance } from "./PersonnelPerformance";
-import { PersonnelOperationsTable } from "./PersonnelOperationsTable";
-import { personelServisi, profilServisi } from "@/lib/supabase";
-import { useQuery } from "@tanstack/react-query";
-import { Personel } from "@/lib/supabase/types";
-import { PersonnelEditDialog } from "./PersonnelEditDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { PersonCircle, Phone, Mail, CreditCard, Calendar, User, Home, CheckCircle, MapPin, BriefcaseBusiness } from "lucide-react";
+import { profilServisi } from "@/lib/supabase";
 
 interface PersonnelDetailsDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
-  personelId: number;
+  onClose: () => void;
+  personel: any;
 }
 
-export function PersonnelDetailsDialog({
-  open,
-  onOpenChange,
-  personelId,
-}: PersonnelDetailsDialogProps) {
-  const [activeTab, setActiveTab] = useState("bilgiler");
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
-
-  const { data: personel, isLoading, refetch } = useQuery({
-    queryKey: ['personel', personelId],
-    queryFn: () => personelServisi.getirById(personelId),
-    enabled: !!personelId && open,
-  });
+export function PersonnelDetailsDialog({ open, onClose, personel }: PersonnelDetailsDialogProps) {
+  const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (open) {
-      // Reset to default tab when dialog opens
-      setActiveTab("bilgiler");
-    }
-  }, [open]);
+    const fetchProfile = async () => {
+      if (personel?.auth_id) {
+        setLoading(true);
+        try {
+          const fetchedProfile = await profilServisi.getir(personel.auth_id);
+          setProfile(fetchedProfile);
+        } catch (error) {
+          console.error("Failed to fetch profile:", error);
+          // Handle error appropriately
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        setProfile(null);
+        setLoading(false);
+      }
+    };
 
-  const handleEditComplete = () => {
-    refetch();
-  };
+    fetchProfile();
+  }, [personel?.auth_id]);
 
-  const handleShowImagePreview = (imageUrl: string) => {
-    setPreviewImage(imageUrl);
-  };
-  
-  const handleCloseImagePreview = () => {
-    setPreviewImage(null);
-  };
+  if (!personel) {
+    return null; // Or a suitable placeholder
+  }
 
   return (
-    <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>Personel Detayları</DialogTitle>
-            <DialogDescription>
-              {personel?.ad_soyad || "Personel bilgileri yükleniyor..."}
-            </DialogDescription>
-            <DialogClose className="absolute right-4 top-4" />
-          </DialogHeader>
-          
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="bilgiler">Bilgiler</TabsTrigger>
-              <TabsTrigger value="islemler">İşlemler</TabsTrigger>
-              <TabsTrigger value="performans">Performans</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="bilgiler">
-              {isLoading ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  Personel bilgileri yükleniyor...
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Personel Detayları</DialogTitle>
+        </DialogHeader>
+        <div className="flex flex-col lg:flex-row gap-4">
+          <Card className="w-full lg:w-1/3">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <PersonCircle className="w-4 h-4" />
+                Personel Bilgileri
+              </CardTitle>
+              <CardDescription>
+                Personel hakkında genel bilgiler
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-col items-center justify-center">
+                <Avatar className="w-24 h-24">
+                  <AvatarImage src={profile?.avatar_url || personel.avatar_url} alt={personel.ad_soyad} />
+                  <AvatarFallback>{personel.ad_soyad?.substring(0, 2).toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <h3 className="text-lg font-semibold mt-2">{personel.ad_soyad}</h3>
+                <Badge variant="secondary">{personel.pozisyon}</Badge>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Mail className="w-4 h-4 text-gray-500" />
+                  <span>{profile?.email || 'N/A'}</span>
                 </div>
-              ) : personel ? (
-                <div className="space-y-4 py-4">
-                  <div className="flex justify-between items-start mb-6">
-                    <div className="flex items-center gap-4">
-                      {personel.avatar_url && (
-                        <Avatar 
-                          className="h-16 w-16 cursor-pointer" 
-                          onClick={() => personel.avatar_url && handleShowImagePreview(personel.avatar_url)}
-                        >
-                          <AvatarImage src={personel.avatar_url} alt={personel.ad_soyad} />
-                          <AvatarFallback className="bg-purple-100 text-purple-600 text-lg">
-                            {personel.ad_soyad.split(' ').map(name => name[0]).join('').substring(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                      )}
-                    </div>
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setEditDialogOpen(true)}
-                    >
-                      Düzenle
-                    </Button>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 gap-4">
-                    <div className="space-y-2">
-                      <h3 className="text-sm font-medium text-muted-foreground">Ad Soyad</h3>
-                      <p>{personel.ad_soyad}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <h3 className="text-sm font-medium text-muted-foreground">Telefon</h3>
-                      <p>{personel.telefon}</p>
-                    </div>
-                    <div className="space-y-2">
-                      <h3 className="text-sm font-medium text-muted-foreground">E-posta</h3>
-                      <p>{personel.eposta}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <h3 className="text-sm font-medium text-muted-foreground">Adres</h3>
-                    <p>{personel.adres}</p>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <h3 className="text-sm font-medium text-muted-foreground">Maaş</h3>
-                      <p>{personel.maas} TL</p>
-                    </div>
-                    <div className="space-y-2">
-                      <h3 className="text-sm font-medium text-muted-foreground">Çalışma Sistemi</h3>
-                      <p>{personel.calisma_sistemi === 'haftalik' ? 'Haftalık' : 'Aylık'}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <h3 className="text-sm font-medium text-muted-foreground">Prim Yüzdesi</h3>
-                      <p>%{personel.prim_yuzdesi}</p>
-                    </div>
-                    <div className="space-y-2">
-                      <h3 className="text-sm font-medium text-muted-foreground">IBAN</h3>
-                      <p>{personel.iban ? profilServisi.formatIBAN(personel.iban) : "Tanımlanmamış"}</p>
-                    </div>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <Phone className="w-4 h-4 text-gray-500" />
+                  <span>{profile?.phone || 'N/A'}</span>
                 </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  Personel bilgileri burada görüntülenecektir.
+                <div className="flex items-center gap-2">
+                  <BriefcaseBusiness className="w-4 h-4 text-gray-500" />
+                  <span>{personel.pozisyon || 'N/A'}</span>
                 </div>
-              )}
-            </TabsContent>
-            
-            <TabsContent value="islemler" className="mt-4">
-              <PersonnelOperationsTable personnelId={personelId} />
-            </TabsContent>
-            
-            <TabsContent value="performans" className="mt-4">
-              <PersonnelPerformance personnelId={personelId} />
-            </TabsContent>
-          </Tabs>
-        </DialogContent>
-      </Dialog>
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-gray-500" />
+                  <span>
+                    Durum: {personel.active ? 'Aktif' : 'Pasif'}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-      <PersonnelEditDialog 
-        personelId={personelId} 
-        open={editDialogOpen} 
-        onOpenChange={setEditDialogOpen} 
-        onEditComplete={handleEditComplete}
-      />
-
-      {/* Image Preview Dialog */}
-      {previewImage && (
-        <Dialog open={!!previewImage} onOpenChange={handleCloseImagePreview}>
-          <DialogContent className="sm:max-w-md flex items-center justify-center">
-            <div className="relative">
-              <img 
-                src={previewImage} 
-                alt="Personel fotoğrafı" 
-                className="max-h-[80vh] max-w-full object-contain"
-              />
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
-    </>
+          <Card className="w-full lg:w-2/3">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="w-4 h-4" />
+                Detaylı Bilgiler
+              </CardTitle>
+              <CardDescription>
+                Personel hakkında detaylı bilgiler
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <User className="w-4 h-4 text-gray-500" />
+                    <span>Ad Soyad:</span>
+                  </div>
+                  <p className="text-sm">{personel.ad_soyad || 'N/A'}</p>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-gray-500" />
+                    <span>Doğum Tarihi:</span>
+                  </div>
+                  <p className="text-sm">{profile?.birthdate || 'N/A'}</p>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Home className="w-4 h-4 text-gray-500" />
+                    <span>Adres:</span>
+                  </div>
+                  <p className="text-sm">{personel.adres || 'N/A'}</p>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-gray-500" />
+                    <span>Şehir:</span>
+                  </div>
+                  <p className="text-sm">{personel.sehir || 'N/A'}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="secondary" onClick={onClose}>
+            Kapat
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
