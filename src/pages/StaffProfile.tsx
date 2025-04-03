@@ -112,23 +112,27 @@ const StaffProfile = () => {
     if (name === 'phone') {
       setFormData(prev => ({ ...prev, [name]: formatPhoneNumber(value) }));
     } else if (name === 'iban') {
-      // Format IBAN as you type
-      // First remove all spaces and non-alphanumeric characters except TR
-      const cleanValue = value.replace(/[^0-9TR]/gi, '');
+      // Format IBAN as you type with 26 character limit (TR + 24 digits)
+      // Only allow TR prefix and digits, limit the total length
       
-      // Ensure it starts with TR
-      let formattedValue = cleanValue;
-      if (!cleanValue.startsWith('TR')) {
-        formattedValue = 'TR' + cleanValue.replace(/\D/g, '');
+      // Strip all non-digits except for TR at beginning
+      let cleaned = '';
+      if (value.startsWith('TR')) {
+        cleaned = 'TR' + value.substring(2).replace(/\D/g, '');
+      } else {
+        cleaned = 'TR' + value.replace(/\D/g, '');
       }
+      
+      // Limit to exactly 26 characters (TR + 24 digits)
+      cleaned = cleaned.substring(0, 26);
       
       // Add spaces every 4 characters for readability
       let displayValue = '';
-      for (let i = 0; i < formattedValue.length; i++) {
+      for (let i = 0; i < cleaned.length; i++) {
         if (i > 0 && i % 4 === 0) {
           displayValue += ' ';
         }
-        displayValue += formattedValue[i];
+        displayValue += cleaned[i];
       }
       
       setFormData(prev => ({ ...prev, [name]: displayValue }));

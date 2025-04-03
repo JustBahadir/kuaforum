@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { 
   Card, 
@@ -46,7 +47,9 @@ const formatIBAN = (value: string) => {
   let result = "TR";
   
   // Get only digits from the input (ignore the TR prefix if it exists)
-  const digitsOnly = value.replace(/[^0-9]/g, '');
+  const digitsOnly = value.startsWith('TR') ? 
+    value.substring(2).replace(/[^0-9]/g, '') : 
+    value.replace(/[^0-9]/g, '');
   
   // Limit to 24 digits (plus 'TR' = 26 characters total)
   const limitedDigits = digitsOnly.substring(0, 24);
@@ -90,15 +93,36 @@ export function ProfileEditForm({
   const isStaff = profile.role === 'staff';
   
   const handleIBANChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Format the IBAN input value
-    const formattedValue = formatIBAN(e.target.value);
-    setFormattedIBAN(formattedValue);
+    // Format the IBAN input value and apply strict 26 character limit
+    const inputValue = e.target.value;
+    
+    // Strip all non-digits except for TR at beginning
+    let cleaned = '';
+    if (inputValue.startsWith('TR')) {
+      cleaned = 'TR' + inputValue.substring(2).replace(/\D/g, '');
+    } else {
+      cleaned = 'TR' + inputValue.replace(/\D/g, '');
+    }
+    
+    // Limit to exactly 26 characters (TR + 24 digits)
+    cleaned = cleaned.substring(0, 26);
+    
+    // Format with spaces for display
+    let formatted = '';
+    for (let i = 0; i < cleaned.length; i++) {
+      if (i > 0 && i % 4 === 0) {
+        formatted += ' ';
+      }
+      formatted += cleaned[i];
+    }
+    
+    setFormattedIBAN(formatted);
     
     // Create a synthetic event to pass to the parent's handleChange
     const syntheticEvent = {
       target: {
         name: 'iban',
-        value: formattedValue.replace(/\s/g, '')  // Remove spaces for storage
+        value: cleaned // Store without spaces
       }
     } as React.ChangeEvent<HTMLInputElement>;
     
@@ -234,7 +258,7 @@ export function ProfileEditForm({
                 onChange={handleIBANChange}
                 placeholder="TR00 0000 0000 0000 0000 0000 00"
                 className="flex-1"
-                maxLength={36}
+                maxLength={36} // Max length includes spaces (26 chars + 6 spaces)
               />
               {formattedIBAN && (
                 <Button 

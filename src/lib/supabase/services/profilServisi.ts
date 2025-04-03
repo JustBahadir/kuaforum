@@ -5,13 +5,21 @@ import { updateProfile, createOrUpdateProfile } from './profileServices/updatePr
 // Function to clean IBAN before sending to the server
 const cleanIBANForStorage = (iban?: string) => {
   if (!iban) return undefined;
+  
   // Remove all spaces and non-alphanumeric characters except for TR prefix
-  const cleaned = iban.replace(/\s/g, '');
+  let cleaned = iban.replace(/\s/g, '');
+  
   // Ensure it starts with TR and has only digits after that
   if (cleaned.startsWith('TR')) {
-    return 'TR' + cleaned.substring(2).replace(/\D/g, '');
+    cleaned = 'TR' + cleaned.substring(2).replace(/\D/g, '');
+  } else {
+    cleaned = 'TR' + cleaned.replace(/\D/g, '');
   }
-  return 'TR' + cleaned.replace(/\D/g, '');
+  
+  // Limit to exactly 26 characters (TR + 24 digits)
+  cleaned = cleaned.substring(0, 26);
+  
+  return cleaned;
 };
 
 // Function to format IBAN with TR prefix and proper spacing
@@ -52,6 +60,9 @@ const validateIBAN = (iban: string) => {
   } else {
     validated += iban.replace(/\D/g, '');
   }
+  
+  // Limit to exactly 26 characters (TR + 24 digits)
+  validated = validated.substring(0, 26);
   
   return validated;
 };

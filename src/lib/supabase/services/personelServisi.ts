@@ -1,4 +1,3 @@
-
 import { supabase } from '../client';
 import { Personel } from '../types';
 import { profilServisi } from './profilServisi';
@@ -23,7 +22,8 @@ export const personelServisi = {
       const transformedData = data?.map(personel => {
         return {
           ...personel,
-          iban: personel.iban || null
+          iban: personel.iban || null,
+          avatar_url: personel.avatar_url || null
         };
       }) || [];
 
@@ -119,7 +119,7 @@ export const personelServisi = {
       let ad_soyad = data.ad_soyad;
       let telefon = data.telefon;
       let adres = data.adres;
-      let avatar_url = null;
+      let avatar_url = data.avatar_url;
       
       if (data.auth_id) {
         try {
