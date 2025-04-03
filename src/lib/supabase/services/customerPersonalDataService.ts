@@ -2,16 +2,17 @@
 import { supabase } from '../client';
 
 export interface CustomerPersonalData {
-  id: number;
+  id?: number;
   customer_id: string;
   birth_date?: string | null;
   horoscope?: string | null;
   horoscope_description?: string | null;
   anniversary_date?: string | null;
-  children_names?: string[];
+  children_names: string[];
   custom_notes?: string | null;
-  created_at: string;
-  updated_at: string;
+  created_at?: string;
+  updated_at?: string;
+  daily_horoscope_reading?: string | null;
 }
 
 export const customerPersonalDataService = {
@@ -67,5 +68,15 @@ export const customerPersonalDataService = {
       console.error('Error updating customer personal data:', error);
       throw error;
     }
+  },
+
+  // Alias method that matches what CustomerDetails.tsx is trying to use
+  async getByCustomerId(customerId: string): Promise<CustomerPersonalData | null> {
+    return this.getCustomerPersonalData(customerId);
+  },
+
+  // Alias method that matches what CustomerDetails.tsx is trying to use
+  async upsert(personalData: CustomerPersonalData): Promise<void> {
+    return this.updateCustomerPersonalData(personalData.customer_id, personalData);
   }
 };

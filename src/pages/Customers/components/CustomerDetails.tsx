@@ -96,7 +96,7 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
     queryKey: ['customerPersonalData', customer.id],
     queryFn: async () => {
       try {
-        return await customerPersonalDataService.getByCustomerId(customer.id.toString());
+        return await customerPersonalDataService.getCustomerPersonalData(customer.id.toString());
       } catch (err) {
         console.error("Customer personal data fetch error:", err);
         return null;
@@ -247,7 +247,7 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
         toast.success("Müşteri bilgileri başarıyla güncellendi");
       } 
       else if (activeTab === "personal") {
-        await customerPersonalDataService.upsert(personalData);
+        await customerPersonalDataService.updateCustomerPersonalData(customer.id.toString(), personalData);
         toast.success("Müşteri kişisel bilgileri başarıyla güncellendi");
       }
       
