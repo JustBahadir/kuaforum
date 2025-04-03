@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { personelServisi } from "@/lib/supabase";
 import { useState } from "react";
@@ -21,6 +20,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent
+} from "@/components/ui/dialog";
 
 interface PersonnelListProps {
   onPersonnelSelect?: (personelId: number) => void;
@@ -46,7 +49,6 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps = {}) {
   const handleOpenDetailsDialog = (personelId: number) => {
     setSelectedPersonel(personelId);
     setDetailsDialogOpen(true);
-    // Call the parent's onPersonnelSelect handler if provided
     if (onPersonnelSelect) {
       onPersonnelSelect(personelId);
     }
@@ -90,7 +92,6 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps = {}) {
     setPreviewImage(null);
   };
 
-  // Force refresh profile to get latest userRole if there was an error
   if (error) {
     refreshProfile().catch(console.error);
   }
@@ -121,7 +122,6 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps = {}) {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Personel Listesi</CardTitle>
-        {/* "Yeni Personel Ekle" button removed as requested */}
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -230,7 +230,6 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps = {}) {
           </AlertDialogContent>
         </AlertDialog>
 
-        {/* Image Preview Dialog */}
         {previewImage && (
           <Dialog open={!!previewImage} onOpenChange={handleCloseImagePreview}>
             <DialogContent className="sm:max-w-md flex items-center justify-center">

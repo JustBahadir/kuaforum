@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PersonnelPerformance } from "./PersonnelPerformance";
 import { PersonnelOperationsTable } from "./PersonnelOperationsTable";
-import { personelServisi } from "@/lib/supabase";
+import { personelServisi, profilServisi } from "@/lib/supabase";
 import { useQuery } from "@tanstack/react-query";
 import { Personel } from "@/lib/supabase/types";
 import { PersonnelEditDialog } from "./PersonnelEditDialog";
