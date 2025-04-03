@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Button } from "@/components/ui/button";
@@ -62,7 +61,7 @@ const StaffProfile = () => {
           const metaAvatarUrl = user.user_metadata.avatar_url;
 
           if (metaFirstName || metaLastName || metaPhone || metaGender || metaBirthdate) {
-            console.log("Kullanıcı metadata'sından profil verisi kullanılıyor");
+            console.log("Kullanıcı metadata'sinden profil verisi kullanılıyor");
             let formattedPhone = metaPhone ? formatPhoneNumber(metaPhone) : "";
 
             setFormData({
@@ -112,6 +111,27 @@ const StaffProfile = () => {
     
     if (name === 'phone') {
       setFormData(prev => ({ ...prev, [name]: formatPhoneNumber(value) }));
+    } else if (name === 'iban') {
+      // Format IBAN as you type
+      // First remove all spaces and non-alphanumeric characters except TR
+      const cleanValue = value.replace(/[^0-9TR]/gi, '');
+      
+      // Ensure it starts with TR
+      let formattedValue = cleanValue;
+      if (!cleanValue.startsWith('TR')) {
+        formattedValue = 'TR' + cleanValue.replace(/\D/g, '');
+      }
+      
+      // Add spaces every 4 characters for readability
+      let displayValue = '';
+      for (let i = 0; i < formattedValue.length; i++) {
+        if (i > 0 && i % 4 === 0) {
+          displayValue += ' ';
+        }
+        displayValue += formattedValue[i];
+      }
+      
+      setFormData(prev => ({ ...prev, [name]: displayValue }));
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
@@ -232,7 +252,9 @@ const StaffProfile = () => {
     setIsSaving(true);
 
     try {
+      // Clean IBAN by removing spaces
       const phoneForSaving = formData.phone.replace(/\s/g, '');
+      const ibanForSaving = formData.iban.replace(/\s/g, '');
 
       await profilServisi.guncelle({
         first_name: formData.firstName,
@@ -241,7 +263,7 @@ const StaffProfile = () => {
         gender: formData.gender,
         birthdate: formData.birthdate,
         address: formData.address,
-        iban: formData.iban
+        iban: ibanForSaving
       });
 
       // Update user metadata for consistency
@@ -253,7 +275,7 @@ const StaffProfile = () => {
           gender: formData.gender,
           birthdate: formData.birthdate,
           address: formData.address,
-          iban: formData.iban
+          iban: ibanForSaving
         }
       });
 

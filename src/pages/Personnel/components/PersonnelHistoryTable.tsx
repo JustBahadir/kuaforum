@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { personelIslemleriServisi, personelServisi } from "@/lib/supabase";
 import {
@@ -9,7 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
@@ -49,7 +48,12 @@ export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProp
     queryFn: () => personelServisi.hepsiniGetir()
   });
 
-  // Pagination
+  useEffect(() => {
+    if (personnelId) {
+      refetch();
+    }
+  }, [personnelId, refetch]);
+
   const totalPages = Math.ceil(islemGecmisi.length / itemsPerPage);
   const paginatedOperations = islemGecmisi.slice(
     (currentPage - 1) * itemsPerPage,
