@@ -1,6 +1,8 @@
 
 // Export types
 export * from './types';
+export * from './services/customerOperationsService';
+export * from './services/customerPersonalDataService';
 
 // Export services
 export { dukkanServisi } from './services/dukkanServisi';

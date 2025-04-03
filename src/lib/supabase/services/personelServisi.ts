@@ -205,6 +205,11 @@ export const personelServisi = {
         avatar_url
       };
       
+      // Format IBAN for display if it exists
+      if (transformedData.iban) {
+        transformedData.formattedIban = profilServisi.formatIBAN(transformedData.iban);
+      }
+      
       return transformedData;
     } catch (error) {
       console.error("Personel getirme hatası:", error);
@@ -284,7 +289,7 @@ export const personelServisi = {
       // Get current personel data to check auth_id
       const { data: currentPersonel, error: fetchError } = await supabase
         .from('personel')
-        .select('auth_id')
+        .select('auth_id, iban')
         .eq('id', id)
         .single();
       
@@ -312,6 +317,27 @@ export const personelServisi = {
       if (error) {
         console.error("Personel güncelleme hatası:", error);
         throw error;
+      }
+      
+      // If there's an auth_id, we need to check if there's new IBAN data from profiles
+      if (currentPersonel?.auth_id) {
+        try {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('iban')
+            .eq('id', currentPersonel.auth_id)
+            .maybeSingle();
+            
+          if (profileData?.iban && profileData.iban !== currentPersonel.iban) {
+            // Profile has IBAN data that needs to be synced to personel
+            await supabase
+              .from('personel')
+              .update({ iban: profileData.iban })
+              .eq('id', id);
+          }
+        } catch (profileError) {
+          console.warn("Profil IBAN bilgisi senkronize edilemedi:", profileError);
+        }
       }
       
       toast.success("Personel bilgileri başarıyla güncellendi");

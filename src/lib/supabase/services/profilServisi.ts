@@ -26,12 +26,14 @@ const cleanIBANForStorage = (iban?: string) => {
 const formatIBAN = (iban: string) => {
   if (!iban) return '';
   
+  // Remove any existing spaces first
+  let cleaned = iban.replace(/\s/g, '');
+  
   // Ensure it starts with TR and contains only digits after TR
-  let cleaned = 'TR';
-  if (iban.startsWith('TR')) {
-    cleaned += iban.substring(2).replace(/\D/g, '');
+  if (cleaned.startsWith('TR')) {
+    cleaned = 'TR' + cleaned.substring(2).replace(/\D/g, '');
   } else {
-    cleaned += iban.replace(/\D/g, '');
+    cleaned = 'TR' + cleaned.replace(/\D/g, '');
   }
   
   // Limit to 26 characters (TR + 24 digits)

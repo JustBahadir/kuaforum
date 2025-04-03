@@ -2,9 +2,9 @@
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
-import { ButtonProps } from "@radix-ui/react-dropdown-menu";
+import { ButtonProps as UIButtonProps } from "@/components/ui/button";
 
-interface LoadingButtonProps extends ButtonProps {
+interface LoadingButtonProps extends Omit<UIButtonProps, "asChild"> {
   loading?: boolean;
   children: React.ReactNode;
   onClick?: () => void;
