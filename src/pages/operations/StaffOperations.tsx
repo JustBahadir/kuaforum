@@ -1,6 +1,7 @@
+
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { kategoriServisi, islemServisi } from "@/lib/supabase";
+import { kategoriServisi, islemServisi, siralamaServisi } from "@/lib/supabase";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ServicesContent } from "@/components/operations/ServicesContent";
 import { WorkingHours } from "@/components/operations/WorkingHours";
@@ -120,7 +121,7 @@ export default function StaffOperations() {
 
   const { mutate: islemSiralamaGuncelle } = useMutation({
     mutationFn: (yeniIslemler: any[]) => {
-      islemServisi.islemSiralaGuncelle(yeniIslemler);
+      return siralamaServisi.islemSiraGuncelle(yeniIslemler);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['islemler'] });
@@ -134,7 +135,7 @@ export default function StaffOperations() {
 
   const { mutate: kategoriSiralamaGuncelle } = useMutation({
     mutationFn: (yeniKategoriler: any[]) => {
-      kategoriServisi.kategoriSiraGuncelle(yeniKategoriler);
+      return siralamaServisi.kategoriSiraGuncelle(yeniKategoriler);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['kategoriler'] });

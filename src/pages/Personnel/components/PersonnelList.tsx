@@ -1,15 +1,17 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { PersonnelDetailsDialog } from "./PersonnelDetailsDialog";
 import { PersonnelDialog } from "./PersonnelDialog";
 import { PersonnelEditDialog } from "./PersonnelEditDialog";
-import { Pencil, Trash, Eye, Plus, ImagePlus } from "lucide-react";
+import { Pencil, Trash, Eye, Plus } from "lucide-react";
 import { toast } from "sonner";
-import { usePersonnelMutation } from "../hooks/usePersonnelMutation";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { LoadingButton } from "@/components/ui/loading-button";
+import { personelServisi, dukkanServisi } from "@/lib/supabase";
+import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,30 +33,48 @@ interface Personnel {
 }
 
 interface PersonnelListProps {
-  personelListesi: Personnel[];
-  dukkanId: number;
-  onPersonnelAdded: () => void;
-  onPersonnelUpdated: () => void;
+  onPersonnelSelect?: (personelId: number) => void;
 }
 
-export function PersonnelList({ personelListesi, dukkanId, onPersonnelAdded, onPersonnelUpdated }: PersonnelListProps) {
-  const [open, setOpen] = useState(false);
-  const [editOpen, setEditOpen] = useState(false);
-  const [detailsOpen, setDetailsOpen] = useState(false);
+export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
+  const [openDetails, setOpenDetails] = useState(false);
+  const [openEdit, setOpenEdit] = useState(false);
+  const [openDialog, setOpenDialog] = useState(false);
   const [selectedPersonnel, setSelectedPersonnel] = useState<Personnel | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const { dukkanId } = useCustomerAuth();
+  const queryClient = useQueryClient();
 
-  const { deletePersonnel } = usePersonnelMutation();
+  const { data: personelListesi = [], isLoading } = useQuery({
+    queryKey: ['personel', dukkanId],
+    queryFn: () => personelServisi.hepsiniGetir(),
+    enabled: !!dukkanId
+  });
 
-  const handleOpen = () => setOpen(true);
-  const handleEditOpen = (personel: Personnel) => {
-    setSelectedPersonnel(personel);
-    setEditOpen(true);
-  };
+  const deletePersonnelMutation = useMutation({
+    mutationFn: (id: number) => personelServisi.sil(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['personel'] });
+      toast.success("Personel başarıyla silindi");
+    },
+    onError: (error) => {
+      console.error("Personel silinirken hata:", error);
+      toast.error("Personel silinirken bir hata oluştu");
+    }
+  });
+
   const handleDetailsOpen = (personel: Personnel) => {
     setSelectedPersonnel(personel);
-    setDetailsOpen(true);
+    setOpenDetails(true);
+    if (onPersonnelSelect) {
+      onPersonnelSelect(personel.id);
+    }
+  };
+
+  const handleEditOpen = (personel: Personnel) => {
+    setSelectedPersonnel(personel);
+    setOpenEdit(true);
   };
 
   const handleDeleteOpen = (personel: Personnel) => {
@@ -66,11 +86,9 @@ export function PersonnelList({ personelListesi, dukkanId, onPersonnelAdded, onP
     if (selectedPersonnel) {
       setIsDeleting(true);
       try {
-        await deletePersonnel(selectedPersonnel.id);
-        toast.success("Personel başarıyla silindi");
+        await deletePersonnelMutation.mutateAsync(selectedPersonnel.id);
       } catch (error) {
         console.error("Personel silinirken hata:", error);
-        toast.error("Personel silinirken bir hata oluştu");
       } finally {
         setIsDeleting(false);
         setDeleteOpen(false);
@@ -79,6 +97,22 @@ export function PersonnelList({ personelListesi, dukkanId, onPersonnelAdded, onP
     }
   };
 
+  const handlePersonnelAdded = () => {
+    queryClient.invalidateQueries({ queryKey: ['personel'] });
+  };
+
+  const handlePersonnelUpdated = () => {
+    queryClient.invalidateQueries({ queryKey: ['personel'] });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center p-8">
+        <div className="w-10 h-10 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="md:flex md:items-center md:justify-between">
@@ -86,7 +120,7 @@ export function PersonnelList({ personelListesi, dukkanId, onPersonnelAdded, onP
           <h1 className="text-2xl font-semibold">Personel Listesi</h1>
         </div>
         <div>
-          <Button onClick={handleOpen}>
+          <Button onClick={() => setOpenDialog(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Personel Ekle
           </Button>
@@ -125,23 +159,25 @@ export function PersonnelList({ personelListesi, dukkanId, onPersonnelAdded, onP
         ))}
       </div>
 
-      <PersonnelDialog open={open} setOpen={setOpen} dukkanId={dukkanId} onPersonnelAdded={onPersonnelAdded} />
+      <PersonnelDialog 
+        open={openDialog} 
+        onOpenChange={setOpenDialog} 
+      />
 
       {selectedPersonnel && (
         <PersonnelEditDialog
-          open={editOpen}
-          setOpen={setEditOpen}
-          personel={selectedPersonnel}
-          dukkanId={dukkanId}
-          onPersonnelUpdated={onPersonnelUpdated}
+          personelId={selectedPersonnel.id}
+          open={openEdit}
+          onOpenChange={setOpenEdit}
+          onEditComplete={handlePersonnelUpdated}
         />
       )}
 
       {selectedPersonnel && (
         <PersonnelDetailsDialog
-          open={detailsOpen}
-          setOpen={setDetailsOpen}
           personel={selectedPersonnel}
+          open={openDetails}
+          onOpenChange={setOpenDetails}
         />
       )}
 

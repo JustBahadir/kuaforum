@@ -13,6 +13,7 @@ export { kategoriServisi } from './services/kategoriServisi';
 export { musteriServisi } from './services/musteriServisi';
 export { calismaSaatleriServisi } from './services/calismaSaatleriServisi';
 export { bildirimServisi as notificationServisi } from './services/bildirimServisi';
-export { customerPersonalDataService as customerServisi } from './services/customerPersonalDataService';
+export { customerPersonalDataService } from './services/customerPersonalDataService';
+export { customerOperationsService } from './services/customerOperationsService';
 export { supabase } from './client';
 export { siralamaServisi } from './services/siralamaServisi';

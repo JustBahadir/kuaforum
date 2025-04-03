@@ -6,7 +6,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { PersonnelForm } from "./PersonnelForm";
-import { usePersonnelMutation } from "../hooks/usePersonnelMutation";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { personelServisi } from "@/lib/supabase";
+import { toast } from "sonner";
 
 interface PersonnelDialogProps {
   open: boolean;
@@ -14,8 +16,19 @@ interface PersonnelDialogProps {
 }
 
 export function PersonnelDialog({ open, onOpenChange }: PersonnelDialogProps) {
-  const { mutate: personelEkle, isPending } = usePersonnelMutation(() => {
-    onOpenChange(false);
+  const queryClient = useQueryClient();
+  
+  const { mutate, isPending } = useMutation({
+    mutationFn: (personelData: any) => personelServisi.ekle(personelData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['personel'] });
+      toast.success("Personel başarıyla eklendi");
+      onOpenChange(false);
+    },
+    onError: (error) => {
+      console.error("Personel eklenirken hata:", error);
+      toast.error("Personel eklenirken bir hata oluştu");
+    }
   });
 
   return (
@@ -24,7 +37,7 @@ export function PersonnelDialog({ open, onOpenChange }: PersonnelDialogProps) {
         <DialogHeader>
           <DialogTitle>Yeni Personel Ekle</DialogTitle>
         </DialogHeader>
-        <PersonnelForm onSubmit={personelEkle} isLoading={isPending} />
+        <PersonnelForm onSubmit={mutate} isLoading={isPending} />
       </DialogContent>
     </Dialog>
   );

@@ -1,19 +1,20 @@
+
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { PersonCircle, Phone, Mail, CreditCard, Calendar, User, Home, CheckCircle, MapPin, BriefcaseBusiness } from "lucide-react";
+import { User, Phone, Mail, CreditCard, Calendar, Home, CheckCircle, MapPin, BriefcaseBusiness } from "lucide-react";
 import { profilServisi } from "@/lib/supabase";
 
 interface PersonnelDetailsDialogProps {
   open: boolean;
-  onClose: () => void;
+  onOpenChange: (open: boolean) => void;
   personel: any;
 }
 
-export function PersonnelDetailsDialog({ open, onClose, personel }: PersonnelDetailsDialogProps) {
+export function PersonnelDetailsDialog({ open, onOpenChange, personel }: PersonnelDetailsDialogProps) {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -44,7 +45,7 @@ export function PersonnelDetailsDialog({ open, onClose, personel }: PersonnelDet
   }
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Personel Detayları</DialogTitle>
@@ -53,7 +54,7 @@ export function PersonnelDetailsDialog({ open, onClose, personel }: PersonnelDet
           <Card className="w-full lg:w-1/3">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <PersonCircle className="w-4 h-4" />
+                <User className="w-4 h-4" />
                 Personel Bilgileri
               </CardTitle>
               <CardDescription>
@@ -137,7 +138,7 @@ export function PersonnelDetailsDialog({ open, onClose, personel }: PersonnelDet
           </Card>
         </div>
         <DialogFooter>
-          <Button type="button" variant="secondary" onClick={onClose}>
+          <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
             Kapat
           </Button>
         </DialogFooter>

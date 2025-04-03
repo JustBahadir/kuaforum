@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { PersonelIslemi, islemServisi, personelIslemleriServisi, personelServisi } from "@/lib/supabase";
@@ -21,6 +20,7 @@ export default function Personnel() {
     from: new Date(new Date().setDate(new Date().getDate() - 30)), // Default to last 30 days
     to: new Date()
   });
+  const [selectedPersonnelId, setSelectedPersonnelId] = useState<number | null>(null);
 
   // Force refresh user role when component mounts to ensure we have the latest role
   useEffect(() => {
@@ -105,7 +105,7 @@ export default function Personnel() {
           </TabsList>
 
           <TabsContent value="personel">
-            <PersonnelList />
+            <PersonnelList onPersonnelSelect={setSelectedPersonnelId} />
           </TabsContent>
 
           <TabsContent value="islemler">
