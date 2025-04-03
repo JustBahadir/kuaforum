@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Personel, personelServisi, profilServisi } from "@/lib/supabase";
@@ -20,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
+import { Copy } from "lucide-react";
 
 interface PersonnelEditDialogProps {
   personelId: number;
@@ -82,17 +84,10 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComp
     }
   }, [personel]);
 
-  // Handle IBAN changes
-  const handleIBANChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Only allow TR and digits
-    const rawValue = e.target.value.replace(/[^0-9TR]/gi, '');
-    const formattedValue = formatIBAN(rawValue);
-    setFormattedIBAN(formattedValue);
-    
-    // Update the personelDuzenle with the unformatted value for saving
-    setPersonelDuzenle((prev) => 
-      prev ? { ...prev, iban: formattedValue.replace(/\s/g, '') } : null
-    );
+  // Copy IBAN to clipboard
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success("IBAN kopyalandı");
   };
 
   const { mutate: personelGuncelle } = useMutation({
@@ -118,24 +113,13 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComp
     if (personelDuzenle) {
       setIsSaving(true);
       
-      // Only send the fields that should be editable
+      // Only send the fields that should be editable by admin
       const { id } = personelDuzenle;
       const guncellenecekVeriler: Partial<Personel> = {
         maas: personelDuzenle.maas,
         calisma_sistemi: personelDuzenle.calisma_sistemi,
+        prim_yuzdesi: personelDuzenle.prim_yuzdesi
       };
-      
-      // If the user is admin, they can edit more fields
-      if (userRole === 'admin') {
-        Object.assign(guncellenecekVeriler, {
-          ad_soyad: personelDuzenle.ad_soyad,
-          telefon: personelDuzenle.telefon,
-          eposta: personelDuzenle.eposta,
-          adres: personelDuzenle.adres,
-          personel_no: personelDuzenle.personel_no,
-          iban: personelDuzenle.iban?.replace(/\s/g, '')
-        });
-      }
       
       personelGuncelle({ id, data: guncellenecekVeriler });
     }
@@ -156,8 +140,6 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComp
     );
   }
 
-  const isAdmin = userRole === 'admin';
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -171,78 +153,47 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComp
               <Input
                 id="edit_ad_soyad"
                 value={personelDuzenle.ad_soyad}
-                onChange={(e) =>
-                  setPersonelDuzenle((prev) =>
-                    prev ? { ...prev, ad_soyad: e.target.value } : null
-                  )
-                }
-                disabled={!isAdmin}
-                className={!isAdmin ? "bg-gray-100" : ""}
-                required
+                className="bg-gray-100"
+                disabled={true}
               />
+              <p className="text-xs text-gray-500">Ad Soyad bilgisi personel profilinden senkronize edilecektir.</p>
             </div>
+            
             <div className="space-y-2">
               <Label htmlFor="edit_telefon">Telefon</Label>
               <Input
                 id="edit_telefon"
                 type="tel"
                 value={personelDuzenle.telefon}
-                onChange={(e) =>
-                  setPersonelDuzenle((prev) =>
-                    prev ? { ...prev, telefon: e.target.value } : null
-                  )
-                }
-                disabled={!isAdmin}
-                className={!isAdmin ? "bg-gray-100" : ""}
-                required
+                className="bg-gray-100"
+                disabled={true}
               />
+              <p className="text-xs text-gray-500">Telefon bilgisi personel profilinden senkronize edilecektir.</p>
             </div>
+            
             <div className="space-y-2">
               <Label htmlFor="edit_eposta">E-posta</Label>
               <Input
                 id="edit_eposta"
                 type="email"
                 value={personelDuzenle.eposta}
-                onChange={(e) =>
-                  setPersonelDuzenle((prev) =>
-                    prev ? { ...prev, eposta: e.target.value } : null
-                  )
-                }
-                disabled={!isAdmin}
-                className={!isAdmin ? "bg-gray-100" : ""}
-                required
+                className="bg-gray-100"
+                disabled={true}
               />
+              <p className="text-xs text-gray-500">E-posta bilgisi personel profilinden senkronize edilecektir.</p>
             </div>
+            
             <div className="space-y-2">
               <Label htmlFor="edit_adres">Adres</Label>
               <Input
                 id="edit_adres"
                 value={personelDuzenle.adres}
-                onChange={(e) =>
-                  setPersonelDuzenle((prev) =>
-                    prev ? { ...prev, adres: e.target.value } : null
-                  )
-                }
-                disabled={!isAdmin}
-                className={!isAdmin ? "bg-gray-100" : ""}
-                required
+                className="bg-gray-100"
+                disabled={true}
               />
+              <p className="text-xs text-gray-500">Adres bilgisi personel profilinden senkronize edilecektir.</p>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit_personel_no">Personel No</Label>
-              <Input
-                id="edit_personel_no"
-                value={personelDuzenle.personel_no}
-                onChange={(e) =>
-                  setPersonelDuzenle((prev) =>
-                    prev ? { ...prev, personel_no: e.target.value } : null
-                  )
-                }
-                disabled={!isAdmin}
-                className={!isAdmin ? "bg-gray-100" : ""}
-                required
-              />
-            </div>
+            
             <div className="space-y-2">
               <Label htmlFor="edit_maas">Maaş</Label>
               <Input
@@ -257,6 +208,7 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComp
                 required
               />
             </div>
+            
             <div className="space-y-2">
               <Label htmlFor="edit_calisma_sistemi">Çalışma Sistemi</Label>
               <Select
@@ -281,17 +233,43 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComp
                 </SelectContent>
               </Select>
             </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="edit_prim_yuzdesi">Prim Yüzdesi</Label>
+              <Input
+                id="edit_prim_yuzdesi"
+                type="number"
+                value={personelDuzenle.prim_yuzdesi}
+                onChange={(e) =>
+                  setPersonelDuzenle((prev) =>
+                    prev ? { ...prev, prim_yuzdesi: Number(e.target.value) } : null
+                  )
+                }
+                required
+              />
+            </div>
+            
             <div className="space-y-2">
               <Label htmlFor="edit_iban">IBAN</Label>
-              <Input
-                id="edit_iban"
-                value={formattedIBAN}
-                onChange={handleIBANChange}
-                placeholder="TR00 0000 0000 0000 0000 0000 00"
-                disabled={!isAdmin}
-                className={!isAdmin ? "bg-gray-100" : ""}
-                maxLength={36}
-              />
+              <div className="flex">
+                <Input
+                  id="edit_iban"
+                  value={formattedIBAN}
+                  className="bg-gray-100 flex-1"
+                  disabled={true}
+                />
+                {formattedIBAN && (
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => copyToClipboard(formattedIBAN)}
+                    className="ml-2"
+                  >
+                    <Copy size={16} />
+                  </Button>
+                )}
+              </div>
               <p className="text-xs text-gray-500">
                 IBAN bilgisi personel profilinden senkronize edilecektir.
               </p>

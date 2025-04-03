@@ -47,10 +47,11 @@ const formatIBAN = (value: string) => {
   
   // Ensure it starts with TR
   if (!cleaned.startsWith('TR')) {
-    cleaned = 'TR' + cleaned.substring(0, cleaned.startsWith('T') ? 25 : cleaned.startsWith('R') ? 25 : 24);
-  } else {
-    cleaned = cleaned.substring(0, 26); // Limit to 26 characters (TR + 24 digits)
+    cleaned = 'TR' + cleaned.replace(/\D/g, '');
   }
+  
+  // Limit to 26 characters (TR + 24 digits)
+  cleaned = cleaned.substring(0, 26);
   
   // Format in groups of 4
   let formatted = '';
