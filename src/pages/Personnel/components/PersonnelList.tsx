@@ -119,16 +119,23 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
         {personelListesi.map((personel) => (
           <div key={personel.id} className="bg-white rounded-lg shadow-md p-4">
             <div className="flex items-center space-x-4">
-              <Avatar>
+              <Avatar className="h-12 w-12">
                 {personel.avatar_url ? (
                   <AvatarImage src={personel.avatar_url} alt={personel.ad_soyad} />
                 ) : (
-                  <AvatarFallback>{personel.ad_soyad.substring(0, 2).toUpperCase()}</AvatarFallback>
+                  <AvatarFallback className="bg-purple-100 text-purple-800">
+                    {personel.ad_soyad
+                      .split(' ')
+                      .map((name: string) => name[0])
+                      .join('')
+                      .substring(0, 2)
+                      .toUpperCase()}
+                  </AvatarFallback>
                 )}
               </Avatar>
               <div>
                 <h2 className="text-lg font-semibold">{personel.ad_soyad}</h2>
-                <p className="text-gray-500">{personel.unvan}</p>
+                <p className="text-gray-500">{personel.unvan || "Personel"}</p>
               </div>
             </div>
             <div className="mt-4 flex justify-end space-x-2">

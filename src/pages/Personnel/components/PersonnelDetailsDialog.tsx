@@ -57,14 +57,19 @@ export function PersonnelDetailsDialog({
                 {personel.avatar_url ? (
                   <AvatarImage src={personel.avatar_url} alt={personel.ad_soyad} />
                 ) : (
-                  <AvatarFallback className="text-lg">
-                    <User className="h-10 w-10" />
+                  <AvatarFallback className="text-lg bg-purple-100 text-purple-800">
+                    {personel.ad_soyad
+                      .split(' ')
+                      .map((name: string) => name[0])
+                      .join('')
+                      .substring(0, 2)
+                      .toUpperCase()}
                   </AvatarFallback>
                 )}
               </Avatar>
               <h2 className="text-xl font-bold">{personel.ad_soyad}</h2>
               <div className="badge bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs">
-                {personel.unvan}
+                {personel.unvan || "Personel"}
               </div>
             </div>
 
@@ -88,10 +93,12 @@ export function PersonnelDetailsDialog({
               <div className="grid grid-cols-3 items-center">
                 <span className="font-medium">Maaş:</span>
                 <span className="col-span-2">
-                  {new Intl.NumberFormat("tr-TR", {
-                    style: "currency",
-                    currency: "TRY",
-                  }).format(personel.maas || 0)}
+                  {personel.maas ? 
+                    new Intl.NumberFormat("tr-TR", {
+                      style: "currency",
+                      currency: "TRY",
+                    }).format(personel.maas || 0) 
+                    : "₺0,00"}
                 </span>
               </div>
               {personel.iban && (

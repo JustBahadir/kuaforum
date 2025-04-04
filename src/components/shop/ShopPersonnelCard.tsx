@@ -56,10 +56,11 @@ export function ShopPersonnelCard({ personelListesi, userRole }: ShopPersonnelCa
                       src={personel.avatar_url} 
                       alt={personel.ad_soyad} 
                     />
-                  ) : null}
-                  <AvatarFallback className="bg-purple-100 text-purple-600">
-                    {personel.ad_soyad.split(' ').map((name: string) => name[0]).join('').substring(0, 2).toUpperCase()}
-                  </AvatarFallback>
+                  ) : (
+                    <AvatarFallback className="bg-purple-100 text-purple-600">
+                      {personel.ad_soyad.split(' ').map((name: string) => name[0]).join('').substring(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  )}
                 </Avatar>
                 <div>
                   <h3 className="font-medium">{personel.ad_soyad}</h3>

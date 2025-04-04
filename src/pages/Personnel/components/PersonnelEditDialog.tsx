@@ -87,6 +87,7 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComp
         maas: personelDuzenle.maas
       };
       
+      console.log("Güncellenecek maaş değeri:", personelDuzenle.maas);
       personelGuncelle({ id, data: guncellenecekVeriler });
     }
   };
@@ -165,7 +166,7 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComp
               <Input
                 id="edit_maas"
                 type="number"
-                value={personelDuzenle.maas}
+                value={personelDuzenle.maas || 0}
                 onChange={(e) =>
                   setPersonelDuzenle((prev) =>
                     prev ? { ...prev, maas: Number(e.target.value) } : null

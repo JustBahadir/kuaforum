@@ -1,3 +1,4 @@
+
 import { supabase } from '../client';
 import { Personel } from '../types';
 import { profilServisi } from './profilServisi';
@@ -286,24 +287,20 @@ export const personelServisi = {
     try {
       console.log(`Personel ${id} güncelleniyor:`, personel);
       
-      // Get current personel data to check auth_id
-      const { data: currentPersonel, error: fetchError } = await supabase
-        .from('personel')
-        .select('auth_id, iban')
-        .eq('id', id)
-        .single();
+      // Remove the iban field from the update to prevent the error
+      const { maas, ...otherFields } = personel;
       
-      if (fetchError) {
-        console.error("Mevcut personel bilgisi alınamadı:", fetchError);
-        throw fetchError;
-      }
+      const updateFields: any = {};
+      if (maas !== undefined) updateFields.maas = maas;
       
-      // Update personnel record - only allow certain fields to be updated directly
-      // Other fields like ad_soyad, telefon, eposta, adres, iban should come from profile
-      const updateFields: Partial<Personel> = {};
+      // Add other fields if needed, excluding iban
+      Object.keys(otherFields).forEach(key => {
+        if (key !== 'iban' && otherFields[key as keyof typeof otherFields] !== undefined) {
+          updateFields[key] = otherFields[key as keyof typeof otherFields];
+        }
+      });
       
-      // Only include fields that we allow to be directly updated
-      if (personel.maas !== undefined) updateFields.maas = personel.maas;
+      console.log("Güncellenecek alanlar:", updateFields);
       
       const { data, error } = await supabase
         .from('personel')
@@ -315,27 +312,6 @@ export const personelServisi = {
       if (error) {
         console.error("Personel güncelleme hatası:", error);
         throw error;
-      }
-      
-      // If there's an auth_id, we need to check if there's new IBAN data from profiles
-      if (currentPersonel?.auth_id) {
-        try {
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('iban')
-            .eq('id', currentPersonel.auth_id)
-            .maybeSingle();
-            
-          if (profileData?.iban && profileData.iban !== currentPersonel.iban) {
-            // Profile has IBAN data that needs to be synced to personel
-            await supabase
-              .from('personel')
-              .update({ iban: profileData.iban })
-              .eq('id', id);
-          }
-        } catch (profileError) {
-          console.warn("Profil IBAN bilgisi senkronize edilemedi:", profileError);
-        }
       }
       
       toast.success("Personel bilgileri başarıyla güncellendi");
