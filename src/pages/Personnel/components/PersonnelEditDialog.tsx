@@ -13,13 +13,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { Copy } from "lucide-react";
 
@@ -91,9 +84,7 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComp
       // Only send the fields that should be editable by admin
       const { id } = personelDuzenle;
       const guncellenecekVeriler: Partial<Personel> = {
-        maas: personelDuzenle.maas,
-        calisma_sistemi: personelDuzenle.calisma_sistemi,
-        prim_yuzdesi: personelDuzenle.prim_yuzdesi
+        maas: personelDuzenle.maas
       };
       
       personelGuncelle({ id, data: guncellenecekVeriler });
@@ -178,46 +169,6 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComp
                 onChange={(e) =>
                   setPersonelDuzenle((prev) =>
                     prev ? { ...prev, maas: Number(e.target.value) } : null
-                  )
-                }
-                required
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="edit_calisma_sistemi">Çalışma Sistemi</Label>
-              <Select
-                onValueChange={(value) =>
-                  setPersonelDuzenle((prev) =>
-                    prev
-                      ? {
-                          ...prev,
-                          calisma_sistemi: value as "haftalik" | "aylik",
-                        }
-                      : null
-                  )
-                }
-                value={personelDuzenle.calisma_sistemi}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Çalışma Sistemi Seçin" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="haftalik">Haftalık</SelectItem>
-                  <SelectItem value="aylik">Aylık</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="edit_prim_yuzdesi">Prim Yüzdesi</Label>
-              <Input
-                id="edit_prim_yuzdesi"
-                type="number"
-                value={personelDuzenle.prim_yuzdesi}
-                onChange={(e) =>
-                  setPersonelDuzenle((prev) =>
-                    prev ? { ...prev, prim_yuzdesi: Number(e.target.value) } : null
                   )
                 }
                 required
