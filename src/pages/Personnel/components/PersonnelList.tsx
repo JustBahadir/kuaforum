@@ -1,16 +1,14 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { PersonnelDetailsDialog } from "./PersonnelDetailsDialog";
 import { PersonnelDialog } from "./PersonnelDialog";
-import { PersonnelEditDialog } from "./PersonnelEditDialog";
-import { Pencil, Trash, Eye, Plus } from "lucide-react";
+import { Trash, Eye, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { LoadingButton } from "@/components/ui/loading-button";
-import { personelServisi, dukkanServisi } from "@/lib/supabase";
+import { personelServisi } from "@/lib/supabase";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import {
   AlertDialog,
@@ -38,7 +36,6 @@ interface PersonnelListProps {
 
 export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
   const [openDetails, setOpenDetails] = useState(false);
-  const [openEdit, setOpenEdit] = useState(false);
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedPersonnel, setSelectedPersonnel] = useState<Personnel | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -72,11 +69,6 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
     }
   };
 
-  const handleEditOpen = (personel: Personnel) => {
-    setSelectedPersonnel(personel);
-    setOpenEdit(true);
-  };
-
   const handleDeleteOpen = (personel: Personnel) => {
     setSelectedPersonnel(personel);
     setDeleteOpen(true);
@@ -98,10 +90,6 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
   };
 
   const handlePersonnelAdded = () => {
-    queryClient.invalidateQueries({ queryKey: ['personel'] });
-  };
-
-  const handlePersonnelUpdated = () => {
     queryClient.invalidateQueries({ queryKey: ['personel'] });
   };
 
@@ -141,15 +129,11 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
               <div>
                 <h2 className="text-lg font-semibold">{personel.ad_soyad}</h2>
                 <p className="text-gray-500">{personel.unvan}</p>
-                <Badge className="mt-1">ID: {personel.id}</Badge>
               </div>
             </div>
             <div className="mt-4 flex justify-end space-x-2">
               <Button variant="outline" size="icon" onClick={() => handleDetailsOpen(personel)}>
                 <Eye className="w-4 h-4" />
-              </Button>
-              <Button variant="outline" size="icon" onClick={() => handleEditOpen(personel)}>
-                <Pencil className="w-4 h-4" />
               </Button>
               <Button variant="destructive" size="icon" onClick={() => handleDeleteOpen(personel)}>
                 <Trash className="w-4 h-4" />
@@ -163,15 +147,6 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
         open={openDialog} 
         onOpenChange={setOpenDialog} 
       />
-
-      {selectedPersonnel && (
-        <PersonnelEditDialog
-          personelId={selectedPersonnel.id}
-          open={openEdit}
-          onOpenChange={setOpenEdit}
-          onEditComplete={handlePersonnelUpdated}
-        />
-      )}
 
       {selectedPersonnel && (
         <PersonnelDetailsDialog

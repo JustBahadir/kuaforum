@@ -15,7 +15,7 @@ import { profilServisi } from "@/lib/supabase";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PersonnelHistoryTable } from "./PersonnelHistoryTable";
 import { PersonnelPerformance } from "./PersonnelPerformance";
-import { PersonnelOperationsTable } from "./PersonnelOperationsTable";
+import { PersonnelEditDialog } from "./PersonnelEditDialog";
 
 interface PersonnelDetailsDialogProps {
   personel: any;
@@ -29,6 +29,7 @@ export function PersonnelDetailsDialog({
   onOpenChange,
 }: PersonnelDetailsDialogProps) {
   const [activeTab, setActiveTab] = useState("details");
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   
   // Copy IBAN to clipboard
   const copyToClipboard = (text: string) => {
@@ -109,10 +110,16 @@ export function PersonnelDetailsDialog({
                 </div>
               )}
             </div>
+            
+            <div className="flex justify-end">
+              <Button onClick={() => setEditDialogOpen(true)}>
+                Düzenle
+              </Button>
+            </div>
           </TabsContent>
           
           <TabsContent value="operations">
-            <PersonnelOperationsTable personnelId={personel.id} />
+            <PersonnelHistoryTable personnelId={personel.id} />
           </TabsContent>
           
           <TabsContent value="performance">
@@ -126,6 +133,12 @@ export function PersonnelDetailsDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      <PersonnelEditDialog
+        personelId={personel.id}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+      />
     </Dialog>
   );
 }

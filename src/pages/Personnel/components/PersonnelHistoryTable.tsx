@@ -1,3 +1,4 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { personelIslemleriServisi, personelServisi } from "@/lib/supabase";
 import {
@@ -27,10 +28,24 @@ export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProp
     queryFn: async () => {
       console.log("Fetching personnel operations for ID:", personnelId);
       try {
+        // First try to get the personnel operations
         const result = personnelId 
           ? await personelIslemleriServisi.personelIslemleriGetir(personnelId)
           : await personelIslemleriServisi.hepsiniGetir();
+          
         console.log("Retrieved operations:", result);
+        
+        // If no operations, automatically try to recover from appointments
+        if (result.length === 0 && personnelId) {
+          console.log("No operations found, attempting to recover from appointments");
+          await personelIslemleriServisi.recoverOperationsFromAppointments(personnelId);
+          
+          // Fetch again after recovery attempt
+          const recoveredResult = await personelIslemleriServisi.personelIslemleriGetir(personnelId);
+          console.log("Operations after recovery:", recoveredResult);
+          return recoveredResult;
+        }
+        
         return result;
       } catch (error) {
         console.error("Error fetching personnel operations:", error);
@@ -41,11 +56,6 @@ export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProp
     refetchOnWindowFocus: true,
     staleTime: 10000, // Reduced to 10 seconds for more frequent refresh
     refetchInterval: 30000 // Set a refresh interval of 30 seconds
-  });
-
-  const { data: personeller = [] } = useQuery({
-    queryKey: ['personel'],
-    queryFn: () => personelServisi.hepsiniGetir()
   });
 
   useEffect(() => {
@@ -80,19 +90,62 @@ export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProp
     );
   }
 
+  const handleRecoverOperations = async () => {
+    if (!personnelId) return;
+    
+    try {
+      toast.info("Tamamlanan randevulardan işlemler oluşturuluyor...");
+      await personelIslemleriServisi.recoverOperationsFromAppointments(personnelId);
+      await refetch();
+      toast.success("İşlem geçmişi güncellendi");
+    } catch (error) {
+      console.error("Error recovering operations:", error);
+      toast.error("İşlem geçmişi güncellenirken bir hata oluştu");
+    }
+  };
+
+  const renderEmptyState = () => {
+    if (!personnelId) {
+      return "Personel seçilmedi.";
+    }
+    
+    return (
+      <div className="text-center space-y-4">
+        <p>Bu personele ait işlem bulunamadı.</p>
+        <Button onClick={handleRecoverOperations}>
+          Tamamlanmış Randevulardan İşlemleri Oluştur
+        </Button>
+      </div>
+    );
+  };
+
   if (islemGecmisi.length === 0) {
     return (
       <div className="text-center p-4 text-muted-foreground">
-        {personnelId ? "Bu personele ait işlem bulunamadı." : "Henüz işlem kaydı bulunmamaktadır."}
+        {renderEmptyState()}
       </div>
     );
   }
 
+  // Calculate totals
+  const totalAmount = islemGecmisi.reduce((sum, item) => sum + (item.tutar || 0), 0);
+  const totalPaid = islemGecmisi.reduce((sum, item) => sum + (item.odenen || 0), 0);
+  const totalPoints = islemGecmisi.reduce((sum, item) => sum + (item.puan || 0), 0);
+
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <div className="text-sm text-muted-foreground">
-          Toplam {islemGecmisi.length} işlem bulundu
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <div className="text-sm text-muted-foreground">TOPLAM PUAN</div>
+          <div className="text-2xl font-bold text-purple-700">{totalPoints}</div>
+        </div>
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <div className="text-sm text-muted-foreground">TOPLAM TUTAR</div>
+          <div className="text-2xl font-bold text-gray-900">{formatCurrency(totalAmount)}</div>
+        </div>
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <div className="text-sm text-muted-foreground">TOPLAM ÖDENEN</div>
+          <div className="text-2xl font-bold text-green-700">{formatCurrency(totalPaid)}</div>
         </div>
       </div>
       
@@ -123,8 +176,8 @@ export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProp
           <TableHeader>
             <TableRow>
               <TableHead>Tarih</TableHead>
-              <TableHead>Personel</TableHead>
               <TableHead>İşlem</TableHead>
+              <TableHead>Müşteri</TableHead>
               <TableHead>Tutar</TableHead>
               <TableHead>Prim %</TableHead>
               <TableHead>Ödenen</TableHead>
@@ -137,10 +190,8 @@ export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProp
                 <TableCell>
                   {new Date(islem.created_at!).toLocaleDateString('tr-TR')}
                 </TableCell>
-                <TableCell>
-                  {personeller?.find(p => p.id === islem.personel_id)?.ad_soyad || islem.personel?.ad_soyad}
-                </TableCell>
-                <TableCell>{islem.aciklama}</TableCell>
+                <TableCell>{islem.islem?.islem_adi || islem.aciklama}</TableCell>
+                <TableCell>{islem.musteri?.first_name + ' ' + (islem.musteri?.last_name || '')}</TableCell>
                 <TableCell>{formatCurrency(islem.tutar || 0)}</TableCell>
                 <TableCell>%{islem.prim_yuzdesi}</TableCell>
                 <TableCell>{formatCurrency(islem.odenen || 0)}</TableCell>
@@ -149,6 +200,12 @@ export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProp
             ))}
           </TableBody>
         </Table>
+      </div>
+      
+      <div className="flex justify-end">
+        <Button variant="outline" onClick={handleRecoverOperations}>
+          Tamamlanmış Randevulardan İşlemleri Oluştur
+        </Button>
       </div>
     </div>
   );
