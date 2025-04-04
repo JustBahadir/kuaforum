@@ -682,13 +682,43 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
               <CardTitle>Müşteri Fotoğrafları</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                <Camera className="mx-auto h-12 w-12 opacity-20" />
-                <p className="mt-2">Henüz kayıtlı fotoğraf bulunmuyor</p>
-                <Button variant="outline" className="mt-4">
-                  <Camera className="h-4 w-4 mr-2" /> Fotoğraf Yükle
-                </Button>
-              </div>
+              {isLoadingOperations ? (
+                <div className="text-center py-8">
+                  <div className="inline-block h-6 w-6 animate-spin rounded-full border-4 border-solid border-current border-r-transparent"></div>
+                  <p className="mt-4">Fotoğraflar yükleniyor...</p>
+                </div>
+              ) : (
+                <>
+                  {customerOperations.some(op => op.photos && op.photos.length > 0) ? (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {customerOperations
+                        .filter(op => op.photos && op.photos.length > 0)
+                        .flatMap(op => 
+                          op.photos!.map((photo, photoIndex) => (
+                            <div key={`${op.id}-${photoIndex}`} className="relative group">
+                              <div className="aspect-square overflow-hidden rounded-md border border-gray-200">
+                                <img 
+                                  src={photo} 
+                                  alt={`${op.service_name} fotoğrafı`} 
+                                  className="h-full w-full object-cover transition-all group-hover:scale-105"
+                                />
+                              </div>
+                              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2 text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity">
+                                <p className="font-medium truncate">{op.service_name}</p>
+                                <p className="truncate">{formatDate(op.date)}</p>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Camera className="mx-auto h-12 w-12 opacity-20" />
+                      <p className="mt-2">Henüz kayıtlı fotoğraf bulunmuyor</p>
+                    </div>
+                  )}
+                </>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

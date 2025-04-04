@@ -10,6 +10,7 @@ export interface CustomerOperation {
   points: number;
   notes?: string;
   appointment_id?: number;
+  photos?: string[];
 }
 
 export const customerOperationsService = {
@@ -28,6 +29,7 @@ export const customerOperationsService = {
           puan,
           notlar,
           randevu_id,
+          photos,
           personel(ad_soyad),
           islem:islemler(islem_adi)
         `)
@@ -68,7 +70,8 @@ export const customerOperationsService = {
           amount: Number(item.tutar) || 0,
           points: Number(item.puan) || 0,
           appointment_id: item.randevu_id,
-          notes: item.notlar || ''
+          notes: item.notlar || '',
+          photos: item.photos || []
         };
       });
     } catch (error) {
@@ -77,16 +80,44 @@ export const customerOperationsService = {
     }
   },
 
-  async updateOperationNotes(appointmentId: number, notes: string): Promise<void> {
+  async updateOperationNotes(operationId: number, notes: string): Promise<void> {
     try {
       const { error } = await supabase
         .from('personel_islemleri')
         .update({ notlar: notes })
-        .eq('id', appointmentId);
+        .eq('id', operationId);
         
       if (error) throw error;
     } catch (error) {
       console.error('Error updating operation notes:', error);
+      throw error;
+    }
+  },
+  
+  async addOperationPhoto(operationId: number, photoUrl: string): Promise<void> {
+    try {
+      // First, get the current operation to check if it has existing photos
+      const { data, error: fetchError } = await supabase
+        .from('personel_islemleri')
+        .select('photos')
+        .eq('id', operationId)
+        .single();
+        
+      if (fetchError) throw fetchError;
+      
+      // Prepare the updated photos array
+      const existingPhotos = data?.photos || [];
+      const updatedPhotos = [...existingPhotos, photoUrl];
+      
+      // Update the operation with the new photo
+      const { error: updateError } = await supabase
+        .from('personel_islemleri')
+        .update({ photos: updatedPhotos })
+        .eq('id', operationId);
+        
+      if (updateError) throw updateError;
+    } catch (error) {
+      console.error('Error adding operation photo:', error);
       throw error;
     }
   }

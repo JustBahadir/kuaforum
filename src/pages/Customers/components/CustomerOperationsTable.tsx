@@ -6,6 +6,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CustomerOperation, customerOperationsService } from "@/lib/supabase";
+import { Camera, Eye } from "lucide-react";
+import { FileUpload } from "@/components/ui/file-upload";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogFooter 
+} from "@/components/ui/dialog";
 
 interface CustomerOperationsTableProps {
   operations: CustomerOperation[];
@@ -15,6 +24,8 @@ interface CustomerOperationsTableProps {
 export function CustomerOperationsTable({ operations, isLoading }: CustomerOperationsTableProps) {
   const [editingNoteId, setEditingNoteId] = useState<number | null>(null);
   const [noteText, setNoteText] = useState("");
+  const [uploadingForId, setUploadingForId] = useState<number | null>(null);
+  const [viewingPhotosForId, setViewingPhotosForId] = useState<number | null>(null);
   const queryClient = useQueryClient();
   
   const updateNotesMutation = useMutation({
@@ -31,6 +42,20 @@ export function CustomerOperationsTable({ operations, isLoading }: CustomerOpera
     }
   });
   
+  const addPhotoMutation = useMutation({
+    mutationFn: ({ id, photoUrl }: { id: number; photoUrl: string }) => 
+      customerOperationsService.addOperationPhoto(id, photoUrl),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customerOperations'] });
+      toast.success("Fotoğraf başarıyla eklendi");
+      setUploadingForId(null);
+    },
+    onError: (error) => {
+      toast.error("Fotoğraf eklenirken bir hata oluştu");
+      console.error("Photo upload error:", error);
+    }
+  });
+  
   const handleEditNote = (operation: CustomerOperation) => {
     setEditingNoteId(operation.id);
     setNoteText(operation.notes || "");
@@ -43,6 +68,24 @@ export function CustomerOperationsTable({ operations, isLoading }: CustomerOpera
   const handleCancelEdit = () => {
     setEditingNoteId(null);
     setNoteText("");
+  };
+  
+  const handleAddPhoto = (id: number) => {
+    setUploadingForId(id);
+  };
+  
+  const handleViewPhotos = (operation: CustomerOperation) => {
+    if (operation.photos && operation.photos.length > 0) {
+      setViewingPhotosForId(operation.id);
+    } else {
+      toast.info("Bu işlem için fotoğraf bulunmamaktadır");
+    }
+  };
+  
+  const handlePhotoUploaded = (url: string) => {
+    if (uploadingForId) {
+      addPhotoMutation.mutate({ id: uploadingForId, photoUrl: url });
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -68,6 +111,10 @@ export function CustomerOperationsTable({ operations, isLoading }: CustomerOpera
       </div>
     );
   }
+
+  const getOperation = (id: number) => {
+    return operations.find(op => op.id === id);
+  };
 
   return (
     <div className="overflow-x-auto rounded-md border">
@@ -133,19 +180,97 @@ export function CustomerOperationsTable({ operations, isLoading }: CustomerOpera
                     </Button>
                   </div>
                 ) : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleEditNote(operation)}
-                  >
-                    Notu Düzenle
-                  </Button>
+                  <div className="flex space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEditNote(operation)}
+                    >
+                      Notu Düzenle
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleAddPhoto(operation.id)}
+                      title="Fotoğraf Ekle"
+                    >
+                      <Camera className="h-4 w-4" />
+                    </Button>
+                    {operation.photos && operation.photos.length > 0 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleViewPhotos(operation)}
+                        title="Fotoğrafları Görüntüle"
+                      >
+                        <Eye className="h-4 w-4" />
+                        <span className="ml-1">{operation.photos.length}</span>
+                      </Button>
+                    )}
+                  </div>
                 )}
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+      
+      {/* Photo Upload Dialog */}
+      <Dialog open={uploadingForId !== null} onOpenChange={(open) => !open && setUploadingForId(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Fotoğraf Ekle</DialogTitle>
+          </DialogHeader>
+          
+          <FileUpload 
+            onUploadComplete={handlePhotoUploaded}
+            label="İşlem Fotoğrafı Yükle"
+            bucketName="operation_photos"
+            folderPath="customer_operations"
+            acceptedFileTypes="image/*"
+            maxFileSize={5 * 1024 * 1024}
+          />
+          
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setUploadingForId(null)}
+            >
+              İptal
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Photo Viewing Dialog */}
+      <Dialog open={viewingPhotosForId !== null} onOpenChange={(open) => !open && setViewingPhotosForId(null)}>
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>İşlem Fotoğrafları</DialogTitle>
+          </DialogHeader>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-4">
+            {viewingPhotosForId && getOperation(viewingPhotosForId)?.photos?.map((photo, index) => (
+              <div key={index} className="rounded-md overflow-hidden border border-gray-200">
+                <img 
+                  src={photo} 
+                  alt={`İşlem fotoğrafı ${index + 1}`}
+                  className="w-full h-[200px] object-cover"
+                />
+              </div>
+            ))}
+          </div>
+          
+          <DialogFooter>
+            <Button
+              variant="default"
+              onClick={() => setViewingPhotosForId(null)}
+            >
+              Kapat
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

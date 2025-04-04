@@ -187,7 +187,8 @@ export const personelIslemleriServisi = {
               prim_yuzdesi: primYuzdesi,
               puan: puan,
               aciklama: description,
-              notlar: appointment.notlar || null
+              notlar: appointment.notlar || null,
+              photos: [] // Initialize with empty photos array
             };
             
             // Insert operation
@@ -251,12 +252,9 @@ export const personelIslemleriServisi = {
       
       console.log(`${appointments.length} adet tamamlanmış müşteri randevusu bulundu`);
       
-      // Use the same processing logic as recoverOperationsFromAppointments
+      // Process each appointment using the same logic as recoverOperationsFromAppointments
       let processed = 0;
       let errors = 0;
-      
-      // Process logic same as recoverOperationsFromAppointments
-      // But we process only for this customer
       
       for (const appointment of appointments) {
         try {
@@ -340,7 +338,8 @@ export const personelIslemleriServisi = {
               prim_yuzdesi: primYuzdesi,
               puan: puan,
               aciklama: description,
-              notlar: appointment.notlar || null
+              notlar: appointment.notlar || null,
+              photos: [] // Initialize with empty photos array
             };
             
             // Insert operation
