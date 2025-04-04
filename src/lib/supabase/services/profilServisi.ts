@@ -75,7 +75,7 @@ export const profilServisi = {
   guncelle: (data: any) => {
     // Validate and clean IBAN if present
     if (data.iban) {
-      data.iban = validateIBAN(cleanIBANForStorage(data.iban));
+      data.iban = cleanIBANForStorage(data.iban);
     }
     return updateProfile(data);
   },
@@ -83,9 +83,11 @@ export const profilServisi = {
   createOrUpdateProfile: (userId: string, data: any) => {
     // Validate and clean IBAN if present
     if (data.iban) {
-      data.iban = validateIBAN(cleanIBANForStorage(data.iban));
+      data.iban = cleanIBANForStorage(data.iban);
     }
     return createOrUpdateProfile(userId, data);
   },
-  formatIBAN // Export the IBAN formatter for use in other components
+  formatIBAN, // Export the IBAN formatter for use in other components
+  cleanIBANForStorage, // Export the IBAN cleaner for direct use
+  validateIBAN // Export the IBAN validator for direct use
 };

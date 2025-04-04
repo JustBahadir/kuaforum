@@ -54,8 +54,8 @@ export function PersonnelDetailsDialog({
 
           <div className="grid gap-4">
             <div className="grid grid-cols-3 items-center">
-              <span className="font-medium">ID:</span>
-              <span className="col-span-2">{personel.id}</span>
+              <span className="font-medium">Ad Soyad:</span>
+              <span className="col-span-2">{personel.ad_soyad}</span>
             </div>
             <div className="grid grid-cols-3 items-center">
               <span className="font-medium">Telefon:</span>
@@ -77,20 +77,6 @@ export function PersonnelDetailsDialog({
                   currency: "TRY",
                 }).format(personel.maas || 0)}
               </span>
-            </div>
-            <div className="grid grid-cols-3 items-center">
-              <span className="font-medium">Çalışma Sistemi:</span>
-              <span className="col-span-2">
-                {personel.calisma_sistemi === "haftalik"
-                  ? "Haftalık"
-                  : personel.calisma_sistemi === "aylik"
-                  ? "Aylık"
-                  : "Belirtilmemiş"}
-              </span>
-            </div>
-            <div className="grid grid-cols-3 items-center">
-              <span className="font-medium">Prim Yüzdesi:</span>
-              <span className="col-span-2">%{personel.prim_yuzdesi || 0}</span>
             </div>
             {personel.iban && (
               <div className="grid grid-cols-3 items-center">

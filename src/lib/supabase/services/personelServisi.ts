@@ -304,8 +304,6 @@ export const personelServisi = {
       
       // Only include fields that we allow to be directly updated
       if (personel.maas !== undefined) updateFields.maas = personel.maas;
-      if (personel.calisma_sistemi !== undefined) updateFields.calisma_sistemi = personel.calisma_sistemi;
-      if (personel.prim_yuzdesi !== undefined) updateFields.prim_yuzdesi = personel.prim_yuzdesi;
       
       const { data, error } = await supabase
         .from('personel')
