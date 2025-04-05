@@ -72,19 +72,18 @@ export function ShopPersonnelCard({ personelListesi, userRole }: ShopPersonnelCa
         )}
 
         {/* Image Preview Dialog */}
-        {previewImage && (
-          <Dialog open={!!previewImage} onOpenChange={handleCloseImagePreview}>
-            <DialogContent className="sm:max-w-md flex items-center justify-center">
-              <div className="relative">
-                <img 
-                  src={previewImage} 
-                  alt="Personel fotoğrafı" 
-                  className="max-h-[80vh] max-w-full object-contain"
-                />
-              </div>
-            </DialogContent>
-          </Dialog>
-        )}
+        <Dialog open={!!previewImage} onOpenChange={handleCloseImagePreview}>
+          <DialogContent className="sm:max-w-md flex items-center justify-center" aria-describedby="dialog-description">
+            <div id="dialog-description" className="sr-only">Personel fotoğrafı önizleme</div>
+            <div className="relative">
+              <img 
+                src={previewImage || ""} 
+                alt="Personel fotoğrafı" 
+                className="max-h-[80vh] max-w-full object-contain"
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );

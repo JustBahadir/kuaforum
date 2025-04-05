@@ -35,7 +35,7 @@ export const personelServisi = {
           try {
             const { data: profileData } = await supabase
               .from('profiles')
-              .select('iban, first_name, last_name, phone, avatar_url, address')
+              .select('iban, first_name, last_name, phone, avatar_url, address, birthdate')
               .eq('id', personel.auth_id)
               .maybeSingle();
               
@@ -69,6 +69,11 @@ export const personelServisi = {
               if (profileData.avatar_url) {
                 personel.avatar_url = profileData.avatar_url;
                 updatedFields.avatar_url = profileData.avatar_url;
+              }
+              
+              if (profileData.birthdate) {
+                personel.birth_date = profileData.birthdate;
+                updatedFields.birth_date = profileData.birthdate;
               }
               
               // Only update if we have changes
@@ -121,12 +126,13 @@ export const personelServisi = {
       let telefon = data.telefon;
       let adres = data.adres;
       let avatar_url = data.avatar_url;
+      let birth_date = data.birth_date;
       
       if (data.auth_id) {
         try {
           const { data: profileData } = await supabase
             .from('profiles')
-            .select('iban, first_name, last_name, phone, avatar_url, address')
+            .select('iban, first_name, last_name, phone, avatar_url, address, birthdate')
             .eq('id', data.auth_id)
             .maybeSingle();
             
@@ -153,6 +159,10 @@ export const personelServisi = {
             
             if (profileData.avatar_url) {
               avatar_url = profileData.avatar_url;
+            }
+            
+            if (profileData.birthdate) {
+              birth_date = profileData.birthdate;
             }
             
             // Update personel record if we got updated data from profile
@@ -184,6 +194,11 @@ export const personelServisi = {
               hasChanges = true;
             }
             
+            if (birth_date && birth_date !== data.birth_date) {
+              updatedFields.birth_date = birth_date;
+              hasChanges = true;
+            }
+            
             if (hasChanges) {
               await supabase
                 .from('personel')
@@ -203,7 +218,8 @@ export const personelServisi = {
         ad_soyad,
         telefon,
         adres,
-        avatar_url
+        avatar_url,
+        birth_date
       };
       
       // Format IBAN for display if it exists

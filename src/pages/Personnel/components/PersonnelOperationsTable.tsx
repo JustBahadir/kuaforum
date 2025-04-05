@@ -43,10 +43,16 @@ export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTab
     queryFn: async () => {
       try {
         console.log(`Fetching operations for personnel ID: ${personnelId}`);
-        const result = await personelIslemleriServisi.personelIslemleriGetir(Number(personnelId));
+        // Direct fetch to avoid join errors
+        const { data, error } = await personelIslemleriServisi.directFetchPersonnelOperations(Number(personnelId));
+        
+        if (error) {
+          console.error('Error fetching personnel operations:', error);
+          throw error;
+        }
         
         // Filter by date range
-        return result.filter(op => {
+        return data.filter((op: any) => {
           if (!op.created_at) return false;
           const opDate = new Date(op.created_at);
           return opDate >= dateRange.from && opDate <= dateRange.to;
@@ -106,8 +112,8 @@ export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTab
       setIsRecovering(true);
       toast.info("Tamamlanan randevular işleniyor...");
       
-      // Force recovery from appointments
-      await personelIslemleriServisi.recoverOperationsFromAppointments(Number(personnelId));
+      // Force recovery from appointments using direct method
+      await personelIslemleriServisi.directRecoverOperations(Number(personnelId));
       
       // Refetch data
       await refetch();
@@ -285,12 +291,10 @@ export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTab
                           {formatDate(operation.created_at)}
                         </TableCell>
                         <TableCell>
-                          {operation.islem?.islem_adi || operation.aciklama || 'Bilinmeyen İşlem'}
+                          {operation.aciklama || 'Bilinmeyen İşlem'}
                         </TableCell>
                         <TableCell>
-                          {operation.aciklama && operation.aciklama.includes('-') 
-                            ? operation.aciklama.split('-')[1]?.split('(')[0]?.trim() 
-                            : 'Bilinmeyen Müşteri'}
+                          {operation.musteri_name || 'Bilinmeyen Müşteri'}
                         </TableCell>
                         <TableCell className="text-right">
                           {formatCurrency(operation.tutar || 0)}

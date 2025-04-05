@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -98,6 +99,7 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComp
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Personel Düzenle</DialogTitle>
+            <DialogDescription>Personel bilgileri yükleniyor, lütfen bekleyin...</DialogDescription>
           </DialogHeader>
           <div className="flex justify-center p-4">
             <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
@@ -113,6 +115,9 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComp
         <form onSubmit={handleUpdate}>
           <DialogHeader>
             <DialogTitle>Personel Düzenle</DialogTitle>
+            <DialogDescription>
+              Personelin maaş bilgisini düzenleyebilirsiniz. Diğer bilgiler personelin kendi profilinden senkronize edilir.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">

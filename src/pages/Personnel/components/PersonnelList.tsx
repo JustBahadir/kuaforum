@@ -46,7 +46,9 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
   const { data: personelListesi = [], isLoading } = useQuery({
     queryKey: ['personel', dukkanId],
     queryFn: () => personelServisi.hepsiniGetir(),
-    enabled: !!dukkanId
+    enabled: !!dukkanId,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true
   });
 
   const deletePersonnelMutation = useMutation({
@@ -69,8 +71,8 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
     }
   };
 
-  const handleDeleteOpen = (personel: Personnel, event: React.MouseEvent) => {
-    event.stopPropagation(); // Prevent opening details when clicking delete
+  const handleDeleteClick = (event: React.MouseEvent, personel: Personnel) => {
+    event.stopPropagation(); // Prevent opening details when clicking delete button
     setSelectedPersonnel(personel);
     setDeleteOpen(true);
   };
@@ -142,7 +144,7 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
                 variant="destructive" 
                 size="sm" 
                 className="self-start"
-                onClick={(e) => handleDeleteOpen(personel, e)}
+                onClick={(e) => handleDeleteClick(e, personel)}
               >
                 <Trash className="w-4 h-4" />
               </Button>

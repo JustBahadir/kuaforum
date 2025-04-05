@@ -48,6 +48,42 @@ export function PersonnelDetailsDialog({
     }
   };
 
+  // Function to handle horizontal swipe for mobile
+  const handleTabSwipe = (direction: 'left' | 'right') => {
+    const tabs = ["details", "operations", "performance"];
+    const currentIndex = tabs.indexOf(activeTab);
+    
+    if (direction === 'left' && currentIndex < tabs.length - 1) {
+      setActiveTab(tabs[currentIndex + 1]);
+    } else if (direction === 'right' && currentIndex > 0) {
+      setActiveTab(tabs[currentIndex - 1]);
+    }
+  };
+
+  // Touch event handling for swipe
+  const touchStartX = React.useRef<number | null>(null);
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+  
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    
+    const touchEndX = e.changedTouches[0].clientX;
+    const diff = touchStartX.current - touchEndX;
+    
+    // Threshold of 50px for swipe
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) {
+        handleTabSwipe('left');
+      } else {
+        handleTabSwipe('right');
+      }
+    }
+    
+    touchStartX.current = null;
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -83,129 +119,127 @@ export function PersonnelDetailsDialog({
           className="w-full"
         >
           <div className="flex justify-center mb-4">
-            <TabsList className="grid grid-cols-3 min-w-[300px]">
+            <TabsList className="grid grid-cols-3 min-w-[350px]">
               <TabsTrigger value="details">Genel Bilgiler</TabsTrigger>
               <TabsTrigger value="operations">İşlem Geçmişi</TabsTrigger>
               <TabsTrigger value="performance">Performans</TabsTrigger>
             </TabsList>
           </div>
           
-          <TabsContent value="details" className="space-y-6">
-            <div className="grid gap-4 text-base">
-              <div className="grid grid-cols-1 sm:grid-cols-3 items-center border-b pb-2">
-                <div className="font-medium flex items-center gap-2">
-                  <User size={18} className="text-purple-600" /> 
-                  Ad Soyad:
+          <div 
+            className="tab-content"
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+          >
+            <TabsContent value="details" className="space-y-6">
+              <div className="grid gap-4 text-base">
+                <div className="grid grid-cols-1 sm:grid-cols-3 items-center border-b pb-2">
+                  <div className="font-medium flex items-center gap-2">
+                    <User size={18} className="text-purple-600" /> 
+                    Ad Soyad:
+                  </div>
+                  <div className="col-span-2">{personel.ad_soyad}</div>
                 </div>
-                <div className="col-span-2">{personel.ad_soyad}</div>
-              </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-3 items-center border-b pb-2">
-                <div className="font-medium flex items-center gap-2">
-                  <Calendar size={18} className="text-purple-600" />
-                  Doğum Tarihi:
+                
+                <div className="grid grid-cols-1 sm:grid-cols-3 items-center border-b pb-2">
+                  <div className="font-medium flex items-center gap-2">
+                    <Calendar size={18} className="text-purple-600" />
+                    Doğum Tarihi:
+                  </div>
+                  <div className="col-span-2">{formatDate(personel.birth_date) || "Belirtilmemiş"}</div>
                 </div>
-                <div className="col-span-2">{formatDate(personel.birth_date) || "Belirtilmemiş"}</div>
-              </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-3 items-center border-b pb-2">
-                <div className="font-medium flex items-center gap-2">
-                  <Phone size={18} className="text-purple-600" />
-                  Telefon:
+                
+                <div className="grid grid-cols-1 sm:grid-cols-3 items-center border-b pb-2">
+                  <div className="font-medium flex items-center gap-2">
+                    <Phone size={18} className="text-purple-600" />
+                    Telefon:
+                  </div>
+                  <div className="col-span-2 flex items-center">
+                    <span className="mr-2">{personel.telefon || "Belirtilmemiş"}</span>
+                    {personel.telefon && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={() => copyToClipboard(personel.telefon, "Telefon numarası")}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
-                <div className="col-span-2 flex items-center">
-                  <span className="mr-2">{personel.telefon || "Belirtilmemiş"}</span>
-                  {personel.telefon && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      onClick={() => copyToClipboard(personel.telefon, "Telefon numarası")}
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                  )}
+                
+                <div className="grid grid-cols-1 sm:grid-cols-3 items-center border-b pb-2">
+                  <div className="font-medium flex items-center gap-2">
+                    <Mail size={18} className="text-purple-600" />
+                    E-posta:
+                  </div>
+                  <div className="col-span-2 flex items-center">
+                    <span className="mr-2">{personel.eposta || "Belirtilmemiş"}</span>
+                  </div>
                 </div>
-              </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-3 items-center border-b pb-2">
-                <div className="font-medium flex items-center gap-2">
-                  <Mail size={18} className="text-purple-600" />
-                  E-posta:
+                
+                <div className="grid grid-cols-1 sm:grid-cols-3 items-center border-b pb-2">
+                  <div className="font-medium flex items-center gap-2">
+                    <Home size={18} className="text-purple-600" />
+                    Adres:
+                  </div>
+                  <div className="col-span-2">{personel.adres || "Belirtilmemiş"}</div>
                 </div>
-                <div className="col-span-2 flex items-center">
-                  <span className="mr-2">{personel.eposta || "Belirtilmemiş"}</span>
-                  {personel.eposta && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      onClick={() => copyToClipboard(personel.eposta, "E-posta")}
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                  )}
+                
+                <div className="grid grid-cols-1 sm:grid-cols-3 items-center border-b pb-2">
+                  <div className="font-medium flex items-center gap-2">
+                    <CreditCard size={18} className="text-purple-600" />
+                    Maaş:
+                  </div>
+                  <div className="col-span-2">
+                    {personel.maas ? 
+                      new Intl.NumberFormat("tr-TR", {
+                        style: "currency",
+                        currency: "TRY",
+                      }).format(personel.maas || 0) 
+                      : "₺0,00"}
+                  </div>
                 </div>
-              </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-3 items-center border-b pb-2">
-                <div className="font-medium flex items-center gap-2">
-                  <Home size={18} className="text-purple-600" />
-                  Adres:
-                </div>
-                <div className="col-span-2">{personel.adres || "Belirtilmemiş"}</div>
-              </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-3 items-center border-b pb-2">
-                <div className="font-medium flex items-center gap-2">
-                  <CreditCard size={18} className="text-purple-600" />
-                  Maaş:
-                </div>
-                <div className="col-span-2">
-                  {personel.maas ? 
-                    new Intl.NumberFormat("tr-TR", {
-                      style: "currency",
-                      currency: "TRY",
-                    }).format(personel.maas || 0) 
-                    : "₺0,00"}
-                </div>
-              </div>
-              
-              {personel.iban && (
+                
                 <div className="grid grid-cols-1 sm:grid-cols-3 items-center border-b pb-2">
                   <div className="font-medium flex items-center gap-2">
                     <CreditCard size={18} className="text-purple-600" />
                     IBAN:
                   </div>
                   <div className="col-span-2 flex items-center">
-                    <span className="mr-2">{profilServisi.formatIBAN(personel.iban)}</span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      onClick={() => copyToClipboard(personel.iban, "IBAN")}
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
+                    <span className="mr-2">
+                      {personel.iban ? profilServisi.formatIBAN(personel.iban) : "Belirtilmemiş"}
+                    </span>
+                    {personel.iban && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={() => copyToClipboard(personel.iban, "IBAN")}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
-              )}
-            </div>
+              </div>
+              
+              <div className="flex justify-end">
+                <Button onClick={() => setEditDialogOpen(true)}>
+                  Düzenle
+                </Button>
+              </div>
+            </TabsContent>
             
-            <div className="flex justify-end">
-              <Button onClick={() => setEditDialogOpen(true)}>
-                Düzenle
-              </Button>
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="operations" className="p-1">
-            <PersonnelOperationsTable personnelId={personel.id} />
-          </TabsContent>
-          
-          <TabsContent value="performance">
-            <PersonnelPerformance personnelId={personel.id} />
-          </TabsContent>
+            <TabsContent value="operations" className="p-1">
+              <PersonnelOperationsTable personnelId={personel.id} />
+            </TabsContent>
+            
+            <TabsContent value="performance">
+              <PersonnelPerformance personnelId={personel.id} />
+            </TabsContent>
+          </div>
         </Tabs>
         
         <DialogFooter>
