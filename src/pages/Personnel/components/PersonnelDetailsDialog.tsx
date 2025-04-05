@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import * as React from "react";
 import {
@@ -170,7 +171,7 @@ export function PersonnelDetailsDialog({
                     <Mail size={18} className="text-purple-600" />
                     E-posta:
                   </div>
-                  <div className="col-span-2 flex items-center">
+                  <div className="col-span-2">
                     <span className="mr-2">{personel.eposta || "Belirtilmemiş"}</span>
                   </div>
                 </div>

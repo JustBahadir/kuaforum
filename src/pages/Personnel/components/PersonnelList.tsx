@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { PersonnelDetailsDialog } from "./PersonnelDetailsDialog";
 import { PersonnelDialog } from "./PersonnelDialog";
-import { Plus, Trash } from "lucide-react";
+import { Plus, Trash, UserMinus } from "lucide-react";
 import { toast } from "sonner";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { LoadingButton } from "@/components/ui/loading-button";
@@ -20,6 +20,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { 
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 interface Personnel {
   id: number;
@@ -40,6 +50,8 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
   const [selectedPersonnel, setSelectedPersonnel] = useState<Personnel | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedPersonnelToDelete, setSelectedPersonnelToDelete] = useState<number | null>(null);
   const { dukkanId } = useCustomerAuth();
   const queryClient = useQueryClient();
 
@@ -71,25 +83,28 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
     }
   };
 
-  const handleDeleteClick = (event: React.MouseEvent, personel: Personnel) => {
-    event.stopPropagation(); // Prevent opening details when clicking delete button
-    setSelectedPersonnel(personel);
-    setDeleteOpen(true);
+  const openDeletePersonnelDialog = () => {
+    setDeleteDialogOpen(true);
   };
 
   const confirmDelete = async () => {
-    if (selectedPersonnel) {
+    if (selectedPersonnelToDelete) {
       setIsDeleting(true);
       try {
-        await deletePersonnelMutation.mutateAsync(selectedPersonnel.id);
+        await deletePersonnelMutation.mutateAsync(selectedPersonnelToDelete);
       } catch (error) {
         console.error("Personel silinirken hata:", error);
       } finally {
         setIsDeleting(false);
         setDeleteOpen(false);
-        setSelectedPersonnel(null);
+        setDeleteDialogOpen(false);
+        setSelectedPersonnelToDelete(null);
       }
     }
+  };
+
+  const handlePersonnelToDeleteChange = (value: string) => {
+    setSelectedPersonnelToDelete(Number(value));
   };
 
   if (isLoading) {
@@ -107,6 +122,10 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
           <h1 className="text-2xl font-semibold">Personel Listesi</h1>
         </div>
         <div className="flex gap-2">
+          <Button variant="destructive" onClick={openDeletePersonnelDialog}>
+            <UserMinus className="w-5 h-5 mr-2" />
+            Personel Sil
+          </Button>
           <Button onClick={() => setOpenDialog(true)}>
             <Plus className="w-5 h-5 mr-2" />
             Personel Ekle
@@ -140,14 +159,6 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
                 <h2 className="text-lg font-semibold">{personel.ad_soyad}</h2>
                 <p className="text-gray-500">{personel.unvan || "Personel"}</p>
               </div>
-              <Button 
-                variant="destructive" 
-                size="sm" 
-                className="self-start"
-                onClick={(e) => handleDeleteClick(e, personel)}
-              >
-                <Trash className="w-4 h-4" />
-              </Button>
             </div>
           </div>
         ))}
@@ -166,10 +177,50 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
         />
       )}
 
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Personel Sil</DialogTitle>
+            <DialogDescription>
+              Silmek istediğiniz personeli seçin. Bu işlem geri alınamaz.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <Select onValueChange={handlePersonnelToDeleteChange}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Personel seç" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectLabel>Personeller</SelectLabel>
+                  {personelListesi.map((personel) => (
+                    <SelectItem key={personel.id} value={personel.id.toString()}>
+                      {personel.ad_soyad}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>İptal</Button>
+            <Button 
+              variant="destructive"
+              onClick={() => selectedPersonnelToDelete ? setDeleteOpen(true) : toast.error("Lütfen bir personel seçin")}
+              disabled={!selectedPersonnelToDelete}
+            >
+              Personeli Sil
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Personeli Sil</AlertDialogTitle>
+            <AlertDialogTitle>Emin misiniz?</AlertDialogTitle>
             <AlertDialogDescription>
               Bu işlemi gerçekleştirmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
             </AlertDialogDescription>
@@ -181,7 +232,7 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
               loading={isDeleting}
               onClick={confirmDelete}
             >
-              Sil
+              Evet, Sil
             </LoadingButton>
           </AlertDialogFooter>
         </AlertDialogContent>
