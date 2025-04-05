@@ -1,3 +1,4 @@
+
 import { PostgrestError } from '@supabase/supabase-js';
 
 export interface Profile {
@@ -71,6 +72,9 @@ export interface PersonelIslemi {
   prim_yuzdesi: number;
   puan: number;
   aciklama: string;
+  notlar?: string;
+  photos?: string[];
+  randevu_id?: number;
   created_at: string;
   islem?: Islem;
   personel?: Personel;

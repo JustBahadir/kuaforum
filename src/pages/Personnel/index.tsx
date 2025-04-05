@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { PersonelIslemi, islemServisi, personelIslemleriServisi, personelServisi } from "@/lib/supabase";
@@ -22,7 +21,6 @@ export default function Personnel() {
     to: new Date()
   });
 
-  // Force refresh user role when component mounts to ensure we have the latest role
   useEffect(() => {
     refreshProfile().catch(console.error);
   }, []);
@@ -31,21 +29,20 @@ export default function Personnel() {
     queryKey: ['islemler'],
     queryFn: islemServisi.hepsiniGetir,
     retry: 1,
-    enabled: userRole === 'admin' // Only fetch if admin
+    enabled: userRole === 'admin'
   });
 
   const { data: personeller = [] } = useQuery({
     queryKey: ['personel'],
     queryFn: () => personelServisi.hepsiniGetir(),
     retry: 1,
-    enabled: userRole === 'admin' // Only fetch if admin
+    enabled: userRole === 'admin'
   });
 
   const { data: islemGecmisi = [], isLoading: islemlerLoading }: UseQueryResult<PersonelIslemi[], Error> = useQuery({
     queryKey: ['personelIslemleri', dateRange.from, dateRange.to],
     queryFn: async () => {
       const data = await personelIslemleriServisi.hepsiniGetir();
-      // Filter by date range
       return data.filter(islem => {
         if (!islem.created_at) return true;
         const islemDate = new Date(islem.created_at);
@@ -53,20 +50,17 @@ export default function Personnel() {
       });
     },
     retry: 1,
-    enabled: userRole === 'admin' // Only fetch if admin
+    enabled: userRole === 'admin'
   });
 
-  // Default personelId for the PersonnelPerformance component
   const [selectedPersonnelId, setSelectedPersonnelId] = useState<number | null>(null);
 
-  // If user is not admin, redirect them to a more appropriate page
   if (userRole === 'staff') {
     return <Navigate to="/shop-home" replace />;
   } else if (userRole === 'customer') {
     return <Navigate to="/customer-dashboard" replace />;
   } 
   
-  // If still loading role, show loading state
   if (!userRole) {
     return (
       <StaffLayout>
@@ -77,7 +71,6 @@ export default function Personnel() {
     );
   }
 
-  // Final check if user is not admin after loading
   if (userRole !== 'admin') {
     return (
       <StaffLayout>
@@ -91,7 +84,6 @@ export default function Personnel() {
     );
   }
 
-  // Get summary statistics for the operations
   const totalRevenue = islemGecmisi.reduce((sum, islem) => sum + (islem.tutar || 0), 0);
   const totalCommission = islemGecmisi.reduce((sum, islem) => sum + (islem.odenen || 0), 0);
   const operationCount = islemGecmisi.length;
@@ -209,7 +201,7 @@ export default function Personnel() {
                 <CardTitle>Personel Performans Çizelgeleri</CardTitle>
               </CardHeader>
               <CardContent>
-                <PersonnelPerformanceReports />
+                <PersonnelPerformanceReports personnelId={selectedPersonnelId || personeller[0]?.id || 1} />
               </CardContent>
             </Card>
           </TabsContent>
