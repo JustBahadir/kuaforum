@@ -35,6 +35,9 @@ interface PersonalData {
   horoscope: string | null;
   horoscope_description: string | null;
   custom_notes: string | null;
+  daily_horoscope_reading: string | null;
+  spouse_name: string | null;
+  spouse_birthdate: string | null;
 }
 
 export function CustomerPersonalInfo({ customerId, customer, editMode }: CustomerPersonalInfoProps) {
@@ -47,7 +50,10 @@ export function CustomerPersonalInfo({ customerId, customer, editMode }: Custome
     children_names: [],
     horoscope: null,
     horoscope_description: null,
-    custom_notes: null
+    custom_notes: null,
+    daily_horoscope_reading: null,
+    spouse_name: null,
+    spouse_birthdate: null
   });
   const [isLoadingHoroscope, setIsLoadingHoroscope] = useState(false);
 
@@ -75,7 +81,10 @@ export function CustomerPersonalInfo({ customerId, customer, editMode }: Custome
         children_names: existingData.children_names || [],
         horoscope: existingData.horoscope,
         horoscope_description: existingData.horoscope_description,
-        custom_notes: existingData.custom_notes
+        custom_notes: existingData.custom_notes,
+        daily_horoscope_reading: existingData.daily_horoscope_reading,
+        spouse_name: existingData.spouse_name,
+        spouse_birthdate: existingData.spouse_birthdate
       });
     }
   }, [existingData]);
@@ -100,6 +109,9 @@ export function CustomerPersonalInfo({ customerId, customer, editMode }: Custome
             horoscope: data.horoscope,
             horoscope_description: data.horoscope_description,
             custom_notes: data.custom_notes,
+            daily_horoscope_reading: data.daily_horoscope_reading,
+            spouse_name: data.spouse_name,
+            spouse_birthdate: data.spouse_birthdate,
             updated_at: new Date().toISOString()
           })
           .eq('id', existingData.id);
@@ -115,7 +127,10 @@ export function CustomerPersonalInfo({ customerId, customer, editMode }: Custome
             children_names: data.children_names,
             horoscope: data.horoscope,
             horoscope_description: data.horoscope_description,
-            custom_notes: data.custom_notes
+            custom_notes: data.custom_notes,
+            daily_horoscope_reading: data.daily_horoscope_reading,
+            spouse_name: data.spouse_name,
+            spouse_birthdate: data.spouse_birthdate
           });
           
         if (error) throw error;
@@ -137,7 +152,7 @@ export function CustomerPersonalInfo({ customerId, customer, editMode }: Custome
     mutation.mutate(personalData);
   };
 
-  const handleDateChange = (field: 'birth_date' | 'anniversary_date', date: Date | undefined) => {
+  const handleDateChange = (field: 'birth_date' | 'anniversary_date' | 'spouse_birthdate', date: Date | undefined) => {
     if (!date) return;
     setPersonalData(prev => ({
       ...prev,
@@ -281,65 +296,111 @@ export function CustomerPersonalInfo({ customerId, customer, editMode }: Custome
         </div>
         
         <div className="space-y-4">
-          <h3 className="text-lg font-medium">Çocuk Bilgileri</h3>
+          <h3 className="text-lg font-medium">Eş Bilgileri</h3>
           
-          {editMode ? (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Input
-                  placeholder="Çocuk ismi ekle"
-                  value={newChild}
-                  onChange={(e) => setNewChild(e.target.value)}
-                  className="flex-1"
-                />
+          <div className="space-y-2">
+            <Label htmlFor="spouseName">Eş Adı</Label>
+            <Input
+              id="spouseName"
+              value={personalData.spouse_name || ""}
+              onChange={(e) => setPersonalData(prev => ({ ...prev, spouse_name: e.target.value }))}
+              placeholder="Eşinin adı"
+              disabled={!editMode}
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="spouseBirthdate">Eş Doğum Tarihi</Label>
+            <Popover>
+              <PopoverTrigger asChild>
                 <Button
-                  type="button"
-                  size="sm"
-                  onClick={addChild}
-                  disabled={!newChild.trim()}
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !personalData.spouse_birthdate && "text-muted-foreground"
+                  )}
+                  disabled={!editMode}
                 >
-                  <PlusCircle className="h-4 w-4 mr-1" />
-                  Ekle
+                  <Calendar className="mr-2 h-4 w-4" />
+                  {personalData.spouse_birthdate ? (
+                    format(new Date(personalData.spouse_birthdate), "dd MMMM yyyy", { locale: tr })
+                  ) : (
+                    <span>Bir tarih seçin</span>
+                  )}
                 </Button>
-              </div>
-              
-              {personalData.children_names.length > 0 ? (
-                <div className="border rounded-md p-2 space-y-2">
-                  {personalData.children_names.map((child, index) => (
-                    <div key={index} className="flex items-center justify-between bg-muted/30 p-2 rounded">
-                      <span>{child}</span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeChild(index)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">Henüz çocuk eklenmemiş.</p>
-              )}
-            </div>
-          ) : (
-            personalData.children_names.length > 0 ? (
-              <div className="border rounded-md p-3">
-                <ul className="space-y-1">
-                  {personalData.children_names.map((child, index) => (
-                    <li key={index} className="text-base">• {child}</li>
-                  ))}
-                </ul>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">Çocuk bilgisi yok.</p>
-            )
-          )}
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <CalendarComponent
+                  mode="single"
+                  selected={personalData.spouse_birthdate ? new Date(personalData.spouse_birthdate) : undefined}
+                  onSelect={(date) => handleDateChange('spouse_birthdate', date)}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
         </div>
       </div>
       
-      <Separator />
+      <div className="space-y-4 mt-6">
+        <h3 className="text-lg font-medium">Çocuk Bilgileri</h3>
+        
+        {editMode ? (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Input
+                placeholder="Çocuk ismi ekle"
+                value={newChild}
+                onChange={(e) => setNewChild(e.target.value)}
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                size="sm"
+                onClick={addChild}
+                disabled={!newChild.trim()}
+              >
+                <PlusCircle className="h-4 w-4 mr-1" />
+                Ekle
+              </Button>
+            </div>
+            
+            {personalData.children_names.length > 0 ? (
+              <div className="border rounded-md p-2 space-y-2">
+                {personalData.children_names.map((child, index) => (
+                  <div key={index} className="flex items-center justify-between bg-muted/30 p-2 rounded">
+                    <span>{child}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeChild(index)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Henüz çocuk eklenmemiş.</p>
+            )}
+          </div>
+        ) : (
+          personalData.children_names.length > 0 ? (
+            <div className="border rounded-md p-3">
+              <ul className="space-y-1">
+                {personalData.children_names.map((child, index) => (
+                  <li key={index} className="text-base">• {child}</li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">Çocuk bilgisi yok.</p>
+          )
+        )}
+      </div>
+      
+      <Separator className="my-6" />
       
       <div className="space-y-4">
         <h3 className="text-lg font-medium">Notlar</h3>

@@ -31,7 +31,7 @@ export const customerOperationsService = {
           randevu_id,
           photos,
           personel(ad_soyad),
-          islem:islemler(islem_adi)
+          islem:islem_id(islem_adi)
         `)
         .eq('musteri_id', customerId)
         .order('created_at', { ascending: false });

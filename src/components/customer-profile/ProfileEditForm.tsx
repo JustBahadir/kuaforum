@@ -85,8 +85,8 @@ export function ProfileEditForm({
   }, [profile.iban]);
 
   const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast.success("Kopyalandı");
+    navigator.clipboard.writeText(text.replace(/\s/g, ''));
+    toast.success("IBAN kopyalandı");
   };
   
   const isAdmin = profile.role === 'admin';
@@ -260,18 +260,20 @@ export function ProfileEditForm({
                 className="flex-1"
                 maxLength={36} // Max length includes spaces (26 chars + 6 spaces)
               />
-              {formattedIBAN && (
-                <Button 
-                  type="button" 
-                  variant="ghost" 
-                  size="icon"
-                  onClick={() => copyToClipboard(formattedIBAN)}
-                  className="ml-2"
-                >
-                  <Copy size={16} />
-                </Button>
-              )}
+              <Button 
+                type="button" 
+                variant="ghost" 
+                size="icon"
+                onClick={() => copyToClipboard(formattedIBAN)}
+                className="ml-2"
+                title="IBAN'ı kopyala"
+              >
+                <Copy size={16} />
+              </Button>
             </div>
+            <p className="text-xs text-gray-500 mt-1">
+              IBAN değeri, boşluklar olmadan kopyalanacaktır.
+            </p>
           </div>
         )}
         

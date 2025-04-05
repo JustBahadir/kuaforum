@@ -1,3 +1,4 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { personelIslemleriServisi, personelServisi } from "@/lib/supabase";
 import {
@@ -29,7 +30,7 @@ export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProp
       try {
         // First try to get the personnel operations
         const result = personnelId 
-          ? await personelIslemleriServisi.personelIslemleriGetir(personnelId)
+          ? await personelIslemleriServisi.personelIslemleriGetirById(personnelId)
           : await personelIslemleriServisi.hepsiniGetir();
           
         console.log("Retrieved operations:", result);
@@ -40,7 +41,7 @@ export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProp
           await personelIslemleriServisi.recoverOperationsFromAppointments(personnelId);
           
           // Fetch again after recovery attempt
-          const recoveredResult = await personelIslemleriServisi.personelIslemleriGetir(personnelId);
+          const recoveredResult = await personelIslemleriServisi.personelIslemleriGetirById(personnelId);
           console.log("Operations after recovery:", recoveredResult);
           return recoveredResult;
         }

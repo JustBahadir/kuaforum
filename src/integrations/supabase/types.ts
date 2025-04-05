@@ -58,6 +58,7 @@ export type Database = {
           created_at: string
           custom_notes: string | null
           customer_id: string | null
+          daily_horoscope_reading: string | null
           horoscope: string | null
           horoscope_description: string | null
           id: number
@@ -70,6 +71,7 @@ export type Database = {
           created_at?: string
           custom_notes?: string | null
           customer_id?: string | null
+          daily_horoscope_reading?: string | null
           horoscope?: string | null
           horoscope_description?: string | null
           id?: number
@@ -82,6 +84,7 @@ export type Database = {
           created_at?: string
           custom_notes?: string | null
           customer_id?: string | null
+          daily_horoscope_reading?: string | null
           horoscope?: string | null
           horoscope_description?: string | null
           id?: number

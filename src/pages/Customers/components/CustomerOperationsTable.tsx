@@ -1,274 +1,243 @@
 
 import { useState } from "react";
+import { format } from "date-fns";
+import { tr } from "date-fns/locale";
 import { formatCurrency } from "@/lib/utils";
+import { useCustomerOperations } from "@/hooks/useCustomerOperations";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Camera, FileImage, Image, Plus, RefreshCcw } from "lucide-react";
 import { toast } from "sonner";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { CustomerOperation, customerOperationsService } from "@/lib/supabase";
-import { Camera, Eye } from "lucide-react";
 import { FileUpload } from "@/components/ui/file-upload";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogFooter 
-} from "@/components/ui/dialog";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { customerOperationsService } from "@/lib/supabase/services/customerOperationsService";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface CustomerOperationsTableProps {
-  operations: CustomerOperation[];
-  isLoading: boolean;
+  customerId: number;
 }
 
-export function CustomerOperationsTable({ operations, isLoading }: CustomerOperationsTableProps) {
-  const [editingNoteId, setEditingNoteId] = useState<number | null>(null);
-  const [noteText, setNoteText] = useState("");
-  const [uploadingForId, setUploadingForId] = useState<number | null>(null);
-  const [viewingPhotosForId, setViewingPhotosForId] = useState<number | null>(null);
+export function CustomerOperationsTable({ customerId }: CustomerOperationsTableProps) {
+  const { 
+    operations, 
+    isLoading, 
+    handleForceRecover, 
+    refetch,
+    totals 
+  } = useCustomerOperations(customerId);
+
+  const [selectedOperation, setSelectedOperation] = useState<any | null>(null);
+  const [notesDialogOpen, setNotesDialogOpen] = useState(false);
+  const [photoDialogOpen, setPhotoDialogOpen] = useState(false);
+  const [notes, setNotes] = useState("");
   const queryClient = useQueryClient();
-  
-  const updateNotesMutation = useMutation({
-    mutationFn: ({ id, notes }: { id: number; notes: string }) => 
-      customerOperationsService.updateOperationNotes(id, notes),
+
+  const updateNotes = useMutation({
+    mutationFn: async ({ id, notes }: { id: number; notes: string }) => {
+      await customerOperationsService.updateOperationNotes(id, notes);
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['customerOperations'] });
-      toast.success("Not başarıyla güncellendi");
-      setEditingNoteId(null);
+      queryClient.invalidateQueries({ queryKey: ['customerOperations', customerId] });
+      toast.success("Notlar kaydedildi");
+      setNotesDialogOpen(false);
     },
     onError: (error) => {
-      toast.error("Not güncellenirken bir hata oluştu");
-      console.error("Note update error:", error);
+      console.error("Error saving notes:", error);
+      toast.error("Notlar kaydedilemedi");
     }
   });
-  
-  const addPhotoMutation = useMutation({
-    mutationFn: ({ id, photoUrl }: { id: number; photoUrl: string }) => 
-      customerOperationsService.addOperationPhoto(id, photoUrl),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['customerOperations'] });
-      toast.success("Fotoğraf başarıyla eklendi");
-      setUploadingForId(null);
-    },
-    onError: (error) => {
-      toast.error("Fotoğraf eklenirken bir hata oluştu");
-      console.error("Photo upload error:", error);
-    }
-  });
-  
-  const handleEditNote = (operation: CustomerOperation) => {
-    setEditingNoteId(operation.id);
-    setNoteText(operation.notes || "");
-  };
-  
-  const handleSaveNote = (id: number) => {
-    updateNotesMutation.mutate({ id, notes: noteText });
-  };
-  
-  const handleCancelEdit = () => {
-    setEditingNoteId(null);
-    setNoteText("");
-  };
-  
-  const handleAddPhoto = (id: number) => {
-    setUploadingForId(id);
-  };
-  
-  const handleViewPhotos = (operation: CustomerOperation) => {
-    if (operation.photos && operation.photos.length > 0) {
-      setViewingPhotosForId(operation.id);
-    } else {
-      toast.info("Bu işlem için fotoğraf bulunmamaktadır");
-    }
-  };
-  
-  const handlePhotoUploaded = (url: string) => {
-    if (uploadingForId) {
-      addPhotoMutation.mutate({ id: uploadingForId, photoUrl: url });
+
+  const handleSaveNotes = () => {
+    if (selectedOperation) {
+      updateNotes.mutate({ id: selectedOperation.id, notes });
     }
   };
 
-  const formatDate = (dateString: string) => {
+  const handleOpenNotesDialog = (operation: any) => {
+    setSelectedOperation(operation);
+    setNotes(operation.notlar || "");
+    setNotesDialogOpen(true);
+  };
+
+  const handleOpenPhotoDialog = (operation: any) => {
+    setSelectedOperation(operation);
+    setPhotoDialogOpen(true);
+  };
+
+  const handlePhotoUpload = async (url: string) => {
+    if (!selectedOperation) return;
+    
     try {
-      return new Date(dateString).toLocaleDateString("tr-TR");
-    } catch (e) {
-      return "Geçersiz tarih";
+      await customerOperationsService.addOperationPhoto(selectedOperation.id, url);
+      toast.success("Fotoğraf başarıyla eklendi");
+      queryClient.invalidateQueries({ queryKey: ['customerOperations', customerId] });
+      setPhotoDialogOpen(false);
+    } catch (error) {
+      console.error("Error adding photo:", error);
+      toast.error("Fotoğraf eklenirken bir hata oluştu");
     }
   };
 
   if (isLoading) {
     return (
-      <div className="flex justify-center p-8">
-        <div className="w-8 h-8 border-4 border-t-blue-600 border-blue-200 rounded-full animate-spin"></div>
+      <div className="flex justify-center items-center py-10">
+        <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
       </div>
     );
   }
 
   if (!operations || operations.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-500">
-        Bu müşteri için henüz işlem kaydı bulunmamaktadır.
+      <div className="bg-white p-6 rounded-lg shadow text-center space-y-4">
+        <h3 className="text-lg font-medium">Müşteri İşlem Geçmişi Bulunamadı</h3>
+        <p className="text-gray-500">Bu müşteriye ait işlem geçmişi bulunmamaktadır.</p>
+        <Button 
+          onClick={() => handleForceRecover()}
+          className="mt-2 flex items-center gap-2"
+        >
+          <RefreshCcw size={16} />
+          İşlemleri Güncelle
+        </Button>
       </div>
     );
   }
 
-  const getOperation = (id: number) => {
-    return operations.find(op => op.id === id);
-  };
-
   return (
-    <div className="overflow-x-auto rounded-md border">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
-          <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tarih</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hizmet</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Personel</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tutar</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Puan</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notlar</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
-          </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
-          {operations.map((operation) => (
-            <tr key={operation.id} className="hover:bg-gray-50">
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                {formatDate(operation.date)}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                {operation.service_name}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                {operation.personnel_name}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                {formatCurrency(operation.amount)}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                {operation.points}
-              </td>
-              <td className="px-6 py-4 text-sm text-gray-900 max-w-xs">
-                {editingNoteId === operation.id ? (
-                  <Textarea
-                    value={noteText}
-                    onChange={(e) => setNoteText(e.target.value)}
-                    className="min-h-[100px]"
-                    placeholder="Müşteri hakkında notlar..."
-                  />
-                ) : (
-                  <div className="whitespace-pre-wrap">{operation.notes || "-"}</div>
-                )}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {editingNoteId === operation.id ? (
-                  <div className="flex space-x-2">
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={() => handleSaveNote(operation.id)}
-                      disabled={updateNotesMutation.isPending}
-                    >
-                      Kaydet
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleCancelEdit}
-                    >
-                      İptal
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="flex space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEditNote(operation)}
-                    >
-                      Notu Düzenle
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleAddPhoto(operation.id)}
-                      title="Fotoğraf Ekle"
-                    >
-                      <Camera className="h-4 w-4" />
-                    </Button>
-                    {operation.photos && operation.photos.length > 0 && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleViewPhotos(operation)}
-                        title="Fotoğrafları Görüntüle"
-                      >
-                        <Eye className="h-4 w-4" />
-                        <span className="ml-1">{operation.photos.length}</span>
-                      </Button>
-                    )}
-                  </div>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      
-      {/* Photo Upload Dialog */}
-      <Dialog open={uploadingForId !== null} onOpenChange={(open) => !open && setUploadingForId(null)}>
-        <DialogContent className="sm:max-w-md">
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-medium">İşlem Geçmişi</h3>
+        <Button 
+          onClick={() => handleForceRecover()}
+          variant="outline"
+          size="sm"
+          className="flex items-center gap-1"
+        >
+          <RefreshCcw size={14} />
+          Yenile
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="bg-gray-50 p-4 rounded-lg shadow-sm">
+          <div className="text-sm text-gray-500">Toplam İşlem Tutarı</div>
+          <div className="text-xl font-bold mt-1">{formatCurrency(totals.totalAmount)}</div>
+        </div>
+        <div className="bg-gray-50 p-4 rounded-lg shadow-sm">
+          <div className="text-sm text-gray-500">Toplam Ödenen</div>
+          <div className="text-xl font-bold mt-1 text-green-700">{formatCurrency(totals.totalPaid)}</div>
+        </div>
+        <div className="bg-gray-50 p-4 rounded-lg shadow-sm">
+          <div className="text-sm text-gray-500">Toplam Puan</div>
+          <div className="text-xl font-bold mt-1 text-purple-700">{totals.totalPoints}</div>
+        </div>
+      </div>
+
+      <div className="overflow-x-auto bg-white rounded-lg border border-gray-200 shadow-sm">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Tarih</TableHead>
+              <TableHead>İşlem</TableHead>
+              <TableHead>Personel</TableHead>
+              <TableHead>Tutar</TableHead>
+              <TableHead>Puan</TableHead>
+              <TableHead className="text-right">İşlemler</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {operations.map((operation) => (
+              <TableRow key={operation.id} className="hover:bg-gray-50">
+                <TableCell>
+                  {operation.created_at && format(new Date(operation.created_at), 'dd MMM yyyy', { locale: tr })}
+                </TableCell>
+                <TableCell>
+                  {operation.islem?.islem_adi || operation.aciklama || 'Belirtilmemiş'}
+                </TableCell>
+                <TableCell>
+                  {operation.personel?.ad_soyad || 'Belirtilmemiş'}
+                </TableCell>
+                <TableCell>{formatCurrency(operation.tutar || 0)}</TableCell>
+                <TableCell>{operation.puan || 0}</TableCell>
+                <TableCell className="text-right space-x-1">
+                  <Button
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => handleOpenNotesDialog(operation)}
+                    title="Not ekle"
+                  >
+                    Not
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleOpenPhotoDialog(operation)}
+                    title="Fotoğraf ekle"
+                    className="text-purple-700"
+                  >
+                    <Plus size={16} className="mr-1" />
+                    Fotoğraf
+                  </Button>
+                  {operation.photos && operation.photos.length > 0 && (
+                    <span className="inline-block bg-gray-100 text-xs rounded-full px-2 py-0.5 ml-2">
+                      {operation.photos.length} foto
+                    </span>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      <Dialog open={notesDialogOpen} onOpenChange={setNotesDialogOpen}>
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle>Fotoğraf Ekle</DialogTitle>
+            <DialogTitle>İşlem Notu</DialogTitle>
           </DialogHeader>
-          
-          <FileUpload 
-            onUploadComplete={handlePhotoUploaded}
-            label="İşlem Fotoğrafı Yükle"
-            bucketName="operation_photos"
-            folderPath="customer_operations"
-            acceptedFileTypes="image/*"
-            maxFileSize={5 * 1024 * 1024}
-          />
-          
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setUploadingForId(null)}
-            >
-              İptal
-            </Button>
-          </DialogFooter>
+          <div className="space-y-4 mt-2">
+            <Textarea 
+              value={notes} 
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="İşlem ile ilgili notlar..."
+              className="h-36"
+            />
+            <div className="flex justify-end">
+              <Button 
+                onClick={handleSaveNotes}
+                disabled={updateNotes.isPending}
+              >
+                {updateNotes.isPending ? "Kaydediliyor..." : "Kaydet"}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
-      
-      {/* Photo Viewing Dialog */}
-      <Dialog open={viewingPhotosForId !== null} onOpenChange={(open) => !open && setViewingPhotosForId(null)}>
-        <DialogContent className="sm:max-w-3xl">
+
+      <Dialog open={photoDialogOpen} onOpenChange={setPhotoDialogOpen}>
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle>İşlem Fotoğrafları</DialogTitle>
+            <DialogTitle>İşlem Fotoğrafı Ekle</DialogTitle>
           </DialogHeader>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-4">
-            {viewingPhotosForId && getOperation(viewingPhotosForId)?.photos?.map((photo, index) => (
-              <div key={index} className="rounded-md overflow-hidden border border-gray-200">
-                <img 
-                  src={photo} 
-                  alt={`İşlem fotoğrafı ${index + 1}`}
-                  className="w-full h-[200px] object-cover"
-                />
-              </div>
-            ))}
+          <div className="space-y-4 mt-2">
+            <FileUpload 
+              onUploadComplete={handlePhotoUpload}
+              bucketName="photos"
+              folderPath="operations"
+              label="Fotoğraf Yükle"
+              maxFileSize={10 * 1024 * 1024} // 10MB
+            />
+            <div className="text-xs text-gray-500 mt-2">
+              Maksimum 10MB boyutunda dosya yükleyebilirsiniz.
+            </div>
           </div>
-          
-          <DialogFooter>
-            <Button
-              variant="default"
-              onClick={() => setViewingPhotosForId(null)}
-            >
-              Kapat
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
