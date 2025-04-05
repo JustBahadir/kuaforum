@@ -9,13 +9,15 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Copy, User } from "lucide-react";
+import { Copy, User, Calendar, Phone, Mail, Home, CreditCard } from "lucide-react";
 import { toast } from "sonner";
 import { profilServisi } from "@/lib/supabase";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PersonnelHistoryTable } from "./PersonnelHistoryTable";
 import { PersonnelPerformance } from "./PersonnelPerformance";
 import { PersonnelEditDialog } from "./PersonnelEditDialog";
+import { PersonnelOperationsTable } from "./PersonnelOperationsTable";
+import { format } from "date-fns";
 
 interface PersonnelDetailsDialogProps {
   personel: any;
@@ -31,85 +33,157 @@ export function PersonnelDetailsDialog({
   const [activeTab, setActiveTab] = useState("details");
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   
-  // Copy IBAN to clipboard
-  const copyToClipboard = (text: string) => {
+  // Copy text to clipboard
+  const copyToClipboard = (text: string, type: string) => {
     navigator.clipboard.writeText(text);
-    toast.success("IBAN kopyalandı");
+    toast.success(`${type} kopyalandı`);
+  };
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "Belirtilmemiş";
+    try {
+      return format(new Date(dateString), "dd.MM.yyyy");
+    } catch {
+      return "Geçersiz tarih";
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Personel Detayları</DialogTitle>
         </DialogHeader>
         
-        <Tabs defaultValue="details" value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="mb-4">
-            <TabsTrigger value="details">Genel Bilgiler</TabsTrigger>
-            <TabsTrigger value="operations">İşlem Geçmişi</TabsTrigger>
-            <TabsTrigger value="performance">Performans</TabsTrigger>
-          </TabsList>
+        <div className="flex flex-col items-center mb-4">
+          <Avatar className="h-24 w-24 mb-3">
+            {personel.avatar_url ? (
+              <AvatarImage src={personel.avatar_url} alt={personel.ad_soyad} />
+            ) : (
+              <AvatarFallback className="text-lg bg-purple-100 text-purple-800">
+                {personel.ad_soyad
+                  .split(' ')
+                  .map((name: string) => name[0])
+                  .join('')
+                  .substring(0, 2)
+                  .toUpperCase()}
+              </AvatarFallback>
+            )}
+          </Avatar>
+          <h2 className="text-xl font-bold">{personel.ad_soyad}</h2>
+          <div className="badge bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs mt-1">
+            {personel.unvan || "Personel"}
+          </div>
+        </div>
+        
+        <Tabs 
+          defaultValue="details" 
+          value={activeTab} 
+          onValueChange={setActiveTab} 
+          className="w-full"
+        >
+          <div className="flex justify-center mb-4">
+            <TabsList className="grid grid-cols-3 min-w-[300px]">
+              <TabsTrigger value="details">Genel Bilgiler</TabsTrigger>
+              <TabsTrigger value="operations">İşlem Geçmişi</TabsTrigger>
+              <TabsTrigger value="performance">Performans</TabsTrigger>
+            </TabsList>
+          </div>
           
           <TabsContent value="details" className="space-y-6">
-            <div className="flex flex-col items-center space-y-2">
-              <Avatar className="h-24 w-24">
-                {personel.avatar_url ? (
-                  <AvatarImage src={personel.avatar_url} alt={personel.ad_soyad} />
-                ) : (
-                  <AvatarFallback className="text-lg bg-purple-100 text-purple-800">
-                    {personel.ad_soyad
-                      .split(' ')
-                      .map((name: string) => name[0])
-                      .join('')
-                      .substring(0, 2)
-                      .toUpperCase()}
-                  </AvatarFallback>
-                )}
-              </Avatar>
-              <h2 className="text-xl font-bold">{personel.ad_soyad}</h2>
-              <div className="badge bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs">
-                {personel.unvan || "Personel"}
+            <div className="grid gap-4 text-base">
+              <div className="grid grid-cols-1 sm:grid-cols-3 items-center border-b pb-2">
+                <div className="font-medium flex items-center gap-2">
+                  <User size={18} className="text-purple-600" /> 
+                  Ad Soyad:
+                </div>
+                <div className="col-span-2">{personel.ad_soyad}</div>
               </div>
-            </div>
-
-            <div className="grid gap-4">
-              <div className="grid grid-cols-3 items-center">
-                <span className="font-medium">Ad Soyad:</span>
-                <span className="col-span-2">{personel.ad_soyad}</span>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-3 items-center border-b pb-2">
+                <div className="font-medium flex items-center gap-2">
+                  <Calendar size={18} className="text-purple-600" />
+                  Doğum Tarihi:
+                </div>
+                <div className="col-span-2">{formatDate(personel.birth_date) || "Belirtilmemiş"}</div>
               </div>
-              <div className="grid grid-cols-3 items-center">
-                <span className="font-medium">Telefon:</span>
-                <span className="col-span-2">{personel.telefon || "Belirtilmemiş"}</span>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-3 items-center border-b pb-2">
+                <div className="font-medium flex items-center gap-2">
+                  <Phone size={18} className="text-purple-600" />
+                  Telefon:
+                </div>
+                <div className="col-span-2 flex items-center">
+                  <span className="mr-2">{personel.telefon || "Belirtilmemiş"}</span>
+                  {personel.telefon && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={() => copyToClipboard(personel.telefon, "Telefon numarası")}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
               </div>
-              <div className="grid grid-cols-3 items-center">
-                <span className="font-medium">E-posta:</span>
-                <span className="col-span-2">{personel.eposta || "Belirtilmemiş"}</span>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-3 items-center border-b pb-2">
+                <div className="font-medium flex items-center gap-2">
+                  <Mail size={18} className="text-purple-600" />
+                  E-posta:
+                </div>
+                <div className="col-span-2 flex items-center">
+                  <span className="mr-2">{personel.eposta || "Belirtilmemiş"}</span>
+                  {personel.eposta && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={() => copyToClipboard(personel.eposta, "E-posta")}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
               </div>
-              <div className="grid grid-cols-3 items-center">
-                <span className="font-medium">Adres:</span>
-                <span className="col-span-2">{personel.adres || "Belirtilmemiş"}</span>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-3 items-center border-b pb-2">
+                <div className="font-medium flex items-center gap-2">
+                  <Home size={18} className="text-purple-600" />
+                  Adres:
+                </div>
+                <div className="col-span-2">{personel.adres || "Belirtilmemiş"}</div>
               </div>
-              <div className="grid grid-cols-3 items-center">
-                <span className="font-medium">Maaş:</span>
-                <span className="col-span-2">
+              
+              <div className="grid grid-cols-1 sm:grid-cols-3 items-center border-b pb-2">
+                <div className="font-medium flex items-center gap-2">
+                  <CreditCard size={18} className="text-purple-600" />
+                  Maaş:
+                </div>
+                <div className="col-span-2">
                   {personel.maas ? 
                     new Intl.NumberFormat("tr-TR", {
                       style: "currency",
                       currency: "TRY",
                     }).format(personel.maas || 0) 
                     : "₺0,00"}
-                </span>
+                </div>
               </div>
+              
               {personel.iban && (
-                <div className="grid grid-cols-3 items-center">
-                  <span className="font-medium">IBAN:</span>
+                <div className="grid grid-cols-1 sm:grid-cols-3 items-center border-b pb-2">
+                  <div className="font-medium flex items-center gap-2">
+                    <CreditCard size={18} className="text-purple-600" />
+                    IBAN:
+                  </div>
                   <div className="col-span-2 flex items-center">
                     <span className="mr-2">{profilServisi.formatIBAN(personel.iban)}</span>
                     <Button
                       variant="ghost"
-                      size="icon"
-                      onClick={() => copyToClipboard(personel.iban)}
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={() => copyToClipboard(personel.iban, "IBAN")}
                     >
                       <Copy className="h-4 w-4" />
                     </Button>
@@ -125,8 +199,8 @@ export function PersonnelDetailsDialog({
             </div>
           </TabsContent>
           
-          <TabsContent value="operations">
-            <PersonnelHistoryTable personnelId={personel.id} />
+          <TabsContent value="operations" className="p-1">
+            <PersonnelOperationsTable personnelId={personel.id} />
           </TabsContent>
           
           <TabsContent value="performance">
@@ -135,7 +209,7 @@ export function PersonnelDetailsDialog({
         </Tabs>
         
         <DialogFooter>
-          <Button variant="secondary" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
             Kapat
           </Button>
         </DialogFooter>

@@ -64,6 +64,7 @@ export function ShopPersonnelCard({ personelListesi, userRole }: ShopPersonnelCa
                 </Avatar>
                 <div>
                   <h3 className="font-medium">{personel.ad_soyad}</h3>
+                  <p className="text-sm text-gray-500">{personel.unvan || "Personel"}</p>
                 </div>
               </div>
             ))}

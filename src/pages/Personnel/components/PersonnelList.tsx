@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { PersonnelDetailsDialog } from "./PersonnelDetailsDialog";
 import { PersonnelDialog } from "./PersonnelDialog";
-import { Trash, Eye, Plus } from "lucide-react";
+import { Plus, Trash } from "lucide-react";
 import { toast } from "sonner";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { LoadingButton } from "@/components/ui/loading-button";
@@ -69,7 +69,8 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
     }
   };
 
-  const handleDeleteOpen = (personel: Personnel) => {
+  const handleDeleteOpen = (personel: Personnel, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent opening details when clicking delete
     setSelectedPersonnel(personel);
     setDeleteOpen(true);
   };
@@ -89,10 +90,6 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
     }
   };
 
-  const handlePersonnelAdded = () => {
-    queryClient.invalidateQueries({ queryKey: ['personel'] });
-  };
-
   if (isLoading) {
     return (
       <div className="flex justify-center items-center p-8">
@@ -103,13 +100,13 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
 
   return (
     <div>
-      <div className="md:flex md:items-center md:justify-between">
+      <div className="md:flex md:items-center md:justify-between mb-6">
         <div className="mb-4 md:mb-0">
           <h1 className="text-2xl font-semibold">Personel Listesi</h1>
         </div>
-        <div>
+        <div className="flex gap-2">
           <Button onClick={() => setOpenDialog(true)}>
-            <Plus className="w-4 h-4 mr-2" />
+            <Plus className="w-5 h-5 mr-2" />
             Personel Ekle
           </Button>
         </div>
@@ -117,13 +114,17 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
         {personelListesi.map((personel) => (
-          <div key={personel.id} className="bg-white rounded-lg shadow-md p-4">
+          <div 
+            key={personel.id} 
+            className="bg-white rounded-lg shadow-md p-5 cursor-pointer hover:bg-gray-50 transition-colors duration-200"
+            onClick={() => handleDetailsOpen(personel)}
+          >
             <div className="flex items-center space-x-4">
-              <Avatar className="h-12 w-12">
+              <Avatar className="h-16 w-16">
                 {personel.avatar_url ? (
                   <AvatarImage src={personel.avatar_url} alt={personel.ad_soyad} />
                 ) : (
-                  <AvatarFallback className="bg-purple-100 text-purple-800">
+                  <AvatarFallback className="bg-purple-100 text-purple-800 text-lg">
                     {personel.ad_soyad
                       .split(' ')
                       .map((name: string) => name[0])
@@ -133,16 +134,16 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
                   </AvatarFallback>
                 )}
               </Avatar>
-              <div>
+              <div className="flex-grow">
                 <h2 className="text-lg font-semibold">{personel.ad_soyad}</h2>
                 <p className="text-gray-500">{personel.unvan || "Personel"}</p>
               </div>
-            </div>
-            <div className="mt-4 flex justify-end space-x-2">
-              <Button variant="outline" size="icon" onClick={() => handleDetailsOpen(personel)}>
-                <Eye className="w-4 h-4" />
-              </Button>
-              <Button variant="destructive" size="icon" onClick={() => handleDeleteOpen(personel)}>
+              <Button 
+                variant="destructive" 
+                size="sm" 
+                className="self-start"
+                onClick={(e) => handleDeleteOpen(personel, e)}
+              >
                 <Trash className="w-4 h-4" />
               </Button>
             </div>
