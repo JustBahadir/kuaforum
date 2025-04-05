@@ -3,6 +3,7 @@ import React from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { format } from "date-fns";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { MapPin } from "lucide-react";
 
 export interface ProfileDisplayProps {
   firstName: string;
@@ -12,6 +13,8 @@ export interface ProfileDisplayProps {
   gender?: "erkek" | "kadın" | null;
   birthdate?: string;
   avatarUrl?: string;
+  address?: string;
+  iban?: string;
 }
 
 export function ProfileDisplay({ 
@@ -21,7 +24,9 @@ export function ProfileDisplay({
   phone, 
   gender, 
   birthdate,
-  avatarUrl
+  avatarUrl,
+  address,
+  iban
 }: ProfileDisplayProps) {
   
   // Format gender for display
@@ -87,7 +92,29 @@ export function ProfileDisplay({
             <p className="text-sm font-medium text-gray-500">DOĞUM TARİHİ</p>
             <p>{formatBirthdate(birthdate)}</p>
           </div>
+          <div className="flex-1 space-y-1 mt-4 md:mt-0">
+            <p className="text-sm font-medium text-gray-500">ADRES</p>
+            <p className="flex items-center gap-1">
+              {address ? (
+                <>
+                  <MapPin size={14} className="text-gray-400" />
+                  {address}
+                </>
+              ) : (
+                "Belirtilmemiş"
+              )}
+            </p>
+          </div>
         </div>
+        
+        {iban && (
+          <div className="flex flex-col">
+            <div className="flex-1 space-y-1">
+              <p className="text-sm font-medium text-gray-500">IBAN</p>
+              <p className="font-mono text-sm bg-gray-50 p-2 rounded">{iban}</p>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

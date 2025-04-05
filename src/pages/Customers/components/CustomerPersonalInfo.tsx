@@ -3,7 +3,6 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Calendar, PlusCircle, X } from "lucide-react";
@@ -99,6 +98,8 @@ export function CustomerPersonalInfo({ customerId, customer, editMode }: Custome
   // Update or create personal data
   const mutation = useMutation({
     mutationFn: async (data: PersonalData) => {
+      console.log("Saving customer personal data:", data);
+      
       if (existingData) {
         const { error } = await supabase
           .from('customer_personal_data')
@@ -116,7 +117,10 @@ export function CustomerPersonalInfo({ customerId, customer, editMode }: Custome
           })
           .eq('id', existingData.id);
           
-        if (error) throw error;
+        if (error) {
+          console.error("Error updating customer personal data:", error);
+          throw error;
+        }
       } else {
         const { error } = await supabase
           .from('customer_personal_data')
@@ -133,7 +137,10 @@ export function CustomerPersonalInfo({ customerId, customer, editMode }: Custome
             spouse_birthdate: data.spouse_birthdate
           });
           
-        if (error) throw error;
+        if (error) {
+          console.error("Error inserting customer personal data:", error);
+          throw error;
+        }
       }
     },
     onSuccess: () => {
@@ -149,6 +156,7 @@ export function CustomerPersonalInfo({ customerId, customer, editMode }: Custome
   });
 
   const handleSave = () => {
+    console.log("Saving customer data:", personalData);
     mutation.mutate(personalData);
   };
 
@@ -426,5 +434,14 @@ export function CustomerPersonalInfo({ customerId, customer, editMode }: Custome
         </div>
       )}
     </div>
+  );
+}
+
+// Helper Label component since it's not imported
+function Label({ htmlFor, children, className }: { htmlFor?: string, children: React.ReactNode, className?: string }) {
+  return (
+    <label htmlFor={htmlFor} className={cn("text-sm font-medium text-gray-700", className)}>
+      {children}
+    </label>
   );
 }

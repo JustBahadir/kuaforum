@@ -62,6 +62,8 @@ export type Database = {
           horoscope: string | null
           horoscope_description: string | null
           id: number
+          spouse_birthdate: string | null
+          spouse_name: string | null
           updated_at: string
         }
         Insert: {
@@ -75,6 +77,8 @@ export type Database = {
           horoscope?: string | null
           horoscope_description?: string | null
           id?: number
+          spouse_birthdate?: string | null
+          spouse_name?: string | null
           updated_at?: string
         }
         Update: {
@@ -88,6 +92,8 @@ export type Database = {
           horoscope?: string | null
           horoscope_description?: string | null
           id?: number
+          spouse_birthdate?: string | null
+          spouse_name?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -332,10 +338,13 @@ export type Database = {
           ad_soyad: string
           adres: string
           auth_id: string | null
+          avatar_url: string | null
+          birth_date: string | null
           calisma_sistemi: string
           created_at: string
           dukkan_id: number | null
           eposta: string
+          iban: string | null
           id: number
           maas: number
           personel_no: string
@@ -346,10 +355,13 @@ export type Database = {
           ad_soyad: string
           adres: string
           auth_id?: string | null
+          avatar_url?: string | null
+          birth_date?: string | null
           calisma_sistemi: string
           created_at?: string
           dukkan_id?: number | null
           eposta: string
+          iban?: string | null
           id?: number
           maas: number
           personel_no: string
@@ -360,10 +372,13 @@ export type Database = {
           ad_soyad?: string
           adres?: string
           auth_id?: string | null
+          avatar_url?: string | null
+          birth_date?: string | null
           calisma_sistemi?: string
           created_at?: string
           dukkan_id?: number | null
           eposta?: string
+          iban?: string | null
           id?: number
           maas?: number
           personel_no?: string
@@ -428,6 +443,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_personel_islemleri_musteri"
+            columns: ["musteri_id"]
+            isOneToOne: false
+            referencedRelation: "musteriler"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "personel_islemleri_islem_id_fkey"
             columns: ["islem_id"]
             isOneToOne: false
@@ -452,33 +474,42 @@ export type Database = {
       }
       profiles: {
         Row: {
+          address: string | null
+          avatar_url: string | null
           birthdate: string | null
           created_at: string
           dukkan_id: number | null
           first_name: string | null
           gender: string | null
+          iban: string | null
           id: string
           last_name: string | null
           phone: string | null
           role: Database["public"]["Enums"]["user_role"] | null
         }
         Insert: {
+          address?: string | null
+          avatar_url?: string | null
           birthdate?: string | null
           created_at?: string
           dukkan_id?: number | null
           first_name?: string | null
           gender?: string | null
+          iban?: string | null
           id: string
           last_name?: string | null
           phone?: string | null
           role?: Database["public"]["Enums"]["user_role"] | null
         }
         Update: {
+          address?: string | null
+          avatar_url?: string | null
           birthdate?: string | null
           created_at?: string
           dukkan_id?: number | null
           first_name?: string | null
           gender?: string | null
+          iban?: string | null
           id?: string
           last_name?: string | null
           phone?: string | null

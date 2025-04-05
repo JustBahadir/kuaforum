@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { User, Phone, Mail, Calendar, Copy, Camera } from "lucide-react";
+import { User, Phone, Mail, Calendar, Copy, Camera, MapPin } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -31,6 +31,7 @@ export interface ProfileEditFormProps {
     birthdate: string;
     avatarUrl?: string;
     iban?: string;
+    address?: string;
     role?: string;
   };
   handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
@@ -206,6 +207,20 @@ export function ProfileEditForm({
             onChange={handleChange}
             placeholder="05XX XXX XX XX"
             maxLength={14}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="address" className="flex items-center gap-2">
+            <MapPin size={16} />
+            Adres
+          </Label>
+          <Input
+            id="address"
+            name="address"
+            value={profile.address || ""}
+            onChange={handleChange}
+            placeholder="Adres bilgileriniz"
           />
         </div>
         

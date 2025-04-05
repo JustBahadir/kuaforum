@@ -58,7 +58,7 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
   const groupByMonth = (operations: any[]) => {
     const months: Record<string, any> = {};
     
-    operations.forEach(op => {
+    operations.forEach((op) => {
       if (!op.created_at) return;
       
       const date = new Date(op.created_at);
@@ -85,7 +85,7 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
   const groupByServiceType = (operations: any[]) => {
     const services: Record<string, any> = {};
     
-    operations.forEach(op => {
+    operations.forEach((op) => {
       const serviceName = op.islem?.islem_adi || op.aciklama || 'Bilinmeyen';
       
       if (!services[serviceName]) {
@@ -101,22 +101,18 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
       services[serviceName].count += 1;
     });
     
-    return Object.values(services)
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 5);  // Top 5
+    return Object.values(services).sort((a, b) => b.value - a.value).slice(0, 5); // Top 5
   };
 
   const groupByCustomer = (operations: any[]) => {
     const customers: Record<string, any> = {};
     
-    operations.forEach(op => {
+    operations.forEach((op) => {
       // Check if musteri_id and musteri exists
       if (!op.musteri_id || !op.musteri) return;
       
       const customerId = op.musteri_id.toString();
-      const customerName = op.musteri ? 
-        `${op.musteri.first_name} ${op.musteri.last_name || ''}` : 
-        `Müşteri ${customerId}`;
+      const customerName = op.musteri ? `${op.musteri.first_name} ${op.musteri.last_name || ''}` : `Müşteri ${customerId}`;
       
       if (!customers[customerId]) {
         customers[customerId] = {
@@ -131,12 +127,10 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
       customers[customerId].count += 1;
     });
     
-    return Object.values(customers)
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 5);  // Top 5
+    return Object.values(customers).sort((a, b) => b.value - a.value).slice(0, 5); // Top 5
   };
 
-  const getMonthName = (monthIndex: number): string => {
+  const getMonthName = (monthIndex: number) => {
     const months = [
       'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
       'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
@@ -211,15 +205,11 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
               }
             ]}
             animate={true}
-            valueFormat={value => 
-              String(value).includes('.') ? 
-              formatCurrency(value) : 
-              String(value)
-            }
+            valueFormat={(value) => String(value).includes('.') ? formatCurrency(value) : String(value)}
           />
         </CardContent>
       </Card>
-
+      
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
