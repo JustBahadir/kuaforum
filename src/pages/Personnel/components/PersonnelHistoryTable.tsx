@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { personelIslemleriServisi, personelServisi } from "@/lib/supabase";
 import {
@@ -191,7 +190,11 @@ export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProp
                   {new Date(islem.created_at!).toLocaleDateString('tr-TR')}
                 </TableCell>
                 <TableCell>{islem.islem?.islem_adi || islem.aciklama}</TableCell>
-                <TableCell>{islem.musteri?.first_name + ' ' + (islem.musteri?.last_name || '')}</TableCell>
+                <TableCell>
+                  {islem.musteri 
+                    ? `${islem.musteri.first_name} ${islem.musteri.last_name || ''}` 
+                    : ''}
+                </TableCell>
                 <TableCell>{formatCurrency(islem.tutar || 0)}</TableCell>
                 <TableCell>%{islem.prim_yuzdesi}</TableCell>
                 <TableCell>{formatCurrency(islem.odenen || 0)}</TableCell>

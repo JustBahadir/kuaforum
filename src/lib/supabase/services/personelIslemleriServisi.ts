@@ -1,4 +1,3 @@
-
 import { supabase } from '../client';
 import { PersonelIslemi } from '../types';
 
@@ -10,6 +9,7 @@ export const personelIslemleriServisi = {
         .select(`
           *,
           personel:personel_id(*),
+          musteri:musteri_id(*),
           islem:islem_id(*)
         `)
         .order('created_at', { ascending: false });
@@ -34,7 +34,7 @@ export const personelIslemleriServisi = {
         .from('personel_islemleri')
         .select(`
           *,
-          musteri:musteri_id(first_name, last_name),
+          musteri:musteri_id(*),
           islem:islem_id(*)
         `)
         .eq('personel_id', personel_id)
@@ -68,6 +68,7 @@ export const personelIslemleriServisi = {
         .select(`
           *,
           personel:personel_id(*),
+          musteri:musteri_id(*),
           islem:islem_id(*)
         `)
         .eq('musteri_id', musteri_id)
