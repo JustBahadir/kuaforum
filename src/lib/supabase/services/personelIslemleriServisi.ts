@@ -94,21 +94,6 @@ export const personelIslemleriServisi = {
     return data || [];
   },
 
-  async personelIslemleriGetir(personel_id: number) {
-    const { data, error } = await supabase
-      .from('personel_islemleri')
-      .select('*, personel:personel_id(*), islem:islem_id(*), musteri:musteri_id(*)')
-      .eq('personel_id', personel_id)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error(`${personel_id} ID'li personel işlemleri alınırken hata:`, error);
-      throw error;
-    }
-
-    return data || [];
-  },
-
   async musteriIslemleriGetir(musteri_id: number) {
     const { data, error } = await supabase
       .from('personel_islemleri')

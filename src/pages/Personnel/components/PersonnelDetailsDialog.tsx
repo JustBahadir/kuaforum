@@ -1,5 +1,5 @@
-
 import { useState } from "react";
+import * as React from "react";
 import {
   Dialog,
   DialogContent,
@@ -33,7 +33,6 @@ export function PersonnelDetailsDialog({
   const [activeTab, setActiveTab] = useState("details");
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   
-  // Copy text to clipboard
   const copyToClipboard = (text: string, type: string) => {
     navigator.clipboard.writeText(text);
     toast.success(`${type} kopyalandı`);
@@ -48,7 +47,6 @@ export function PersonnelDetailsDialog({
     }
   };
 
-  // Function to handle horizontal swipe for mobile
   const handleTabSwipe = (direction: 'left' | 'right') => {
     const tabs = ["details", "operations", "performance"];
     const currentIndex = tabs.indexOf(activeTab);
@@ -60,7 +58,6 @@ export function PersonnelDetailsDialog({
     }
   };
 
-  // Touch event handling for swipe
   const touchStartX = React.useRef<number | null>(null);
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
@@ -72,7 +69,6 @@ export function PersonnelDetailsDialog({
     const touchEndX = e.changedTouches[0].clientX;
     const diff = touchStartX.current - touchEndX;
     
-    // Threshold of 50px for swipe
     if (Math.abs(diff) > 50) {
       if (diff > 0) {
         handleTabSwipe('left');
