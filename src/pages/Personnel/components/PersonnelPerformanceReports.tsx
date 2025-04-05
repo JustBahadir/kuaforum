@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { personelServisi, personelIslemleriServisi } from "@/lib/supabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -59,8 +58,13 @@ export function PersonnelPerformanceReports() {
   // Customer count by personnel
   const customerCountByPersonnel = personeller.map(personel => {
     const personelIslemleri = islemler.filter(islem => islem.personel_id === personel.id);
-    // Get unique customer IDs
-    const uniqueCustomers = new Set(personelIslemleri.map(islem => islem.musteri_id));
+    // Get unique customer IDs - safely access musteri_id which might not exist on all operations
+    const uniqueCustomers = new Set();
+    personelIslemleri.forEach(islem => {
+      if (islem.musteri_id) {
+        uniqueCustomers.add(islem.musteri_id);
+      }
+    });
     
     return {
       id: personel.id,
