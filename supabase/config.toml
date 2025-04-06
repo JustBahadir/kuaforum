@@ -1,9 +1,4 @@
 
-[functions.operate]
-verify_jwt = true
-
-[functions.recover_customer_operations]
-verify_jwt = true
-
-# Do not delete the [project] section
-[project]
+project_id = "xkbjjcizncwkrouvoujw"
+[functions.delete-user]
+verify_jwt = false
