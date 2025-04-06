@@ -2,7 +2,7 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.0';
 
-// Supabase istemcisini oluştur
+// Supabase client setup
 const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 
@@ -12,21 +12,21 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // CORS preflight isteğini işle
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    // Supabase istemcisini oluştur
+    // Create Supabase client
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // İstek gövdesini JSON olarak ayrıştır
+    // Parse request body
     const { customer_id } = await req.json();
 
     if (!customer_id) {
       return new Response(
-        JSON.stringify({ error: 'Müşteri ID gerekli' }),
+        JSON.stringify({ error: 'Customer ID is required' }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 400,
@@ -34,9 +34,9 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Müşteri ID ${customer_id} için tamamlanmış randevular işleniyor...`);
+    console.log(`Processing completed appointments for customer ID ${customer_id}...`);
 
-    // Müşterinin tamamlanmış randevularını getir
+    // Get customer's completed appointments
     const { data: appointments, error: appointmentsError } = await supabase
       .from('randevular')
       .select(`
@@ -53,7 +53,7 @@ serve(async (req) => {
       .eq('durum', 'tamamlandi');
 
     if (appointmentsError) {
-      console.error('Randevu getirme hatası:', appointmentsError);
+      console.error('Error fetching appointments:', appointmentsError);
       return new Response(
         JSON.stringify({ error: appointmentsError.message }),
         {
@@ -65,7 +65,7 @@ serve(async (req) => {
 
     if (!appointments || appointments.length === 0) {
       return new Response(
-        JSON.stringify({ message: 'Tamamlanmış randevu bulunamadı', count: 0 }),
+        JSON.stringify({ message: 'No completed appointments found', count: 0 }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 200,
@@ -73,20 +73,20 @@ serve(async (req) => {
       );
     }
 
-    console.log(`${appointments.length} tamamlanmış randevu bulundu`);
+    console.log(`Found ${appointments.length} completed appointments`);
 
-    // İşlemleri saklamak için dizi
+    // Array to store operations
     const operations = [];
 
-    // Her randevu için personel işlemleri oluştur
+    // Create personnel operations for each appointment
     for (const appointment of appointments) {
-      // Randevu içindeki işlemleri kontrol et
+      // Check appointment services
       if (!appointment.islemler || !Array.isArray(appointment.islemler) || appointment.islemler.length === 0) {
-        console.log(`Randevu ${appointment.id} için işlem bilgisi bulunamadı`);
+        console.log(`No service information found for appointment ${appointment.id}`);
         continue;
       }
 
-      // Her işlem ID'si için hizmet bilgilerini getir
+      // Process each service ID
       for (const islemId of appointment.islemler) {
         const { data: islem, error: islemError } = await supabase
           .from('islemler')
@@ -95,31 +95,31 @@ serve(async (req) => {
           .single();
 
         if (islemError) {
-          console.error(`İşlem ID ${islemId} bilgisi alınamadı:`, islemError);
+          console.error(`Error fetching service ID ${islemId}:`, islemError);
           continue;
         }
 
         if (!islem) {
-          console.log(`İşlem ID ${islemId} bulunamadı`);
+          console.log(`Service ID ${islemId} not found`);
           continue;
         }
 
-        // Personel işlemi oluştur
+        // Create operation data
         const operationData = {
           personel_id: appointment.personel_id,
           islem_id: islem.id,
           musteri_id: customer_id,
           tutar: islem.fiyat || 0,
-          odenen: islem.fiyat || 0, // Varsayılan olarak tam ödeme
-          prim_yuzdesi: 0, // Prim değeri personel tablosundan alınabilir
+          odenen: islem.fiyat || 0, // Default to full payment
+          prim_yuzdesi: 0, // Commission from personnel table
           puan: islem.puan || 0,
-          aciklama: islem.islem_adi || 'İşlem',
+          aciklama: islem.islem_adi || 'Service',
           notlar: appointment.notlar || '',
           randevu_id: appointment.id,
           created_at: `${appointment.tarih}T${appointment.saat || '00:00:00'}`
         };
 
-        // Personel primini kontrol et
+        // Get personnel commission
         if (appointment.personel && appointment.personel.id) {
           const { data: personelData } = await supabase
             .from('personel')
@@ -132,7 +132,7 @@ serve(async (req) => {
           }
         }
 
-        // İşlem kaydını eklemeye çalış - aynı randevu ID ile kayıt varsa ekleme
+        // Check if operation record exists
         const { data: existingOperation } = await supabase
           .from('personel_islemleri')
           .select('id')
@@ -147,20 +147,20 @@ serve(async (req) => {
             .select();
 
           if (operationError) {
-            console.error('İşlem kaydı oluşturma hatası:', operationError);
+            console.error('Error creating operation record:', operationError);
           } else if (newOperation) {
             operations.push(newOperation[0]);
-            console.log(`Randevu ${appointment.id} için işlem kaydı oluşturuldu`);
+            console.log(`Created operation record for appointment ${appointment.id}`);
           }
         } else {
-          console.log(`Randevu ${appointment.id} için işlem kaydı zaten mevcut`);
+          console.log(`Operation record already exists for appointment ${appointment.id}`);
         }
       }
     }
 
     return new Response(
       JSON.stringify({
-        message: `${operations.length} işlem kaydedildi`,
+        message: `${operations.length} operations saved`,
         count: operations.length,
         operations
       }),
@@ -171,7 +171,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Beklenmeyen hata:', error);
+    console.error('Unexpected error:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       {

@@ -697,6 +697,24 @@ export type Database = {
         }
         Returns: Json
       }
+      recover_customer_appointments: {
+        Args: {
+          p_customer_id: number
+        }
+        Returns: {
+          id: number
+          tarih: string
+          saat: string
+          durum: string
+          notlar: string
+          personel_id: number
+          islemler: Json
+          service_name: string
+          personnel_name: string
+          amount: number
+          points: number
+        }[]
+      }
       update_appointment_status: {
         Args: {
           appointment_id: number

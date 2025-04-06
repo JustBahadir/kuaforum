@@ -60,7 +60,7 @@ export function useCustomerOperations(customerId?: number) {
       } catch (error) {
         console.error("Error fetching customer operations:", error);
         
-        // Otomatik olarak kurtarma işlemi
+        // Automatic recovery
         try {
           await handleForceRecover();
           // Re-fetch after recovery

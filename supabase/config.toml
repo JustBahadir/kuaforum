@@ -1,4 +1,6 @@
 
+# This file controls the behavior of Supabase functions.
 project_id = "xkbjjcizncwkrouvoujw"
-[functions.delete-user]
+
+[functions.recover_customer_operations]
 verify_jwt = false
