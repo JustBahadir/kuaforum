@@ -11,7 +11,7 @@ import { CustomerPhotoGallery } from "@/components/customers/CustomerPhotoGaller
 import { AddOperationForm } from "@/components/operations/AddOperationForm";
 import { FileImage, Plus, RefreshCcw } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/lib/supabase/client"; // Added missing import
+import { supabase } from "@/lib/supabase"; // Updated import path
 import {
   Table,
   TableBody,
@@ -71,7 +71,7 @@ export function CustomerOperations({ customerId }: CustomerOperationsProps) {
     }
   };
 
-  // Use recoverOperations instead of handleForceRecover
+  // Use recoverOperations for consistency
   const handleForceRecover = () => {
     recoverOperations();
   };

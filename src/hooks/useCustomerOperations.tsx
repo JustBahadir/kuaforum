@@ -4,7 +4,7 @@ import { customerOperationsService } from "@/lib/supabase/services/customerOpera
 import { PersonelIslemi } from "@/lib/supabase/types";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase";
 
 export function useCustomerOperations(customerId?: number | string) {
   const queryClient = useQueryClient();

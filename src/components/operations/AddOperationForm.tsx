@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { personelServisi, islemServisi } from "@/lib/supabase";
@@ -9,7 +8,7 @@ import * as z from "zod";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { Camera, FileImage } from "lucide-react";
-import { supabase } from "@/lib/supabase/client"; // Added missing import
+import { supabase } from "@/lib/supabase/client";
 import {
   Form,
   FormControl,
@@ -32,7 +31,6 @@ import { Input } from "@/components/ui/input";
 import { FileUpload } from "@/components/ui/file-upload";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
-// Define form schema with zod
 const operationFormSchema = z.object({
   islemId: z.string().min(1, { message: "İşlem seçilmelidir" }),
   personelId: z.string().min(1, { message: "Personel seçilmelidir" }),
@@ -61,7 +59,6 @@ export function AddOperationForm({
   const [currentOperationId, setCurrentOperationId] = useState<number | null>(null);
   const queryClient = useQueryClient();
   
-  // Fetch services and personnel
   const { data: islemler = [] } = useQuery({
     queryKey: ['islemler'],
     queryFn: islemServisi.hepsiniGetir,
@@ -72,7 +69,6 @@ export function AddOperationForm({
     queryFn: personelServisi.hepsiniGetir,
   });
 
-  // Create form
   const form = useForm<OperationFormValues>({
     resolver: zodResolver(operationFormSchema),
     defaultValues: {
@@ -84,14 +80,12 @@ export function AddOperationForm({
     },
   });
 
-  // When personnelId prop changes, update form value
   useEffect(() => {
     if (personnelId) {
       form.setValue("personelId", String(personnelId));
     }
   }, [personnelId, form]);
 
-  // When an islem (service) is selected, update tutar and puan automatically
   const watchIslemId = form.watch("islemId");
   useEffect(() => {
     if (watchIslemId) {
@@ -103,20 +97,11 @@ export function AddOperationForm({
     }
   }, [watchIslemId, islemler, form]);
 
-  // Add operation mutation
   const addOperation = useMutation({
-    mutationFn: async (data: {
-      islemId: number;
-      personelId: number;
-      customerId: number;
-      tutar: number;
-      puan: number;
-      notlar?: string;
-    }) => {
-      const { data: result } = await supabase.functions.invoke('add-operation', {
+    mutationFn: async (data) => {
+      return await supabase.functions.invoke('add-operation', {
         body: data
       });
-      return result;
     },
     onSuccess: (data) => {
       setCurrentOperationId(data.id);
@@ -125,10 +110,8 @@ export function AddOperationForm({
       toast.success("İşlem başarıyla eklendi");
       
       if (uploadedPhotos.length > 0) {
-        // If there are photos, open the photo dialog
         setIsPhotoDialogOpen(true);
       } else {
-        // If no photos, close the form
         onClose();
       }
     },
@@ -138,9 +121,8 @@ export function AddOperationForm({
     },
   });
 
-  // Photo upload mutation
   const addPhoto = useMutation({
-    mutationFn: async ({ operationId, photoUrl }: { operationId: number; photoUrl: string }) => {
+    mutationFn: async ({ operationId, photoUrl }) => {
       const { data: result } = await supabase.functions.invoke('add-operation-photo', {
         body: { operationId, photoUrl }
       });
@@ -176,7 +158,6 @@ export function AddOperationForm({
     if (!currentOperationId) return;
     
     try {
-      // Upload all photos
       for (const photo of uploadedPhotos) {
         await addPhoto.mutateAsync({
           operationId: currentOperationId,
@@ -220,7 +201,6 @@ export function AddOperationForm({
           
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              {/* İşlem (Service) Selection */}
               <FormField
                 control={form.control}
                 name="islemId"
@@ -252,7 +232,6 @@ export function AddOperationForm({
                 )}
               />
               
-              {/* Personel (Staff) Selection */}
               <FormField
                 control={form.control}
                 name="personelId"
@@ -282,7 +261,6 @@ export function AddOperationForm({
                 )}
               />
               
-              {/* Price Field */}
               <FormField
                 control={form.control}
                 name="tutar"
@@ -297,7 +275,6 @@ export function AddOperationForm({
                 )}
               />
               
-              {/* Points Field */}
               <FormField
                 control={form.control}
                 name="puan"
@@ -312,7 +289,6 @@ export function AddOperationForm({
                 )}
               />
               
-              {/* Notes Field */}
               <FormField
                 control={form.control}
                 name="notlar"
@@ -372,7 +348,6 @@ export function AddOperationForm({
         </DialogContent>
       </Dialog>
       
-      {/* Photo Upload Dialog */}
       <Dialog open={isPhotoDialogOpen} onOpenChange={setIsPhotoDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
@@ -388,7 +363,7 @@ export function AddOperationForm({
                 bucketName="photos"
                 folderPath="operations"
                 acceptedFileTypes="image/*"
-                maxFileSize={5 * 1024 * 1024} // 5MB
+                maxFileSize={5 * 1024 * 1024}
                 label="Fotoğraf Seç"
               />
               
@@ -398,7 +373,6 @@ export function AddOperationForm({
               </p>
             </div>
             
-            {/* Preview uploaded photos */}
             {uploadedPhotos.length > 0 && (
               <div className="grid grid-cols-2 gap-2">
                 {uploadedPhotos.map((photo, index) => (

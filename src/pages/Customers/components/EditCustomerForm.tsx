@@ -63,7 +63,8 @@ export function EditCustomerForm({
         dukkan_id: dukkanId || customer.dukkan_id,
       };
 
-      return musteriServisi.guncelle(customerData);
+      // Fix: Pass both arguments to the guncelle function
+      return musteriServisi.guncelle(customerData, customer.id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["musteriler"] });
