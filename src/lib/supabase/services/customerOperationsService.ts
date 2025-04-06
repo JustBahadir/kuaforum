@@ -70,15 +70,15 @@ export const customerOperationsService = {
         
         // Safely extract islem_adi if available
         if (item.islem && typeof item.islem === 'object') {
-          // Make sure we're treating islem as an object, not an array
-          const islemObj = item.islem as { islem_adi?: string };
+          // Properly type and access the islem property
+          const islemObj = item.islem as any;
           serviceName = islemObj.islem_adi || serviceName;
         }
         
         // Safely extract ad_soyad if available
         if (item.personel && typeof item.personel === 'object') {
-          // Make sure we're treating personel as an object, not an array
-          const personelObj = item.personel as { ad_soyad?: string };
+          // Properly type and access the personel property
+          const personelObj = item.personel as any;
           personnelName = personelObj.ad_soyad || personnelName;
         }
         
