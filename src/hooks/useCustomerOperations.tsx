@@ -7,6 +7,10 @@ import { PersonelIslemi } from "@/lib/supabase/types";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
 
+// Define the Supabase URL for API calls
+const SUPABASE_URL = "https://xkbjjcizncwkrouvoujw.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhrYmpqY2l6bmN3a3JvdXZvdWp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzk5Njg0NzksImV4cCI6MjA1NTU0NDQ3OX0.RyaC2G1JPHUGQetAcvMgjsTp_nqBB2rZe3U-inU2osw";
+
 export function useCustomerOperations(customerId?: number) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState({
@@ -60,12 +64,12 @@ export function useCustomerOperations(customerId?: number) {
     try {
       toast.info("Tamamlanan randevular işleniyor...");
       
-      // Call the edge function directly for better performance
-      const response = await fetch(`${supabase.supabaseUrl}/functions/v1/recover_customer_operations`, {
+      // Call the edge function directly with the URL constants
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/recover_customer_operations`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabase.supabaseKey}`
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
         },
         body: JSON.stringify({ customer_id: customerId })
       });

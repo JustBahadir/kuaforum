@@ -1,7 +1,12 @@
+
 import { supabase } from '../client';
 import { Randevu } from '../types';
 import { toast } from 'sonner';
 import { personelIslemleriServisi } from './personelIslemleriServisi';
+
+// Define the Supabase URL for API calls
+const SUPABASE_URL = "https://xkbjjcizncwkrouvoujw.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhrYmpqY2l6bmN3a3JvdXZvdWp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzk5Njg0NzksImV4cCI6MjA1NTU0NDQ3OX0.RyaC2G1JPHUGQetAcvMgjsTp_nqBB2rZe3U-inU2osw";
 
 export const randevuServisi = {
   async hepsiniGetir() {
@@ -197,11 +202,12 @@ export const randevuServisi = {
     try {
       console.log(`Randevu ${randevuId} tamamlandı işlemi başlatılıyor...`);
       
-      const response = await fetch(`${supabase.supabaseUrl}/functions/v1/process_completed_appointment`, {
+      // Use the defined constants instead of accessing protected properties
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/process_completed_appointment`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabase.supabaseKey}`
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
         },
         body: JSON.stringify({ appointment_id: randevuId })
       });
