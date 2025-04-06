@@ -12,7 +12,6 @@ import { toast } from "sonner";
 import { FileUpload } from "@/components/ui/file-upload";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { customerOperationsService, CustomerOperation } from "@/lib/supabase/services/customerOperationsService";
-import { supabase } from "@/lib/supabase/client";
 import {
   Table,
   TableBody,
@@ -30,11 +29,11 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
   const { 
     operations, 
     isLoading, 
-    recoverOperations,
+    handleForceRecover, 
     refetch,
-    totals
+    totals 
   } = useCustomerOperations(customerId);
-  
+
   const [selectedOperation, setSelectedOperation] = useState<CustomerOperation | null>(null);
   const [notesDialogOpen, setNotesDialogOpen] = useState(false);
   const [photoDialogOpen, setPhotoDialogOpen] = useState(false);
@@ -87,11 +86,6 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
     }
   };
 
-  // Use recoverOperations function directly from the hook
-  const handleForceRecover = () => {
-    recoverOperations();
-  };
-
   if (isLoading) {
     return (
       <div className="flex justify-center items-center py-10">
@@ -107,7 +101,7 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
         <h3 className="text-lg font-medium">Müşteri İşlem Geçmişi Bulunamadı</h3>
         <p className="text-gray-500">Bu müşteriye ait işlem geçmişi bulunmamaktadır.</p>
         <Button 
-          onClick={handleForceRecover}
+          onClick={() => handleForceRecover()}
           className="mt-2 flex items-center gap-2"
         >
           <RefreshCcw size={16} />

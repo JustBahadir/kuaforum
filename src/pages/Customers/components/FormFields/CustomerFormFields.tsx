@@ -1,89 +1,49 @@
 
-import { UseFormReturn } from "react-hook-form";
-import {
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
-export interface CustomerFormFieldsProps {
-  form?: UseFormReturn<any>;
-  firstName?: string;
-  lastName?: string;
-  onFirstNameChange?: (value: string) => void;
-  onLastNameChange?: (value: string) => void;
-  errors?: Record<string, string>;
+interface CustomerFormFieldsProps {
+  firstName: string;
+  lastName: string;
+  onFirstNameChange: (value: string) => void;
+  onLastNameChange: (value: string) => void;
+  errors?: {
+    firstName?: string;
+    lastName?: string;
+  };
 }
 
-export function CustomerFormFields({ 
-  form, 
-  firstName, 
-  lastName, 
-  onFirstNameChange, 
-  onLastNameChange, 
-  errors 
+export function CustomerFormFields({
+  firstName,
+  lastName,
+  onFirstNameChange,
+  onLastNameChange,
+  errors = {}
 }: CustomerFormFieldsProps) {
-  // If form is provided, use react-hook-form
-  if (form) {
-    return (
-      <div className="space-y-4">
-        <FormField
-          control={form.control}
-          name="first_name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>İsim*</FormLabel>
-              <FormControl>
-                <Input {...field} placeholder="Müşteri ismi" />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        
-        <FormField
-          control={form.control}
-          name="last_name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Soyisim</FormLabel>
-              <FormControl>
-                <Input {...field} placeholder="Müşteri soyismi" />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </div>
-    );
-  }
-  
-  // If individual props are provided, use controlled inputs
   return (
-    <div className="space-y-4">
+    <div className="grid grid-cols-2 gap-4">
       <div>
-        <label htmlFor="firstName" className="block text-sm font-medium">İsim*</label>
+        <Label htmlFor="firstName">İsim*</Label>
         <Input
           id="firstName"
-          value={firstName || ''}
-          onChange={(e) => onFirstNameChange?.(e.target.value)}
-          placeholder="Müşteri ismi"
-          className={errors?.firstName ? "border-red-500" : ""}
+          value={firstName}
+          onChange={(e) => onFirstNameChange(e.target.value)}
+          placeholder="İsim"
+          className={errors.firstName ? "border-red-500" : ""}
         />
-        {errors?.firstName && <p className="text-red-500 text-sm mt-1">{errors.firstName}</p>}
+        {errors.firstName && <p className="text-red-500 text-sm mt-1">{errors.firstName}</p>}
       </div>
       
       <div>
-        <label htmlFor="lastName" className="block text-sm font-medium">Soyisim</label>
+        <Label htmlFor="lastName">Soyisim</Label>
         <Input
           id="lastName"
-          value={lastName || ''}
-          onChange={(e) => onLastNameChange?.(e.target.value)}
-          placeholder="Müşteri soyismi"
+          value={lastName}
+          onChange={(e) => onLastNameChange(e.target.value)}
+          placeholder="Soyisim"
+          className={errors.lastName ? "border-red-500" : ""}
         />
+        {errors.lastName && <p className="text-red-500 text-sm mt-1">{errors.lastName}</p>}
       </div>
     </div>
   );

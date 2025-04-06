@@ -1,22 +1,20 @@
 
 import { Button } from "@/components/ui/button";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { Loader2 } from "lucide-react";
 
-export interface CustomerFormActionsProps {
+interface CustomerFormActionsProps {
   isSubmitting: boolean;
   onCancel: () => void;
-  submitLabel?: string;
-  disabled?: boolean; // Added missing property
+  disabled?: boolean;
 }
 
-export function CustomerFormActions({ 
-  isSubmitting, 
-  onCancel, 
-  submitLabel = "Kaydet",
-  disabled = false // Added default value 
+export function CustomerFormActions({
+  isSubmitting,
+  onCancel,
+  disabled = false
 }: CustomerFormActionsProps) {
   return (
-    <div className="flex justify-end gap-2">
+    <div className="flex justify-end space-x-2 pt-4">
       <Button 
         type="button" 
         variant="outline" 
@@ -31,12 +29,10 @@ export function CustomerFormActions({
       >
         {isSubmitting ? (
           <>
-            <LoadingSpinner size="sm" className="mr-2" /> 
-            Kaydediliyor...
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            Ekleniyor...
           </>
-        ) : (
-          submitLabel
-        )}
+        ) : 'Müşteri Ekle'}
       </Button>
     </div>
   );

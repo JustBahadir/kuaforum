@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -46,7 +47,7 @@ interface PersonnelListProps {
 export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
   const [openDetails, setOpenDetails] = useState(false);
   const [openDialog, setOpenDialog] = useState(false);
-  const [selectedPersonnel, setSelectedPersonnel] = useState<any | null>(null);
+  const [selectedPersonnel, setSelectedPersonnel] = useState<Personnel | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -74,7 +75,7 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
     }
   });
 
-  const handleDetailsOpen = (personel: any) => {
+  const handleDetailsOpen = (personel: Personnel) => {
     setSelectedPersonnel(personel);
     setOpenDetails(true);
     if (onPersonnelSelect) {

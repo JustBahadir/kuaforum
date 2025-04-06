@@ -11,7 +11,6 @@ import { CustomerPhotoGallery } from "@/components/customers/CustomerPhotoGaller
 import { AddOperationForm } from "@/components/operations/AddOperationForm";
 import { FileImage, Plus, RefreshCcw } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/lib/supabase/client";
 import {
   Table,
   TableBody,
@@ -31,9 +30,9 @@ export function CustomerOperations({ customerId }: CustomerOperationsProps) {
   const { 
     operations, 
     isLoading, 
-    recoverOperations,
+    handleForceRecover, 
     refetch,
-    totals,
+    totals 
   } = useCustomerOperations(customerId);
 
   const [selectedOperation, setSelectedOperation] = useState<CustomerOperation | null>(null);
@@ -51,9 +50,15 @@ export function CustomerOperations({ customerId }: CustomerOperationsProps) {
     if (!selectedOperation) return;
     
     try {
-      // Use supabase functions directly
-      await supabase.functions.invoke('update-operation-notes', {
-        body: { operationId: selectedOperation.id, notes }
+      await fetch("/api/update-operation-notes", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          operationId: selectedOperation.id,
+          notes,
+        }),
       });
       
       toast.success("Notlar kaydedildi");
@@ -63,11 +68,6 @@ export function CustomerOperations({ customerId }: CustomerOperationsProps) {
       console.error("Error saving notes:", error);
       toast.error("Notlar kaydedilemedi");
     }
-  };
-
-  // Use recoverOperations for consistency
-  const handleForceRecover = () => {
-    recoverOperations();
   };
 
   if (isLoading) {
@@ -87,7 +87,7 @@ export function CustomerOperations({ customerId }: CustomerOperationsProps) {
           <Button 
             variant="outline" 
             size="sm"
-            onClick={handleForceRecover}
+            onClick={() => handleForceRecover()}
             className="flex items-center gap-1"
           >
             <RefreshCcw size={14} />

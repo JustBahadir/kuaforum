@@ -1,137 +1,136 @@
 
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { personelIslemleriServisi } from "@/lib/supabase/services/personelIslemleriServisi";
 import { customerOperationsService } from "@/lib/supabase/services/customerOperationsService";
 import { PersonelIslemi } from "@/lib/supabase/types";
-import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
 
-export function useCustomerOperations(customerId?: number | string) {
+// Define the Supabase URL for API calls
+const SUPABASE_URL = "https://xkbjjcizncwkrouvoujw.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhrYmpqY2l6bmN3a3JvdXZvdWp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzk5Njg0NzksImV4cCI6MjA1NTU0NDQ3OX0.RyaC2G1JPHUGQetAcvMgjsTp_nqBB2rZe3U-inU2osw";
+
+export function useCustomerOperations(customerId?: number) {
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [dateRange, setDateRange] = useState({
+    from: new Date(new Date().setDate(new Date().getDate() - 90)), // Default to last 90 days
+    to: new Date()
+  });
   const queryClient = useQueryClient();
-  const [isRecovering, setIsRecovering] = useState(false);
   
-  // Get customer operations
-  const { data: operations = [], isLoading, refetch } = useQuery({
-    queryKey: ['customerOperations', customerId],
+  const { 
+    data: operations = [], 
+    isLoading,
+    refetch,
+    isError,
+    error
+  } = useQuery({
+    queryKey: ['customerOperations', customerId, dateRange.from, dateRange.to],
     queryFn: async () => {
       if (!customerId) return [];
-      return await customerOperationsService.getCustomerOperations(customerId);
+      
+      console.log("Fetching operations for customer ID:", customerId);
+      
+      try {
+        // First try to get operations directly using our improved service
+        const operations = await customerOperationsService.getCustomerOperations(customerId);
+        
+        // Filter by date range
+        const filteredOperations = operations.filter(op => {
+          if (!op.date) return false;
+          const opDate = new Date(op.date);
+          return opDate >= dateRange.from && opDate <= dateRange.to;
+        });
+        
+        // If no operations found, trigger recovery automatically
+        if (filteredOperations.length === 0) {
+          console.log("No operations found, attempting automatic recovery...");
+          await handleForceRecover();
+          // Re-fetch after recovery
+          const recoveredOperations = await customerOperationsService.getCustomerOperations(customerId);
+          return recoveredOperations.filter(op => {
+            if (!op.date) return false;
+            const opDate = new Date(op.date);
+            return opDate >= dateRange.from && opDate <= dateRange.to;
+          });
+        }
+        
+        return filteredOperations;
+      } catch (error) {
+        console.error("Error fetching customer operations:", error);
+        toast.error("Müşteri işlemleri yüklenirken bir hata oluştu");
+        return [];
+      }
     },
     enabled: !!customerId,
+    staleTime: 1000, // Keep data fresh for 1 second so it refreshes more frequently
+    refetchInterval: 10000 // Refetch every 10 seconds to catch new operations
   });
   
-  // Calculate totals from operations
-  const totals = useMemo(() => {
-    const totalAmount = operations.reduce((sum, op) => sum + (op.amount || op.tutar || 0), 0);
-    const totalPaid = operations.reduce((sum, op) => sum + (op.odenen || 0), 0);
-    const totalPoints = operations.reduce((sum, op) => sum + (op.points || op.puan || 0), 0);
-    
-    return { totalAmount, totalPaid, totalPoints };
-  }, [operations]);
-  
-  // Add operation mutation
-  const addOperation = useMutation({
-    mutationFn: async (data: any) => {
-      const { data: result, error } = await supabase.functions.invoke('add-operation', {
-        body: data
-      });
-      
-      if (error) throw error;
-      return result;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['customerOperations'] });
-      toast.success("İşlem başarıyla eklendi");
-    },
-    onError: (error) => {
-      console.error("Error adding operation:", error);
-      toast.error("İşlem eklenirken bir hata oluştu");
+  const handleForceRecover = async () => {
+    if (!customerId) {
+      toast.error("Müşteri ID bulunamadı");
+      return;
     }
-  });
-  
-  // Add operation photo mutation
-  const addOperationPhoto = useMutation({
-    mutationFn: async (params: { operationId: number; photoUrl: string }) => {
-      const { data: result, error } = await supabase.functions.invoke('add-operation-photo', {
-        body: { 
-          operationId: params.operationId, 
-          photoUrl: params.photoUrl 
-        }
-      });
-      
-      if (error) throw error;
-      return result;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['customerOperations'] });
-      toast.success("Fotoğraf başarıyla eklendi");
-    },
-    onError: (error) => {
-      console.error("Error adding photo:", error);
-      toast.error("Fotoğraf eklenirken bir hata oluştu");
-    }
-  });
-  
-  // Update operation notes mutation
-  const updateOperationNotes = useMutation({
-    mutationFn: async (params: { operationId: number; notes: string }) => {
-      const { data: result, error } = await supabase.functions.invoke('update-operation-notes', {
-        body: { 
-          operationId: params.operationId, 
-          notes: params.notes 
-        }
-      });
-      
-      if (error) throw error;
-      return result;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['customerOperations'] });
-      toast.success("Notlar başarıyla güncellendi");
-    },
-    onError: (error) => {
-      console.error("Error updating notes:", error);
-      toast.error("Notlar güncellenirken bir hata oluştu");
-    }
-  });
-  
-  // Recover operations from appointments
-  const recoverOperations = async () => {
-    if (!customerId) return;
     
     try {
-      setIsRecovering(true);
-      toast.info("İşlemler yenileniyor...");
+      toast.info("Tamamlanan randevular işleniyor...");
       
-      const { data, error } = await supabase.functions.invoke('recover_customer_operations', {
-        body: { customerId }
+      // Call the edge function directly with the URL constants
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/recover_customer_operations`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify({ customer_id: customerId })
       });
       
-      if (error) throw error;
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Error from edge function:", errorText);
+        throw new Error("İşlem geçmişi yenilenirken bir hata oluştu");
+      }
       
+      const result = await response.json();
+      
+      // Update shop statistics
+      await personelIslemleriServisi.updateShopStatistics();
+      
+      // Manually invalidate relevant queries to force refetch
+      queryClient.invalidateQueries({ queryKey: ['customerOperations'] });
+      queryClient.invalidateQueries({ queryKey: ['personelIslemleri'] });
+      
+      // Refetch operations
       await refetch();
       
-      toast.success(data?.message || "İşlemler başarıyla yenilendi");
+      toast.success(`İşlem geçmişi yenilendi (${result.count || 0} işlem)`);
+      return result;
     } catch (error) {
       console.error("Error recovering operations:", error);
-      toast.error("İşlemler yenilenirken bir hata oluştu");
-    } finally {
-      setIsRecovering(false);
+      toast.error("İşlem geçmişi yenilenirken bir hata oluştu");
     }
   };
+  
+  // Calculate totals
+  const totals = operations?.reduce((acc, op) => {
+    acc.totalAmount += (op.amount || 0);
+    acc.totalPoints += (op.points || 0);
+    acc.totalPaid += 0; // This needs to be fixed if we have paid data
+    return acc;
+  }, { totalAmount: 0, totalPoints: 0, totalPaid: 0 });
 
-  // Add handleForceRecover as an alias for recoverOperations to maintain compatibility
-  const handleForceRecover = recoverOperations;
-
-  return {
+  return { 
     operations,
     isLoading,
-    addOperation,
-    addOperationPhoto,
-    updateOperationNotes,
-    recoverOperations,
+    isError,
+    error,
+    selectedDate,
+    setSelectedDate,
+    dateRange,
+    setDateRange,
     handleForceRecover,
-    isRecovering,
     refetch,
     totals
   };

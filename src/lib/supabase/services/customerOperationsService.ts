@@ -1,3 +1,4 @@
+
 import { supabase } from '../client';
 
 export interface CustomerOperation {
@@ -21,7 +22,6 @@ export interface CustomerOperation {
   aciklama?: string;
   tutar?: number;
   puan?: number;
-  odenen?: number;
 }
 
 export const customerOperationsService = {
@@ -39,7 +39,6 @@ export const customerOperationsService = {
           aciklama,
           tutar,
           puan,
-          odenen,
           notlar,
           randevu_id,
           photos,
@@ -105,8 +104,7 @@ export const customerOperationsService = {
           },
           aciklama: item.aciklama,
           tutar: Number(item.tutar) || 0,
-          puan: Number(item.puan) || 0,
-          odenen: Number(item.odenen) || 0
+          puan: Number(item.puan) || 0
         };
       });
     } catch (error) {
@@ -165,8 +163,7 @@ export const customerOperationsService = {
           },
           aciklama: appointment.service_name || 'Randevu',
           tutar: appointment.amount || 0,
-          puan: appointment.points || 0,
-          odenen: appointment.odenen || 0
+          puan: appointment.points || 0
         };
       });
       
