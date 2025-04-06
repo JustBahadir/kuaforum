@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { useCustomerOperations } from "@/hooks/useCustomerOperations";
+import { CustomerOperation } from "@/lib/supabase/services/customerOperationsService";
 
 interface CustomerPhotoGalleryProps {
   customerId?: number;
@@ -29,20 +30,22 @@ export function CustomerPhotoGallery({ customerId }: CustomerPhotoGalleryProps) 
   const operationsWithPhotos = operations
     .filter(op => op.photos && op.photos.length > 0)
     .sort((a, b) => {
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      const dateA = a.date || a.created_at;
+      const dateB = b.date || b.created_at;
+      return new Date(dateB).getTime() - new Date(dateA).getTime();
     });
 
   // Filter by search query if provided
   const filteredOperations = searchQuery
-    ? operationsWithPhotos.filter(op => 
-        (op.islem?.islem_adi || op.aciklama || '')
-          .toLowerCase()
-          .includes(searchQuery.toLowerCase()) ||
-        (op.created_at && 
-          format(new Date(op.created_at), 'dd MMMM yyyy', { locale: tr })
+    ? operationsWithPhotos.filter(op => {
+        const serviceName = op.islem?.islem_adi || op.service_name || op.aciklama || '';
+        const dateStr = op.date || op.created_at;
+        
+        return serviceName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (dateStr && format(new Date(dateStr), 'dd MMMM yyyy', { locale: tr })
             .toLowerCase()
-            .includes(searchQuery.toLowerCase()))
-      )
+            .includes(searchQuery.toLowerCase()));
+      })
     : operationsWithPhotos;
 
   const viewPhoto = (url: string) => {
@@ -73,18 +76,18 @@ export function CustomerPhotoGallery({ customerId }: CustomerPhotoGalleryProps) 
               <CardContent className="p-4">
                 <div className="mb-3">
                   <p className="text-sm font-medium">
-                    {operation.islem?.islem_adi || operation.aciklama}
+                    {operation.islem?.islem_adi || operation.service_name || operation.aciklama}
                   </p>
                   <p className="text-xs text-gray-500">
-                    {operation.created_at && 
-                      format(new Date(operation.created_at), 'dd MMMM yyyy', { locale: tr })}
+                    {(operation.date || operation.created_at) && 
+                      format(new Date(operation.date || operation.created_at), 'dd MMMM yyyy', { locale: tr })}
                   </p>
-                  {operation.notlar && (
-                    <p className="text-xs mt-1 italic text-gray-600">{operation.notlar}</p>
+                  {(operation.notes || operation.notlar) && (
+                    <p className="text-xs mt-1 italic text-gray-600">{operation.notes || operation.notlar}</p>
                   )}
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                  {operation.photos.map((photo: string, index: number) => (
+                  {operation.photos?.map((photo: string, index: number) => (
                     <div 
                       key={index} 
                       className="relative aspect-square cursor-pointer overflow-hidden rounded-md"

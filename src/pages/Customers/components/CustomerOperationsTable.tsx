@@ -11,7 +11,7 @@ import { Camera, FileImage, Image, Plus, RefreshCcw } from "lucide-react";
 import { toast } from "sonner";
 import { FileUpload } from "@/components/ui/file-upload";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { customerOperationsService } from "@/lib/supabase/services/customerOperationsService";
+import { customerOperationsService, CustomerOperation } from "@/lib/supabase/services/customerOperationsService";
 import {
   Table,
   TableBody,
@@ -34,7 +34,7 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
     totals 
   } = useCustomerOperations(customerId);
 
-  const [selectedOperation, setSelectedOperation] = useState<any | null>(null);
+  const [selectedOperation, setSelectedOperation] = useState<CustomerOperation | null>(null);
   const [notesDialogOpen, setNotesDialogOpen] = useState(false);
   const [photoDialogOpen, setPhotoDialogOpen] = useState(false);
   const [notes, setNotes] = useState("");
@@ -156,16 +156,16 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
             {operations.map((operation) => (
               <TableRow key={operation.id} className="hover:bg-gray-50">
                 <TableCell>
-                  {operation.created_at && format(new Date(operation.created_at), 'dd MMM yyyy', { locale: tr })}
+                  {operation.date && format(new Date(operation.date), 'dd MMM yyyy', { locale: tr })}
                 </TableCell>
                 <TableCell>
-                  {operation.islem?.islem_adi || operation.aciklama || 'Belirtilmemiş'}
+                  {(operation.islem?.islem_adi || operation.service_name || operation.aciklama || 'Belirtilmemiş')}
                 </TableCell>
                 <TableCell>
-                  {operation.personel?.ad_soyad || 'Belirtilmemiş'}
+                  {(operation.personel?.ad_soyad || operation.personnel_name || 'Belirtilmemiş')}
                 </TableCell>
-                <TableCell>{formatCurrency(operation.tutar || 0)}</TableCell>
-                <TableCell>{operation.puan || 0}</TableCell>
+                <TableCell>{formatCurrency(operation.amount || operation.tutar || 0)}</TableCell>
+                <TableCell>{operation.points || operation.puan || 0}</TableCell>
                 <TableCell className="text-right space-x-1">
                   <Button
                     variant="ghost" 

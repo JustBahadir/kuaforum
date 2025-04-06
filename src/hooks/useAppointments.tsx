@@ -69,7 +69,7 @@ export function useAppointments(dukkanId?: number) {
     },
     enabled: true,
     staleTime: 5000, // Reduced to 5 seconds to improve freshness
-    cacheTime: 1000 * 60 * 5, // Cache for 5 minutes
+    gcTime: 1000 * 60 * 5, // Cache for 5 minutes (replaced cacheTime with gcTime)
     refetchOnMount: true,
     refetchOnWindowFocus: true
   });

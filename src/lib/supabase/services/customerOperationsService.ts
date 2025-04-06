@@ -1,16 +1,26 @@
-
 import { supabase } from '../client';
 
 export interface CustomerOperation {
   id: number;
   date: string;
+  created_at: string;
   service_name: string;
   personnel_name: string;
   amount: number;
   points: number;
   notes?: string;
+  notlar?: string;
   appointment_id?: number;
   photos?: string[];
+  islem?: {
+    islem_adi: string;
+  };
+  personel?: {
+    ad_soyad: string;
+  };
+  aciklama?: string;
+  tutar?: number;
+  puan?: number;
 }
 
 export const customerOperationsService = {
@@ -70,13 +80,24 @@ export const customerOperationsService = {
         return {
           id: item.id,
           date: item.created_at,
+          created_at: item.created_at,
           service_name: serviceName,
           personnel_name: personnelName,
           amount: Number(item.tutar) || 0,
           points: Number(item.puan) || 0,
           appointment_id: item.randevu_id,
           notes: item.notlar || '',
-          photos: item.photos || []
+          notlar: item.notlar || '',
+          photos: item.photos || [],
+          islem: {
+            islem_adi: serviceName
+          },
+          personel: {
+            ad_soyad: personnelName
+          },
+          aciklama: item.aciklama,
+          tutar: Number(item.tutar) || 0,
+          puan: Number(item.puan) || 0
         };
       });
     } catch (error) {
@@ -160,13 +181,24 @@ export const customerOperationsService = {
         return {
           id: appointment.id,
           date: appointmentDate || new Date().toISOString(),
+          created_at: appointmentDate || new Date().toISOString(),
           service_name: serviceName,
           personnel_name: personnelName,
           amount: amount,
           points: points,
           appointment_id: appointment.id,
           notes: appointment.notlar || '',
-          photos: []
+          notlar: appointment.notlar || '',
+          photos: [],
+          islem: {
+            islem_adi: serviceName
+          },
+          personel: {
+            ad_soyad: personnelName
+          },
+          aciklama: serviceName,
+          tutar: amount,
+          puan: points
         };
       });
       
