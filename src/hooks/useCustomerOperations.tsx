@@ -47,8 +47,8 @@ export function useCustomerOperations(customerId?: number) {
       }
     },
     enabled: !!customerId,
-    staleTime: 30000, // Keep data fresh for 30 seconds
-    refetchInterval: 60000 // Refetch every minute
+    staleTime: 5000, // Keep data fresh for 5 seconds
+    refetchInterval: 30000 // Refetch every 30 seconds
   });
   
   const handleForceRecover = async () => {
@@ -60,8 +60,23 @@ export function useCustomerOperations(customerId?: number) {
     try {
       toast.info("Tamamlanan randevular işleniyor...");
       
-      // First, try to recover operations using the improved function
-      await personelIslemleriServisi.recoverOperationsFromCustomerAppointments(customerId);
+      // Call the edge function directly for better performance
+      const response = await fetch(`${supabase.supabaseUrl}/functions/v1/recover_customer_operations`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabase.supabaseKey}`
+        },
+        body: JSON.stringify({ customer_id: customerId })
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Error from edge function:", errorText);
+        throw new Error("İşlem geçmişi yenilenirken bir hata oluştu");
+      }
+      
+      const result = await response.json();
       
       // Update shop statistics
       await personelIslemleriServisi.updateShopStatistics();
@@ -69,7 +84,7 @@ export function useCustomerOperations(customerId?: number) {
       // Refetch operations
       await refetch();
       
-      toast.success("İşlem geçmişi yenilendi");
+      toast.success(`İşlem geçmişi yenilendi (${result.count || 0} işlem)`);
     } catch (error) {
       console.error("Error recovering operations:", error);
       toast.error("İşlem geçmişi yenilenirken bir hata oluştu");

@@ -68,8 +68,8 @@ export function useAppointments(dukkanId?: number) {
       }
     },
     enabled: true,
-    staleTime: 5000, // Reduced to 5 seconds to improve freshness
-    gcTime: 1000 * 60 * 5, // Cache for 5 minutes (replaced cacheTime with gcTime)
+    staleTime: 1000, // Reduced to 1 second to improve freshness
+    gcTime: 1000 * 30, // Cache for 30 seconds (replaced cacheTime with gcTime)
     refetchOnMount: true,
     refetchOnWindowFocus: true
   });
@@ -167,9 +167,6 @@ export function useAppointments(dukkanId?: number) {
         
         // Make sure to create operations for personnel and customer
         await randevuServisi.randevuTamamlandi(appointmentId);
-        
-        // Force update shop statistics
-        await personelIslemleriServisi.updateShopStatistics();
         
         return result;
       } catch (error) {

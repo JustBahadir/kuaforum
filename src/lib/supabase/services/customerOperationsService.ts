@@ -114,23 +114,11 @@ export const customerOperationsService = {
       const customerIdStr = customerId.toString();
       console.log(`Trying to recover operations from randevular for customer ID: ${customerIdStr}`);
       
-      // Instead of using a query that relies on profiles (which causes recursion),
-      // we'll use a direct query to get completed appointments for this customer
+      // Direct query to get completed appointments without requiring profiles
       const { data: appointments, error: appointmentError } = await supabase
-        .from('randevular')
-        .select(`
-          id,
-          created_at,
-          tarih,
-          saat,
-          durum,
-          notlar,
-          islemler,
-          personel_id
-        `)
-        .eq('musteri_id', customerId)
-        .eq('durum', 'tamamlandi')
-        .order('tarih', { ascending: false });
+        .rpc('recover_customer_appointments', { 
+          p_customer_id: parseInt(customerIdStr) 
+        });
       
       if (appointmentError) {
         console.error("Error fetching customer appointments:", appointmentError);
@@ -144,64 +132,34 @@ export const customerOperationsService = {
       
       console.log(`Found ${appointments.length} completed appointments for customer ID: ${customerIdStr}`);
       
-      // Get personnel information for these appointments
-      const personnelIds = appointments.map(apt => apt.personel_id).filter(Boolean);
-      const { data: personnelData } = await supabase
-        .from('personel')
-        .select('id, ad_soyad')
-        .in('id', personnelIds);
-      
-      const personnelMap = (personnelData || []).reduce((map, p) => {
-        map[p.id] = p.ad_soyad;
-        return map;
-      }, {} as Record<number, string>);
-      
       // Transform appointments to operations format
-      const operations = appointments.map(appointment => {
-        // Parse islemler to get service details
-        let serviceName = 'Randevu';
-        let amount = 0;
-        let points = 0;
-        
-        try {
-          if (appointment.islemler && Array.isArray(appointment.islemler)) {
-            // If islemler is an array, use the first item
-            serviceName = `${appointment.islemler.length} işlem`;
-            // Could fetch details for each işlem if needed
-          }
-        } catch (e) {
-          console.error("Error parsing islemler:", e);
-        }
-        
+      const operations = appointments.map((appointment: any) => {
         // Format date and time
         const appointmentDate = appointment.tarih ? 
           `${appointment.tarih}T${appointment.saat || '00:00:00'}` : 
           appointment.created_at;
-        
-        // Get personnel name from our map
-        const personnelName = personnelMap[appointment.personel_id] || 'Belirtilmemiş';
-        
+          
         return {
           id: appointment.id,
           date: appointmentDate || new Date().toISOString(),
           created_at: appointmentDate || new Date().toISOString(),
-          service_name: serviceName,
-          personnel_name: personnelName,
-          amount: amount,
-          points: points,
+          service_name: appointment.service_name || 'Randevu',
+          personnel_name: appointment.personnel_name || 'Belirtilmemiş',
+          amount: appointment.amount || 0,
+          points: appointment.points || 0,
           appointment_id: appointment.id,
-          notes: appointment.notlar || '',
-          notlar: appointment.notlar || '',
+          notes: appointment.notes || '',
+          notlar: appointment.notes || '',
           photos: [],
           islem: {
-            islem_adi: serviceName
+            islem_adi: appointment.service_name || 'Randevu'
           },
           personel: {
-            ad_soyad: personnelName
+            ad_soyad: appointment.personnel_name || 'Belirtilmemiş'
           },
-          aciklama: serviceName,
-          tutar: amount,
-          puan: points
+          aciklama: appointment.service_name || 'Randevu',
+          tutar: appointment.amount || 0,
+          puan: appointment.points || 0
         };
       });
       
