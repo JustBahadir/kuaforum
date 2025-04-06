@@ -73,7 +73,9 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
     horoscope_description: null,
     children_names: [],
     custom_notes: null,
-    daily_horoscope_reading: null
+    daily_horoscope_reading: null,
+    spouse_name: null,
+    spouse_birthdate: null
   });
 
   const [editingNotes, setEditingNotes] = useState<{ [key: number]: string }>({});
@@ -116,8 +118,15 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
   const { data: customerOperations = [], isLoading: isLoadingOperations } = useQuery({
     queryKey: ['customerOperations', customer.id],
     queryFn: async () => {
-      return customerOperationsService.getCustomerOperations(customer.id.toString());
-    }
+      try {
+        console.log("Fetching operations for customer ID:", customer.id.toString());
+        return await customerOperationsService.getCustomerOperations(customer.id.toString());
+      } catch (error) {
+        console.error("Error fetching customer operations:", error);
+        return [];
+      }
+    },
+    refetchOnWindowFocus: false
   });
 
   const saveNotesMutation = useMutation({
@@ -493,94 +502,123 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
                     </Card>
                   </div>
 
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <Label>Çocukları</Label>
-                      {editMode && (
-                        <Dialog open={childNameDialogOpen} onOpenChange={setChildNameDialogOpen}>
-                          <DialogTrigger asChild>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => {
-                                setChildName("");
-                                setEditingChildIndex(null);
-                              }}
-                            >
-                              <Plus className="h-4 w-4 mr-1" />
-                              Çocuk Ekle
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="sm:max-w-md">
-                            <DialogHeader>
-                              <DialogTitle>
-                                {editingChildIndex !== null ? "Çocuk İsmini Düzenle" : "Yeni Çocuk Ekle"}
-                              </DialogTitle>
-                              <DialogDescription>
-                                Lütfen çocuğun adını ve soyadını girin.
-                              </DialogDescription>
-                            </DialogHeader>
-                            <div className="space-y-4 py-4">
-                              <div className="space-y-2">
-                                <Label htmlFor="childName">Çocuk Adı</Label>
-                                <Input 
-                                  id="childName"
-                                  value={childName}
-                                  onChange={(e) => setChildName(e.target.value)}
-                                  placeholder="Örn: Ahmet Yılmaz"
-                                />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-3">
+                      <Label htmlFor="spouse_name">Eş Bilgileri</Label>
+                      <div className="space-y-2">
+                        <Input
+                          id="spouse_name"
+                          name="spouse_name"
+                          value={personalData.spouse_name || ''}
+                          onChange={handleChange}
+                          placeholder="Eş adı soyadı"
+                          disabled={!editMode}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="spouse_birthdate" className="text-xs text-gray-500">
+                          Eş Doğum Tarihi
+                        </Label>
+                        <Input
+                          id="spouse_birthdate"
+                          name="spouse_birthdate"
+                          type="date"
+                          value={personalData.spouse_birthdate?.toString() || ''}
+                          onChange={handleChange}
+                          disabled={!editMode}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <Label>Çocukları</Label>
+                        {editMode && (
+                          <Dialog open={childNameDialogOpen} onOpenChange={setChildNameDialogOpen}>
+                            <DialogTrigger asChild>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => {
+                                  setChildName("");
+                                  setEditingChildIndex(null);
+                                }}
+                              >
+                                <Plus className="h-4 w-4 mr-1" />
+                                Çocuk Ekle
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-md">
+                              <DialogHeader>
+                                <DialogTitle>
+                                  {editingChildIndex !== null ? "Çocuk İsmini Düzenle" : "Yeni Çocuk Ekle"}
+                                </DialogTitle>
+                                <DialogDescription>
+                                  Lütfen çocuğun adını ve soyadını girin.
+                                </DialogDescription>
+                              </DialogHeader>
+                              <div className="space-y-4 py-4">
+                                <div className="space-y-2">
+                                  <Label htmlFor="childName">Çocuk Adı</Label>
+                                  <Input 
+                                    id="childName"
+                                    value={childName}
+                                    onChange={(e) => setChildName(e.target.value)}
+                                    placeholder="Örn: Ahmet Yılmaz"
+                                  />
+                                </div>
                               </div>
+                              <DialogFooter>
+                                <Button variant="outline" onClick={() => setChildNameDialogOpen(false)}>
+                                  İptal
+                                </Button>
+                                <Button onClick={handleAddChildName}>
+                                  {editingChildIndex !== null ? "Güncelle" : "Ekle"}
+                                </Button>
+                              </DialogFooter>
+                            </DialogContent>
+                          </Dialog>
+                        )}
+                      </div>
+                      
+                      {personalData.children_names.length === 0 ? (
+                        <div className="p-4 border rounded-md bg-gray-50 text-center text-sm text-gray-500">
+                          Henüz çocuk bilgisi eklenmemiş
+                        </div>
+                      ) : (
+                        <div className="border rounded-md divide-y">
+                          {personalData.children_names.map((name, index) => (
+                            <div 
+                              key={index} 
+                              className="flex justify-between items-center p-3"
+                            >
+                              <span className="flex items-center gap-2">
+                                <User className="h-4 w-4 text-gray-500" />
+                                {name}
+                              </span>
+                              {editMode && (
+                                <div className="flex gap-2">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon"
+                                    onClick={() => handleEditChildName(index)}
+                                  >
+                                    <Pencil className="h-4 w-4 text-gray-500" />
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon"
+                                    onClick={() => handleRemoveChildName(index)}
+                                  >
+                                    <X className="h-4 w-4 text-red-500" />
+                                  </Button>
+                                </div>
+                              )}
                             </div>
-                            <DialogFooter>
-                              <Button variant="outline" onClick={() => setChildNameDialogOpen(false)}>
-                                İptal
-                              </Button>
-                              <Button onClick={handleAddChildName}>
-                                {editingChildIndex !== null ? "Güncelle" : "Ekle"}
-                              </Button>
-                            </DialogFooter>
-                          </DialogContent>
-                        </Dialog>
+                          ))}
+                        </div>
                       )}
                     </div>
-                    
-                    {personalData.children_names.length === 0 ? (
-                      <div className="p-4 border rounded-md bg-gray-50 text-center text-sm text-gray-500">
-                        Henüz çocuk bilgisi eklenmemiş
-                      </div>
-                    ) : (
-                      <div className="border rounded-md divide-y">
-                        {personalData.children_names.map((name, index) => (
-                          <div 
-                            key={index} 
-                            className="flex justify-between items-center p-3"
-                          >
-                            <span className="flex items-center gap-2">
-                              <User className="h-4 w-4 text-gray-500" />
-                              {name}
-                            </span>
-                            {editMode && (
-                              <div className="flex gap-2">
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon"
-                                  onClick={() => handleEditChildName(index)}
-                                >
-                                  <Pencil className="h-4 w-4 text-gray-500" />
-                                </Button>
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon"
-                                  onClick={() => handleRemoveChildName(index)}
-                                >
-                                  <X className="h-4 w-4 text-red-500" />
-                                </Button>
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
                   </div>
                   
                   <div className="space-y-2">
@@ -621,56 +659,104 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
                   <p className="mt-4">İşlem geçmişi yükleniyor...</p>
                 </div>
               ) : customerOperations.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <FileText className="mx-auto h-12 w-12 opacity-20" />
-                  <p className="mt-2">Henüz kayıtlı işlem bulunmuyor</p>
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">Bu müşteri için henüz işlem kaydı bulunmuyor.</p>
+                  <Button 
+                    variant="outline" 
+                    className="mt-4"
+                    onClick={() => {
+                      customerOperationsService.getCustomerOperations(customer.id.toString());
+                    }}
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Yenile
+                  </Button>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead><Calendar className="h-4 w-4 mr-2" /> Tarih</TableHead>
-                        <TableHead><FileText className="h-4 w-4 mr-2" /> İşlem</TableHead>
-                        <TableHead><User className="h-4 w-4 mr-2" /> Personel</TableHead>
-                        <TableHead><CreditCard className="h-4 w-4 mr-2" /> Tutar</TableHead>
-                        <TableHead><Award className="h-4 w-4 mr-2" /> Puan</TableHead>
-                        <TableHead className="w-1/3"><MessageSquare className="h-4 w-4 mr-2" /> Açıklama</TableHead>
-                        <TableHead></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {customerOperations.map(operation => (
-                        <TableRow key={operation.id}>
-                          <TableCell className="font-medium">{formatDate(operation.date)}</TableCell>
-                          <TableCell>{operation.service_name}</TableCell>
-                          <TableCell>{operation.personnel_name}</TableCell>
-                          <TableCell>{formatCurrency(operation.amount)}</TableCell>
-                          <TableCell>{operation.points}</TableCell>
-                          <TableCell>
-                            <Textarea
-                              value={editingNotes[operation.id] !== undefined ? editingNotes[operation.id] : operation.notes || ''}
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Tarih</TableHead>
+                      <TableHead>İşlem</TableHead>
+                      <TableHead>Personel</TableHead>
+                      <TableHead>Tutar</TableHead>
+                      <TableHead>Notlar</TableHead>
+                      <TableHead>İşlemler</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {customerOperations.map((operation) => (
+                      <TableRow key={operation.id}>
+                        <TableCell>{formatDate(operation.date)}</TableCell>
+                        <TableCell>{operation.service_name}</TableCell>
+                        <TableCell>{operation.personnel_name}</TableCell>
+                        <TableCell>{formatCurrency(operation.amount)}</TableCell>
+                        <TableCell>
+                          {editingNotes[operation.id] !== undefined ? (
+                            <Textarea 
+                              value={editingNotes[operation.id] || ''} 
                               onChange={(e) => handleNotesChange(operation.id, e.target.value)}
-                              placeholder="İşlem hakkında notlar..."
-                              className="resize-none min-h-[80px]"
-                              rows={2}
+                              className="max-h-20 min-h-[80px]"
+                              placeholder="Not ekleyin..."
                             />
-                          </TableCell>
-                          <TableCell>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => handleSaveNotes(operation.id)}
-                              disabled={saveNotesMutation.isPending}
-                            >
-                              <Save className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                          ) : (
+                            operation.notes || "-"
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            {editingNotes[operation.id] !== undefined ? (
+                              <>
+                                <Button 
+                                  size="sm" 
+                                  onClick={() => handleSaveNotes(operation.id)}
+                                  className="h-8 w-8 p-0"
+                                  variant="default"
+                                >
+                                  <Check className="h-4 w-4" />
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  onClick={() => {
+                                    const newEditingNotes = { ...editingNotes };
+                                    delete newEditingNotes[operation.id];
+                                    setEditingNotes(newEditingNotes);
+                                  }}
+                                  className="h-8 w-8 p-0"
+                                  variant="outline"
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </>
+                            ) : (
+                              <Button 
+                                size="sm" 
+                                onClick={() => setEditingNotes({ 
+                                  ...editingNotes, 
+                                  [operation.id]: operation.notes || '' 
+                                })}
+                                className="h-8 w-8 p-0"
+                                variant="ghost"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            )}
+                            
+                            {operation.photos && operation.photos.length > 0 && (
+                              <Button 
+                                size="sm" 
+                                variant="ghost"
+                                className="h-8 w-8 p-0"
+                              >
+                                <Camera className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               )}
             </CardContent>
           </Card>
@@ -682,66 +768,30 @@ export function CustomerDetails({ customer, dukkanId, onEdit, onDelete }: Custom
               <CardTitle>Müşteri Fotoğrafları</CardTitle>
             </CardHeader>
             <CardContent>
-              {isLoadingOperations ? (
-                <div className="text-center py-8">
-                  <div className="inline-block h-6 w-6 animate-spin rounded-full border-4 border-solid border-current border-r-transparent"></div>
-                  <p className="mt-4">Fotoğraflar yükleniyor...</p>
-                </div>
-              ) : (
-                <>
-                  {customerOperations.some(op => op.photos && op.photos.length > 0) ? (
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                      {customerOperations
-                        .filter(op => op.photos && op.photos.length > 0)
-                        .flatMap(op => 
-                          op.photos!.map((photo, photoIndex) => (
-                            <div key={`${op.id}-${photoIndex}`} className="relative group">
-                              <div className="aspect-square overflow-hidden rounded-md border border-gray-200">
-                                <img 
-                                  src={photo} 
-                                  alt={`${op.service_name} fotoğrafı`} 
-                                  className="h-full w-full object-cover transition-all group-hover:scale-105"
-                                />
-                              </div>
-                              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2 text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity">
-                                <p className="font-medium truncate">{op.service_name}</p>
-                                <p className="truncate">{formatDate(op.date)}</p>
-                              </div>
-                            </div>
-                          ))
-                        )}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <Camera className="mx-auto h-12 w-12 opacity-20" />
-                      <p className="mt-2">Henüz kayıtlı fotoğraf bulunmuyor</p>
-                    </div>
-                  )}
-                </>
-              )}
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">Bu özellik henüz geliştirme aşamasındadır.</p>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
-      
+
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-red-500" />
-              Müşteri Kaydını Sil
-            </AlertDialogTitle>
+            <AlertDialogTitle>Müşteriyi Sil</AlertDialogTitle>
             <AlertDialogDescription>
-              <span className="font-medium text-black">{customer.first_name} {customer.last_name}</span> adlı müşteriye ait tüm bilgiler kalıcı olarak silinecektir. Bu işlem geri alınamaz. Devam etmek istediğinize emin misiniz?
+              Bu müşteriyi silmek istediğinizden emin misiniz? 
+              Bu işlem geri alınamaz ve müşteriye ait tüm veriler silinecektir.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>İptal Et</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogCancel>İptal</AlertDialogCancel>
+            <AlertDialogAction
               onClick={handleDeleteCustomer}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-red-600 text-white hover:bg-red-700"
             >
-              Evet, Sil
+              Sil
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

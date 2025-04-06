@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { User, Phone, Mail, Calendar, MapPin, CreditCard, Camera, Trash2 } from "lucide-react";
+import { User, Phone, Mail, Calendar, MapPin, CreditCard, Camera, Trash2, Edit, Save } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const StaffProfile = () => {
@@ -25,6 +26,7 @@ const StaffProfile = () => {
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [editMode, setEditMode] = useState(false);
   
   const [formData, setFormData] = useState({
     firstName: "",
@@ -285,6 +287,7 @@ const StaffProfile = () => {
 
       toast.success("Profil bilgileriniz başarıyla güncellendi");
       refreshProfile();
+      setEditMode(false); // Düzenleme modunu kapat
     } catch (error: any) {
       console.error("Profil güncelleme hatası:", error);
       toast.error(error.message || "Profil güncellenirken bir hata oluştu");
@@ -309,8 +312,35 @@ const StaffProfile = () => {
         <h1 className="text-2xl font-bold mb-6">Profil Bilgilerim</h1>
         
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row justify-between items-center">
             <CardTitle>Profil Bilgilerini Düzenle</CardTitle>
+            <Button
+              onClick={() => {
+                if (editMode) {
+                  // Düzenleme modunda ise formu gönder
+                  document.getElementById('profileForm')?.dispatchEvent(
+                    new Event('submit', { cancelable: true, bubbles: true })
+                  );
+                } else {
+                  // Düzenleme modunda değilse düzenleme modunu aç
+                  setEditMode(true);
+                }
+              }}
+              disabled={isSaving || isUploading}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              {editMode ? (
+                <>
+                  <Save className="h-4 w-4 mr-1" />
+                  {isSaving ? "Kaydediliyor..." : "Değişiklikleri Kaydet"}
+                </>
+              ) : (
+                <>
+                  <Edit className="h-4 w-4 mr-1" />
+                  Düzenle
+                </>
+              )}
+            </Button>
           </CardHeader>
           <CardContent>
             <form id="profileForm" onSubmit={handleSubmit} className="space-y-6">
@@ -327,7 +357,7 @@ const StaffProfile = () => {
                       type="button"
                       className="flex items-center gap-2"
                       onClick={() => document.getElementById('avatar-input')?.click()}
-                      disabled={isUploading}
+                      disabled={isUploading || !editMode}
                     >
                       <Camera size={16} />
                       Fotoğraf {formData.avatarUrl ? "Değiştir" : "Ekle"}
@@ -339,7 +369,7 @@ const StaffProfile = () => {
                         type="button"
                         className="flex items-center gap-2"
                         onClick={handleRemoveAvatar}
-                        disabled={isUploading}
+                        disabled={isUploading || !editMode}
                       >
                         <Trash2 size={16} />
                         Fotoğrafı Kaldır
@@ -352,7 +382,7 @@ const StaffProfile = () => {
                       className="hidden"
                       accept="image/*"
                       onChange={handleAvatarInputChange}
-                      disabled={isUploading}
+                      disabled={isUploading || !editMode}
                     />
                   </div>
                 </div>
@@ -390,6 +420,7 @@ const StaffProfile = () => {
                     value={formData.firstName}
                     onChange={handleChange}
                     placeholder="Adınız"
+                    disabled={!editMode}
                   />
                 </div>
                 
@@ -404,6 +435,7 @@ const StaffProfile = () => {
                     value={formData.lastName}
                     onChange={handleChange}
                     placeholder="Soyadınız"
+                    disabled={!editMode}
                   />
                 </div>
               </div>
@@ -420,6 +452,7 @@ const StaffProfile = () => {
                   onChange={handleChange}
                   placeholder="05XX XXX XX XX"
                   maxLength={14}
+                  disabled={!editMode}
                 />
               </div>
               
@@ -432,6 +465,7 @@ const StaffProfile = () => {
                   <Select
                     value={formData.gender || ""}
                     onValueChange={(value) => handleSelectChange("gender", value as "erkek" | "kadın")}
+                    disabled={!editMode}
                   >
                     <SelectTrigger id="gender">
                       <SelectValue placeholder="Cinsiyet seçin" />
@@ -454,6 +488,7 @@ const StaffProfile = () => {
                     type="date"
                     value={formData.birthdate || ""}
                     onChange={handleChange}
+                    disabled={!editMode}
                   />
                 </div>
               </div>
@@ -470,6 +505,7 @@ const StaffProfile = () => {
                   onChange={handleChange}
                   placeholder="Açık adresinizi girin"
                   rows={3}
+                  disabled={!editMode}
                 />
               </div>
               
@@ -484,6 +520,7 @@ const StaffProfile = () => {
                   value={formData.iban}
                   onChange={handleChange}
                   placeholder="TR00 0000 0000 0000 0000 0000 00"
+                  disabled={!editMode}
                 />
               </div>
               
@@ -503,7 +540,8 @@ const StaffProfile = () => {
               </div>
             </form>
           </CardContent>
-          <CardFooter className="justify-end">
+          {/* Düzenleme modu aktif değilse footer'ı kaldıralım */}
+          {/* <CardFooter className="justify-end">
             <Button 
               type="submit"
               form="profileForm"
@@ -512,7 +550,7 @@ const StaffProfile = () => {
             >
               {isSaving ? "Kaydediliyor..." : "Bilgilerimi Güncelle"}
             </Button>
-          </CardFooter>
+          </CardFooter> */}
         </Card>
       </div>
     </StaffLayout>

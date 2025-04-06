@@ -43,7 +43,11 @@ export const customerOperationsService = {
       
       if (!data || data.length === 0) {
         console.log(`No operations found for customer ID: ${customerId}`);
-        return [];
+        
+        // If no operations found, try to fetch from appointments
+        console.log("Trying to recover operations from appointments");
+        const operations = await this.recoverOperationsFromRandevular(customerId);
+        return operations;
       }
       
       // Transform the data with proper type handling
@@ -76,6 +80,81 @@ export const customerOperationsService = {
       });
     } catch (error) {
       console.error('Error getting customer operations:', error);
+      return [];
+    }
+  },
+
+  async recoverOperationsFromRandevular(customerId: string): Promise<CustomerOperation[]> {
+    try {
+      console.log(`Trying to recover operations from randevular for customer ID: ${customerId}`);
+      
+      // Get appointments for this customer
+      const { data: appointments, error: appointmentError } = await supabase
+        .from('randevular')
+        .select(`
+          id,
+          created_at,
+          tarih,
+          saat,
+          durum,
+          notlar,
+          islemler,
+          personel:personel_id(ad_soyad)
+        `)
+        .eq('musteri_id', customerId)
+        .eq('durum', 'tamamlandi')
+        .order('tarih', { ascending: false });
+      
+      if (appointmentError) {
+        console.error("Error fetching customer appointments:", appointmentError);
+        return [];
+      }
+      
+      if (!appointments || appointments.length === 0) {
+        console.log(`No completed appointments found for customer ID: ${customerId}`);
+        return [];
+      }
+      
+      console.log(`Found ${appointments.length} completed appointments for customer ID: ${customerId}`);
+      
+      // Transform appointments to operations format
+      const operations = appointments.map(appointment => {
+        // Parse islemler to get service details
+        let serviceName = 'Randevu';
+        let amount = 0;
+        let points = 0;
+        
+        try {
+          if (appointment.islemler && Array.isArray(appointment.islemler)) {
+            // If islemler is an array, use the first item
+            serviceName = `${appointment.islemler.length} işlem`;
+            // Could fetch details for each işlem if needed
+          }
+        } catch (e) {
+          console.error("Error parsing islemler:", e);
+        }
+        
+        // Format date and time
+        const appointmentDate = appointment.tarih ? 
+          `${appointment.tarih}T${appointment.saat || '00:00:00'}` : 
+          appointment.created_at;
+        
+        return {
+          id: appointment.id,
+          date: appointmentDate || new Date().toISOString(),
+          service_name: serviceName,
+          personnel_name: appointment.personel?.ad_soyad || 'Belirtilmemiş',
+          amount: amount,
+          points: points,
+          appointment_id: appointment.id,
+          notes: appointment.notlar || '',
+          photos: []
+        };
+      });
+      
+      return operations;
+    } catch (error) {
+      console.error('Error recovering operations from appointments:', error);
       return [];
     }
   },
