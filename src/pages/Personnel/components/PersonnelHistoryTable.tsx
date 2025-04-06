@@ -14,10 +14,15 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, RefreshCcw } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
+import { supabase } from "@/lib/supabase/client";
 
 interface PersonnelHistoryTableProps {
   personnelId?: number;
 }
+
+// Supabase connection info
+const SUPABASE_URL = "https://xkbjjcizncwkrouvoujw.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhrYmpqY2l6bmN3a3JvdXZvdWp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzk5Njg0NzksImV4cCI6MjA1NTU0NDQ3OX0.RyaC2G1JPHUGQetAcvMgjsTp_nqBB2rZe3U-inU2osw";
 
 export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
@@ -39,10 +44,7 @@ export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProp
         // If no operations, automatically try to recover from appointments
         if (result.length === 0 && personnelId) {
           console.log("No operations found, attempting to recover from appointments");
-          await personelIslemleriServisi.recoverOperationsFromAppointments(personnelId);
-          
-          // Invalidate queries to force refetch
-          queryClient.invalidateQueries({ queryKey: ['personelIslemleri'] });
+          await handleRecoverOperations(); // Use the same function as the button click
           
           // Fetch again after recovery attempt
           const recoveredResult = await personelIslemleriServisi.personelIslemleriGetirById(personnelId);
@@ -86,21 +88,29 @@ export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProp
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex justify-center p-4 items-center">
-        <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
-        <span className="ml-2">İşlem geçmişi yükleniyor...</span>
-      </div>
-    );
-  }
-
   const handleRecoverOperations = async () => {
     if (!personnelId) return;
     
     try {
       toast.info("Tamamlanan randevulardan işlemler oluşturuluyor...");
-      await personelIslemleriServisi.recoverOperationsFromAppointments(personnelId);
+      
+      // Call the edge function directly with the URL constants
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/recover_customer_operations`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify({ personnel_id: personnelId })
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Error from edge function:", errorText);
+        throw new Error("İşlem geçmişi yenilenirken bir hata oluştu");
+      }
+      
+      const result = await response.json();
       
       // Invalidate related queries
       queryClient.invalidateQueries({ queryKey: ['personelIslemleri'] });
@@ -109,12 +119,22 @@ export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProp
       // Refetch after invalidation
       await refetch();
       
-      toast.success("İşlem geçmişi güncellendi");
+      toast.success(`İşlem geçmişi güncellendi (${result.count || 0} işlem)`);
     } catch (error) {
       console.error("Error recovering operations:", error);
-      toast.error("İşlem geçmişi güncellenirken bir hata oluştu");
+      toast.error("İşlem geçmişi güncellenirken bir hata oluştu: " + 
+        (error instanceof Error ? error.message : "Bilinmeyen hata"));
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center p-4 items-center">
+        <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
+        <span className="ml-2">İşlem geçmişi yükleniyor...</span>
+      </div>
+    );
+  }
 
   const renderEmptyState = () => {
     if (!personnelId) {
@@ -165,10 +185,7 @@ export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProp
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-medium">İşlem Geçmişi</h3>
         <Button 
-          onClick={() => {
-            handleRecoverOperations();
-            toast.info("İşlem geçmişi yenileniyor...");
-          }}
+          onClick={handleRecoverOperations}
           variant="outline"
           size="sm"
           className="flex items-center gap-1"

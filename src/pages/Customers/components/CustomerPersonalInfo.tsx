@@ -104,11 +104,15 @@ export function CustomerPersonalInfo({ customerId, customer, editMode }: Custome
   const mutation = useMutation({
     mutationFn: async (data: PersonalData) => {
       console.log("Saving customer personal data:", data);
+      console.log("Customer ID type:", typeof customerId, "Value:", customerId);
       
       try {
-        // Always convert customerId to string
-        await customerPersonalDataService.updateCustomerPersonalData(customerId.toString(), {
-          customer_id: customerId.toString(),
+        // Always convert customerId to string and ensure it doesn't have double quotes
+        const customerIdStr = customerId.toString().replace(/"/g, "");
+        console.log("Cleaned customer ID:", customerIdStr);
+        
+        await customerPersonalDataService.updateCustomerPersonalData(customerIdStr, {
+          customer_id: customerIdStr,
           birth_date: data.birth_date,
           anniversary_date: data.anniversary_date,
           children_names: data.children_names,
@@ -132,7 +136,7 @@ export function CustomerPersonalInfo({ customerId, customer, editMode }: Custome
     },
     onError: (error) => {
       console.error("Müşteri bilgileri kaydedilemedi:", error);
-      toast.error("Müşteri bilgileri kaydedilemedi");
+      toast.error("Müşteri bilgileri kaydedilemedi: " + (error instanceof Error ? error.message : String(error)));
     }
   });
 

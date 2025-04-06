@@ -22,11 +22,11 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Parse request body
-    const { customer_id } = await req.json();
+    const { customer_id, personnel_id } = await req.json();
 
-    if (!customer_id) {
+    if (!customer_id && !personnel_id) {
       return new Response(
-        JSON.stringify({ error: 'Customer ID is required' }),
+        JSON.stringify({ error: 'Either customer_id or personnel_id is required' }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 400,
@@ -34,23 +34,50 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Processing completed appointments for customer ID ${customer_id}...`);
+    console.log(`Processing completed appointments for ${customer_id ? 'customer ID ' + customer_id : 'personnel ID ' + personnel_id}...`);
 
-    // Get customer's completed appointments
-    const { data: appointments, error: appointmentsError } = await supabase
-      .from('randevular')
-      .select(`
-        id, 
-        tarih, 
-        saat, 
-        durum,
-        notlar,
-        personel_id, 
-        personel:personel_id (id, ad_soyad),
-        islemler
-      `)
-      .eq('musteri_id', customer_id)
-      .eq('durum', 'tamamlandi');
+    let appointments;
+    let appointmentsError;
+
+    // Get appointments based on provided ID
+    if (customer_id) {
+      const result = await supabase
+        .from('randevular')
+        .select(`
+          id, 
+          tarih, 
+          saat, 
+          durum,
+          notlar,
+          personel_id, 
+          personel:personel_id (id, ad_soyad),
+          islemler
+        `)
+        .eq('musteri_id', customer_id)
+        .eq('durum', 'tamamlandi');
+
+      appointments = result.data;
+      appointmentsError = result.error;
+    } else {
+      const result = await supabase
+        .from('randevular')
+        .select(`
+          id, 
+          tarih, 
+          saat, 
+          durum,
+          notlar,
+          personel_id,
+          musteri_id,
+          personel:personel_id (id, ad_soyad, prim_yuzdesi),
+          islemler
+        `)
+        .eq('personel_id', personnel_id)
+        .eq('durum', 'tamamlandi');
+
+      appointments = result.data;
+      appointmentsError = result.error;
+    }
 
     if (appointmentsError) {
       console.error('Error fetching appointments:', appointmentsError);
@@ -104,33 +131,36 @@ serve(async (req) => {
           continue;
         }
 
+        // Get personnel commission percentage
+        let primYuzdesi = 0;
+        if (appointment.personel && appointment.personel.prim_yuzdesi) {
+          primYuzdesi = appointment.personel.prim_yuzdesi;
+        } else if (appointment.personel_id) {
+          const { data: personelData } = await supabase
+            .from('personel')
+            .select('prim_yuzdesi')
+            .eq('id', appointment.personel_id)
+            .single();
+
+          if (personelData) {
+            primYuzdesi = personelData.prim_yuzdesi || 0;
+          }
+        }
+
         // Create operation data
         const operationData = {
           personel_id: appointment.personel_id,
           islem_id: islem.id,
-          musteri_id: customer_id,
+          musteri_id: customer_id || appointment.musteri_id,
           tutar: islem.fiyat || 0,
           odenen: islem.fiyat || 0, // Default to full payment
-          prim_yuzdesi: 0, // Commission from personnel table
+          prim_yuzdesi: primYuzdesi,
           puan: islem.puan || 0,
           aciklama: islem.islem_adi || 'Service',
           notlar: appointment.notlar || '',
           randevu_id: appointment.id,
           created_at: `${appointment.tarih}T${appointment.saat || '00:00:00'}`
         };
-
-        // Get personnel commission
-        if (appointment.personel && appointment.personel.id) {
-          const { data: personelData } = await supabase
-            .from('personel')
-            .select('prim_yuzdesi')
-            .eq('id', appointment.personel.id)
-            .single();
-
-          if (personelData) {
-            operationData.prim_yuzdesi = personelData.prim_yuzdesi || 0;
-          }
-        }
 
         // Check if operation record exists
         const { data: existingOperation } = await supabase

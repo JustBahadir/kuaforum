@@ -22,8 +22,9 @@ export const customerPersonalDataService = {
     try {
       console.log("Fetching personal data for customer:", customerId);
       
-      // Always handle as string
-      const customerIdStr = customerId.toString();
+      // Always handle as string and remove any quotes
+      const customerIdStr = String(customerId).replace(/"/g, "");
+      console.log("Cleaned customer ID for query:", customerIdStr);
       
       const { data, error } = await supabase
         .from('customer_personal_data')
@@ -49,8 +50,9 @@ export const customerPersonalDataService = {
       console.log("Updating personal data for customer:", customerId);
       console.log("Data to update:", personalData);
       
-      // Always handle as string
-      const customerIdStr = customerId.toString();
+      // Always handle as string and remove any quotes
+      const customerIdStr = String(customerId).replace(/"/g, "");
+      console.log("Cleaned customer ID for update:", customerIdStr);
       
       // Check if record exists
       const { data: existingData } = await supabase
@@ -59,8 +61,9 @@ export const customerPersonalDataService = {
         .eq('customer_id', customerIdStr)
         .maybeSingle();
       
-      // Check for empty children_names array
-      const children_names = personalData.children_names || [];
+      // Ensure children_names is an array
+      const children_names = Array.isArray(personalData.children_names) ? personalData.children_names : [];
+      console.log("Children names to update:", children_names);
       
       if (existingData) {
         // Update existing record
