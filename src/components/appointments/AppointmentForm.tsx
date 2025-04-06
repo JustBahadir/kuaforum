@@ -89,6 +89,7 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
     
     try {
       setIsFetchingTimes(true);
+      console.log(`Fetching available times for date: ${date}`);
       
       const selected = new Date(date);
       const now = new Date();
@@ -100,28 +101,43 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
       const dayNames = ["pazar", "pazartesi", "sali", "carsamba", "persembe", "cuma", "cumartesi"];
       const dayName = dayNames[dayOfWeek];
       
+      console.log(`Day of week: ${dayName}, Dukkan ID: ${dukkanId}`);
+      
       const workingHours = await calismaSaatleriServisi.dukkanSaatleriGetir(dukkanId);
+      console.log("Working hours retrieved:", workingHours);
+      
       const dayHours = workingHours.find((h: CalismaSaati) => h.gun === dayName);
+      console.log("Hours for this day:", dayHours);
       
       if (!dayHours || dayHours.kapali || !dayHours.acilis || !dayHours.kapanis) {
+        console.log("Shop is closed or working hours not set for this day");
         setAvailableTimes([]);
         return;
       }
       
       const slots = generateTimeSlots(dayHours.acilis, dayHours.kapanis, isToday);
+      console.log("Generated time slots:", slots);
       setAvailableTimes(slots);
     } catch (error) {
       console.error("Error fetching available times:", error);
       // Fallback
       const isToday = new Date(date).toDateString() === new Date().toDateString();
       const defaultSlots = generateTimeSlots('09:00', '19:00', isToday);
+      console.log("Using fallback time slots:", defaultSlots);
       setAvailableTimes(defaultSlots);
     } finally {
       setIsFetchingTimes(false);
     }
   };
   
-  // Force fetch times when date is selected initially
+  // Force fetch times when component mounts or date changes
+  React.useEffect(() => {
+    if (selectedDate) {
+      fetchAvailableTimes(selectedDate);
+    }
+  }, [selectedDate, dukkanId]);
+  
+  // Handle date change
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const date = e.target.value;
     setSelectedDate(date);
@@ -285,7 +301,7 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
       <div className="space-y-2">
         <Label htmlFor="time">Saat</Label>
         <Select onValueChange={setSelectedTime}>
-          <SelectTrigger id="time" onClick={() => fetchAvailableTimes(selectedDate)}>
+          <SelectTrigger id="time">
             <SelectValue placeholder={
               isFetchingTimes 
                 ? "Saatler yükleniyor..." 

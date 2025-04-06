@@ -1,4 +1,3 @@
-
 import { supabase } from '../client';
 import { Randevu } from '../types';
 import { toast } from 'sonner';
@@ -198,186 +197,158 @@ export const randevuServisi = {
     try {
       console.log(`Randevu ${randevuId} tamamlandı işlemi başlatılıyor...`);
       
-      const { data: randevu, error: randevuError } = await supabase
-        .from('randevular')
-        .select(`
-          *,
-          musteri:musteriler(*),
-          personel:personel(*)
-        `)
-        .eq('id', randevuId)
-        .single();
+      const { data: rpcResult, error: rpcError } = await supabase.rpc(
+        'process_completed_appointment', 
+        { appointment_id: randevuId }
+      );
+      
+      if (rpcError) {
+        console.error("RPC error while processing completed appointment:", rpcError);
         
-      if (randevuError || !randevu) {
-        console.error("Randevu bilgileri alınamadı:", randevuError);
-        throw new Error(`Randevu bilgileri alınamadı: ${randevuError?.message || 'Randevu bulunamadı'}`);
-      }
-      
-      console.log("Retrieved appointment details:", randevu);
-      
-      const islemIds = randevu.islemler || [];
-      if (!islemIds || islemIds.length === 0) {
-        console.error("Randevuda kayıtlı işlem bulunamadı");
-        throw new Error("Randevuda kayıtlı işlem bulunamadı");
-      }
-      
-      console.log("Service IDs from appointment:", islemIds);
-      
-      const { data: islemler, error: islemError } = await supabase
-        .from('islemler')
-        .select('*')
-        .in('id', islemIds);
-      
-      if (islemError || !islemler || islemler.length === 0) {
-        console.error("İşlem detayları alınamadı:", islemError);
-        throw new Error(`İşlem detayları alınamadı: ${islemError?.message || 'İşlemler bulunamadı'}`);
-      }
-      
-      console.log(`${islemler.length} adet işlem işlenecek:`, islemler);
-      
-      const personelData = randevu.personel;
-      const primYuzdesi = personelData?.prim_yuzdesi || 0;
-      
-      console.log("Personel data:", personelData);
-      console.log("Prim yüzdesi:", primYuzdesi);
-      
-      let musteriAdi = "Belirtilmemiş";
-      if (randevu.musteri) {
-        musteriAdi = `${randevu.musteri.first_name || ''} ${randevu.musteri.last_name || ''}`.trim();
-      }
-      
-      const createdOperations = [];
-      
-      // Başka bir yol deneyelim - doğrudan SQL RPC çağrısı
-      try {
-        const { data: rpcResult, error: rpcError } = await supabase.rpc(
-          'process_completed_appointment', 
-          { appointment_id: randevuId }
-        );
-        
-        if (rpcError) {
-          console.error("RPC error while processing completed appointment:", rpcError);
-          // RPC başarısız olursa yedek yönteme devam et
-        } else if (rpcResult) {
-          console.log("Successfully processed appointment via RPC:", rpcResult);
-          return rpcResult;
+        const { data: randevu, error: randevuError } = await supabase
+          .from('randevular')
+          .select(`
+            *,
+            personel:personel_id(id, ad_soyad, prim_yuzdesi)
+          `)
+          .eq('id', randevuId)
+          .single();
+          
+        if (randevuError || !randevu) {
+          console.error("Randevu bilgileri alınamadı:", randevuError);
+          throw new Error(`Randevu bilgileri alınamadı: ${randevuError?.message || 'Randevu bulunamadı'}`);
         }
-      } catch (rpcException) {
-        console.error("Exception in RPC call:", rpcException);
-        // RPC başarısız olursa yedek yönteme devam et
-      }
-      
-      // RPC başarısız olursa manüel olarak işlemleri oluştur
-      for (const islem of islemler) {
-        try {
-          const tutar = parseFloat(islem.fiyat) || 0;
-          const odenenPrim = (tutar * primYuzdesi) / 100;
+        
+        console.log("Retrieved appointment details:", randevu);
+        
+        const islemIds = randevu.islemler || [];
+        if (!islemIds || islemIds.length === 0) {
+          console.error("Randevuda kayıtlı işlem bulunamadı");
+          throw new Error("Randevuda kayıtlı işlem bulunamadı");
+        }
+        
+        console.log("Service IDs from appointment:", islemIds);
+        
+        const { data: islemler, error: islemError } = await supabase
+          .from('islemler')
+          .select('*')
+          .in('id', islemIds);
+        
+        if (islemError || !islemler || islemler.length === 0) {
+          console.error("İşlem detayları alınamadı:", islemError);
+          throw new Error(`İşlem detayları alınamadı: ${islemError?.message || 'İşlemler bulunamadı'}`);
+        }
+        
+        console.log(`${islemler.length} adet işlem işlenecek:`, islemler);
+        
+        const personelData = randevu.personel;
+        const primYuzdesi = personelData?.prim_yuzdesi || 0;
+        
+        console.log("Personel data:", personelData);
+        console.log("Prim yüzdesi:", primYuzdesi);
+        
+        const { data: musteriData } = await supabase
+          .from('musteriler')
+          .select('first_name, last_name')
+          .eq('id', randevu.musteri_id)
+          .single();
           
-          const personelIslem = {
-            personel_id: randevu.personel_id,
-            islem_id: islem.id,
-            tutar: tutar,
-            puan: parseInt(islem.puan) || 0,
-            prim_yuzdesi: primYuzdesi,
-            odenen: odenenPrim,
-            musteri_id: randevu.musteri_id,
-            randevu_id: randevuId,
-            aciklama: `${islem.islem_adi} hizmeti verildi - ${musteriAdi} (Randevu #${randevuId})`,
-            notlar: randevu.notlar || ''
-          };
-          
-          console.log("Creating personnel operation:", personelIslem);
-          
-          // Mevcut işlemleri kontrol et
-          const { data: existingOps, error: checkError } = await supabase
-            .from('personel_islemleri')
-            .select('id')
-            .eq('randevu_id', randevuId)
-            .eq('islem_id', islem.id)
-            .eq('personel_id', randevu.personel_id);
+        let musteriAdi = "Belirtilmemiş";
+        if (musteriData) {
+          musteriAdi = `${musteriData.first_name || ''} ${musteriData.last_name || ''}`.trim();
+        }
+        
+        const createdOperations = [];
+        
+        for (const islem of islemler) {
+          try {
+            const tutar = parseFloat(islem.fiyat) || 0;
+            const odenenPrim = (tutar * primYuzdesi) / 100;
             
-          if (checkError) {
-            console.error("Error checking for existing operations:", checkError);
-          }
-          
-          if (existingOps && existingOps.length > 0) {
-            console.log(`İşlem zaten var, güncelleniyor: ${existingOps[0].id}`);
+            const personelIslem = {
+              personel_id: randevu.personel_id,
+              islem_id: islem.id,
+              tutar: tutar,
+              puan: parseInt(islem.puan) || 0,
+              prim_yuzdesi: primYuzdesi,
+              odenen: odenenPrim,
+              musteri_id: randevu.musteri_id,
+              randevu_id: randevuId,
+              aciklama: `${islem.islem_adi} hizmeti verildi - ${musteriAdi} (Randevu #${randevuId})`,
+              notlar: randevu.notlar || ''
+            };
             
-            // Varsa güncelle
-            const { data: updatedOp, error: updateError } = await supabase
+            console.log("Creating personnel operation:", personelIslem);
+            
+            const { data: existingOps, error: checkError } = await supabase
               .from('personel_islemleri')
-              .update({
-                tutar: tutar,
-                puan: parseInt(islem.puan) || 0,
-                prim_yuzdesi: primYuzdesi,
-                odenen: odenenPrim,
-                aciklama: `${islem.islem_adi} hizmeti verildi - ${musteriAdi} (Randevu #${randevuId})`,
-                notlar: randevu.notlar || '',
-                musteri_id: randevu.musteri_id
-              })
-              .eq('id', existingOps[0].id)
-              .select('*')
-              .single();
+              .select('id')
+              .eq('randevu_id', randevuId)
+              .eq('islem_id', islem.id)
+              .eq('personel_id', randevu.personel_id);
               
-            if (updateError) {
-              console.error("Error updating operation:", updateError);
-            } else if (updatedOp) {
-              createdOperations.push(updatedOp);
-              console.log("Updated existing operation:", updatedOp);
+            if (checkError) {
+              console.error("Error checking for existing operations:", checkError);
             }
-          } else {
-            // Yoksa yeni oluştur
-            const { data: insertedOp, error: insertError } = await supabase
-              .from('personel_islemleri')
-              .insert([personelIslem])
-              .select('*');
+            
+            if (existingOps && existingOps.length > 0) {
+              console.log(`İşlem zaten var, güncelleniyor: ${existingOps[0].id}`);
               
-            if (insertError) {
-              console.error("Error creating new operation:", insertError);
-              
-              // Alternatif yöntem dene
-              const { data: alternativeOp, error: altError } = await supabase
-                .rpc('create_personnel_operation', {
-                  p_personel_id: randevu.personel_id,
-                  p_islem_id: islem.id,
-                  p_tutar: tutar,
-                  p_puan: parseInt(islem.puan) || 0,
-                  p_prim_yuzdesi: primYuzdesi,
-                  p_odenen: odenenPrim,
-                  p_musteri_id: randevu.musteri_id,
-                  p_randevu_id: randevuId,
-                  p_aciklama: `${islem.islem_adi} hizmeti verildi - ${musteriAdi} (Randevu #${randevuId})`,
-                  p_notlar: randevu.notlar || ''
-                });
+              const { data: updatedOp, error: updateError } = await supabase
+                .from('personel_islemleri')
+                .update({
+                  tutar: tutar,
+                  puan: parseInt(islem.puan) || 0,
+                  prim_yuzdesi: primYuzdesi,
+                  odenen: odenenPrim,
+                  aciklama: `${islem.islem_adi} hizmeti verildi - ${musteriAdi} (Randevu #${randevuId})`,
+                  notlar: randevu.notlar || '',
+                  musteri_id: randevu.musteri_id
+                })
+                .eq('id', existingOps[0].id)
+                .select('*')
+                .single();
                 
-              if (altError) {
-                console.error("Error creating operation via RPC:", altError);
-              } else if (alternativeOp) {
-                createdOperations.push(alternativeOp);
-                console.log("Created operation via RPC:", alternativeOp);
+              if (updateError) {
+                console.error("Error updating operation:", updateError);
+              } else if (updatedOp) {
+                createdOperations.push(updatedOp);
+                console.log("Updated existing operation:", updatedOp);
               }
-            } else if (insertedOp && insertedOp.length > 0) {
-              createdOperations.push(insertedOp[0]);
-              console.log("Created new personnel operation:", insertedOp[0]);
+            } else {
+              const { data: insertedOp, error: insertError } = await supabase
+                .from('personel_islemleri')
+                .insert([personelIslem])
+                .select('*');
+                
+              if (insertError) {
+                console.error("Error creating new operation:", insertError);
+              } else if (insertedOp && insertedOp.length > 0) {
+                createdOperations.push(insertedOp[0]);
+                console.log("Created new personnel operation:", insertedOp[0]);
+              }
             }
+          } catch (serviceError) {
+            console.error(`Error processing service ID ${islem.id}:`, serviceError);
           }
-        } catch (serviceError) {
-          console.error(`Error processing service ID ${islem.id}:`, serviceError);
         }
+        
+        console.log(`Toplam ${createdOperations.length} adet işlem kaydı oluşturuldu`);
+        
+        await personelIslemleriServisi.updateShopStatistics();
+        
+        if (createdOperations.length > 0) {
+          toast.success(`Randevu tamamlandı ve ${createdOperations.length} işlem kaydedildi`);
+        } else {
+          toast.warning("Randevu tamamlandı ancak işlem kaydedilemedi");
+        }
+        
+        return createdOperations;
       }
       
-      console.log(`Toplam ${createdOperations.length} adet işlem kaydı oluşturuldu`);
+      console.log("Successfully processed appointment via RPC:", rpcResult);
+      return rpcResult;
       
-      // İstatistikleri güncelle
-      await personelIslemleriServisi.updateShopStatistics();
-      
-      if (createdOperations.length > 0) {
-        toast.success(`Randevu tamamlandı ve ${createdOperations.length} işlem kaydedildi`);
-      } else {
-        toast.warning("Randevu tamamlandı ancak işlem kaydedilemedi");
-      }
-      
-      return createdOperations;
     } catch (error: any) {
       console.error("Randevu tamamlandı işlemi hatası:", error);
       toast.error(`İşlem kaydedilemedi: ${error.message}`);
