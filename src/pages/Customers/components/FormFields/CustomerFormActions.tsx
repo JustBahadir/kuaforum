@@ -6,9 +6,15 @@ export interface CustomerFormActionsProps {
   isSubmitting: boolean;
   onCancel: () => void;
   submitLabel?: string;
+  disabled?: boolean; // Added missing property
 }
 
-export function CustomerFormActions({ isSubmitting, onCancel, submitLabel = "Kaydet" }: CustomerFormActionsProps) {
+export function CustomerFormActions({ 
+  isSubmitting, 
+  onCancel, 
+  submitLabel = "Kaydet",
+  disabled = false // Added default value 
+}: CustomerFormActionsProps) {
   return (
     <div className="flex justify-end gap-2">
       <Button 
@@ -19,7 +25,10 @@ export function CustomerFormActions({ isSubmitting, onCancel, submitLabel = "Kay
       >
         İptal
       </Button>
-      <Button type="submit" disabled={isSubmitting}>
+      <Button 
+        type="submit" 
+        disabled={isSubmitting || disabled}
+      >
         {isSubmitting ? (
           <>
             <LoadingSpinner size="sm" className="mr-2" /> 

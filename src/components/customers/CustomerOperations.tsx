@@ -11,6 +11,7 @@ import { CustomerPhotoGallery } from "@/components/customers/CustomerPhotoGaller
 import { AddOperationForm } from "@/components/operations/AddOperationForm";
 import { FileImage, Plus, RefreshCcw } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/lib/supabase/client"; // Added missing import
 import {
   Table,
   TableBody,

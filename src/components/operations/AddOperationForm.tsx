@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { personelServisi, islemServisi, personelIslemleriServisi } from "@/lib/supabase";
+import { personelServisi, islemServisi } from "@/lib/supabase";
 import { Islem, Personel } from "@/lib/supabase/types";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -9,6 +9,7 @@ import * as z from "zod";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { Camera, FileImage } from "lucide-react";
+import { supabase } from "@/lib/supabase/client"; // Added missing import
 import {
   Form,
   FormControl,

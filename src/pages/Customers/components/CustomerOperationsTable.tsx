@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { FileUpload } from "@/components/ui/file-upload";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { customerOperationsService, CustomerOperation } from "@/lib/supabase/services/customerOperationsService";
-import { supabase } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase/client"; // Added missing import
 import {
   Table,
   TableBody,

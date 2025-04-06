@@ -22,6 +22,7 @@ export interface CustomerOperation {
   aciklama?: string;
   tutar?: number;
   puan?: number;
+  odenen?: number; // Added this missing property
 }
 
 export const customerOperationsService = {

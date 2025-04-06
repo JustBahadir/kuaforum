@@ -1,19 +1,31 @@
 
-[functions.operate]
-verify_jwt = true
+project_id = "xkbjjcizncwkrouvoujw"
 
-[functions.recover_customer_operations]
-verify_jwt = true
+[api]
+port = 54321
+schemas = ["public", "storage"]
 
+[db]
+port = 54322
+
+[studio]
+port = 54323
+
+[inbucket]
+port = 54324
+
+[auth]
+additional_redirect_urls = ["https://localhost:3000"]
+
+[storage]
+enabled = true
+
+[functions]
 [functions.add-operation]
-verify_jwt = true
-
+verify_jwt = false
 [functions.add-operation-photo]
-verify_jwt = true
-
+verify_jwt = false
 [functions.update-operation-notes]
-verify_jwt = true
-
-# Do not delete the [project] section
-[project]
-
+verify_jwt = false
+[functions.recover_customer_operations]
+verify_jwt = false
