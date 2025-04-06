@@ -70,14 +70,16 @@ export const customerOperationsService = {
         
         // Safely extract islem_adi if available
         if (item.islem && typeof item.islem === 'object') {
-          // Fix: Check if islem is a single object (not an array)
-          serviceName = item.islem.islem_adi || serviceName;
+          // Make sure we're treating islem as an object, not an array
+          const islemObj = item.islem as { islem_adi?: string };
+          serviceName = islemObj.islem_adi || serviceName;
         }
         
         // Safely extract ad_soyad if available
         if (item.personel && typeof item.personel === 'object') {
-          // Fix: Check if personel is a single object (not an array)
-          personnelName = item.personel.ad_soyad || personnelName;
+          // Make sure we're treating personel as an object, not an array
+          const personelObj = item.personel as { ad_soyad?: string };
+          personnelName = personelObj.ad_soyad || personnelName;
         }
         
         return {
