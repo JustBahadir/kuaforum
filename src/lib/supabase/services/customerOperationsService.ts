@@ -1,3 +1,4 @@
+
 import { supabase } from '../client';
 
 export interface CustomerOperation {
@@ -69,13 +70,13 @@ export const customerOperationsService = {
         
         // Safely extract islem_adi if available
         if (item.islem && typeof item.islem === 'object') {
-          // Fixed: Access islem_adi directly from the object, not as an array
+          // Fix: Access islem_adi directly from the object
           serviceName = item.islem.islem_adi || serviceName;
         }
         
         // Safely extract ad_soyad if available
         if (item.personel && typeof item.personel === 'object') {
-          // Fixed: Access ad_soyad directly from the object, not as an array
+          // Fix: Access ad_soyad directly from the object
           personnelName = item.personel.ad_soyad || personnelName;
         }
         
