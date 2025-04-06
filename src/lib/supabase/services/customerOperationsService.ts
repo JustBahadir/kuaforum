@@ -14,9 +14,10 @@ export interface CustomerOperation {
 }
 
 export const customerOperationsService = {
-  async getCustomerOperations(customerId: string): Promise<CustomerOperation[]> {
+  async getCustomerOperations(customerId: string | number): Promise<CustomerOperation[]> {
     try {
-      console.log(`Fetching operations for customer ID: ${customerId}`);
+      const customerIdStr = customerId.toString();
+      console.log(`Fetching operations for customer ID: ${customerIdStr}`);
       
       // Try to get operations directly from personel_islemleri table first
       const { data, error } = await supabase
@@ -30,7 +31,7 @@ export const customerOperationsService = {
           notlar,
           randevu_id,
           photos,
-          personel(ad_soyad),
+          personel:personel_id(ad_soyad),
           islem:islem_id(islem_adi)
         `)
         .eq('musteri_id', customerId)
@@ -42,11 +43,11 @@ export const customerOperationsService = {
       }
       
       if (!data || data.length === 0) {
-        console.log(`No operations found for customer ID: ${customerId}`);
+        console.log(`No operations found for customer ID: ${customerIdStr}`);
         
         // If no operations found, try to fetch from appointments
         console.log("Trying to recover operations from appointments");
-        const operations = await this.recoverOperationsFromRandevular(customerId);
+        const operations = await this.recoverOperationsFromRandevular(customerIdStr);
         return operations;
       }
       
@@ -58,12 +59,12 @@ export const customerOperationsService = {
         
         // Safely extract islem_adi if available
         if (item.islem && typeof item.islem === 'object') {
-          serviceName = (item.islem as any).islem_adi || serviceName;
+          serviceName = item.islem?.islem_adi || serviceName;
         }
         
         // Safely extract ad_soyad if available
         if (item.personel && typeof item.personel === 'object') {
-          personnelName = (item.personel as any).ad_soyad || personnelName;
+          personnelName = item.personel?.ad_soyad || personnelName;
         }
         
         return {
@@ -84,11 +85,13 @@ export const customerOperationsService = {
     }
   },
 
-  async recoverOperationsFromRandevular(customerId: string): Promise<CustomerOperation[]> {
+  async recoverOperationsFromRandevular(customerId: string | number): Promise<CustomerOperation[]> {
     try {
-      console.log(`Trying to recover operations from randevular for customer ID: ${customerId}`);
+      const customerIdStr = customerId.toString();
+      console.log(`Trying to recover operations from randevular for customer ID: ${customerIdStr}`);
       
-      // Get appointments for this customer
+      // Instead of using a query that relies on profiles (which causes recursion),
+      // we'll use a direct query to get completed appointments for this customer
       const { data: appointments, error: appointmentError } = await supabase
         .from('randevular')
         .select(`
@@ -99,7 +102,7 @@ export const customerOperationsService = {
           durum,
           notlar,
           islemler,
-          personel:personel_id(ad_soyad)
+          personel_id
         `)
         .eq('musteri_id', customerId)
         .eq('durum', 'tamamlandi')
@@ -111,11 +114,23 @@ export const customerOperationsService = {
       }
       
       if (!appointments || appointments.length === 0) {
-        console.log(`No completed appointments found for customer ID: ${customerId}`);
+        console.log(`No completed appointments found for customer ID: ${customerIdStr}`);
         return [];
       }
       
-      console.log(`Found ${appointments.length} completed appointments for customer ID: ${customerId}`);
+      console.log(`Found ${appointments.length} completed appointments for customer ID: ${customerIdStr}`);
+      
+      // Get personnel information for these appointments
+      const personnelIds = appointments.map(apt => apt.personel_id).filter(Boolean);
+      const { data: personnelData } = await supabase
+        .from('personel')
+        .select('id, ad_soyad')
+        .in('id', personnelIds);
+      
+      const personnelMap = (personnelData || []).reduce((map, p) => {
+        map[p.id] = p.ad_soyad;
+        return map;
+      }, {} as Record<number, string>);
       
       // Transform appointments to operations format
       const operations = appointments.map(appointment => {
@@ -139,11 +154,8 @@ export const customerOperationsService = {
           `${appointment.tarih}T${appointment.saat || '00:00:00'}` : 
           appointment.created_at;
         
-        // Fix the type issue - ensure we handle personel correctly
-        let personnelName = 'Belirtilmemiş';
-        if (appointment.personel && typeof appointment.personel === 'object') {
-          personnelName = (appointment.personel as any).ad_soyad || 'Belirtilmemiş';
-        }
+        // Get personnel name from our map
+        const personnelName = personnelMap[appointment.personel_id] || 'Belirtilmemiş';
         
         return {
           id: appointment.id,

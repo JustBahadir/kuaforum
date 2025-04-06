@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { Calendar, PlusCircle, X } from "lucide-react";
+import { Calendar, PlusCircle, User, X } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -20,9 +20,10 @@ import { Musteri } from "@/lib/supabase";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { getHoroscope, getHoroscopeDescription } from "../utils/horoscopeUtils";
+import { customerPersonalDataService } from "@/lib/supabase/services/customerPersonalDataService";
 
 interface CustomerPersonalInfoProps {
-  customerId: string;
+  customerId: string | number;
   customer: Musteri;
   editMode: boolean;
 }
@@ -60,15 +61,17 @@ export function CustomerPersonalInfo({ customerId, customer, editMode }: Custome
   const { data: existingData, isLoading } = useQuery({
     queryKey: ['customer_personal_data', customerId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('customer_personal_data')
-        .select('*')
-        .eq('customer_id', customerId)
-        .maybeSingle();
-        
-      if (error) throw error;
-      return data;
-    }
+      try {
+        // Make sure we're passing the ID in a way that the service can handle
+        const data = await customerPersonalDataService.getByCustomerId(customerId);
+        console.log("Fetched personal data:", data);
+        return data;
+      } catch (error) {
+        console.error("Error fetching personal data:", error);
+        return null;
+      }
+    },
+    staleTime: 30000, // 30 seconds
   });
 
   // Prefill form with existing data
@@ -100,47 +103,21 @@ export function CustomerPersonalInfo({ customerId, customer, editMode }: Custome
     mutationFn: async (data: PersonalData) => {
       console.log("Saving customer personal data:", data);
       
-      if (existingData) {
-        const { error } = await supabase
-          .from('customer_personal_data')
-          .update({
-            birth_date: data.birth_date,
-            anniversary_date: data.anniversary_date,
-            children_names: data.children_names,
-            horoscope: data.horoscope,
-            horoscope_description: data.horoscope_description,
-            custom_notes: data.custom_notes,
-            daily_horoscope_reading: data.daily_horoscope_reading,
-            spouse_name: data.spouse_name,
-            spouse_birthdate: data.spouse_birthdate,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existingData.id);
-          
-        if (error) {
-          console.error("Error updating customer personal data:", error);
-          throw error;
-        }
-      } else {
-        const { error } = await supabase
-          .from('customer_personal_data')
-          .insert({
-            customer_id: customerId,
-            birth_date: data.birth_date,
-            anniversary_date: data.anniversary_date,
-            children_names: data.children_names,
-            horoscope: data.horoscope,
-            horoscope_description: data.horoscope_description,
-            custom_notes: data.custom_notes,
-            daily_horoscope_reading: data.daily_horoscope_reading,
-            spouse_name: data.spouse_name,
-            spouse_birthdate: data.spouse_birthdate
-          });
-          
-        if (error) {
-          console.error("Error inserting customer personal data:", error);
-          throw error;
-        }
+      try {
+        await customerPersonalDataService.updateCustomerPersonalData(customerId, {
+          birth_date: data.birth_date,
+          anniversary_date: data.anniversary_date,
+          children_names: data.children_names,
+          horoscope: data.horoscope,
+          horoscope_description: data.horoscope_description,
+          custom_notes: data.custom_notes,
+          daily_horoscope_reading: data.daily_horoscope_reading,
+          spouse_name: data.spouse_name,
+          spouse_birthdate: data.spouse_birthdate
+        });
+      } catch (error) {
+        console.error("Error saving personal data:", error);
+        throw error;
       }
     },
     onSuccess: () => {
@@ -377,7 +354,10 @@ export function CustomerPersonalInfo({ customerId, customer, editMode }: Custome
               <div className="border rounded-md p-2 space-y-2">
                 {personalData.children_names.map((child, index) => (
                   <div key={index} className="flex items-center justify-between bg-muted/30 p-2 rounded">
-                    <span>{child}</span>
+                    <div className="flex items-center">
+                      <User className="h-4 w-4 mr-2 text-gray-500" />
+                      <span>{child}</span>
+                    </div>
                     <Button
                       type="button"
                       variant="ghost"
@@ -398,7 +378,10 @@ export function CustomerPersonalInfo({ customerId, customer, editMode }: Custome
             <div className="border rounded-md p-3">
               <ul className="space-y-1">
                 {personalData.children_names.map((child, index) => (
-                  <li key={index} className="text-base">• {child}</li>
+                  <li key={index} className="flex items-center">
+                    <User className="h-4 w-4 mr-2 text-gray-500" />
+                    <span>{child}</span>
+                  </li>
                 ))}
               </ul>
             </div>

@@ -18,14 +18,17 @@ export interface CustomerPersonalData {
 }
 
 export const customerPersonalDataService = {
-  async getCustomerPersonalData(customerId: string): Promise<CustomerPersonalData | null> {
+  async getCustomerPersonalData(customerId: string | number): Promise<CustomerPersonalData | null> {
     try {
       console.log("Fetching personal data for customer:", customerId);
+      
+      // Handle numeric customer IDs by converting to string
+      const customerIdStr = customerId.toString();
       
       const { data, error } = await supabase
         .from('customer_personal_data')
         .select('*')
-        .eq('customer_id', customerId)
+        .eq('customer_id', customerIdStr)
         .maybeSingle();
         
       if (error) {
@@ -41,16 +44,19 @@ export const customerPersonalDataService = {
     }
   },
   
-  async updateCustomerPersonalData(customerId: string, personalData: Partial<CustomerPersonalData>): Promise<void> {
+  async updateCustomerPersonalData(customerId: string | number, personalData: Partial<CustomerPersonalData>): Promise<void> {
     try {
       console.log("Updating personal data for customer:", customerId);
       console.log("Data to update:", personalData);
+      
+      // Handle numeric customer IDs by converting to string
+      const customerIdStr = customerId.toString();
       
       // Check if record exists
       const { data: existingData } = await supabase
         .from('customer_personal_data')
         .select('id')
-        .eq('customer_id', customerId)
+        .eq('customer_id', customerIdStr)
         .maybeSingle();
       
       if (existingData) {
@@ -61,7 +67,7 @@ export const customerPersonalDataService = {
             ...personalData,
             updated_at: new Date().toISOString()
           })
-          .eq('customer_id', customerId);
+          .eq('customer_id', customerIdStr);
           
         if (error) {
           console.error("Error updating customer personal data:", error);
@@ -74,7 +80,7 @@ export const customerPersonalDataService = {
         const { error } = await supabase
           .from('customer_personal_data')
           .insert({
-            customer_id: customerId,
+            customer_id: customerIdStr,
             ...personalData,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
@@ -94,7 +100,7 @@ export const customerPersonalDataService = {
   },
 
   // Alias method that matches what CustomerDetails.tsx is trying to use
-  async getByCustomerId(customerId: string): Promise<CustomerPersonalData | null> {
+  async getByCustomerId(customerId: string | number): Promise<CustomerPersonalData | null> {
     return this.getCustomerPersonalData(customerId);
   },
 

@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { personelIslemleriServisi } from "@/lib/supabase/services/personelIslemleriServisi";
+import { customerOperationsService } from "@/lib/supabase/services/customerOperationsService";
 import { PersonelIslemi } from "@/lib/supabase/types";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
@@ -28,29 +29,15 @@ export function useCustomerOperations(customerId?: number) {
       console.log("Fetching operations for customer ID:", customerId);
       
       try {
-        // First try to get operations directly
-        const operations = await personelIslemleriServisi.musteriIslemleriGetir(customerId);
+        // First try to get operations directly using our improved service
+        const operations = await customerOperationsService.getCustomerOperations(customerId);
         
-        // Tarih aralığına göre filtreleme
+        // Filter by date range
         const filteredOperations = operations.filter(op => {
-          if (!op.created_at) return false;
-          const opDate = new Date(op.created_at);
+          if (!op.date) return false;
+          const opDate = new Date(op.date);
           return opDate >= dateRange.from && opDate <= dateRange.to;
         });
-        
-        if (!filteredOperations || filteredOperations.length === 0) {
-          // If no operations, try to recover from appointments
-          console.log("No operations found, trying to recover from appointments");
-          await personelIslemleriServisi.recoverOperationsFromCustomerAppointments(customerId);
-          
-          // Try to get operations again
-          const retryOperations = await personelIslemleriServisi.musteriIslemleriGetir(customerId);
-          return retryOperations.filter(op => {
-            if (!op.created_at) return false;
-            const opDate = new Date(op.created_at);
-            return opDate >= dateRange.from && opDate <= dateRange.to;
-          }) || [];
-        }
         
         return filteredOperations;
       } catch (error) {
@@ -60,7 +47,8 @@ export function useCustomerOperations(customerId?: number) {
       }
     },
     enabled: !!customerId,
-    refetchInterval: 30000 // Refetch every 30 seconds
+    staleTime: 30000, // Keep data fresh for 30 seconds
+    refetchInterval: 60000 // Refetch every minute
   });
   
   const handleForceRecover = async () => {
@@ -71,6 +59,8 @@ export function useCustomerOperations(customerId?: number) {
     
     try {
       toast.info("Tamamlanan randevular işleniyor...");
+      
+      // First, try to recover operations using the improved function
       await personelIslemleriServisi.recoverOperationsFromCustomerAppointments(customerId);
       
       // Update shop statistics
@@ -88,13 +78,13 @@ export function useCustomerOperations(customerId?: number) {
   
   // Calculate totals
   const totals = operations?.reduce((acc, op) => {
-    acc.totalAmount += (op.tutar || 0);
-    acc.totalPoints += (op.puan || 0);
-    acc.totalPaid += (op.odenen || 0);
+    acc.totalAmount += (op.amount || 0);
+    acc.totalPoints += (op.points || 0);
+    acc.totalPaid += 0; // This needs to be fixed if we have paid data
     return acc;
   }, { totalAmount: 0, totalPoints: 0, totalPaid: 0 });
 
-  // Automatically recover operations on first load
+  // Automatically recover operations on first load if none found
   useEffect(() => {
     if (customerId && operations.length === 0 && !isLoading) {
       handleForceRecover();

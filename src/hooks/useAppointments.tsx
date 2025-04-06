@@ -68,49 +68,87 @@ export function useAppointments(dukkanId?: number) {
       }
     },
     enabled: true,
-    refetchOnWindowFocus: true, // Changed to true for better real-time updates
-    staleTime: 10000, // Reduced to 10 seconds for more frequent refresh
-    refetchInterval: 30000 // Reduced to 30 seconds for more frequent refresh
+    staleTime: 5000, // Reduced to 5 seconds to improve freshness
+    cacheTime: 1000 * 60 * 5, // Cache for 5 minutes
+    refetchOnMount: true,
+    refetchOnWindowFocus: true
   });
   
+  // Optimize the enhancement of appointments by using a more efficient approach
   const enhanceAppointments = useCallback(async () => {
     if (!appointmentsRaw?.length) {
       setAppointmentData([]);
       return;
     }
     
-    const enhancedAppointments = [...appointmentsRaw];
-    
-    for (const appointment of enhancedAppointments) {
-      if (appointment.personel_id && !appointment.personel) {
-        try {
-          const personel = await personelServisi.getirById(appointment.personel_id);
-          if (personel) {
-            appointment.personel = personel as Personel;
-          }
-        } catch (error) {
-          console.error(`Error fetching personnel for appointment ${appointment.id}:`, error);
+    try {
+      const enhancedAppointments = [...appointmentsRaw];
+      
+      // Get all personel IDs that need to be fetched
+      const personelIds = enhancedAppointments
+        .filter(app => app.personel_id && !app.personel)
+        .map(app => app.personel_id)
+        .filter((id, index, self) => id !== null && self.indexOf(id) === index) as number[];
+      
+      // Get all customer IDs that need to be fetched
+      const customerIds = enhancedAppointments
+        .filter(app => app.musteri_id && !app.musteri)
+        .map(app => app.musteri_id)
+        .filter((id, index, self) => id !== null && self.indexOf(id) === index) as number[];
+      
+      // Fetch all personnel in one query
+      if (personelIds.length > 0) {
+        const { data: personelData } = await supabase
+          .from('personel')
+          .select('*')
+          .in('id', personelIds);
+        
+        if (personelData) {
+          const personelMap = personelData.reduce((map, p) => {
+            map[p.id] = p;
+            return map;
+          }, {} as Record<number, Personel>);
+          
+          // Assign personnel to appointments
+          enhancedAppointments.forEach(app => {
+            if (app.personel_id && !app.personel && personelMap[app.personel_id]) {
+              app.personel = personelMap[app.personel_id];
+            }
+          });
         }
       }
       
-      if (appointment.musteri_id && !appointment.musteri) {
-        try {
-          const musteri = await musteriServisi.getirById(appointment.musteri_id);
-          if (musteri) {
+      // Fetch all customers in one query
+      if (customerIds.length > 0) {
+        const { data: customerData } = await supabase
+          .from('musteriler')
+          .select('*')
+          .in('id', customerIds);
+        
+        if (customerData) {
+          const customerMap = customerData.reduce((map, c) => {
             // Add a role property to make it compatible with Profile type
             const customerWithRole = {
-              ...musteri,
-              role: 'customer' // Add the missing role property
+              ...c,
+              role: 'customer'
             };
-            appointment.musteri = customerWithRole as unknown as any;
-          }
-        } catch (error) {
-          console.error(`Error fetching customer for appointment ${appointment.id}:`, error);
+            map[c.id] = customerWithRole as unknown as any;
+            return map;
+          }, {} as Record<number, any>);
+          
+          // Assign customers to appointments
+          enhancedAppointments.forEach(app => {
+            if (app.musteri_id && !app.musteri && customerMap[app.musteri_id]) {
+              app.musteri = customerMap[app.musteri_id];
+            }
+          });
         }
       }
+      
+      setAppointmentData(enhancedAppointments);
+    } catch (error) {
+      console.error("Error enhancing appointments:", error);
     }
-    
-    setAppointmentData(enhancedAppointments);
   }, [appointmentsRaw]);
   
   useEffect(() => {
