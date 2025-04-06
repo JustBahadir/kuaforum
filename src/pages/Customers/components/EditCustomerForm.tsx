@@ -51,8 +51,6 @@ export function EditCustomerForm({
       setIsSubmitting(true);
       
       const updates = {
-        id: customer.id,
-        dukkan_id: customer.dukkan_id,
         first_name: firstName,
         last_name: lastName || null,
         phone: phone || null,
