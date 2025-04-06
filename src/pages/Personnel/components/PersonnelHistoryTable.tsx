@@ -14,7 +14,6 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, RefreshCcw } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
-import { supabase } from "@/lib/supabase/client";
 
 interface PersonnelHistoryTableProps {
   personnelId?: number;
@@ -43,10 +42,10 @@ export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProp
         
         // If no operations, automatically try to recover from appointments
         if (result.length === 0 && personnelId) {
-          console.log("No operations found, attempting to recover from appointments");
+          console.log("No operations found, attempting automatic recovery...");
           await handleRecoverOperations(); // Use the same function as the button click
           
-          // Fetch again after recovery attempt
+          // Fetch again after recovery
           const recoveredResult = await personelIslemleriServisi.personelIslemleriGetirById(personnelId);
           console.log("Operations after recovery:", recoveredResult);
           return recoveredResult;
@@ -61,7 +60,8 @@ export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProp
     },
     refetchOnWindowFocus: true,
     staleTime: 1000, // Reduced to 1 second for more frequent refresh
-    refetchInterval: 10000 // Set a refresh interval of 10 seconds
+    refetchInterval: 10000, // Set a refresh interval of 10 seconds
+    enabled: !!personnelId
   });
 
   useEffect(() => {

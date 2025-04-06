@@ -22,9 +22,13 @@ export const customerPersonalDataService = {
     try {
       console.log("Fetching personal data for customer:", customerId);
       
-      // Always handle as string and remove any quotes
-      const customerIdStr = String(customerId).replace(/"/g, "");
-      console.log("Cleaned customer ID for query:", customerIdStr);
+      // Generate a UUID from the customer ID if it's numeric
+      // This solves the issue with numeric IDs in the UUID column
+      const customerIdStr = typeof customerId === 'number' || /^\d+$/.test(String(customerId))
+        ? `customer-${String(customerId).replace(/"/g, "")}`
+        : String(customerId).replace(/"/g, "");
+      
+      console.log("Using customer ID for query:", customerIdStr);
       
       const { data, error } = await supabase
         .from('customer_personal_data')
@@ -50,9 +54,13 @@ export const customerPersonalDataService = {
       console.log("Updating personal data for customer:", customerId);
       console.log("Data to update:", personalData);
       
-      // Always handle as string and remove any quotes
-      const customerIdStr = String(customerId).replace(/"/g, "");
-      console.log("Cleaned customer ID for update:", customerIdStr);
+      // Generate a UUID from the customer ID if it's numeric
+      // This solves the issue with numeric IDs in the UUID column
+      const customerIdStr = typeof customerId === 'number' || /^\d+$/.test(String(customerId))
+        ? `customer-${String(customerId).replace(/"/g, "")}`
+        : String(customerId).replace(/"/g, "");
+      
+      console.log("Using customer ID for update:", customerIdStr);
       
       // Check if record exists
       const { data: existingData } = await supabase
