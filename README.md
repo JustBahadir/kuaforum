@@ -1,69 +1,70 @@
-# Welcome to your Lovable project
 
-## Project info
+# İşlem Geçmişi Sistemi
 
-**URL**: https://lovable.dev/projects/b3dc3ee8-c479-4364-8fa8-475851e3d83c
+## Müşteri İşlem Geçmişi
 
-## How can I edit this code?
+Sisteme eklenen yeni özellikler ile her müşteri için "İşlem Geçmişi" ve "Fotoğraf Galerisi" bölümleri eklenmiştir.
 
-There are several ways of editing your application.
+### Müşteri İşlem Geçmişi Özellikleri:
 
-**Use Lovable**
+- Her işlem kaydında aşağıdaki bilgiler bulunur:
+  - Tarih (otomatik olarak o günün tarihi)
+  - İşlem Adı (kullanıcı tarafından seçilen)
+  - Yapan Personel Adı
+  - İşlem Ücreti (Hizmet Yönetiminden otomatik alınır)
+  - İşlem Puanı (Hizmet Yönetiminden otomatik alınır)
+  - Not Alanı
+  - Fotoğraf Ekleme İmkanı
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/b3dc3ee8-c479-4364-8fa8-475851e3d83c) and start prompting.
+- Fotoğraf özellikleri:
+  - Müşteri geçmişine her işlem için maksimum 2 fotoğraf eklenebilir
+  - Fotoğraflar kronolojik olarak sıralanır
+  - Fotoğraf galerisi ayrı bir sekmede gösterilir
+  - Fotoğraflar isim veya tarih ile aranabilir
 
-Changes made via Lovable will be committed automatically to this repo.
+## Personel İşlem Geçmişi
 
-**Use your preferred IDE**
+Personel işlem geçmişi, personel detay sayfasında "İşlem Geçmişi" sekmesi altında görüntülenebilir.
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Personel İşlem Geçmişi Özellikleri:
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+- Her işlem kaydında aşağıdaki bilgiler bulunur:
+  - Tarih
+  - Yapılan İşlem
+  - Müşteri Adı
+  - İşlem Ücreti
+  - Prim Yüzdesi
+  - Ödenen Miktar
+  - İşlem Puanı
 
-Follow these steps:
+## Senkronizasyon
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+Müşteri ve personel işlem geçmişleri otomatik olarak senkronize edilmiştir:
+- Müşteri geçmişine bir işlem eklendiğinde, ilgili personelin geçmişine de aynı işlem eklenir
+- Her iki tarafta da yapılan güncellemeler diğer tarafa yansır
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+## Kullanım Kılavuzu
 
-# Step 3: Install the necessary dependencies.
-npm i
+### Yeni İşlem Ekleme:
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+1. Müşteri detay sayfasında "İşlem Geçmişi" sekmesine gidin
+2. "Yeni İşlem" butonuna tıklayın
+3. İşlem türü, personel, ücret ve diğer bilgileri doldurun
+4. İsterseniz not ekleyin ve "Ekle" butonuna tıklayın
+5. İsterseniz fotoğraf ekleyebilirsiniz (maksimum 2 adet)
 
-**Edit a file directly in GitHub**
+### Fotoğraf Galerisi Görüntüleme:
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+1. Müşteri detay sayfasında "Fotoğraf Galerisi" sekmesine gidin
+2. Fotoğrafları kronolojik sırayla görüntüleyin
+3. İstenirse arama kutusu ile fotoğrafları filtreleyebilirsiniz
 
-**Use GitHub Codespaces**
+### Personel İşlem Geçmişi Görüntüleme:
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+1. Personel menüsünde ilgili personele tıklayın
+2. Açılan pencerede "İşlem Geçmişi" sekmesine gidin
+3. Personelin tüm işlemlerini görüntüleyin veya "Yeni İşlem" ekleyin
 
-## What technologies are used for this project?
+## Not
 
-This project is built with .
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/b3dc3ee8-c479-4364-8fa8-475851e3d83c) and click on Share -> Publish.
-
-## I want to use a custom domain - is that possible?
-
-We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
+İşlem geçmişlerinin düzgün çalışabilmesi için tamamlanan randevuların işlem geçmişine aktarılması gerekmektedir. Eksik işlemleri yenilemek için "Yenile" butonunu kullanabilirsiniz.
