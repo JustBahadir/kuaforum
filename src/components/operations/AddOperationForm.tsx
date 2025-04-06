@@ -411,7 +411,7 @@ export function AddOperationForm({
                 label={
                   <div className="flex items-center gap-2">
                     <FileImage className="h-4 w-4" />
-                    Fotoğraf Seç
+                    <span>Fotoğraf Seç</span>
                   </div>
                 }
               />

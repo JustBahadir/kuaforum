@@ -5,5 +5,15 @@ verify_jwt = true
 [functions.recover_customer_operations]
 verify_jwt = true
 
+[functions.add-operation]
+verify_jwt = true
+
+[functions.add-operation-photo]
+verify_jwt = true
+
+[functions.update-operation-notes]
+verify_jwt = true
+
 # Do not delete the [project] section
 [project]
+

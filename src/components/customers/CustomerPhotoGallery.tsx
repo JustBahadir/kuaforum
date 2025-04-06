@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
-import { Gallery, Search, Maximize2, Image } from "lucide-react";
+import { Search, Maximize2, Image, ImageIcon } from "lucide-react";
 
 interface CustomerPhotoGalleryProps {
   customerId?: number;
@@ -70,7 +70,7 @@ export function CustomerPhotoGallery({ customerId }: CustomerPhotoGalleryProps) 
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <Gallery className="h-5 w-5 text-purple-600" />
+        <ImageIcon className="h-5 w-5 text-purple-600" />
         <h2 className="text-xl font-medium">Müşteri Fotoğraf Galerisi</h2>
       </div>
       
