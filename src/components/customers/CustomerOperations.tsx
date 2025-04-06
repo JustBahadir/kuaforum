@@ -11,7 +11,7 @@ import { CustomerPhotoGallery } from "@/components/customers/CustomerPhotoGaller
 import { AddOperationForm } from "@/components/operations/AddOperationForm";
 import { FileImage, Plus, RefreshCcw } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/lib/supabase"; // Updated import path
+import { supabase } from "@/lib/supabase/client";
 import {
   Table,
   TableBody,
@@ -33,14 +33,8 @@ export function CustomerOperations({ customerId }: CustomerOperationsProps) {
     isLoading, 
     recoverOperations,
     refetch,
+    totals,
   } = useCustomerOperations(customerId);
-
-  // Compute totals locally since they don't come from the hook
-  const totals = {
-    totalAmount: operations.reduce((sum, op) => sum + (op.amount || op.tutar || 0), 0),
-    totalPaid: operations.reduce((sum, op) => sum + (op.odenen || 0), 0),
-    totalPoints: operations.reduce((sum, op) => sum + (op.points || op.puan || 0), 0)
-  };
 
   const [selectedOperation, setSelectedOperation] = useState<CustomerOperation | null>(null);
   const [notesDialogOpen, setNotesDialogOpen] = useState(false);

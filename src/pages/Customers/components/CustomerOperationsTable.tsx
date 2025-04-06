@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { FileUpload } from "@/components/ui/file-upload";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { customerOperationsService, CustomerOperation } from "@/lib/supabase/services/customerOperationsService";
-import { supabase } from "@/lib/supabase/client"; // Added missing import
+import { supabase } from "@/lib/supabase/client";
 import {
   Table,
   TableBody,
@@ -32,15 +32,9 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
     isLoading, 
     recoverOperations,
     refetch,
+    totals
   } = useCustomerOperations(customerId);
   
-  // Compute totals locally since they don't come from the hook
-  const totals = {
-    totalAmount: operations.reduce((sum, op) => sum + (op.amount || op.tutar || 0), 0),
-    totalPaid: operations.reduce((sum, op) => sum + (op.odenen || 0), 0),
-    totalPoints: operations.reduce((sum, op) => sum + (op.points || op.puan || 0), 0)
-  };
-
   const [selectedOperation, setSelectedOperation] = useState<CustomerOperation | null>(null);
   const [notesDialogOpen, setNotesDialogOpen] = useState(false);
   const [photoDialogOpen, setPhotoDialogOpen] = useState(false);
@@ -93,7 +87,7 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
     }
   };
 
-  // Use recoverOperations instead of handleForceRecover
+  // Use recoverOperations function directly from the hook
   const handleForceRecover = () => {
     recoverOperations();
   };

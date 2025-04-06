@@ -98,10 +98,13 @@ export function AddOperationForm({
   }, [watchIslemId, islemler, form]);
 
   const addOperation = useMutation({
-    mutationFn: async (data) => {
-      return await supabase.functions.invoke('add-operation', {
+    mutationFn: async (data: Record<string, any>) => {
+      const { data: result, error } = await supabase.functions.invoke('add-operation', {
         body: data
       });
+      
+      if (error) throw error;
+      return result;
     },
     onSuccess: (data) => {
       setCurrentOperationId(data.id);
@@ -122,10 +125,15 @@ export function AddOperationForm({
   });
 
   const addPhoto = useMutation({
-    mutationFn: async ({ operationId, photoUrl }) => {
-      const { data: result } = await supabase.functions.invoke('add-operation-photo', {
-        body: { operationId, photoUrl }
+    mutationFn: async (params: { operationId: number, photoUrl: string }) => {
+      const { data: result, error } = await supabase.functions.invoke('add-operation-photo', {
+        body: { 
+          operationId: params.operationId, 
+          photoUrl: params.photoUrl 
+        }
       });
+      
+      if (error) throw error;
       return result;
     },
     onSuccess: () => {

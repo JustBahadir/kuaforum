@@ -4,7 +4,7 @@ import { customerOperationsService } from "@/lib/supabase/services/customerOpera
 import { PersonelIslemi } from "@/lib/supabase/types";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
 
 export function useCustomerOperations(customerId?: number | string) {
   const queryClient = useQueryClient();
@@ -32,9 +32,11 @@ export function useCustomerOperations(customerId?: number | string) {
   // Add operation mutation
   const addOperation = useMutation({
     mutationFn: async (data: any) => {
-      const { data: result } = await supabase.functions.invoke('add-operation', {
+      const { data: result, error } = await supabase.functions.invoke('add-operation', {
         body: data
       });
+      
+      if (error) throw error;
       return result;
     },
     onSuccess: () => {
@@ -49,10 +51,15 @@ export function useCustomerOperations(customerId?: number | string) {
   
   // Add operation photo mutation
   const addOperationPhoto = useMutation({
-    mutationFn: async ({ operationId, photoUrl }: { operationId: number; photoUrl: string }) => {
-      const { data: result } = await supabase.functions.invoke('add-operation-photo', {
-        body: { operationId, photoUrl }
+    mutationFn: async (params: { operationId: number; photoUrl: string }) => {
+      const { data: result, error } = await supabase.functions.invoke('add-operation-photo', {
+        body: { 
+          operationId: params.operationId, 
+          photoUrl: params.photoUrl 
+        }
       });
+      
+      if (error) throw error;
       return result;
     },
     onSuccess: () => {
@@ -67,10 +74,15 @@ export function useCustomerOperations(customerId?: number | string) {
   
   // Update operation notes mutation
   const updateOperationNotes = useMutation({
-    mutationFn: async ({ operationId, notes }: { operationId: number; notes: string }) => {
-      const { data: result } = await supabase.functions.invoke('update-operation-notes', {
-        body: { operationId, notes }
+    mutationFn: async (params: { operationId: number; notes: string }) => {
+      const { data: result, error } = await supabase.functions.invoke('update-operation-notes', {
+        body: { 
+          operationId: params.operationId, 
+          notes: params.notes 
+        }
       });
+      
+      if (error) throw error;
       return result;
     },
     onSuccess: () => {
@@ -118,9 +130,9 @@ export function useCustomerOperations(customerId?: number | string) {
     addOperationPhoto,
     updateOperationNotes,
     recoverOperations,
-    handleForceRecover, // Added this property
+    handleForceRecover,
     isRecovering,
     refetch,
-    totals // Added the totals property
+    totals
   };
 }
