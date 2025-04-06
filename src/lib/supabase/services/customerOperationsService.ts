@@ -118,7 +118,7 @@ export const customerOperationsService = {
       const customerIdStr = customerId.toString();
       console.log(`Trying to recover operations from randevular for customer ID: ${customerIdStr}`);
       
-      // Direct query to get completed appointments without requiring profiles
+      // Direct query to get completed appointments using the new recover_customer_appointments function
       const { data: appointments, error: appointmentError } = await supabase
         .rpc('recover_customer_appointments', { 
           p_customer_id: parseInt(customerIdStr) 
@@ -152,7 +152,7 @@ export const customerOperationsService = {
           amount: appointment.amount || 0,
           points: appointment.points || 0,
           appointment_id: appointment.id,
-          notes: appointment.notes || '',
+          notes: appointment.notlar || '',
           notlar: appointment.notes || '',
           photos: [],
           islem: {

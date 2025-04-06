@@ -62,8 +62,11 @@ export function CustomerPersonalInfo({ customerId, customer, editMode }: Custome
     queryKey: ['customer_personal_data', customerId],
     queryFn: async () => {
       try {
-        // Make sure we're passing the ID in a way that the service can handle
-        const data = await customerPersonalDataService.getByCustomerId(customerId);
+        console.log("Fetching personal data for customer ID:", customerId);
+        
+        // Önemli: customer_id parametresini string olarak geçmemiz gerekiyor
+        // customerId bir sayı olsa bile string'e dönüştürüp göndermeliyiz
+        const data = await customerPersonalDataService.getByCustomerId(customerId.toString());
         console.log("Fetched personal data:", data);
         return data;
       } catch (error) {
@@ -104,7 +107,9 @@ export function CustomerPersonalInfo({ customerId, customer, editMode }: Custome
       console.log("Saving customer personal data:", data);
       
       try {
-        await customerPersonalDataService.updateCustomerPersonalData(customerId, {
+        // customerId'yi string olarak gönderiyoruz
+        await customerPersonalDataService.updateCustomerPersonalData(customerId.toString(), {
+          customer_id: customerId.toString(),
           birth_date: data.birth_date,
           anniversary_date: data.anniversary_date,
           children_names: data.children_names,
@@ -150,7 +155,7 @@ export function CustomerPersonalInfo({ customerId, customer, editMode }: Custome
     
     setPersonalData(prev => ({
       ...prev,
-      children_names: [...prev.children_names, newChild.trim()]
+      children_names: [...(prev.children_names || []), newChild.trim()]
     }));
     
     setNewChild("");
@@ -159,7 +164,7 @@ export function CustomerPersonalInfo({ customerId, customer, editMode }: Custome
   const removeChild = (index: number) => {
     setPersonalData(prev => ({
       ...prev,
-      children_names: prev.children_names.filter((_, i) => i !== index)
+      children_names: (prev.children_names || []).filter((_, i) => i !== index)
     }));
   };
 
@@ -350,7 +355,7 @@ export function CustomerPersonalInfo({ customerId, customer, editMode }: Custome
               </Button>
             </div>
             
-            {personalData.children_names.length > 0 ? (
+            {(personalData.children_names && personalData.children_names.length > 0) ? (
               <div className="border rounded-md p-2 space-y-2">
                 {personalData.children_names.map((child, index) => (
                   <div key={index} className="flex items-center justify-between bg-muted/30 p-2 rounded">
@@ -374,7 +379,7 @@ export function CustomerPersonalInfo({ customerId, customer, editMode }: Custome
             )}
           </div>
         ) : (
-          personalData.children_names.length > 0 ? (
+          (personalData.children_names && personalData.children_names.length > 0) ? (
             <div className="border rounded-md p-3">
               <ul className="space-y-1">
                 {personalData.children_names.map((child, index) => (

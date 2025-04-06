@@ -22,7 +22,7 @@ export const customerPersonalDataService = {
     try {
       console.log("Fetching personal data for customer:", customerId);
       
-      // Handle numeric customer IDs by converting to string
+      // Her durumda string olarak işle
       const customerIdStr = customerId.toString();
       
       const { data, error } = await supabase
@@ -49,7 +49,7 @@ export const customerPersonalDataService = {
       console.log("Updating personal data for customer:", customerId);
       console.log("Data to update:", personalData);
       
-      // Handle numeric customer IDs by converting to string
+      // Her durumda string olarak işle
       const customerIdStr = customerId.toString();
       
       // Check if record exists
@@ -59,12 +59,16 @@ export const customerPersonalDataService = {
         .eq('customer_id', customerIdStr)
         .maybeSingle();
       
+      // Çocuk isimleri için boş dizi kontrol et
+      const children_names = personalData.children_names || [];
+      
       if (existingData) {
         // Update existing record
         const { error } = await supabase
           .from('customer_personal_data')
           .update({
             ...personalData,
+            children_names: children_names,
             updated_at: new Date().toISOString()
           })
           .eq('customer_id', customerIdStr);
@@ -82,6 +86,7 @@ export const customerPersonalDataService = {
           .insert({
             customer_id: customerIdStr,
             ...personalData,
+            children_names: children_names,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           });

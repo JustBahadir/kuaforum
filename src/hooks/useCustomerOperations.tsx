@@ -59,8 +59,22 @@ export function useCustomerOperations(customerId?: number) {
         return filteredOperations;
       } catch (error) {
         console.error("Error fetching customer operations:", error);
-        toast.error("Müşteri işlemleri yüklenirken bir hata oluştu");
-        return [];
+        
+        // Otomatik olarak kurtarma işlemi
+        try {
+          await handleForceRecover();
+          // Re-fetch after recovery
+          const recoveredOperations = await customerOperationsService.getCustomerOperations(customerId);
+          return recoveredOperations.filter(op => {
+            if (!op.date) return false;
+            const opDate = new Date(op.date);
+            return opDate >= dateRange.from && opDate <= dateRange.to;
+          });
+        } catch (recoveryError) {
+          console.error("Recovery failed:", recoveryError);
+          toast.error("Müşteri işlemleri yüklenirken bir hata oluştu");
+          return [];
+        }
       }
     },
     enabled: !!customerId,
