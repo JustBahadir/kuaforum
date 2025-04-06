@@ -69,7 +69,7 @@ export function useAppointments(dukkanId?: number) {
     },
     enabled: true,
     staleTime: 1000, // Reduced to 1 second to improve freshness
-    gcTime: 1000 * 30, // Cache for 30 seconds (replaced cacheTime with gcTime)
+    refetchInterval: 5000, // Check for updates every 5 seconds
     refetchOnMount: true,
     refetchOnWindowFocus: true
   });
@@ -174,19 +174,37 @@ export function useAppointments(dukkanId?: number) {
         throw error;
       }
     },
-    onSuccess: () => {
-      // Invalidate all relevant queries to trigger refetches
-      queryClient.invalidateQueries({ queryKey: ['appointments'] });
-      queryClient.invalidateQueries({ queryKey: ['personnelOperations'] });
-      queryClient.invalidateQueries({ queryKey: ['customerOperations'] });
-      queryClient.invalidateQueries({ queryKey: ['shop-statistics'] });
-      queryClient.invalidateQueries({ queryKey: ['personelIslemleri'] });
-      
+    onSuccess: async (_, appointmentId) => {
       toast.success("Randevu tamamlandı");
+      
+      // Get the appointment details to retrieve customer and personnel IDs
+      const appointment = appointmentsRaw.find(app => app.id === appointmentId);
+      
+      if (appointment) {
+        // Invalidate relevant queries to ensure data refresh
+        queryClient.invalidateQueries({ queryKey: ['appointments'] });
+        queryClient.invalidateQueries({ queryKey: ['personnelOperations'] });
+        queryClient.invalidateQueries({ queryKey: ['customerOperations'] });
+        queryClient.invalidateQueries({ queryKey: ['shop-statistics'] });
+        
+        // Invalidate specific personnel and customer queries if we have their IDs
+        if (appointment.personel_id) {
+          queryClient.invalidateQueries({ queryKey: ['personelIslemleri', appointment.personel_id] });
+        }
+        
+        if (appointment.musteri_id) {
+          queryClient.invalidateQueries({ queryKey: ['customerOperations', appointment.musteri_id] });
+        }
+      } else {
+        // If we can't find the appointment, just invalidate all possible related queries
+        queryClient.invalidateQueries();
+      }
+      
+      // Close the dialog
       setConfirmDialogOpen(false);
       
       // Immediately trigger a refetch
-      refetch();
+      await refetch();
     },
     onError: (error: any) => {
       console.error("Error completing appointment:", error);

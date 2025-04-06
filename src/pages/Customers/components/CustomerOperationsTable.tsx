@@ -6,7 +6,7 @@ import { formatCurrency } from "@/lib/utils";
 import { useCustomerOperations } from "@/hooks/useCustomerOperations";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Camera, FileImage, Image, Plus, RefreshCcw } from "lucide-react";
 import { toast } from "sonner";
 import { FileUpload } from "@/components/ui/file-upload";
@@ -90,6 +90,7 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
     return (
       <div className="flex justify-center items-center py-10">
         <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
+        <span className="ml-2">İşlem geçmişi yükleniyor...</span>
       </div>
     );
   }
@@ -104,7 +105,7 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
           className="mt-2 flex items-center gap-2"
         >
           <RefreshCcw size={16} />
-          İşlemleri Güncelle
+          İşlemleri Yenile
         </Button>
       </div>
     );
@@ -115,7 +116,10 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-medium">İşlem Geçmişi</h3>
         <Button 
-          onClick={() => handleForceRecover()}
+          onClick={() => {
+            handleForceRecover();
+            toast.info("İşlem geçmişi yenileniyor...");
+          }}
           variant="outline"
           size="sm"
           className="flex items-center gap-1"

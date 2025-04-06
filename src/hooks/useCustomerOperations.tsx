@@ -43,6 +43,19 @@ export function useCustomerOperations(customerId?: number) {
           return opDate >= dateRange.from && opDate <= dateRange.to;
         });
         
+        // If no operations found, trigger recovery automatically
+        if (filteredOperations.length === 0) {
+          console.log("No operations found, attempting automatic recovery...");
+          await handleForceRecover();
+          // Re-fetch after recovery
+          const recoveredOperations = await customerOperationsService.getCustomerOperations(customerId);
+          return recoveredOperations.filter(op => {
+            if (!op.date) return false;
+            const opDate = new Date(op.date);
+            return opDate >= dateRange.from && opDate <= dateRange.to;
+          });
+        }
+        
         return filteredOperations;
       } catch (error) {
         console.error("Error fetching customer operations:", error);
@@ -51,8 +64,8 @@ export function useCustomerOperations(customerId?: number) {
       }
     },
     enabled: !!customerId,
-    staleTime: 5000, // Keep data fresh for 5 seconds
-    refetchInterval: 30000 // Refetch every 30 seconds
+    staleTime: 1000, // Keep data fresh for 1 second so it refreshes more frequently
+    refetchInterval: 10000 // Refetch every 10 seconds to catch new operations
   });
   
   const handleForceRecover = async () => {
@@ -85,10 +98,15 @@ export function useCustomerOperations(customerId?: number) {
       // Update shop statistics
       await personelIslemleriServisi.updateShopStatistics();
       
+      // Manually invalidate relevant queries to force refetch
+      queryClient.invalidateQueries({ queryKey: ['customerOperations'] });
+      queryClient.invalidateQueries({ queryKey: ['personelIslemleri'] });
+      
       // Refetch operations
       await refetch();
       
       toast.success(`İşlem geçmişi yenilendi (${result.count || 0} işlem)`);
+      return result;
     } catch (error) {
       console.error("Error recovering operations:", error);
       toast.error("İşlem geçmişi yenilenirken bir hata oluştu");
@@ -102,13 +120,6 @@ export function useCustomerOperations(customerId?: number) {
     acc.totalPaid += 0; // This needs to be fixed if we have paid data
     return acc;
   }, { totalAmount: 0, totalPoints: 0, totalPaid: 0 });
-
-  // Automatically recover operations on first load if none found
-  useEffect(() => {
-    if (customerId && operations.length === 0 && !isLoading) {
-      handleForceRecover();
-    }
-  }, [customerId, isLoading, operations.length]);
 
   return { 
     operations,

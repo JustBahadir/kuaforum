@@ -153,6 +153,8 @@ export const randevuServisi = {
       
       if (randevu.durum === "tamamlandi") {
         console.log(`Randevu ${id} tamamlandı olarak işaretleniyor...`);
+        // For completed appointments, ensure operations are created
+        return this.randevuTamamlandi(id);
       }
       
       if (randevu.durum && Object.keys(randevu).length === 1) {
@@ -213,14 +215,15 @@ export const randevuServisi = {
       });
       
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.text();
         console.error("Edge function error:", errorData);
-        throw new Error(`İşlem kaydedilemedi: ${errorData.error || response.statusText}`);
+        throw new Error(`İşlem kaydedilemedi: ${errorData || response.statusText}`);
       }
       
       const result = await response.json();
       console.log("Edge function response:", result);
       
+      // Update both shop statistics and all related data
       await Promise.all([
         personelIslemleriServisi.hepsiniGetir(),
         personelIslemleriServisi.updateShopStatistics()

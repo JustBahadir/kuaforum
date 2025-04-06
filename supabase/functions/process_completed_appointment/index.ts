@@ -2,12 +2,23 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.0";
 
+// CORS headers for the function
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
 // Create a Supabase client
 const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
 const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders, status: 204 });
+  }
+  
   try {
     // Extract appointment ID from request body
     const { appointment_id } = await req.json();
@@ -15,9 +26,17 @@ serve(async (req) => {
     if (!appointment_id) {
       return new Response(
         JSON.stringify({ error: "Appointment ID is required" }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
+        { 
+          status: 400, 
+          headers: { 
+            ...corsHeaders,
+            "Content-Type": "application/json" 
+          } 
+        }
       );
     }
+    
+    console.log(`Processing completed appointment: ${appointment_id}`);
     
     // Get appointment details
     const { data: appointment, error: appointmentError } = await supabase
@@ -34,7 +53,13 @@ serve(async (req) => {
       console.error("Error fetching appointment:", appointmentError);
       return new Response(
         JSON.stringify({ error: "Could not fetch appointment details", details: appointmentError }),
-        { status: 500, headers: { "Content-Type": "application/json" } }
+        { 
+          status: 500, 
+          headers: { 
+            ...corsHeaders,
+            "Content-Type": "application/json" 
+          } 
+        }
       );
     }
     
@@ -49,7 +74,13 @@ serve(async (req) => {
         console.error("Error updating appointment status:", updateError);
         return new Response(
           JSON.stringify({ error: "Error updating appointment status", details: updateError }),
-          { status: 500, headers: { "Content-Type": "application/json" } }
+          { 
+            status: 500, 
+            headers: { 
+              ...corsHeaders,
+              "Content-Type": "application/json" 
+            } 
+          }
         );
       }
     }
@@ -59,7 +90,13 @@ serve(async (req) => {
     if (islemIds.length === 0) {
       return new Response(
         JSON.stringify({ error: "No services found in appointment" }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
+        { 
+          status: 400, 
+          headers: { 
+            ...corsHeaders,
+            "Content-Type": "application/json" 
+          } 
+        }
       );
     }
     
@@ -72,7 +109,13 @@ serve(async (req) => {
       console.error("Error fetching services:", servicesError);
       return new Response(
         JSON.stringify({ error: "Error fetching service details", details: servicesError }),
-        { status: 500, headers: { "Content-Type": "application/json" } }
+        { 
+          status: 500, 
+          headers: { 
+            ...corsHeaders,
+            "Content-Type": "application/json" 
+          } 
+        }
       );
     }
     
@@ -159,14 +202,26 @@ serve(async (req) => {
         message: "Appointment completed successfully", 
         operations: operations 
       }),
-      { status: 200, headers: { "Content-Type": "application/json" } }
+      { 
+        status: 200, 
+        headers: { 
+          ...corsHeaders,
+          "Content-Type": "application/json" 
+        } 
+      }
     );
     
   } catch (error) {
     console.error("Error processing appointment:", error);
     return new Response(
       JSON.stringify({ error: "Server error processing appointment", details: String(error) }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
+      { 
+        status: 500, 
+        headers: { 
+          ...corsHeaders,
+          "Content-Type": "application/json" 
+        } 
+      }
     );
   }
 });

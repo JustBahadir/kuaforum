@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, RefreshCcw } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -22,6 +22,7 @@ interface PersonnelHistoryTableProps {
 export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const queryClient = useQueryClient();
 
   const { data: islemGecmisi = [], isLoading, refetch } = useQuery({
     queryKey: ['personelIslemleri', personnelId],
@@ -40,6 +41,9 @@ export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProp
           console.log("No operations found, attempting to recover from appointments");
           await personelIslemleriServisi.recoverOperationsFromAppointments(personnelId);
           
+          // Invalidate queries to force refetch
+          queryClient.invalidateQueries({ queryKey: ['personelIslemleri'] });
+          
           // Fetch again after recovery attempt
           const recoveredResult = await personelIslemleriServisi.personelIslemleriGetirById(personnelId);
           console.log("Operations after recovery:", recoveredResult);
@@ -54,8 +58,8 @@ export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProp
       }
     },
     refetchOnWindowFocus: true,
-    staleTime: 10000, // Reduced to 10 seconds for more frequent refresh
-    refetchInterval: 30000 // Set a refresh interval of 30 seconds
+    staleTime: 1000, // Reduced to 1 second for more frequent refresh
+    refetchInterval: 10000 // Set a refresh interval of 10 seconds
   });
 
   useEffect(() => {
@@ -84,8 +88,9 @@ export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProp
 
   if (isLoading) {
     return (
-      <div className="flex justify-center p-4">
+      <div className="flex justify-center p-4 items-center">
         <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
+        <span className="ml-2">İşlem geçmişi yükleniyor...</span>
       </div>
     );
   }
@@ -96,7 +101,14 @@ export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProp
     try {
       toast.info("Tamamlanan randevulardan işlemler oluşturuluyor...");
       await personelIslemleriServisi.recoverOperationsFromAppointments(personnelId);
+      
+      // Invalidate related queries
+      queryClient.invalidateQueries({ queryKey: ['personelIslemleri'] });
+      queryClient.invalidateQueries({ queryKey: ['customerOperations'] });
+      
+      // Refetch after invalidation
       await refetch();
+      
       toast.success("İşlem geçmişi güncellendi");
     } catch (error) {
       console.error("Error recovering operations:", error);
@@ -112,7 +124,8 @@ export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProp
     return (
       <div className="text-center space-y-4">
         <p>Bu personele ait işlem bulunamadı.</p>
-        <Button onClick={handleRecoverOperations}>
+        <Button onClick={handleRecoverOperations} className="flex items-center gap-2">
+          <RefreshCcw size={16} />
           Tamamlanmış Randevulardan İşlemleri Oluştur
         </Button>
       </div>
@@ -147,6 +160,22 @@ export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProp
           <div className="text-sm text-muted-foreground">TOPLAM ÖDENEN</div>
           <div className="text-2xl font-bold text-green-700">{formatCurrency(totalPaid)}</div>
         </div>
+      </div>
+      
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-medium">İşlem Geçmişi</h3>
+        <Button 
+          onClick={() => {
+            handleRecoverOperations();
+            toast.info("İşlem geçmişi yenileniyor...");
+          }}
+          variant="outline"
+          size="sm"
+          className="flex items-center gap-1"
+        >
+          <RefreshCcw size={14} />
+          Yenile
+        </Button>
       </div>
       
       {islemGecmisi.length > itemsPerPage && (
@@ -204,12 +233,6 @@ export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProp
             ))}
           </TableBody>
         </Table>
-      </div>
-      
-      <div className="flex justify-end">
-        <Button variant="outline" onClick={handleRecoverOperations}>
-          Tamamlanmış Randevulardan İşlemleri Oluştur
-        </Button>
       </div>
     </div>
   );

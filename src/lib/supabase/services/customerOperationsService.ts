@@ -64,20 +64,24 @@ export const customerOperationsService = {
       
       // Transform the data with proper type handling
       return data.map(item => {
-        // Default values in case the relations are null
-        let serviceName = item.aciklama;
+        // Initialize default values
+        let serviceName = item.aciklama || 'İşlem';
         let personnelName = 'Belirtilmemiş';
         
         // Safely extract islem_adi if available
         if (item.islem && typeof item.islem === 'object') {
-          // Fix: Properly handle the object type from Supabase join
-          serviceName = (item.islem as any).islem_adi || serviceName;
+          const islemObj = item.islem as any;
+          if (islemObj && 'islem_adi' in islemObj) {
+            serviceName = islemObj.islem_adi || serviceName;
+          }
         }
         
         // Safely extract ad_soyad if available
         if (item.personel && typeof item.personel === 'object') {
-          // Fix: Properly handle the object type from Supabase join
-          personnelName = (item.personel as any).ad_soyad || personnelName;
+          const personelObj = item.personel as any;
+          if (personelObj && 'ad_soyad' in personelObj) {
+            personnelName = personelObj.ad_soyad || personnelName;
+          }
         }
         
         return {
