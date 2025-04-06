@@ -54,7 +54,8 @@ export function EditCustomerForm({
         first_name: firstName,
         last_name: lastName || null,
         phone: phone || null,
-        birthdate: birthdate || null,
+        // Convert Date object to ISO string format if it exists, otherwise set to null
+        birthdate: birthdate ? birthdate.toISOString().split('T')[0] : null,
       };
       
       // Pass just the ID and the updates as separate parameters
