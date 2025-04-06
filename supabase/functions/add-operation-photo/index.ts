@@ -21,7 +21,7 @@ serve(async (req) => {
   
   try {
     const { operationId, photoUrl } = await req.json();
-    
+
     if (!operationId || !photoUrl) {
       return new Response(
         JSON.stringify({ message: "Missing required fields" }),
@@ -34,7 +34,7 @@ serve(async (req) => {
         }
       );
     }
-    
+
     // Get the current operation to check if it has existing photos
     const { data: currentOperation, error: fetchError } = await supabase
       .from("personel_islemleri")

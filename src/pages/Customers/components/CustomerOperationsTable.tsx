@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { FileUpload } from "@/components/ui/file-upload";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { customerOperationsService, CustomerOperation } from "@/lib/supabase/services/customerOperationsService";
+import { supabase } from "@/lib/supabase/client";
 import {
   Table,
   TableBody,
@@ -29,10 +30,16 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
   const { 
     operations, 
     isLoading, 
-    handleForceRecover, 
+    recoverOperations,
     refetch,
-    totals 
   } = useCustomerOperations(customerId);
+  
+  // Compute totals locally since they don't come from the hook
+  const totals = {
+    totalAmount: operations.reduce((sum, op) => sum + (op.amount || op.tutar || 0), 0),
+    totalPaid: operations.reduce((sum, op) => sum + (op.odenen || 0), 0),
+    totalPoints: operations.reduce((sum, op) => sum + (op.points || op.puan || 0), 0)
+  };
 
   const [selectedOperation, setSelectedOperation] = useState<CustomerOperation | null>(null);
   const [notesDialogOpen, setNotesDialogOpen] = useState(false);
@@ -86,6 +93,11 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
     }
   };
 
+  // Use recoverOperations instead of handleForceRecover
+  const handleForceRecover = () => {
+    recoverOperations();
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center py-10">
@@ -101,7 +113,7 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
         <h3 className="text-lg font-medium">Müşteri İşlem Geçmişi Bulunamadı</h3>
         <p className="text-gray-500">Bu müşteriye ait işlem geçmişi bulunmamaktadır.</p>
         <Button 
-          onClick={() => handleForceRecover()}
+          onClick={handleForceRecover}
           className="mt-2 flex items-center gap-2"
         >
           <RefreshCcw size={16} />

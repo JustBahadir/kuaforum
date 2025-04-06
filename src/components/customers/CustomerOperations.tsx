@@ -30,10 +30,16 @@ export function CustomerOperations({ customerId }: CustomerOperationsProps) {
   const { 
     operations, 
     isLoading, 
-    handleForceRecover, 
+    recoverOperations,
     refetch,
-    totals 
   } = useCustomerOperations(customerId);
+
+  // Compute totals locally since they don't come from the hook
+  const totals = {
+    totalAmount: operations.reduce((sum, op) => sum + (op.amount || op.tutar || 0), 0),
+    totalPaid: operations.reduce((sum, op) => sum + (op.odenen || 0), 0),
+    totalPoints: operations.reduce((sum, op) => sum + (op.points || op.puan || 0), 0)
+  };
 
   const [selectedOperation, setSelectedOperation] = useState<CustomerOperation | null>(null);
   const [notesDialogOpen, setNotesDialogOpen] = useState(false);
@@ -50,15 +56,9 @@ export function CustomerOperations({ customerId }: CustomerOperationsProps) {
     if (!selectedOperation) return;
     
     try {
-      await fetch("/api/update-operation-notes", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          operationId: selectedOperation.id,
-          notes,
-        }),
+      // Use supabase functions directly
+      await supabase.functions.invoke('update-operation-notes', {
+        body: { operationId: selectedOperation.id, notes }
       });
       
       toast.success("Notlar kaydedildi");
@@ -68,6 +68,11 @@ export function CustomerOperations({ customerId }: CustomerOperationsProps) {
       console.error("Error saving notes:", error);
       toast.error("Notlar kaydedilemedi");
     }
+  };
+
+  // Use recoverOperations instead of handleForceRecover
+  const handleForceRecover = () => {
+    recoverOperations();
   };
 
   if (isLoading) {
@@ -87,7 +92,7 @@ export function CustomerOperations({ customerId }: CustomerOperationsProps) {
           <Button 
             variant="outline" 
             size="sm"
-            onClick={() => handleForceRecover()}
+            onClick={handleForceRecover}
             className="flex items-center gap-1"
           >
             <RefreshCcw size={14} />

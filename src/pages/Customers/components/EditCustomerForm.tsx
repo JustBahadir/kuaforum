@@ -9,15 +9,7 @@ import { musteriServisi } from "@/lib/supabase";
 import { Musteri } from "@/lib/supabase/types";
 import { CustomerFormFields } from "./FormFields/CustomerFormFields";
 import { CustomerFormActions } from "./FormFields/CustomerFormActions";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+import { Form } from "@/components/ui/form";
 
 // Form schema for customer data
 const customerFormSchema = z.object({

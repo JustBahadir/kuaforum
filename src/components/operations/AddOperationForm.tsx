@@ -112,20 +112,10 @@ export function AddOperationForm({
       puan: number;
       notlar?: string;
     }) => {
-      const response = await fetch("/api/add-operation", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
+      const { data: result } = await supabase.functions.invoke('add-operation', {
+        body: data
       });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "İşlem eklenirken bir hata oluştu");
-      }
-      
-      return response.json();
+      return result;
     },
     onSuccess: (data) => {
       setCurrentOperationId(data.id);
@@ -150,20 +140,10 @@ export function AddOperationForm({
   // Photo upload mutation
   const addPhoto = useMutation({
     mutationFn: async ({ operationId, photoUrl }: { operationId: number; photoUrl: string }) => {
-      const response = await fetch("/api/add-operation-photo", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ operationId, photoUrl }),
+      const { data: result } = await supabase.functions.invoke('add-operation-photo', {
+        body: { operationId, photoUrl }
       });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Fotoğraf eklenirken bir hata oluştu");
-      }
-      
-      return response.json();
+      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['personelIslemleri'] });
@@ -408,12 +388,7 @@ export function AddOperationForm({
                 folderPath="operations"
                 acceptedFileTypes="image/*"
                 maxFileSize={5 * 1024 * 1024} // 5MB
-                label={
-                  <div className="flex items-center gap-2">
-                    <FileImage className="h-4 w-4" />
-                    <span>Fotoğraf Seç</span>
-                  </div>
-                }
+                label="Fotoğraf Seç"
               />
               
               <p className="text-xs text-muted-foreground">

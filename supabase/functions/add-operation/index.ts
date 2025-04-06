@@ -21,7 +21,7 @@ serve(async (req) => {
   
   try {
     const { islemId, personelId, customerId, tutar, puan, notlar } = await req.json();
-    
+
     if (!islemId || !personelId || !customerId) {
       return new Response(
         JSON.stringify({ message: "Missing required fields" }),

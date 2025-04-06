@@ -2,7 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { customerOperationsService } from "@/lib/supabase/services/customerOperationsService";
 import { PersonelIslemi } from "@/lib/supabase/types";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
 
@@ -19,6 +19,15 @@ export function useCustomerOperations(customerId?: number | string) {
     },
     enabled: !!customerId,
   });
+  
+  // Calculate totals from operations
+  const totals = useMemo(() => {
+    const totalAmount = operations.reduce((sum, op) => sum + (op.amount || op.tutar || 0), 0);
+    const totalPaid = operations.reduce((sum, op) => sum + (op.odenen || 0), 0);
+    const totalPoints = operations.reduce((sum, op) => sum + (op.points || op.puan || 0), 0);
+    
+    return { totalAmount, totalPaid, totalPoints };
+  }, [operations]);
   
   // Add operation mutation
   const addOperation = useMutation({
@@ -99,6 +108,9 @@ export function useCustomerOperations(customerId?: number | string) {
     }
   };
 
+  // Add handleForceRecover as an alias for recoverOperations to maintain compatibility
+  const handleForceRecover = recoverOperations;
+
   return {
     operations,
     isLoading,
@@ -106,7 +118,9 @@ export function useCustomerOperations(customerId?: number | string) {
     addOperationPhoto,
     updateOperationNotes,
     recoverOperations,
+    handleForceRecover, // Added this property
     isRecovering,
-    refetch
+    refetch,
+    totals // Added the totals property
   };
 }
