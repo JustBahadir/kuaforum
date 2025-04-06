@@ -139,11 +139,17 @@ export const customerOperationsService = {
           `${appointment.tarih}T${appointment.saat || '00:00:00'}` : 
           appointment.created_at;
         
+        // Fix the type issue - ensure we handle personel correctly
+        let personnelName = 'Belirtilmemiş';
+        if (appointment.personel && typeof appointment.personel === 'object') {
+          personnelName = (appointment.personel as any).ad_soyad || 'Belirtilmemiş';
+        }
+        
         return {
           id: appointment.id,
           date: appointmentDate || new Date().toISOString(),
           service_name: serviceName,
-          personnel_name: appointment.personel?.ad_soyad || 'Belirtilmemiş',
+          personnel_name: personnelName,
           amount: amount,
           points: points,
           appointment_id: appointment.id,

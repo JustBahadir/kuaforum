@@ -12,7 +12,8 @@ import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { 
   User, Calendar, Mail, Phone, MapPin, Briefcase, Edit, Save, Trash2, AlertTriangle,
-  FileText, Camera, Clock, CreditCard, Award, BookOpen, MessageSquare, Plus, X, Pencil
+  FileText, Camera, Clock, CreditCard, Award, BookOpen, MessageSquare, Plus, X, Pencil,
+  RefreshCw, Check
 } from "lucide-react";
 import { 
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
