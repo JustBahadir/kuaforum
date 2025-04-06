@@ -70,14 +70,14 @@ export const customerOperationsService = {
         
         // Safely extract islem_adi if available
         if (item.islem && typeof item.islem === 'object') {
-          // Fix: Access islem_adi directly from the object
-          serviceName = item.islem.islem_adi || serviceName;
+          // Fix: Properly handle the object type from Supabase join
+          serviceName = (item.islem as any).islem_adi || serviceName;
         }
         
         // Safely extract ad_soyad if available
         if (item.personel && typeof item.personel === 'object') {
-          // Fix: Access ad_soyad directly from the object
-          personnelName = item.personel.ad_soyad || personnelName;
+          // Fix: Properly handle the object type from Supabase join
+          personnelName = (item.personel as any).ad_soyad || personnelName;
         }
         
         return {
