@@ -64,8 +64,7 @@ export function CustomerPersonalInfo({ customerId, customer, editMode }: Custome
       try {
         console.log("Fetching personal data for customer ID:", customerId);
         
-        // Önemli: customer_id parametresini string olarak geçmemiz gerekiyor
-        // customerId bir sayı olsa bile string'e dönüştürüp göndermeliyiz
+        // Convert customerId to string before passing to the service
         const data = await customerPersonalDataService.getByCustomerId(customerId.toString());
         console.log("Fetched personal data:", data);
         return data;
@@ -107,7 +106,7 @@ export function CustomerPersonalInfo({ customerId, customer, editMode }: Custome
       console.log("Saving customer personal data:", data);
       
       try {
-        // customerId'yi string olarak gönderiyoruz
+        // Always convert customerId to string
         await customerPersonalDataService.updateCustomerPersonalData(customerId.toString(), {
           customer_id: customerId.toString(),
           birth_date: data.birth_date,
