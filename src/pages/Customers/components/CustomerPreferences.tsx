@@ -395,66 +395,83 @@ export function CustomerPreferences({ customerId }: CustomerPreferencesProps) {
         
         <Separator />
         
-        {/* 2. Saç Tipi */}
+        {/* 2. Saç Tipi - Reorganized into 3 columns with separators */}
         <div className="space-y-4">
           <h4 className="font-medium text-base border-l-4 border-purple-500 pl-2">Saç Tipi</h4>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <CheckboxItem 
-              id="hair-straight" 
-              label="Düz" 
-              checked={isArrayItemSelected(['hairType'], 'Düz')} 
-              onCheckedChange={() => toggleArrayItem(['hairType'], 'Düz')}
-              disabled={!editMode}
-            />
-            <CheckboxItem 
-              id="hair-wavy" 
-              label="Dalgalı" 
-              checked={isArrayItemSelected(['hairType'], 'Dalgalı')} 
-              onCheckedChange={() => toggleArrayItem(['hairType'], 'Dalgalı')}
-              disabled={!editMode}
-            />
-            <CheckboxItem 
-              id="hair-curly" 
-              label="Kıvırcık" 
-              checked={isArrayItemSelected(['hairType'], 'Kıvırcık')} 
-              onCheckedChange={() => toggleArrayItem(['hairType'], 'Kıvırcık')}
-              disabled={!editMode}
-            />
-            <CheckboxItem 
-              id="hair-thin" 
-              label="İnce Telli" 
-              checked={isArrayItemSelected(['hairType'], 'İnce Telli')} 
-              onCheckedChange={() => toggleArrayItem(['hairType'], 'İnce Telli')}
-              disabled={!editMode}
-            />
-            <CheckboxItem 
-              id="hair-thick" 
-              label="Kalın Telli" 
-              checked={isArrayItemSelected(['hairType'], 'Kalın Telli')} 
-              onCheckedChange={() => toggleArrayItem(['hairType'], 'Kalın Telli')}
-              disabled={!editMode}
-            />
-            <CheckboxItem 
-              id="hair-oily" 
-              label="Yağlı" 
-              checked={isArrayItemSelected(['hairType'], 'Yağlı')} 
-              onCheckedChange={() => toggleArrayItem(['hairType'], 'Yağlı')}
-              disabled={!editMode}
-            />
-            <CheckboxItem 
-              id="hair-dry" 
-              label="Kuru" 
-              checked={isArrayItemSelected(['hairType'], 'Kuru')} 
-              onCheckedChange={() => toggleArrayItem(['hairType'], 'Kuru')}
-              disabled={!editMode}
-            />
-            <CheckboxItem 
-              id="hair-normal" 
-              label="Normal" 
-              checked={isArrayItemSelected(['hairType'], 'Normal')} 
-              onCheckedChange={() => toggleArrayItem(['hairType'], 'Normal')}
-              disabled={!editMode}
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* Column 1: Hair Structure */}
+            <div className="space-y-2">
+              <CheckboxItem 
+                id="hair-straight" 
+                label="Düz" 
+                checked={isArrayItemSelected(['hairType'], 'Düz')} 
+                onCheckedChange={() => toggleArrayItem(['hairType'], 'Düz')}
+                disabled={!editMode}
+              />
+              <CheckboxItem 
+                id="hair-wavy" 
+                label="Dalgalı" 
+                checked={isArrayItemSelected(['hairType'], 'Dalgalı')} 
+                onCheckedChange={() => toggleArrayItem(['hairType'], 'Dalgalı')}
+                disabled={!editMode}
+              />
+              <CheckboxItem 
+                id="hair-curly" 
+                label="Kıvırcık" 
+                checked={isArrayItemSelected(['hairType'], 'Kıvırcık')} 
+                onCheckedChange={() => toggleArrayItem(['hairType'], 'Kıvırcık')}
+                disabled={!editMode}
+              />
+            </div>
+            
+            {/* Separator between columns */}
+            <div className="hidden sm:block border-r border-gray-200 h-full mx-auto opacity-50"></div>
+            
+            {/* Column 2: Hair Condition */}
+            <div className="space-y-2">
+              <CheckboxItem 
+                id="hair-dry" 
+                label="Kuru" 
+                checked={isArrayItemSelected(['hairType'], 'Kuru')} 
+                onCheckedChange={() => toggleArrayItem(['hairType'], 'Kuru')}
+                disabled={!editMode}
+              />
+              <CheckboxItem 
+                id="hair-normal" 
+                label="Normal" 
+                checked={isArrayItemSelected(['hairType'], 'Normal')} 
+                onCheckedChange={() => toggleArrayItem(['hairType'], 'Normal')}
+                disabled={!editMode}
+              />
+              <CheckboxItem 
+                id="hair-oily" 
+                label="Yağlı" 
+                checked={isArrayItemSelected(['hairType'], 'Yağlı')} 
+                onCheckedChange={() => toggleArrayItem(['hairType'], 'Yağlı')}
+                disabled={!editMode}
+              />
+            </div>
+            
+            {/* Separator between columns */}
+            <div className="hidden sm:block border-r border-gray-200 h-full mx-auto opacity-50"></div>
+            
+            {/* Column 3: Hair Thickness */}
+            <div className="space-y-2">
+              <CheckboxItem 
+                id="hair-thin" 
+                label="İnce Telli" 
+                checked={isArrayItemSelected(['hairType'], 'İnce Telli')} 
+                onCheckedChange={() => toggleArrayItem(['hairType'], 'İnce Telli')}
+                disabled={!editMode}
+              />
+              <CheckboxItem 
+                id="hair-thick" 
+                label="Kalın Telli" 
+                checked={isArrayItemSelected(['hairType'], 'Kalın Telli')} 
+                onCheckedChange={() => toggleArrayItem(['hairType'], 'Kalın Telli')}
+                disabled={!editMode}
+              />
+            </div>
           </div>
         </div>
         
@@ -727,44 +744,7 @@ export function CustomerPreferences({ customerId }: CustomerPreferencesProps) {
         
         <Separator />
         
-        {/* 7. Kaş/Bıyık/İpek Kirpik Tercihleri */}
-        <div className="space-y-4">
-          <h4 className="font-medium text-base border-l-4 border-purple-500 pl-2">Yüz Bakım Tercihleri</h4>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <CheckboxItem 
-              id="facial-eyebrow" 
-              label="Kaş Aldırır" 
-              checked={isArrayItemSelected(['facialTreatments'], 'Kaş Aldırır')} 
-              onCheckedChange={() => toggleArrayItem(['facialTreatments'], 'Kaş Aldırır')}
-              disabled={!editMode}
-            />
-            <CheckboxItem 
-              id="facial-mustache" 
-              label="Bıyık Temizliği İster" 
-              checked={isArrayItemSelected(['facialTreatments'], 'Bıyık Temizliği İster')} 
-              onCheckedChange={() => toggleArrayItem(['facialTreatments'], 'Bıyık Temizliği İster')}
-              disabled={!editMode}
-            />
-            <CheckboxItem 
-              id="facial-wax" 
-              label="Sir Ağda Yaptırır" 
-              checked={isArrayItemSelected(['facialTreatments'], 'Sir Ağda Yaptırır')} 
-              onCheckedChange={() => toggleArrayItem(['facialTreatments'], 'Sir Ağda Yaptırır')}
-              disabled={!editMode}
-            />
-            <CheckboxItem 
-              id="facial-lashes" 
-              label="Kirpik Uzatma / İpek Kirpik Tercihi" 
-              checked={isArrayItemSelected(['facialTreatments'], 'Kirpik Uzatma / İpek Kirpik Tercihi')} 
-              onCheckedChange={() => toggleArrayItem(['facialTreatments'], 'Kirpik Uzatma / İpek Kirpik Tercihi')}
-              disabled={!editMode}
-            />
-          </div>
-        </div>
-        
-        <Separator />
-        
-        {/* 8. Hassasiyet / Alerji / Kısıtlar */}
+        {/* 7. Hassasiyet / Alerji / Kısıtlar */}
         <div className="space-y-4">
           <h4 className="font-medium text-base border-l-4 border-purple-500 pl-2">Hassasiyet / Alerji / Kısıtlar</h4>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -819,7 +799,7 @@ export function CustomerPreferences({ customerId }: CustomerPreferencesProps) {
         
         <Separator />
         
-        {/* 9. Serbest Notlar */}
+        {/* 8. Serbest Notlar */}
         <div className="space-y-4">
           <h4 className="font-medium text-base border-l-4 border-purple-500 pl-2">Kuaför Gözlem Notları</h4>
           <div className="space-y-2">
