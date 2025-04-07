@@ -42,6 +42,9 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
     return format(new Date(date), "dd.MM.yyyy");
   };
 
+  // Check if we should show points column - default to true if totalPoints > 0
+  const showPointsColumn = totals && totals.totalPoints > 0;
+
   if (isLoading) {
     return (
       <div className="p-4 md:p-6 text-center">
@@ -124,7 +127,7 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
                   <th className="py-2 px-2 md:px-4 text-left text-xs md:text-sm">İşlem</th>
                   <th className="py-2 px-2 md:px-4 text-left text-xs md:text-sm">Personel</th>
                   <th className="py-2 px-2 md:px-4 text-right text-xs md:text-sm">Tutar</th>
-                  {totals?.showPoints && (
+                  {showPointsColumn && (
                     <th className="py-2 px-2 md:px-4 text-right text-xs md:text-sm">Puan</th>
                   )}
                 </tr>
@@ -144,7 +147,7 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
                     <td className="py-2 px-2 md:px-4 text-right text-xs md:text-sm whitespace-nowrap">
                       {op.amount ? `${op.amount.toFixed(2)} ₺` : "-"}
                     </td>
-                    {totals?.showPoints && (
+                    {showPointsColumn && (
                       <td className="py-2 px-2 md:px-4 text-right text-xs md:text-sm">
                         {op.points || "0"}
                       </td>
