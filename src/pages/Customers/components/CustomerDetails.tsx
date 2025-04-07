@@ -29,6 +29,7 @@ export function CustomerDetails({
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("temel");
+  const [editMode, setEditMode] = useState(true); // Default to edit mode enabled
   const { totals } = useCustomerOperations(customer.id);
 
   const handleDelete = async () => {
@@ -94,7 +95,11 @@ export function CustomerDetails({
           </TabsList>
 
           <TabsContent value="temel" className="p-2">
-            <CustomerPersonalInfo customer={customer} />
+            <CustomerPersonalInfo 
+              customer={customer} 
+              customerId={customer.id.toString()} // Pass customerId as string
+              editMode={editMode} 
+            />
           </TabsContent>
 
           <TabsContent value="detayli" className="p-2">

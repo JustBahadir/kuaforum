@@ -26,7 +26,7 @@ export default function StaffLogin() {
             setTimeout(() => {
               console.log("Yönlendirme yapılıyor: /shop-home");
               navigate("/shop-home", { replace: true });
-            }, 1000);
+            }, 2000); // Bekleme süresini 2 saniyeye çıkarıyoruz
             return;
           }
         }
@@ -43,7 +43,7 @@ export default function StaffLogin() {
     // Yükleme ekranında sonsuz kalması durumuna karşı bir güvenlik önlemi
     const timeout = setTimeout(() => {
       setIsLoading(false);
-    }, 2000);
+    }, 3000); // Bu süreyi de artırıyoruz
     
     return () => clearTimeout(timeout);
   }, [navigate]);
@@ -56,7 +56,7 @@ export default function StaffLogin() {
     setTimeout(() => {
       console.log("Yönlendirme yapılıyor: /shop-home");
       navigate("/shop-home", { replace: true });
-    }, 1000);
+    }, 2000); // Bekleme süresini 2 saniyeye çıkarıyoruz
   };
 
   const handleBackClick = () => {

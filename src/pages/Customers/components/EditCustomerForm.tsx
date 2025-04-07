@@ -20,17 +20,26 @@ import { musteriServisi } from "@/lib/supabase";
 
 interface EditCustomerFormProps {
   customer: any;
-  isOpen: boolean;
+  open?: boolean; // Make open optional
+  isOpen?: boolean; // Support legacy isOpen prop
   onOpenChange: (open: boolean) => void;
-  onCustomerUpdated: () => void;
+  onSuccess?: () => void;
+  onCustomerUpdated?: () => void;
+  dukkanId?: number;
 }
 
 export function EditCustomerForm({
   customer,
+  open,
   isOpen,
   onOpenChange,
+  onSuccess,
   onCustomerUpdated,
+  dukkanId,
 }: EditCustomerFormProps) {
+  // Use open prop as first choice, fall back to isOpen for backward compatibility
+  const dialogOpen = open !== undefined ? open : (isOpen !== undefined ? isOpen : false);
+  
   const [firstName, setFirstName] = useState(customer?.first_name || "");
   const [lastName, setLastName] = useState(customer?.last_name || "");
   const [phone, setPhone] = useState(customer?.phone || "");
@@ -62,7 +71,11 @@ export function EditCustomerForm({
       await musteriServisi.guncelle(customer.id, updates);
       
       toast.success("Müşteri bilgileri güncellendi");
-      onCustomerUpdated();
+      
+      // Call the appropriate callback function
+      if (onSuccess) onSuccess();
+      if (onCustomerUpdated) onCustomerUpdated();
+      
       onOpenChange(false);
     } catch (error) {
       console.error("Müşteri güncelleme hatası:", error);
@@ -73,7 +86,7 @@ export function EditCustomerForm({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <Dialog open={dialogOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Müşteri Düzenle</DialogTitle>

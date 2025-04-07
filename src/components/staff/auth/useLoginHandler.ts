@@ -54,8 +54,9 @@ export function useLoginHandler(onSuccess: () => void) {
         // Başarılı giriş sonrası callback'i çağır
         // Doğrudan navigate etmek yerine önce state güncellenmesini bekle
         setTimeout(() => {
+          console.log("onSuccess callback çağırılıyor...");
           onSuccess();
-        }, 500); // Bekleme süresini artırıyoruz
+        }, 2000); // Bekleme süresini 2 saniyeye çıkarıyoruz
       } else {
         console.error("Kullanıcının rolü personel veya admin değil:", userRole);
         setLoginError("Bu hesap personel girişi için yetkilendirilmemiş. Lütfen personel hesabınızla giriş yapın.");
