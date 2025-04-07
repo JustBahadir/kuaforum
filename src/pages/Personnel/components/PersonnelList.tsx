@@ -29,7 +29,7 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
   const [adres, setAdres] = useState("");
   const [maas, setMaas] = useState<number>(0);
   const [primYuzdesi, setPrimYuzdesi] = useState<number>(0);
-  const [calisma_sistemi, setCalisma_sistemi] = useState("maas");
+  const [calisma_sistemi, setCalisma_sistemi] = useState<"haftalik" | "aylik">("aylik");
   const [iban, setIban] = useState("");
   
   const queryClient = useQueryClient();
@@ -78,7 +78,7 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
       adres,
       maas: Number(maas),
       prim_yuzdesi: Number(primYuzdesi),
-      calisma_sistemi: calisma_sistemi as "maas" | "prim" | "maas_ve_prim",
+      calisma_sistemi, // Already of type "haftalik" | "aylik"
       iban,
       personel_no: Math.random().toString(36).substring(2, 8).toUpperCase()
     };
@@ -98,7 +98,7 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
     setAdres(personel.adres || "");
     setMaas(personel.maas || 0);
     setPrimYuzdesi(personel.prim_yuzdesi || 0);
-    setCalisma_sistemi(personel.calisma_sistemi || "maas");
+    setCalisma_sistemi(personel.calisma_sistemi || "aylik");
     setIban(personel.iban || "");
     setIsDialogOpen(true);
   };
@@ -116,7 +116,7 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
     setAdres("");
     setMaas(0);
     setPrimYuzdesi(0);
-    setCalisma_sistemi("maas");
+    setCalisma_sistemi("aylik");
     setIban("");
   };
   
@@ -182,8 +182,7 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
                         </div>
                         <div>
                           <p className="text-gray-500">Sistem:</p>
-                          <p>{personel.calisma_sistemi === 'maas' ? 'Maaşlı' : 
-                              personel.calisma_sistemi === 'prim' ? 'Primli' : 'Maaş+Prim'}</p>
+                          <p>{personel.calisma_sistemi === 'haftalik' ? 'Haftalık' : 'Aylık'}</p>
                         </div>
                         <div>
                           <p className="text-gray-500">Maaş:</p>
@@ -325,12 +324,11 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
                   id="calisma_sistemi"
                   className="col-span-3 border rounded-md h-10 px-3"
                   value={calisma_sistemi}
-                  onChange={(e) => setCalisma_sistemi(e.target.value)}
+                  onChange={(e) => setCalisma_sistemi(e.target.value as "haftalik" | "aylik")}
                   required
                 >
-                  <option value="maas">Maaşlı</option>
-                  <option value="prim">Primli</option>
-                  <option value="maas_ve_prim">Maaşlı ve Primli</option>
+                  <option value="haftalik">Haftalık</option>
+                  <option value="aylik">Aylık</option>
                 </select>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
