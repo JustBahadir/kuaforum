@@ -19,7 +19,7 @@ interface SidebarNavProps {
 
 export function SidebarNav({ activeTab, userName, onLogout }: SidebarNavProps) {
   return (
-    <div className="hidden md:flex flex-col w-64 bg-white border-r shadow-sm">
+    <div className="hidden md:flex flex-col w-64 bg-white border-r shadow-sm h-screen sticky top-0">
       <div className="p-4 border-b">
         <h2 className="text-xl font-bold text-center text-purple-700">Kuaför Randevu</h2>
         <div className="mt-4 text-center">
@@ -28,7 +28,7 @@ export function SidebarNav({ activeTab, userName, onLogout }: SidebarNavProps) {
         </div>
       </div>
       
-      <nav className="flex-1 p-4 space-y-1">
+      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         <Link to="/customer-dashboard">
           <Button 
             variant={activeTab === "home" ? "default" : "ghost"} 
@@ -74,6 +74,9 @@ export function SidebarNav({ activeTab, userName, onLogout }: SidebarNavProps) {
             Ayarlar
           </Button>
         </Link>
+      </nav>
+      
+      <div className="p-4 border-t">
         <Button 
           variant="ghost" 
           className="w-full justify-start text-red-500 hover:text-red-700 hover:bg-red-50" 
@@ -82,7 +85,7 @@ export function SidebarNav({ activeTab, userName, onLogout }: SidebarNavProps) {
           <LogOut className="mr-2 h-4 w-4" />
           Çıkış Yap
         </Button>
-      </nav>
+      </div>
     </div>
   );
 }

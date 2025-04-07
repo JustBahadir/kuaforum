@@ -52,30 +52,32 @@ export function CustomerDetails({
   return (
     <div>
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        <div className="p-6">
-          {/* Simplified header with just name and buttons */}
-          <div className="flex items-center justify-between mb-6">
+        <div className="p-4 md:p-6">
+          {/* Responsive header with flexible layout */}
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
             <div className="flex items-center">
-              <div className="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 font-medium text-xl">
+              <div className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 font-medium text-lg md:text-xl">
                 {customer.first_name?.[0] || "?"}{customer.last_name?.[0] || ""}
               </div>
-              <div className="ml-4">
-                <h2 className="text-xl font-semibold">
+              <div className="ml-3 md:ml-4">
+                <h2 className="text-lg md:text-xl font-semibold">
                   {customer.first_name} {customer.last_name || ""}
                 </h2>
-                <p className="text-gray-600">Kayıt: {format(new Date(customer.created_at), "dd.MM.yyyy")}</p>
+                <p className="text-sm md:text-base text-gray-600">Kayıt: {format(new Date(customer.created_at), "dd.MM.yyyy")}</p>
               </div>
             </div>
             <div className="flex gap-2">
               <Button 
                 variant="outline"
                 onClick={() => setIsEditDialogOpen(true)}
+                className="min-h-10 px-3 md:px-4"
               >
                 Düzenle
               </Button>
               <Button 
                 variant="destructive"
                 onClick={() => setIsDeleteDialogOpen(true)}
+                className="min-h-10 px-3 md:px-4"
               >
                 Sil
               </Button>
@@ -91,17 +93,17 @@ export function CustomerDetails({
           )}
         
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-4 w-full">
-              <TabsTrigger value="temel">Temel Bilgiler</TabsTrigger>
-              <TabsTrigger value="detayli">Detaylı Bilgiler</TabsTrigger>
-              <TabsTrigger value="islemler">İşlem Geçmişi</TabsTrigger>
-              <TabsTrigger value="fotograflar">Fotoğraflar</TabsTrigger>
+            <TabsList className="grid grid-cols-2 md:grid-cols-4 w-full mb-2">
+              <TabsTrigger value="temel" className="text-xs md:text-sm py-2">Temel Bilgiler</TabsTrigger>
+              <TabsTrigger value="detayli" className="text-xs md:text-sm py-2">Detaylı Bilgiler</TabsTrigger>
+              <TabsTrigger value="islemler" className="text-xs md:text-sm py-2">İşlem Geçmişi</TabsTrigger>
+              <TabsTrigger value="fotograflar" className="text-xs md:text-sm py-2">Fotoğraflar</TabsTrigger>
             </TabsList>
 
             <TabsContent value="temel" className="p-2">
               <CustomerPersonalInfo 
                 customer={customer} 
-                customerId={customerId} // Pass the converted number here
+                customerId={customerId} 
                 editMode={false} 
               />
             </TabsContent>
@@ -134,15 +136,15 @@ export function CustomerDetails({
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-[90vw] md:max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle>Müşteri Silme İşlemi</AlertDialogTitle>
             <AlertDialogDescription>
               <strong>{customer.first_name} {customer.last_name}</strong> isimli müşteriyi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>İptal</AlertDialogCancel>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel className="mt-0">İptal</AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleDelete}
               className="bg-destructive text-destructive-foreground"
