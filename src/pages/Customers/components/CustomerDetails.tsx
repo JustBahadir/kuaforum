@@ -8,7 +8,7 @@ import { CustomerOperationsTable } from "./CustomerOperationsTable";
 import { CustomerLoyaltyCard } from "./CustomerLoyaltyCard";
 import { CustomerProfile } from "./CustomerProfile";
 import { useQuery } from "@tanstack/react-query";
-import { customerService } from "@/lib/supabase";
+import { musteriServisi } from "@/lib/supabase";
 import { useParams } from "react-router-dom";
 import { Label } from "@/components/ui/label";
 
@@ -31,7 +31,7 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
     queryKey: ['customer', customerId],
     queryFn: async () => {
       if (!customerId) throw new Error("No customer ID provided");
-      return customerService.musteriGetirById(customerId);
+      return musteriServisi.musteriGetirById(customerId);
     },
     enabled: !!customerId,
   });

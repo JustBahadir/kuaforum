@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { PersonIcon, Plus, Pencil, BadgeDollarSign } from "lucide-react";
+import { Plus, Pencil, BadgeDollarSign, User } from "lucide-react";
 
 interface PersonnelListProps {
   onPersonnelSelect: (id: number) => void;
@@ -77,7 +77,7 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
       adres,
       maas: Number(maas),
       prim_yuzdesi: Number(primYuzdesi),
-      calisma_sistemi,
+      calisma_sistemi: calisma_sistemi as "haftalik" | "aylik",
       iban,
       personel_no: Math.random().toString(36).substring(2, 8).toUpperCase()
     };
@@ -163,7 +163,7 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
                           <AvatarImage src={personel.avatar_url} alt={personel.ad_soyad} />
                         ) : (
                           <AvatarFallback>
-                            <PersonIcon className="h-6 w-6" />
+                            <User className="h-6 w-6" />
                           </AvatarFallback>
                         )}
                       </Avatar>

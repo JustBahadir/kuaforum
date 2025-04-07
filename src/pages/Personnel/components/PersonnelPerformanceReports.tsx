@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,7 +19,7 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
     queryKey: ['personel-detail', personnelId],
     queryFn: async () => {
       if (!personnelId) return null;
-      return await personelServisi.personelGetirById(personnelId);
+      return await personelServisi.getirById(personnelId);
     },
     enabled: !!personnelId
   });
