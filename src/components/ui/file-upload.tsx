@@ -90,7 +90,8 @@ export function FileUpload({
   const inputId = id || "file-upload";
 
   // Modify the input to use capture if useCamera is true
-  const inputProps = useCamera ? { capture: "environment" } : {};
+  // Fix: Use the correct type for capture attribute - "environment" | "user" instead of string
+  const inputProps = useCamera ? { capture: "environment" as "environment" | "user" } : {};
 
   return (
     <div className="space-y-4">

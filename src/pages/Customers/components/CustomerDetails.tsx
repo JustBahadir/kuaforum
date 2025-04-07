@@ -97,7 +97,7 @@ export function CustomerDetails({
           <TabsContent value="temel" className="p-2">
             <CustomerPersonalInfo 
               customer={customer} 
-              customerId={customer.id.toString()} // Pass customerId as string
+              customerId={String(customer.id)} 
               editMode={editMode} 
             />
           </TabsContent>
