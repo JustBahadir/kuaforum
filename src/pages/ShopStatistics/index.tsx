@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -307,7 +306,7 @@ export default function ShopStatistics() {
     
     try {
       // Force recovery of operations from appointments
-      await personelIslemleriServisi.recoverOperationsFromAppointments(0);
+      await personelIslemleriServisi.recoverOperations({ get_all: true });
       await personelIslemleriServisi.updateShopStatistics();
       
       // Refetch data
