@@ -42,9 +42,9 @@ export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProp
         
         console.log("Retrieved operations:", result);
         
-        // If no operations, automatically try to recover from appointments
-        if (result.length === 0) {
-          console.log("No operations found, attempting automatic recovery...");
+        // If no operations or very few operations, automatically try to recover from appointments
+        if (result.length < 5) {
+          console.log("Few operations found, attempting automatic recovery...");
           await handleRecoverOperations();
           
           // Fetch again after recovery
@@ -71,7 +71,6 @@ export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProp
     },
     refetchOnWindowFocus: true,
     staleTime: 1000, // Reduced to 1 second for more frequent refresh
-    refetchInterval: 10000, // Set a refresh interval of 10 seconds
     enabled: !!personnelId
   });
 
@@ -125,6 +124,7 @@ export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProp
       
       // Invalidate related queries
       queryClient.invalidateQueries({ queryKey: ['personelIslemleri'] });
+      queryClient.invalidateQueries({ queryKey: ['shop-statistics'] });
       
       // Refetch after invalidation
       await refetch();
