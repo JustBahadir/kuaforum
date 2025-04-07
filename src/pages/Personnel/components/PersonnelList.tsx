@@ -11,6 +11,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { Plus, Pencil, BadgeDollarSign, User } from "lucide-react";
+import { PersonnelAnalyst } from "@/components/analyst/PersonnelAnalyst";
 
 interface PersonnelListProps {
   onPersonnelSelect: (id: number) => void;
@@ -77,7 +78,7 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
       adres,
       maas: Number(maas),
       prim_yuzdesi: Number(primYuzdesi),
-      calisma_sistemi: calisma_sistemi as "haftalik" | "aylik",
+      calisma_sistemi: calisma_sistemi as "maas" | "prim" | "maas_ve_prim",
       iban,
       personel_no: Math.random().toString(36).substring(2, 8).toUpperCase()
     };
@@ -145,66 +146,88 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
           </div>
           
           <ScrollArea className="h-[600px] pr-4">
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {isLoading ? (
-                <div className="flex justify-center p-4">
+                <div className="flex justify-center p-4 col-span-full">
                   <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
                 </div>
               ) : filteredPersonnel.length > 0 ? (
                 filteredPersonnel.map(personel => (
-                  <div 
+                  <Card 
                     key={personel.id} 
-                    className="flex items-center justify-between p-4 border rounded-md hover:bg-gray-50 cursor-pointer"
+                    className="hover:shadow-md transition-shadow cursor-pointer bg-white"
                     onClick={() => onPersonnelSelect(personel.id)}
                   >
-                    <div className="flex items-center space-x-4">
-                      <Avatar className="h-10 w-10">
-                        {personel.avatar_url ? (
-                          <AvatarImage src={personel.avatar_url} alt={personel.ad_soyad} />
-                        ) : (
-                          <AvatarFallback>
-                            <User className="h-6 w-6" />
-                          </AvatarFallback>
-                        )}
-                      </Avatar>
-                      <div>
-                        <h4 className="font-medium">{personel.ad_soyad}</h4>
-                        <div className="flex flex-wrap gap-x-4 text-sm text-gray-500">
-                          <span>{personel.telefon}</span>
-                          <span>{personel.eposta}</span>
+                    <CardContent className="p-4">
+                      <div className="flex items-center space-x-4 mb-4">
+                        <Avatar className="h-12 w-12">
+                          {personel.avatar_url ? (
+                            <AvatarImage src={personel.avatar_url} alt={personel.ad_soyad} />
+                          ) : (
+                            <AvatarFallback>
+                              <User className="h-6 w-6" />
+                            </AvatarFallback>
+                          )}
+                        </Avatar>
+                        <div>
+                          <h4 className="font-medium text-lg">{personel.ad_soyad}</h4>
+                          <p className="text-sm text-gray-500">{personel.telefon}</p>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <div className="flex flex-col items-end mr-4">
-                        <span className="text-sm text-gray-800">
-                          <BadgeDollarSign className="inline-block mr-1 h-4 w-4" />
-                          {personel.maas} ₺
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          %{personel.prim_yuzdesi} prim
-                        </span>
+                      
+                      <div className="grid grid-cols-2 gap-2 text-sm mb-4">
+                        <div>
+                          <p className="text-gray-500">Email:</p>
+                          <p className="truncate">{personel.eposta}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">Sistem:</p>
+                          <p>{personel.calisma_sistemi === 'maas' ? 'Maaşlı' : 
+                              personel.calisma_sistemi === 'prim' ? 'Primli' : 'Maaş+Prim'}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">Maaş:</p>
+                          <p className="font-medium">{personel.maas}₺</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">Prim:</p>
+                          <p className="font-medium">%{personel.prim_yuzdesi}</p>
+                        </div>
                       </div>
-                      <Button 
-                        variant="outline" 
-                        size="icon" 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEdit(personel);
-                        }}
-                      >
-                        <Pencil size={16} />
-                      </Button>
-                    </div>
-                  </div>
+                      
+                      <div className="flex justify-between items-center mt-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEdit(personel);
+                          }}
+                          className="flex items-center gap-1"
+                        >
+                          <Pencil size={14} />
+                          Düzenle
+                        </Button>
+                        
+                        <div className="flex items-center">
+                          <BadgeDollarSign className="h-4 w-4 text-green-600 mr-1" />
+                          <span className="text-sm font-medium">%{personel.prim_yuzdesi} prim</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                 ))
               ) : (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-gray-500 col-span-full">
                   Personel bulunamadı
                 </div>
               )}
             </div>
           </ScrollArea>
+          
+          <div className="mt-6">
+            <PersonnelAnalyst />
+          </div>
         </CardContent>
       </Card>
       

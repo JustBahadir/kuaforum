@@ -14,6 +14,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, FileBarChart } from "lucide-react";
 import { Navigate } from "react-router-dom";
 import { formatCurrency } from "@/lib/utils";
+import { PersonnelAnalyst } from "@/components/analyst/PersonnelAnalyst";
 
 export default function Personnel() {
   const { userRole, refreshProfile } = useCustomerAuth();
@@ -146,11 +147,11 @@ export default function Personnel() {
                         <tr>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tarih</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Personel</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Müşteri</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlem</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tutar</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prim %</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ödenen</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Puan</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
@@ -164,7 +165,10 @@ export default function Personnel() {
                                 {personeller?.find(p => p.id === islem.personel_id)?.ad_soyad}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {islem.aciklama}
+                                {islem.musteri?.first_name} {islem.musteri?.last_name}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {islem.islem?.islem_adi || islem.aciklama.split(' hizmeti verildi')[0]}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                 {formatCurrency(islem.tutar)}
@@ -174,9 +178,6 @@ export default function Personnel() {
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                 {formatCurrency(islem.odenen)}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {islem.puan}
                               </td>
                             </tr>
                           ))

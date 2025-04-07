@@ -1,9 +1,10 @@
+
 import { useState, useEffect } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { useQuery } from "@tanstack/react-query";
-import { personelIslemleriServisi } from "@/lib/supabase/services/personelIslemleriServisi";
+import { personelIslemleriServisi, randevuServisi } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 import { toast } from "sonner";
@@ -16,6 +17,7 @@ import { ServicePerformanceChart } from "./components/ServicePerformanceChart";
 import { YearlyStatisticsPlaceholder } from "./components/YearlyStatisticsPlaceholder";
 import { DailyPerformanceChart } from "./components/DailyPerformanceChart";
 import { HourlyPerformanceChart } from "./components/HourlyPerformanceChart";
+import { ShopAnalyst } from "@/components/analyst/ShopAnalyst"; // Added ShopAnalyst import
 
 // Define interfaces for chart data
 interface ChartDataItem {
@@ -61,6 +63,18 @@ export default function ShopStatistics() {
     enabled: !!dukkanId,
     refetchOnWindowFocus: false,
     staleTime: 60000 // Consider data fresh for 1 minute
+  });
+  
+  const { data: randevular = [], isLoading: isRandevularLoading, refetch: refetchRandevular } = useQuery({
+    queryKey: ['randevular-analysis'],
+    queryFn: async () => {
+      if (dukkanId) {
+        return await randevuServisi.dukkanRandevulariniGetir(dukkanId);
+      }
+      return [];
+    },
+    enabled: !!dukkanId,
+    staleTime: 60000 // 1 minute
   });
   
   // Calculate data for charts based on operations
@@ -275,10 +289,19 @@ export default function ShopStatistics() {
     
     operations.forEach(op => {
       try {
-        if (!op.islem) return;
+        if (!op.islem && !op.aciklama) return;
         
-        const serviceId = op.islem.id;
-        const serviceName = op.islem.islem_adi;
+        // Get service name either from islem.islem_adi or clean up aciklama
+        let serviceName = '';
+        if (op.islem && op.islem.islem_adi) {
+          serviceName = op.islem.islem_adi;
+        } else if (op.aciklama) {
+          serviceName = op.aciklama.split(' hizmeti verildi')[0];
+        }
+        
+        if (!serviceName) return;
+        
+        const serviceId = serviceName; // Use name as ID
         
         if (!services[serviceId]) {
           services[serviceId] = {
@@ -297,8 +320,7 @@ export default function ShopStatistics() {
     
     // Convert to array and sort by revenue
     return Object.values(services)
-      .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 10); // Top 10 services
+      .sort((a, b) => b.revenue - a.revenue);
   };
   
   const handleRefresh = async () => {
@@ -312,7 +334,8 @@ export default function ShopStatistics() {
       // Refetch data
       await Promise.all([
         refetchStats(),
-        refetchIslemler()
+        refetchIslemler(),
+        refetchRandevular()
       ]);
       
       toast.success("İstatistikler güncellendi");
@@ -322,7 +345,7 @@ export default function ShopStatistics() {
     }
   };
   
-  const isLoading = isStatsLoading || isIslemlerLoading;
+  const isLoading = isStatsLoading || isIslemlerLoading || isRandevularLoading;
 
   return (
     <StaffLayout>
@@ -339,6 +362,10 @@ export default function ShopStatistics() {
             <RefreshCw className={`h-4 w-4 ${isRefetching ? 'animate-spin' : ''}`} />
             Verileri Güncelle
           </Button>
+        </div>
+
+        <div className="mb-6">
+          <ShopAnalyst dukkanId={dukkanId} />
         </div>
         
         <Tabs defaultValue={period} onValueChange={setPeriod} className="space-y-4">
