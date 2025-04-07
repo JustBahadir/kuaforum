@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { PersonelIslemi, islemServisi, personelIslemleriServisi, personelServisi } from "@/lib/supabase";
@@ -10,9 +11,11 @@ import { PersonnelPerformanceReports } from "./components/PersonnelPerformanceRe
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, FileBarChart } from "lucide-react";
+import { AlertCircle, FileBarChart, RefreshCcw } from "lucide-react";
 import { Navigate } from "react-router-dom";
 import { formatCurrency } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 export default function Personnel() {
   const { userRole, refreshProfile } = useCustomerAuth();
@@ -39,27 +42,31 @@ export default function Personnel() {
     enabled: userRole === 'admin'
   });
 
-  const { data: islemGecmisi = [], isLoading: islemlerLoading }: UseQueryResult<PersonelIslemi[], Error> = useQuery({
-    queryKey: ['personelIslemleri', dateRange.from, dateRange.to],
+  const [selectedPersonnelId, setSelectedPersonnelId] = useState<number | null>(null);
+  
+  // We'll use the personnel ID if selected, otherwise we'll use all personnel
+  const activePersonnelId = selectedPersonnelId || (personeller.length > 0 ? personeller[0].id : null);
+
+  const { data: islemGecmisi = [], isLoading: islemlerLoading, refetch: refetchOperations }: UseQueryResult<PersonelIslemi[], Error> = useQuery({
+    queryKey: ['personelIslemleri', dateRange.from, dateRange.to, activePersonnelId],
     queryFn: async () => {
       try {
-        const data = await personelIslemleriServisi.hepsiniGetir();
+        // Try getting from personnel service first
+        const data = selectedPersonnelId 
+          ? await personelIslemleriServisi.personelIslemleriGetir(selectedPersonnelId) 
+          : await personelIslemleriServisi.hepsiniGetir();
         
         // If no operations found, try to recover from appointments
         if (!data || data.length === 0) {
-          console.log("No operations found, attempting to recover from appointments...");
-          // This will recover operations for all personnel
-          await fetch(`https://xkbjjcizncwkrouvoujw.supabase.co/functions/v1/recover_customer_operations`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhrYmpqY2l6bmN3a3JvdXZvdWp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzk5Njg0NzksImV4cCI6MjA1NTU0NDQ3OX0.RyaC2G1JPHUGQetAcvMgjsTp_nqBB2rZe3U-inU2osw`
-            },
-            body: JSON.stringify({ personnel_id: selectedPersonnelId || personeller[0]?.id })
-          });
+          console.log(`No operations found for ${selectedPersonnelId ? 'personnel #' + selectedPersonnelId : 'any personnel'}, attempting to recover...`);
+          
+          await recoverPersonnelOperations();
           
           // Try fetching again after recovery
-          const recoveredData = await personelIslemleriServisi.hepsiniGetir();
+          const recoveredData = selectedPersonnelId 
+            ? await personelIslemleriServisi.personelIslemleriGetir(selectedPersonnelId)
+            : await personelIslemleriServisi.hepsiniGetir();
+            
           return filterOperationsByDateRange(recoveredData);
         }
         
@@ -70,10 +77,51 @@ export default function Personnel() {
       }
     },
     retry: 1,
-    enabled: userRole === 'admin'
+    enabled: userRole === 'admin' && !!activePersonnelId
   });
 
-  const [selectedPersonnelId, setSelectedPersonnelId] = useState<number | null>(null);
+  // Function to filter operations by date range
+  const filterOperationsByDateRange = (operations: PersonelIslemi[]) => {
+    return operations.filter(islem => {
+      if (!islem.created_at) return true;
+      const islemDate = new Date(islem.created_at);
+      return islemDate >= dateRange.from && islemDate <= dateRange.to;
+    });
+  };
+
+  // Function to call the edge function and recover operations
+  const recoverPersonnelOperations = async () => {
+    try {
+      toast.info(`İşlemler kurtarılıyor...`);
+      
+      // Call edge function to recover operations
+      const response = await fetch(`https://xkbjjcizncwkrouvoujw.supabase.co/functions/v1/recover_customer_operations`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhrYmpqY2l6bmN3a3JvdXZvdWp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzk5Njg0NzksImV4cCI6MjA1NTU0NDQ3OX0.RyaC2G1JPHUGQetAcvMgjsTp_nqBB2rZe3U-inU2osw`
+        },
+        body: JSON.stringify({ personnel_id: selectedPersonnelId, get_all_shop_operations: !selectedPersonnelId })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to recover operations: ${response.statusText}`);
+      }
+      
+      const result = await response.json();
+      
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      
+      toast.success(`${result.count} işlem kurtarıldı`);
+      return result.operations || [];
+    } catch (error) {
+      console.error("Error recovering operations:", error);
+      toast.error(`İşlemler kurtarılamadı: ${error.message}`);
+      return [];
+    }
+  };
 
   if (userRole === 'staff') {
     return <Navigate to="/shop-home" replace />;
@@ -107,15 +155,6 @@ export default function Personnel() {
   const totalRevenue = islemGecmisi.reduce((sum, islem) => sum + (islem.tutar || 0), 0);
   const totalCommission = islemGecmisi.reduce((sum, islem) => sum + (islem.odenen || 0), 0);
   const operationCount = islemGecmisi.length;
-  
-  // Helper function to filter operations by date range
-  const filterOperationsByDateRange = (operations: PersonelIslemi[]) => {
-    return operations.filter(islem => {
-      if (!islem.created_at) return true;
-      const islemDate = new Date(islem.created_at);
-      return islemDate >= dateRange.from && islemDate <= dateRange.to;
-    });
-  };
 
   return (
     <StaffLayout>
@@ -146,20 +185,34 @@ export default function Personnel() {
                     />
                   </div>
                   
-                  <div className="flex gap-4">
-                    <div className="text-sm bg-gray-100 p-2 rounded-md flex items-center gap-1">
-                      <FileBarChart className="h-4 w-4 text-purple-600" />
-                      <span className="font-medium">Toplam İşlem:</span> 
-                      <span>{operationCount}</span>
-                    </div>
-                    <div className="text-sm bg-gray-100 p-2 rounded-md">
-                      <span className="font-medium">Toplam Ciro:</span> 
-                      <span className="text-green-600">{formatCurrency(totalRevenue)}</span>
-                    </div>
-                    <div className="text-sm bg-gray-100 p-2 rounded-md">
-                      <span className="font-medium">Toplam Ödenen:</span> 
-                      <span className="text-blue-600">{formatCurrency(totalCommission)}</span>
-                    </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        recoverPersonnelOperations().then(() => refetchOperations());
+                      }}
+                      className="flex items-center gap-1"
+                    >
+                      <RefreshCcw size={16} />
+                      Yenile
+                    </Button>
+                  </div>
+                </div>
+                
+                <div className="flex gap-4 mt-4">
+                  <div className="text-sm bg-gray-100 p-2 rounded-md flex items-center gap-1">
+                    <FileBarChart className="h-4 w-4 text-purple-600" />
+                    <span className="font-medium">Toplam İşlem:</span> 
+                    <span>{operationCount}</span>
+                  </div>
+                  <div className="text-sm bg-gray-100 p-2 rounded-md">
+                    <span className="font-medium">Toplam Ciro:</span> 
+                    <span className="text-green-600">{formatCurrency(totalRevenue)}</span>
+                  </div>
+                  <div className="text-sm bg-gray-100 p-2 rounded-md">
+                    <span className="font-medium">Toplam Ödenen:</span> 
+                    <span className="text-blue-600">{formatCurrency(totalCommission)}</span>
                   </div>
                 </div>
               </CardHeader>
@@ -190,10 +243,11 @@ export default function Personnel() {
                                 {new Date(islem.created_at!).toLocaleDateString('tr-TR')}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {personeller?.find(p => p.id === islem.personel_id)?.ad_soyad}
+                                {personeller?.find(p => p.id === islem.personel_id)?.ad_soyad || 
+                                 (islem.personel?.ad_soyad) || 'Belirtilmemiş'}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {islem.aciklama}
+                                {islem.aciklama || (islem.islem?.islem_adi) || 'Belirtilmemiş'}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                 {formatCurrency(islem.tutar)}

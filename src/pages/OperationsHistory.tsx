@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -7,9 +7,10 @@ import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
-import { Search } from "lucide-react";
+import { Search, FileBarChart, RefreshCcw, Download } from "lucide-react";
 import { personelIslemleriServisi } from "@/lib/supabase/services/personelIslemleriServisi";
 import { formatCurrency } from "@/lib/utils";
+import { toast } from "sonner";
 
 export default function OperationsHistory() {
   const [dateRange, setDateRange] = useState({
@@ -19,15 +20,47 @@ export default function OperationsHistory() {
   const [searchText, setSearchText] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
   
-  const { data: operationsData = [], isLoading } = useQuery({
-    queryKey: ['personelIslemleri', dateRange.from, dateRange.to],
+  const { data: operationsData = [], isLoading, refetch } = useQuery({
+    queryKey: ['operationsHistory', dateRange.from, dateRange.to],
     queryFn: async () => {
-      const data = await personelIslemleriServisi.hepsiniGetir();
-      return data.filter(islem => {
-        if (!islem.created_at) return true;
-        const islemDate = new Date(islem.created_at);
-        return islemDate >= dateRange.from && islemDate <= dateRange.to;
-      });
+      try {
+        // First try to get from personel_islemleri
+        const data = await personelIslemleriServisi.hepsiniGetir();
+        
+        // If no data found or minimal data, try to recover operations
+        if (!data || data.length < 5) {
+          console.log("Few operations found, attempting to recover all shop operations...");
+          
+          // Call edge function to recover and retrieve all shop operations
+          const response = await fetch(`https://xkbjjcizncwkrouvoujw.supabase.co/functions/v1/recover_customer_operations`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhrYmpqY2l6bmN3a3JvdXZvdWp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzk5Njg0NzksImV4cCI6MjA1NTU0NDQ3OX0.RyaC2G1JPHUGQetAcvMgjsTp_nqBB2rZe3U-inU2osw`
+            },
+            body: JSON.stringify({ get_all_shop_operations: true })
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Failed to recover operations: ${response.statusText}`);
+          }
+          
+          const result = await response.json();
+          
+          if (result.error) {
+            throw new Error(result.error);
+          }
+          
+          console.log(`Retrieved ${result.count} operations from recovery function`);
+          return result.operations || [];
+        }
+        
+        return filterOperationsByDateRange(data);
+      } catch (error) {
+        console.error("Error fetching operations:", error);
+        toast.error("İşlemler yüklenirken hata oluştu");
+        return [];
+      }
     }
   });
 
@@ -41,21 +74,71 @@ export default function OperationsHistory() {
     
     // Apply search filter
     const searchLower = searchText.toLowerCase();
+    const personelName = operation.personel?.ad_soyad || '';
+    const islemAdi = operation.aciklama || (operation.islem?.islem_adi || '');
+    const musteriFullName = operation.musteri 
+      ? `${operation.musteri.first_name || ''} ${operation.musteri.last_name || ''}`.trim()
+      : '';
+    
     const matchesSearch = 
       !searchText || 
-      (operation.personel?.ad_soyad || '').toLowerCase().includes(searchLower) ||
-      (operation.aciklama || '').toLowerCase().includes(searchLower) ||
-      (operation.musteri?.first_name + ' ' + operation.musteri?.last_name || '').toLowerCase().includes(searchLower);
+      personelName.toLowerCase().includes(searchLower) ||
+      islemAdi.toLowerCase().includes(searchLower) ||
+      musteriFullName.toLowerCase().includes(searchLower);
     
     // Apply type filter
     if (filterType === "all") return matchesSearch;
+    if (filterType === "tamamlanan") {
+      // All operations in personel_islemleri are completed
+      return matchesSearch;
+    }
     
-    // Add more filter types as needed
     return matchesSearch;
   });
 
   const totalRevenue = filteredOperations.reduce((sum, op) => sum + (op.tutar || 0), 0);
   const totalCount = filteredOperations.length;
+
+  // Function to filter operations by date range
+  const filterOperationsByDateRange = (operations) => {
+    return operations.filter(islem => {
+      if (!islem.created_at) return true;
+      const islemDate = new Date(islem.created_at);
+      return islemDate >= dateRange.from && islemDate <= dateRange.to;
+    });
+  };
+  
+  // Function to force regenerate all operations from appointments
+  const handleForceRecover = async () => {
+    toast.info("İşlemler yenileniyor...");
+    
+    try {
+      const response = await fetch(`https://xkbjjcizncwkrouvoujw.supabase.co/functions/v1/recover_customer_operations`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhrYmpqY2l6bmN3a3JvdXZvdWp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzk5Njg0NzksImV4cCI6MjA1NTU0NDQ3OX0.RyaC2G1JPHUGQetAcvMgjsTp_nqBB2rZe3U-inU2osw`
+        },
+        body: JSON.stringify({ get_all_shop_operations: true })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`İşlemler yüklenemedi: ${response.statusText}`);
+      }
+      
+      const result = await response.json();
+      
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      
+      toast.success(`${result.count} işlem yüklendi`);
+      refetch();
+    } catch (error) {
+      console.error("Error recovering operations:", error);
+      toast.error("İşlemler yenilenirken hata oluştu");
+    }
+  };
   
   return (
     <StaffLayout>
@@ -94,8 +177,8 @@ export default function OperationsHistory() {
                 <Tabs defaultValue="all" className="w-full" value={filterType} onValueChange={setFilterType}>
                   <TabsList className="w-full">
                     <TabsTrigger value="all" className="flex-1">Tümü</TabsTrigger>
-                    <TabsTrigger value="completed" className="flex-1">Tamamlanan</TabsTrigger>
-                    <TabsTrigger value="cancelled" className="flex-1">İptal</TabsTrigger>
+                    <TabsTrigger value="tamamlanan" className="flex-1">Tamamlanan</TabsTrigger>
+                    <TabsTrigger value="iptal" className="flex-1">İptal</TabsTrigger>
                   </TabsList>
                 </Tabs>
               </div>
@@ -105,7 +188,8 @@ export default function OperationsHistory() {
 
         <div className="flex justify-between mb-4">
           <div className="flex gap-4">
-            <div className="bg-gray-100 p-2 rounded-md">
+            <div className="bg-gray-100 p-2 rounded-md flex items-center gap-1">
+              <FileBarChart className="h-4 w-4 text-purple-600" />
               <span className="font-medium">Toplam İşlem:</span> 
               <span className="ml-1">{totalCount}</span>
             </div>
@@ -115,7 +199,21 @@ export default function OperationsHistory() {
             </div>
           </div>
           
-          <Button variant="outline">Rapor İndir</Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={handleForceRecover}
+              className="flex items-center gap-1"
+            >
+              <RefreshCcw size={16} />
+              Yenile
+            </Button>
+            <Button variant="outline" size="sm" className="flex items-center gap-1">
+              <Download size={16} />
+              Rapor İndir
+            </Button>
+          </div>
         </div>
 
         <Card>
@@ -154,7 +252,7 @@ export default function OperationsHistory() {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm">
                               {operation.musteri 
-                                ? `${operation.musteri.first_name} ${operation.musteri.last_name || ''}`
+                                ? `${operation.musteri.first_name || ''} ${operation.musteri.last_name || ''}`.trim() || 'Belirtilmemiş'
                                 : 'Belirtilmemiş'}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm">

@@ -1,5 +1,10 @@
+
 import { supabase } from '../client';
 import { PersonelIslemi } from '../types';
+
+// Define the Supabase URL and key for edge function calls
+const SUPABASE_URL = "https://xkbjjcizncwkrouvoujw.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhrYmpqY2l6bmN3a3JvdXZvdWp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzk5Njg0NzksImV4cCI6MjA1NTU0NDQ3OX0.RyaC2G1JPHUGQetAcvMgjsTp_nqBB2rZe3U-inU2osw";
 
 export const personelIslemleriServisi = {
   async hepsiniGetir(): Promise<PersonelIslemi[]> {
@@ -86,42 +91,39 @@ export const personelIslemleriServisi = {
     }
   },
 
-  // Method to create operations from completed appointments for a specific customer
-  async recoverOperationsFromCustomerAppointments(musteri_id: number): Promise<boolean> {
+  // Method to recover operations from appointments using edge function
+  async recoverOperations(options: { customer_id?: number, personnel_id?: number, get_all?: boolean } = {}): Promise<PersonelIslemi[]> {
     try {
-      console.info(`${musteri_id} ID'li müşteri için randevulardan işlemler kurtarılıyor...`);
+      console.info(`İşlemler kurtarılıyor:`, options);
       
-      const { data, error } = await supabase
-        .rpc('recover_operations_from_customer_appointments', { p_customer_id: musteri_id });
-
-      if (error) {
-        console.error(`Müşteri işlemleri kurtarma hatası:`, error);
-        throw error;
-      }
-
-      return data || false;
-    } catch (error) {
-      console.error(`Müşteri işlemleri kurtarma hatası:`, error);
-      throw error;
-    }
-  },
-
-  // Method to create operations from completed appointments for a specific personnel
-  async recoverOperationsFromAppointments(personel_id: number): Promise<boolean> {
-    try {
-      console.info(`${personel_id} ID'li personel için randevulardan işlemler kurtarılıyor...`);
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/recover_customer_operations`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify({
+          customer_id: options.customer_id,
+          personnel_id: options.personnel_id,
+          get_all_shop_operations: options.get_all
+        })
+      });
       
-      const { data, error } = await supabase
-        .rpc('recover_operations_from_appointments', { p_personel_id: personel_id });
-
-      if (error) {
-        console.error(`Personel işlemleri kurtarma hatası:`, error);
-        throw error;
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Kurtarma işlemi başarısız: ${response.status} ${response.statusText} - ${errorText}`);
       }
-
-      return data || false;
+      
+      const result = await response.json();
+      
+      if (result.error) {
+        throw new Error(`Kurtarma hatası: ${result.error}`);
+      }
+      
+      console.info(`${result.count} işlem kurtarıldı`);
+      return result.operations || [];
     } catch (error) {
-      console.error(`Personel işlemleri kurtarma hatası:`, error);
+      console.error("İşlemler kurtarılırken hata:", error);
       throw error;
     }
   },

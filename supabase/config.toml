@@ -1,5 +1,4 @@
 
-# This file controls the behavior of Supabase functions.
 project_id = "xkbjjcizncwkrouvoujw"
 
 [functions.recover_customer_operations]

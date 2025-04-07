@@ -22,11 +22,11 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Parse request body
-    const { customer_id, personnel_id } = await req.json();
+    const { customer_id, personnel_id, get_all_shop_operations } = await req.json();
 
-    if (!customer_id && !personnel_id) {
+    if (!customer_id && !personnel_id && !get_all_shop_operations) {
       return new Response(
-        JSON.stringify({ error: 'Either customer_id or personnel_id is required' }),
+        JSON.stringify({ error: 'Either customer_id, personnel_id, or get_all_shop_operations is required' }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 400,
@@ -34,9 +34,9 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Processing completed appointments for ${customer_id ? 'customer ID ' + customer_id : 'personnel ID ' + personnel_id}...`);
+    console.log(`Processing request for ${customer_id ? 'customer ID ' + customer_id : personnel_id ? 'personnel ID ' + personnel_id : 'all shop operations'}...`);
 
-    // Get completed appointments based on provided ID
+    // Get appointments based on provided parameters
     let appointments;
     let appointmentsError;
 
@@ -51,6 +51,7 @@ serve(async (req) => {
           durum,
           notlar,
           personel_id, 
+          musteri_id,
           personel:personel_id (id, ad_soyad),
           islemler
         `)
@@ -59,7 +60,7 @@ serve(async (req) => {
 
       appointments = result.data;
       appointmentsError = result.error;
-    } else {
+    } else if (personnel_id) {
       // For personnel operations
       const result = await supabase
         .from('randevular')
@@ -72,10 +73,33 @@ serve(async (req) => {
           personel_id,
           musteri_id,
           personel:personel_id (id, ad_soyad, prim_yuzdesi),
+          musteri:musteri_id (id, first_name, last_name),
           islemler
         `)
         .eq('personel_id', personnel_id)
         .eq('durum', 'tamamlandi');
+
+      appointments = result.data;
+      appointmentsError = result.error;
+    } else if (get_all_shop_operations) {
+      // For all shop operations
+      const result = await supabase
+        .from('randevular')
+        .select(`
+          id, 
+          tarih, 
+          saat, 
+          durum,
+          notlar,
+          personel_id,
+          musteri_id,
+          personel:personel_id (id, ad_soyad, prim_yuzdesi),
+          musteri:musteri_id (id, first_name, last_name),
+          islemler
+        `)
+        .eq('durum', 'tamamlandi')
+        .order('tarih', { ascending: false })
+        .order('saat', { ascending: false });
 
       appointments = result.data;
       appointmentsError = result.error;
@@ -153,7 +177,7 @@ serve(async (req) => {
         const operationData = {
           personel_id: appointment.personel_id,
           islem_id: islem.id,
-          musteri_id: customer_id || appointment.musteri_id,
+          musteri_id: appointment.musteri_id,
           tutar: islem.fiyat || 0,
           odenen: islem.fiyat || 0, // Default to full payment
           prim_yuzdesi: primYuzdesi,
@@ -198,11 +222,29 @@ serve(async (req) => {
       console.error("Error updating shop statistics:", statsError);
     }
 
+    // Get all personel_islemleri if requested for all shop operations
+    let allOperations = operations;
+    if (get_all_shop_operations) {
+      const { data: existingOperations, error: operationsError } = await supabase
+        .from('personel_islemleri')
+        .select(`
+          *,
+          personel:personel_id(*),
+          musteri:musteri_id(*),
+          islem:islem_id(*)
+        `)
+        .order('created_at', { ascending: false });
+        
+      if (!operationsError) {
+        allOperations = existingOperations;
+      }
+    }
+
     return new Response(
       JSON.stringify({
-        message: `${operations.length} operations saved`,
-        count: operations.length,
-        operations
+        message: `${operations.length} operations created, ${allOperations.length} operations returned`,
+        count: allOperations.length,
+        operations: allOperations
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
