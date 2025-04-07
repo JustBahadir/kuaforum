@@ -4,7 +4,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
@@ -26,9 +25,6 @@ interface CustomerPreferencesProps {
 }
 
 interface Preference {
-  cologne_preference: string | null;
-  razor_preference: string | null;
-  ear_burning: boolean;
   custom_preferences: {
     beverages?: string[];
     beverageNotes?: string;
@@ -94,9 +90,6 @@ export function CustomerPreferences({ customerId }: CustomerPreferencesProps) {
   const queryClient = useQueryClient();
   const [editMode, setEditMode] = useState(false);
   const [preferences, setPreferences] = useState<Preference>({
-    cologne_preference: null,
-    razor_preference: null,
-    ear_burning: false,
     custom_preferences: {
       beverages: [],
       beverageNotes: "",
@@ -126,14 +119,42 @@ export function CustomerPreferences({ customerId }: CustomerPreferencesProps) {
     }
   });
 
+  // Format customer ID to UUID format for Supabase
+  const formatCustomerId = (id: string) => {
+    // If already a UUID, return it
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      return id;
+    }
+    
+    // Convert numeric ID to UUID format (PostgreSQL method)
+    // This creates a deterministic UUID from an integer
+    const numericId = parseInt(id, 10);
+    if (isNaN(numericId)) {
+      return null;
+    }
+    
+    // Format: 00000000-0000-4000-a000-000000000000
+    // We replace the last digits with our numeric ID
+    const uuid = `00000000-0000-4000-a000-${numericId.toString().padStart(12, '0')}`;
+    console.log("Formatted numeric ID to UUID:", uuid);
+    return uuid;
+  };
+
   // Fetch customer preferences
-  const { data: existingPreferences, isLoading } = useQuery({
+  const { data: existingPreferences, isLoading, refetch } = useQuery({
     queryKey: ['customer_preferences', customerId],
     queryFn: async () => {
+      const formattedId = formatCustomerId(customerId);
+      console.log("Using customer ID for query:", formattedId);
+      
+      if (!formattedId) {
+        throw new Error("Invalid customer ID format");
+      }
+      
       const { data, error } = await supabase
         .from('customer_preferences')
         .select('*')
-        .eq('customer_id', customerId)
+        .eq('customer_id', formattedId)
         .maybeSingle();
         
       if (error) throw error;
@@ -145,9 +166,6 @@ export function CustomerPreferences({ customerId }: CustomerPreferencesProps) {
   useEffect(() => {
     if (existingPreferences) {
       setPreferences({
-        cologne_preference: existingPreferences.cologne_preference,
-        razor_preference: existingPreferences.razor_preference,
-        ear_burning: existingPreferences.ear_burning || false,
         custom_preferences: existingPreferences.custom_preferences || {
           beverages: [],
           beverageNotes: "",
@@ -182,14 +200,17 @@ export function CustomerPreferences({ customerId }: CustomerPreferencesProps) {
   // Update or create preferences
   const mutation = useMutation({
     mutationFn: async (data: Preference) => {
+      const formattedId = formatCustomerId(customerId);
+      
+      if (!formattedId) {
+        throw new Error("Invalid customer ID format");
+      }
+      
       if (existingPreferences) {
         // Update existing preferences
         const { error } = await supabase
           .from('customer_preferences')
           .update({
-            cologne_preference: data.cologne_preference,
-            razor_preference: data.razor_preference,
-            ear_burning: data.ear_burning,
             custom_preferences: data.custom_preferences,
             updated_at: new Date().toISOString()
           })
@@ -201,10 +222,7 @@ export function CustomerPreferences({ customerId }: CustomerPreferencesProps) {
         const { error } = await supabase
           .from('customer_preferences')
           .insert({
-            customer_id: customerId,
-            cologne_preference: data.cologne_preference,
-            razor_preference: data.razor_preference,
-            ear_burning: data.ear_burning,
+            customer_id: formattedId,
             custom_preferences: data.custom_preferences
           });
           
@@ -302,12 +320,30 @@ export function CustomerPreferences({ customerId }: CustomerPreferencesProps) {
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-medium">Müşteri Tercihleri</h3>
-        <Button 
-          variant="outline" 
-          onClick={() => setEditMode(!editMode)}
-        >
-          {editMode ? "İptal" : "Düzenle"}
-        </Button>
+        {editMode ? (
+          <div className="flex space-x-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setEditMode(false)}
+            >
+              İptal
+            </Button>
+            <Button 
+              variant="default" 
+              onClick={handleSave}
+              disabled={mutation.isPending}
+            >
+              {mutation.isPending ? "Kaydediliyor..." : "Kaydet"}
+            </Button>
+          </div>
+        ) : (
+          <Button 
+            variant="outline" 
+            onClick={() => setEditMode(true)}
+          >
+            Düzenle
+          </Button>
+        )}
       </div>
       
       <div className="space-y-6">
@@ -437,7 +473,11 @@ export function CustomerPreferences({ customerId }: CustomerPreferencesProps) {
                   disabled={!editMode}
                   className="h-4 w-4 border border-gray-300 rounded"
                 >
-                  <CheckboxIndicator/>
+                  <CheckboxIndicator className="flex items-center justify-center">
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                      <path d="M8 3L4 7L2 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </CheckboxIndicator>
                 </Checkbox>
                 <Label htmlFor="color-permanent">Kalıcı Boya</Label>
               </div>
@@ -449,7 +489,11 @@ export function CustomerPreferences({ customerId }: CustomerPreferencesProps) {
                   disabled={!editMode}
                   className="h-4 w-4 border border-gray-300 rounded"
                 >
-                  <CheckboxIndicator/>
+                  <CheckboxIndicator className="flex items-center justify-center">
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                      <path d="M8 3L4 7L2 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </CheckboxIndicator>
                 </Checkbox>
                 <Label htmlFor="color-temporary">Geçici Boya</Label>
               </div>
@@ -476,7 +520,11 @@ export function CustomerPreferences({ customerId }: CustomerPreferencesProps) {
                 disabled={!editMode}
                 className="h-4 w-4 border border-gray-300 rounded"
               >
-                <CheckboxIndicator/>
+                <CheckboxIndicator className="flex items-center justify-center">
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                    <path d="M8 3L4 7L2 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </CheckboxIndicator>
               </Checkbox>
               <Label htmlFor="color-lightening">Açıcı Toleransı</Label>
             </div>
@@ -546,7 +594,11 @@ export function CustomerPreferences({ customerId }: CustomerPreferencesProps) {
               disabled={!editMode}
               className="h-4 w-4 border border-gray-300 rounded"
             >
-              <CheckboxIndicator/>
+              <CheckboxIndicator className="flex items-center justify-center">
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                  <path d="M8 3L4 7L2 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </CheckboxIndicator>
             </Checkbox>
             <Label htmlFor="heat-sensitive">Isıya Hassas Saç</Label>
           </div>
@@ -782,61 +834,6 @@ export function CustomerPreferences({ customerId }: CustomerPreferencesProps) {
             />
           </div>
         </div>
-        
-        {/* Kolonya ve Ustura Tercihleri */}
-        <Separator />
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <Label htmlFor="cologne" className="font-medium">Kolonya Tercihi</Label>
-            <Input
-              id="cologne"
-              placeholder="Limon, Lavanta, vb."
-              value={preferences.cologne_preference || ""}
-              onChange={(e) => setPreferences(prev => ({ ...prev, cologne_preference: e.target.value }))}
-              disabled={!editMode}
-            />
-          </div>
-          
-          <div className="space-y-4">
-            <Label htmlFor="razor" className="font-medium">Jilet/Ustura Tercihi</Label>
-            <Input
-              id="razor"
-              placeholder="Jilet markası, ustura tipi, vb."
-              value={preferences.razor_preference || ""}
-              onChange={(e) => setPreferences(prev => ({ ...prev, razor_preference: e.target.value }))}
-              disabled={!editMode}
-            />
-          </div>
-        </div>
-        
-        <Separator />
-        
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="ear_burning" className="cursor-pointer font-medium">
-              Kulak Yakma İster
-            </Label>
-            <Switch
-              id="ear_burning"
-              checked={preferences.ear_burning}
-              onCheckedChange={(checked) => setPreferences(prev => ({ ...prev, ear_burning: checked }))}
-              disabled={!editMode}
-            />
-          </div>
-        </div>
-        
-        {editMode && (
-          <div className="flex justify-end">
-            <Button 
-              onClick={handleSave}
-              disabled={mutation.isPending}
-              className="bg-purple-600 hover:bg-purple-700"
-            >
-              {mutation.isPending ? "Kaydediliyor..." : "Tercihleri Kaydet"}
-            </Button>
-          </div>
-        )}
       </div>
     </div>
   );

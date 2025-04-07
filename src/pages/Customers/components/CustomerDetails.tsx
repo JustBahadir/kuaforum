@@ -50,6 +50,7 @@ export function CustomerDetails({
     <div>
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
         <div className="p-6">
+          {/* Simplified header with just name and buttons */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center">
               <div className="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 font-medium text-xl">
@@ -59,7 +60,7 @@ export function CustomerDetails({
                 <h2 className="text-xl font-semibold">
                   {customer.first_name} {customer.last_name || ""}
                 </h2>
-                {customer.phone && <p className="text-gray-600">{customer.phone}</p>}
+                <p className="text-gray-600">Kayıt: {format(new Date(customer.created_at), "dd.MM.yyyy")}</p>
               </div>
             </div>
             <div className="flex gap-2">
@@ -78,26 +79,6 @@ export function CustomerDetails({
             </div>
           </div>
           
-          {/* Customer Basic Information */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 pb-4 border-b">
-            <div>
-              <p className="text-sm font-medium text-gray-500">AD SOYAD</p>
-              <p className="font-medium">{customer.first_name} {customer.last_name}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">TELEFON</p>
-              <p>{customer.phone || "Belirtilmemiş"}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">DOĞUM TARİHİ</p>
-              <p>{customer.birthdate ? format(new Date(customer.birthdate), "dd.MM.yyyy") : "Belirtilmemiş"}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">KAYIT TARİHİ</p>
-              <p>{format(new Date(customer.created_at), "dd.MM.yyyy")}</p>
-            </div>
-          </div>
-
           {totals && totals.totalPoints > 0 && (
             <div className="mb-4">
               <div className="inline-block bg-purple-50 text-purple-700 px-3 py-1 rounded-full text-sm font-medium">

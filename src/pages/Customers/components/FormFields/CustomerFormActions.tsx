@@ -7,6 +7,7 @@ interface CustomerFormActionsProps {
   loading?: boolean; // For backward compatibility
   onCancel: () => void;
   onSubmit?: () => void; // For backward compatibility
+  onSave?: () => Promise<void> | void; // New prop for EditCustomerForm
   actionText?: string;
   disabled?: boolean;
 }
@@ -16,11 +17,17 @@ export function CustomerFormActions({
   loading = false,
   onCancel,
   onSubmit,
+  onSave,
   actionText = "Müşteri Ekle",
   disabled = false
 }: CustomerFormActionsProps) {
   // Use either isSubmitting or loading
   const isLoading = isSubmitting || loading;
+  
+  const handleSubmit = () => {
+    if (onSubmit) onSubmit();
+    if (onSave) onSave();
+  };
   
   return (
     <div className="flex justify-end space-x-2 pt-4">
@@ -33,14 +40,14 @@ export function CustomerFormActions({
         İptal
       </Button>
       <Button 
-        type={onSubmit ? "button" : "submit"}
-        onClick={onSubmit}
+        type={onSubmit || onSave ? "button" : "submit"}
+        onClick={handleSubmit}
         disabled={isLoading || disabled}
       >
         {isLoading ? (
           <>
             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            Ekleniyor...
+            {actionText === "Müşteri Ekle" ? "Ekleniyor..." : "Kaydediliyor..."}
           </>
         ) : actionText}
       </Button>

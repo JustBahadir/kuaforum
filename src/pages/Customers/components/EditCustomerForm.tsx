@@ -1,5 +1,4 @@
 
-// Fix the EditCustomerForm to handle both open and isOpen props
 import { useEffect, useState } from "react";
 import { 
   Dialog, 
@@ -40,6 +39,7 @@ export function EditCustomerForm({
     customer.birthdate ? new Date(customer.birthdate).toISOString().split('T')[0] : undefined
   );
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   
   // Reset form when customer changes
   useEffect(() => {
@@ -54,6 +54,7 @@ export function EditCustomerForm({
   const handleSave = async () => {
     if (!firstName) {
       toast.error("Lütfen müşteri adı girin");
+      setErrors({ firstName: "Ad alanı zorunludur" });
       return;
     }
 
@@ -82,6 +83,27 @@ export function EditCustomerForm({
     }
   };
 
+  // Handle form field changes
+  const handleFirstNameChange = (value: string) => {
+    setFirstName(value);
+    if (errors.firstName) setErrors({ ...errors, firstName: '' });
+  };
+
+  const handleLastNameChange = (value: string) => {
+    setLastName(value);
+    if (errors.lastName) setErrors({ ...errors, lastName: '' });
+  };
+
+  const handlePhoneChange = (value: string) => {
+    setPhone(value);
+    if (errors.phone) setErrors({ ...errors, phone: '' });
+  };
+
+  const handleBirthdateChange = (value: string) => {
+    setBirthdate(value);
+    if (errors.birthdate) setErrors({ ...errors, birthdate: '' });
+  };
+
   return (
     <Dialog open={dialogOpen} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -94,17 +116,19 @@ export function EditCustomerForm({
           lastName={lastName}
           phone={phone}
           birthdate={birthdate}
-          setFirstName={setFirstName}
-          setLastName={setLastName}
-          setPhone={setPhone}
-          setBirthdate={setBirthdate}
+          onFirstNameChange={handleFirstNameChange}
+          onLastNameChange={handleLastNameChange}
+          onPhoneChange={handlePhoneChange}
+          onBirthdateChange={handleBirthdateChange}
+          errors={errors}
         />
 
         <CustomerFormActions
           onCancel={() => onOpenChange(false)}
-          onSubmit={handleSave}
-          loading={loading}
           actionText="Güncelle"
+          isSubmitting={loading}
+          disabled={!firstName}
+          onSave={handleSave}
         />
       </DialogContent>
     </Dialog>
