@@ -22,14 +22,25 @@ export const customerPersonalDataService = {
     try {
       console.log("Fetching personal data for customer:", customerId);
       
-      // Always convert to string, remove quotes, and use as-is without trying to make it a UUID
-      const customerIdStr = String(customerId).replace(/"/g, "");
-      console.log("Using customer ID for query:", customerIdStr);
+      // The issue is that we're trying to store numeric IDs in a UUID column
+      // We need to convert numeric IDs to a properly formatted UUID
+      // Using a deterministic approach to create a UUID from a numeric ID
+      let customerIdForQuery;
+      if (typeof customerId === 'number' || /^\d+$/.test(String(customerId))) {
+        // Format a fixed UUID with the customer number in it - use UUID v4 format
+        customerIdForQuery = `00000000-0000-4000-a000-00000000${String(customerId).padStart(4, '0')}`;
+        console.log("Formatted numeric ID to UUID:", customerIdForQuery);
+      } else {
+        // If it's already a UUID, just use it as is
+        customerIdForQuery = String(customerId).replace(/"/g, "");
+      }
+      
+      console.log("Using customer ID for query:", customerIdForQuery);
       
       const { data, error } = await supabase
         .from('customer_personal_data')
         .select('*')
-        .eq('customer_id', customerIdStr)
+        .eq('customer_id', customerIdForQuery)
         .maybeSingle();
         
       if (error) {
@@ -50,15 +61,24 @@ export const customerPersonalDataService = {
       console.log("Updating personal data for customer:", customerId);
       console.log("Data to update:", personalData);
       
-      // Always convert to string and remove quotes - store the ID as a plain string
-      const customerIdStr = String(customerId).replace(/"/g, "");
-      console.log("Using customer ID for update:", customerIdStr);
+      // Use the same UUID formatting approach as in getCustomerPersonalData
+      let customerIdForUpdate;
+      if (typeof customerId === 'number' || /^\d+$/.test(String(customerId))) {
+        // Format a fixed UUID with the customer number in it - use UUID v4 format
+        customerIdForUpdate = `00000000-0000-4000-a000-00000000${String(customerId).padStart(4, '0')}`;
+        console.log("Formatted numeric ID to UUID:", customerIdForUpdate);
+      } else {
+        // If it's already a UUID, just use it as is
+        customerIdForUpdate = String(customerId).replace(/"/g, "");
+      }
+      
+      console.log("Using customer ID for update:", customerIdForUpdate);
       
       // Check if record exists
       const { data: existingData } = await supabase
         .from('customer_personal_data')
         .select('id')
-        .eq('customer_id', customerIdStr)
+        .eq('customer_id', customerIdForUpdate)
         .maybeSingle();
       
       // Ensure children_names is an array
@@ -71,10 +91,11 @@ export const customerPersonalDataService = {
           .from('customer_personal_data')
           .update({
             ...personalData,
+            customer_id: customerIdForUpdate, // Make sure to use the formatted ID
             children_names: children_names,
             updated_at: new Date().toISOString()
           })
-          .eq('customer_id', customerIdStr);
+          .eq('customer_id', customerIdForUpdate);
           
         if (error) {
           console.error("Error updating customer personal data:", error);
@@ -87,7 +108,7 @@ export const customerPersonalDataService = {
         const { error } = await supabase
           .from('customer_personal_data')
           .insert({
-            customer_id: customerIdStr,
+            customer_id: customerIdForUpdate, // Make sure to use the formatted ID
             ...personalData,
             children_names: children_names,
             created_at: new Date().toISOString(),

@@ -36,11 +36,12 @@ serve(async (req) => {
 
     console.log(`Processing completed appointments for ${customer_id ? 'customer ID ' + customer_id : 'personnel ID ' + personnel_id}...`);
 
+    // Get completed appointments based on provided ID
     let appointments;
     let appointmentsError;
 
-    // Get appointments based on provided ID
     if (customer_id) {
+      // For customer operations
       const result = await supabase
         .from('randevular')
         .select(`
@@ -59,6 +60,7 @@ serve(async (req) => {
       appointments = result.data;
       appointmentsError = result.error;
     } else {
+      // For personnel operations
       const result = await supabase
         .from('randevular')
         .select(`
@@ -183,9 +185,17 @@ serve(async (req) => {
             console.log(`Created operation record for appointment ${appointment.id}, service ${islem.islem_adi}`);
           }
         } else {
-          console.log(`Operation record already exists for appointment ${appointment.id}`);
+          console.log(`Operation record already exists for appointment ${appointment.id}, service ${islem.islem_adi}`);
         }
       }
+    }
+
+    // Force update shop statistics after creating new operations
+    try {
+      await supabase.rpc('update_shop_statistics');
+      console.log("Shop statistics updated successfully");
+    } catch (statsError) {
+      console.error("Error updating shop statistics:", statsError);
     }
 
     return new Response(

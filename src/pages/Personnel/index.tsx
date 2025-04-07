@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { PersonelIslemi, islemServisi, personelIslemleriServisi, personelServisi } from "@/lib/supabase";
@@ -43,12 +42,32 @@ export default function Personnel() {
   const { data: islemGecmisi = [], isLoading: islemlerLoading }: UseQueryResult<PersonelIslemi[], Error> = useQuery({
     queryKey: ['personelIslemleri', dateRange.from, dateRange.to],
     queryFn: async () => {
-      const data = await personelIslemleriServisi.hepsiniGetir();
-      return data.filter(islem => {
-        if (!islem.created_at) return true;
-        const islemDate = new Date(islem.created_at);
-        return islemDate >= dateRange.from && islemDate <= dateRange.to;
-      });
+      try {
+        const data = await personelIslemleriServisi.hepsiniGetir();
+        
+        // If no operations found, try to recover from appointments
+        if (!data || data.length === 0) {
+          console.log("No operations found, attempting to recover from appointments...");
+          // This will recover operations for all personnel
+          await fetch(`https://xkbjjcizncwkrouvoujw.supabase.co/functions/v1/recover_customer_operations`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhrYmpqY2l6bmN3a3JvdXZvdWp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzk5Njg0NzksImV4cCI6MjA1NTU0NDQ3OX0.RyaC2G1JPHUGQetAcvMgjsTp_nqBB2rZe3U-inU2osw`
+            },
+            body: JSON.stringify({ personnel_id: selectedPersonnelId || personeller[0]?.id })
+          });
+          
+          // Try fetching again after recovery
+          const recoveredData = await personelIslemleriServisi.hepsiniGetir();
+          return filterOperationsByDateRange(recoveredData);
+        }
+        
+        return filterOperationsByDateRange(data);
+      } catch (error) {
+        console.error("Error fetching operations:", error);
+        return [];
+      }
     },
     retry: 1,
     enabled: userRole === 'admin'
@@ -89,6 +108,15 @@ export default function Personnel() {
   const totalCommission = islemGecmisi.reduce((sum, islem) => sum + (islem.odenen || 0), 0);
   const operationCount = islemGecmisi.length;
   
+  // Helper function to filter operations by date range
+  const filterOperationsByDateRange = (operations: PersonelIslemi[]) => {
+    return operations.filter(islem => {
+      if (!islem.created_at) return true;
+      const islemDate = new Date(islem.created_at);
+      return islemDate >= dateRange.from && islemDate <= dateRange.to;
+    });
+  };
+
   return (
     <StaffLayout>
       <div className="container mx-auto">
