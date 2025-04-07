@@ -38,6 +38,7 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
   const [notesDialogOpen, setNotesDialogOpen] = useState(false);
   const [photoDialogOpen, setPhotoDialogOpen] = useState(false);
   const [notes, setNotes] = useState("");
+  const [photoSource, setPhotoSource] = useState<"camera" | "gallery" | null>(null);
   const queryClient = useQueryClient();
 
   const updateNotes = useMutation({
@@ -70,6 +71,7 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
   const handleOpenPhotoDialog = (operation: any) => {
     setSelectedOperation(operation);
     setPhotoDialogOpen(true);
+    setPhotoSource(null); // Reset the photo source selection
   };
 
   const handlePhotoUpload = async (url: string) => {
@@ -135,12 +137,12 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
           <div className="text-xl font-bold mt-1">{formatCurrency(totals.totalAmount)}</div>
         </div>
         <div className="bg-gray-50 p-4 rounded-lg shadow-sm">
-          <div className="text-sm text-gray-500">Toplam Ödenen</div>
-          <div className="text-xl font-bold mt-1 text-green-700">{formatCurrency(totals.totalPaid)}</div>
-        </div>
-        <div className="bg-gray-50 p-4 rounded-lg shadow-sm">
           <div className="text-sm text-gray-500">Toplam Puan</div>
           <div className="text-xl font-bold mt-1 text-purple-700">{totals.totalPoints}</div>
+        </div>
+        <div className="bg-gray-50 p-4 rounded-lg shadow-sm">
+          <div className="text-sm text-gray-500">Toplam Ödenen</div>
+          <div className="text-xl font-bold mt-1 text-green-700">{formatCurrency(totals.totalPaid)}</div>
         </div>
       </div>
 
@@ -175,7 +177,7 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
                     variant="ghost" 
                     size="sm"
                     onClick={() => handleOpenNotesDialog(operation)}
-                    title="Not ekle"
+                    title="Not ekle/düzenle"
                   >
                     Not
                   </Button>
@@ -230,18 +232,55 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
           <DialogHeader>
             <DialogTitle>İşlem Fotoğrafı Ekle</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 mt-2">
-            <FileUpload 
-              onUploadComplete={handlePhotoUpload}
-              bucketName="photos"
-              folderPath="operations"
-              label="Fotoğraf Yükle"
-              maxFileSize={10 * 1024 * 1024} // 10MB
-            />
-            <div className="text-xs text-gray-500 mt-2">
-              Maksimum 10MB boyutunda dosya yükleyebilirsiniz.
+          
+          {!photoSource ? (
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              <Button
+                variant="outline"
+                className="flex flex-col items-center justify-center gap-2 h-32"
+                onClick={() => setPhotoSource("camera")}
+              >
+                <Camera size={32} />
+                <span>Kamera</span>
+              </Button>
+              
+              <Button
+                variant="outline"
+                className="flex flex-col items-center justify-center gap-2 h-32"
+                onClick={() => setPhotoSource("gallery")}
+              >
+                <FileImage size={32} />
+                <span>Galeri</span>
+              </Button>
             </div>
-          </div>
+          ) : (
+            <div className="space-y-4 mt-2">
+              <FileUpload 
+                onUploadComplete={handlePhotoUpload}
+                bucketName="photos"
+                folderPath="operations"
+                label={photoSource === "camera" ? "Kamera ile Çek" : "Galeriden Seç"}
+                maxFileSize={10 * 1024 * 1024} // 10MB
+                useCamera={photoSource === "camera"}
+              />
+              <div className="text-xs text-gray-500 mt-2">
+                Maksimum 10MB boyutunda dosya yükleyebilirsiniz.
+                {selectedOperation && selectedOperation.photos && selectedOperation.photos.length >= 2 && (
+                  <p className="text-amber-600 mt-1">
+                    Bu işlem için zaten {selectedOperation.photos.length} fotoğraf yüklenmiş.
+                  </p>
+                )}
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="mt-2"
+                onClick={() => setPhotoSource(null)}
+              >
+                Geri
+              </Button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

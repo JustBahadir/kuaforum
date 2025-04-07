@@ -21,12 +21,12 @@ export default function StaffLogin() {
         if (data?.session) {
           const role = data.session.user.user_metadata?.role;
           if (role === 'staff' || role === 'admin') {
-            // Rota değişikliğinin tamamlanması için biraz zaman tanıyalım
-            // ve ardından doğrudan navigasyon yapalım
+            // Daha uzun bekleme süresi ve doğrudan navigasyon
+            console.log("Oturum açık, yönlendiriliyor...");
             setTimeout(() => {
-              console.log("Redirecting to shop-home from StaffLogin");
+              console.log("Yönlendirme yapılıyor: /shop-home");
               navigate("/shop-home", { replace: true });
-            }, 100);
+            }, 1000);
             return;
           }
         }
@@ -43,15 +43,20 @@ export default function StaffLogin() {
     // Yükleme ekranında sonsuz kalması durumuna karşı bir güvenlik önlemi
     const timeout = setTimeout(() => {
       setIsLoading(false);
-    }, 1500);
+    }, 2000);
     
     return () => clearTimeout(timeout);
   }, [navigate]);
   
   const handleLoginSuccess = () => {
-    console.log("Login success detected, navigating to shop-home");
-    // Başarılı girişten sonra doğrudan gezinme
-    navigate("/shop-home", { replace: true });
+    console.log("Login success detected");
+    toast.success("Giriş başarılı! Yönlendiriliyorsunuz...");
+    
+    // Başarılı giriş sonrası daha uzun bir bekleme süresi ile yönlendirme
+    setTimeout(() => {
+      console.log("Yönlendirme yapılıyor: /shop-home");
+      navigate("/shop-home", { replace: true });
+    }, 1000);
   };
 
   const handleBackClick = () => {
