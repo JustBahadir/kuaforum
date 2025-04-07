@@ -91,12 +91,12 @@ export function EditCustomerForm({
 
         <CustomerFormFields
           firstName={firstName}
-          setFirstName={setFirstName}
           lastName={lastName}
-          setLastName={setLastName}
           phone={phone}
-          setPhone={setPhone}
           birthdate={birthdate}
+          setFirstName={setFirstName}
+          setLastName={setLastName}
+          setPhone={setPhone}
           setBirthdate={setBirthdate}
         />
 
