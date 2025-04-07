@@ -1,170 +1,111 @@
 
-import React, { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+// Fix the EditCustomerForm to handle both open and isOpen props
+import { useEffect, useState } from "react";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle 
 } from "@/components/ui/dialog";
-import { CalendarIcon } from "lucide-react";
-import { format } from "date-fns";
-import { toast } from "sonner";
-import { cn } from "@/lib/utils";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
+import { CustomerFormFields } from "./FormFields/CustomerFormFields";
+import { CustomerFormActions } from "./FormFields/CustomerFormActions";
 import { musteriServisi } from "@/lib/supabase";
+import { toast } from "sonner";
+import { Musteri } from "@/lib/supabase/types";
 
-interface EditCustomerFormProps {
-  customer: any;
-  open?: boolean; // Make open optional
-  isOpen?: boolean; // Support legacy isOpen prop
+export interface EditCustomerFormProps {
+  customer: Musteri;
+  open?: boolean; // Support both open and isOpen
+  isOpen?: boolean; // Support both open and isOpen
   onOpenChange: (open: boolean) => void;
-  onSuccess?: () => void;
-  onCustomerUpdated?: () => void;
+  onSuccess: () => void;
   dukkanId?: number;
 }
 
-export function EditCustomerForm({
-  customer,
-  open,
+export function EditCustomerForm({ 
+  customer, 
+  open, 
   isOpen,
-  onOpenChange,
+  onOpenChange, 
   onSuccess,
-  onCustomerUpdated,
-  dukkanId,
+  dukkanId
 }: EditCustomerFormProps) {
-  // Use open prop as first choice, fall back to isOpen for backward compatibility
-  const dialogOpen = open !== undefined ? open : (isOpen !== undefined ? isOpen : false);
+  // Use either open or isOpen prop
+  const dialogOpen = open !== undefined ? open : isOpen;
   
-  const [firstName, setFirstName] = useState(customer?.first_name || "");
-  const [lastName, setLastName] = useState(customer?.last_name || "");
-  const [phone, setPhone] = useState(customer?.phone || "");
-  const [birthdate, setBirthdate] = useState<Date | undefined>(
-    customer?.birthdate ? new Date(customer.birthdate) : undefined
+  const [firstName, setFirstName] = useState(customer.first_name || "");
+  const [lastName, setLastName] = useState(customer.last_name || "");
+  const [phone, setPhone] = useState(customer.phone || "");
+  const [birthdate, setBirthdate] = useState<string | undefined>(
+    customer.birthdate ? new Date(customer.birthdate).toISOString().split('T')[0] : undefined
   );
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loading, setLoading] = useState(false);
+  
+  // Reset form when customer changes
+  useEffect(() => {
+    setFirstName(customer.first_name || "");
+    setLastName(customer.last_name || "");
+    setPhone(customer.phone || "");
+    setBirthdate(
+      customer.birthdate ? new Date(customer.birthdate).toISOString().split('T')[0] : undefined
+    );
+  }, [customer]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!customer?.id) {
-      toast.error("Müşteri bilgileri bulunamadı");
+  const handleSave = async () => {
+    if (!firstName) {
+      toast.error("Lütfen müşteri adı girin");
       return;
     }
 
     try {
-      setIsSubmitting(true);
+      setLoading(true);
       
-      const updates = {
+      // If dukkanId is not passed, use the customer's existing dukkanId
+      const shopId = dukkanId || customer.dukkan_id;
+
+      await musteriServisi.guncelle(customer.id, {
         first_name: firstName,
         last_name: lastName || null,
         phone: phone || null,
-        // Convert Date object to ISO string format if it exists, otherwise set to null
-        birthdate: birthdate ? birthdate.toISOString().split('T')[0] : null,
-      };
-      
-      // Pass just the ID and the updates as separate parameters
-      await musteriServisi.guncelle(customer.id, updates);
+        birthdate: birthdate || null,
+        dukkan_id: shopId,
+      });
       
       toast.success("Müşteri bilgileri güncellendi");
-      
-      // Call the appropriate callback function
-      if (onSuccess) onSuccess();
-      if (onCustomerUpdated) onCustomerUpdated();
-      
+      onSuccess();
       onOpenChange(false);
     } catch (error) {
-      console.error("Müşteri güncelleme hatası:", error);
-      toast.error("Müşteri güncellenirken hata oluştu");
+      console.error("Müşteri güncellenirken hata:", error);
+      toast.error("Müşteri bilgileri güncellenemedi");
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
   return (
     <Dialog open={dialogOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Müşteri Düzenle</DialogTitle>
         </DialogHeader>
-        
-        <form onSubmit={handleSubmit} className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="firstName">Ad</Label>
-            <Input
-              id="firstName"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              required
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="lastName">Soyad</Label>
-            <Input
-              id="lastName"
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="phone">Telefon</Label>
-            <Input
-              id="phone"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="05XX XXX XX XX"
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="birthdate">Doğum Tarihi</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  id="birthdate"
-                  variant={"outline"}
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !birthdate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {birthdate ? format(birthdate, "dd.MM.yyyy") : "Tarih Seç"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={birthdate}
-                  onSelect={setBirthdate}
-                  initialFocus
-                  disabled={(date) => date > new Date()}
-                  className="pointer-events-auto"
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-          
-          <DialogFooter className="pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isSubmitting}
-            >
-              İptal
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Kaydediliyor..." : "Kaydet"}
-            </Button>
-          </DialogFooter>
-        </form>
+
+        <CustomerFormFields
+          firstName={firstName}
+          setFirstName={setFirstName}
+          lastName={lastName}
+          setLastName={setLastName}
+          phone={phone}
+          setPhone={setPhone}
+          birthdate={birthdate}
+          setBirthdate={setBirthdate}
+        />
+
+        <CustomerFormActions
+          onCancel={() => onOpenChange(false)}
+          onSubmit={handleSave}
+          loading={loading}
+          actionText="Güncelle"
+        />
       </DialogContent>
     </Dialog>
   );

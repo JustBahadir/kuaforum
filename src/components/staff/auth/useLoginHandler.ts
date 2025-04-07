@@ -48,15 +48,12 @@ export function useLoginHandler(onSuccess: () => void) {
       console.log("Kullanıcı rolü:", userRole);
       
       if (userRole === 'staff' || userRole === 'admin') {
-        console.log("Personel/admin girişi başarılı. Yönlendirme yapılacak.");
+        console.log("Personel/admin girişi başarılı. Hemen yönlendirme yapılacak.");
         toast.success("Giriş başarılı!");
         
-        // Başarılı giriş sonrası callback'i çağır
-        // Doğrudan navigate etmek yerine önce state güncellenmesini bekle
-        setTimeout(() => {
-          console.log("onSuccess callback çağırılıyor...");
-          onSuccess();
-        }, 2000); // Bekleme süresini 2 saniyeye çıkarıyoruz
+        // Başarılı giriş sonrası callback'i hemen çağır
+        console.log("onSuccess callback çağırılıyor...");
+        onSuccess();
       } else {
         console.error("Kullanıcının rolü personel veya admin değil:", userRole);
         setLoginError("Bu hesap personel girişi için yetkilendirilmemiş. Lütfen personel hesabınızla giriş yapın.");

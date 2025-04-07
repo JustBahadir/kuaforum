@@ -38,6 +38,7 @@ interface PersonalData {
   daily_horoscope_reading: string | null;
   spouse_name: string | null;
   spouse_birthdate: string | null;
+  style_preference: string | null;
 }
 
 export function CustomerPersonalInfo({ customerId, customer, editMode }: CustomerPersonalInfoProps) {
@@ -53,7 +54,8 @@ export function CustomerPersonalInfo({ customerId, customer, editMode }: Custome
     custom_notes: null,
     daily_horoscope_reading: null,
     spouse_name: null,
-    spouse_birthdate: null
+    spouse_birthdate: null,
+    style_preference: null
   });
   const [isLoadingHoroscope, setIsLoadingHoroscope] = useState(false);
 
@@ -88,7 +90,10 @@ export function CustomerPersonalInfo({ customerId, customer, editMode }: Custome
         custom_notes: existingData.custom_notes,
         daily_horoscope_reading: existingData.daily_horoscope_reading,
         spouse_name: existingData.spouse_name,
-        spouse_birthdate: existingData.spouse_birthdate
+        spouse_birthdate: existingData.spouse_birthdate,
+        style_preference: existingData.custom_notes?.includes("Style:") 
+          ? existingData.custom_notes.split("Style:")[1].trim() 
+          : null
       });
     }
   }, [existingData]);
@@ -111,6 +116,19 @@ export function CustomerPersonalInfo({ customerId, customer, editMode }: Custome
         const customerIdStr = customerId.toString().replace(/"/g, "");
         console.log("Cleaned customer ID:", customerIdStr);
         
+        // Add style preference to custom notes if provided
+        let customNotes = data.custom_notes || "";
+        if (data.style_preference) {
+          // Check if there's already a style preference noted
+          if (customNotes.includes("Style:")) {
+            // Replace existing style preference
+            customNotes = customNotes.replace(/Style:.*?(\n|$)/, `Style: ${data.style_preference}\n`);
+          } else {
+            // Add new style preference
+            customNotes = customNotes + (customNotes ? "\n" : "") + `Style: ${data.style_preference}`;
+          }
+        }
+        
         await customerPersonalDataService.updateCustomerPersonalData(customerIdStr, {
           customer_id: customerIdStr,
           birth_date: data.birth_date,
@@ -118,7 +136,7 @@ export function CustomerPersonalInfo({ customerId, customer, editMode }: Custome
           children_names: data.children_names,
           horoscope: data.horoscope,
           horoscope_description: data.horoscope_description,
-          custom_notes: data.custom_notes,
+          custom_notes: customNotes,
           daily_horoscope_reading: data.daily_horoscope_reading,
           spouse_name: data.spouse_name,
           spouse_birthdate: data.spouse_birthdate
@@ -201,97 +219,11 @@ export function CustomerPersonalInfo({ customerId, customer, editMode }: Custome
 
   return (
     <div className="p-6 space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-4">
-          <h3 className="text-lg font-medium">Kişisel Bilgiler</h3>
-          
-          <div className="space-y-2">
-            <Label htmlFor="birthDate">Doğum Tarihi</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !personalData.birth_date && "text-muted-foreground"
-                  )}
-                  disabled={!editMode}
-                >
-                  <Calendar className="mr-2 h-4 w-4" />
-                  {personalData.birth_date ? (
-                    format(new Date(personalData.birth_date), "dd MMMM yyyy", { locale: tr })
-                  ) : (
-                    <span>Bir tarih seçin</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <CalendarComponent
-                  mode="single"
-                  selected={personalData.birth_date ? new Date(personalData.birth_date) : undefined}
-                  onSelect={(date) => handleDateChange('birth_date', date)}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-          
-          {personalData.horoscope && (
-            <div className="space-y-2">
-              <Label>Burç</Label>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="px-2 py-1 bg-purple-50">
-                  {personalData.horoscope}
-                </Badge>
-                {isLoadingHoroscope && <span className="text-xs text-muted-foreground">Güncelleniyor...</span>}
-              </div>
-              {personalData.horoscope_description && (
-                <div className="mt-2 p-3 bg-muted/40 rounded-md text-sm">
-                  <p>{personalData.horoscope_description}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Kaynak: elle.com.tr
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-          
-          <div className="space-y-2">
-            <Label htmlFor="anniversaryDate">Evlilik Yıldönümü</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !personalData.anniversary_date && "text-muted-foreground"
-                  )}
-                  disabled={!editMode}
-                >
-                  <Calendar className="mr-2 h-4 w-4" />
-                  {personalData.anniversary_date ? (
-                    format(new Date(personalData.anniversary_date), "dd MMMM yyyy", { locale: tr })
-                  ) : (
-                    <span>Bir tarih seçin</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <CalendarComponent
-                  mode="single"
-                  selected={personalData.anniversary_date ? new Date(personalData.anniversary_date) : undefined}
-                  onSelect={(date) => handleDateChange('anniversary_date', date)}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-        </div>
+      <div className="space-y-6">
+        <h3 className="text-lg font-medium">Aile Bilgileri</h3>
         
-        <div className="space-y-4">
-          <h3 className="text-lg font-medium">Eş Bilgileri</h3>
-          
-          <div className="space-y-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-4">
             <Label htmlFor="spouseName">Eş Adı</Label>
             <Input
               id="spouseName"
@@ -302,7 +234,7 @@ export function CustomerPersonalInfo({ customerId, customer, editMode }: Custome
             />
           </div>
           
-          <div className="space-y-2">
+          <div className="space-y-4">
             <Label htmlFor="spouseBirthdate">Eş Doğum Tarihi</Label>
             <Popover>
               <PopoverTrigger asChild>
@@ -333,70 +265,137 @@ export function CustomerPersonalInfo({ customerId, customer, editMode }: Custome
             </Popover>
           </div>
         </div>
-      </div>
-      
-      <div className="space-y-4 mt-6">
-        <h3 className="text-lg font-medium">Çocuk Bilgileri</h3>
-        
-        {editMode ? (
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Input
-                placeholder="Çocuk ismi ekle"
-                value={newChild}
-                onChange={(e) => setNewChild(e.target.value)}
-                className="flex-1"
-              />
+
+        <div className="space-y-4">
+          <Label htmlFor="anniversaryDate">Evlilik Yıldönümü</Label>
+          <Popover>
+            <PopoverTrigger asChild>
               <Button
-                type="button"
-                size="sm"
-                onClick={addChild}
-                disabled={!newChild.trim()}
+                variant="outline"
+                className={cn(
+                  "w-full justify-start text-left font-normal",
+                  !personalData.anniversary_date && "text-muted-foreground"
+                )}
+                disabled={!editMode}
               >
-                <PlusCircle className="h-4 w-4 mr-1" />
-                Ekle
+                <Calendar className="mr-2 h-4 w-4" />
+                {personalData.anniversary_date ? (
+                  format(new Date(personalData.anniversary_date), "dd MMMM yyyy", { locale: tr })
+                ) : (
+                  <span>Bir tarih seçin</span>
+                )}
               </Button>
-            </div>
-            
-            {(personalData.children_names && personalData.children_names.length > 0) ? (
-              <div className="border rounded-md p-2 space-y-2">
-                {personalData.children_names.map((child, index) => (
-                  <div key={index} className="flex items-center justify-between bg-muted/30 p-2 rounded">
-                    <div className="flex items-center">
-                      <User className="h-4 w-4 mr-2 text-gray-500" />
-                      <span>{child}</span>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeChild(index)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <CalendarComponent
+                mode="single"
+                selected={personalData.anniversary_date ? new Date(personalData.anniversary_date) : undefined}
+                onSelect={(date) => handleDateChange('anniversary_date', date)}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+        
+        <div className="space-y-4">
+          <Label>Çocuk Bilgileri</Label>
+          
+          {editMode ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Input
+                  placeholder="Çocuk ismi ekle"
+                  value={newChild}
+                  onChange={(e) => setNewChild(e.target.value)}
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={addChild}
+                  disabled={!newChild.trim()}
+                >
+                  <PlusCircle className="h-4 w-4 mr-1" />
+                  Ekle
+                </Button>
               </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">Henüz çocuk eklenmemiş.</p>
-            )}
-          </div>
-        ) : (
-          (personalData.children_names && personalData.children_names.length > 0) ? (
-            <div className="border rounded-md p-3">
-              <ul className="space-y-1">
-                {personalData.children_names.map((child, index) => (
-                  <li key={index} className="flex items-center">
-                    <User className="h-4 w-4 mr-2 text-gray-500" />
-                    <span>{child}</span>
-                  </li>
-                ))}
-              </ul>
+              
+              {(personalData.children_names && personalData.children_names.length > 0) ? (
+                <div className="border rounded-md p-2 space-y-2">
+                  {personalData.children_names.map((child, index) => (
+                    <div key={index} className="flex items-center justify-between bg-muted/30 p-2 rounded">
+                      <div className="flex items-center">
+                        <User className="h-4 w-4 mr-2 text-gray-500" />
+                        <span>{child}</span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeChild(index)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">Henüz çocuk eklenmemiş.</p>
+              )}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">Çocuk bilgisi yok.</p>
-          )
-        )}
+            (personalData.children_names && personalData.children_names.length > 0) ? (
+              <div className="border rounded-md p-3">
+                <ul className="space-y-1">
+                  {personalData.children_names.map((child, index) => (
+                    <li key={index} className="flex items-center">
+                      <User className="h-4 w-4 mr-2 text-gray-500" />
+                      <span>{child}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Çocuk bilgisi yok.</p>
+            )
+          )}
+        </div>
+      </div>
+      
+      <Separator className="my-6" />
+      
+      {personalData.birth_date && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-medium">Burç Bilgileri</h3>
+          {personalData.horoscope && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="px-2 py-1 bg-purple-50">
+                  {personalData.horoscope}
+                </Badge>
+                {isLoadingHoroscope && <span className="text-xs text-muted-foreground">Güncelleniyor...</span>}
+              </div>
+              {personalData.horoscope_description && (
+                <div className="mt-2 p-3 bg-muted/40 rounded-md text-sm">
+                  <p>{personalData.horoscope_description}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+      
+      <Separator className="my-6" />
+      
+      <div className="space-y-4">
+        <h3 className="text-lg font-medium">Tarz Tercihi</h3>
+        <Input
+          placeholder="Tarz tercihi (samimi, resmi, vb.)"
+          value={personalData.style_preference || ""}
+          onChange={(e) => setPersonalData(prev => ({ ...prev, style_preference: e.target.value }))}
+          disabled={!editMode}
+          className="w-full"
+        />
       </div>
       
       <Separator className="my-6" />

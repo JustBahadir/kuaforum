@@ -12,6 +12,7 @@ import { CustomerOperationsTable } from "./CustomerOperationsTable";
 import { CustomerPhotoGallery } from "./CustomerPhotoGallery";
 import { useCustomerOperations } from "@/hooks/useCustomerOperations";
 import { Musteri } from "@/lib/supabase/types";
+import { format } from "date-fns";
 
 interface CustomerDetailsProps {
   customer: Musteri;
@@ -48,8 +49,8 @@ export function CustomerDetails({
   return (
     <div>
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        <div className="p-6 flex items-center justify-between">
-          <div>
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-6">
             <div className="flex items-center">
               <div className="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 font-medium text-xl">
                 {customer.first_name?.[0] || "?"}{customer.last_name?.[0] || ""}
@@ -61,66 +62,86 @@ export function CustomerDetails({
                 {customer.phone && <p className="text-gray-600">{customer.phone}</p>}
               </div>
             </div>
-          </div>
-          <div className="flex gap-2">
-            <Button 
-              variant="outline"
-              onClick={() => setIsEditDialogOpen(true)}
-            >
-              Düzenle
-            </Button>
-            <Button 
-              variant="destructive"
-              onClick={() => setIsDeleteDialogOpen(true)}
-            >
-              Sil
-            </Button>
-          </div>
-        </div>
-
-        {totals && totals.totalPoints > 0 && (
-          <div className="px-6 pb-4 -mt-2">
-            <div className="inline-block bg-purple-50 text-purple-700 px-3 py-1 rounded-full text-sm font-medium">
-              Toplam Puan: {totals.totalPoints}
+            <div className="flex gap-2">
+              <Button 
+                variant="outline"
+                onClick={() => setIsEditDialogOpen(true)}
+              >
+                Düzenle
+              </Button>
+              <Button 
+                variant="destructive"
+                onClick={() => setIsDeleteDialogOpen(true)}
+              >
+                Sil
+              </Button>
             </div>
           </div>
-        )}
+          
+          {/* Customer Basic Information */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 pb-4 border-b">
+            <div>
+              <p className="text-sm font-medium text-gray-500">AD SOYAD</p>
+              <p className="font-medium">{customer.first_name} {customer.last_name}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">TELEFON</p>
+              <p>{customer.phone || "Belirtilmemiş"}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">DOĞUM TARİHİ</p>
+              <p>{customer.birthdate ? format(new Date(customer.birthdate), "dd.MM.yyyy") : "Belirtilmemiş"}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">KAYIT TARİHİ</p>
+              <p>{format(new Date(customer.created_at), "dd.MM.yyyy")}</p>
+            </div>
+          </div>
+
+          {totals && totals.totalPoints > 0 && (
+            <div className="mb-4">
+              <div className="inline-block bg-purple-50 text-purple-700 px-3 py-1 rounded-full text-sm font-medium">
+                Toplam Puan: {totals.totalPoints}
+              </div>
+            </div>
+          )}
         
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="p-6 pt-0 border-t">
-          <TabsList className="grid grid-cols-4 w-full">
-            <TabsTrigger value="temel">Temel Bilgiler</TabsTrigger>
-            <TabsTrigger value="detayli">Detaylı Bilgiler</TabsTrigger>
-            <TabsTrigger value="islemler">İşlem Geçmişi</TabsTrigger>
-            <TabsTrigger value="fotograflar">Fotoğraflar</TabsTrigger>
-          </TabsList>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid grid-cols-4 w-full">
+              <TabsTrigger value="temel">Temel Bilgiler</TabsTrigger>
+              <TabsTrigger value="detayli">Detaylı Bilgiler</TabsTrigger>
+              <TabsTrigger value="islemler">İşlem Geçmişi</TabsTrigger>
+              <TabsTrigger value="fotograflar">Fotoğraflar</TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="temel" className="p-2">
-            <CustomerPersonalInfo 
-              customer={customer} 
-              customerId={String(customer.id)} 
-              editMode={editMode} 
-            />
-          </TabsContent>
+            <TabsContent value="temel" className="p-2">
+              <CustomerPersonalInfo 
+                customer={customer} 
+                customerId={String(customer.id)} 
+                editMode={editMode} 
+              />
+            </TabsContent>
 
-          <TabsContent value="detayli" className="p-2">
-            <CustomerPreferences customerId={customer.id} />
-          </TabsContent>
+            <TabsContent value="detayli" className="p-2">
+              <CustomerPreferences customerId={customer.id} />
+            </TabsContent>
 
-          <TabsContent value="islemler" className="p-2">
-            <CustomerOperationsTable customerId={customer.id} />
-          </TabsContent>
+            <TabsContent value="islemler" className="p-2">
+              <CustomerOperationsTable customerId={customer.id} />
+            </TabsContent>
 
-          <TabsContent value="fotograflar" className="p-2">
-            <CustomerPhotoGallery customerId={customer.id} />
-          </TabsContent>
-        </Tabs>
+            <TabsContent value="fotograflar" className="p-2">
+              <CustomerPhotoGallery customerId={customer.id} />
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
 
       {/* Edit Dialog */}
       {isEditDialogOpen && (
         <EditCustomerForm 
           customer={customer}
-          open={isEditDialogOpen}
+          isOpen={isEditDialogOpen}
           onOpenChange={setIsEditDialogOpen}
           onSuccess={onEdit}
           dukkanId={dukkanId}
