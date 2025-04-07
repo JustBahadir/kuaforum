@@ -30,13 +30,15 @@ export function CustomerDetails({
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("temel");
+  
   // Convert customer.id to number to ensure it's properly typed
   const customerId = typeof customer.id === 'string' ? parseInt(customer.id, 10) : customer.id;
   const { totals } = useCustomerOperations(customerId);
 
   const handleDelete = async () => {
     try {
-      await musteriServisi.sil(customer.id);
+      // Make sure we're passing a number for customer.id
+      await musteriServisi.sil(customerId);
       toast.success("Müşteri başarıyla silindi");
       onDelete();
     } catch (error) {
@@ -105,15 +107,15 @@ export function CustomerDetails({
             </TabsContent>
 
             <TabsContent value="detayli" className="p-2">
-              <CustomerPreferences customerId={String(customer.id)} />
+              <CustomerPreferences customerId={String(customerId)} />
             </TabsContent>
 
             <TabsContent value="islemler" className="p-2">
-              <CustomerOperationsTable customerId={customer.id} />
+              <CustomerOperationsTable customerId={customerId} />
             </TabsContent>
 
             <TabsContent value="fotograflar" className="p-2">
-              <CustomerPhotoGallery customerId={String(customer.id)} />
+              <CustomerPhotoGallery customerId={String(customerId)} />
             </TabsContent>
           </Tabs>
         </div>
