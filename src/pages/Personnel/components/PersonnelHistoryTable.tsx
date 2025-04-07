@@ -1,6 +1,6 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { personelIslemleriServisi, personelServisi } from "@/lib/supabase";
+import { personelIslemleriServisi } from "@/lib/supabase";
 import {
   Table,
   TableBody,
@@ -33,17 +33,19 @@ export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProp
     queryFn: async () => {
       console.log("Fetching personnel operations for ID:", personnelId);
       try {
+        if (!personnelId) {
+          return [];
+        }
+        
         // First try to get the personnel operations
-        const result = personnelId 
-          ? await personelIslemleriServisi.personelIslemleriGetirById(personnelId)
-          : await personelIslemleriServisi.hepsiniGetir();
-          
+        const result = await personelIslemleriServisi.personelIslemleriGetirById(personnelId);
+        
         console.log("Retrieved operations:", result);
         
         // If no operations, automatically try to recover from appointments
-        if (result.length === 0 && personnelId) {
+        if (result.length === 0) {
           console.log("No operations found, attempting automatic recovery...");
-          await handleRecoverOperations(); // Use the same function as the button click
+          await handleRecoverOperations();
           
           // Fetch again after recovery
           const recoveredResult = await personelIslemleriServisi.personelIslemleriGetirById(personnelId);
@@ -54,8 +56,17 @@ export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProp
         return result;
       } catch (error) {
         console.error("Error fetching personnel operations:", error);
-        toast.error("İşlem geçmişi yüklenirken bir hata oluştu");
-        return [];
+        
+        // If there's an error, still try recovery
+        try {
+          await handleRecoverOperations();
+          const recoveredResult = await personelIslemleriServisi.personelIslemleriGetirById(personnelId);
+          return recoveredResult;
+        } catch (recoveryError) {
+          console.error("Recovery also failed:", recoveryError);
+          toast.error("İşlem geçmişi yüklenirken bir hata oluştu");
+          return [];
+        }
       }
     },
     refetchOnWindowFocus: true,
@@ -114,7 +125,6 @@ export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProp
       
       // Invalidate related queries
       queryClient.invalidateQueries({ queryKey: ['personelIslemleri'] });
-      queryClient.invalidateQueries({ queryKey: ['customerOperations'] });
       
       // Refetch after invalidation
       await refetch();

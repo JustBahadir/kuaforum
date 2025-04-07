@@ -180,7 +180,7 @@ serve(async (req) => {
             console.error('Error creating operation record:', operationError);
           } else if (newOperation) {
             operations.push(newOperation[0]);
-            console.log(`Created operation record for appointment ${appointment.id}`);
+            console.log(`Created operation record for appointment ${appointment.id}, service ${islem.islem_adi}`);
           }
         } else {
           console.log(`Operation record already exists for appointment ${appointment.id}`);
