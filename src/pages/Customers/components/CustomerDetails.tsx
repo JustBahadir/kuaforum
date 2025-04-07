@@ -31,7 +31,7 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
     queryKey: ['customer', customerId],
     queryFn: async () => {
       if (!customerId) throw new Error("No customer ID provided");
-      return musteriServisi.musteriGetirById(customerId);
+      return musteriServisi.getirById(customerId);
     },
     enabled: !!customerId,
   });

@@ -12,8 +12,11 @@ export function CustomerAppointmentsTable({ customerId, limitCount }: CustomerAp
   const { data: appointments = [], isLoading } = useQuery({
     queryKey: ['customerAppointments', customerId, limitCount],
     queryFn: async () => {
-      const data = await randevuServisi.getAppointmentsByCustomerId(customerId);
-      return limitCount ? data.slice(0, limitCount) : data;
+      // Using the correct method name from randevuServisi
+      const data = await randevuServisi.kendiRandevulariniGetir();
+      // Filter the appointments by customer ID
+      const customerAppointments = data.filter(appointment => appointment.musteri_id === customerId);
+      return limitCount ? customerAppointments.slice(0, limitCount) : customerAppointments;
     },
     enabled: !!customerId
   });

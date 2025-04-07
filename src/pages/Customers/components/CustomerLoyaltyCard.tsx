@@ -13,7 +13,9 @@ export function CustomerLoyaltyCard({ customerId, expanded = false }: CustomerLo
   const { data: operations = [], isLoading } = useQuery({
     queryKey: ['customerOperations', customerId],
     queryFn: async () => {
-      return await personelIslemleriServisi.getOperationsByCustomerId(customerId);
+      // Get all operations and filter by customer ID
+      const allOperations = await personelIslemleriServisi.hepsiniGetir();
+      return allOperations.filter(op => op.musteri_id === customerId);
     },
     enabled: !!customerId
   });
