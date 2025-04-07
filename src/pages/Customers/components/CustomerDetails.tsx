@@ -30,7 +30,9 @@ export function CustomerDetails({
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("temel");
-  const { totals } = useCustomerOperations(customer.id);
+  // Convert customer.id to number to ensure it's properly typed
+  const customerId = typeof customer.id === 'string' ? parseInt(customer.id, 10) : customer.id;
+  const { totals } = useCustomerOperations(customerId);
 
   const handleDelete = async () => {
     try {
@@ -97,7 +99,7 @@ export function CustomerDetails({
             <TabsContent value="temel" className="p-2">
               <CustomerPersonalInfo 
                 customer={customer} 
-                customerId={Number(customer.id)}
+                customerId={customerId} // Pass the converted number here
                 editMode={false} 
               />
             </TabsContent>
