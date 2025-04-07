@@ -98,13 +98,13 @@ export function CustomerDetails({
             <TabsContent value="temel" className="p-2">
               <CustomerPersonalInfo 
                 customer={customer} 
-                customerId={customer.id} // Convert string to number here
+                customerId={customer.id}
                 editMode={editMode} 
               />
             </TabsContent>
 
             <TabsContent value="detayli" className="p-2">
-              <CustomerPreferences customerId={customer.id} />
+              <CustomerPreferences customerId={String(customer.id)} />
             </TabsContent>
 
             <TabsContent value="islemler" className="p-2">
@@ -112,7 +112,7 @@ export function CustomerDetails({
             </TabsContent>
 
             <TabsContent value="fotograflar" className="p-2">
-              <CustomerPhotoGallery customerId={customer.id} />
+              <CustomerPhotoGallery customerId={String(customer.id)} />
             </TabsContent>
           </Tabs>
         </div>

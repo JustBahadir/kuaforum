@@ -98,6 +98,7 @@ export function CustomerPersonalInfo({ customer, customerId, editMode = false }:
     mutation.mutate(dataToSave);
   };
 
+  // Define the addChildName function only once
   const addChildName = () => {
     if (newChildName.trim()) {
       setPersonalData(prev => ({
@@ -108,6 +109,7 @@ export function CustomerPersonalInfo({ customer, customerId, editMode = false }:
     }
   };
 
+  // Define the removeChildName function only once
   const removeChildName = (index: number) => {
     setPersonalData(prev => ({
       ...prev,
@@ -295,21 +297,4 @@ export function CustomerPersonalInfo({ customer, customerId, editMode = false }:
       </div>
     </div>
   );
-  
-  function addChildName() {
-    if (newChildName.trim()) {
-      setPersonalData(prev => ({
-        ...prev,
-        childrenNames: [...prev.childrenNames, newChildName.trim()]
-      }));
-      setNewChildName("");
-    }
-  }
-
-  function removeChildName(index: number) {
-    setPersonalData(prev => ({
-      ...prev,
-      childrenNames: prev.childrenNames.filter((_, i) => i !== index)
-    }));
-  }
 }
