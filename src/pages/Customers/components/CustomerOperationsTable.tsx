@@ -3,8 +3,8 @@ import { useState } from "react";
 import { useCustomerOperations } from "@/hooks/useCustomerOperations";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { DatePickerWithRange } from "@/components/ui/date-range-picker";
-import { addDays, format } from "date-fns";
+import { DatePickerWithRange } from "@/components/ui/date-range-picker-adapter";
+import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { CalendarIcon, RefreshCw } from "lucide-react";
 

@@ -15,7 +15,7 @@ import { formatPhoneNumber } from "@/utils/phoneFormatter";
 
 interface CustomerPersonalInfoProps {
   customer: Musteri;
-  customerId: string;
+  customerId: number;
   editMode?: boolean;
 }
 
@@ -31,8 +31,11 @@ export function CustomerPersonalInfo({ customer, customerId, editMode = false }:
   });
   const [newChildName, setNewChildName] = useState("");
 
+  // Convert customerId to string for query key consistency
+  const customerIdStr = String(customerId);
+
   const { data: existingPersonalData, isLoading } = useQuery({
-    queryKey: ['customer_personal_data', customerId],
+    queryKey: ['customer_personal_data', customerIdStr],
     queryFn: async () => {
       console.log("Fetching personal data for customer ID:", customerId);
       try {
@@ -51,11 +54,12 @@ export function CustomerPersonalInfo({ customer, customerId, editMode = false }:
       if (existingPersonalData) {
         return await customerPersonalDataService.updateCustomerPersonalData(customerId, data);
       } else {
-        return await customerPersonalDataService.createCustomerPersonalData(customerId, data);
+        // Use updateCustomerPersonalData instead of createCustomerPersonalData
+        return await customerPersonalDataService.updateCustomerPersonalData(customerId, data);
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['customer_personal_data', customerId] });
+      queryClient.invalidateQueries({ queryKey: ['customer_personal_data', customerIdStr] });
       setIsEditing(false);
       toast.success("Müşteri kişisel bilgileri kaydedildi");
     },
@@ -291,4 +295,21 @@ export function CustomerPersonalInfo({ customer, customerId, editMode = false }:
       </div>
     </div>
   );
+  
+  function addChildName() {
+    if (newChildName.trim()) {
+      setPersonalData(prev => ({
+        ...prev,
+        childrenNames: [...prev.childrenNames, newChildName.trim()]
+      }));
+      setNewChildName("");
+    }
+  }
+
+  function removeChildName(index: number) {
+    setPersonalData(prev => ({
+      ...prev,
+      childrenNames: prev.childrenNames.filter((_, i) => i !== index)
+    }));
+  }
 }
