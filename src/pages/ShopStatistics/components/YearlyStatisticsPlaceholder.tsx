@@ -7,14 +7,16 @@ export function YearlyStatisticsPlaceholder() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Veri Hazırlanıyor</CardTitle>
+        <CardTitle className="text-lg">Yıllık İstatistikler</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="py-8">
         <Alert>
           <CircleAlert className="h-4 w-4" />
-          <AlertTitle>Bilgi</AlertTitle>
+          <AlertTitle>Yeterli veri bulunamadı</AlertTitle>
           <AlertDescription>
-            Yıllık istatistik verileri henüz hazır değil. Daha sonra tekrar kontrol edin.
+            Yıllık istatistikleri görebilmek için en az 1 yıllık veri gerekiyor. 
+            Şu anda yeterli veriye sahip değilsiniz. Daha fazla veri oluştukça, yıllık istatistikler 
+            burada görüntülenecektir.
           </AlertDescription>
         </Alert>
       </CardContent>

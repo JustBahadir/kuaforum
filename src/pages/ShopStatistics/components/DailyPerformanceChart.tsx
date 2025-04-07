@@ -1,74 +1,70 @@
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, Legend, TooltipProps } from "recharts";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { formatCurrency } from "@/lib/utils";
 
+interface ChartDataItem {
+  name: string;
+  ciro: number;
+  islemSayisi: number;
+}
+
 interface DailyPerformanceChartProps {
-  data: any[];
+  data: ChartDataItem[];
   isLoading: boolean;
 }
 
-type CustomTooltipProps = TooltipProps<number, string> & {
-  active?: boolean;
-  payload?: any[];
-  label?: string;
-}
-
 export function DailyPerformanceChart({ data, isLoading }: DailyPerformanceChartProps) {
-  const formatYAxisTick = (value: number): string => {
-    if (value >= 1000) {
-      return `${(value / 1000).toFixed(1)}k`;
+  
+  // Custom tooltip formatter
+  const tooltipFormatter = (value: number, name: string) => {
+    if (name === 'ciro') {
+      return [formatCurrency(value), 'Ciro'];
     }
-    return value.toString();
+    return [value, 'İşlem Sayısı'];
   };
   
-  const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white p-4 border rounded shadow">
-          <p className="text-sm font-medium">{label}</p>
-          <p className="text-sm text-blue-500">
-            Ciro: {formatCurrency(payload[0].value)}
-          </p>
-          <p className="text-sm text-green-500">
-            İşlem Sayısı: {payload[1].value}
-          </p>
-        </div>
-      );
-    }
-    return null;
-  };
-
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Son 7 Gün Performansı</CardTitle>
+        </CardHeader>
+        <CardContent className="h-[300px] flex items-center justify-center">
+          <div className="w-10 h-10 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
+        </CardContent>
+      </Card>
+    );
+  }
+  
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Günlük Performans</CardTitle>
-        <CardDescription>Son 7 günün ciro ve işlem sayısı</CardDescription>
+        <CardTitle className="text-lg">Son 7 Gün Performansı</CardTitle>
       </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <div className="w-full h-[300px] flex items-center justify-center">
-            <Skeleton className="h-[300px] w-full" />
-          </div>
-        ) : data.length === 0 ? (
-          <div className="w-full h-[300px] flex items-center justify-center">
-            <p className="text-muted-foreground">Henüz veri bulunmamaktadır</p>
-          </div>
-        ) : (
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis yAxisId="left" orientation="left" tickFormatter={formatYAxisTick} />
-              <YAxis yAxisId="right" orientation="right" />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend />
-              <Bar yAxisId="left" dataKey="ciro" name="Ciro (₺)" fill="#3b82f6" />
-              <Bar yAxisId="right" dataKey="islemSayisi" name="İşlem Sayısı" fill="#22c55e" />
-            </BarChart>
-          </ResponsiveContainer>
-        )}
+      <CardContent className="h-[300px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="name" />
+            <YAxis yAxisId="left" />
+            <YAxis yAxisId="right" orientation="right" />
+            <Tooltip formatter={tooltipFormatter} />
+            <Legend />
+            <Bar 
+              yAxisId="left" 
+              dataKey="ciro" 
+              name="Ciro (₺)" 
+              fill="#8884d8" 
+            />
+            <Bar 
+              yAxisId="right" 
+              dataKey="islemSayisi" 
+              name="İşlem Sayısı" 
+              fill="#82ca9d" 
+            />
+          </BarChart>
+        </ResponsiveContainer>
       </CardContent>
     </Card>
   );

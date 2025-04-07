@@ -1,242 +1,335 @@
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { PersonnelDetailsDialog } from "./PersonnelDetailsDialog";
-import { PersonnelDialog } from "./PersonnelDialog";
-import { Plus, Trash, UserMinus } from "lucide-react";
-import { toast } from "sonner";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { LoadingButton } from "@/components/ui/loading-button";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { personelServisi } from "@/lib/supabase";
-import { useCustomerAuth } from "@/hooks/useCustomerAuth";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { 
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue
-} from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-
-interface Personnel {
-  id: number;
-  ad_soyad: string;
-  unvan: string;
-  auth_id: string;
-  dukkan_id: number;
-  avatar_url?: string;
-}
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { toast } from "sonner";
+import { PersonIcon, Plus, Pencil, BadgeDollarSign } from "lucide-react";
 
 interface PersonnelListProps {
-  onPersonnelSelect?: (personelId: number) => void;
+  onPersonnelSelect: (id: number) => void;
 }
 
 export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
-  const [openDetails, setOpenDetails] = useState(false);
-  const [openDialog, setOpenDialog] = useState(false);
-  const [selectedPersonnel, setSelectedPersonnel] = useState<Personnel | null>(null);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [selectedPersonnelToDelete, setSelectedPersonnelToDelete] = useState<number | null>(null);
-  const { dukkanId } = useCustomerAuth();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedPersonnel, setSelectedPersonnel] = useState<any | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  
+  // Form state
+  const [adSoyad, setAdSoyad] = useState("");
+  const [telefon, setTelefon] = useState("");
+  const [eposta, setEposta] = useState("");
+  const [adres, setAdres] = useState("");
+  const [maas, setMaas] = useState<number>(0);
+  const [primYuzdesi, setPrimYuzdesi] = useState<number>(0);
+  const [calisma_sistemi, setCalisma_sistemi] = useState("maas");
+  const [iban, setIban] = useState("");
+  
   const queryClient = useQueryClient();
-
-  const { data: personelListesi = [], isLoading } = useQuery({
-    queryKey: ['personel', dukkanId],
-    queryFn: () => personelServisi.hepsiniGetir(),
-    enabled: !!dukkanId,
-    refetchOnMount: true,
-    refetchOnWindowFocus: true
+  
+  const { data: personeller = [], isLoading } = useQuery({
+    queryKey: ['personel-list'],
+    queryFn: personelServisi.hepsiniGetir
   });
-
-  const deletePersonnelMutation = useMutation({
-    mutationFn: (id: number) => personelServisi.sil(id),
+  
+  const { mutate: addPersonnel } = useMutation({
+    mutationFn: personelServisi.ekle,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['personel'] });
-      toast.success("Personel başarıyla silindi");
+      queryClient.invalidateQueries({ queryKey: ['personel-list'] });
+      resetForm();
+      setIsDialogOpen(false);
+      toast.success("Personel başarıyla eklendi");
     },
     onError: (error) => {
-      console.error("Personel silinirken hata:", error);
-      toast.error("Personel silinirken bir hata oluştu");
+      console.error("Personel eklenirken hata:", error);
+      toast.error("Personel eklenirken bir hata oluştu");
     }
   });
-
-  const handleDetailsOpen = (personel: Personnel) => {
+  
+  const { mutate: updatePersonnel } = useMutation({
+    mutationFn: ({ id, personel }: { id: number; personel: any }) => 
+      personelServisi.guncelle(id, personel),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['personel-list'] });
+      resetForm();
+      setIsDialogOpen(false);
+      toast.success("Personel başarıyla güncellendi");
+    },
+    onError: (error) => {
+      console.error("Personel güncellenirken hata:", error);
+      toast.error("Personel güncellenirken bir hata oluştu");
+    }
+  });
+  
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const personelData = {
+      ad_soyad: adSoyad,
+      telefon,
+      eposta,
+      adres,
+      maas: Number(maas),
+      prim_yuzdesi: Number(primYuzdesi),
+      calisma_sistemi,
+      iban,
+      personel_no: Math.random().toString(36).substring(2, 8).toUpperCase()
+    };
+    
+    if (selectedPersonnel) {
+      updatePersonnel({ id: selectedPersonnel.id, personel: personelData });
+    } else {
+      addPersonnel(personelData);
+    }
+  };
+  
+  const handleEdit = (personel: any) => {
     setSelectedPersonnel(personel);
-    setOpenDetails(true);
-    if (onPersonnelSelect) {
-      onPersonnelSelect(personel.id);
-    }
+    setAdSoyad(personel.ad_soyad || "");
+    setTelefon(personel.telefon || "");
+    setEposta(personel.eposta || "");
+    setAdres(personel.adres || "");
+    setMaas(personel.maas || 0);
+    setPrimYuzdesi(personel.prim_yuzdesi || 0);
+    setCalisma_sistemi(personel.calisma_sistemi || "maas");
+    setIban(personel.iban || "");
+    setIsDialogOpen(true);
   };
-
-  const openDeletePersonnelDialog = () => {
-    setDeleteDialogOpen(true);
+  
+  const handleAddNew = () => {
+    resetForm();
+    setSelectedPersonnel(null);
+    setIsDialogOpen(true);
   };
-
-  const confirmDelete = async () => {
-    if (selectedPersonnelToDelete) {
-      setIsDeleting(true);
-      try {
-        await deletePersonnelMutation.mutateAsync(selectedPersonnelToDelete);
-      } catch (error) {
-        console.error("Personel silinirken hata:", error);
-      } finally {
-        setIsDeleting(false);
-        setDeleteOpen(false);
-        setDeleteDialogOpen(false);
-        setSelectedPersonnelToDelete(null);
-      }
-    }
+  
+  const resetForm = () => {
+    setAdSoyad("");
+    setTelefon("");
+    setEposta("");
+    setAdres("");
+    setMaas(0);
+    setPrimYuzdesi(0);
+    setCalisma_sistemi("maas");
+    setIban("");
   };
-
-  const handlePersonnelToDeleteChange = (value: string) => {
-    setSelectedPersonnelToDelete(Number(value));
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center p-8">
-        <div className="w-10 h-10 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
-      </div>
-    );
-  }
+  
+  const filteredPersonnel = personeller.filter(personel =>
+    personel.ad_soyad?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    personel.telefon?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    personel.eposta?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
-    <div>
-      <div className="md:flex md:items-center md:justify-between mb-6">
-        <div className="mb-4 md:mb-0">
-          <h1 className="text-2xl font-semibold">Personel Listesi</h1>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="destructive" onClick={openDeletePersonnelDialog}>
-            <UserMinus className="w-5 h-5 mr-2" />
-            Personel Sil
+    <>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Personel Listesi</CardTitle>
+          <Button onClick={handleAddNew} size="sm" className="flex items-center gap-1">
+            <Plus size={16} />
+            Yeni Personel
           </Button>
-          <Button onClick={() => setOpenDialog(true)}>
-            <Plus className="w-5 h-5 mr-2" />
-            Personel Ekle
-          </Button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
-        {personelListesi.map((personel) => (
-          <div 
-            key={personel.id} 
-            className="bg-white rounded-lg shadow-md p-5 cursor-pointer hover:bg-gray-50 transition-colors duration-200"
-            onClick={() => handleDetailsOpen(personel)}
-          >
-            <div className="flex items-center space-x-4">
-              <Avatar className="h-16 w-16">
-                {personel.avatar_url ? (
-                  <AvatarImage src={personel.avatar_url} alt={personel.ad_soyad} />
-                ) : (
-                  <AvatarFallback className="bg-purple-100 text-purple-800 text-lg">
-                    {personel.ad_soyad
-                      .split(' ')
-                      .map((name: string) => name[0])
-                      .join('')
-                      .substring(0, 2)
-                      .toUpperCase()}
-                  </AvatarFallback>
-                )}
-              </Avatar>
-              <div className="flex-grow">
-                <h2 className="text-lg font-semibold">{personel.ad_soyad}</h2>
-                <p className="text-gray-500">{personel.unvan || "Personel"}</p>
-              </div>
-            </div>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-4">
+            <Input 
+              placeholder="Ara..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)} 
+            />
           </div>
-        ))}
-      </div>
-
-      <PersonnelDialog 
-        open={openDialog} 
-        onOpenChange={setOpenDialog} 
-      />
-
-      {selectedPersonnel && (
-        <PersonnelDetailsDialog
-          personel={selectedPersonnel}
-          open={openDetails}
-          onOpenChange={setOpenDetails}
-        />
-      )}
-
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
+          
+          <ScrollArea className="h-[600px] pr-4">
+            <div className="space-y-4">
+              {isLoading ? (
+                <div className="flex justify-center p-4">
+                  <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
+                </div>
+              ) : filteredPersonnel.length > 0 ? (
+                filteredPersonnel.map(personel => (
+                  <div 
+                    key={personel.id} 
+                    className="flex items-center justify-between p-4 border rounded-md hover:bg-gray-50 cursor-pointer"
+                    onClick={() => onPersonnelSelect(personel.id)}
+                  >
+                    <div className="flex items-center space-x-4">
+                      <Avatar className="h-10 w-10">
+                        {personel.avatar_url ? (
+                          <AvatarImage src={personel.avatar_url} alt={personel.ad_soyad} />
+                        ) : (
+                          <AvatarFallback>
+                            <PersonIcon className="h-6 w-6" />
+                          </AvatarFallback>
+                        )}
+                      </Avatar>
+                      <div>
+                        <h4 className="font-medium">{personel.ad_soyad}</h4>
+                        <div className="flex flex-wrap gap-x-4 text-sm text-gray-500">
+                          <span>{personel.telefon}</span>
+                          <span>{personel.eposta}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="flex flex-col items-end mr-4">
+                        <span className="text-sm text-gray-800">
+                          <BadgeDollarSign className="inline-block mr-1 h-4 w-4" />
+                          {personel.maas} ₺
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          %{personel.prim_yuzdesi} prim
+                        </span>
+                      </div>
+                      <Button 
+                        variant="outline" 
+                        size="icon" 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEdit(personel);
+                        }}
+                      >
+                        <Pencil size={16} />
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  Personel bulunamadı
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </CardContent>
+      </Card>
+      
+      {/* Personnel Form Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Personel Sil</DialogTitle>
-            <DialogDescription>
-              Silmek istediğiniz personeli seçin. Bu işlem geri alınamaz.
-            </DialogDescription>
+            <DialogTitle>
+              {selectedPersonnel ? "Personeli Düzenle" : "Yeni Personel Ekle"}
+            </DialogTitle>
           </DialogHeader>
           
-          <div className="py-4">
-            <Select onValueChange={handlePersonnelToDeleteChange}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Personel seç" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectLabel>Personeller</SelectLabel>
-                  {personelListesi.map((personel) => (
-                    <SelectItem key={personel.id} value={personel.id.toString()}>
-                      {personel.ad_soyad}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>İptal</Button>
-            <Button 
-              variant="destructive"
-              onClick={() => selectedPersonnelToDelete ? setDeleteOpen(true) : toast.error("Lütfen bir personel seçin")}
-              disabled={!selectedPersonnelToDelete}
-            >
-              Personeli Sil
-            </Button>
-          </DialogFooter>
+          <form onSubmit={handleSubmit}>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="adSoyad" className="text-right">
+                  Ad Soyad
+                </Label>
+                <Input 
+                  id="adSoyad" 
+                  className="col-span-3" 
+                  value={adSoyad}
+                  onChange={(e) => setAdSoyad(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="telefon" className="text-right">
+                  Telefon
+                </Label>
+                <Input 
+                  id="telefon" 
+                  className="col-span-3" 
+                  value={telefon}
+                  onChange={(e) => setTelefon(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="eposta" className="text-right">
+                  E-posta
+                </Label>
+                <Input 
+                  id="eposta" 
+                  className="col-span-3" 
+                  type="email"
+                  value={eposta}
+                  onChange={(e) => setEposta(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="adres" className="text-right">
+                  Adres
+                </Label>
+                <Input 
+                  id="adres" 
+                  className="col-span-3" 
+                  value={adres}
+                  onChange={(e) => setAdres(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="maas" className="text-right">
+                  Maaş
+                </Label>
+                <Input 
+                  id="maas" 
+                  className="col-span-3" 
+                  type="number"
+                  value={maas}
+                  onChange={(e) => setMaas(Number(e.target.value))}
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="primYuzdesi" className="text-right">
+                  Prim %
+                </Label>
+                <Input 
+                  id="primYuzdesi" 
+                  className="col-span-3" 
+                  type="number"
+                  value={primYuzdesi}
+                  onChange={(e) => setPrimYuzdesi(Number(e.target.value))}
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="calisma_sistemi" className="text-right">
+                  Çalışma
+                </Label>
+                <select
+                  id="calisma_sistemi"
+                  className="col-span-3 border rounded-md h-10 px-3"
+                  value={calisma_sistemi}
+                  onChange={(e) => setCalisma_sistemi(e.target.value)}
+                  required
+                >
+                  <option value="maas">Maaşlı</option>
+                  <option value="prim">Primli</option>
+                  <option value="maas_ve_prim">Maaşlı ve Primli</option>
+                </select>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="iban" className="text-right">
+                  IBAN
+                </Label>
+                <Input 
+                  id="iban" 
+                  className="col-span-3" 
+                  value={iban}
+                  onChange={(e) => setIban(e.target.value)}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="submit">
+                {selectedPersonnel ? "Güncelle" : "Ekle"}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
-
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Emin misiniz?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Bu işlemi gerçekleştirmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>İptal</AlertDialogCancel>
-            <LoadingButton
-              variant="destructive"
-              loading={isDeleting}
-              onClick={confirmDelete}
-            >
-              Evet, Sil
-            </LoadingButton>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+    </>
   );
 }

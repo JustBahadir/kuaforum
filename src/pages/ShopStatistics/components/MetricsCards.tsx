@@ -1,71 +1,117 @@
 
-import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
 
 interface MetricsCardsProps {
-  isLoading: boolean;
   totalRevenue: number;
   totalServices: number;
   uniqueCustomerCount: number;
   totalCompletedAppointments: number;
+  isLoading: boolean;
 }
 
 export function MetricsCards({
-  isLoading,
   totalRevenue,
   totalServices,
   uniqueCustomerCount,
-  totalCompletedAppointments
+  totalCompletedAppointments,
+  isLoading
 }: MetricsCardsProps) {
+  
+  // Calculate average spending
+  const averageSpending = uniqueCustomerCount > 0 
+    ? totalRevenue / uniqueCustomerCount 
+    : 0;
+  
+  if (isLoading) {
+    return (
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+        {[...Array(5)].map((_, i) => (
+          <Card key={i}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium h-4 bg-gray-200 rounded animate-pulse"></CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-8 bg-gray-200 rounded animate-pulse mb-1"></div>
+              <p className="h-3 bg-gray-100 w-2/3 rounded animate-pulse"></p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+  
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <div className="rounded-lg border bg-card text-card-foreground shadow">
-        <div className="p-6 flex flex-col space-y-2">
-          <p className="text-sm text-muted-foreground">Toplam Ciro</p>
-          {isLoading ? (
-            <Skeleton className="h-7 w-20" />
-          ) : (
-            <p className="text-2xl font-bold">{formatCurrency(totalRevenue)}</p>
-          )}
-          <p className="text-xs text-muted-foreground">Güncel ciro bilgisi</p>
-        </div>
-      </div>
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">
+            Toplam Ciro
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
+          <p className="text-xs text-muted-foreground">
+            Toplam gelir
+          </p>
+        </CardContent>
+      </Card>
       
-      <div className="rounded-lg border bg-card text-card-foreground shadow">
-        <div className="p-6 flex flex-col space-y-2">
-          <p className="text-sm text-muted-foreground">Müşteri Sayısı</p>
-          {isLoading ? (
-            <Skeleton className="h-7 w-12" />
-          ) : (
-            <p className="text-2xl font-bold">{uniqueCustomerCount}</p>
-          )}
-          <p className="text-xs text-muted-foreground">Toplam müşteri sayısı</p>
-        </div>
-      </div>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">
+            Müşteri Sayısı
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{uniqueCustomerCount}</div>
+          <p className="text-xs text-muted-foreground">
+            Tekil müşteri sayısı
+          </p>
+        </CardContent>
+      </Card>
       
-      <div className="rounded-lg border bg-card text-card-foreground shadow">
-        <div className="p-6 flex flex-col space-y-2">
-          <p className="text-sm text-muted-foreground">İşlem Sayısı</p>
-          {isLoading ? (
-            <Skeleton className="h-7 w-12" />
-          ) : (
-            <p className="text-2xl font-bold">{totalServices}</p>
-          )}
-          <p className="text-xs text-muted-foreground">Toplam işlem sayısı</p>
-        </div>
-      </div>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">
+            İşlem Sayısı
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{totalServices}</div>
+          <p className="text-xs text-muted-foreground">
+            Toplam hizmet adedi
+          </p>
+        </CardContent>
+      </Card>
       
-      <div className="rounded-lg border bg-card text-card-foreground shadow">
-        <div className="p-6 flex flex-col space-y-2">
-          <p className="text-sm text-muted-foreground">Tamamlanan Randevular</p>
-          {isLoading ? (
-            <Skeleton className="h-7 w-12" />
-          ) : (
-            <p className="text-2xl font-bold">{totalCompletedAppointments}</p>
-          )}
-          <p className="text-xs text-muted-foreground">Toplam tamamlanan randevu</p>
-        </div>
-      </div>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">
+            Ortalama Harcama
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{formatCurrency(averageSpending)}</div>
+          <p className="text-xs text-muted-foreground">
+            Müşteri başına
+          </p>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">
+            Randevu Sayısı
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{totalCompletedAppointments}</div>
+          <p className="text-xs text-muted-foreground">
+            Tamamlanan randevular
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 }
