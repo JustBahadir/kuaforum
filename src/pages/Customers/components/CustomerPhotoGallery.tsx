@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Calendar, User } from "lucide-react";
+import { Search, Calendar, User, Camera } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { supabase } from "@/lib/supabase/client";
@@ -42,6 +42,7 @@ export function CustomerPhotoGallery({ customerId }: CustomerPhotoGalleryProps) 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("all");
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
 
   // Fetch operations with photos
   const { data: operations, isLoading } = useQuery({
@@ -138,7 +139,20 @@ export function CustomerPhotoGallery({ customerId }: CustomerPhotoGalleryProps) 
 
   const handleOpenPhotoModal = (operation: Operation) => {
     setSelectedPhoto(operation);
+    setCurrentPhotoIndex(0);
     setIsModalOpen(true);
+  };
+
+  const nextPhoto = () => {
+    if (selectedPhoto && selectedPhoto.photos && currentPhotoIndex < selectedPhoto.photos.length - 1) {
+      setCurrentPhotoIndex(prevIndex => prevIndex + 1);
+    }
+  };
+
+  const previousPhoto = () => {
+    if (selectedPhoto && currentPhotoIndex > 0) {
+      setCurrentPhotoIndex(prevIndex => prevIndex - 1);
+    }
   };
 
   if (isLoading) {
@@ -187,20 +201,49 @@ export function CustomerPhotoGallery({ customerId }: CustomerPhotoGalleryProps) 
       
       {filteredOperations.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredOperations.map((operation: Operation) => (
-            operation.photos && operation.photos.map((photo, index) => (
+          {filteredOperations.map((operation: Operation) => {
+            // Skip operations without photos
+            if (!operation.photos || operation.photos.length === 0) {
+              return null;
+            }
+            
+            const photoCount = operation.photos.length;
+            
+            return (
               <div 
-                key={`${operation.id}-${index}`} 
+                key={operation.id}
                 className="border rounded-md overflow-hidden cursor-pointer hover:shadow-md transition-shadow group"
                 onClick={() => handleOpenPhotoModal(operation)}
               >
-                <div className="aspect-square overflow-hidden">
-                  <img 
-                    src={photo} 
-                    alt={operation.service_name} 
-                    className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                  />
-                </div>
+                {photoCount === 1 ? (
+                  // Single photo display
+                  <div className="aspect-square overflow-hidden">
+                    <img 
+                      src={operation.photos[0]} 
+                      alt={operation.service_name} 
+                      className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                    />
+                  </div>
+                ) : (
+                  // Multiple photos display (2 max)
+                  <div className="aspect-square grid grid-cols-2 gap-1">
+                    {operation.photos.slice(0, 2).map((photo, photoIndex) => (
+                      <div key={photoIndex} className="overflow-hidden">
+                        <img 
+                          src={photo} 
+                          alt={`${operation.service_name} - ${photoIndex + 1}`} 
+                          className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                        />
+                      </div>
+                    ))}
+                    {/* Show indicator if there are more than 2 photos */}
+                    {photoCount > 2 && (
+                      <div className="absolute bottom-2 right-2 bg-black bg-opacity-60 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs">
+                        +{photoCount - 2}
+                      </div>
+                    )}
+                  </div>
+                )}
                 <div className="p-3">
                   <div className="flex justify-between items-start">
                     <h4 className="font-medium text-sm line-clamp-1">{operation.service_name}</h4>
@@ -214,8 +257,8 @@ export function CustomerPhotoGallery({ customerId }: CustomerPhotoGalleryProps) 
                   </div>
                 </div>
               </div>
-            ))
-          ))}
+            );
+          })}
         </div>
       ) : (
         <div className="text-center py-8 border rounded-md">
@@ -235,16 +278,47 @@ export function CustomerPhotoGallery({ customerId }: CustomerPhotoGalleryProps) 
           
           <div className="space-y-6">
             {selectedPhoto?.photos && selectedPhoto.photos.length > 0 && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {selectedPhoto.photos.map((photo, index) => (
-                  <div key={index} className="aspect-square overflow-hidden rounded-md border">
-                    <img 
-                      src={photo} 
-                      alt={`${selectedPhoto.service_name} - ${index + 1}`}
-                      className="w-full h-full object-cover"
-                    />
+              <div className="relative">
+                <div className="aspect-square overflow-hidden rounded-md border">
+                  <img 
+                    src={selectedPhoto.photos[currentPhotoIndex]} 
+                    alt={`${selectedPhoto.service_name} - ${currentPhotoIndex + 1}`}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+                
+                {/* Photo navigation buttons */}
+                {selectedPhoto.photos.length > 1 && (
+                  <div className="flex justify-between mt-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        previousPhoto();
+                      }}
+                      disabled={currentPhotoIndex === 0}
+                    >
+                      Önceki
+                    </Button>
+                    
+                    <span className="text-sm text-gray-500">
+                      {currentPhotoIndex + 1} / {selectedPhoto.photos.length}
+                    </span>
+                    
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        nextPhoto();
+                      }}
+                      disabled={currentPhotoIndex === selectedPhoto.photos.length - 1}
+                    >
+                      Sonraki
+                    </Button>
                   </div>
-                ))}
+                )}
               </div>
             )}
             

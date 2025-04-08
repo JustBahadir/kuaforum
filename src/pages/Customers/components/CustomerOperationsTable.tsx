@@ -5,14 +5,29 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { DatePickerWithRange } from "@/components/ui/date-range-picker-adapter";
 import { format } from "date-fns";
-import { CalendarIcon, RefreshCw, FileDown } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
+import { CalendarIcon, RefreshCw, FileDown, Camera, Image, Check, Edit, X } from "lucide-react";
+import { supabase } from "@/lib/supabase/client";
 
 interface CustomerOperationsTableProps {
   customerId: number;
 }
 
+interface OperationNote {
+  id: number;
+  note: string;
+  isEditing: boolean;
+}
+
 export function CustomerOperationsTable({ customerId }: CustomerOperationsTableProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [selectedOperation, setSelectedOperation] = useState<any>(null);
+  const [isNoteDialogOpen, setIsNoteDialogOpen] = useState(false);
+  const [isPhotoDialogOpen, setIsPhotoDialogOpen] = useState(false);
+  const [operationNotes, setOperationNotes] = useState<OperationNote[]>([]);
+  const [currentNote, setCurrentNote] = useState("");
   
   const {
     operations,
@@ -35,7 +50,58 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
   const handleReportDownload = () => {
     // Placeholder for PDF download functionality
     console.log("Downloading report for operations:", operations);
-    // Implementation for PDF download would go here
+    toast.info("Rapor indirme özelliği yakında eklenecek");
+  };
+
+  const handleOpenNoteDialog = (operation: any) => {
+    setSelectedOperation(operation);
+    setCurrentNote(operation.notlar || "");
+    
+    // Check if we already have this operation in our notes state
+    const existingNote = operationNotes.find(note => note.id === operation.id);
+    if (!existingNote) {
+      setOperationNotes([...operationNotes, { id: operation.id, note: operation.notlar || "", isEditing: false }]);
+    }
+    
+    setIsNoteDialogOpen(true);
+  };
+
+  const handleOpenPhotoDialog = (operation: any) => {
+    setSelectedOperation(operation);
+    setIsPhotoDialogOpen(true);
+  };
+
+  const handleSaveNote = async () => {
+    if (!selectedOperation) return;
+    
+    try {
+      // Here would be the API call to save the note
+      await supabase
+        .from('personel_islemleri')
+        .update({ notlar: currentNote })
+        .eq('id', selectedOperation.id);
+      
+      // Update local state
+      setOperationNotes(operationNotes.map(note => 
+        note.id === selectedOperation.id 
+          ? { ...note, note: currentNote, isEditing: false } 
+          : note
+      ));
+      
+      toast.success("Not başarıyla kaydedildi");
+      setIsNoteDialogOpen(false);
+    } catch (error) {
+      console.error("Error saving note:", error);
+      toast.error("Not kaydedilirken bir hata oluştu");
+    }
+  };
+
+  const handleUploadPhoto = async (method: 'camera' | 'gallery') => {
+    // This is a placeholder for photo upload functionality
+    // In a real implementation, you would use the device camera or file picker
+    console.log(`Uploading photo using ${method}`, selectedOperation);
+    toast.info(`${method === 'camera' ? 'Kamera' : 'Galeri'} kullanarak fotoğraf yükleme özelliği yakında eklenecek`);
+    setIsPhotoDialogOpen(false);
   };
 
   const formatDate = (date: Date | string) => {
@@ -53,6 +119,16 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
       </div>
     );
   }
+
+  // Helper function to check if operation has notes
+  const hasNotes = (operation: any) => {
+    return operation.notlar && operation.notlar.trim().length > 0;
+  };
+
+  // Helper function to check if operation has photos
+  const hasPhotos = (operation: any) => {
+    return operation.photos && operation.photos.length > 0;
+  };
 
   return (
     <div className="space-y-4">
@@ -130,6 +206,8 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
                   {showPointsColumn && (
                     <th className="py-2 px-2 md:px-4 text-right text-xs md:text-sm">Puan</th>
                   )}
+                  <th className="py-2 px-2 md:px-4 text-center text-xs md:text-sm">Not</th>
+                  <th className="py-2 px-2 md:px-4 text-center text-xs md:text-sm">Fotoğraf</th>
                 </tr>
               </thead>
               <tbody>
@@ -152,6 +230,34 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
                         {op.points || "0"}
                       </td>
                     )}
+                    <td className="py-2 px-2 md:px-4 text-center text-xs md:text-sm">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={() => handleOpenNoteDialog(op)}
+                      >
+                        {hasNotes(op) ? (
+                          <Check className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <Edit className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </td>
+                    <td className="py-2 px-2 md:px-4 text-center text-xs md:text-sm">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className="h-8 w-8 p-0" 
+                        onClick={() => handleOpenPhotoDialog(op)}
+                      >
+                        {hasPhotos(op) ? (
+                          <Camera className="h-4 w-4 text-blue-600" />
+                        ) : (
+                          <Camera className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -178,6 +284,84 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
           </Button>
         </div>
       )}
+
+      {/* Note Dialog */}
+      <Dialog open={isNoteDialogOpen} onOpenChange={setIsNoteDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>İşlem Notu</DialogTitle>
+            <DialogDescription>
+              {selectedOperation?.service_name || selectedOperation?.aciklama || "İşlem"} için notunuzu düzenleyin
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <Textarea
+              value={currentNote}
+              onChange={(e) => setCurrentNote(e.target.value)}
+              placeholder="İşlem hakkında notlarınızı buraya ekleyin..."
+              className="min-h-[150px]"
+            />
+            
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setIsNoteDialogOpen(false)}>
+                İptal
+              </Button>
+              <Button onClick={handleSaveNote}>
+                Kaydet
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Photo Upload Dialog */}
+      <Dialog open={isPhotoDialogOpen} onOpenChange={setIsPhotoDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Fotoğraf Ekle</DialogTitle>
+            <DialogDescription>
+              {selectedOperation?.service_name || selectedOperation?.aciklama || "İşlem"} için fotoğraf ekleyin (en fazla 2 fotoğraf)
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex flex-col gap-4">
+            <Button 
+              onClick={() => handleUploadPhoto('camera')} 
+              className="flex items-center gap-2"
+            >
+              <Camera className="h-5 w-5" />
+              Kamera ile Çek
+            </Button>
+            
+            <Button 
+              onClick={() => handleUploadPhoto('gallery')} 
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <Image className="h-5 w-5" />
+              Galeriden Seç
+            </Button>
+            
+            {selectedOperation && selectedOperation.photos && selectedOperation.photos.length > 0 && (
+              <div className="mt-4">
+                <h4 className="text-sm font-medium mb-2">Mevcut Fotoğraflar</h4>
+                <div className="grid grid-cols-2 gap-2">
+                  {selectedOperation.photos.map((photo: string, index: number) => (
+                    <div key={index} className="border rounded overflow-hidden aspect-square">
+                      <img 
+                        src={photo} 
+                        alt={`İşlem fotoğrafı ${index + 1}`} 
+                        className="w-full h-full object-cover" 
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -9,11 +9,9 @@ import { CustomerLoyaltyCard } from "./CustomerLoyaltyCard";
 import { CustomerProfile } from "./CustomerProfile";
 import { useQuery } from "@tanstack/react-query";
 import { musteriServisi, islemServisi } from "@/lib/supabase";
-import { useParams } from "react-router-dom";
-import { Label } from "@/components/ui/label";
+import { useParams, useNavigate } from "react-router-dom";
 import { CustomerPersonalData } from "./CustomerPersonalData";
 import { CustomerPhotoGallery } from "./CustomerPhotoGallery";
-import { Textarea } from "@/components/ui/textarea";
 
 interface CustomerDetailsProps {
   customerId?: number;
@@ -21,8 +19,8 @@ interface CustomerDetailsProps {
 
 export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsProps) {
   const [activeTab, setActiveTab] = useState("basic");
-  const [customerNote, setCustomerNote] = useState("");
   const params = useParams<{ id: string }>();
+  const navigate = useNavigate();
   
   // Use the prop customerId if provided, otherwise get it from URL params
   const customerId = propCustomerId !== undefined ? propCustomerId : params.id ? Number(params.id) : undefined;
@@ -48,9 +46,12 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
 
   const isPointSystemEnabled = services.some((service: any) => service.puan > 0);
   
-  const handleSaveNote = () => {
-    // Save note functionality would go here
-    console.log("Saving note:", customerNote);
+  // Handle appointment creation
+  const handleCreateAppointment = () => {
+    if (customerId) {
+      // Navigate to appointments page with customer ID in the URL
+      navigate(`/appointments?customerId=${customerId}`);
+    }
   };
 
   if (isLoading) {
@@ -82,13 +83,10 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
 
         {/* Action buttons */}
         <div className="flex gap-2">
-          <Button variant="outline" size="sm">
-            Düzenle
-          </Button>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={() => {}}>
             Mesaj Gönder
           </Button>
-          <Button size="sm">Randevu Oluştur</Button>
+          <Button size="sm" onClick={handleCreateAppointment}>Randevu Oluştur</Button>
         </div>
       </div>
 
@@ -105,42 +103,14 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
         
         {/* Temel Bilgiler (Basic Info) */}
         <TabsContent value="basic">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Müşteri Bilgileri</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CustomerProfile customer={customer} />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Not Ekle</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <Textarea 
-                    placeholder="Müşteri hakkında notlarınızı buraya ekleyin..." 
-                    value={customerNote}
-                    onChange={(e) => setCustomerNote(e.target.value)}
-                    className="min-h-[120px]"
-                  />
-                  <Button onClick={handleSaveNote} className="w-full md:w-auto">Kaydet</Button>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="lg:col-span-2">
-              <CardHeader>
-                <CardTitle>Son Randevular</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {customerId && <CustomerAppointmentsTable customerId={customerId} limitCount={3} />}
-              </CardContent>
-            </Card>
-          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Müşteri Bilgileri</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CustomerProfile customer={customer} />
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Detaylı Bilgiler (Detailed Info) */}
