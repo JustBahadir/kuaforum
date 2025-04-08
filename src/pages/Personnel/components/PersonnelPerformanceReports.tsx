@@ -106,6 +106,10 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
     );
   }
 
+  const handlePersonnelChange = (value: string) => {
+    setSelectedPersonnelId(Number(value));
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -113,7 +117,7 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
         
         <Select
           value={selectedPersonnelId?.toString()}
-          onValueChange={(value) => setSelectedPersonnelId(Number(value))}
+          onValueChange={handlePersonnelChange}
         >
           <SelectTrigger className="w-[220px]">
             <SelectValue placeholder="Personel seçiniz" />

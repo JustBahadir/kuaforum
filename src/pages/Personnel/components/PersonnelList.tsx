@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Plus, Pencil, BadgeDollarSign, User } from "lucide-react";
+import { Plus, Pencil, BadgeDollarSign, User, Trash } from "lucide-react";
 import { PersonnelAnalyst } from "@/components/analyst/PersonnelAnalyst";
 
 interface PersonnelListProps {
@@ -76,7 +76,7 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
       adres,
       maas: Number(maas),
       prim_yuzdesi: Number(primYuzdesi),
-      calisma_sistemi, // Already of type "haftalik" | "aylik"
+      calisma_sistemi, // "haftalik" | "aylik"
       iban,
       personel_no: Math.random().toString(36).substring(2, 8).toUpperCase()
     };
@@ -130,7 +130,7 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
         <CardTitle>Personel Listesi</CardTitle>
         <Button onClick={handleAddNew} className="flex items-center gap-1">
           <Plus size={16} />
-          Yeni Personel
+          Personel Ekle
         </Button>
       </CardHeader>
       <CardContent>
@@ -148,69 +148,38 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
           </div>
         ) : filteredPersonnel.length > 0 ? (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {filteredPersonnel.map((personel) => (
                 <div
                   key={personel.id}
-                  className="border rounded-md p-6 cursor-pointer hover:bg-gray-50 transition-colors"
+                  className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
                   onClick={() => onPersonnelSelect(personel.id)}
                 >
-                  <div className="flex justify-between items-start">
-                    <div className="flex items-center">
-                      <div className="bg-purple-100 w-10 h-10 rounded-full flex items-center justify-center mr-3">
-                        <span className="text-purple-700 font-semibold">
-                          {personel.ad_soyad?.split(' ').map((n: string) => n[0]).join('')}
-                        </span>
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-medium">{personel.ad_soyad}</h3>
-                        <p className="text-sm text-gray-500">{personel.telefon}</p>
-                      </div>
+                  <div className="p-4 flex items-center space-x-4 border-b border-gray-100">
+                    <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 font-bold">
+                      {personel.ad_soyad?.split(' ').map((n: string) => n[0]).join('')}
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-gray-900">{personel.ad_soyad}</h3>
+                      <p className="text-sm text-gray-500">Personel</p>
                     </div>
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
+                      className="text-red-500"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleEdit(personel);
                       }}
-                      className="flex items-center gap-1"
                     >
-                      <Pencil size={14} />
-                      Düzenle
+                      <Pencil size={16} />
                     </Button>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4 mt-4">
-                    <div>
-                      <p className="text-gray-500 text-sm">Email:</p>
-                      <p className="text-sm">{personel.eposta}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500 text-sm">Sistem:</p>
-                      <p className="text-sm">{personel.calisma_sistemi === 'haftalik' ? 'Haftalık' : 'Aylık'}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500 text-sm">Maaş:</p>
-                      <p className="text-sm font-medium">{personel.maas}₺</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500 text-sm">Prim:</p>
-                      <p className="text-sm font-medium">%{personel.prim_yuzdesi}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex justify-end mt-2">
-                    <div className="flex items-center text-green-600">
-                      <BadgeDollarSign className="h-4 w-4 mr-1" />
-                      <span className="text-sm font-medium">%{personel.prim_yuzdesi} prim</span>
-                    </div>
                   </div>
                 </div>
               ))}
             </div>
             
-            {/* Personnel Analyst component - directly after personnel list */}
+            {/* Add PersonnelAnalyst right below the personnel list */}
             <div className="mt-4">
               <PersonnelAnalyst />
             </div>
