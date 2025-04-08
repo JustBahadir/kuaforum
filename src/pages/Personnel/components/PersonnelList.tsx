@@ -8,8 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Plus, Pencil, BadgeDollarSign, User, Trash } from "lucide-react";
+import { Plus, Pencil } from "lucide-react";
 import { PersonnelAnalyst } from "@/components/analyst/PersonnelAnalyst";
+import { PersonnelDetailsDialog } from "./PersonnelDetailsDialog";
+import { Personel } from "@/lib/supabase/types";
 
 interface PersonnelListProps {
   onPersonnelSelect: (id: number) => void;
@@ -19,6 +21,8 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedPersonnel, setSelectedPersonnel] = useState<any | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [selectedPersonnelForDetails, setSelectedPersonnelForDetails] = useState<Personel | null>(null);
   
   // Form state
   const [adSoyad, setAdSoyad] = useState("");
@@ -117,6 +121,12 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
     setCalisma_sistemi("aylik");
     setIban("");
   };
+
+  const handlePersonnelClick = (personel: Personel) => {
+    setSelectedPersonnelForDetails(personel);
+    setDetailsDialogOpen(true);
+    onPersonnelSelect(personel.id);
+  };
   
   const filteredPersonnel = personeller.filter(personel =>
     personel.ad_soyad?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -147,17 +157,17 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
             <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
           </div>
         ) : filteredPersonnel.length > 0 ? (
-          <div className="space-y-6">
+          <div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {filteredPersonnel.map((personel) => (
                 <div
                   key={personel.id}
                   className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
-                  onClick={() => onPersonnelSelect(personel.id)}
+                  onClick={() => handlePersonnelClick(personel)}
                 >
-                  <div className="p-4 flex items-center space-x-4 border-b border-gray-100">
-                    <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 font-bold">
-                      {personel.ad_soyad?.split(' ').map((n: string) => n[0]).join('')}
+                  <div className="p-4 flex items-center">
+                    <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 font-bold mr-3">
+                      {personel.ad_soyad?.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()}
                     </div>
                     <div className="flex-1">
                       <h3 className="font-semibold text-gray-900">{personel.ad_soyad}</h3>
@@ -166,7 +176,7 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-red-500"
+                      className="text-gray-500"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleEdit(personel);
@@ -312,6 +322,15 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Personnel Details Dialog */}
+      {selectedPersonnelForDetails && (
+        <PersonnelDetailsDialog
+          personel={selectedPersonnelForDetails}
+          open={detailsDialogOpen}
+          onOpenChange={setDetailsDialogOpen}
+        />
+      )}
     </Card>
   );
 }

@@ -9,16 +9,14 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Copy, User, Calendar, Phone, Mail, Home, CreditCard } from "lucide-react";
 import { toast } from "sonner";
 import { profilServisi } from "@/lib/supabase";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PersonnelHistoryTable } from "./PersonnelHistoryTable";
 import { PersonnelPerformance } from "./PersonnelPerformance";
-import { PersonnelEditDialog } from "./PersonnelEditDialog";
-import { PersonnelOperationsTable } from "./PersonnelOperationsTable";
-import { format } from "date-fns";
+import { formatCurrency } from "@/lib/utils";
 
 interface PersonnelDetailsDialogProps {
   personel: any;
@@ -42,43 +40,10 @@ export function PersonnelDetailsDialog({
   const formatDate = (dateString?: string) => {
     if (!dateString) return "Belirtilmemiş";
     try {
-      return format(new Date(dateString), "dd.MM.yyyy");
+      return new Date(dateString).toLocaleDateString('tr-TR');
     } catch {
       return "Geçersiz tarih";
     }
-  };
-
-  const handleTabSwipe = (direction: 'left' | 'right') => {
-    const tabs = ["details", "operations", "performance"];
-    const currentIndex = tabs.indexOf(activeTab);
-    
-    if (direction === 'left' && currentIndex < tabs.length - 1) {
-      setActiveTab(tabs[currentIndex + 1]);
-    } else if (direction === 'right' && currentIndex > 0) {
-      setActiveTab(tabs[currentIndex - 1]);
-    }
-  };
-
-  const touchStartX = React.useRef<number | null>(null);
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
-  };
-  
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (touchStartX.current === null) return;
-    
-    const touchEndX = e.changedTouches[0].clientX;
-    const diff = touchStartX.current - touchEndX;
-    
-    if (Math.abs(diff) > 50) {
-      if (diff > 0) {
-        handleTabSwipe('left');
-      } else {
-        handleTabSwipe('right');
-      }
-    }
-    
-    touchStartX.current = null;
   };
 
   return (
@@ -90,22 +55,18 @@ export function PersonnelDetailsDialog({
         
         <div className="flex flex-col items-center mb-4">
           <Avatar className="h-24 w-24 mb-3">
-            {personel.avatar_url ? (
-              <AvatarImage src={personel.avatar_url} alt={personel.ad_soyad} />
-            ) : (
-              <AvatarFallback className="text-lg bg-purple-100 text-purple-800">
-                {personel.ad_soyad
-                  .split(' ')
-                  .map((name: string) => name[0])
-                  .join('')
-                  .substring(0, 2)
-                  .toUpperCase()}
-              </AvatarFallback>
-            )}
+            <AvatarFallback className="text-lg bg-purple-100 text-purple-800">
+              {personel.ad_soyad
+                .split(' ')
+                .map((name: string) => name[0])
+                .join('')
+                .substring(0, 2)
+                .toUpperCase()}
+            </AvatarFallback>
           </Avatar>
           <h2 className="text-xl font-bold">{personel.ad_soyad}</h2>
           <div className="badge bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs mt-1">
-            {personel.unvan || "Personel"}
+            Personel
           </div>
         </div>
         
@@ -123,11 +84,7 @@ export function PersonnelDetailsDialog({
             </TabsList>
           </div>
           
-          <div 
-            className="tab-content"
-            onTouchStart={handleTouchStart}
-            onTouchEnd={handleTouchEnd}
-          >
+          <div className="tab-content">
             <TabsContent value="details" className="space-y-6">
               <div className="grid gap-4 text-base">
                 <div className="grid grid-cols-1 sm:grid-cols-3 items-center border-b pb-2">
@@ -190,12 +147,7 @@ export function PersonnelDetailsDialog({
                     Maaş:
                   </div>
                   <div className="col-span-2">
-                    {personel.maas ? 
-                      new Intl.NumberFormat("tr-TR", {
-                        style: "currency",
-                        currency: "TRY",
-                      }).format(personel.maas || 0) 
-                      : "₺0,00"}
+                    {formatCurrency(personel.maas || 0)}
                   </div>
                 </div>
                 
@@ -229,8 +181,8 @@ export function PersonnelDetailsDialog({
               </div>
             </TabsContent>
             
-            <TabsContent value="operations" className="p-1">
-              <PersonnelOperationsTable personnelId={personel.id} />
+            <TabsContent value="operations">
+              <PersonnelHistoryTable personnelId={personel.id} />
             </TabsContent>
             
             <TabsContent value="performance">
@@ -245,12 +197,6 @@ export function PersonnelDetailsDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
-
-      <PersonnelEditDialog
-        personelId={personel.id}
-        open={editDialogOpen}
-        onOpenChange={setEditDialogOpen}
-      />
     </Dialog>
   );
 }
