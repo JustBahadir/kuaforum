@@ -11,6 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { format } from "date-fns"; // Add this import for the format function
 
 interface CustomerPersonalDataProps {
   customerId: number;
@@ -88,6 +89,9 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
     
     // Free Notes
     stylist_observations: "",
+    
+    // Add children_names to fix missing property error
+    children_names: [] as string[],
   });
 
   const {
@@ -150,6 +154,9 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
         sensitivity_notes: personalData.sensitivity_notes || "",
         
         stylist_observations: personalData.stylist_observations || "",
+        
+        // Add children_names from personalData
+        children_names: personalData.children_names || [],
       });
     }
   }, [personalData]);
