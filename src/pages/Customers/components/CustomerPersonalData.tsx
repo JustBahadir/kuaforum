@@ -5,12 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { format } from "date-fns";
 import { toast } from "sonner";
 import { customerPersonalDataService } from "@/lib/supabase/services/customerPersonalDataService";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 
 interface CustomerPersonalDataProps {
   customerId: number;
@@ -18,7 +18,11 @@ interface CustomerPersonalDataProps {
 
 // Define constants for preference options
 const BEVERAGE_OPTIONS = ["Kahve", "Çay", "Su", "Soğuk İçecekler"];
-const HAIR_TYPE_OPTIONS = ["Düz", "Dalgalı", "Kıvırcık", "İnce Telli", "Kalın Telli", "Kuru", "Normal", "Yağlı"];
+const HAIR_TYPE_OPTIONS = {
+  structure: ["Düz", "Dalgalı", "Kıvırcık"],
+  condition: ["Kuru", "Normal", "Yağlı"],
+  thickness: ["İnce Telli", "Kalın Telli"]
+};
 const HAIR_DYE_OPTIONS = ["Kalıcı Boya", "Geçici Boya"];
 const HEAT_PREFERENCES = ["Seviyor", "Sevmiyor", "Nötr"];
 const STYLING_PREFERENCES = ["Maşa", "Düzleştirici", "Bigudi", "Doğal Kurutma"];
@@ -40,18 +44,15 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
   const [isEditing, setIsEditing] = useState(false);
   const [childName, setChildName] = useState("");
   const [formData, setFormData] = useState({
-    // Family Information (moved to basic profile)
-    spouse_name: "",
-    spouse_birthdate: "",
-    anniversary_date: "",
-    children_names: [] as string[],
-    
     // Beverage Preference
     beverage_preferences: [] as string[],
     beverage_notes: "",
 
-    // Hair Type
-    hair_types: [] as string[],
+    // Hair Type - Updated structure for radio buttons
+    hair_structure: "", // Single value for radio button
+    hair_condition: "", // Single value for radio button
+    hair_thickness: "", // Single value for radio button
+    hair_types: [] as string[], // Keep compatibility with existing data
     
     // Hair Dye Preference
     dye_preferences: [] as string[],
@@ -87,10 +88,6 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
     
     // Free Notes
     stylist_observations: "",
-    
-    // Custom/Other fields
-    horoscope: "",
-    custom_notes: "",
   });
 
   const {
@@ -103,21 +100,27 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
     },
   });
 
+  // Extract hair type categories from existing data
   useEffect(() => {
     if (personalData) {
-      // Initialize form data with existing values from the database
-      // For simplicity, we're assuming a specific JSON structure for the preferences
-      // In a real application, you might need to parse these from custom fields
+      const hairTypes = personalData.hair_types || [];
+      
+      // Find hair structure
+      const hairStructure = HAIR_TYPE_OPTIONS.structure.find(type => hairTypes.includes(type)) || "";
+      
+      // Find hair condition
+      const hairCondition = HAIR_TYPE_OPTIONS.condition.find(type => hairTypes.includes(type)) || "";
+      
+      // Find hair thickness
+      const hairThickness = HAIR_TYPE_OPTIONS.thickness.find(type => hairTypes.includes(type)) || "";
+      
       setFormData({
-        spouse_name: personalData.spouse_name || "",
-        spouse_birthdate: personalData.spouse_birthdate || "",
-        anniversary_date: personalData.anniversary_date || "",
-        children_names: personalData.children_names || [],
-        
-        // Parse preferences from json or use defaults
         beverage_preferences: personalData.beverage_preferences || [],
         beverage_notes: personalData.beverage_notes || "",
         
+        hair_structure: hairStructure,
+        hair_condition: hairCondition,
+        hair_thickness: hairThickness,
         hair_types: personalData.hair_types || [],
         
         dye_preferences: personalData.dye_preferences || [],
@@ -147,19 +150,43 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
         sensitivity_notes: personalData.sensitivity_notes || "",
         
         stylist_observations: personalData.stylist_observations || "",
-        
-        horoscope: personalData.horoscope || "",
-        custom_notes: personalData.custom_notes || "",
       });
     }
   }, [personalData]);
 
   const updatePersonalDataMutation = useMutation({
     mutationFn: async (data: any) => {
-      await customerPersonalDataService.updateCustomerPersonalData(customerId, {
+      // Convert radio button selections back to array format
+      const hairTypes = [] as string[];
+      
+      if (data.hair_structure) {
+        hairTypes.push(data.hair_structure);
+      }
+      
+      if (data.hair_condition) {
+        hairTypes.push(data.hair_condition);
+      }
+      
+      if (data.hair_thickness) {
+        hairTypes.push(data.hair_thickness);
+      }
+      
+      // Prepare data for saving
+      const dataToSave = {
         ...data,
+        hair_types: hairTypes,
         customer_id: customerId.toString(),
-      });
+      };
+      
+      console.log("Saving data:", dataToSave);
+      
+      try {
+        await customerPersonalDataService.updateCustomerPersonalData(customerId, dataToSave);
+        return true;
+      } catch (error) {
+        console.error("Error updating personal data:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       toast.success("Müşteri bilgileri güncellendi");
@@ -194,6 +221,10 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
 
   const handleBooleanChange = (name: string, checked: boolean) => {
     setFormData((prev) => ({ ...prev, [name]: checked }));
+  };
+
+  const handleRadioChange = (name: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleAddChild = () => {
@@ -296,29 +327,81 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
         </div>
       </div>
 
-      {/* 2. Saç Tipi */}
+      <Separator className="my-6" />
+
+      {/* 2. Saç Tipi - Updated to use radio buttons in 3 columns */}
       <div>
         <h3 className="text-lg font-medium mb-4">Saç Tipi</h3>
-        <div className="grid gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Column 1: Hair Structure */}
           <div className="space-y-2">
-            <div className="flex flex-wrap gap-4">
-              {HAIR_TYPE_OPTIONS.map((hairType) => (
-                <div key={hairType} className="flex items-center space-x-2">
-                  <Checkbox 
-                    id={`hair-${hairType}`}
-                    checked={isSelected(formData.hair_types, hairType)}
-                    onCheckedChange={(checked) => 
-                      handleCheckboxChange('hair_types', hairType, checked as boolean)
-                    }
-                    disabled={!isEditing}
-                  />
-                  <label htmlFor={`hair-${hairType}`}>{hairType}</label>
-                </div>
-              ))}
-            </div>
+            <Label className="font-medium">Saç Yapısı</Label>
+            {isEditing ? (
+              <RadioGroup 
+                value={formData.hair_structure} 
+                onValueChange={(value) => handleRadioChange('hair_structure', value)}
+              >
+                {HAIR_TYPE_OPTIONS.structure.map(option => (
+                  <div key={option} className="flex items-center space-x-2">
+                    <RadioGroupItem value={option} id={`structure-${option}`} />
+                    <Label htmlFor={`structure-${option}`}>{option}</Label>
+                  </div>
+                ))}
+              </RadioGroup>
+            ) : (
+              <p className="p-2 border rounded-md bg-gray-50">
+                {formData.hair_structure || "Belirtilmemiş"}
+              </p>
+            )}
+          </div>
+          
+          {/* Column 2: Hair Condition */}
+          <div className="space-y-2">
+            <Label className="font-medium">Saç Durumu</Label>
+            {isEditing ? (
+              <RadioGroup 
+                value={formData.hair_condition} 
+                onValueChange={(value) => handleRadioChange('hair_condition', value)}
+              >
+                {HAIR_TYPE_OPTIONS.condition.map(option => (
+                  <div key={option} className="flex items-center space-x-2">
+                    <RadioGroupItem value={option} id={`condition-${option}`} />
+                    <Label htmlFor={`condition-${option}`}>{option}</Label>
+                  </div>
+                ))}
+              </RadioGroup>
+            ) : (
+              <p className="p-2 border rounded-md bg-gray-50">
+                {formData.hair_condition || "Belirtilmemiş"}
+              </p>
+            )}
+          </div>
+          
+          {/* Column 3: Hair Thickness */}
+          <div className="space-y-2">
+            <Label className="font-medium">Saç Kalınlığı</Label>
+            {isEditing ? (
+              <RadioGroup 
+                value={formData.hair_thickness} 
+                onValueChange={(value) => handleRadioChange('hair_thickness', value)}
+              >
+                {HAIR_TYPE_OPTIONS.thickness.map(option => (
+                  <div key={option} className="flex items-center space-x-2">
+                    <RadioGroupItem value={option} id={`thickness-${option}`} />
+                    <Label htmlFor={`thickness-${option}`}>{option}</Label>
+                  </div>
+                ))}
+              </RadioGroup>
+            ) : (
+              <p className="p-2 border rounded-md bg-gray-50">
+                {formData.hair_thickness || "Belirtilmemiş"}
+              </p>
+            )}
           </div>
         </div>
       </div>
+
+      <Separator className="my-6" />
 
       {/* 3. Boyama Tercihi */}
       <div>
@@ -388,6 +471,8 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
           </div>
         </div>
       </div>
+
+      <Separator className="my-6" />
 
       {/* 4. Isı İşlemi Toleransı */}
       <div>
@@ -476,6 +561,8 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
         </div>
       </div>
 
+      <Separator className="my-6" />
+
       {/* 5. Bakım Tercihleri */}
       <div>
         <h3 className="text-lg font-medium mb-4">Bakım Tercihleri</h3>
@@ -515,6 +602,8 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
           </div>
         </div>
       </div>
+
+      <Separator className="my-6" />
 
       {/* 6. Saç Uzunluğu & Hedefi */}
       <div>
@@ -588,6 +677,8 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
           </div>
         </div>
       </div>
+
+      <Separator className="my-6" />
 
       {/* 7. Kaş/Bıyık/İpek Kirpik Tercihleri */}
       <div>
@@ -688,6 +779,8 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
         </div>
       </div>
 
+      <Separator className="my-6" />
+
       {/* 8. Hassasiyet / Alerji / Kısıtlar */}
       <div>
         <h3 className="text-lg font-medium mb-4">Hassasiyet / Alerji / Kısıtlar</h3>
@@ -727,6 +820,8 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
           </div>
         </div>
       </div>
+
+      <Separator className="my-6" />
 
       {/* 9. Serbest Not Alanı (Kuaför İçin Gözlem Notları) */}
       <div>

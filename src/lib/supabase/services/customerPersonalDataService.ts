@@ -22,6 +22,9 @@ export interface CustomerPersonalData {
   
   // Hair type preferences
   hair_types?: string[];
+  hair_structure?: string; // Düz, Dalgalı, Kıvırcık
+  hair_condition?: string; // Kuru, Normal, Yağlı
+  hair_thickness?: string; // İnce Telli, Kalın Telli
   
   // Dye preferences
   dye_preferences?: string[];
@@ -126,17 +129,37 @@ export const customerPersonalDataService = {
       // Ensure children_names is an array
       const children_names = Array.isArray(personalData.children_names) ? personalData.children_names : [];
       console.log("Children names to update:", children_names);
+
+      // Convert hair_structure, hair_condition, and hair_thickness to hair_types
+      let hair_types = [...(personalData.hair_types || [])];
+      
+      // Add structure, condition, and thickness if they're not already in the array
+      if (personalData.hair_structure && !hair_types.includes(personalData.hair_structure)) {
+        hair_types = [...hair_types.filter(t => !['Düz', 'Dalgalı', 'Kıvırcık'].includes(t)), personalData.hair_structure];
+      }
+      
+      if (personalData.hair_condition && !hair_types.includes(personalData.hair_condition)) {
+        hair_types = [...hair_types.filter(t => !['Kuru', 'Normal', 'Yağlı'].includes(t)), personalData.hair_condition];
+      }
+      
+      if (personalData.hair_thickness && !hair_types.includes(personalData.hair_thickness)) {
+        hair_types = [...hair_types.filter(t => !['İnce Telli', 'Kalın Telli'].includes(t)), personalData.hair_thickness];
+      }
+      
+      // Create data object for save operation
+      const dataToSave = {
+        ...personalData,
+        customer_id: customerIdForUpdate, // Make sure to use the formatted ID
+        children_names: children_names,
+        hair_types: hair_types,
+        updated_at: new Date().toISOString()
+      };
       
       if (existingData) {
         // Update existing record
         const { error } = await supabase
           .from('customer_personal_data')
-          .update({
-            ...personalData,
-            customer_id: customerIdForUpdate, // Make sure to use the formatted ID
-            children_names: children_names,
-            updated_at: new Date().toISOString()
-          })
+          .update(dataToSave)
           .eq('customer_id', customerIdForUpdate);
           
         if (error) {
@@ -151,10 +174,8 @@ export const customerPersonalDataService = {
           .from('customer_personal_data')
           .insert({
             customer_id: customerIdForUpdate, // Make sure to use the formatted ID
-            ...personalData,
-            children_names: children_names,
+            ...dataToSave,
             created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
           });
           
         if (error) {

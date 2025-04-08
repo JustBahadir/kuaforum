@@ -12,6 +12,7 @@ import { musteriServisi, islemServisi } from "@/lib/supabase";
 import { useParams, useNavigate } from "react-router-dom";
 import { CustomerPersonalData } from "./CustomerPersonalData";
 import { CustomerPhotoGallery } from "./CustomerPhotoGallery";
+import { customerPersonalDataService } from "@/lib/supabase/services/customerPersonalDataService";
 
 interface CustomerDetailsProps {
   customerId?: number;
@@ -27,8 +28,8 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
 
   const { 
     data: customer, 
-    isLoading,
-    error
+    isLoading: isLoadingCustomer,
+    error: customerError
   } = useQuery({
     queryKey: ['customer', customerId],
     queryFn: async () => {
@@ -37,6 +38,25 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
     },
     enabled: !!customerId,
   });
+  
+  // Fetch customer personal data
+  const {
+    data: personalData,
+    isLoading: isLoadingPersonalData
+  } = useQuery({
+    queryKey: ['customer-personal-data', customerId],
+    queryFn: async () => {
+      if (!customerId) throw new Error("No customer ID provided");
+      return customerPersonalDataService.getCustomerPersonalData(customerId);
+    },
+    enabled: !!customerId
+  });
+
+  // Merge customer data with personal data
+  const customerWithPersonalData = customer && personalData ? {
+    ...customer,
+    ...personalData
+  } : customer;
 
   // Check if points system is enabled
   const { data: services = [] } = useQuery({
@@ -54,7 +74,7 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
     }
   };
 
-  if (isLoading) {
+  if (isLoadingCustomer || isLoadingPersonalData) {
     return (
       <div className="flex justify-center p-6">
         <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
@@ -62,7 +82,7 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
     );
   }
 
-  if (error || !customer) {
+  if (customerError || !customer) {
     return (
       <div className="p-4 md:p-6 border border-gray-200 rounded-md bg-gray-50">
         <h3 className="text-lg font-medium text-gray-900">Müşteri Bulunamadı</h3>
@@ -108,7 +128,7 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
               <CardTitle>Müşteri Bilgileri</CardTitle>
             </CardHeader>
             <CardContent>
-              <CustomerProfile customer={customer} />
+              <CustomerProfile customer={customerWithPersonalData} />
             </CardContent>
           </Card>
         </TabsContent>
