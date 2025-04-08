@@ -15,6 +15,48 @@ export interface CustomerPersonalData {
   daily_horoscope_reading?: string | null;
   spouse_name?: string | null;
   spouse_birthdate?: string | null;
+  
+  // Customer beverage preferences
+  beverage_preferences?: string[];
+  beverage_notes?: string;
+  
+  // Hair type preferences
+  hair_types?: string[];
+  
+  // Dye preferences
+  dye_preferences?: string[];
+  root_dye_frequency?: string;
+  bleach_tolerance?: boolean;
+  allergy_notes?: string;
+  
+  // Heat treatment preferences
+  straightener_preference?: string;
+  curling_preference?: string;
+  heat_sensitive_hair?: boolean;
+  heat_notes?: string;
+  
+  // Care preferences
+  care_preferences?: string[];
+  care_notes?: string;
+  
+  // Hair length & goal
+  hair_length?: string;
+  hair_goal?: string;
+  hair_goal_notes?: string;
+  
+  // Brow/Mustache/Eyelash preferences
+  brow_preference?: string;
+  mustache_preference?: string;
+  waxing_preference?: boolean;
+  eyelash_preference?: boolean;
+  face_preference_notes?: string;
+  
+  // Sensitivities
+  sensitivities?: string[];
+  sensitivity_notes?: string;
+  
+  // Stylist observations
+  stylist_observations?: string;
 }
 
 export const customerPersonalDataService = {
