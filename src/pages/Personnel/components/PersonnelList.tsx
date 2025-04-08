@@ -7,8 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { Plus, Pencil, BadgeDollarSign, User } from "lucide-react";
 import { PersonnelAnalyst } from "@/components/analyst/PersonnelAnalyst";
@@ -127,108 +125,102 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
   );
 
   return (
-    <>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Personel Listesi</CardTitle>
-          <Button onClick={handleAddNew} size="sm" className="flex items-center gap-1">
-            <Plus size={16} />
-            Yeni Personel
-          </Button>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-4">
-            <Input 
-              placeholder="Ara..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)} 
-            />
+    <Card className="mb-4">
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle>Personel Listesi</CardTitle>
+        <Button onClick={handleAddNew} className="flex items-center gap-1">
+          <Plus size={16} />
+          Yeni Personel
+        </Button>
+      </CardHeader>
+      <CardContent>
+        <div className="mb-4">
+          <Input 
+            placeholder="Ara..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)} 
+          />
+        </div>
+        
+        {isLoading ? (
+          <div className="flex justify-center p-4">
+            <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
           </div>
-          
-          <ScrollArea className="h-[600px] pr-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {isLoading ? (
-                <div className="flex justify-center p-4 col-span-full">
-                  <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
+        ) : filteredPersonnel.length > 0 ? (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {filteredPersonnel.map((personel) => (
+                <div
+                  key={personel.id}
+                  className="border rounded-md p-6 cursor-pointer hover:bg-gray-50 transition-colors"
+                  onClick={() => onPersonnelSelect(personel.id)}
+                >
+                  <div className="flex justify-between items-start">
+                    <div className="flex items-center">
+                      <div className="bg-purple-100 w-10 h-10 rounded-full flex items-center justify-center mr-3">
+                        <span className="text-purple-700 font-semibold">
+                          {personel.ad_soyad?.split(' ').map((n: string) => n[0]).join('')}
+                        </span>
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-medium">{personel.ad_soyad}</h3>
+                        <p className="text-sm text-gray-500">{personel.telefon}</p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEdit(personel);
+                      }}
+                      className="flex items-center gap-1"
+                    >
+                      <Pencil size={14} />
+                      Düzenle
+                    </Button>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4 mt-4">
+                    <div>
+                      <p className="text-gray-500 text-sm">Email:</p>
+                      <p className="text-sm">{personel.eposta}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 text-sm">Sistem:</p>
+                      <p className="text-sm">{personel.calisma_sistemi === 'haftalik' ? 'Haftalık' : 'Aylık'}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 text-sm">Maaş:</p>
+                      <p className="text-sm font-medium">{personel.maas}₺</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 text-sm">Prim:</p>
+                      <p className="text-sm font-medium">%{personel.prim_yuzdesi}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex justify-end mt-2">
+                    <div className="flex items-center text-green-600">
+                      <BadgeDollarSign className="h-4 w-4 mr-1" />
+                      <span className="text-sm font-medium">%{personel.prim_yuzdesi} prim</span>
+                    </div>
+                  </div>
                 </div>
-              ) : filteredPersonnel.length > 0 ? (
-                filteredPersonnel.map(personel => (
-                  <Card 
-                    key={personel.id} 
-                    className="hover:shadow-md transition-shadow cursor-pointer bg-white"
-                    onClick={() => onPersonnelSelect(personel.id)}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-center space-x-4 mb-4">
-                        <Avatar className="h-12 w-12">
-                          {personel.avatar_url ? (
-                            <AvatarImage src={personel.avatar_url} alt={personel.ad_soyad} />
-                          ) : (
-                            <AvatarFallback>
-                              <User className="h-6 w-6" />
-                            </AvatarFallback>
-                          )}
-                        </Avatar>
-                        <div>
-                          <h4 className="font-medium text-lg">{personel.ad_soyad}</h4>
-                          <p className="text-sm text-gray-500">{personel.telefon}</p>
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-2 text-sm mb-4">
-                        <div>
-                          <p className="text-gray-500">Email:</p>
-                          <p className="truncate">{personel.eposta}</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-500">Sistem:</p>
-                          <p>{personel.calisma_sistemi === 'haftalik' ? 'Haftalık' : 'Aylık'}</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-500">Maaş:</p>
-                          <p className="font-medium">{personel.maas}₺</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-500">Prim:</p>
-                          <p className="font-medium">%{personel.prim_yuzdesi}</p>
-                        </div>
-                      </div>
-                      
-                      <div className="flex justify-between items-center mt-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEdit(personel);
-                          }}
-                          className="flex items-center gap-1"
-                        >
-                          <Pencil size={14} />
-                          Düzenle
-                        </Button>
-                        
-                        <div className="flex items-center">
-                          <BadgeDollarSign className="h-4 w-4 text-green-600 mr-1" />
-                          <span className="text-sm font-medium">%{personel.prim_yuzdesi} prim</span>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
-              ) : (
-                <div className="text-center py-8 text-gray-500 col-span-full">
-                  Personel bulunamadı
-                </div>
-              )}
+              ))}
             </div>
-          </ScrollArea>
-          
-          <div className="mt-6">
-            <PersonnelAnalyst />
+            
+            {/* Personnel Analyst component - directly after personnel list */}
+            <div className="mt-4">
+              <PersonnelAnalyst />
+            </div>
           </div>
-        </CardContent>
-      </Card>
+        ) : (
+          <div className="text-center py-8 text-gray-500">
+            Personel bulunamadı
+          </div>
+        )}
+      </CardContent>
       
       {/* Personnel Form Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -351,6 +343,6 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
           </form>
         </DialogContent>
       </Dialog>
-    </>
+    </Card>
   );
 }

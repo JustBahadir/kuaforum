@@ -5,28 +5,51 @@ import { Bar, BarChart, Legend, Line, LineChart, ResponsiveContainer, Tooltip, X
 import { personelIslemleriServisi, personelServisi } from "@/lib/supabase";
 import { formatCurrency } from "@/lib/utils";
 import { PersonnelDetailsAnalyst } from "./PersonnelDetailsAnalyst";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState, useEffect } from "react";
 
 interface PersonnelPerformanceReportsProps {
-  personnelId: number;
+  personnelId?: number;
 }
 
 export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanceReportsProps) {
+  const [selectedPersonnelId, setSelectedPersonnelId] = useState<number | undefined>(personnelId);
+  
+  // Get all personnel for selection dropdown
+  const { data: allPersonnel = [], isLoading: isLoadingPersonnelList } = useQuery({
+    queryKey: ['personnel-list'],
+    queryFn: async () => {
+      return personelServisi.hepsiniGetir();
+    }
+  });
+  
+  // Update selected personnel when prop changes
+  useEffect(() => {
+    if (personnelId) {
+      setSelectedPersonnelId(personnelId);
+    } else if (allPersonnel.length > 0 && !selectedPersonnelId) {
+      setSelectedPersonnelId(allPersonnel[0].id);
+    }
+  }, [personnelId, allPersonnel, selectedPersonnelId]);
+  
   // Get personnel details
   const { data: personnel, isLoading: isPersonnelLoading } = useQuery({
-    queryKey: ['personnel', personnelId],
+    queryKey: ['personnel', selectedPersonnelId],
     queryFn: async () => {
-      return personelServisi.getirById(personnelId);
+      if (!selectedPersonnelId) return null;
+      return personelServisi.getirById(selectedPersonnelId);
     },
-    enabled: !!personnelId
+    enabled: !!selectedPersonnelId
   });
 
   // Get personnel operations
   const { data: operations = [], isLoading: isOperationsLoading } = useQuery({
-    queryKey: ['personnelOperations', personnelId],
+    queryKey: ['personnelOperations', selectedPersonnelId],
     queryFn: async () => {
-      return personelIslemleriServisi.personelIslemleriGetir(personnelId);
+      if (!selectedPersonnelId) return [];
+      return personelIslemleriServisi.personelIslemleriGetir(selectedPersonnelId);
     },
-    enabled: !!personnelId
+    enabled: !!selectedPersonnelId
   });
 
   // Generate weekly data
@@ -73,7 +96,7 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
     return months;
   };
 
-  const isLoading = isPersonnelLoading || isOperationsLoading;
+  const isLoading = isPersonnelLoading || isOperationsLoading || isLoadingPersonnelList;
   
   if (isLoading) {
     return (
@@ -83,66 +106,86 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
     );
   }
 
-  if (!personnel) {
-    return (
-      <div className="p-4 text-center text-gray-500">
-        Personel bilgileri bulunamadı.
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-semibold">{personnel.ad_soyad} - Performans Raporu</h2>
-      
-      {/* Add Analyst Component at the top */}
-      <PersonnelDetailsAnalyst personnelId={personnelId} />
-      
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Haftalık Performans</CardTitle>
-          </CardHeader>
-          <CardContent className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={weeklyData()}>
-                <XAxis dataKey="name" />
-                <YAxis yAxisId="left" />
-                <YAxis yAxisId="right" orientation="right" />
-                <Tooltip formatter={(value, name) => {
-                  if (name === 'gelir') return formatCurrency(value as number);
-                  return value;
-                }} />
-                <Legend />
-                <Bar yAxisId="left" dataKey="gelir" name="Gelir (₺)" fill="#8884d8" />
-                <Bar yAxisId="right" dataKey="islemSayisi" name="İşlem Sayısı" fill="#82ca9d" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Aylık Performans</CardTitle>
-          </CardHeader>
-          <CardContent className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={monthlyData()}>
-                <XAxis dataKey="name" />
-                <YAxis yAxisId="left" />
-                <YAxis yAxisId="right" orientation="right" />
-                <Tooltip formatter={(value, name) => {
-                  if (name === 'gelir') return formatCurrency(value as number);
-                  return value;
-                }} />
-                <Legend />
-                <Line yAxisId="left" type="monotone" dataKey="gelir" name="Gelir (₺)" stroke="#8884d8" />
-                <Line yAxisId="right" type="monotone" dataKey="islemSayisi" name="İşlem Sayısı" stroke="#82ca9d" />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-semibold">Personel Performans Raporu</h2>
+        
+        <Select
+          value={selectedPersonnelId?.toString()}
+          onValueChange={(value) => setSelectedPersonnelId(Number(value))}
+        >
+          <SelectTrigger className="w-[220px]">
+            <SelectValue placeholder="Personel seçiniz" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              {allPersonnel.map((person) => (
+                <SelectItem key={person.id} value={person.id.toString()}>
+                  {person.ad_soyad}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
       </div>
+      
+      {personnel ? (
+        <>
+          {/* Add Analyst Component at the top */}
+          <PersonnelDetailsAnalyst personnelId={selectedPersonnelId} />
+          
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Haftalık Performans - {personnel.ad_soyad}</CardTitle>
+              </CardHeader>
+              <CardContent className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={weeklyData()}>
+                    <XAxis dataKey="name" />
+                    <YAxis yAxisId="left" />
+                    <YAxis yAxisId="right" orientation="right" />
+                    <Tooltip formatter={(value, name) => {
+                      if (name === 'gelir') return formatCurrency(value as number);
+                      return value;
+                    }} />
+                    <Legend />
+                    <Bar yAxisId="left" dataKey="gelir" name="Gelir (₺)" fill="#8884d8" />
+                    <Bar yAxisId="right" dataKey="islemSayisi" name="İşlem Sayısı" fill="#82ca9d" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Aylık Performans - {personnel.ad_soyad}</CardTitle>
+              </CardHeader>
+              <CardContent className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={monthlyData()}>
+                    <XAxis dataKey="name" />
+                    <YAxis yAxisId="left" />
+                    <YAxis yAxisId="right" orientation="right" />
+                    <Tooltip formatter={(value, name) => {
+                      if (name === 'gelir') return formatCurrency(value as number);
+                      return value;
+                    }} />
+                    <Legend />
+                    <Line yAxisId="left" type="monotone" dataKey="gelir" name="Gelir (₺)" stroke="#8884d8" />
+                    <Line yAxisId="right" type="monotone" dataKey="islemSayisi" name="İşlem Sayısı" stroke="#82ca9d" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      ) : (
+        <div className="p-4 text-center text-gray-500">
+          Lütfen personel seçiniz veya veri bulunamadı.
+        </div>
+      )}
     </div>
   );
 }
