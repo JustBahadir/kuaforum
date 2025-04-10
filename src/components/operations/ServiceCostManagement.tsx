@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,7 +17,7 @@ interface ServiceCost {
   id: number;
   islem_adi: string;
   fiyat: number;
-  maliyet: number;
+  maliyet?: number;
   kategori_adi?: string;
   kategori_id?: number;
   profitMargin?: number;
@@ -54,6 +54,7 @@ export function ServiceCostManagement() {
   // Update service cost mutation
   const updateCostMutation = useMutation({
     mutationFn: async ({ id, maliyet }: { id: number, maliyet: number }) => {
+      // Ensure we're passing a proper object with correct properties
       return await islemServisi.guncelle(id, { maliyet });
     },
     onSuccess: () => {
@@ -70,7 +71,7 @@ export function ServiceCostManagement() {
   // Start editing a service cost
   const handleEdit = (service: ServiceCost) => {
     setEditingId(service.id);
-    setEditedMaliyet(service.maliyet);
+    setEditedMaliyet(service.maliyet || 0);
   };
   
   // Save the edited cost
@@ -185,7 +186,7 @@ export function ServiceCostManagement() {
                               className="w-24 text-right inline-block"
                             />
                           ) : (
-                            formatCurrency(service.maliyet)
+                            formatCurrency(service.maliyet || 0)
                           )}
                         </TableCell>
                         <TableCell className={`text-right font-medium ${getProfitMarginColor(service.profitMargin)}`}>

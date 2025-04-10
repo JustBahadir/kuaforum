@@ -35,7 +35,7 @@ export interface ServiceFormProps {
   setPuan: (value: number) => void;
   kategoriId: number | undefined;
   setKategoriId: (value: number | undefined) => void;
-  isNewService: boolean;
+  isNewService?: boolean;
   serviceId?: number;
   puanlamaAktif: boolean;
   showCategorySelect?: boolean;
@@ -53,7 +53,7 @@ export function ServiceForm({
   setPuan,
   kategoriId,
   setKategoriId,
-  isNewService,
+  isNewService = true,
   serviceId,
   puanlamaAktif,
   showCategorySelect = true,

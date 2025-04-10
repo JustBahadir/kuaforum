@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Personel } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
@@ -18,9 +17,14 @@ import { dukkanServisi } from "@/lib/supabase/services/dukkanServisi";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-interface PersonnelFormProps {
-  onSubmit: (data: Omit<Personel, 'id' | 'created_at'>) => void;
-  isLoading: boolean;
+export interface PersonnelFormProps {
+  personnel?: any;
+  onChange?: (field: string, value: any) => void;
+  readOnly?: boolean;
+  showWorkInfo?: boolean;
+  showPersonalInfo?: boolean;
+  onSubmit?: (data: any) => void;
+  isLoading?: boolean;
 }
 
 export function PersonnelForm({ onSubmit, isLoading }: PersonnelFormProps) {
@@ -37,13 +41,11 @@ export function PersonnelForm({ onSubmit, isLoading }: PersonnelFormProps) {
     dukkan_id: dukkanId || undefined
   });
   
-  // For staff joining via invitation
   const [dukkanKodu, setDukkanKodu] = useState("");
   const [dogrulamaYapiliyor, setDogrulamaYapiliyor] = useState(false);
   const [dogrulanmisDukkan, setDogrulanmisDukkan] = useState<{id: number, ad: string} | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   
-  // Update dukkan_id when it changes in auth context
   useEffect(() => {
     if (dukkanId) {
       setYeniPersonel(prev => ({
@@ -53,7 +55,6 @@ export function PersonnelForm({ onSubmit, isLoading }: PersonnelFormProps) {
     }
   }, [dukkanId]);
   
-  // Verify shop code
   const handleVerifyShopCode = async () => {
     if (!dukkanKodu) {
       toast.error("Lütfen dükkan kodunu girin");
@@ -88,10 +89,8 @@ export function PersonnelForm({ onSubmit, isLoading }: PersonnelFormProps) {
   };
 
   const validateFormFields = () => {
-    // Reset form error
     setFormError(null);
     
-    // Admin form validation
     if (userRole === 'admin') {
       if (!dukkanId) {
         setFormError("Personel eklemek için bir dükkana bağlı olmanız gerekmektedir.");
@@ -113,7 +112,6 @@ export function PersonnelForm({ onSubmit, isLoading }: PersonnelFormProps) {
         return false;
       }
     } 
-    // Staff form validation
     else {
       if (!dogrulanmisDukkan) {
         setFormError("Lütfen önce dükkan kodunu doğrulayın.");
@@ -142,14 +140,11 @@ export function PersonnelForm({ onSubmit, isLoading }: PersonnelFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate form fields
     if (!validateFormFields()) {
       return;
     }
     
-    // For admin adding staff to their own shop
     if (userRole === 'admin') {
-      // Ensure dukkan_id is set
       const personelData = {
         ...yeniPersonel,
         dukkan_id: dukkanId || undefined
@@ -164,13 +159,11 @@ export function PersonnelForm({ onSubmit, isLoading }: PersonnelFormProps) {
       return;
     }
     
-    // For staff joining via invitation
     if (!dogrulanmisDukkan) {
       setFormError("Lütfen önce dükkan kodunu doğrulayın");
       return;
     }
     
-    // Personnel joining with shop code
     const personelData = {
       ...yeniPersonel,
       dukkan_id: dogrulanmisDukkan.id
@@ -179,9 +172,7 @@ export function PersonnelForm({ onSubmit, isLoading }: PersonnelFormProps) {
     onSubmit(personelData);
   };
 
-  // Show different form based on role
   if (userRole === 'admin') {
-    // Admin adding personnel to their shop
     return (
       <form onSubmit={handleSubmit} className="space-y-4">
         {formError && (
@@ -310,7 +301,6 @@ export function PersonnelForm({ onSubmit, isLoading }: PersonnelFormProps) {
       </form>
     );
   } else {
-    // Personnel joining via invitation
     return (
       <form onSubmit={handleSubmit} className="space-y-4">
         {formError && (

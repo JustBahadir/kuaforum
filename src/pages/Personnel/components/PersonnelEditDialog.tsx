@@ -107,11 +107,11 @@ export function PersonnelEditDialog({
             </TabsContent>
             
             <TabsContent value="history">
-              <PersonnelOperationsTable personelId={personnel.id} />
+              <PersonnelOperationsTable personnelId={personnel.id} />
             </TabsContent>
             
             <TabsContent value="performance">
-              <PersonnelPerformance personelId={personnel.id} />
+              <PersonnelPerformance personnelId={personnel.id} />
             </TabsContent>
           </Tabs>
           

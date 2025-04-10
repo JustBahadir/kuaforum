@@ -30,13 +30,20 @@ import {
 import { PersonnelDetailsDialog } from "./PersonnelDetailsDialog";
 
 interface PersonnelListProps {
-  personnel: any[];
-  isLoading: boolean;
-  onEdit: (personnel: any) => void;
-  onDelete: (id: number) => void;
+  personnel?: any[];
+  isLoading?: boolean;
+  onEdit?: (personnel: any) => void;
+  onDelete?: (id: number) => void;
+  onPersonnelSelect?: (id: number | null) => void;
 }
 
-export function PersonnelList({ personnel, isLoading, onEdit, onDelete }: PersonnelListProps) {
+export function PersonnelList({ 
+  personnel = [], 
+  isLoading = false, 
+  onEdit = () => {}, 
+  onDelete = () => {},
+  onPersonnelSelect = () => {}
+}: PersonnelListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [filter, setFilter] = useState("all");
   const [selectedPersonnel, setSelectedPersonnel] = useState<any>(null);
@@ -74,6 +81,10 @@ export function PersonnelList({ personnel, isLoading, onEdit, onDelete }: Person
   const handlePersonnelClick = (personnel: any) => {
     setSelectedPersonnel(personnel);
     setIsDetailsDialogOpen(true);
+    // Call the onPersonnelSelect prop with the selected personnel id
+    if (onPersonnelSelect) {
+      onPersonnelSelect(personnel.id);
+    }
   };
 
   const getInitials = (name: string) => {

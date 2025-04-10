@@ -1,30 +1,32 @@
-
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { personelIslemleriServisi } from "@/lib/supabase";
 import { format } from "date-fns";
 import { formatCurrency } from "@/lib/utils";
 
-interface PersonnelOperationsTableProps {
-  personnelId: number;
+export interface PersonnelOperationsTableProps {
+  personnelId?: number;
+  personelId?: number; // For backwards compatibility
 }
 
-export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTableProps) {
+export function PersonnelOperationsTable({ personnelId, personelId }: PersonnelOperationsTableProps) {
+  const actualPersonnelId = personnelId || personelId;
+  
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<any>(null);
   const [operations, setOperations] = useState<any[]>([]);
   
   useEffect(() => {
     async function fetchOperations() {
-      if (!personnelId) return;
+      if (!actualPersonnelId) return;
       
       setIsLoading(true);
       setError(null);
       
       try {
-        console.info("Fetching operations for personnel ID:", personnelId);
-        console.info("Directly fetching operations for personnel ID:", personnelId);
-        const results = await personelIslemleriServisi.personelIslemleriGetirById(personnelId);
+        console.info("Fetching operations for personnel ID:", actualPersonnelId);
+        console.info("Directly fetching operations for personnel ID:", actualPersonnelId);
+        const results = await personelIslemleriServisi.personelIslemleriGetirById(actualPersonnelId);
         setOperations(results);
       } catch (err) {
         console.error("Error fetching personnel operations:", err);
@@ -35,7 +37,7 @@ export function PersonnelOperationsTable({ personnelId }: PersonnelOperationsTab
     }
     
     fetchOperations();
-  }, [personnelId]);
+  }, [actualPersonnelId]);
 
   if (isLoading) {
     return (

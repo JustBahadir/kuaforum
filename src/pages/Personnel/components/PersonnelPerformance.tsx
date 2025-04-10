@@ -5,17 +5,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from "recharts";
 import { formatCurrency } from "@/lib/utils";
 
-interface PersonnelPerformanceProps {
-  personnelId: number;
+export interface PersonnelPerformanceProps {
+  personnelId?: number;
+  personelId?: number; // For backwards compatibility
 }
 
-export function PersonnelPerformance({ personnelId }: PersonnelPerformanceProps) {
+export function PersonnelPerformance({ personnelId, personelId }: PersonnelPerformanceProps) {
+  const actualPersonnelId = personnelId || personelId;
+  
   const { data: operations = [], isLoading } = useQuery({
-    queryKey: ['personnel-operations', personnelId],
+    queryKey: ['personnel-operations', actualPersonnelId],
     queryFn: async () => {
-      return personelIslemleriServisi.personelIslemleriGetir(personnelId);
+      return personelIslemleriServisi.personelIslemleriGetir(actualPersonnelId);
     },
-    enabled: !!personnelId
+    enabled: !!actualPersonnelId
   });
 
   if (isLoading) {
