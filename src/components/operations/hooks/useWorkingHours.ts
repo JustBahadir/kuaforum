@@ -1,66 +1,121 @@
-import { useState, useEffect } from "react";
+
+import { useState, useEffect, useCallback } from "react";
 import { calismaSaatleriServisi } from "@/lib/supabase/services/calismaSaatleriServisi";
 import { CalismaSaati } from "@/lib/supabase/types";
+import { gunSiralama } from "../constants/workingDays";
 
-export const useWorkingHours = (dukkanId: number | undefined) => {
-  const [workingHours, setWorkingHours] = useState<CalismaSaati[]>([]);
+interface UseWorkingHoursProps {
+  dukkanId: number;
+  onMutationSuccess?: () => void;
+}
+
+export const useWorkingHours = ({ dukkanId, onMutationSuccess }: UseWorkingHoursProps) => {
+  const [hours, setHours] = useState<CalismaSaati[]>([]);
+  const [originalHours, setOriginalHours] = useState<CalismaSaati[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   
-  useEffect(() => {
+  const fetchHours = useCallback(async () => {
     if (!dukkanId) return;
     
-    const fetchWorkingHours = async () => {
-      setIsLoading(true);
-      setError(null);
-      
-      try {
-        const hours = await calismaSaatleriServisi.dukkanSaatleriGetir(dukkanId);
-        if (hours && hours.length > 0) {
-          setWorkingHours(hours);
-        } else {
-          const defaultHours = setDefaultWorkingHours(dukkanId);
-          setWorkingHours(defaultHours);
-        }
-      } catch (e: any) {
-        setError(e);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    fetchWorkingHours();
-  }, [dukkanId]);
-  
-  // Update the setWorkingHours function to include the required id property
-const setDefaultWorkingHours = (dukkanId: number) => {
-  const defaultHours: CalismaSaati[] = [
-    { id: 1, dukkan_id: dukkanId, gun: "pazartesi", gun_sira: 1, acilis: "09:00", kapanis: "18:00", kapali: false },
-    { id: 2, dukkan_id: dukkanId, gun: "sali", gun_sira: 2, acilis: "09:00", kapanis: "18:00", kapali: false },
-    { id: 3, dukkan_id: dukkanId, gun: "carsamba", gun_sira: 3, acilis: "09:00", kapanis: "18:00", kapali: false },
-    { id: 4, dukkan_id: dukkanId, gun: "persembe", gun_sira: 4, acilis: "09:00", kapanis: "18:00", kapali: false },
-    { id: 5, dukkan_id: dukkanId, gun: "cuma", gun_sira: 5, acilis: "09:00", kapanis: "18:00", kapali: false },
-    { id: 6, dukkan_id: dukkanId, gun: "cumartesi", gun_sira: 6, acilis: "09:00", kapanis: "18:00", kapali: false },
-    { id: 7, dukkan_id: dukkanId, gun: "pazar", gun_sira: 7, acilis: "09:00", kapanis: "18:00", kapali: true }
-  ];
-  
-  setWorkingHours(defaultHours);
-  return defaultHours;
-};
-  
-  const updateWorkingHours = async (updatedHours: CalismaSaati[]) => {
     setIsLoading(true);
     setError(null);
     
     try {
-      await calismaSaatleriServisi.topluGuncelle(updatedHours);
-      setWorkingHours(updatedHours);
+      const fetchedHours = await calismaSaatleriServisi.dukkanSaatleriGetir(dukkanId);
+      if (fetchedHours && fetchedHours.length > 0) {
+        // Sort by the predefined day order
+        const sortedHours = [...fetchedHours].sort((a, b) => {
+          const aIndex = gunSiralama.indexOf(a.gun);
+          const bIndex = gunSiralama.indexOf(b.gun);
+          return aIndex - bIndex;
+        });
+        setHours(sortedHours);
+        setOriginalHours(JSON.parse(JSON.stringify(sortedHours)));
+      } else {
+        const defaultHours = generateDefaultHours(dukkanId);
+        setHours(defaultHours);
+        setOriginalHours(JSON.parse(JSON.stringify(defaultHours)));
+      }
     } catch (e: any) {
       setError(e);
     } finally {
       setIsLoading(false);
     }
+  }, [dukkanId]);
+  
+  useEffect(() => {
+    fetchHours();
+  }, [fetchHours]);
+  
+  // Generate default working hours
+  const generateDefaultHours = (dukkanId: number): CalismaSaati[] => {
+    return gunSiralama.map((gun, index) => ({
+      id: -(index + 1), // Negative IDs for unsaved records
+      gun,
+      gun_sira: index + 1,
+      acilis: "09:00",
+      kapanis: "18:00",
+      kapali: gun === "pazar", // Close Sundays by default
+      dukkan_id: dukkanId
+    }));
   };
   
-  return { workingHours, isLoading, error, updateWorkingHours };
+  // Update a single day
+  const updateDay = useCallback((index: number, updates: Partial<CalismaSaati>) => {
+    setHours(prevHours => {
+      const newHours = [...prevHours];
+      newHours[index] = { ...newHours[index], ...updates };
+      return newHours;
+    });
+  }, []);
+  
+  // Save all hours
+  const saveHours = useCallback(async () => {
+    setIsLoading(true);
+    
+    try {
+      // Make sure all hours have dukkan_id
+      const hoursWithDukkanId = hours.map(hour => ({
+        ...hour,
+        dukkan_id: dukkanId
+      }));
+      
+      await calismaSaatleriServisi.guncelle(hoursWithDukkanId);
+      setOriginalHours(JSON.parse(JSON.stringify(hours)));
+      
+      if (onMutationSuccess) {
+        onMutationSuccess();
+      }
+    } catch (e: any) {
+      setError(e);
+      throw e;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [hours, dukkanId, onMutationSuccess]);
+  
+  // Reset hours to original state
+  const resetHours = useCallback(() => {
+    setHours(JSON.parse(JSON.stringify(originalHours)));
+  }, [originalHours]);
+  
+  // Check if there are unsaved changes
+  const hasChanges = useCallback(() => {
+    return JSON.stringify(hours) !== JSON.stringify(originalHours);
+  }, [hours, originalHours]);
+  
+  return {
+    hours,
+    workingHours: hours, // For backward compatibility
+    updateDay,
+    saveHours,
+    resetHours,
+    isLoading,
+    error,
+    isError: !!error,
+    hasChanges,
+    refetch: fetchHours,
+    updateWorkingHours: saveHours // For backward compatibility
+  };
 };

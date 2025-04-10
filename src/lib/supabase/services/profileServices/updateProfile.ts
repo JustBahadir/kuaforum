@@ -1,6 +1,36 @@
 import { supabase } from "../../client";
 import { Profil } from "../../types";
 
+export interface ProfileUpdateData {
+  first_name?: string;
+  last_name?: string;
+  phone?: string;
+  address?: string;
+  avatar_url?: string;
+  birthdate?: string;
+  iban?: string;
+  gender?: string;
+}
+
+export interface ProfileCreationParams {
+  first_name?: string;
+  last_name?: string;
+  phone?: string;
+  role?: 'admin' | 'staff' | 'customer';
+  address?: string;
+  avatar_url?: string;
+  birthdate?: string;
+  iban?: string;
+  gender?: string;
+}
+
+export class ProfileServiceError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ProfileServiceError';
+  }
+}
+
 /**
  * Updates a user's profile
  */

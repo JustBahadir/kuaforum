@@ -1,4 +1,6 @@
+
 import { CalismaSaati } from "@/lib/supabase/types";
+import { gunSiralama } from "../constants/workingDays";
 
 /**
  * Sort working hours by the predefined day order
@@ -18,6 +20,7 @@ export const createDefaultWorkingHours = (dukkanId: number = 0): CalismaSaati[] 
   return gunSiralama.map((gun, index) => ({
     id: -(index + 1), // Negative IDs for unsaved records
     gun,
+    gun_sira: index + 1,
     acilis: "09:00",
     kapanis: "18:00",
     kapali: gun === "pazar", // Close Sundays by default

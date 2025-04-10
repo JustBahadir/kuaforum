@@ -1,3 +1,4 @@
+
 import { Personel, Islem, IslemKategori } from "@/lib/supabase/types";
 
 const generatePersonel = (count: number): Personel[] => {
@@ -32,6 +33,24 @@ const generateCategories = (count: number): IslemKategori[] => {
     sira: i,
     created_at: new Date().toISOString()
   }));
+};
+
+// Add the generateTestData function
+export const generateTestData = async () => {
+  try {
+    console.log("Generating test data...");
+    // This would typically insert data using Supabase
+    // For now, we'll just return dummy data
+    const categories = generateCategories(5);
+    const islemler = generateIslemler(10);
+    const personel = generatePersonel(3);
+    
+    console.log("Test data generated", { categories, islemler, personel });
+    return { categories, islemler, personel };
+  } catch (error) {
+    console.error("Error generating test data:", error);
+    throw error;
+  }
 };
 
 export { generatePersonel, generateIslemler, generateCategories };

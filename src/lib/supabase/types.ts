@@ -112,6 +112,7 @@ export interface Profil {
   dukkan_id?: number;
   iban?: string;
   created_at?: string;
+  gender?: string;  // Added gender field
 }
 
 // Profile alias for backward compatibility
