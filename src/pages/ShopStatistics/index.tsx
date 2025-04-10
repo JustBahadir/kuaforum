@@ -23,6 +23,17 @@ import { HourHeatmapChart } from "./components/HourHeatmapChart";
 import { CustomerLoyaltyChart } from "./components/CustomerLoyaltyChart";
 import { RevenueSourceChart } from "./components/RevenueSourceChart";
 import { ShopAnalyst } from "@/components/analyst/ShopAnalyst";
+import { ProfitAnalysis } from "@/components/dashboard/ProfitAnalysis";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
 
 // Define interfaces for chart data
 interface ChartDataItem {
@@ -40,12 +51,18 @@ interface ServiceDataItem {
 export default function ShopStatistics() {
   const { userRole, dukkanId } = useCustomerAuth();
   const [period, setPeriod] = useState<string>("daily"); // Default to daily view
+  const [activeTab, setActiveTab] = useState<string>("overview");
   
   // Date range state
   const [dateRange, setDateRange] = useState({
     from: startOfDay(subDays(new Date(), 30)),
     to: endOfDay(new Date())
   });
+  
+  // Sabit gider yönetimi için state
+  const [fixedExpenses, setFixedExpenses] = useState<number>(0);
+  const [estimatedMonthlyAppointments, setEstimatedMonthlyAppointments] = useState<number>(0);
+  const [expenseCalculationType, setExpenseCalculationType] = useState<string>("automatic");
   
   // Set preset date ranges based on selected period
   useEffect(() => {
@@ -78,6 +95,9 @@ export default function ShopStatistics() {
           from: startOfYear,
           to: endOfYear
         });
+        break;
+      default:
+        // Custom period stays as is
         break;
     }
   }, [period]);
@@ -150,6 +170,22 @@ export default function ShopStatistics() {
   const [weeklyData, setWeeklyData] = useState<ChartDataItem[]>([]);
   const [monthlyData, setMonthlyData] = useState<ChartDataItem[]>([]);
   const [serviceData, setServiceData] = useState<ServiceDataItem[]>([]);
+  
+  // Otomatik hesaplama için tahmini randevu sayısını belirle
+  useEffect(() => {
+    if (expenseCalculationType === "automatic" && randevular.length > 0) {
+      // Son 3 ayın randevuları
+      const threeMonthsAgo = new Date();
+      threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+      
+      const recentAppointments = randevular.filter(r => 
+        new Date(r.tarih) >= threeMonthsAgo && r.durum !== 'iptal'
+      );
+      
+      const monthlyAverage = Math.ceil(recentAppointments.length / 3);
+      setEstimatedMonthlyAppointments(monthlyAverage > 0 ? monthlyAverage : 100); // En az 100 göster
+    }
+  }, [randevular, expenseCalculationType]);
   
   // Generate chart data based on operations
   useEffect(() => {
@@ -431,71 +467,181 @@ export default function ShopStatistics() {
           </Button>
         </div>
 
-        <div className="mb-6">
-          <ShopAnalyst 
-            dukkanId={dukkanId} 
-            dateRange={dateRange}
-            period={period} 
-          />
-        </div>
-        
-        <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-6">
-          <Tabs defaultValue={period} onValueChange={setPeriod} className="space-y-4 flex-1">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="daily">Günlük</TabsTrigger>
-              <TabsTrigger value="weekly">Haftalık</TabsTrigger>
-              <TabsTrigger value="monthly">Aylık</TabsTrigger>
-              <TabsTrigger value="yearly">Yıllık</TabsTrigger>
-            </TabsList>
-          </Tabs>
-          
-          <div className="flex items-center gap-2">
-            <Calendar className="h-5 w-5 text-muted-foreground" />
-            <DateRangePicker 
-              from={dateRange.from}
-              to={dateRange.to}
-              onSelect={handleDateRangeChange}
+        <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          <TabsList className="w-full border-b pb-0 mb-6">
+            <TabsTrigger value="overview">Genel Bakış</TabsTrigger>
+            <TabsTrigger value="profitability">Kârlılık Analizi</TabsTrigger>
+            <TabsTrigger value="settings">Maliyet Ayarları</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="space-y-6">
+            <div className="mb-6">
+              <ShopAnalyst 
+                dukkanId={dukkanId} 
+                dateRange={dateRange}
+                period={period} 
+              />
+            </div>
+            
+            <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-6">
+              <Tabs defaultValue={period} onValueChange={setPeriod} className="space-y-4 flex-1">
+                <TabsList className="grid w-full grid-cols-4">
+                  <TabsTrigger value="daily">Günlük</TabsTrigger>
+                  <TabsTrigger value="weekly">Haftalık</TabsTrigger>
+                  <TabsTrigger value="monthly">Aylık</TabsTrigger>
+                  <TabsTrigger value="yearly">Yıllık</TabsTrigger>
+                </TabsList>
+              </Tabs>
+              
+              <div className="flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-muted-foreground" />
+                <DateRangePicker 
+                  from={dateRange.from}
+                  to={dateRange.to}
+                  onSelect={handleDateRangeChange}
+                />
+              </div>
+            </div>
+            
+            <MetricsCards 
+              isLoading={isLoading}
+              totalRevenue={shopStats?.totalRevenue || 0}
+              totalServices={shopStats?.totalServices || 0}
+              uniqueCustomerCount={shopStats?.uniqueCustomerCount || 0}
+              totalCompletedAppointments={shopStats?.totalCompletedAppointments || 0}
+              cancelledAppointments={shopStats?.cancelledAppointments || 0}
+              newCustomers={shopStats?.newCustomers || 0}
+              loyalCustomers={shopStats?.loyalCustomers || 0}
             />
-          </div>
-        </div>
-        
-        <MetricsCards 
-          isLoading={isLoading}
-          totalRevenue={shopStats?.totalRevenue || 0}
-          totalServices={shopStats?.totalServices || 0}
-          uniqueCustomerCount={shopStats?.uniqueCustomerCount || 0}
-          totalCompletedAppointments={shopStats?.totalCompletedAppointments || 0}
-          cancelledAppointments={shopStats?.cancelledAppointments || 0}
-          newCustomers={shopStats?.newCustomers || 0}
-          loyalCustomers={shopStats?.loyalCustomers || 0}
-        />
-        
-        {/* Common charts for all views */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-          <ServicePerformanceChart data={serviceData} isLoading={isLoading} />
-          <CustomerLoyaltyChart data={filteredIslemler} isLoading={isLoading} />
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-          <CustomerFrequencyChart data={filteredIslemler} isLoading={isLoading} />
-          <RevenueSourceChart data={serviceData} isLoading={isLoading} />
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-          <HourHeatmapChart data={filteredIslemler} isLoading={isLoading} />
-          {period === "daily" && (
-            <HourlyPerformanceChart data={hourlyData} isLoading={isLoading} />
-          )}
-          {period === "weekly" && (
-            <DailyPerformanceChart data={dailyData} isLoading={isLoading} />
-          )}
-          {period === "monthly" && (
-            <WeeklyPerformanceChart data={weeklyData} isLoading={isLoading} />
-          )}
-          {period === "yearly" && (
-            <MonthlyPerformanceChart data={monthlyData} isLoading={isLoading} />
-          )}
-        </div>
+            
+            {/* Common charts for all views */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+              <ServicePerformanceChart data={serviceData} isLoading={isLoading} />
+              <CustomerLoyaltyChart data={filteredIslemler} isLoading={isLoading} />
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+              <CustomerFrequencyChart data={filteredIslemler} isLoading={isLoading} />
+              <RevenueSourceChart data={serviceData} isLoading={isLoading} />
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+              <HourHeatmapChart data={filteredIslemler} isLoading={isLoading} />
+              {period === "daily" && (
+                <HourlyPerformanceChart data={hourlyData} isLoading={isLoading} />
+              )}
+              {period === "weekly" && (
+                <DailyPerformanceChart data={dailyData} isLoading={isLoading} />
+              )}
+              {period === "monthly" && (
+                <WeeklyPerformanceChart data={weeklyData} isLoading={isLoading} />
+              )}
+              {period === "yearly" && (
+                <MonthlyPerformanceChart data={monthlyData} isLoading={isLoading} />
+              )}
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="profitability" className="space-y-6">
+            <ProfitAnalysis 
+              operations={filteredIslemler} 
+              fixedExpenses={fixedExpenses}
+              monthlyAppointments={estimatedMonthlyAppointments}
+            />
+          </TabsContent>
+          
+          <TabsContent value="settings" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Maliyet Ayarları</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">Sabit Giderler</h3>
+                  <div className="grid gap-4">
+                    <div>
+                      <Label htmlFor="fixedExpenses">Aylık Sabit Giderler (₺)</Label>
+                      <Input
+                        id="fixedExpenses"
+                        type="number" 
+                        min="0"
+                        value={fixedExpenses}
+                        onChange={(e) => setFixedExpenses(Number(e.target.value))}
+                        placeholder="Kira, fatura, temizlik vb. giderler"
+                        className="mt-1"
+                      />
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Kiranız, elektrik, su, doğalgaz gibi sabit giderlerin toplamını girin
+                      </p>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label>Sabit Gider Dağıtım Yöntemi</Label>
+                      <Select 
+                        value={expenseCalculationType} 
+                        onValueChange={setExpenseCalculationType}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Hesaplama yöntemi seçin" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="automatic">Otomatik Hesaplama (Son 3 ay ortalaması)</SelectItem>
+                          <SelectItem value="manual">Manuel Hesaplama</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    {expenseCalculationType === "manual" && (
+                      <div>
+                        <Label htmlFor="estimatedMonthlyAppointments">Tahmini Aylık Randevu Sayısı</Label>
+                        <Input
+                          id="estimatedMonthlyAppointments"
+                          type="number" 
+                          min="1"
+                          value={estimatedMonthlyAppointments}
+                          onChange={(e) => setEstimatedMonthlyAppointments(Number(e.target.value))}
+                          placeholder="Örn: 200"
+                          className="mt-1"
+                        />
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Ortalama aylık randevu sayınızı girin
+                        </p>
+                      </div>
+                    )}
+                    
+                    {expenseCalculationType === "automatic" && (
+                      <div className="bg-slate-50 p-4 rounded-md border">
+                        <p className="text-sm">
+                          <span className="font-medium">Hesaplanan ortalama aylık randevu sayısı: </span>
+                          <span className="font-bold">{estimatedMonthlyAppointments}</span>
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Bu değer son 3 ayın randevu verileri baz alınarak hesaplanmıştır
+                        </p>
+                      </div>
+                    )}
+                    
+                    <div className="bg-blue-50 p-4 rounded-md border border-blue-100">
+                      <p className="text-sm">
+                        <span className="font-medium">İşlem başına düşen sabit gider: </span>
+                        <span className="font-bold">
+                          {estimatedMonthlyAppointments > 0
+                            ? new Intl.NumberFormat('tr-TR', {
+                                style: 'currency',
+                                currency: 'TRY',
+                                minimumFractionDigits: 2
+                              }).format(fixedExpenses / estimatedMonthlyAppointments)
+                            : "0 ₺"
+                          }
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </StaffLayout>
   );

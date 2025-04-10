@@ -8,6 +8,9 @@ type AnalysisData = {
   peakHours?: string;
   revenueChange?: string;
   cancellationRate?: string;
+  mostProfitableCategory?: string;
+  leastProfitableService?: string;
+  averageProfitMargin?: string;
   hasEnoughData: boolean;
 };
 
@@ -15,6 +18,9 @@ interface ServiceStat {
   name: string;
   count: number;
   revenue: number;
+  cost?: number;
+  profit?: number;
+  profitMargin?: number;
 }
 
 export function analyzeShopData(operations = [], appointments = [], period = 'daily') {
@@ -39,10 +45,13 @@ export function analyzeShopData(operations = [], appointments = [], period = 'da
   // Calculate revenue statistics
   const revenueStats = calculateRevenueStatistics(operations, period);
   
+  // Calculate profit statistics
+  const profitStats = calculateProfitStatistics(operations);
+  
   return {
     // Most profitable service
-    mostProfitableService: serviceStats.mostProfitable ? 
-      `"${serviceStats.mostProfitable.name}" en yüksek karı sağlıyor (${serviceStats.mostProfitable.revenue.toLocaleString()} TL)` : undefined,
+    mostProfitableService: profitStats.mostProfitable ? 
+      `"${profitStats.mostProfitable.name}" en yüksek kârı sağlıyor (${profitStats.mostProfitable.profit.toLocaleString()} TL, %${profitStats.mostProfitable.profitMargin.toFixed(1)} kârlılık)` : undefined,
     
     // Most popular service
     mostPopularService: serviceStats.mostPopular ? 
@@ -71,6 +80,18 @@ export function analyzeShopData(operations = [], appointments = [], period = 'da
     // Cancellation rate
     cancellationRate: customerStats.cancellationRate ? 
       `${customerStats.cancellationRate}` : undefined,
+      
+    // Most profitable category
+    mostProfitableCategory: profitStats.mostProfitableCategory ? 
+      `"${profitStats.mostProfitableCategory.name}" kategorisi en yüksek kârı sağlıyor (%${profitStats.mostProfitableCategory.profitMargin.toFixed(1)})` : undefined,
+      
+    // Least profitable service
+    leastProfitableService: profitStats.leastProfitable ? 
+      `"${profitStats.leastProfitable.name}" en düşük kârlılığa sahip (%${profitStats.leastProfitable.profitMargin.toFixed(1)})` : undefined,
+      
+    // Average profit margin
+    averageProfitMargin: profitStats.averageProfitMargin ? 
+      `Ortalama kârlılık oranı: %${profitStats.averageProfitMargin.toFixed(1)}` : undefined,
     
     // Flag to indicate data availability
     hasEnoughData
@@ -242,5 +263,105 @@ function calculateRevenueStatistics(operations: any[] = [], period = 'daily') {
       `${averageSpending.toLocaleString()} TL` : undefined,
     change: totalRevenue > 0 ? 
       `Toplam ciro: ${totalRevenue.toLocaleString()} TL` : undefined
+  };
+}
+
+function calculateProfitStatistics(operations: any[] = []) {
+  // Service profit calculation
+  const serviceMap: Record<string, ServiceStat> = operations.reduce((acc: Record<string, ServiceStat>, op: any) => {
+    // Get service name, cost and revenue from operation
+    const serviceName = op.islem?.islem_adi || op.aciklama?.split(' hizmeti verildi')[0] || 'Bilinmeyen';
+    const cost = (op.islem?.maliyet || 0) + (op.odenen || 0); // Malzeme + Personel gideri
+    const revenue = op.tutar || 0;
+    
+    if (!acc[serviceName]) {
+      acc[serviceName] = {
+        name: serviceName,
+        count: 0,
+        revenue: 0,
+        cost: 0,
+        profit: 0,
+        profitMargin: 0
+      };
+    }
+    
+    acc[serviceName].count++;
+    acc[serviceName].revenue += revenue;
+    acc[serviceName].cost = (acc[serviceName].cost || 0) + cost;
+    
+    return acc;
+  }, {});
+  
+  // Calculate profit metrics for each service
+  const services = Object.values(serviceMap).map(service => {
+    const profit = service.revenue - (service.cost || 0);
+    const profitMargin = service.revenue > 0 ? (profit / service.revenue) * 100 : 0;
+    
+    return {
+      ...service,
+      profit,
+      profitMargin
+    };
+  });
+  
+  // Category profit calculation
+  const categoryMap: Record<string, ServiceStat> = operations.reduce((acc: Record<string, ServiceStat>, op: any) => {
+    if (!op.islem?.kategori_id) return acc;
+    
+    // Get category name from the operation
+    const categoryName = op.islem.kategori_adi || 'Kategorisiz';
+    const cost = (op.islem?.maliyet || 0) + (op.odenen || 0);
+    const revenue = op.tutar || 0;
+    
+    if (!acc[categoryName]) {
+      acc[categoryName] = {
+        name: categoryName,
+        count: 0,
+        revenue: 0,
+        cost: 0,
+        profit: 0,
+        profitMargin: 0
+      };
+    }
+    
+    acc[categoryName].count++;
+    acc[categoryName].revenue += revenue;
+    acc[categoryName].cost = (acc[categoryName].cost || 0) + cost;
+    
+    return acc;
+  }, {});
+  
+  // Calculate profit metrics for each category
+  const categories = Object.values(categoryMap).map(category => {
+    const profit = category.revenue - (category.cost || 0);
+    const profitMargin = category.revenue > 0 ? (profit / category.revenue) * 100 : 0;
+    
+    return {
+      ...category,
+      profit,
+      profitMargin
+    };
+  });
+  
+  // Find most profitable and least profitable services
+  const sortedByProfit = [...services].sort((a, b) => (b.profitMargin || 0) - (a.profitMargin || 0));
+  const mostProfitable = sortedByProfit.length > 0 ? sortedByProfit[0] : null;
+  const leastProfitable = sortedByProfit.length > 0 ? sortedByProfit[sortedByProfit.length - 1] : null;
+  
+  // Find most profitable category
+  const sortedCategoriesByProfit = [...categories].sort((a, b) => (b.profitMargin || 0) - (a.profitMargin || 0));
+  const mostProfitableCategory = sortedCategoriesByProfit.length > 0 ? sortedCategoriesByProfit[0] : null;
+  
+  // Calculate average profit margin
+  const totalProfitMargin = services.reduce((sum, service) => sum + (service.profitMargin || 0), 0);
+  const averageProfitMargin = services.length > 0 ? totalProfitMargin / services.length : 0;
+  
+  return {
+    mostProfitable,
+    leastProfitable,
+    mostProfitableCategory,
+    averageProfitMargin,
+    services,
+    categories
   };
 }

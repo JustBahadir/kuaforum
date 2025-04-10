@@ -15,6 +15,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { InfoCircle } from "@/components/ui/custom-icons";
+import { useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface ServiceFormProps {
   isOpen: boolean;
@@ -24,6 +27,8 @@ interface ServiceFormProps {
   setIslemAdi: (value: string) => void;
   fiyat: number;
   setFiyat: (value: number) => void;
+  maliyet: number;
+  setMaliyet: (value: number) => void;
   puan: number;
   setPuan: (value: number) => void;
   kategoriId: number | null;
@@ -44,6 +49,8 @@ export function ServiceForm({
   setIslemAdi,
   fiyat,
   setFiyat,
+  maliyet,
+  setMaliyet,
   puan,
   setPuan,
   kategoriId,
@@ -55,6 +62,39 @@ export function ServiceForm({
   // Varsayılan değeri true olacak
   showCategorySelect = true,
 }: ServiceFormProps) {
+  // Önerilen maliyet için örnek değerler
+  const [suggestedCost, setSuggestedCost] = useState<number | null>(null);
+  const [showSuggestion, setShowSuggestion] = useState(false);
+
+  // İsim değişince rastgele bir maliyet önerisi üret
+  const generateCostSuggestion = () => {
+    // Gerçek bir API çağrısı yapılacak olsaydı burada isteği yapardık
+    // Bu örnekte basit bir simülasyon yapıyoruz
+    const baseCost = Math.floor(fiyat * 0.4); // Fiyatın %40'ı
+    const random = Math.floor(Math.random() * 20) - 10; // -10 ile +10 arası rastgele değer
+    const suggested = Math.max(10, baseCost + random); // En az 10 TL olsun
+    
+    setSuggestedCost(suggested);
+    setShowSuggestion(maliyet === 0); // Sadece maliyet girilmediyse göster
+  };
+
+  // Fiyat değişince maliyet önerisini güncelle
+  const handlePriceChange = (value: number) => {
+    setFiyat(value);
+    if (value > 0 && maliyet === 0) {
+      setShowSuggestion(true);
+      generateCostSuggestion();
+    }
+  };
+
+  // Önerilen maliyeti kullan
+  const useSuggestedCost = () => {
+    if (suggestedCost) {
+      setMaliyet(suggestedCost);
+      setShowSuggestion(false);
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -93,7 +133,12 @@ export function ServiceForm({
             <Input
               id="islem_adi"
               value={islemAdi}
-              onChange={(e) => setIslemAdi(e.target.value)}
+              onChange={(e) => {
+                setIslemAdi(e.target.value);
+                if (e.target.value && !duzenleId) {
+                  generateCostSuggestion();
+                }
+              }}
               required
             />
           </div>
@@ -103,9 +148,43 @@ export function ServiceForm({
               id="fiyat"
               type="number"
               value={fiyat}
-              onChange={(e) => setFiyat(Number(e.target.value))}
+              onChange={(e) => handlePriceChange(Number(e.target.value))}
               required
             />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="maliyet">Maliyet (₺)</Label>
+            <Input
+              id="maliyet"
+              type="number"
+              value={maliyet}
+              onChange={(e) => {
+                setMaliyet(Number(e.target.value));
+                setShowSuggestion(false);
+              }}
+              required
+            />
+            <p className="text-xs text-muted-foreground">
+              Bir işlem için kullanılan malzeme maliyetleri (boya, maske, krem vb.)
+            </p>
+
+            {/* Maliyet Önerisi */}
+            {showSuggestion && suggestedCost && (
+              <Alert className="mt-2 bg-slate-50">
+                <InfoCircle className="h-4 w-4 text-blue-500" />
+                <AlertDescription className="text-sm flex justify-between items-center">
+                  <span>Bu hizmet için ortalama maliyet: {suggestedCost} ₺</span>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm"
+                    onClick={useSuggestedCost}
+                  >
+                    Bu Değeri Kullan
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            )}
           </div>
           {puanlamaAktif && (
             <div className="space-y-2">
