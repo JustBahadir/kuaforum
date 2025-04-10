@@ -1,27 +1,34 @@
-
 import { PersonelIslemi } from "@/lib/supabase/types";
 import { formatCurrency } from "@/lib/utils";
+import { format, startOfDay, endOfDay, differenceInDays, isPast, isFuture } from "date-fns";
 
 // Function to analyze shop statistics data
 export function analyzeShopData(
   operations: any[] = [],
-  appointments: any[] = []
+  appointments: any[] = [],
+  period: string = "daily"
 ): {
   mostProfitableService: string;
   mostPopularService: string;
   busiestDays: string;
   averageSpendingChange: string;
   customerRatio: string;
+  peakHours: string;
+  revenueChange: string;
+  cancellationRate: string;
   hasEnoughData: boolean;
 } {
   // Check if there's enough data
-  if (operations.length < 5 || appointments.length < 5) {
+  if (operations.length < 3 || appointments.length < 3) {
     return {
       mostProfitableService: "",
       mostPopularService: "",
       busiestDays: "",
       averageSpendingChange: "",
       customerRatio: "",
+      peakHours: "",
+      revenueChange: "",
+      cancellationRate: "",
       hasEnoughData: false,
     };
   }
@@ -56,14 +63,55 @@ export function analyzeShopData(
 
   const totalRevenue = operations.reduce((sum, op) => sum + (op.tutar || 0), 0);
   
-  const mostProfitableService = sortedByRevenue.length > 0 
-    ? `Bu ay en çok gelir sağlayan hizmet %${Math.round((sortedByRevenue[0].revenue / totalRevenue) * 100)} ile '${sortedByRevenue[0].name}' oldu.`
-    : "Henüz yeterli gelir verisi bulunmuyor.";
+  // Period-specific message for the most profitable service
+  let mostProfitableService = "";
+  if (sortedByRevenue.length > 0) {
+    const percentage = Math.round((sortedByRevenue[0].revenue / totalRevenue) * 100);
+    
+    switch (period) {
+      case "daily":
+        mostProfitableService = `Bugün en çok gelir sağlayan hizmet %${percentage} ile '${sortedByRevenue[0].name}' oldu.`;
+        break;
+      case "weekly":
+        mostProfitableService = `Bu hafta en çok gelir sağlayan hizmet %${percentage} ile '${sortedByRevenue[0].name}' oldu.`;
+        break;
+      case "monthly":
+        mostProfitableService = `Bu ay en çok gelir sağlayan hizmet %${percentage} ile '${sortedByRevenue[0].name}' oldu.`;
+        break;
+      case "yearly":
+        mostProfitableService = `Bu yıl en çok gelir sağlayan hizmet %${percentage} ile '${sortedByRevenue[0].name}' oldu.`;
+        break;
+      default:
+        mostProfitableService = `Seçili dönemde en çok gelir sağlayan hizmet %${percentage} ile '${sortedByRevenue[0].name}' oldu.`;
+    }
+  } else {
+    mostProfitableService = "Henüz yeterli gelir verisi bulunmuyor.";
+  }
 
   const totalAppointments = appointments.length;
-  const mostPopularService = sortedByCount.length > 0
-    ? `'${sortedByCount[0].name}', toplam randevuların %${Math.round((sortedByCount[0].count / totalAppointments) * 100)}'sını oluşturdu.`
-    : "Henüz yeterli randevu verisi bulunmuyor.";
+  let mostPopularService = "";
+  if (sortedByCount.length > 0) {
+    const percentage = Math.round((sortedByCount[0].count / totalAppointments) * 100);
+    
+    switch (period) {
+      case "daily":
+        mostPopularService = `Bugün '${sortedByCount[0].name}', toplam işlemlerin %${percentage}'sını oluşturdu.`;
+        break;
+      case "weekly":
+        mostPopularService = `Bu hafta '${sortedByCount[0].name}', toplam işlemlerin %${percentage}'sını oluşturdu.`;
+        break;
+      case "monthly":
+        mostPopularService = `Bu ay '${sortedByCount[0].name}', toplam işlemlerin %${percentage}'sını oluşturdu.`;
+        break;
+      case "yearly":
+        mostPopularService = `Bu yıl '${sortedByCount[0].name}', toplam işlemlerin %${percentage}'sını oluşturdu.`;
+        break;
+      default:
+        mostPopularService = `Seçilen dönemde '${sortedByCount[0].name}', toplam işlemlerin %${percentage}'sını oluşturdu.`;
+    }
+  } else {
+    mostPopularService = "Henüz yeterli randevu verisi bulunmuyor.";
+  }
 
   // Analyze busiest days
   const dayDistribution: Record<number, number> = {};
@@ -81,81 +129,166 @@ export function analyzeShopData(
     .slice(0, 2)
     .map(([dayIndex]) => days[Number(dayIndex)]);
 
-  const busiestDays = sortedDays.length >= 2
-    ? `${sortedDays[0]} ve ${sortedDays[1]} günleri haftanın en yoğun günleri oldu.`
-    : sortedDays.length === 1
-    ? `${sortedDays[0]} günü haftanın en yoğun günü oldu.`
-    : "Henüz yeterli gün dağılımı verisi bulunmuyor.";
+  let busiestDays = "";
+  switch (period) {
+    case "daily":
+      busiestDays = "Günlük analizde en yoğun gün verisi bulunmaz.";
+      break;
+    default:
+      busiestDays = sortedDays.length >= 2
+        ? `${sortedDays[0]} ve ${sortedDays[1]} günleri seçilen dönemin en yoğun günleri oldu.`
+        : sortedDays.length === 1
+        ? `${sortedDays[0]} günü seçilen dönemin en yoğun günü oldu.`
+        : "Henüz yeterli gün dağılımı verisi bulunmuyor.";
+  }
 
   // Calculate customer spending trend compared to previous period
-  // Now we're using actual data for comparison instead of random
   const now = new Date();
-  const thisMonth = now.getMonth();
-  const lastMonth = thisMonth === 0 ? 11 : thisMonth - 1;
   
-  const thisMonthOps = operations.filter(op => {
-    if (!op.created_at) return false;
-    const date = new Date(op.created_at);
-    return date.getMonth() === thisMonth;
+  // Group operations by date for trend analysis
+  const operationsByDate: Record<string, { count: number; revenue: number; }> = {};
+  
+  operations.forEach(op => {
+    if (!op.created_at) return;
+    const date = format(new Date(op.created_at), 'yyyy-MM-dd');
+    
+    if (!operationsByDate[date]) {
+      operationsByDate[date] = { count: 0, revenue: 0 };
+    }
+    
+    operationsByDate[date].count += 1;
+    operationsByDate[date].revenue += op.tutar || 0;
   });
   
-  const lastMonthOps = operations.filter(op => {
-    if (!op.created_at) return false;
-    const date = new Date(op.created_at);
-    return date.getMonth() === lastMonth;
-  });
+  // Get sorted dates
+  const sortedDates = Object.keys(operationsByDate).sort();
   
-  const thisMonthAvg = thisMonthOps.length > 0 
-    ? thisMonthOps.reduce((sum, op) => sum + (op.tutar || 0), 0) / thisMonthOps.length 
-    : 0;
+  // Split into two halves for comparison
+  const halfPoint = Math.floor(sortedDates.length / 2);
+  const firstHalfDates = sortedDates.slice(0, halfPoint);
+  const secondHalfDates = sortedDates.slice(halfPoint);
   
-  const lastMonthAvg = lastMonthOps.length > 0 
-    ? lastMonthOps.reduce((sum, op) => sum + (op.tutar || 0), 0) / lastMonthOps.length 
-    : 0;
+  // Calculate averages for each half
+  const firstHalfAvg = firstHalfDates.reduce((sum, date) => {
+    const ops = operationsByDate[date];
+    return sum + (ops.revenue / ops.count);
+  }, 0) / (firstHalfDates.length || 1);
+  
+  const secondHalfAvg = secondHalfDates.reduce((sum, date) => {
+    const ops = operationsByDate[date];
+    return sum + (ops.revenue / ops.count);
+  }, 0) / (secondHalfDates.length || 1);
 
-  let averageSpendingChange = "Geçmiş ay verileri karşılaştırma için yetersiz.";
-  if (lastMonthAvg > 0 && thisMonthAvg > 0) {
-    const changePercent = Math.round(((thisMonthAvg - lastMonthAvg) / lastMonthAvg) * 100);
-    if (changePercent !== 0) {
-      averageSpendingChange = `Ortalama harcama geçen aya göre %${Math.abs(changePercent)} ${
+  let averageSpendingChange = "Karşılaştırma için yeterli veri yok.";
+  if (firstHalfAvg > 0 && secondHalfAvg > 0) {
+    const changePercent = Math.round(((secondHalfAvg - firstHalfAvg) / firstHalfAvg) * 100);
+    
+    if (Math.abs(changePercent) >= 5) {  // Only show significant changes
+      averageSpendingChange = `Ortalama müşteri harcaması %${Math.abs(changePercent)} ${
         changePercent > 0 ? "arttı" : "azaldı"
       }.`;
     } else {
-      averageSpendingChange = "Ortalama harcamada geçen aya göre önemli bir değişiklik olmadı.";
+      averageSpendingChange = "Ortalama harcamada önemli bir değişiklik görülmüyor.";
     }
   }
 
   // Calculate new vs returning customer ratio
-  const thisMonthCustomers = new Set();
+  const allCustomers = new Set();
   const newCustomers = new Set();
+  const recentAppointments = appointments.sort((a, b) => {
+    const dateA = new Date(a.tarih);
+    const dateB = new Date(b.tarih);
+    return dateB.getTime() - dateA.getTime();
+  });
   
-  appointments.forEach(app => {
-    if (!app.tarih) return;
-    const date = new Date(app.tarih);
-    if (date.getMonth() === thisMonth && date.getFullYear() === now.getFullYear()) {
-      thisMonthCustomers.add(app.musteri_id);
+  // Identify all customers and determine which ones are new
+  recentAppointments.forEach(app => {
+    if (!app.tarih || !app.musteri_id) return;
+    
+    if (!allCustomers.has(app.musteri_id)) {
+      allCustomers.add(app.musteri_id);
       
-      // Check if this customer had appointments before this month
-      const hadPreviousAppointments = appointments.some(prevApp => {
-        if (!prevApp.tarih || prevApp.musteri_id !== app.musteri_id) return false;
-        const prevDate = new Date(prevApp.tarih);
-        return (prevDate.getMonth() !== thisMonth || prevDate.getFullYear() !== now.getFullYear()) 
-          && prevDate < date;
-      });
+      // First time we're seeing this customer in the sorted list
+      const appDate = new Date(app.tarih);
       
-      if (!hadPreviousAppointments) {
+      // Check if this is earliest appointment for this customer
+      const earliestAppointment = appointments.find(a => 
+        a.musteri_id === app.musteri_id && 
+        new Date(a.tarih) < appDate
+      );
+      
+      if (!earliestAppointment) {
         newCustomers.add(app.musteri_id);
       }
     }
   });
   
-  const newCustomerPercentage = thisMonthCustomers.size > 0
-    ? Math.round((newCustomers.size / thisMonthCustomers.size) * 100)
+  const newCustomerPercentage = allCustomers.size > 0
+    ? Math.round((newCustomers.size / allCustomers.size) * 100)
     : 0;
   
-  const customerRatio = thisMonthCustomers.size > 0
-    ? `Bu ay müşterilerin %${newCustomerPercentage}'ı ilk kez geldi.`
-    : "Bu ay için yeterli müşteri verisi bulunmuyor.";
+  let customerRatio = "";
+  switch (period) {
+    case "daily":
+      customerRatio = `Bugün müşterilerin %${newCustomerPercentage}'ı ilk kez geldi.`;
+      break;
+    case "weekly":
+      customerRatio = `Bu hafta müşterilerin %${newCustomerPercentage}'ı ilk kez geldi.`;
+      break;
+    case "monthly":
+      customerRatio = `Bu ay müşterilerin %${newCustomerPercentage}'ı ilk kez geldi.`;
+      break;
+    case "yearly":
+      customerRatio = `Bu yıl müşterilerin %${newCustomerPercentage}'ı ilk kez geldi.`;
+      break;
+    default:
+      customerRatio = `Seçili dönemde müşterilerin %${newCustomerPercentage}'ı ilk kez geldi.`;
+  }
+
+  // Peak hours analysis
+  const hourDistribution: Record<number, number> = {};
+  appointments.forEach(app => {
+    if (!app.saat) return;
+    const timeStr = app.saat.toString();
+    let hour = 0;
+    
+    // Parse hour from time string (could be in different formats)
+    if (timeStr.includes(':')) {
+      hour = parseInt(timeStr.split(':')[0]);
+    } else if (timeStr.length >= 2) {
+      hour = parseInt(timeStr.substring(0, 2));
+    }
+    
+    hourDistribution[hour] = (hourDistribution[hour] || 0) + 1;
+  });
+  
+  // Find peak hour
+  let peakHour = 0;
+  let peakCount = 0;
+  
+  Object.entries(hourDistribution).forEach(([hourStr, count]) => {
+    if (count > peakCount) {
+      peakCount = count;
+      peakHour = parseInt(hourStr);
+    }
+  });
+  
+  const formatHour = (hour: number) => {
+    return `${hour}:00 - ${hour + 1}:00`;
+  };
+  
+  const peakHours = peakCount > 0 
+    ? `En yoğun saat aralığı ${formatHour(peakHour)} (${peakCount} randevu).`
+    : "Yoğun saat aralığı tespiti için yeterli veri yok.";
+
+  // Revenue change analysis
+  const revenueChange = calculateRevenueChange(operations, period);
+
+  // Appointment cancellation rate
+  const cancelledAppointments = appointments.filter(app => app.durum === 'iptal').length;
+  const cancellationRate = appointments.length > 0 
+    ? `Randevu iptal oranı: %${Math.round((cancelledAppointments / appointments.length) * 100)}.`
+    : "İptal oranı verisi için yeterli randevu yok.";
 
   return {
     mostProfitableService,
@@ -163,8 +296,47 @@ export function analyzeShopData(
     busiestDays,
     averageSpendingChange,
     customerRatio,
+    peakHours,
+    revenueChange,
+    cancellationRate,
     hasEnoughData: true,
   };
+}
+
+function calculateRevenueChange(operations: any[], period: string): string {
+  if (operations.length < 5) return "Ciro değişim analizi için yeterli veri yok.";
+  
+  // Sort operations by date
+  const sortedOps = [...operations].sort((a, b) => 
+    new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  );
+  
+  // Split into two periods for comparison
+  const halfIndex = Math.floor(sortedOps.length / 2);
+  const firstHalf = sortedOps.slice(0, halfIndex);
+  const secondHalf = sortedOps.slice(halfIndex);
+  
+  const firstHalfRevenue = firstHalf.reduce((sum, op) => sum + (op.tutar || 0), 0);
+  const secondHalfRevenue = secondHalf.reduce((sum, op) => sum + (op.tutar || 0), 0);
+  
+  if (firstHalfRevenue === 0) return "Önceki dönem verisi bulunamadı.";
+  
+  const changePercent = Math.round(((secondHalfRevenue - firstHalfRevenue) / firstHalfRevenue) * 100);
+  
+  let timePeriod = "";
+  switch (period) {
+    case "daily": timePeriod = "günün ilk yarısına"; break;
+    case "weekly": timePeriod = "haftanın ilk yarısına"; break;
+    case "monthly": timePeriod = "ayın ilk yarısına"; break;
+    case "yearly": timePeriod = "yılın ilk yarısına"; break;
+    default: timePeriod = "önceki döneme";
+  }
+  
+  if (Math.abs(changePercent) < 5) {
+    return `Ciro ${timePeriod} göre stabil seyrediyor.`;
+  }
+  
+  return `Ciro ${timePeriod} göre %${Math.abs(changePercent)} ${changePercent > 0 ? "artış" : "düşüş"} gösterdi.`;
 }
 
 // Function to analyze personnel data

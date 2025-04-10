@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -6,8 +5,10 @@ import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { useQuery } from "@tanstack/react-query";
 import { personelIslemleriServisi, randevuServisi } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Calendar } from "lucide-react";
 import { toast } from "sonner";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { addDays, endOfDay, endOfMonth, endOfWeek, startOfDay, startOfMonth, startOfWeek, subDays } from "date-fns";
 
 // Import components
 import { MetricsCards } from "./components/MetricsCards";
@@ -17,7 +18,11 @@ import { ServicePerformanceChart } from "./components/ServicePerformanceChart";
 import { YearlyStatisticsPlaceholder } from "./components/YearlyStatisticsPlaceholder";
 import { DailyPerformanceChart } from "./components/DailyPerformanceChart";
 import { HourlyPerformanceChart } from "./components/HourlyPerformanceChart";
-import { ShopAnalyst } from "@/components/analyst/ShopAnalyst"; // Added ShopAnalyst import
+import { CustomerFrequencyChart } from "./components/CustomerFrequencyChart";
+import { HourHeatmapChart } from "./components/HourHeatmapChart";
+import { CustomerLoyaltyChart } from "./components/CustomerLoyaltyChart";
+import { RevenueSourceChart } from "./components/RevenueSourceChart";
+import { ShopAnalyst } from "@/components/analyst/ShopAnalyst";
 
 // Define interfaces for chart data
 interface ChartDataItem {
@@ -36,8 +41,56 @@ export default function ShopStatistics() {
   const { userRole, dukkanId } = useCustomerAuth();
   const [period, setPeriod] = useState<string>("daily"); // Default to daily view
   
+  // Date range state
+  const [dateRange, setDateRange] = useState({
+    from: startOfDay(subDays(new Date(), 30)),
+    to: endOfDay(new Date())
+  });
+  
+  // Set preset date ranges based on selected period
+  useEffect(() => {
+    const now = new Date();
+    
+    switch(period) {
+      case "daily":
+        setDateRange({
+          from: startOfDay(now),
+          to: endOfDay(now)
+        });
+        break;
+      case "weekly":
+        setDateRange({
+          from: startOfWeek(now, { weekStartsOn: 1 }),
+          to: endOfWeek(now, { weekStartsOn: 1 })
+        });
+        break;
+      case "monthly":
+        setDateRange({
+          from: startOfMonth(now),
+          to: endOfMonth(now)
+        });
+        break;
+      case "yearly":
+        // Set to current year
+        const startOfYear = new Date(now.getFullYear(), 0, 1);
+        const endOfYear = new Date(now.getFullYear(), 11, 31);
+        setDateRange({
+          from: startOfYear,
+          to: endOfYear
+        });
+        break;
+    }
+  }, [period]);
+  
+  // Handle date range change
+  const handleDateRangeChange = (range: { from: Date; to: Date }) => {
+    setDateRange(range);
+    // Custom period when user manually selects dates
+    setPeriod("custom");
+  };
+  
   const { data: shopStats, isLoading: isStatsLoading, refetch: refetchStats, isRefetching } = useQuery({
-    queryKey: ['shop-statistics'],
+    queryKey: ['shop-statistics', dateRange],
     queryFn: async () => {
       try {
         // Retrieve and update shop statistics
@@ -56,8 +109,9 @@ export default function ShopStatistics() {
   });
   
   const { data: islemler = [], isLoading: isIslemlerLoading, refetch: refetchIslemler } = useQuery({
-    queryKey: ['personel-islemleri'],
+    queryKey: ['personel-islemleri', dateRange],
     queryFn: async () => {
+      // Filter operations by date range
       return await personelIslemleriServisi.hepsiniGetir();
     },
     enabled: !!dukkanId,
@@ -66,7 +120,7 @@ export default function ShopStatistics() {
   });
   
   const { data: randevular = [], isLoading: isRandevularLoading, refetch: refetchRandevular } = useQuery({
-    queryKey: ['randevular-analysis'],
+    queryKey: ['randevular-analysis', dateRange],
     queryFn: async () => {
       if (dukkanId) {
         return await randevuServisi.dukkanRandevulariniGetir(dukkanId);
@@ -77,7 +131,20 @@ export default function ShopStatistics() {
     staleTime: 60000 // 1 minute
   });
   
-  // Calculate data for charts based on operations
+  // Filter data by date range
+  const filteredIslemler = islemler.filter(islem => {
+    if (!islem.created_at) return false;
+    const date = new Date(islem.created_at);
+    return date >= dateRange.from && date <= dateRange.to;
+  });
+  
+  const filteredRandevular = randevular.filter(randevu => {
+    if (!randevu.tarih) return false;
+    const date = new Date(randevu.tarih);
+    return date >= dateRange.from && date <= dateRange.to;
+  });
+  
+  // Calculate data for charts based on filtered operations
   const [hourlyData, setHourlyData] = useState<ChartDataItem[]>([]);
   const [dailyData, setDailyData] = useState<ChartDataItem[]>([]);
   const [weeklyData, setWeeklyData] = useState<ChartDataItem[]>([]);
@@ -86,32 +153,32 @@ export default function ShopStatistics() {
   
   // Generate chart data based on operations
   useEffect(() => {
-    if (!islemler || islemler.length === 0) return;
+    if (!filteredIslemler || filteredIslemler.length === 0) return;
     
     try {
       // Prepare hourly data (today's operations by hour)
-      const hourlyStats = prepareHourlyData(islemler);
+      const hourlyStats = prepareHourlyData(filteredIslemler);
       setHourlyData(hourlyStats);
       
       // Prepare daily data (last 7 days)
-      const dailyStats = prepareDailyData(islemler);
+      const dailyStats = prepareDailyData(filteredIslemler);
       setDailyData(dailyStats);
       
       // Prepare weekly data (last 4 weeks)
-      const weeklyStats = prepareWeeklyData(islemler);
+      const weeklyStats = prepareWeeklyData(filteredIslemler);
       setWeeklyData(weeklyStats);
       
       // Prepare monthly data (last 6 months)
-      const monthlyStats = prepareMonthlyData(islemler);
+      const monthlyStats = prepareMonthlyData(filteredIslemler);
       setMonthlyData(monthlyStats);
       
       // Prepare service performance data
-      const serviceStats = prepareServiceData(islemler);
+      const serviceStats = prepareServiceData(filteredIslemler);
       setServiceData(serviceStats);
     } catch (error) {
       console.error("Error preparing chart data:", error);
     }
-  }, [islemler]);
+  }, [filteredIslemler]);
   
   const prepareHourlyData = (operations: any[]): ChartDataItem[] => {
     // Group operations by hour for today
@@ -365,45 +432,70 @@ export default function ShopStatistics() {
         </div>
 
         <div className="mb-6">
-          <ShopAnalyst dukkanId={dukkanId} />
+          <ShopAnalyst 
+            dukkanId={dukkanId} 
+            dateRange={dateRange}
+            period={period} 
+          />
         </div>
         
-        <Tabs defaultValue={period} onValueChange={setPeriod} className="space-y-4">
-          <div className="flex justify-between items-center">
-            <TabsList>
+        <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-6">
+          <Tabs defaultValue={period} onValueChange={setPeriod} className="space-y-4 flex-1">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="daily">Günlük</TabsTrigger>
               <TabsTrigger value="weekly">Haftalık</TabsTrigger>
               <TabsTrigger value="monthly">Aylık</TabsTrigger>
               <TabsTrigger value="yearly">Yıllık</TabsTrigger>
             </TabsList>
+          </Tabs>
+          
+          <div className="flex items-center gap-2">
+            <Calendar className="h-5 w-5 text-muted-foreground" />
+            <DateRangePicker 
+              from={dateRange.from}
+              to={dateRange.to}
+              onSelect={handleDateRangeChange}
+            />
           </div>
-          
-          <MetricsCards 
-            isLoading={isLoading}
-            totalRevenue={shopStats?.totalRevenue || 0}
-            totalServices={shopStats?.totalServices || 0}
-            uniqueCustomerCount={shopStats?.uniqueCustomerCount || 0}
-            totalCompletedAppointments={shopStats?.totalServices || 0}
-          />
-          
-          <TabsContent value="daily" className="space-y-4">
+        </div>
+        
+        <MetricsCards 
+          isLoading={isLoading}
+          totalRevenue={shopStats?.totalRevenue || 0}
+          totalServices={shopStats?.totalServices || 0}
+          uniqueCustomerCount={shopStats?.uniqueCustomerCount || 0}
+          totalCompletedAppointments={shopStats?.totalCompletedAppointments || 0}
+          cancelledAppointments={shopStats?.cancelledAppointments || 0}
+          newCustomers={shopStats?.newCustomers || 0}
+          loyalCustomers={shopStats?.loyalCustomers || 0}
+        />
+        
+        {/* Common charts for all views */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+          <ServicePerformanceChart data={serviceData} isLoading={isLoading} />
+          <CustomerLoyaltyChart data={filteredIslemler} isLoading={isLoading} />
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+          <CustomerFrequencyChart data={filteredIslemler} isLoading={isLoading} />
+          <RevenueSourceChart data={serviceData} isLoading={isLoading} />
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+          <HourHeatmapChart data={filteredIslemler} isLoading={isLoading} />
+          {period === "daily" && (
             <HourlyPerformanceChart data={hourlyData} isLoading={isLoading} />
+          )}
+          {period === "weekly" && (
             <DailyPerformanceChart data={dailyData} isLoading={isLoading} />
-          </TabsContent>
-          
-          <TabsContent value="weekly" className="space-y-4">
+          )}
+          {period === "monthly" && (
             <WeeklyPerformanceChart data={weeklyData} isLoading={isLoading} />
-            <ServicePerformanceChart data={serviceData} isLoading={isLoading} />
-          </TabsContent>
-          
-          <TabsContent value="monthly" className="space-y-4">
+          )}
+          {period === "yearly" && (
             <MonthlyPerformanceChart data={monthlyData} isLoading={isLoading} />
-          </TabsContent>
-          
-          <TabsContent value="yearly">
-            <YearlyStatisticsPlaceholder />
-          </TabsContent>
-        </Tabs>
+          )}
+        </div>
       </div>
     </StaffLayout>
   );
