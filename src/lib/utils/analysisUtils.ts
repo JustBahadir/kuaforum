@@ -1,3 +1,4 @@
+
 type AnalysisData = {
   mostProfitableService?: string;
   mostPopularService?: string;
@@ -124,14 +125,14 @@ function calculateServiceStatistics(operations = []) {
 function calculateCustomerStatistics(operations = [], appointments = []) {
   // Count unique customers
   const uniqueCustomers = new Set();
-  operations.forEach(op => {
+  operations.forEach((op: any) => {
     if (op.musteri_id) uniqueCustomers.add(op.musteri_id);
   });
   
   const uniqueCustomerCount = uniqueCustomers.size;
   
   // Calculate new vs returning customers
-  const customerVisitCounts = operations.reduce((acc, op) => {
+  const customerVisitCounts: Record<string | number, number> = operations.reduce((acc: Record<string | number, number>, op: any) => {
     if (!op.musteri_id) return acc;
     
     if (!acc[op.musteri_id]) {
@@ -147,7 +148,7 @@ function calculateCustomerStatistics(operations = [], appointments = []) {
   
   // Calculate cancellation statistics
   const totalAppointments = appointments.length;
-  const cancelledAppointments = appointments.filter(app => app.durum === 'iptal').length;
+  const cancelledAppointments = appointments.filter((app: any) => app.durum === 'iptal').length;
   
   return {
     uniqueCustomerCount,
@@ -162,7 +163,7 @@ function calculateCustomerStatistics(operations = [], appointments = []) {
 
 function calculateTimeStatistics(operations = [], appointments = [], period = 'daily') {
   // Time-based grouping based on period
-  const timeGroups = operations.reduce((acc, op) => {
+  const timeGroups: Record<string, { count: number, revenue: number }> = operations.reduce((acc: Record<string, { count: number, revenue: number }>, op: any) => {
     if (!op.created_at) return acc;
     
     const date = new Date(op.created_at);
@@ -220,10 +221,10 @@ function calculateTimeStatistics(operations = [], appointments = [], period = 'd
 
 function calculateRevenueStatistics(operations = [], period = 'daily') {
   // Calculate total revenue
-  const totalRevenue = operations.reduce((sum, op) => sum + (op.tutar || 0), 0);
+  const totalRevenue = operations.reduce((sum: number, op: any) => sum + (op.tutar || 0), 0);
   
   // Calculate average spending per customer
-  const uniqueCustomers = new Set(operations.map(op => op.musteri_id).filter(Boolean));
+  const uniqueCustomers = new Set(operations.map((op: any) => op.musteri_id).filter(Boolean));
   const averageSpending = uniqueCustomers.size > 0 ? totalRevenue / uniqueCustomers.size : 0;
   
   // Period comparisons would need historical data

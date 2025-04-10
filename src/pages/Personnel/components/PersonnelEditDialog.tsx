@@ -11,12 +11,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -48,6 +43,7 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComp
   const [calisma_sistemi, setCalisma_sistemi] = useState<string>('aylik_maas');
   const [baslama_tarihi, setBaslama_tarihi] = useState<Date | undefined>(undefined);
   const [aktif, setAktif] = useState<boolean>(true);
+  const [activeTab, setActiveTab] = useState<string>("personal");
   const [isSaving, setIsSaving] = useState(false);
   const { userRole } = useCustomerAuth();
   const queryClient = useQueryClient();
@@ -165,236 +161,228 @@ export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComp
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[550px]">
+      <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
         <form onSubmit={handleUpdate}>
           <DialogHeader>
             <DialogTitle>Personel Düzenle</DialogTitle>
             <DialogDescription>
-              Personel çalışma sistemi ve diğer bilgilerini düzenleyebilirsiniz.
+              Personel bilgilerini düzenleyebilirsiniz.
             </DialogDescription>
           </DialogHeader>
           
-          <Accordion type="single" collapsible className="w-full">
-            <AccordionItem value="kisisel-bilgiler">
-              <AccordionTrigger>Kişisel Bilgiler</AccordionTrigger>
-              <AccordionContent>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="edit_ad_soyad">Ad Soyad</Label>
-                    <Input
-                      id="edit_ad_soyad"
-                      value={personelDuzenle.ad_soyad}
-                      className="bg-gray-100"
-                      disabled={true}
-                    />
-                    <p className="text-xs text-gray-500">Ad Soyad bilgisi personel profilinden senkronize edilecektir.</p>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="edit_telefon">Telefon</Label>
-                    <Input
-                      id="edit_telefon"
-                      type="tel"
-                      value={personelDuzenle.telefon}
-                      className="bg-gray-100"
-                      disabled={true}
-                    />
-                    <p className="text-xs text-gray-500">Telefon bilgisi personel profilinden senkronize edilecektir.</p>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="edit_eposta">E-posta</Label>
-                    <Input
-                      id="edit_eposta"
-                      type="email"
-                      value={personelDuzenle.eposta}
-                      className="bg-gray-100"
-                      disabled={true}
-                    />
-                    <p className="text-xs text-gray-500">E-posta bilgisi personel profilinden senkronize edilecektir.</p>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="edit_adres">Adres</Label>
-                    <Input
-                      id="edit_adres"
-                      value={personelDuzenle.adres}
-                      className="bg-gray-100"
-                      disabled={true}
-                    />
-                    <p className="text-xs text-gray-500">Adres bilgisi personel profilinden senkronize edilecektir.</p>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
+          <Tabs defaultValue="personal" value={activeTab} onValueChange={setActiveTab} className="mt-4">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="personal">Kişisel Bilgiler</TabsTrigger>
+              <TabsTrigger value="work">Çalışma Bilgileri</TabsTrigger>
+            </TabsList>
             
-            <AccordionItem value="calisma-bilgileri">
-              <AccordionTrigger>Çalışma Bilgileri</AccordionTrigger>
-              <AccordionContent>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="edit_calisma_sistemi">Çalışma Şekli</Label>
-                    <Select 
-                      value={calisma_sistemi} 
-                      onValueChange={(value) => setCalisma_sistemi(value)}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Çalışma şekli seçin" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="aylik_maas">Sabit Aylık Maaş</SelectItem>
-                        <SelectItem value="gunluk_yevmiye">Günlük Yevmiye</SelectItem>
-                        <SelectItem value="haftalik_yevmiye">Haftalık Yevmiye</SelectItem>
-                        <SelectItem value="prim_komisyon">Prim / Komisyon</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-gray-500">Personelin çalışma şekli değiştiğinde ücret alanları da otomatik güncellenir.</p>
-                  </div>
-                  
-                  {calisma_sistemi === 'aylik_maas' && (
-                    <div className="space-y-2">
-                      <Label htmlFor="edit_maas">Aylık Maaş (₺)</Label>
-                      <Input
-                        id="edit_maas"
-                        type="number"
-                        value={personelDuzenle.maas || 0}
-                        onChange={(e) =>
-                          setPersonelDuzenle((prev) =>
-                            prev ? { ...prev, maas: Number(e.target.value) } : null
-                          )
-                        }
-                        required
-                      />
-                    </div>
-                  )}
-                  
-                  {calisma_sistemi === 'gunluk_yevmiye' && (
-                    <div className="space-y-2">
-                      <Label htmlFor="edit_gunluk_ucret">Günlük Ücret (₺)</Label>
-                      <Input
-                        id="edit_gunluk_ucret"
-                        type="number"
-                        value={personelDuzenle.gunluk_ucret || 0}
-                        onChange={(e) =>
-                          setPersonelDuzenle((prev) =>
-                            prev ? { ...prev, gunluk_ucret: Number(e.target.value) } : null
-                          )
-                        }
-                        required
-                      />
-                    </div>
-                  )}
-                  
-                  {calisma_sistemi === 'haftalik_yevmiye' && (
-                    <div className="space-y-2">
-                      <Label htmlFor="edit_haftalik_ucret">Haftalık Ücret (₺)</Label>
-                      <Input
-                        id="edit_haftalik_ucret"
-                        type="number"
-                        value={personelDuzenle.haftalik_ucret || 0}
-                        onChange={(e) =>
-                          setPersonelDuzenle((prev) =>
-                            prev ? { ...prev, haftalik_ucret: Number(e.target.value) } : null
-                          )
-                        }
-                        required
-                      />
-                    </div>
-                  )}
-                  
-                  {calisma_sistemi === 'prim_komisyon' && (
-                    <div className="space-y-2">
-                      <Label htmlFor="edit_prim_yuzdesi">Komisyon Oranı (%)</Label>
-                      <Input
-                        id="edit_prim_yuzdesi"
-                        type="number"
-                        value={personelDuzenle.prim_yuzdesi || 0}
-                        onChange={(e) =>
-                          setPersonelDuzenle((prev) =>
-                            prev ? { ...prev, prim_yuzdesi: Number(e.target.value) } : null
-                          )
-                        }
-                        required
-                      />
-                    </div>
-                  )}
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="edit_baslama_tarihi">İşe Başlama Tarihi</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className="w-full justify-start text-left font-normal"
-                          id="edit_baslama_tarihi"
-                        >
-                          <Calendar className="mr-2 h-4 w-4" />
-                          {baslama_tarihi ? (
-                            format(baslama_tarihi, "PP", { locale: tr })
-                          ) : (
-                            <span>Tarih seçin</span>
-                          )}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <CalendarComponent
-                          mode="single"
-                          selected={baslama_tarihi}
-                          onSelect={setBaslama_tarihi}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="aktif"
-                      checked={aktif}
-                      onCheckedChange={setAktif}
+            <TabsContent value="personal" className="space-y-4 mt-4">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit_ad_soyad">Ad Soyad</Label>
+                  <Input
+                    id="edit_ad_soyad"
+                    value={personelDuzenle.ad_soyad}
+                    className="bg-gray-100"
+                    disabled={true}
+                  />
+                  <p className="text-xs text-gray-500">Ad Soyad bilgisi personel profilinden senkronize edilecektir.</p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="edit_telefon">Telefon</Label>
+                  <Input
+                    id="edit_telefon"
+                    type="tel"
+                    value={personelDuzenle.telefon}
+                    className="bg-gray-100"
+                    disabled={true}
+                  />
+                  <p className="text-xs text-gray-500">Telefon bilgisi personel profilinden senkronize edilecektir.</p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="edit_eposta">E-posta</Label>
+                  <Input
+                    id="edit_eposta"
+                    type="email"
+                    value={personelDuzenle.eposta}
+                    className="bg-gray-100"
+                    disabled={true}
+                  />
+                  <p className="text-xs text-gray-500">E-posta bilgisi personel profilinden senkronize edilecektir.</p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="edit_adres">Adres</Label>
+                  <Input
+                    id="edit_adres"
+                    value={personelDuzenle.adres}
+                    className="bg-gray-100"
+                    disabled={true}
+                  />
+                  <p className="text-xs text-gray-500">Adres bilgisi personel profilinden senkronize edilecektir.</p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="edit_iban">IBAN</Label>
+                  <div className="flex">
+                    <Input
+                      id="edit_iban"
+                      value={formattedIBAN}
+                      className="bg-gray-100 flex-1"
+                      disabled={true}
                     />
-                    <Label htmlFor="aktif">Personel Aktif</Label>
-                    <p className="text-xs text-gray-500 ml-2">
-                      {aktif ? "Personel aktif olarak çalışıyor" : "Personel pasif durumda"}
-                    </p>
+                    {formattedIBAN && (
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => copyToClipboard(formattedIBAN)}
+                        className="ml-2"
+                      >
+                        <Copy size={16} />
+                      </Button>
+                    )}
                   </div>
+                  <p className="text-xs text-gray-500">
+                    IBAN bilgisi personel profilinden senkronize edilecektir.
+                  </p>
                 </div>
-              </AccordionContent>
-            </AccordionItem>
+              </div>
+            </TabsContent>
             
-            <AccordionItem value="finansal-bilgiler">
-              <AccordionTrigger>Finansal Bilgiler</AccordionTrigger>
-              <AccordionContent>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="edit_iban">IBAN</Label>
-                    <div className="flex">
-                      <Input
-                        id="edit_iban"
-                        value={formattedIBAN}
-                        className="bg-gray-100 flex-1"
-                        disabled={true}
-                      />
-                      {formattedIBAN && (
-                        <Button 
-                          type="button" 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={() => copyToClipboard(formattedIBAN)}
-                          className="ml-2"
-                        >
-                          <Copy size={16} />
-                        </Button>
-                      )}
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      IBAN bilgisi personel profilinden senkronize edilecektir.
-                    </p>
-                  </div>
+            <TabsContent value="work" className="space-y-4 mt-4">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit_calisma_sistemi">Çalışma Şekli</Label>
+                  <Select 
+                    value={calisma_sistemi} 
+                    onValueChange={(value) => setCalisma_sistemi(value)}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Çalışma şekli seçin" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="aylik_maas">Sabit Aylık Maaş</SelectItem>
+                      <SelectItem value="gunluk_yevmiye">Günlük Yevmiye</SelectItem>
+                      <SelectItem value="haftalik_yevmiye">Haftalık Yevmiye</SelectItem>
+                      <SelectItem value="prim_komisyon">Prim / Komisyon</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-gray-500">Personelin çalışma şekli değiştiğinde ücret alanları da otomatik güncellenir.</p>
                 </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
+                
+                {calisma_sistemi === 'aylik_maas' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="edit_maas">Aylık Maaş (₺)</Label>
+                    <Input
+                      id="edit_maas"
+                      type="number"
+                      value={personelDuzenle.maas || 0}
+                      onChange={(e) =>
+                        setPersonelDuzenle((prev) =>
+                          prev ? { ...prev, maas: Number(e.target.value) } : null
+                        )
+                      }
+                      required
+                    />
+                  </div>
+                )}
+                
+                {calisma_sistemi === 'gunluk_yevmiye' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="edit_gunluk_ucret">Günlük Ücret (₺)</Label>
+                    <Input
+                      id="edit_gunluk_ucret"
+                      type="number"
+                      value={personelDuzenle.gunluk_ucret || 0}
+                      onChange={(e) =>
+                        setPersonelDuzenle((prev) =>
+                          prev ? { ...prev, gunluk_ucret: Number(e.target.value) } : null
+                        )
+                      }
+                      required
+                    />
+                  </div>
+                )}
+                
+                {calisma_sistemi === 'haftalik_yevmiye' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="edit_haftalik_ucret">Haftalık Ücret (₺)</Label>
+                    <Input
+                      id="edit_haftalik_ucret"
+                      type="number"
+                      value={personelDuzenle.haftalik_ucret || 0}
+                      onChange={(e) =>
+                        setPersonelDuzenle((prev) =>
+                          prev ? { ...prev, haftalik_ucret: Number(e.target.value) } : null
+                        )
+                      }
+                      required
+                    />
+                  </div>
+                )}
+                
+                {calisma_sistemi === 'prim_komisyon' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="edit_prim_yuzdesi">Komisyon Oranı (%)</Label>
+                    <Input
+                      id="edit_prim_yuzdesi"
+                      type="number"
+                      value={personelDuzenle.prim_yuzdesi || 0}
+                      onChange={(e) =>
+                        setPersonelDuzenle((prev) =>
+                          prev ? { ...prev, prim_yuzdesi: Number(e.target.value) } : null
+                        )
+                      }
+                      required
+                    />
+                  </div>
+                )}
+                
+                <div className="space-y-2">
+                  <Label htmlFor="edit_baslama_tarihi">İşe Başlama Tarihi</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start text-left font-normal"
+                        id="edit_baslama_tarihi"
+                      >
+                        <Calendar className="mr-2 h-4 w-4" />
+                        {baslama_tarihi ? (
+                          format(baslama_tarihi, "PP", { locale: tr })
+                        ) : (
+                          <span>Tarih seçin</span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={baslama_tarihi}
+                        onSelect={setBaslama_tarihi}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="aktif"
+                    checked={aktif}
+                    onCheckedChange={setAktif}
+                  />
+                  <Label htmlFor="aktif">Personel Aktif</Label>
+                  <p className="text-xs text-gray-500 ml-2">
+                    {aktif ? "Personel aktif olarak çalışıyor" : "Personel pasif durumda"}
+                  </p>
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
           
           <DialogFooter className="mt-4">
             <Button type="submit" disabled={isSaving}>

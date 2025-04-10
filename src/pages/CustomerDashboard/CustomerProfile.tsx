@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { formatPhoneNumber } from "@/utils/phoneFormatter";
@@ -7,7 +7,7 @@ import { ProfileEditForm } from "@/components/customer-profile/ProfileEditForm";
 import { profilServisi } from "@/lib/supabase/services/profilServisi";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 
-export default function CustomerProfile() {
+const CustomerProfile = () => {
   const [profile, setProfile] = useState({
     firstName: "",
     lastName: "",
@@ -49,7 +49,7 @@ export default function CustomerProfile() {
           const metaPhone = user.user_metadata.phone;
           const metaGender = user.user_metadata.gender as "erkek" | "kadın" | null;
           const metaBirthdate = user.user_metadata.birthdate;
-          const metaAvatarUrl = user.user_metadata.avatar_url;
+          const metaAddress = user.user_metadata.address;
           
           if (metaFirstName || metaLastName || metaPhone || metaGender || metaBirthdate) {
             console.log("Using profile data from user metadata");
@@ -248,4 +248,6 @@ export default function CustomerProfile() {
       />
     </div>
   );
-}
+};
+
+export default CustomerProfile;
