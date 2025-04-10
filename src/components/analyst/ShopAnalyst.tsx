@@ -16,7 +16,7 @@ export function ShopAnalyst({ dukkanId }: ShopAnalystProps) {
         return await personelIslemleriServisi.hepsiniGetir();
       },
       enabled: !!dukkanId,
-      staleTime: 60000 // 1 minute
+      staleTime: 0 // Force refetch every time to ensure fresh data
     });
     
   const { data: appointments = [], isLoading: isLoadingAppointments, refetch: refetchAppointments } = 
@@ -29,7 +29,7 @@ export function ShopAnalyst({ dukkanId }: ShopAnalystProps) {
         return [];
       },
       enabled: !!dukkanId,
-      staleTime: 60000 // 1 minute
+      staleTime: 0 // Force refetch every time to ensure fresh data
     });
 
   const handleRefresh = async () => {

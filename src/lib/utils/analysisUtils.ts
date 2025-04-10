@@ -87,18 +87,75 @@ export function analyzeShopData(
     ? `${sortedDays[0]} günü haftanın en yoğun günü oldu.`
     : "Henüz yeterli gün dağılımı verisi bulunmuyor.";
 
-  // For average spending change, we would need historical data
-  // As a placeholder, we'll simulate an increase or decrease
-  const changeDirection = Math.random() > 0.5;
-  const changePercentage = Math.floor(Math.random() * 15) + 1;
-  const averageSpendingChange = `Ortalama harcama geçen aya göre %${changePercentage} ${
-    changeDirection ? "arttı" : "azaldı"
-  }.`;
+  // Calculate customer spending trend compared to previous period
+  // Now we're using actual data for comparison instead of random
+  const now = new Date();
+  const thisMonth = now.getMonth();
+  const lastMonth = thisMonth === 0 ? 11 : thisMonth - 1;
+  
+  const thisMonthOps = operations.filter(op => {
+    if (!op.created_at) return false;
+    const date = new Date(op.created_at);
+    return date.getMonth() === thisMonth;
+  });
+  
+  const lastMonthOps = operations.filter(op => {
+    if (!op.created_at) return false;
+    const date = new Date(op.created_at);
+    return date.getMonth() === lastMonth;
+  });
+  
+  const thisMonthAvg = thisMonthOps.length > 0 
+    ? thisMonthOps.reduce((sum, op) => sum + (op.tutar || 0), 0) / thisMonthOps.length 
+    : 0;
+  
+  const lastMonthAvg = lastMonthOps.length > 0 
+    ? lastMonthOps.reduce((sum, op) => sum + (op.tutar || 0), 0) / lastMonthOps.length 
+    : 0;
 
-  // For customer ratio, we would need historical data
-  // As a placeholder, we'll provide a simulated ratio
-  const newCustomerPercentage = Math.floor(Math.random() * 30) + 10;
-  const customerRatio = `Bu ay müşterilerin %${newCustomerPercentage}'ı ilk kez geldi.`;
+  let averageSpendingChange = "Geçmiş ay verileri karşılaştırma için yetersiz.";
+  if (lastMonthAvg > 0 && thisMonthAvg > 0) {
+    const changePercent = Math.round(((thisMonthAvg - lastMonthAvg) / lastMonthAvg) * 100);
+    if (changePercent !== 0) {
+      averageSpendingChange = `Ortalama harcama geçen aya göre %${Math.abs(changePercent)} ${
+        changePercent > 0 ? "arttı" : "azaldı"
+      }.`;
+    } else {
+      averageSpendingChange = "Ortalama harcamada geçen aya göre önemli bir değişiklik olmadı.";
+    }
+  }
+
+  // Calculate new vs returning customer ratio
+  const thisMonthCustomers = new Set();
+  const newCustomers = new Set();
+  
+  appointments.forEach(app => {
+    if (!app.tarih) return;
+    const date = new Date(app.tarih);
+    if (date.getMonth() === thisMonth && date.getFullYear() === now.getFullYear()) {
+      thisMonthCustomers.add(app.musteri_id);
+      
+      // Check if this customer had appointments before this month
+      const hadPreviousAppointments = appointments.some(prevApp => {
+        if (!prevApp.tarih || prevApp.musteri_id !== app.musteri_id) return false;
+        const prevDate = new Date(prevApp.tarih);
+        return (prevDate.getMonth() !== thisMonth || prevDate.getFullYear() !== now.getFullYear()) 
+          && prevDate < date;
+      });
+      
+      if (!hadPreviousAppointments) {
+        newCustomers.add(app.musteri_id);
+      }
+    }
+  });
+  
+  const newCustomerPercentage = thisMonthCustomers.size > 0
+    ? Math.round((newCustomers.size / thisMonthCustomers.size) * 100)
+    : 0;
+  
+  const customerRatio = thisMonthCustomers.size > 0
+    ? `Bu ay müşterilerin %${newCustomerPercentage}'ı ilk kez geldi.`
+    : "Bu ay için yeterli müşteri verisi bulunmuyor.";
 
   return {
     mostProfitableService,
@@ -117,7 +174,7 @@ export function analyzePersonnelData(
 ): {
   mostOperationsStaff: string;
   mostRevenueStaff: string;
-  highestRatedStaff: string;
+  highestPointsStaff: string;
   serviceSpecializations: string;
   hasEnoughData: boolean;
 } {
@@ -126,7 +183,7 @@ export function analyzePersonnelData(
     return {
       mostOperationsStaff: "",
       mostRevenueStaff: "",
-      highestRatedStaff: "",
+      highestPointsStaff: "",
       serviceSpecializations: "",
       hasEnoughData: false,
     };
@@ -139,7 +196,7 @@ export function analyzePersonnelData(
       name: string;
       operationCount: number;
       revenue: number;
-      ratings: number[];
+      points: number;
       services: Record<string, number>;
     }
   > = {};
@@ -150,7 +207,7 @@ export function analyzePersonnelData(
       name: person.ad_soyad,
       operationCount: 0,
       revenue: 0,
-      ratings: [],
+      points: 0,
       services: {},
     };
   });
@@ -162,11 +219,8 @@ export function analyzePersonnelData(
     const stats = personnelStats[op.personel_id];
     stats.operationCount += 1;
     stats.revenue += op.tutar || 0;
+    stats.points += op.puan || 0;
     
-    if (op.puan) {
-      stats.ratings.push(op.puan);
-    }
-
     const serviceName = op.islem?.islem_adi || op.aciklama || "Bilinmeyen Hizmet";
     stats.services[serviceName] = (stats.services[serviceName] || 0) + 1;
   });
@@ -194,25 +248,20 @@ export function analyzePersonnelData(
       } lider durumda.`
     : "Henüz yeterli gelir verisi bulunmuyor.";
 
-  // Highest rating
-  const personnelWithRatings = statsArray.filter(
-    (p) => p.ratings.length > 0
+  // Highest points - Replacing the previous rating-based metric
+  const personnelWithPoints = statsArray.filter(
+    (p) => p.points > 0
   );
   
-  const ratedPersonnel = personnelWithRatings.map((p) => ({
-    name: p.name,
-    averageRating: p.ratings.reduce((sum, r) => sum + r, 0) / p.ratings.length,
-  }));
-
-  const highestRatedPersonnel = [...ratedPersonnel].sort(
-    (a, b) => b.averageRating - a.averageRating
+  const highestPointsPersonnel = [...personnelWithPoints].sort(
+    (a, b) => b.points - a.points
   )[0];
 
-  const highestRatedStaff = highestRatedPersonnel
-    ? `Ortalama ${highestRatedPersonnel.averageRating.toFixed(1)} puan ile en yüksek müşteri memnuniyetine sahip kişi: ${
-        highestRatedPersonnel.name
+  const highestPointsStaff = highestPointsPersonnel
+    ? `Toplam ${highestPointsPersonnel.points} puanla en yüksek puana sahip personel: ${
+        highestPointsPersonnel.name
       }.`
-    : "Henüz yeterli değerlendirme verisi bulunmuyor.";
+    : "Henüz yeterli puan verisi bulunmuyor.";
 
   // Service specialization
   let serviceSpecialist = null;
@@ -244,7 +293,7 @@ export function analyzePersonnelData(
   return {
     mostOperationsStaff,
     mostRevenueStaff,
-    highestRatedStaff,
+    highestPointsStaff,
     serviceSpecializations,
     hasEnoughData: true,
   };

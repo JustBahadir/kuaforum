@@ -17,7 +17,7 @@ export function PersonnelDetailsAnalyst({ personnelId }: PersonnelDetailsAnalyst
         return await personelIslemleriServisi.personelIslemleriGetir(personnelId);
       },
       enabled: !!personnelId,
-      staleTime: 30000
+      staleTime: 0 // Force refetch every time to ensure fresh data
     });
     
   // Get personnel details
@@ -28,7 +28,7 @@ export function PersonnelDetailsAnalyst({ personnelId }: PersonnelDetailsAnalyst
         return await personelServisi.getirById(personnelId);
       },
       enabled: !!personnelId,
-      staleTime: 30000
+      staleTime: 0 // Force refetch every time to ensure fresh data
     });
 
   const handleRefresh = async () => {
@@ -50,11 +50,8 @@ export function PersonnelDetailsAnalyst({ personnelId }: PersonnelDetailsAnalyst
     // Total count of operations
     const operationCount = operations.length;
     
-    // Calculate average rating
-    const ratingsCount = operations.filter(op => op.puan).length;
-    const averageRating = ratingsCount > 0
-      ? operations.reduce((sum, op) => sum + (op.puan || 0), 0) / ratingsCount
-      : 0;
+    // Calculate total points
+    const totalPoints = operations.reduce((sum, op) => sum + (op.puan || 0), 0);
     
     // Service distribution
     const serviceDistribution: Record<string, { count: number, revenue: number }> = {};
@@ -85,8 +82,8 @@ export function PersonnelDetailsAnalyst({ personnelId }: PersonnelDetailsAnalyst
     insights.push(`${personnel.ad_soyad} son 30 günde ${operationCount} işlem gerçekleştirdi.`);
     insights.push(`Toplam ${formatCurrency(totalRevenue)} gelir elde edildi.`);
     
-    if (averageRating > 0) {
-      insights.push(`Müşteri memnuniyet puanı: ${averageRating.toFixed(1)}/5.`);
+    if (totalPoints > 0) {
+      insights.push(`Toplam ${totalPoints} puan kazanıldı.`);
     }
     
     if (topService) {

@@ -15,14 +15,14 @@ export function PersonnelAnalyst({ personnelId }: PersonnelAnalystProps) {
       queryFn: async () => {
         return await personelIslemleriServisi.hepsiniGetir();
       },
-      staleTime: 60000 // 1 minute
+      staleTime: 0 // Force refetch every time to ensure fresh data
     });
     
   const { data: personnel = [], isLoading: isLoadingPersonnel, refetch: refetchPersonnel } = 
     useQuery({
       queryKey: ['personel-analysis'],
       queryFn: () => personelServisi.hepsiniGetir(),
-      staleTime: 60000 // 1 minute
+      staleTime: 0 // Force refetch every time to ensure fresh data
     });
 
   const handleRefresh = async () => {
@@ -42,7 +42,7 @@ export function PersonnelAnalyst({ personnelId }: PersonnelAnalystProps) {
   const insights = [
     analysis.mostOperationsStaff,
     analysis.mostRevenueStaff,
-    analysis.highestRatedStaff,
+    analysis.highestPointsStaff,
     analysis.serviceSpecializations,
   ].filter(Boolean);
 
