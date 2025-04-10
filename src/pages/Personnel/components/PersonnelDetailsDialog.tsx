@@ -1,313 +1,149 @@
 
 import { useState } from "react";
-import * as React from "react";
-import {
-  Dialog,
+import { 
+  Dialog, 
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
+  DialogDescription
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Copy, User, Calendar, Phone, Mail, Home, CreditCard, Briefcase } from "lucide-react";
-import { toast } from "sonner";
-import { profilServisi, personelServisi } from "@/lib/supabase";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PersonnelHistoryTable } from "./PersonnelHistoryTable";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+
+import { PersonnelForm } from "./PersonnelForm";
+import { PersonnelOperationsTable } from "./PersonnelOperationsTable";
 import { PersonnelPerformance } from "./PersonnelPerformance";
-import { formatCurrency } from "@/lib/utils";
 import { PersonnelEditDialog } from "./PersonnelEditDialog";
+import { Button } from "@/components/ui/button";
 
 interface PersonnelDetailsDialogProps {
-  personel: any;
-  open: boolean;
+  isOpen: boolean;
   onOpenChange: (open: boolean) => void;
+  personnel: any;
 }
 
 export function PersonnelDetailsDialog({
-  personel,
-  open,
+  isOpen,
   onOpenChange,
+  personnel
 }: PersonnelDetailsDialogProps) {
-  const [activeTab, setActiveTab] = useState("details");
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   
-  const copyToClipboard = (text: string, type: string) => {
-    navigator.clipboard.writeText(text);
-    toast.success(`${type} kopyalandı`);
-  };
+  if (!personnel) return null;
 
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return "Belirtilmemiş";
-    try {
-      return new Date(dateString).toLocaleDateString('tr-TR');
-    } catch {
-      return "Geçersiz tarih";
-    }
-  };
-
-  const handleEditComplete = () => {
-    setEditDialogOpen(false);
-    // You might want to refresh personnel data here
-  };
-
-  // Define a function to get working type label with color
-  const getWorkingTypeLabel = (type?: string) => {
-    if (!type) return { label: "Belirtilmemiş", color: "bg-gray-100 text-gray-800" };
-    
-    switch (type) {
-      case 'aylik_maas':
-        return { label: "Maaşlı", color: "bg-blue-100 text-blue-800" };
-      case 'prim_komisyon':
-        return { label: "Primli/Komisyonlu", color: "bg-green-100 text-green-800" };
-      case 'gunluk_yevmiye':
-        return { label: "Günlük Yevmiyeli", color: "bg-orange-100 text-orange-800" };
-      case 'haftalik_yevmiye':
-        return { label: "Haftalık Yevmiyeli", color: "bg-yellow-100 text-yellow-800" };
-      default:
-        return { label: type, color: "bg-gray-100 text-gray-800" };
-    }
+  const handleEditClick = () => {
+    setIsEditModalOpen(true);
   };
   
-  const workingType = getWorkingTypeLabel(personel.calisma_sistemi);
-
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <Dialog open={isOpen} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Personel Detayları</DialogTitle>
+            <DialogTitle>Personel Bilgileri</DialogTitle>
+            <DialogDescription>
+              <div className="flex items-center justify-between mt-2">
+                <span className="font-medium text-foreground">{personnel.ad_soyad}</span>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleEditClick}
+                >
+                  Düzenle
+                </Button>
+              </div>
+            </DialogDescription>
           </DialogHeader>
           
-          <div className="flex flex-col items-center mb-4">
-            <Avatar className="h-24 w-24 mb-3">
-              {personel.avatar_url ? (
-                <AvatarImage src={personel.avatar_url} alt={personel.ad_soyad} />
-              ) : (
-                <AvatarFallback className="text-lg bg-purple-100 text-purple-800">
-                  {personel.ad_soyad
-                    .split(' ')
-                    .map((name: string) => name[0])
-                    .join('')
-                    .substring(0, 2)
-                    .toUpperCase()}
-                </AvatarFallback>
-              )}
-            </Avatar>
-            <h2 className="text-xl font-bold">{personel.ad_soyad}</h2>
-            <div className={`${workingType.color} px-2 py-1 rounded-full text-xs mt-1`}>
-              {workingType.label}
-            </div>
-          </div>
-          
-          <Tabs 
-            defaultValue="details" 
-            value={activeTab} 
-            onValueChange={setActiveTab} 
-            className="w-full"
-          >
-            <div className="flex justify-center mb-4 overflow-x-auto">
-              <TabsList className="grid grid-cols-4 min-w-[400px]">
-                <TabsTrigger value="details">Genel Bilgiler</TabsTrigger>
-                <TabsTrigger value="operations">İşlem Geçmişi</TabsTrigger>
-                <TabsTrigger value="performance">Performans</TabsTrigger>
+          <div className="mt-4">
+            <Tabs defaultValue="personal-info" className="w-full">
+              <TabsList className="grid grid-cols-4 mb-6">
+                <TabsTrigger value="personal-info">Kişisel Bilgiler</TabsTrigger>
                 <TabsTrigger value="work-info">Çalışma Bilgileri</TabsTrigger>
+                <TabsTrigger value="history">İşlem Geçmişi</TabsTrigger>
+                <TabsTrigger value="performance">Performans</TabsTrigger>
               </TabsList>
-            </div>
-            
-            <div className="tab-content">
-              <TabsContent value="details" className="space-y-6">
-                <div className="grid gap-4 text-base">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 items-center border-b pb-2">
-                    <div className="font-medium flex items-center gap-2">
-                      <User size={18} className="text-purple-600" /> 
-                      Ad Soyad:
-                    </div>
-                    <div className="col-span-2">{personel.ad_soyad}</div>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-3 items-center border-b pb-2">
-                    <div className="font-medium flex items-center gap-2">
-                      <Calendar size={18} className="text-purple-600" />
-                      Doğum Tarihi:
-                    </div>
-                    <div className="col-span-2">{formatDate(personel.birth_date) || "Belirtilmemiş"}</div>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-3 items-center border-b pb-2">
-                    <div className="font-medium flex items-center gap-2">
-                      <Phone size={18} className="text-purple-600" />
-                      Telefon:
-                    </div>
-                    <div className="col-span-2 flex items-center">
-                      <span className="mr-2">{personel.telefon || "Belirtilmemiş"}</span>
-                      {personel.telefon && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0"
-                          onClick={() => copyToClipboard(personel.telefon, "Telefon numarası")}
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-3 items-center border-b pb-2">
-                    <div className="font-medium flex items-center gap-2">
-                      <Mail size={18} className="text-purple-600" />
-                      E-posta:
-                    </div>
-                    <div className="col-span-2">
-                      <span className="mr-2">{personel.eposta || "Belirtilmemiş"}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-3 items-center border-b pb-2">
-                    <div className="font-medium flex items-center gap-2">
-                      <Home size={18} className="text-purple-600" />
-                      Adres:
-                    </div>
-                    <div className="col-span-2">{personel.adres || "Belirtilmemiş"}</div>
-                  </div>
-                </div>
-                
-                <div className="flex justify-end">
-                  <Button onClick={() => setEditDialogOpen(true)}>
-                    Düzenle
-                  </Button>
-                </div>
-              </TabsContent>
               
-              <TabsContent value="operations">
-                <PersonnelHistoryTable personnelId={personel.id} />
-              </TabsContent>
-              
-              <TabsContent value="performance">
-                <PersonnelPerformance personnelId={personel.id} />
+              <TabsContent value="personal-info">
+                <PersonnelForm personnel={personnel} readOnly />
               </TabsContent>
               
               <TabsContent value="work-info">
-                <div className="grid gap-4 text-base">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 items-center border-b pb-2">
-                    <div className="font-medium flex items-center gap-2">
-                      <Briefcase size={18} className="text-purple-600" />
-                      Çalışma Şekli:
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <h3 className="text-lg font-medium mb-2">Çalışma Bilgileri</h3>
+                      <div className="space-y-2">
+                        <div className="flex justify-between border-b pb-1">
+                          <span className="text-muted-foreground">Personel No</span>
+                          <span>{personnel.personel_no}</span>
+                        </div>
+                        <div className="flex justify-between border-b pb-1">
+                          <span className="text-muted-foreground">Çalışma Sistemi</span>
+                          <span>{personnel.calisma_sistemi}</span>
+                        </div>
+                        <div className="flex justify-between border-b pb-1">
+                          <span className="text-muted-foreground">Maaş</span>
+                          <span>
+                            {new Intl.NumberFormat("tr-TR", {
+                              style: "currency",
+                              currency: "TRY",
+                            }).format(personnel.maas || 0)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between border-b pb-1">
+                          <span className="text-muted-foreground">Prim Yüzdesi</span>
+                          <span>%{personnel.prim_yuzdesi}</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="col-span-2">
-                      <span className={`px-2 py-1 rounded-md text-sm ${workingType.color}`}>
-                        {workingType.label}
-                      </span>
+
+                    <div>
+                      <h3 className="text-lg font-medium mb-2">İletişim Bilgileri</h3>
+                      <div className="space-y-2">
+                        <div className="flex justify-between border-b pb-1">
+                          <span className="text-muted-foreground">Telefon</span>
+                          <span>{personnel.telefon}</span>
+                        </div>
+                        <div className="flex justify-between border-b pb-1">
+                          <span className="text-muted-foreground">E-posta</span>
+                          <span>{personnel.eposta}</span>
+                        </div>
+                        <div className="flex justify-between border-b pb-1">
+                          <span className="text-muted-foreground">Adres</span>
+                          <span className="text-right">{personnel.adres}</span>
+                        </div>
+                        <div className="flex justify-between border-b pb-1">
+                          <span className="text-muted-foreground">IBAN</span>
+                          <span>{personnel.iban}</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  
-                  {personel.calisma_sistemi === 'aylik_maas' && (
-                    <div className="grid grid-cols-1 sm:grid-cols-3 items-center border-b pb-2">
-                      <div className="font-medium flex items-center gap-2">
-                        <CreditCard size={18} className="text-purple-600" />
-                        Aylık Maaş:
-                      </div>
-                      <div className="col-span-2">
-                        {formatCurrency(personel.maas || 0)}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {personel.calisma_sistemi === 'gunluk_yevmiye' && (
-                    <div className="grid grid-cols-1 sm:grid-cols-3 items-center border-b pb-2">
-                      <div className="font-medium flex items-center gap-2">
-                        <CreditCard size={18} className="text-purple-600" />
-                        Günlük Yevmiye:
-                      </div>
-                      <div className="col-span-2">
-                        {formatCurrency(personel.gunluk_ucret || 0)}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {personel.calisma_sistemi === 'haftalik_yevmiye' && (
-                    <div className="grid grid-cols-1 sm:grid-cols-3 items-center border-b pb-2">
-                      <div className="font-medium flex items-center gap-2">
-                        <CreditCard size={18} className="text-purple-600" />
-                        Haftalık Yevmiye:
-                      </div>
-                      <div className="col-span-2">
-                        {formatCurrency(personel.haftalik_ucret || 0)}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {personel.calisma_sistemi === 'prim_komisyon' && (
-                    <div className="grid grid-cols-1 sm:grid-cols-3 items-center border-b pb-2">
-                      <div className="font-medium flex items-center gap-2">
-                        <CreditCard size={18} className="text-purple-600" />
-                        Komisyon Oranı:
-                      </div>
-                      <div className="col-span-2">
-                        %{personel.prim_yuzdesi || 0}
-                      </div>
-                    </div>
-                  )}
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-3 items-center border-b pb-2">
-                    <div className="font-medium flex items-center gap-2">
-                      <Calendar size={18} className="text-purple-600" />
-                      İşe Başlama Tarihi:
-                    </div>
-                    <div className="col-span-2">
-                      {formatDate(personel.baslama_tarihi) || "Belirtilmemiş"}
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-3 items-center border-b pb-2">
-                    <div className="font-medium flex items-center gap-2">
-                      <CreditCard size={18} className="text-purple-600" />
-                      IBAN:
-                    </div>
-                    <div className="col-span-2 flex items-center">
-                      <span className="mr-2">
-                        {personel.iban ? profilServisi.formatIBAN(personel.iban) : "Belirtilmemiş"}
-                      </span>
-                      {personel.iban && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0"
-                          onClick={() => copyToClipboard(personel.iban, "IBAN")}
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="flex justify-end mt-4">
-                  <Button onClick={() => setEditDialogOpen(true)}>
-                    Düzenle
-                  </Button>
                 </div>
               </TabsContent>
-            </div>
-          </Tabs>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Kapat
-            </Button>
-          </DialogFooter>
+              
+              <TabsContent value="history">
+                <PersonnelOperationsTable personelId={personnel.id} />
+              </TabsContent>
+              
+              <TabsContent value="performance">
+                <PersonnelPerformance personelId={personnel.id} />
+              </TabsContent>
+            </Tabs>
+          </div>
         </DialogContent>
       </Dialog>
       
-      {/* Edit Dialog */}
-      {personel && (
-        <PersonnelEditDialog
-          personelId={personel.id}
-          open={editDialogOpen}
-          onOpenChange={setEditDialogOpen}
-          onEditComplete={handleEditComplete}
+      {isEditModalOpen && (
+        <PersonnelEditDialog 
+          isOpen={isEditModalOpen} 
+          onOpenChange={setIsEditModalOpen}
+          personnel={personnel}
         />
       )}
     </>

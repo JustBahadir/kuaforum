@@ -1,6 +1,6 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line } from 'recharts';
 import { formatCurrency } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -198,32 +198,68 @@ export function ServicePerformanceChart({ data, isLoading }: ServicePerformanceC
                   id="service-bar-chart-container"
                   onScroll={(e) => setScrollPosition((e.target as HTMLDivElement).scrollLeft)}
                 >
-                  <div className="min-w-[800px]">
+                  {/* Updated chart that matches the requested design */}
+                  <div className="min-w-[800px] bg-[#fff9e8] p-4 rounded-md">
                     <ResponsiveContainer width="100%" height={400}>
                       <BarChart
                         data={data}
                         margin={{
                           top: 20,
-                          right: 30,
+                          right: 60,
                           left: 20,
-                          bottom: 5,
+                          bottom: 60,
                         }}
                       >
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="name" />
-                        <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
-                        <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
+                        <XAxis 
+                          dataKey="name" 
+                          angle={-45} 
+                          textAnchor="end"
+                          height={80}
+                          tick={{ fontSize: 12 }}
+                        />
+                        <YAxis 
+                          yAxisId="left" 
+                          orientation="left" 
+                          stroke="#4CAF50"
+                          tickFormatter={(value) => formatCurrency(value).replace('₺', '')}
+                        />
+                        <YAxis 
+                          yAxisId="right" 
+                          orientation="right" 
+                          stroke="#FF5722"
+                        />
                         <Tooltip 
-                          formatter={(value, name) => {
+                          formatter={(value, name, props) => {
                             if (name === 'revenue') {
-                              return [formatCurrency(value as number), 'Gelir'];
+                              return [formatCurrency(value as number), 'Ciro'];
                             }
                             return [value, 'İşlem Sayısı'];
                           }}
                         />
-                        <Legend />
-                        <Bar yAxisId="left" dataKey="count" name="İşlem Sayısı" fill="#8884d8" />
-                        <Bar yAxisId="right" dataKey="revenue" name="Gelir" fill="#82ca9d" />
+                        <Legend 
+                          payload={[
+                            { value: 'Ciro', type: 'rect', color: '#4CAF50' },
+                            { value: 'İşlem Sayısı', type: 'line', color: '#FF5722' }
+                          ]}
+                        />
+                        <Bar 
+                          yAxisId="left" 
+                          dataKey="revenue" 
+                          fill="#4CAF50" 
+                          name="Ciro"
+                          barSize={30}
+                        />
+                        <Line
+                          yAxisId="right"
+                          type="monotone"
+                          dataKey="count"
+                          stroke="#FF5722"
+                          strokeWidth={3}
+                          name="İşlem Sayısı"
+                          dot={{ r: 6 }}
+                          activeDot={{ r: 8 }}
+                        />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>

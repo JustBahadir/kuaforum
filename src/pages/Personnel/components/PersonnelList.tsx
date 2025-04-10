@@ -1,305 +1,223 @@
 
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { personelServisi } from "@/lib/supabase";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { toast } from "sonner";
-import { Plus, UserPlus, Search } from "lucide-react";
-import { PersonnelAnalyst } from "@/components/analyst/PersonnelAnalyst";
-import { PersonnelDialog } from "./PersonnelDialog";
-import { Personel } from "@/lib/supabase/types";
-import { PersonnelEditDialog } from "./PersonnelEditDialog";
-import { Badge } from "@/components/ui/badge";
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { format } from "date-fns";
-import { tr } from "date-fns/locale";
-import { useCustomerAuth } from "@/hooks/useCustomerAuth";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { 
+  Card, 
+  CardHeader,
+  CardContent,
+  CardFooter,
+  CardTitle
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Search, MoreHorizontal, Pencil, Trash2, Phone, Mail, Calendar } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { PersonnelDetailsDialog } from "./PersonnelDetailsDialog";
 
 interface PersonnelListProps {
-  onPersonnelSelect: (id: number) => void;
+  personnel: any[];
+  isLoading: boolean;
+  onEdit: (personnel: any) => void;
+  onDelete: (id: number) => void;
 }
 
-export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedPersonnel, setSelectedPersonnel] = useState<Personel | null>(null);
+export function PersonnelList({ personnel, isLoading, onEdit, onDelete }: PersonnelListProps) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const { userRole } = useCustomerAuth();
-  
-  const queryClient = useQueryClient();
-  
-  const { data: personeller = [], isLoading } = useQuery({
-    queryKey: ['personel-list'],
-    queryFn: personelServisi.hepsiniGetir
+  const [filter, setFilter] = useState("all");
+  const [selectedPersonnel, setSelectedPersonnel] = useState<any>(null);
+  const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
+  const [personnelToDelete, setPersonnelToDelete] = useState<number | null>(null);
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
+
+  const filteredPersonnel = personnel.filter(p => {
+    const matchesSearch = p.ad_soyad.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesFilter = filter === "all" || p.calisma_sistemi === filter;
+    return matchesSearch && matchesFilter;
   });
-  
-  // Define color based on working type
-  const getWorkingTypeColor = (type: string): string => {
-    switch (type) {
-      case 'aylik_maas':
-        return 'bg-blue-100 text-blue-800';
-      case 'prim_komisyon':
-        return 'bg-green-100 text-green-800';
-      case 'gunluk_yevmiye':
-        return 'bg-orange-100 text-orange-800';
-      case 'haftalik_yevmiye':
-        return 'bg-yellow-100 text-yellow-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  };
+
+  const handleEditClick = (personnel: any) => {
+    onEdit(personnel);
+  };
+
+  const handleDeleteClick = (id: number) => {
+    setPersonnelToDelete(id);
+    setIsDeleteAlertOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (personnelToDelete !== null) {
+      onDelete(personnelToDelete);
     }
+    setIsDeleteAlertOpen(false);
+    setPersonnelToDelete(null);
   };
-  
-  // Get working type label
-  const getWorkingTypeLabel = (type: string): string => {
-    switch (type) {
-      case 'aylik_maas':
-        return 'Aylık Maaş';
-      case 'prim_komisyon':
-        return 'Prim/Komisyon';
-      case 'gunluk_yevmiye':
-        return 'Günlük Yevmiye';
-      case 'haftalik_yevmiye':
-        return 'Haftalık Yevmiye';
-      default:
-        return 'Belirsiz';
-    }
+
+  const handlePersonnelClick = (personnel: any) => {
+    setSelectedPersonnel(personnel);
+    setIsDetailsDialogOpen(true);
   };
-  
-  const handleOpenEditDialog = (personel: Personel) => {
-    setSelectedPersonnel(personel);
-    setEditDialogOpen(true);
-    onPersonnelSelect(personel.id);
+
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map(n => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
   };
-  
-  const handleAddNew = () => {
-    setIsDialogOpen(true);
-  };
-  
-  // Filter active and inactive personnel
-  const activePersonnel = personeller.filter(p => p.aktif !== false);
-  const inactivePersonnel = personeller.filter(p => p.aktif === false);
-  
-  // Filter based on search term
-  const filteredActivePersonnel = searchTerm 
-    ? activePersonnel.filter(personel =>
-        personel.ad_soyad?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        personel.telefon?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        personel.eposta?.toLowerCase().includes(searchTerm.toLowerCase()))
-    : activePersonnel;
-    
-  const filteredInactivePersonnel = searchTerm 
-    ? inactivePersonnel.filter(personel =>
-        personel.ad_soyad?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        personel.telefon?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        personel.eposta?.toLowerCase().includes(searchTerm.toLowerCase()))
-    : inactivePersonnel;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-10">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
-    <Card className="mb-4">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Personel Listesi</CardTitle>
-        {userRole === 'admin' && (
-          <Button onClick={handleAddNew} className="flex items-center gap-1">
-            <UserPlus size={16} />
-            <span className="hidden sm:inline">Personel Kaydını Görüntüle</span>
-            <span className="sm:hidden">Personel</span>
-          </Button>
-        )}
-      </CardHeader>
-      <CardContent>
-        <div className="mb-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 h-4 w-4" />
-            <Input 
-              placeholder="Personel ara..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)} 
-              className="pl-10"
-            />
-          </div>
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Personel ara..."
+            className="pl-8"
+            value={searchTerm}
+            onChange={handleSearchChange}
+          />
         </div>
-        
-        {isLoading ? (
-          <div className="flex justify-center p-4">
-            <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
+        <Select value={filter} onValueChange={setFilter}>
+          <SelectTrigger className="sm:w-[180px]">
+            <SelectValue placeholder="Çalışma şekli" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tümü</SelectItem>
+            <SelectItem value="maaşlı">Maaşlı</SelectItem>
+            <SelectItem value="yüzdelik">Yüzdelik</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {filteredPersonnel.length === 0 ? (
+        <div className="text-center py-8">
+          <p className="text-muted-foreground">Personel bulunamadı.</p>
+        </div>
+      ) : (
+        <ScrollArea className="h-[calc(100vh-250px)]">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredPersonnel.map((p) => (
+              <Card key={p.id} className="overflow-hidden hover:shadow-md transition-shadow">
+                <CardHeader className="p-4 pb-2 cursor-pointer" onClick={() => handlePersonnelClick(p)}>
+                  <div className="flex items-center space-x-4">
+                    <Avatar className="h-12 w-12 border">
+                      <AvatarImage src={p.avatar_url} />
+                      <AvatarFallback>{getInitials(p.ad_soyad)}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-base truncate">{p.ad_soyad}</CardTitle>
+                      <Badge variant={p.calisma_sistemi === "maaşlı" ? "outline" : "secondary"} className="mt-1">
+                        {p.calisma_sistemi === "maaşlı" ? "Maaşlı" : `%${p.prim_yuzdesi}`}
+                      </Badge>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleEditClick(p)}>
+                          <Pencil className="mr-2 h-4 w-4" />
+                          <span>Düzenle</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteClick(p.id);
+                          }}
+                          className="text-red-600 hover:text-red-600 focus:text-red-600"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          <span>Sil</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-4 pt-2 cursor-pointer" onClick={() => handlePersonnelClick(p)}>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex items-center text-muted-foreground">
+                      <Phone className="h-3.5 w-3.5 mr-2" />
+                      <span>{p.telefon}</span>
+                    </div>
+                    <div className="flex items-center text-muted-foreground">
+                      <Mail className="h-3.5 w-3.5 mr-2" />
+                      <span className="truncate">{p.eposta}</span>
+                    </div>
+                    {p.birth_date && (
+                      <div className="flex items-center text-muted-foreground">
+                        <Calendar className="h-3.5 w-3.5 mr-2" />
+                        <span>{new Date(p.birth_date).toLocaleDateString('tr-TR')}</span>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+                <CardFooter className="p-4 pt-0">
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => handleEditClick(p)}
+                  >
+                    Düzenle
+                  </Button>
+                </CardFooter>
+              </Card>
+            ))}
           </div>
-        ) : filteredActivePersonnel.length > 0 || filteredInactivePersonnel.length > 0 ? (
-          <div>
-            {filteredActivePersonnel.length > 0 && (
-              <div className="space-y-4">
-                <h3 className="font-medium text-sm text-gray-500">Aktif Personeller ({filteredActivePersonnel.length})</h3>
-                {filteredActivePersonnel.map((personel) => (
-                  <Collapsible key={personel.id} className="border rounded-lg overflow-hidden">
-                    <CollapsibleTrigger className="w-full flex items-center justify-between p-4 hover:bg-gray-50 text-left">
-                      <div className="flex items-center space-x-4">
-                        <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 font-bold">
-                          {personel.ad_soyad?.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()}
-                        </div>
-                        <div>
-                          <h3 className="font-semibold">{personel.ad_soyad}</h3>
-                          <div className="flex flex-wrap gap-2 mt-1">
-                            <Badge variant="outline" className={getWorkingTypeColor(personel.calisma_sistemi || 'aylik_maas')}>
-                              {getWorkingTypeLabel(personel.calisma_sistemi || 'aylik_maas')}
-                            </Badge>
-                            <Badge variant="outline" className="bg-gray-100">
-                              {personel.telefon}
-                            </Badge>
-                          </div>
-                        </div>
-                      </div>
-                      <Button 
-                        variant="ghost" 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleOpenEditDialog(personel);
-                        }} 
-                        className="ml-2"
-                      >
-                        Düzenle
-                      </Button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="bg-gray-50 p-4 border-t">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                        <div>
-                          <span className="font-medium">E-posta:</span> {personel.eposta}
-                        </div>
-                        {personel.baslama_tarihi && (
-                          <div>
-                            <span className="font-medium">İşe Başlama:</span> {format(new Date(personel.baslama_tarihi), "PP", { locale: tr })}
-                          </div>
-                        )}
-                        {personel.calisma_sistemi === 'aylik_maas' && (
-                          <div>
-                            <span className="font-medium">Aylık Maaş:</span> {personel.maas?.toLocaleString()} ₺
-                          </div>
-                        )}
-                        {personel.calisma_sistemi === 'gunluk_yevmiye' && (
-                          <div>
-                            <span className="font-medium">Günlük Ücret:</span> {personel.gunluk_ucret?.toLocaleString()} ₺
-                          </div>
-                        )}
-                        {personel.calisma_sistemi === 'haftalik_yevmiye' && (
-                          <div>
-                            <span className="font-medium">Haftalık Ücret:</span> {personel.haftalik_ucret?.toLocaleString()} ₺
-                          </div>
-                        )}
-                        {personel.calisma_sistemi === 'prim_komisyon' && (
-                          <div>
-                            <span className="font-medium">Komisyon Oranı:</span> %{personel.prim_yuzdesi}
-                          </div>
-                        )}
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-                ))}
-              </div>
-            )}
-            
-            {filteredInactivePersonnel.length > 0 && (
-              <div className="mt-8 space-y-4">
-                <h3 className="font-medium text-sm text-gray-500">Pasif Personeller ({filteredInactivePersonnel.length})</h3>
-                {filteredInactivePersonnel.map((personel) => (
-                  <Collapsible key={personel.id} className="border rounded-lg overflow-hidden opacity-70">
-                    <CollapsibleTrigger className="w-full flex items-center justify-between p-4 hover:bg-gray-50 text-left">
-                      <div className="flex items-center space-x-4">
-                        <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-700 font-bold">
-                          {personel.ad_soyad?.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()}
-                        </div>
-                        <div>
-                          <h3 className="font-semibold">{personel.ad_soyad}</h3>
-                          <div className="flex flex-wrap gap-2 mt-1">
-                            <Badge variant="outline" className="bg-gray-200 text-gray-800">
-                              {getWorkingTypeLabel(personel.calisma_sistemi || 'aylik_maas')}
-                            </Badge>
-                            <Badge variant="outline" className="bg-gray-200">
-                              {personel.telefon}
-                            </Badge>
-                            <Badge variant="outline" className="bg-red-100 text-red-800">
-                              Pasif
-                            </Badge>
-                          </div>
-                        </div>
-                      </div>
-                      <Button 
-                        variant="ghost" 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleOpenEditDialog(personel);
-                        }} 
-                        className="ml-2"
-                      >
-                        Düzenle
-                      </Button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="bg-gray-50 p-4 border-t">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                        <div>
-                          <span className="font-medium">E-posta:</span> {personel.eposta}
-                        </div>
-                        {personel.baslama_tarihi && (
-                          <div>
-                            <span className="font-medium">İşe Başlama:</span> {format(new Date(personel.baslama_tarihi), "PP", { locale: tr })}
-                          </div>
-                        )}
-                        {personel.calisma_sistemi === 'aylik_maas' && (
-                          <div>
-                            <span className="font-medium">Aylık Maaş:</span> {personel.maas?.toLocaleString()} ₺
-                          </div>
-                        )}
-                        {personel.calisma_sistemi === 'gunluk_yevmiye' && (
-                          <div>
-                            <span className="font-medium">Günlük Ücret:</span> {personel.gunluk_ucret?.toLocaleString()} ₺
-                          </div>
-                        )}
-                        {personel.calisma_sistemi === 'haftalik_yevmiye' && (
-                          <div>
-                            <span className="font-medium">Haftalık Ücret:</span> {personel.haftalik_ucret?.toLocaleString()} ₺
-                          </div>
-                        )}
-                        {personel.calisma_sistemi === 'prim_komisyon' && (
-                          <div>
-                            <span className="font-medium">Komisyon Oranı:</span> %{personel.prim_yuzdesi}
-                          </div>
-                        )}
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-                ))}
-              </div>
-            )}
-            
-            {/* Add PersonnelAnalyst component */}
-            <div className="mt-8">
-              <PersonnelAnalyst />
-            </div>
-          </div>
-        ) : (
-          <div className="text-center py-8 text-gray-500">
-            {searchTerm ? "Arama kriterlerine uygun personel bulunamadı" : "Henüz personel kaydı bulunmuyor"}
-          </div>
-        )}
-      </CardContent>
-      
-      {/* Personnel Dialog */}
-      <PersonnelDialog
-        open={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
-      />
-      
-      {/* Personnel Edit Dialog */}
-      {selectedPersonnel && (
-        <PersonnelEditDialog
-          personelId={selectedPersonnel.id}
-          open={editDialogOpen}
-          onOpenChange={setEditDialogOpen}
-        />
+        </ScrollArea>
       )}
-    </Card>
+
+      <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Emin misiniz?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bu personel kaydı kalıcı olarak silinecek. Bu işlem geri alınamaz.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>İptal</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-red-500 hover:bg-red-600">
+              Sil
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+      <PersonnelDetailsDialog
+        isOpen={isDetailsDialogOpen}
+        onOpenChange={setIsDetailsDialogOpen}
+        personnel={selectedPersonnel}
+      />
+    </div>
   );
 }
