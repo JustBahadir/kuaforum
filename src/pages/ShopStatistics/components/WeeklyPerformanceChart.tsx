@@ -1,29 +1,14 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { formatCurrency } from "@/lib/utils";
 
-interface ChartDataItem {
-  name: string;
-  ciro: number;
-  islemSayisi: number;
-}
-
 interface WeeklyPerformanceChartProps {
-  data: ChartDataItem[];
+  data: any[];
   isLoading: boolean;
 }
 
 export function WeeklyPerformanceChart({ data, isLoading }: WeeklyPerformanceChartProps) {
-  
-  // Custom tooltip formatter
-  const tooltipFormatter = (value: number, name: string) => {
-    if (name === 'ciro') {
-      return [formatCurrency(value), 'Ciro'];
-    }
-    return [value, 'İşlem Sayısı'];
-  };
-  
   if (isLoading) {
     return (
       <Card>
@@ -36,7 +21,7 @@ export function WeeklyPerformanceChart({ data, isLoading }: WeeklyPerformanceCha
       </Card>
     );
   }
-  
+
   return (
     <Card>
       <CardHeader>
@@ -44,29 +29,44 @@ export function WeeklyPerformanceChart({ data, isLoading }: WeeklyPerformanceCha
       </CardHeader>
       <CardContent className="h-[300px]">
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={data}>
+          <LineChart
+            data={data}
+            margin={{
+              top: 5,
+              right: 30,
+              left: 20,
+              bottom: 5,
+            }}
+          >
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="name" />
             <YAxis yAxisId="left" />
             <YAxis yAxisId="right" orientation="right" />
-            <Tooltip formatter={tooltipFormatter} />
-            <Legend />
-            <Bar 
-              yAxisId="left" 
-              dataKey="ciro" 
-              name="Ciro (₺)" 
-              fill="#8884d8" 
+            <Tooltip 
+              formatter={(value: any) => {
+                if (typeof value === 'number' && value > 10) {
+                  return formatCurrency(value);
+                }
+                return value;
+              }}
             />
-            <Line
-              yAxisId="right"
-              type="monotone"
-              dataKey="islemSayisi"
-              name="İşlem Sayısı"
-              stroke="#82ca9d"
-              strokeWidth={2}
+            <Legend />
+            <Line 
+              yAxisId="left" 
+              type="monotone" 
+              dataKey="ciro" 
+              stroke="#8884d8" 
+              name="Ciro (TL)" 
               activeDot={{ r: 8 }}
             />
-          </ComposedChart>
+            <Line 
+              yAxisId="right" 
+              type="monotone" 
+              dataKey="islemSayisi" 
+              stroke="#82ca9d" 
+              name="İşlem Sayısı"
+            />
+          </LineChart>
         </ResponsiveContainer>
       </CardContent>
     </Card>

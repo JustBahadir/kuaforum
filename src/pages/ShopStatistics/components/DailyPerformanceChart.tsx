@@ -1,34 +1,19 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { formatCurrency } from "@/lib/utils";
 
-interface ChartDataItem {
-  name: string;
-  ciro: number;
-  islemSayisi: number;
-}
-
 interface DailyPerformanceChartProps {
-  data: ChartDataItem[];
+  data: any[];
   isLoading: boolean;
 }
 
 export function DailyPerformanceChart({ data, isLoading }: DailyPerformanceChartProps) {
-  
-  // Custom tooltip formatter
-  const tooltipFormatter = (value: number, name: string) => {
-    if (name === 'ciro') {
-      return [formatCurrency(value), 'Ciro'];
-    }
-    return [value, 'İşlem Sayısı'];
-  };
-  
   if (isLoading) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Son 7 Gün Performansı</CardTitle>
+          <CardTitle className="text-lg">Günlük Performans</CardTitle>
         </CardHeader>
         <CardContent className="h-[300px] flex items-center justify-center">
           <div className="w-10 h-10 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
@@ -36,34 +21,52 @@ export function DailyPerformanceChart({ data, isLoading }: DailyPerformanceChart
       </Card>
     );
   }
-  
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg">Son 7 Gün Performansı</CardTitle>
+        <CardTitle className="text-lg">Günlük Performans</CardTitle>
       </CardHeader>
       <CardContent className="h-[300px]">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data}>
+          <LineChart
+            data={data}
+            margin={{
+              top: 5,
+              right: 30,
+              left: 20,
+              bottom: 5,
+            }}
+          >
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="name" />
             <YAxis yAxisId="left" />
             <YAxis yAxisId="right" orientation="right" />
-            <Tooltip formatter={tooltipFormatter} />
+            <Tooltip 
+              formatter={(value: any) => {
+                if (typeof value === 'number' && value > 10) {
+                  return formatCurrency(value);
+                }
+                return value;
+              }}
+            />
             <Legend />
-            <Bar 
+            <Line 
               yAxisId="left" 
+              type="monotone" 
               dataKey="ciro" 
-              name="Ciro (₺)" 
-              fill="#8884d8" 
+              stroke="#8884d8" 
+              name="Ciro (TL)" 
+              activeDot={{ r: 8 }}
             />
-            <Bar 
+            <Line 
               yAxisId="right" 
+              type="monotone" 
               dataKey="islemSayisi" 
-              name="İşlem Sayısı" 
-              fill="#82ca9d" 
+              stroke="#82ca9d" 
+              name="İşlem Sayısı"
             />
-          </BarChart>
+          </LineChart>
         </ResponsiveContainer>
       </CardContent>
     </Card>

@@ -1,59 +1,93 @@
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { formatCurrency } from "@/lib/utils";
 import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { useIsMobile } from "@/hooks/use-mobile";
 
-interface CustomerFrequencyProps {
+interface CustomerFrequencyChartProps {
   data: any[];
   isLoading: boolean;
 }
 
-export function CustomerFrequencyChart({ data, isLoading }: CustomerFrequencyProps) {
-  const [chartData, setChartData] = useState<any[]>([]);
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
+
+export function CustomerFrequencyChart({ data, isLoading }: CustomerFrequencyChartProps) {
+  const [frequencyData, setFrequencyData] = useState<any[]>([]);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     if (!data || data.length === 0) return;
     
     try {
-      // Count visits per customer
-      const customerVisits: Record<string, number> = {};
+      // Group operations by customer
+      const customerOperations = data.reduce((acc, op) => {
+        if (!op.musteri_id) return acc;
+        
+        if (!acc[op.musteri_id]) {
+          acc[op.musteri_id] = {
+            customerId: op.musteri_id,
+            customerName: op.musteri?.first_name 
+              ? `${op.musteri.first_name} ${op.musteri.last_name || ''}`
+              : `Müşteri #${op.musteri_id}`,
+            visits: 0,
+            revenue: 0,
+            dates: new Set()
+          };
+        }
+        
+        acc[op.musteri_id].visits++;
+        acc[op.musteri_id].revenue += (op.tutar || 0);
+        
+        // Add date to track unique visit days
+        if (op.created_at) {
+          const date = new Date(op.created_at).toISOString().split('T')[0];
+          acc[op.musteri_id].dates.add(date);
+        }
+        
+        return acc;
+      }, {});
       
-      data.forEach(op => {
-        if (!op.musteri_id) return;
-        const customerId = op.musteri_id.toString();
-        customerVisits[customerId] = (customerVisits[customerId] || 0) + 1;
-      });
-      
-      // Create frequency distribution
-      const frequencyDistribution: Record<string, number> = {
-        '1 Ziyaret': 0,
-        '2 Ziyaret': 0,
-        '3 Ziyaret': 0,
-        '4 Ziyaret': 0,
-        '5+ Ziyaret': 0
+      // Categorize by frequency (monthly, quarterly, etc.)
+      const frequencyCounts = {
+        monthly: 0,    // At least once a month
+        quarterly: 0,  // Every 1-3 months
+        biannual: 0,   // Every 3-6 months
+        yearly: 0,     // Once a year or less
+        onetime: 0     // Only visited once
       };
       
-      Object.values(customerVisits).forEach(visits => {
-        if (visits === 1) frequencyDistribution['1 Ziyaret']++;
-        else if (visits === 2) frequencyDistribution['2 Ziyaret']++;
-        else if (visits === 3) frequencyDistribution['3 Ziyaret']++;
-        else if (visits === 4) frequencyDistribution['4 Ziyaret']++;
-        else frequencyDistribution['5+ Ziyaret']++;
+      // Analyze visit frequency based on unique visit dates
+      Object.values(customerOperations).forEach((customer: any) => {
+        const uniqueVisitDays = customer.dates.size;
+        
+        if (uniqueVisitDays === 1) {
+          frequencyCounts.onetime++;
+        } else if (uniqueVisitDays >= 12) {
+          frequencyCounts.monthly++;
+        } else if (uniqueVisitDays >= 4) {
+          frequencyCounts.quarterly++;
+        } else if (uniqueVisitDays >= 2) {
+          frequencyCounts.biannual++;
+        } else {
+          frequencyCounts.yearly++;
+        }
       });
       
-      // Convert to array for chart
-      const result = Object.entries(frequencyDistribution).map(([name, value]) => ({
-        name,
-        müşteri: value
-      }));
+      // Format for chart
+      const result = [
+        { name: 'Aylık Düzenli', value: frequencyCounts.monthly, color: '#0088FE' },
+        { name: '3 Ayda Bir', value: frequencyCounts.quarterly, color: '#00C49F' },
+        { name: '6 Ayda Bir', value: frequencyCounts.biannual, color: '#FFBB28' },
+        { name: 'Yılda Bir', value: frequencyCounts.yearly, color: '#FF8042' },
+        { name: 'Tek Seferlik', value: frequencyCounts.onetime, color: '#8884d8' }
+      ];
       
-      setChartData(result);
+      setFrequencyData(result);
     } catch (error) {
       console.error("Error preparing customer frequency data:", error);
     }
   }, [data]);
-  
+
   if (isLoading) {
     return (
       <Card>
@@ -67,22 +101,65 @@ export function CustomerFrequencyChart({ data, isLoading }: CustomerFrequencyPro
     );
   }
   
+  const renderLabel = ({ name, percent }: any) => {
+    return `${name}: ${(percent * 100).toFixed(0)}%`;
+  };
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-lg">Müşteri Ziyaret Sıklığı</CardTitle>
       </CardHeader>
       <CardContent className="h-[300px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" />
-            <YAxis />
-            <Tooltip />
-            <Legend />
-            <Bar dataKey="müşteri" fill="#8884d8" name="Müşteri Sayısı" />
-          </BarChart>
-        </ResponsiveContainer>
+        {frequencyData.length === 0 ? (
+          <div className="flex items-center justify-center h-full text-muted-foreground">
+            Bu zaman diliminde müşteri verisi bulunmuyor
+          </div>
+        ) : isMobile ? (
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={frequencyData}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                outerRadius={80}
+                fill="#8884d8"
+                dataKey="value"
+                label={renderLabel}
+              >
+                {frequencyData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Legend />
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={frequencyData}
+              margin={{
+                top: 5,
+                right: 30,
+                left: 20,
+                bottom: 5,
+              }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="value" name="Müşteri Sayısı" fill="#8884d8">
+                {frequencyData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        )}
       </CardContent>
     </Card>
   );
