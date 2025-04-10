@@ -5,13 +5,21 @@ import { personelServisi } from "@/lib/supabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Plus, Pencil } from "lucide-react";
+import { Plus, UserPlus, Search } from "lucide-react";
 import { PersonnelAnalyst } from "@/components/analyst/PersonnelAnalyst";
-import { PersonnelDetailsDialog } from "./PersonnelDetailsDialog";
+import { PersonnelDialog } from "./PersonnelDialog";
 import { Personel } from "@/lib/supabase/types";
+import { PersonnelEditDialog } from "./PersonnelEditDialog";
+import { Badge } from "@/components/ui/badge";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { format } from "date-fns";
+import { tr } from "date-fns/locale";
+import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 
 interface PersonnelListProps {
   onPersonnelSelect: (id: number) => void;
@@ -19,20 +27,10 @@ interface PersonnelListProps {
 
 export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedPersonnel, setSelectedPersonnel] = useState<any | null>(null);
+  const [selectedPersonnel, setSelectedPersonnel] = useState<Personel | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
-  const [selectedPersonnelForDetails, setSelectedPersonnelForDetails] = useState<Personel | null>(null);
-  
-  // Form state
-  const [adSoyad, setAdSoyad] = useState("");
-  const [telefon, setTelefon] = useState("");
-  const [eposta, setEposta] = useState("");
-  const [adres, setAdres] = useState("");
-  const [maas, setMaas] = useState<number>(0);
-  const [primYuzdesi, setPrimYuzdesi] = useState<number>(0);
-  const [calisma_sistemi, setCalisma_sistemi] = useState<"haftalik" | "aylik">("aylik");
-  const [iban, setIban] = useState("");
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const { userRole } = useCustomerAuth();
   
   const queryClient = useQueryClient();
   
@@ -41,294 +39,265 @@ export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
     queryFn: personelServisi.hepsiniGetir
   });
   
-  const { mutate: addPersonnel } = useMutation({
-    mutationFn: personelServisi.ekle,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['personel-list'] });
-      resetForm();
-      setIsDialogOpen(false);
-      toast.success("Personel başarıyla eklendi");
-    },
-    onError: (error) => {
-      console.error("Personel eklenirken hata:", error);
-      toast.error("Personel eklenirken bir hata oluştu");
-    }
-  });
-  
-  const { mutate: updatePersonnel } = useMutation({
-    mutationFn: ({ id, personel }: { id: number; personel: any }) => 
-      personelServisi.guncelle(id, personel),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['personel-list'] });
-      resetForm();
-      setIsDialogOpen(false);
-      toast.success("Personel başarıyla güncellendi");
-    },
-    onError: (error) => {
-      console.error("Personel güncellenirken hata:", error);
-      toast.error("Personel güncellenirken bir hata oluştu");
-    }
-  });
-  
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const personelData = {
-      ad_soyad: adSoyad,
-      telefon,
-      eposta,
-      adres,
-      maas: Number(maas),
-      prim_yuzdesi: Number(primYuzdesi),
-      calisma_sistemi, // "haftalik" | "aylik"
-      iban,
-      personel_no: Math.random().toString(36).substring(2, 8).toUpperCase()
-    };
-    
-    if (selectedPersonnel) {
-      updatePersonnel({ id: selectedPersonnel.id, personel: personelData });
-    } else {
-      addPersonnel(personelData);
+  // Define color based on working type
+  const getWorkingTypeColor = (type: string): string => {
+    switch (type) {
+      case 'aylik_maas':
+        return 'bg-blue-100 text-blue-800';
+      case 'prim_komisyon':
+        return 'bg-green-100 text-green-800';
+      case 'gunluk_yevmiye':
+        return 'bg-orange-100 text-orange-800';
+      case 'haftalik_yevmiye':
+        return 'bg-yellow-100 text-yellow-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
     }
   };
   
-  const handleEdit = (personel: any) => {
+  // Get working type label
+  const getWorkingTypeLabel = (type: string): string => {
+    switch (type) {
+      case 'aylik_maas':
+        return 'Aylık Maaş';
+      case 'prim_komisyon':
+        return 'Prim/Komisyon';
+      case 'gunluk_yevmiye':
+        return 'Günlük Yevmiye';
+      case 'haftalik_yevmiye':
+        return 'Haftalık Yevmiye';
+      default:
+        return 'Belirsiz';
+    }
+  };
+  
+  const handleOpenEditDialog = (personel: Personel) => {
     setSelectedPersonnel(personel);
-    setAdSoyad(personel.ad_soyad || "");
-    setTelefon(personel.telefon || "");
-    setEposta(personel.eposta || "");
-    setAdres(personel.adres || "");
-    setMaas(personel.maas || 0);
-    setPrimYuzdesi(personel.prim_yuzdesi || 0);
-    setCalisma_sistemi(personel.calisma_sistemi || "aylik");
-    setIban(personel.iban || "");
-    setIsDialogOpen(true);
-  };
-  
-  const handleAddNew = () => {
-    resetForm();
-    setSelectedPersonnel(null);
-    setIsDialogOpen(true);
-  };
-  
-  const resetForm = () => {
-    setAdSoyad("");
-    setTelefon("");
-    setEposta("");
-    setAdres("");
-    setMaas(0);
-    setPrimYuzdesi(0);
-    setCalisma_sistemi("aylik");
-    setIban("");
-  };
-
-  const handlePersonnelClick = (personel: Personel) => {
-    setSelectedPersonnelForDetails(personel);
-    setDetailsDialogOpen(true);
+    setEditDialogOpen(true);
     onPersonnelSelect(personel.id);
   };
   
-  const filteredPersonnel = personeller.filter(personel =>
-    personel.ad_soyad?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    personel.telefon?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    personel.eposta?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleAddNew = () => {
+    setIsDialogOpen(true);
+  };
+  
+  // Filter active and inactive personnel
+  const activePersonnel = personeller.filter(p => p.aktif !== false);
+  const inactivePersonnel = personeller.filter(p => p.aktif === false);
+  
+  // Filter based on search term
+  const filteredActivePersonnel = searchTerm 
+    ? activePersonnel.filter(personel =>
+        personel.ad_soyad?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        personel.telefon?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        personel.eposta?.toLowerCase().includes(searchTerm.toLowerCase()))
+    : activePersonnel;
+    
+  const filteredInactivePersonnel = searchTerm 
+    ? inactivePersonnel.filter(personel =>
+        personel.ad_soyad?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        personel.telefon?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        personel.eposta?.toLowerCase().includes(searchTerm.toLowerCase()))
+    : inactivePersonnel;
 
   return (
     <Card className="mb-4">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Personel Listesi</CardTitle>
-        <Button onClick={handleAddNew} className="flex items-center gap-1">
-          <Plus size={16} />
-          Personel Ekle
-        </Button>
+        {userRole === 'admin' && (
+          <Button onClick={handleAddNew} className="flex items-center gap-1">
+            <UserPlus size={16} />
+            <span className="hidden sm:inline">Personel Kaydını Görüntüle</span>
+            <span className="sm:hidden">Personel</span>
+          </Button>
+        )}
       </CardHeader>
       <CardContent>
         <div className="mb-4">
-          <Input 
-            placeholder="Ara..." 
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)} 
-          />
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 h-4 w-4" />
+            <Input 
+              placeholder="Personel ara..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)} 
+              className="pl-10"
+            />
+          </div>
         </div>
         
         {isLoading ? (
           <div className="flex justify-center p-4">
             <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
           </div>
-        ) : filteredPersonnel.length > 0 ? (
+        ) : filteredActivePersonnel.length > 0 || filteredInactivePersonnel.length > 0 ? (
           <div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {filteredPersonnel.map((personel) => (
-                <div
-                  key={personel.id}
-                  className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
-                  onClick={() => handlePersonnelClick(personel)}
-                >
-                  <div className="p-4 flex items-center">
-                    <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 font-bold mr-3">
-                      {personel.ad_soyad?.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()}
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900">{personel.ad_soyad}</h3>
-                      <p className="text-sm text-gray-500">Personel</p>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-gray-500"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEdit(personel);
-                      }}
-                    >
-                      <Pencil size={16} />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
+            {filteredActivePersonnel.length > 0 && (
+              <div className="space-y-4">
+                <h3 className="font-medium text-sm text-gray-500">Aktif Personeller ({filteredActivePersonnel.length})</h3>
+                {filteredActivePersonnel.map((personel) => (
+                  <Collapsible key={personel.id} className="border rounded-lg overflow-hidden">
+                    <CollapsibleTrigger className="w-full flex items-center justify-between p-4 hover:bg-gray-50 text-left">
+                      <div className="flex items-center space-x-4">
+                        <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 font-bold">
+                          {personel.ad_soyad?.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()}
+                        </div>
+                        <div>
+                          <h3 className="font-semibold">{personel.ad_soyad}</h3>
+                          <div className="flex flex-wrap gap-2 mt-1">
+                            <Badge variant="outline" className={getWorkingTypeColor(personel.calisma_sistemi || 'aylik_maas')}>
+                              {getWorkingTypeLabel(personel.calisma_sistemi || 'aylik_maas')}
+                            </Badge>
+                            <Badge variant="outline" className="bg-gray-100">
+                              {personel.telefon}
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenEditDialog(personel);
+                        }} 
+                        className="ml-2"
+                      >
+                        Düzenle
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="bg-gray-50 p-4 border-t">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <span className="font-medium">E-posta:</span> {personel.eposta}
+                        </div>
+                        {personel.baslama_tarihi && (
+                          <div>
+                            <span className="font-medium">İşe Başlama:</span> {format(new Date(personel.baslama_tarihi), "PP", { locale: tr })}
+                          </div>
+                        )}
+                        {personel.calisma_sistemi === 'aylik_maas' && (
+                          <div>
+                            <span className="font-medium">Aylık Maaş:</span> {personel.maas?.toLocaleString()} ₺
+                          </div>
+                        )}
+                        {personel.calisma_sistemi === 'gunluk_yevmiye' && (
+                          <div>
+                            <span className="font-medium">Günlük Ücret:</span> {personel.gunluk_ucret?.toLocaleString()} ₺
+                          </div>
+                        )}
+                        {personel.calisma_sistemi === 'haftalik_yevmiye' && (
+                          <div>
+                            <span className="font-medium">Haftalık Ücret:</span> {personel.haftalik_ucret?.toLocaleString()} ₺
+                          </div>
+                        )}
+                        {personel.calisma_sistemi === 'prim_komisyon' && (
+                          <div>
+                            <span className="font-medium">Komisyon Oranı:</span> %{personel.prim_yuzdesi}
+                          </div>
+                        )}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                ))}
+              </div>
+            )}
             
-            {/* Add PersonnelAnalyst right below the personnel list */}
-            <div className="mt-4">
+            {filteredInactivePersonnel.length > 0 && (
+              <div className="mt-8 space-y-4">
+                <h3 className="font-medium text-sm text-gray-500">Pasif Personeller ({filteredInactivePersonnel.length})</h3>
+                {filteredInactivePersonnel.map((personel) => (
+                  <Collapsible key={personel.id} className="border rounded-lg overflow-hidden opacity-70">
+                    <CollapsibleTrigger className="w-full flex items-center justify-between p-4 hover:bg-gray-50 text-left">
+                      <div className="flex items-center space-x-4">
+                        <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-700 font-bold">
+                          {personel.ad_soyad?.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()}
+                        </div>
+                        <div>
+                          <h3 className="font-semibold">{personel.ad_soyad}</h3>
+                          <div className="flex flex-wrap gap-2 mt-1">
+                            <Badge variant="outline" className="bg-gray-200 text-gray-800">
+                              {getWorkingTypeLabel(personel.calisma_sistemi || 'aylik_maas')}
+                            </Badge>
+                            <Badge variant="outline" className="bg-gray-200">
+                              {personel.telefon}
+                            </Badge>
+                            <Badge variant="outline" className="bg-red-100 text-red-800">
+                              Pasif
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenEditDialog(personel);
+                        }} 
+                        className="ml-2"
+                      >
+                        Düzenle
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="bg-gray-50 p-4 border-t">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <span className="font-medium">E-posta:</span> {personel.eposta}
+                        </div>
+                        {personel.baslama_tarihi && (
+                          <div>
+                            <span className="font-medium">İşe Başlama:</span> {format(new Date(personel.baslama_tarihi), "PP", { locale: tr })}
+                          </div>
+                        )}
+                        {personel.calisma_sistemi === 'aylik_maas' && (
+                          <div>
+                            <span className="font-medium">Aylık Maaş:</span> {personel.maas?.toLocaleString()} ₺
+                          </div>
+                        )}
+                        {personel.calisma_sistemi === 'gunluk_yevmiye' && (
+                          <div>
+                            <span className="font-medium">Günlük Ücret:</span> {personel.gunluk_ucret?.toLocaleString()} ₺
+                          </div>
+                        )}
+                        {personel.calisma_sistemi === 'haftalik_yevmiye' && (
+                          <div>
+                            <span className="font-medium">Haftalık Ücret:</span> {personel.haftalik_ucret?.toLocaleString()} ₺
+                          </div>
+                        )}
+                        {personel.calisma_sistemi === 'prim_komisyon' && (
+                          <div>
+                            <span className="font-medium">Komisyon Oranı:</span> %{personel.prim_yuzdesi}
+                          </div>
+                        )}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                ))}
+              </div>
+            )}
+            
+            {/* Add PersonnelAnalyst component */}
+            <div className="mt-8">
               <PersonnelAnalyst />
             </div>
           </div>
         ) : (
           <div className="text-center py-8 text-gray-500">
-            Personel bulunamadı
+            {searchTerm ? "Arama kriterlerine uygun personel bulunamadı" : "Henüz personel kaydı bulunmuyor"}
           </div>
         )}
       </CardContent>
       
-      {/* Personnel Form Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>
-              {selectedPersonnel ? "Personeli Düzenle" : "Yeni Personel Ekle"}
-            </DialogTitle>
-          </DialogHeader>
-          
-          <form onSubmit={handleSubmit}>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="adSoyad" className="text-right">
-                  Ad Soyad
-                </Label>
-                <Input 
-                  id="adSoyad" 
-                  className="col-span-3" 
-                  value={adSoyad}
-                  onChange={(e) => setAdSoyad(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="telefon" className="text-right">
-                  Telefon
-                </Label>
-                <Input 
-                  id="telefon" 
-                  className="col-span-3" 
-                  value={telefon}
-                  onChange={(e) => setTelefon(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="eposta" className="text-right">
-                  E-posta
-                </Label>
-                <Input 
-                  id="eposta" 
-                  className="col-span-3" 
-                  type="email"
-                  value={eposta}
-                  onChange={(e) => setEposta(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="adres" className="text-right">
-                  Adres
-                </Label>
-                <Input 
-                  id="adres" 
-                  className="col-span-3" 
-                  value={adres}
-                  onChange={(e) => setAdres(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="maas" className="text-right">
-                  Maaş
-                </Label>
-                <Input 
-                  id="maas" 
-                  className="col-span-3" 
-                  type="number"
-                  value={maas}
-                  onChange={(e) => setMaas(Number(e.target.value))}
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="primYuzdesi" className="text-right">
-                  Prim %
-                </Label>
-                <Input 
-                  id="primYuzdesi" 
-                  className="col-span-3" 
-                  type="number"
-                  value={primYuzdesi}
-                  onChange={(e) => setPrimYuzdesi(Number(e.target.value))}
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="calisma_sistemi" className="text-right">
-                  Çalışma
-                </Label>
-                <select
-                  id="calisma_sistemi"
-                  className="col-span-3 border rounded-md h-10 px-3"
-                  value={calisma_sistemi}
-                  onChange={(e) => setCalisma_sistemi(e.target.value as "haftalik" | "aylik")}
-                  required
-                >
-                  <option value="haftalik">Haftalık</option>
-                  <option value="aylik">Aylık</option>
-                </select>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="iban" className="text-right">
-                  IBAN
-                </Label>
-                <Input 
-                  id="iban" 
-                  className="col-span-3" 
-                  value={iban}
-                  onChange={(e) => setIban(e.target.value)}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="submit">
-                {selectedPersonnel ? "Güncelle" : "Ekle"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Personnel Details Dialog */}
-      {selectedPersonnelForDetails && (
-        <PersonnelDetailsDialog
-          personel={selectedPersonnelForDetails}
-          open={detailsDialogOpen}
-          onOpenChange={setDetailsDialogOpen}
+      {/* Personnel Dialog */}
+      <PersonnelDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+      />
+      
+      {/* Personnel Edit Dialog */}
+      {selectedPersonnel && (
+        <PersonnelEditDialog
+          personelId={selectedPersonnel.id}
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
         />
       )}
     </Card>
