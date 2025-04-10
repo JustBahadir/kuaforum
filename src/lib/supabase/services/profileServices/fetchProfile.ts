@@ -1,11 +1,10 @@
-
-import { supabase } from '../../client';
-import { Profile } from '../../types';
+import { supabase } from "../../client";
+import { Profil } from "../../types";
 
 /**
  * Mevcut kullanıcının profilini getirir
  */
-export async function getProfile(): Promise<Profile | null> {
+export async function getProfile(): Promise<Profil | null> {
   try {
     // Mevcut kullanıcıyı al
     let { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -43,7 +42,7 @@ export async function getProfile(): Promise<Profile | null> {
         .maybeSingle();
       
       if (!error && data) {
-        return data as Profile;
+        return data as Profil;
       }
       
       console.warn("Profil veritabanından alınamadı, kullanıcı meta verisine dönülüyor:", error);

@@ -40,6 +40,9 @@ export interface IslemKategori {
   created_at?: string;
 }
 
+// Kategori alias for backward compatibility
+export type Kategori = IslemKategori;
+
 // Personel işlemi veri modeli
 export interface PersonelIslemi {
   id: number;
@@ -75,6 +78,9 @@ export interface Musteri {
   created_at?: string;
 }
 
+// Randevu durum tipi
+export type RandevuDurumu = 'beklemede' | 'onaylandi' | 'iptal_edildi' | 'tamamlandi';
+
 // Randevu veri modeli
 export interface Randevu {
   id: number;
@@ -88,6 +94,9 @@ export interface Randevu {
   notlar?: string;
   islemler: any;
   created_at?: string;
+  // Add these properties to the interface to fix the TS errors
+  musteri?: Musteri;
+  personel?: Personel;
 }
 
 // Profil veri modeli
@@ -104,6 +113,9 @@ export interface Profil {
   iban?: string;
   created_at?: string;
 }
+
+// Profile alias for backward compatibility
+export type Profile = Profil;
 
 // Dükkan veri modeli
 export interface Dukkan {

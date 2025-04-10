@@ -1,11 +1,10 @@
-
-import { supabase } from '../../client';
-import type { Profile } from '../../types';
+import { supabase } from "../../client";
+import { Profil } from "../../types";
 
 /**
  * Creates a new profile for a user
  */
-export async function createProfile(userId: string, data: any): Promise<Profile> {
+export async function createProfile(userId: string, data: any): Promise<Profil> {
   try {
     const { error } = await supabase
       .from('profiles')

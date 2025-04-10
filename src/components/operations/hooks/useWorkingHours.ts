@@ -1,127 +1,66 @@
+import { useState, useEffect } from "react";
+import { calismaSaatleriServisi } from "@/lib/supabase/services/calismaSaatleriServisi";
+import { CalismaSaati } from "@/lib/supabase/types";
 
-import { useState, useEffect, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { CalismaSaati } from '@/lib/supabase/types';
-import { calismaSaatleriServisi } from '@/lib/supabase/services/calismaSaatleriServisi';
-import { useWorkingHoursMutation, UseWorkingHoursMutationProps } from './useWorkingHoursMutation';
-import { gunSiralama } from '../constants/workingDays';
-
-interface UseWorkingHoursProps {
-  dukkanId: number;
-  onMutationSuccess?: () => void;
-}
-
-export const useWorkingHours = ({ dukkanId, onMutationSuccess }: UseWorkingHoursProps) => {
-  const [hours, setHours] = useState<CalismaSaati[]>([]);
-  const [originalHours, setOriginalHours] = useState<CalismaSaati[]>([]);
+export const useWorkingHours = (dukkanId: number | undefined) => {
+  const [workingHours, setWorkingHours] = useState<CalismaSaati[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
   
-  // Use the mutation hook for updates
-  const mutation = useWorkingHoursMutation({ dukkanId, onMutationSuccess });
-  const { updateAllHours, updateSingleDay, isLoading: isMutationLoading, isUpdating } = mutation;
-
-  // Fetch working hours with React Query
-  const { 
-    data: fetchedHours = [], 
-    isLoading, 
-    isError, 
-    error,
-    refetch
-  } = useQuery({
-    queryKey: ['calisma_saatleri', dukkanId],
-    queryFn: async () => {
-      console.log('useWorkingHours: Fetching hours for shop ID:', dukkanId);
-      if (!dukkanId) return [];
+  useEffect(() => {
+    if (!dukkanId) return;
+    
+    const fetchWorkingHours = async () => {
+      setIsLoading(true);
+      setError(null);
       
       try {
-        const result = await calismaSaatleriServisi.dukkanSaatleriGetir(dukkanId);
-        console.log('useWorkingHours: Fetched hours:', result);
-        return result;
-      } catch (err) {
-        console.error('useWorkingHours: Error fetching hours:', err);
-        throw err;
+        const hours = await calismaSaatleriServisi.dukkanSaatleriGetir(dukkanId);
+        if (hours && hours.length > 0) {
+          setWorkingHours(hours);
+        } else {
+          const defaultHours = setDefaultWorkingHours(dukkanId);
+          setWorkingHours(defaultHours);
+        }
+      } catch (e: any) {
+        setError(e);
+      } finally {
+        setIsLoading(false);
       }
-    },
-    enabled: !!dukkanId,
-  });
-
-  // Update local state when fetched data changes
-  useEffect(() => {
-    if (fetchedHours && fetchedHours.length > 0) {
-      // Sort by our predefined day order
-      const sortedHours = [...fetchedHours].sort((a, b) => {
-        const aIndex = gunSiralama.indexOf(a.gun);
-        const bIndex = gunSiralama.indexOf(b.gun);
-        return aIndex - bIndex;
-      });
-      
-      setHours(sortedHours);
-      setOriginalHours(JSON.parse(JSON.stringify(sortedHours)));
-    } else if (dukkanId && !isLoading && fetchedHours.length === 0) {
-      // If we have a dukkanId but no hours, create default hours
-      const defaultHours = calismaSaatleriServisi.defaultWorkingHours(dukkanId);
-      setHours(defaultHours);
-      setOriginalHours(JSON.parse(JSON.stringify(defaultHours)));
-    }
-  }, [fetchedHours, isLoading, dukkanId]);
-
-  // Update a single day
-  const updateDay = useCallback((index: number, updates: Partial<CalismaSaati>) => {
-    setHours(current => {
-      const updated = [...current];
-      updated[index] = { ...updated[index], ...updates };
-      return updated;
-    });
-  }, []);
-
-  // Save current hours to the database
-  const saveHours = useCallback(async () => {
-    if (hours.length === 0) return;
+    };
+    
+    fetchWorkingHours();
+  }, [dukkanId]);
+  
+  // Update the setWorkingHours function to include the required id property
+const setDefaultWorkingHours = (dukkanId: number) => {
+  const defaultHours: CalismaSaati[] = [
+    { id: 1, dukkan_id: dukkanId, gun: "pazartesi", gun_sira: 1, acilis: "09:00", kapanis: "18:00", kapali: false },
+    { id: 2, dukkan_id: dukkanId, gun: "sali", gun_sira: 2, acilis: "09:00", kapanis: "18:00", kapali: false },
+    { id: 3, dukkan_id: dukkanId, gun: "carsamba", gun_sira: 3, acilis: "09:00", kapanis: "18:00", kapali: false },
+    { id: 4, dukkan_id: dukkanId, gun: "persembe", gun_sira: 4, acilis: "09:00", kapanis: "18:00", kapali: false },
+    { id: 5, dukkan_id: dukkanId, gun: "cuma", gun_sira: 5, acilis: "09:00", kapanis: "18:00", kapali: false },
+    { id: 6, dukkan_id: dukkanId, gun: "cumartesi", gun_sira: 6, acilis: "09:00", kapanis: "18:00", kapali: false },
+    { id: 7, dukkan_id: dukkanId, gun: "pazar", gun_sira: 7, acilis: "09:00", kapanis: "18:00", kapali: true }
+  ];
+  
+  setWorkingHours(defaultHours);
+  return defaultHours;
+};
+  
+  const updateWorkingHours = async (updatedHours: CalismaSaati[]) => {
+    setIsLoading(true);
+    setError(null);
     
     try {
-      console.log('useWorkingHours: Saving hours:', hours);
-      await updateAllHours(hours);
-      setOriginalHours(JSON.parse(JSON.stringify(hours)));
-    } catch (error) {
-      console.error('useWorkingHours: Error saving hours:', error);
-      throw error;
+      await calismaSaatleriServisi.topluGuncelle(updatedHours);
+      setWorkingHours(updatedHours);
+    } catch (e: any) {
+      setError(e);
+    } finally {
+      setIsLoading(false);
     }
-  }, [hours, updateAllHours]);
-
-  // Reset to original state
-  const resetHours = useCallback(() => {
-    setHours(JSON.parse(JSON.stringify(originalHours)));
-  }, [originalHours]);
-
-  // Check if there are unsaved changes
-  const hasChanges = useCallback(() => {
-    if (hours.length !== originalHours.length) return true;
-    
-    for (let i = 0; i < hours.length; i++) {
-      const current = hours[i];
-      const original = originalHours[i];
-      
-      if (current.kapali !== original.kapali) return true;
-      if (!current.kapali && !original.kapali) {
-        if (current.acilis !== original.acilis) return true;
-        if (current.kapanis !== original.kapanis) return true;
-      }
-    }
-    
-    return false;
-  }, [hours, originalHours]);
-
-  return {
-    hours,
-    setHours,
-    updateDay,
-    saveHours,
-    resetHours,
-    isLoading,
-    isError,
-    error,
-    hasChanges,
-    refetch,
-    isMutationLoading,
-    isUpdating
   };
+  
+  return { workingHours, isLoading, error, updateWorkingHours };
 };

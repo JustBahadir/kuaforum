@@ -1,12 +1,10 @@
-
-import { supabase } from '../../client';
-import { Profile } from '../../types';
-import { ProfileServiceError, ProfileUpdateData, ProfileCreationParams } from './profileTypes';
+import { supabase } from "../../client";
+import { Profil } from "../../types";
 
 /**
  * Updates a user's profile
  */
-export async function updateProfile(data: ProfileUpdateData): Promise<Profile | null> {
+export async function updateProfile(data: ProfileUpdateData): Promise<Profil | null> {
   try {
     console.log("Profil güncelleniyor:", data);
     
@@ -161,7 +159,7 @@ export async function updateProfile(data: ProfileUpdateData): Promise<Profile | 
 export async function createOrUpdateProfile(
   userId: string, 
   profileData: ProfileCreationParams
-): Promise<Profile | null> {
+): Promise<Profil | null> {
   try {
     console.log("Kullanıcı için profil oluşturuluyor veya güncelleniyor:", userId, "veri:", profileData);
     
@@ -202,7 +200,7 @@ export async function createOrUpdateProfile(
       console.error("Profil alınırken hata:", fetchError);
     }
     
-    let profile: Profile | null = null;
+    let profile: Profil | null = null;
     
     // If profile exists, update it
     if (existingProfile) {

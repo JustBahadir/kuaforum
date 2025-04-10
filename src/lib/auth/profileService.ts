@@ -1,116 +1,22 @@
+import { supabase } from "../supabase/client";
+import { Profil } from "@/lib/supabase/types";
 
-import { profilServisi } from "@/lib/supabase/services/profilServisi";
-import { dukkanServisi } from "@/lib/supabase/services/dukkanServisi";
-import { getGenderTitle } from "@/lib/supabase/services/profileServices/profileTypes";
-import { supabase } from "@/lib/supabase/client";
-import { Profile } from "@/lib/supabase/types";
-import { ProfileUpdateData } from "@/lib/supabase/services/profileServices/profileTypes";
+// Function to get the user profile
+export const getProfileData = async (userId: string): Promise<Profil | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
 
-/**
- * Service to handle user profile operations
- */
-export const profileService = {
-  /**
-   * Get the user's name with proper title
-   */
-  getUserNameWithTitle: async (): Promise<string> => {
-    try {
-      const { data } = await supabase.auth.getUser();
-      const user = data.user;
-      
-      if (!user) {
-        return "Değerli Müşterimiz";
-      }
-      
-      // First try to get name from user metadata
-      if (user.user_metadata && (user.user_metadata.first_name)) {
-        const metaFirstName = user.user_metadata.first_name || '';
-        const metaGender = user.user_metadata.gender || '';
-        
-        const genderTitle = getGenderTitle(metaGender);
-        
-        if (metaFirstName && genderTitle) {
-          return `${metaFirstName} ${genderTitle}`;
-        } else if (metaFirstName) {
-          return metaFirstName;
-        }
-      }
-      
-      // If metadata doesn't have the name, try from profile table
-      try {
-        const profile = await profilServisi.getir();
-        if (profile) {
-          const firstName = profile.first_name || "";
-          const genderTitle = getGenderTitle(profile.gender);
-          
-          if (firstName && genderTitle) {
-            return `${firstName} ${genderTitle}`;
-          } else if (firstName) {
-            return firstName;
-          } else {
-            return "Değerli Müşterimiz";
-          }
-        } else {
-          return "Değerli Müşterimiz";
-        }
-      } catch (profileError) {
-        console.error("Error getting profile:", profileError);
-        return "Değerli Müşterimiz";
-      }
-    } catch (error) {
-      console.error("Error getting user name:", error);
-      return "Değerli Müşterimiz";
+    if (error) {
+      console.error("Error fetching profile:", error);
+      return null;
     }
-  },
-
-  /**
-   * Get the user's shop ID if they are an admin
-   */
-  getUserShopId: async (userId: string, role: string): Promise<number | null> => {
-    if (role === 'admin') {
-      try {
-        const dukkan = await dukkanServisi.kullanicininDukkani(userId);
-        if (dukkan) {
-          return dukkan.id;
-        }
-      } catch (error) {
-        console.error("Dükkan bilgisi alınamadı:", error);
-      }
-    }
+    return data;
+  } catch (error) {
+    console.error("Unexpected error fetching profile:", error);
     return null;
-  },
-
-  /**
-   * Get the user's role
-   */
-  getUserRole: async (): Promise<string | null> => {
-    return await profilServisi.getUserRole();
-  },
-  
-  /**
-   * Get user profile
-   */
-  getUserProfile: async (): Promise<Profile | null> => {
-    return await profilServisi.getir();
-  },
-  
-  /**
-   * Update user profile
-   */
-  updateUserProfile: async (data: Partial<Profile>): Promise<Profile | null> => {
-    // Convert data to ProfileUpdateData
-    const updateData: ProfileUpdateData = {
-      first_name: data.first_name,
-      last_name: data.last_name,
-      phone: data.phone,
-      role: data.role,
-      gender: data.gender as "erkek" | "kadın" | null,
-      birthdate: data.birthdate,
-      avatar_url: data.avatar_url,
-      address: data.address,
-      iban: data.iban
-    };
-    
-    return await profilServisi.guncelle(updateData);
   }
 };
