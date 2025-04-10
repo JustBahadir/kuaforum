@@ -46,8 +46,23 @@ export const getUserNameWithTitle = async (): Promise<string> => {
   }
 };
 
+// Add getUserRole function to fix the missing method error
+export const getUserRole = async (): Promise<string | null> => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    const profile = await getProfileData(user.id);
+    return profile?.role || null;
+  } catch (error) {
+    console.error("Error getting user role:", error);
+    return null;
+  }
+};
+
 // Export as profileService object for backward compatibility
 export const profileService = {
   getProfileData,
-  getUserNameWithTitle
+  getUserNameWithTitle,
+  getUserRole
 };

@@ -118,7 +118,7 @@ export default function CustomerProfile() {
     if (name === 'gender') {
       setProfile(prev => ({ 
         ...prev, 
-        [name]: value ? value as "erkek" | "kadın" : null 
+        [name]: value ? (value as "erkek" | "kadın") : null 
       }));
     } else {
       setProfile(prev => ({ ...prev, [name]: value }));

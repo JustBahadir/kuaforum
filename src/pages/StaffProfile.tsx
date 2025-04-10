@@ -146,7 +146,7 @@ const StaffProfile = () => {
   const handleSelectChange = (name: string, value: "erkek" | "kadın" | "") => {
     setFormData(prev => ({ 
       ...prev, 
-      [name]: value === "" ? null : value
+      [name]: value === "" ? null : (value as "erkek" | "kadın")
     }));
   };
 
