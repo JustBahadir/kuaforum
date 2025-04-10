@@ -19,6 +19,34 @@ const CHART_COLORS = [
   "#4CAF50", "#F44336", "#2196F3", "#FF9800", "#9C27B0"
 ];
 
+interface ServiceData {
+  name: string;
+  revenue: number;
+  materialCost: number;
+  laborCost: number;
+  fixedCost: number;
+  totalCost?: number;
+  profit?: number;
+  profitMargin?: number;
+}
+
+interface CategoryData {
+  name: string;
+  revenue: number;
+  cost: number;
+  count: number;
+  profit?: number;
+  profitMargin?: number;
+}
+
+interface PeriodData {
+  name: string;
+  revenue: number;
+  cost: number;
+  profit: number;
+  change?: number;
+}
+
 interface ProfitAnalysisProps {
   operations: any[];
   fixedExpenses: number;
@@ -30,13 +58,7 @@ export function ProfitAnalysis({ operations, fixedExpenses, monthlyAppointments 
   const [expenseView, setExpenseView] = useState<'service' | 'category'>('service');
   
   // Servis bazlı kâr analizi verileri
-  const serviceAnalysisData = operations.reduce((acc: Record<string, { 
-    name: string,
-    revenue: number,
-    materialCost: number,
-    laborCost: number,
-    fixedCost: number
-  }>, op) => {
+  const serviceAnalysisData = operations.reduce((acc: Record<string, ServiceData>, op) => {
     if (!op.islem) return acc;
     
     const serviceName = op.islem.islem_adi;
@@ -87,12 +109,7 @@ export function ProfitAnalysis({ operations, fixedExpenses, monthlyAppointments 
   const leastProfitableService = serviceData.length > 0 ? serviceData[serviceData.length - 1] : null;
   
   // Kategori bazlı kâr analizi
-  const categoryAnalysisData = operations.reduce((acc: Record<string, {
-    name: string,
-    revenue: number,
-    cost: number,
-    count: number
-  }>, op) => {
+  const categoryAnalysisData = operations.reduce((acc: Record<string, CategoryData>, op) => {
     if (!op.islem || !op.islem.kategori_id) return acc;
     
     // Kategori bilgisi
@@ -153,7 +170,7 @@ export function ProfitAnalysis({ operations, fixedExpenses, monthlyAppointments 
     
     const baseRevenue = 10000;
     const baseCost = 6000;
-    const data = [];
+    const data: PeriodData[] = [];
     
     let prevProfit = 0;
     

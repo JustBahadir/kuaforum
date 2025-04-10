@@ -12,6 +12,7 @@ import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 export default function StaffOperations() {
   const [islemAdi, setIslemAdi] = useState("");
   const [fiyat, setFiyat] = useState<number>(0);
+  const [maliyet, setMaliyet] = useState<number>(0);
   const [puan, setPuan] = useState<number>(0);
   const [kategoriId, setKategoriId] = useState<number | null>(null);
   const [duzenleId, setDuzenleId] = useState<number | null>(null);
@@ -150,6 +151,7 @@ export default function StaffOperations() {
   const formuSifirla = () => {
     setIslemAdi("");
     setFiyat(0);
+    setMaliyet(0);
     setPuan(0);
     setKategoriId(null);
     setDuzenleId(null);
@@ -161,6 +163,7 @@ export default function StaffOperations() {
     const islem = {
       islem_adi: islemAdi,
       fiyat,
+      maliyet,
       puan: puanlamaAktif ? puan : 0,
       kategori_id: kategoriId
     };
@@ -235,6 +238,8 @@ export default function StaffOperations() {
               setIslemAdi={setIslemAdi}
               fiyat={fiyat}
               setFiyat={setFiyat}
+              maliyet={maliyet}
+              setMaliyet={setMaliyet}
               puan={puan}
               setPuan={setPuan}
               kategoriId={kategoriId}
@@ -247,6 +252,7 @@ export default function StaffOperations() {
                 setDuzenleId(islem.id);
                 setIslemAdi(islem.islem_adi || "");
                 setFiyat(islem.fiyat || 0);
+                setMaliyet(islem.maliyet || 0);
                 setPuan(islem.puan || 0);
                 setKategoriId(islem.kategori_id || null);
                 setDialogAcik(true);
