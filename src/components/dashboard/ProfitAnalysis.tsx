@@ -91,7 +91,7 @@ export function ProfitAnalysis({ operations, fixedExpenses, monthlyAppointments 
   }, {});
   
   // Veriyi diziye dönüştür
-  const serviceData = Object.values(serviceAnalysisData).map(service => {
+  const serviceData = Object.values(serviceAnalysisData).map((service: ServiceData) => {
     const totalCost = service.materialCost + service.laborCost + service.fixedCost;
     const profit = service.revenue - totalCost;
     const profitMargin = service.revenue > 0 ? (profit / service.revenue) * 100 : 0;
@@ -131,7 +131,7 @@ export function ProfitAnalysis({ operations, fixedExpenses, monthlyAppointments 
     return acc;
   }, {});
   
-  const categoryData = Object.values(categoryAnalysisData).map(category => {
+  const categoryData = Object.values(categoryAnalysisData).map((category: CategoryData) => {
     const profit = category.revenue - category.cost;
     const profitMargin = category.revenue > 0 ? (profit / category.revenue) * 100 : 0;
     
