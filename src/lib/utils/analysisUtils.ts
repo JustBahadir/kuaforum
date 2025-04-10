@@ -77,7 +77,7 @@ export function analyzeShopData(operations = [], appointments = [], period = 'da
   };
 }
 
-function calculateServiceStatistics(operations = []) {
+function calculateServiceStatistics(operations: any[] = []) {
   // Map to store service statistics
   const serviceMap: Record<string, ServiceStat> = operations.reduce((acc: Record<string, ServiceStat>, op: any) => {
     // Get service name either from islem or description
@@ -122,7 +122,7 @@ function calculateServiceStatistics(operations = []) {
   };
 }
 
-function calculateCustomerStatistics(operations = [], appointments = []) {
+function calculateCustomerStatistics(operations: any[] = [], appointments: any[] = []) {
   // Count unique customers
   const uniqueCustomers = new Set();
   operations.forEach((op: any) => {
@@ -161,7 +161,13 @@ function calculateCustomerStatistics(operations = [], appointments = []) {
   };
 }
 
-function calculateTimeStatistics(operations = [], appointments = [], period = 'daily') {
+interface TimeEntry {
+  key: string;
+  count: number;
+  revenue: number;
+}
+
+function calculateTimeStatistics(operations: any[] = [], appointments: any[] = [], period = 'daily') {
   // Time-based grouping based on period
   const timeGroups: Record<string, { count: number, revenue: number }> = operations.reduce((acc: Record<string, { count: number, revenue: number }>, op: any) => {
     if (!op.created_at) return acc;
@@ -200,7 +206,7 @@ function calculateTimeStatistics(operations = [], appointments = [], period = 'd
   }, {});
   
   // Convert to array and sort by count
-  const timeArray = Object.entries(timeGroups)
+  const timeArray: TimeEntry[] = Object.entries(timeGroups)
     .map(([key, value]) => ({ key, ...value }))
     .sort((a, b) => b.count - a.count);
   
@@ -219,7 +225,7 @@ function calculateTimeStatistics(operations = [], appointments = [], period = 'd
   };
 }
 
-function calculateRevenueStatistics(operations = [], period = 'daily') {
+function calculateRevenueStatistics(operations: any[] = [], period = 'daily') {
   // Calculate total revenue
   const totalRevenue = operations.reduce((sum: number, op: any) => sum + (op.tutar || 0), 0);
   

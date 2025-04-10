@@ -88,7 +88,7 @@ const StaffProfile = () => {
             firstName: profile.first_name || "",
             lastName: profile.last_name || "",
             phone: profile.phone ? formatPhoneNumber(profile.phone) : "",
-            gender: profile.gender || null,
+            gender: profile.gender as "erkek" | "kadın" | null || null,
             birthdate: profile.birthdate || "",
             email: user.email || "",
             address: profile.address || "",

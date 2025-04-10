@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
@@ -50,6 +51,7 @@ const CustomerProfile = () => {
           const metaGender = user.user_metadata.gender as "erkek" | "kadın" | null;
           const metaBirthdate = user.user_metadata.birthdate;
           const metaAddress = user.user_metadata.address;
+          const metaAvatarUrl = user.user_metadata.avatar_url;
           
           if (metaFirstName || metaLastName || metaPhone || metaGender || metaBirthdate) {
             console.log("Using profile data from user metadata");
@@ -81,7 +83,7 @@ const CustomerProfile = () => {
               lastName: profileData.last_name || "",
               phone: formattedPhone,
               email: user.email || "",
-              gender: profileData.gender || null,
+              gender: profileData.gender as "erkek" | "kadın" | null || null,
               birthdate: profileData.birthdate || "",
               avatarUrl: profileData.avatar_url || ""
             });
