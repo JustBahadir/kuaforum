@@ -1,4 +1,3 @@
-
 type AnalysisData = {
   mostProfitableService?: string;
   mostPopularService?: string;
@@ -10,6 +9,12 @@ type AnalysisData = {
   cancellationRate?: string;
   hasEnoughData: boolean;
 };
+
+interface ServiceStat {
+  name: string;
+  count: number;
+  revenue: number;
+}
 
 export function analyzeShopData(operations = [], appointments = [], period = 'daily') {
   // Check if we have enough data to perform analysis
@@ -73,7 +78,7 @@ export function analyzeShopData(operations = [], appointments = [], period = 'da
 
 function calculateServiceStatistics(operations = []) {
   // Map to store service statistics
-  const serviceMap = operations.reduce((acc, op) => {
+  const serviceMap: Record<string, ServiceStat> = operations.reduce((acc: Record<string, ServiceStat>, op: any) => {
     // Get service name either from islem or description
     let serviceName = '';
     if (op.islem && op.islem.islem_adi) {
@@ -99,7 +104,7 @@ function calculateServiceStatistics(operations = []) {
   }, {});
   
   // Convert to array
-  const services = Object.values(serviceMap);
+  const services: ServiceStat[] = Object.values(serviceMap);
   
   // Find most profitable service
   const mostProfitableService = services.length > 0 ? 

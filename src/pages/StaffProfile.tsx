@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Button } from "@/components/ui/button";
@@ -56,7 +55,7 @@ const StaffProfile = () => {
           const metaFirstName = user.user_metadata.first_name;
           const metaLastName = user.user_metadata.last_name;
           const metaPhone = user.user_metadata.phone;
-          const metaGender = user.user_metadata.gender;
+          const metaGender = user.user_metadata.gender as "erkek" | "kadın" | null;
           const metaBirthdate = user.user_metadata.birthdate;
           const metaAddress = user.user_metadata.address;
           const metaIban = user.user_metadata.iban;

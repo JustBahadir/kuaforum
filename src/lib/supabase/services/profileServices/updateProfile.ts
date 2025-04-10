@@ -1,3 +1,4 @@
+
 import { supabase } from "../../client";
 import { Profil } from "../../types";
 
@@ -10,6 +11,7 @@ export interface ProfileUpdateData {
   birthdate?: string;
   iban?: string;
   gender?: string;
+  role?: 'admin' | 'staff' | 'customer'; // Added missing role property
 }
 
 export interface ProfileCreationParams {
