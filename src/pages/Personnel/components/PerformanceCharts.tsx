@@ -127,6 +127,27 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
   // İşlem sayısı ve ciro verilerini birleştirdiğimiz composedChart için veri
   const timeData = timeChartData();
 
+  // Custom render function for XAxis tick to create angled text
+  const renderCustomAxisTick = (props: any) => {
+    const { x, y, payload } = props;
+    
+    return (
+      <g transform={`translate(${x},${y})`}>
+        <text 
+          x={0} 
+          y={0} 
+          dy={16} 
+          textAnchor="end" 
+          fill="#666"
+          transform="rotate(-45)"
+          style={{ fontSize: '12px' }}
+        >
+          {payload.value}
+        </text>
+      </g>
+    );
+  };
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -190,8 +211,8 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis 
                     dataKey="displayDate" 
-                    tick={{ fontSize: 12, angle: -45, textAnchor: 'end' }}
                     height={60}
+                    tick={renderCustomAxisTick}
                   />
                   <YAxis yAxisId="left" />
                   <YAxis yAxisId="right" orientation="right" />
