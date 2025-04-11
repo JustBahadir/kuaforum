@@ -1,4 +1,3 @@
-
 // Personel tablosu için arayüz
 export interface Personel {
   id: number;
@@ -28,6 +27,7 @@ export interface Islem {
   kategori_id?: number;
   fiyat: number;
   puan: number;
+  maliyet?: number;
   sira?: number;
   created_at?: string;
 }
