@@ -28,6 +28,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PersonnelDetailsDialog } from "./PersonnelDetailsDialog";
+import { useQuery } from "@tanstack/react-query";
+import { personelServisi } from "@/lib/supabase";
 
 interface PersonnelListProps {
   personnel?: any[];
@@ -38,8 +40,8 @@ interface PersonnelListProps {
 }
 
 export function PersonnelList({ 
-  personnel = [], 
-  isLoading = false, 
+  personnel: externalPersonnel, 
+  isLoading: externalLoading = false, 
   onEdit = () => {}, 
   onDelete = () => {},
   onPersonnelSelect = () => {}
@@ -51,8 +53,21 @@ export function PersonnelList({
   const [personnelToDelete, setPersonnelToDelete] = useState<number | null>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
 
+  // Use internal data fetching if external data is not provided
+  const { data: fetchedPersonnel = [], isLoading: fetchLoading } = useQuery({
+    queryKey: ['personel-list'],
+    queryFn: () => personelServisi.hepsiniGetir(),
+    enabled: !externalPersonnel,
+  });
+
+  // Determine which personnel data and loading state to use
+  const personnel = externalPersonnel || fetchedPersonnel;
+  const isLoading = externalLoading || fetchLoading;
+
   // Make sure personnel is always an array
   const personnelArray = Array.isArray(personnel) ? personnel : [];
+  
+  console.log("Personnel List Rendered with data:", personnelArray);
 
   const filteredPersonnel = personnelArray.filter(p => {
     if (!p) return false;

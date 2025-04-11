@@ -207,12 +207,14 @@ export default function Auth() {
                 Personel olarak giriş yapmak için tıklayın
               </Link>
             </Button>
-            <Button variant="secondary" asChild className="w-full">
-              <Link to="/" className="flex items-center justify-center gap-2">
-                <Home size={16} />
-                <span>Ana Sayfaya Dön</span>
-              </Link>
-            </Button>
+            <div className="space-y-2">
+              <Button variant="secondary" asChild className="w-full">
+                <Link to="/" className="flex items-center justify-center gap-2">
+                  <Home size={16} />
+                  <span>Ana Sayfaya Dön</span>
+                </Link>
+              </Button>
+            </div>
           </div>
         </CardContent>
         <CardFooter className="flex justify-center text-sm text-gray-600">

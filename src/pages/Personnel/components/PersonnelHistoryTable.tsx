@@ -239,7 +239,6 @@ export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProp
               <TableHead>Müşteri</TableHead>
               <TableHead>Tutar</TableHead>
               <TableHead>Prim %</TableHead>
-              <TableHead>Ödenen</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -255,8 +254,7 @@ export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProp
                     : ''}
                 </TableCell>
                 <TableCell>{formatCurrency(islem.tutar || 0)}</TableCell>
-                <TableCell>%{islem.prim_yuzdesi}</TableCell>
-                <TableCell>{formatCurrency(islem.odenen || 0)}</TableCell>
+                <TableCell>{islem.prim_yuzdesi > 0 ? `%${islem.prim_yuzdesi}` : "-"}</TableCell>
               </TableRow>
             ))}
           </TableBody>

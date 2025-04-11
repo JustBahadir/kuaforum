@@ -1,146 +1,85 @@
 
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, ComposedChart } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, Line, ComposedChart } from "recharts";
 import { formatCurrency } from "@/lib/utils";
-import { Personel, PersonelIslemi, IslemKategori } from "@/lib/supabase/types";
-import { useQuery } from "@tanstack/react-query";
-import { islemServisi } from "@/lib/supabase";
 
 interface PerformanceChartsProps {
-  personeller: Personel[];
-  islemGecmisi: PersonelIslemi[];
+  personeller?: any[];
+  islemGecmisi?: any[];
 }
 
-export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChartsProps) {
-  const [chartType, setChartType] = useState<'daily' | 'monthly'>('daily');
-  
-  // Kategori verilerini çekiyoruz
-  const { data: kategoriler = [] } = useQuery({
-    queryKey: ['islem-kategorileri'],
-    queryFn: islemServisi.kategorileriGetir,
-  });
-  
-  // Personel işlem verilerini performans grafiğine dönüştürüyoruz
-  const personnelPerformanceData = personeller
-    .map((personel) => {
-      const personelIslemleri = islemGecmisi.filter(
-        (islem) => islem.personel_id === personel.id
-      );
+export function PerformanceCharts({ personeller = [], islemGecmisi = [] }: PerformanceChartsProps) {
+  const [displayMode, setDisplayMode] = useState<"daily" | "weekly" | "monthly">("daily");
 
-      const islemSayisi = personelIslemleri.length;
-      const toplamCiro = personelIslemleri.reduce(
-        (sum, islem) => sum + (islem.tutar || 0),
-        0
-      );
-      const toplamPuan = personelIslemleri.reduce(
-        (sum, islem) => sum + (islem.puan || 0),
-        0
-      );
-
-      return {
-        name: personel.ad_soyad,
-        islemSayisi,
-        toplamCiro,
-        toplamPuan,
-        ortalamaCiro: islemSayisi ? toplamCiro / islemSayisi : 0,
-        ortalamaPuan: islemSayisi ? toplamPuan / islemSayisi : 0,
-      };
-    })
-    .sort((a, b) => b.toplamCiro - a.toplamCiro)
-    .slice(0, 5); // En iyi 5 performans gösteren personeli alıyoruz
-
-  // İşlemleri tarihe göre gruplayıp günlük/aylık verileri oluşturuyoruz
-  const timeChartData = () => {
-    const dateMap: Record<string, any> = {};
-
-    islemGecmisi.forEach((islem) => {
-      if (!islem.created_at) return;
-      
-      const date = new Date(islem.created_at);
-      const key = chartType === 'daily' 
-        ? date.toISOString().split('T')[0]  // YYYY-MM-DD
-        : `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`; // YYYY-MM for monthly
-      
-      if (!dateMap[key]) {
-        dateMap[key] = {
-          date: key,
-          displayDate: chartType === 'daily'
-            ? new Date(key).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })
-            : new Date(date.getFullYear(), date.getMonth()).toLocaleDateString('tr-TR', { month: 'short', year: 'numeric' }),
-          islemSayisi: 0,
-          ciro: 0
-        };
-      }
-      
-      dateMap[key].islemSayisi += 1;
-      dateMap[key].ciro += islem.tutar || 0;
-    });
+  // Calculate personnel performance data
+  const personnelPerformanceData = personeller.map(personel => {
+    const personelIslemler = islemGecmisi.filter(islem => islem.personel_id === personel.id);
+    const totalRevenue = personelIslemler.reduce((sum, islem) => sum + (islem.tutar || 0), 0);
+    const operationsCount = personelIslemler.length;
+    const totalPoints = personelIslemler.reduce((sum, islem) => sum + (islem.puan || 0), 0);
     
-    return Object.values(dateMap)
-      .sort((a: any, b: any) => a.date.localeCompare(b.date));
-  };
-  
-  // Kategori bazlı işlem verilerini hazırlıyoruz
-  const prepareKategoriData = () => {
-    // Kategori ID'ye göre işlem sayısını ve ciroyu toplama
-    const kategoriMap: Record<number, { 
-      kategoriId: number,
-      kategoriAdi: string,
-      islemSayisi: number, 
-      toplamCiro: number 
-    }> = {};
+    return {
+      name: personel.ad_soyad,
+      revenue: totalRevenue,
+      operations: operationsCount,
+      points: totalPoints,
+      id: personel.id
+    };
+  }).sort((a, b) => b.revenue - a.revenue);
 
-    // Önce kategorileri oluştur
-    kategoriler.forEach(kategori => {
-      kategoriMap[kategori.id] = {
-        kategoriId: kategori.id,
-        kategoriAdi: kategori.kategori_adi,
-        islemSayisi: 0,
-        toplamCiro: 0
-      };
-    });
-
-    // İşlemleri kategorilerine göre grupla
-    islemGecmisi.forEach(islem => {
-      if (islem.islem?.kategori_id && kategoriMap[islem.islem.kategori_id]) {
-        kategoriMap[islem.islem.kategori_id].islemSayisi += 1;
-        kategoriMap[islem.islem.kategori_id].toplamCiro += islem.tutar || 0;
-      }
-    });
-
-    return Object.values(kategoriMap);
-  };
-
-  const kategoriIslemData = prepareKategoriData()
-    .sort((a, b) => b.islemSayisi - a.islemSayisi)
-    .slice(0, 5);
-
-  const kategoriCiroData = prepareKategoriData()
-    .sort((a, b) => b.toplamCiro - a.toplamCiro)
-    .slice(0, 5);
-
-  // Renk dizisi
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
-  
-  // İşlem sayısı ve ciro verilerini birleştirdiğimiz composedChart için veri
-  const timeData = timeChartData();
-
-  // Custom render function for XAxis tick to create angled text
-  const renderCustomAxisTick = (props: any) => {
-    const { x, y, payload } = props;
+  // Group operations by category for the categories chart
+  const categoryCounts = islemGecmisi.reduce((acc: Record<string, { count: number, revenue: number }>, islem) => {
+    const categoryId = islem.islem?.kategori_id;
+    const categoryName = islem.islem?.kategori?.kategori_adi || "Diğer";
+    const revenue = islem.tutar || 0;
     
+    if (!acc[categoryName]) {
+      acc[categoryName] = { count: 0, revenue: 0 };
+    }
+    
+    acc[categoryName].count += 1;
+    acc[categoryName].revenue += revenue;
+    
+    return acc;
+  }, {});
+
+  const popularCategoriesData = Object.entries(categoryCounts)
+    .map(([name, data]) => ({
+      name,
+      count: data.count,
+      revenue: data.revenue
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  const revenueCategoriesData = Object.entries(categoryCounts)
+    .map(([name, data]) => ({
+      name,
+      count: data.count,
+      revenue: data.revenue
+    }))
+    .sort((a, b) => b.revenue - a.revenue);
+
+  // Custom colors
+  const COLORS = [
+    "#8884d8", "#82ca9d", "#ffc658", "#ff8042", 
+    "#0088fe", "#00C49F", "#FFBB28", "#FF8042"
+  ];
+
+  // Custom tick renderer function for x-axis labels
+  const renderCustomAxisTick = ({ x, y, payload }: any) => {
     return (
       <g transform={`translate(${x},${y})`}>
         <text 
           x={0} 
           y={0} 
-          dy={16} 
-          textAnchor="end" 
+          dy={16}
+          textAnchor="end"
           fill="#666"
-          transform="rotate(-45)"
-          style={{ fontSize: '12px' }}
+          transform="rotate(-35)"
+          fontSize={12}
+          dominantBaseline="central"
         >
           {payload.value}
         </text>
@@ -149,203 +88,204 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
   };
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle>Personel Performans Karşılaştırması</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[400px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={personnelPerformanceData}
-                  layout="vertical"
-                  margin={{ top: 20, right: 30, left: 60, bottom: 5 }}
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>Personel Performans Karşılaştırması</CardTitle>
+          <CardDescription>Personellerin toplam ciro ve işlem sayısı karşılaştırması</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[450px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart
+                layout="vertical"
+                data={personnelPerformanceData}
+                margin={{ top: 20, right: 30, left: 90, bottom: 20 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis type="number" domain={[0, 'auto']} />
+                <YAxis 
+                  dataKey="name"
+                  type="category"
+                  width={80}
+                  tick={{ fontSize: 12 }}
+                />
+                <Tooltip
+                  formatter={(value, name) => {
+                    if (name === 'revenue') return [formatCurrency(value as number), 'Toplam Ciro'];
+                    if (name === 'operations') return [Math.round(Number(value)), 'İşlem Sayısı'];
+                    return [value, name];
+                  }}
+                />
+                <Legend />
+                <Bar 
+                  dataKey="revenue" 
+                  name="Toplam Ciro (₺)" 
+                  barSize={20} 
+                  fill="#82ca9d"
                 >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" />
-                  <YAxis 
-                    dataKey="name" 
-                    type="category" 
-                    width={80}
-                    tick={{ fontSize: 12 }}
-                  />
-                  <Tooltip formatter={(value) => 
-                    typeof value === 'number' 
-                      ? value % 1 === 0 
-                        ? value 
-                        : formatCurrency(value) 
-                      : value
-                  } />
-                  <Legend />
-                  <Bar dataKey="islemSayisi" name="İşlem Sayısı" fill="#8884d8" />
-                  <Bar dataKey="toplamCiro" name="Toplam Ciro (₺)" fill="#82ca9d" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <div className="flex justify-between items-center">
-              <CardTitle>Zaman Bazlı Performans</CardTitle>
-              <div>
-                <Tabs value={chartType} onValueChange={(v) => setChartType(v as 'daily' | 'monthly')}>
-                  <TabsList>
-                    <TabsTrigger value="daily">Günlük</TabsTrigger>
-                    <TabsTrigger value="monthly">Aylık</TabsTrigger>
-                  </TabsList>
-                </Tabs>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[400px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart
-                  data={timeData}
-                  margin={{ top: 20, right: 30, left: 20, bottom: 40 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    dataKey="displayDate" 
-                    height={60}
-                    tick={renderCustomAxisTick}
-                  />
-                  <YAxis 
-                    yAxisId="left" 
-                    orientation="left"
-                    allowDecimals={false}
-                    domain={[0, 'dataMax + 1']}
-                  />
-                  <YAxis yAxisId="right" orientation="right" />
-                  <Tooltip formatter={(value, name) => {
-                    if (name === 'islemSayisi') {
-                      return [Math.round(Number(value)), 'İşlem Sayısı'];
-                    }
-                    return [
-                      formatCurrency(Number(value)), 
-                      name === 'ciro' ? 'Ciro' : String(name)
-                    ];
-                  }} />
-                  <Legend />
-                  <Bar 
-                    yAxisId="right" 
-                    dataKey="ciro" 
-                    name="Ciro (₺)" 
-                    fill="#82ca9d" 
-                    barSize={20} 
-                  />
-                  <Line
-                    yAxisId="left"
-                    type="monotone"
-                    dataKey="islemSayisi"
-                    name="İşlem Sayısı"
-                    stroke="#8884d8"
-                    strokeWidth={2}
-                    dot={{ r: 4 }}
-                    activeDot={{ r: 6 }}
-                  />
-                </ComposedChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+                  {personnelPerformanceData.map((_: any, index: number) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Bar>
+                <Line
+                  dataKey="operations"
+                  name="İşlem Sayısı"
+                  stroke="#8884d8"
+                  strokeWidth={3}
+                  dot={{ r: 5 }}
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle>En Popüler Kategoriler</CardTitle>
-            <p className="text-sm text-muted-foreground">İşlem sayısına göre en popüler kategoriler</p>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[400px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={kategoriIslemData}
-                  layout="vertical"
-                  margin={{ top: 20, right: 30, left: 120, bottom: 5 }}
+      <Card>
+        <CardHeader>
+          <CardTitle>Zaman Bazlı Performans</CardTitle>
+          <div className="flex justify-between items-center">
+            <CardDescription>Seçilen zaman aralığına göre personel performansı</CardDescription>
+            <Tabs defaultValue={displayMode} onValueChange={(v) => setDisplayMode(v as any)}>
+              <TabsList>
+                <TabsTrigger value="daily">Günlük</TabsTrigger>
+                <TabsTrigger value="weekly">Haftalık</TabsTrigger>
+                <TabsTrigger value="monthly">Aylık</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[450px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart
+                data={personnelPerformanceData}
+                margin={{ top: 20, right: 30, left: 20, bottom: 40 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="name" 
+                  height={60}
+                  tick={renderCustomAxisTick}
+                />
+                <YAxis 
+                  yAxisId="left" 
+                  orientation="left"
+                  tickFormatter={(value) => `₺${value}`}
+                />
+                <YAxis 
+                  yAxisId="right" 
+                  orientation="right"
+                  domain={[0, (dataMax: number) => Math.max(5, Math.ceil(dataMax * 1.2))]}
+                  allowDecimals={false}
+                />
+                <Tooltip formatter={(value, name) => {
+                  if (name === 'revenue') return [formatCurrency(value as number), 'Ciro'];
+                  if (name === 'operations') return [Math.round(Number(value)), 'İşlem Sayısı'];
+                  return [value, name];
+                }} />
+                <Legend />
+                <Bar 
+                  yAxisId="left"
+                  dataKey="revenue" 
+                  name="Ciro (₺)" 
+                  fill="#8884d8" 
+                  barSize={30}
                 >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    type="number" 
-                    allowDecimals={false}
-                    domain={[0, 'dataMax + 1']}
-                  />
-                  <YAxis 
-                    dataKey="kategoriAdi" 
-                    type="category" 
-                    width={100}
-                    tick={{ fontSize: 12 }}
-                  />
-                  <Tooltip 
-                    formatter={(value, name) => {
-                      return [`${Math.round(Number(value))} işlem`, 'İşlem Sayısı'];
-                    }} 
-                    labelFormatter={(label) => `${label}`} 
-                  />
-                  <Legend />
-                  <Bar 
-                    dataKey="islemSayisi" 
-                    name="İşlem Sayısı" 
-                    fill="#8884d8" 
-                    radius={[0, 4, 4, 0]}
-                  >
-                    {kategoriIslemData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle>En Kazançlı Kategoriler</CardTitle>
-            <p className="text-sm text-muted-foreground">Toplam ciroya göre en kazançlı kategoriler</p>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[400px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={kategoriCiroData}
-                  layout="vertical"
-                  margin={{ top: 20, right: 30, left: 120, bottom: 5 }}
+                  {personnelPerformanceData.map((_: any, index: number) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Bar>
+                <Line 
+                  yAxisId="right"
+                  type="monotone" 
+                  dataKey="operations" 
+                  name="İşlem Sayısı" 
+                  stroke="#82ca9d" 
+                  strokeWidth={2}
+                  dot={{ r: 4 }}
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>En Popüler Kategoriler</CardTitle>
+          <CardDescription>İşlem sayısına göre en popüler kategoriler</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[400px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                layout="vertical"
+                data={popularCategoriesData.slice(0, 7)}
+                margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis type="number" />
+                <YAxis 
+                  dataKey="name" 
+                  type="category" 
+                  tick={{ fontSize: 12 }} 
+                  width={100}
+                />
+                <Tooltip formatter={(value) => Math.round(Number(value))} />
+                <Legend />
+                <Bar 
+                  dataKey="count" 
+                  name="İşlem Sayısı" 
+                  fill="#8884d8"
                 >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" />
-                  <YAxis 
-                    dataKey="kategoriAdi" 
-                    type="category" 
-                    width={100}
-                    tick={{ fontSize: 12 }}
-                  />
-                  <Tooltip 
-                    formatter={(value) => [formatCurrency(value as number), 'Toplam Ciro']} 
-                    labelFormatter={(label) => `${label}`} 
-                  />
-                  <Legend />
-                  <Bar 
-                    dataKey="toplamCiro" 
-                    name="Toplam Ciro" 
-                    fill="#82ca9d"
-                    radius={[0, 4, 4, 0]}
-                  >
-                    {kategoriCiroData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+                  {popularCategoriesData.map((_: any, index: number) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>En Kazançlı Kategoriler</CardTitle>
+          <CardDescription>Toplam ciroya göre en kazançlı kategoriler</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[400px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                layout="vertical"
+                data={revenueCategoriesData.slice(0, 7)}
+                margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis type="number" tickFormatter={(value) => `₺${value}`} />
+                <YAxis 
+                  dataKey="name" 
+                  type="category" 
+                  tick={{ fontSize: 12 }} 
+                  width={100}
+                />
+                <Tooltip formatter={(value) => formatCurrency(value as number)} />
+                <Legend />
+                <Bar 
+                  dataKey="revenue" 
+                  name="Toplam Ciro" 
+                  fill="#82ca9d"
+                >
+                  {revenueCategoriesData.map((_: any, index: number) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

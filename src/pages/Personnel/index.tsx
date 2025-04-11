@@ -11,12 +11,11 @@ import { PersonnelPerformanceReports } from "./components/PersonnelPerformanceRe
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, FileBarChart, RefreshCcw } from "lucide-react";
+import { AlertCircle, FileBarChart, RefreshCcw, Search } from "lucide-react";
 import { Navigate } from "react-router-dom";
 import { formatCurrency } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { PersonnelAnalyst } from "@/components/analyst/PersonnelAnalyst";
 
 export default function Personnel() {
   const { userRole, refreshProfile } = useCustomerAuth();
@@ -24,6 +23,8 @@ export default function Personnel() {
     from: new Date(new Date().setDate(new Date().getDate() - 30)), // Default to last 30 days
     to: new Date()
   });
+
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     refreshProfile().catch(console.error);
@@ -44,6 +45,13 @@ export default function Personnel() {
   });
 
   const [selectedPersonnelId, setSelectedPersonnelId] = useState<number | null>(null);
+  
+  // Set default selected personnel when list loads
+  useEffect(() => {
+    if (personeller.length > 0 && !selectedPersonnelId) {
+      setSelectedPersonnelId(personeller[0]?.id || null);
+    }
+  }, [personeller, selectedPersonnelId]);
   
   // We'll use the personnel ID if selected, otherwise we'll use all personnel
   const activePersonnelId = selectedPersonnelId || (personeller.length > 0 ? personeller[0]?.id : null);
@@ -90,11 +98,25 @@ export default function Personnel() {
     });
   };
 
+  // Function to filter operations by search term
+  const filteredOperations = islemGecmisi.filter(islem => {
+    if (!searchTerm) return true;
+    
+    const searchLower = searchTerm.toLowerCase();
+    const personelName = personeller.find(p => p.id === islem.personel_id)?.ad_soyad?.toLowerCase() || '';
+    const customerName = islem.musteri 
+      ? `${islem.musteri.first_name} ${islem.musteri.last_name || ''}`.toLowerCase() 
+      : '';
+    const operationName = (islem.islem?.islem_adi || islem.aciklama || '').toLowerCase();
+    
+    return personelName.includes(searchLower) || 
+           customerName.includes(searchLower) || 
+           operationName.includes(searchLower);
+  });
+
   // Function to call the edge function and recover operations
   const recoverPersonnelOperations = async () => {
     try {
-      toast.info(`İşlemler kurtarılıyor...`);
-      
       // Call edge function to recover operations
       const response = await fetch(`https://xkbjjcizncwkrouvoujw.supabase.co/functions/v1/recover_customer_operations`, {
         method: 'POST',
@@ -109,17 +131,9 @@ export default function Personnel() {
         throw new Error(`Failed to recover operations: ${response.statusText}`);
       }
       
-      const result = await response.json();
-      
-      if (result.error) {
-        throw new Error(result.error);
-      }
-      
-      toast.success(`${result.count} işlem kurtarıldı`);
-      return result.operations || [];
+      return [];
     } catch (error) {
       console.error("Error recovering operations:", error);
-      toast.error(`İşlemler kurtarılamadı: ${error.message}`);
       return [];
     }
   };
@@ -153,13 +167,8 @@ export default function Personnel() {
     );
   }
 
-  const totalRevenue = islemGecmisi.reduce((sum, islem) => sum + (islem.tutar || 0), 0);
-  const totalCommission = islemGecmisi.reduce((sum, islem) => sum + (islem.odenen || 0), 0);
-  const operationCount = islemGecmisi.length;
-
-  const handlePersonnelChange = (value: string) => {
-    setSelectedPersonnelId(value === "all" ? null : Number(value));
-  };
+  const totalRevenue = filteredOperations.reduce((sum, islem) => sum + (islem.tutar || 0), 0);
+  const operationCount = filteredOperations.length;
 
   return (
     <StaffLayout>
@@ -173,27 +182,24 @@ export default function Personnel() {
           </TabsList>
 
           <TabsContent value="personel">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle>Personel Listesi</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <PersonnelList 
-                  personnel={personeller} 
-                  isLoading={personnelLoading} 
-                  onPersonnelSelect={setSelectedPersonnelId} 
-                />
-              </CardContent>
-            </Card>
+            <PersonnelList personnel={personeller} onPersonnelSelect={setSelectedPersonnelId} />
           </TabsContent>
 
           <TabsContent value="islemler">
             <Card>
               <CardHeader>
                 <CardTitle>İşlem Geçmişi</CardTitle>
-                <div className="flex justify-between items-center flex-wrap gap-4">
-                  <div className="flex gap-4 items-center">
-                    <span className="text-sm text-muted-foreground">Tarih aralığı seçin:</span>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 flex-wrap">
+                  <div className="flex flex-wrap gap-4 items-center w-full sm:w-auto">
+                    <div className="relative flex-1 sm:w-80">
+                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Personel, müşteri veya işlem ara..."
+                        className="pl-8"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                      />
+                    </div>
                     <DateRangePicker 
                       from={dateRange.from}
                       to={dateRange.to}
@@ -201,22 +207,18 @@ export default function Personnel() {
                     />
                   </div>
                   
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        recoverPersonnelOperations().then(() => refetchOperations());
-                      }}
-                      className="flex items-center gap-1"
+                  <div className="flex gap-2 w-full sm:w-auto">
+                    <button
+                      className="flex items-center gap-1 px-4 py-2 border rounded-md hover:bg-gray-100"
+                      onClick={() => refetchOperations()}
                     >
                       <RefreshCcw size={16} />
-                      Yenile
-                    </Button>
+                      <span>Yenile</span>
+                    </button>
                   </div>
                 </div>
                 
-                <div className="flex gap-4 mt-4">
+                <div className="flex flex-wrap gap-4 mt-4">
                   <div className="text-sm bg-gray-100 p-2 rounded-md flex items-center gap-1">
                     <FileBarChart className="h-4 w-4 text-purple-600" />
                     <span className="font-medium">Toplam İşlem:</span> 
@@ -226,10 +228,6 @@ export default function Personnel() {
                     <span className="font-medium">Toplam Ciro:</span> 
                     <span className="text-green-600">{formatCurrency(totalRevenue)}</span>
                   </div>
-                  <div className="text-sm bg-gray-100 p-2 rounded-md">
-                    <span className="font-medium">Toplam Ödenen:</span> 
-                    <span className="text-blue-600">{formatCurrency(totalCommission)}</span>
-                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -238,22 +236,21 @@ export default function Personnel() {
                     <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
                   </div>
                 ) : (
-                  <div className="rounded-md border">
+                  <div className="rounded-md border overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tarih</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Personel</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Müşteri</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlem</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tutar</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prim %</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ödenen</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Puan</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tutar</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        {islemGecmisi.length > 0 ? (
-                          islemGecmisi.map((islem) => (
+                        {filteredOperations.length > 0 ? (
+                          filteredOperations.map((islem) => (
                             <tr key={islem.id} className="hover:bg-gray-50">
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                 {new Date(islem.created_at!).toLocaleDateString('tr-TR')}
@@ -263,26 +260,25 @@ export default function Personnel() {
                                  (islem.personel?.ad_soyad) || 'Belirtilmemiş'}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {islem.aciklama || (islem.islem?.islem_adi) || 'Belirtilmemiş'}
+                                {islem.musteri 
+                                  ? `${islem.musteri.first_name} ${islem.musteri.last_name || ''}` 
+                                  : 'Belirtilmemiş'}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {formatCurrency(islem.tutar)}
+                                {islem.islem?.islem_adi || islem.aciklama || 'Belirtilmemiş'}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                %{islem.prim_yuzdesi}
+                                {islem.prim_yuzdesi > 0 ? `%${islem.prim_yuzdesi}` : "-"}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {formatCurrency(islem.odenen)}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {islem.puan}
+                                {formatCurrency(islem.tutar || 0)}
                               </td>
                             </tr>
                           ))
                         ) : (
                           <tr>
-                            <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">
-                              Seçilen tarih aralığında işlem bulunamadı
+                            <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">
+                              {searchTerm ? "Arama kriterleriyle eşleşen işlem bulunamadı" : "Seçilen tarih aralığında işlem bulunamadı"}
                             </td>
                           </tr>
                         )}
@@ -295,37 +291,10 @@ export default function Personnel() {
           </TabsContent>
 
           <TabsContent value="performans">
-            <Card>
-              <CardHeader>
-                <CardTitle>Personel Performans Çizelgeleri</CardTitle>
-                <div className="flex justify-between items-center gap-4 mt-2">
-                  <Select 
-                    value={selectedPersonnelId ? String(selectedPersonnelId) : "all"}
-                    onValueChange={handlePersonnelChange}
-                  >
-                    <SelectTrigger className="w-[240px]">
-                      <SelectValue placeholder="Personel seçin" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Tüm Personel</SelectItem>
-                      {personeller.map((personel) => (
-                        <SelectItem key={personel.id} value={String(personel.id)}>
-                          {personel.ad_soyad}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <DateRangePicker
-                    from={dateRange.from}
-                    to={dateRange.to}
-                    onSelect={({from, to}) => setDateRange({from: from || dateRange.from, to: to || dateRange.to})}
-                  />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <PersonnelPerformanceReports personnelId={activePersonnelId || 0} />
-              </CardContent>
-            </Card>
+            <PersonnelAnalyst />
+            <div className="mt-4">
+              <PersonnelPerformanceReports />
+            </div>
           </TabsContent>
 
           <TabsContent value="raporlar">
