@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
-import { PersonelIslemi, islemServisi, personelIslemleriServisi, personelServisi } from "@/lib/supabase";
+import { PersonelIslemi as PersonelIslemiType, islemServisi, personelIslemleriServisi, personelServisi } from "@/lib/supabase";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
@@ -15,6 +14,11 @@ import { AlertCircle, FileBarChart } from "lucide-react";
 import { Navigate } from "react-router-dom";
 import { formatCurrency } from "@/lib/utils";
 import { PersonnelAnalyst } from "@/components/analyst/PersonnelAnalyst";
+
+interface PersonelIslemi extends PersonelIslemiType {
+  personel_id: number;
+  created_at: string;
+}
 
 export default function Personnel() {
   const { userRole, refreshProfile } = useCustomerAuth();
@@ -42,7 +46,7 @@ export default function Personnel() {
     enabled: userRole === 'admin'
   });
 
-  const { data: islemGecmisi = [], isLoading: islemlerLoading }: UseQueryResult<PersonelIslemi[], Error> = useQuery({
+  const { data: rawIslemGecmisi = [], isLoading: islemlerLoading }: UseQueryResult<PersonelIslemiType[], Error> = useQuery({
     queryKey: ['personelIslemleri', dateRange.from, dateRange.to],
     queryFn: async () => {
       const data = await personelIslemleriServisi.hepsiniGetir();
@@ -55,6 +59,14 @@ export default function Personnel() {
     retry: 1,
     enabled: userRole === 'admin'
   });
+  
+  const islemGecmisi: PersonelIslemi[] = rawIslemGecmisi
+    .filter(islem => islem.personel_id !== undefined && islem.created_at !== undefined)
+    .map(islem => ({
+      ...islem,
+      personel_id: islem.personel_id as number,
+      created_at: islem.created_at as string
+    }));
 
   if (userRole === 'staff') {
     return <Navigate to="/shop-home" replace />;

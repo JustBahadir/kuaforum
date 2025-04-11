@@ -21,21 +21,14 @@ import { formatCurrency } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CircleAlert } from "lucide-react";
+import { PersonelIslemi as PersonelIslemiType, Personel as PersonelType } from "@/lib/supabase/types";
 
-interface PersonelIslemi {
-  id: number;
+interface PersonelIslemi extends PersonelIslemiType {
   personel_id: number;
-  tutar: number;
-  odenen: number;
-  prim_yuzdesi: number;
-  // other fields...
+  created_at: string;
 }
 
-interface Personel {
-  id: number;
-  ad_soyad: string;
-  // other fields...
-}
+interface Personel extends PersonelType {}
 
 interface PerformanceChartsProps {
   personeller: Personel[];
@@ -74,7 +67,15 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
   });
   const [selectedTab, setSelectedTab] = useState("revenue");
 
-  const filteredOperations = islemGecmisi.filter(islem => {
+  const validatedOperations: PersonelIslemi[] = islemGecmisi
+    .filter(islem => islem.personel_id !== undefined && islem.created_at !== undefined)
+    .map(islem => ({
+      ...islem,
+      personel_id: islem.personel_id as number,
+      created_at: islem.created_at as string
+    }));
+
+  const filteredOperations = validatedOperations.filter(islem => {
     if (!islem.created_at) return false;
     
     const date = new Date(islem.created_at);

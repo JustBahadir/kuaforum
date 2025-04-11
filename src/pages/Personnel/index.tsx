@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { PersonelIslemi, islemServisi, personelIslemleriServisi, personelServisi } from "@/lib/supabase";
+import { PersonelIslemi as PersonelIslemiType, islemServisi, personelIslemleriServisi, personelServisi } from "@/lib/supabase";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
@@ -16,6 +15,11 @@ import { Navigate } from "react-router-dom";
 import { formatCurrency } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { PersonnelAnalyst } from "@/components/analyst/PersonnelAnalyst";
+
+interface PersonelIslemi extends PersonelIslemiType {
+  personel_id: number;
+  created_at: string;
+}
 
 export default function Personnel() {
   const { userRole, refreshProfile } = useCustomerAuth();
@@ -46,21 +50,18 @@ export default function Personnel() {
 
   const [selectedPersonnelId, setSelectedPersonnelId] = useState<number | null>(null);
   
-  // Set default selected personnel when list loads
   useEffect(() => {
     if (personeller.length > 0 && !selectedPersonnelId) {
       setSelectedPersonnelId(personeller[0]?.id || null);
     }
   }, [personeller, selectedPersonnelId]);
   
-  // We'll use the personnel ID if selected, otherwise we'll use all personnel
   const activePersonnelId = selectedPersonnelId || (personeller.length > 0 ? personeller[0]?.id : null);
 
-  const { data: islemGecmisi = [], isLoading: islemlerLoading, refetch: refetchOperations } = useQuery({
+  const { data: rawIslemGecmisi = [], isLoading: islemlerLoading, refetch: refetchOperations } = useQuery({
     queryKey: ['personelIslemleri', dateRange.from, dateRange.to, activePersonnelId],
     queryFn: async () => {
       try {
-        // Try getting from personnel service first
         const data = selectedPersonnelId 
           ? await personelIslemleriServisi.personelIslemleriGetir(selectedPersonnelId) 
           : await personelIslemleriServisi.hepsiniGetir();
@@ -75,8 +76,15 @@ export default function Personnel() {
     enabled: userRole === 'admin' && !!activePersonnelId
   });
 
-  // Function to filter operations by date range
-  const filterOperationsByDateRange = (operations: PersonelIslemi[]) => {
+  const islemGecmisi: PersonelIslemi[] = rawIslemGecmisi
+    .filter(islem => islem.personel_id !== undefined && islem.created_at !== undefined)
+    .map(islem => ({
+      ...islem,
+      personel_id: islem.personel_id as number,
+      created_at: islem.created_at as string
+    }));
+
+  const filterOperationsByDateRange = (operations: PersonelIslemiType[]) => {
     return operations.filter(islem => {
       if (!islem.created_at) return true;
       const islemDate = new Date(islem.created_at);
@@ -84,7 +92,6 @@ export default function Personnel() {
     });
   };
 
-  // Function to filter operations by search term
   const filteredOperations = islemGecmisi.filter(islem => {
     if (!searchTerm) return true;
     

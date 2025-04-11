@@ -1,5 +1,5 @@
-
 import { useState, useEffect } from "react";
+import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useQuery } from "@tanstack/react-query";
@@ -26,8 +26,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CircleAlert } from "lucide-react";
 import { YearlyStatisticsPlaceholder } from "@/pages/ShopStatistics/components/YearlyStatisticsPlaceholder";
+import { PersonelIslemi as PersonelIslemiType } from "@/lib/supabase/types";
 
 const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088FE', '#00C49F', '#FFBB28'];
+
+interface PersonelIslemi extends PersonelIslemiType {
+  personel_id: number;
+  created_at: string;
+}
 
 interface PersonnelPerformanceReportsProps {
   personnelId?: number | null;
@@ -53,13 +59,11 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
   const [selectedTab, setSelectedTab] = useState("daily");
   const [selectedPersonnelId, setSelectedPersonnelId] = useState<number | null>(personnelId || null);
 
-  // Get all personnel
   const { data: personeller = [], isLoading: personnelLoading } = useQuery({
     queryKey: ['personel-for-performance'],
     queryFn: () => personelServisi.hepsiniGetir(),
   });
 
-  // Update selected personnel when personnelId prop changes
   useEffect(() => {
     if (personnelId) {
       setSelectedPersonnelId(personnelId);
@@ -68,7 +72,6 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
     }
   }, [personnelId, personeller, selectedPersonnelId]);
 
-  // Get operations for the selected personnel
   const { data: operationsData = [], isLoading: operationsLoading } = useQuery({
     queryKey: ['personnel-operations', selectedPersonnelId, dateRange.from, dateRange.to],
     queryFn: async () => {
@@ -76,7 +79,6 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
       
       const operations = await personelIslemleriServisi.personelIslemleriGetir(selectedPersonnelId);
       
-      // Filter by date range
       return operations.filter(op => {
         if (!op.created_at) return false;
         const date = new Date(op.created_at);
@@ -86,7 +88,6 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
     enabled: !!selectedPersonnelId,
   });
 
-  // Get details for the selected personnel
   const { data: selectedPersonnel, isLoading: selectedPersonnelLoading } = useQuery({
     queryKey: ['selected-personnel-details', selectedPersonnelId],
     queryFn: async () => {
@@ -100,7 +101,6 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
     setSelectedPersonnelId(Number(personnelId));
   };
 
-  // Prepare daily performance data
   const dailyData = React.useMemo(() => {
     if (!operationsData?.length) return [];
 
@@ -128,7 +128,6 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
     });
   }, [operationsData]);
 
-  // Prepare service performance data
   const serviceData = React.useMemo(() => {
     if (!operationsData?.length) return [];
 
@@ -150,7 +149,6 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
       .sort((a, b) => b.count - a.count);
   }, [operationsData]);
 
-  // Get performance summary
   const performanceSummary = React.useMemo(() => {
     if (!operationsData?.length) {
       return { totalOperations: 0, totalRevenue: 0, averageRevenue: 0 };
@@ -166,7 +164,6 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
     };
   }, [operationsData]);
 
-  // AI-generated insights based on data
   const aiInsights = React.useMemo(() => {
     if (!operationsData?.length || !selectedPersonnel) {
       return ["Bu personel için yeterli veri bulunmamaktadır."];
@@ -175,29 +172,24 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
     const insights = [];
     const personnelName = selectedPersonnel.ad_soyad;
     
-    // Insights about operations
     if (performanceSummary.totalOperations > 0) {
       insights.push(`${personnelName}, seçilen dönemde toplam ${performanceSummary.totalOperations} işlem gerçekleştirdi.`);
     }
     
-    // Insights about revenue
     if (performanceSummary.totalRevenue > 0) {
       insights.push(`${personnelName}, toplam ${formatCurrency(performanceSummary.totalRevenue)} ciro elde etti.`);
     }
     
-    // Insights about most popular service
     if (serviceData.length > 0) {
       const mostPopularService = serviceData[0];
       insights.push(`En çok yaptığı işlem: ${mostPopularService.count} adet ile ${mostPopularService.name}.`);
     }
     
-    // Insights about most profitable service
     if (serviceData.length > 0) {
       const mostProfitableService = [...serviceData].sort((a, b) => b.revenue - a.revenue)[0];
       insights.push(`En çok kazandıran işlem: ${formatCurrency(mostProfitableService.revenue)} ile ${mostProfitableService.name}.`);
     }
     
-    // Insights about best day
     if (dailyData.length > 0) {
       const bestDay = [...dailyData].sort((a, b) => b.ciro - a.ciro)[0];
       insights.push(`En yüksek ciroyu ${bestDay.date} tarihinde ${formatCurrency(bestDay.ciro)} ile elde etti.`);
