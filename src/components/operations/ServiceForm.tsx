@@ -31,6 +31,8 @@ export interface ServiceFormProps {
   setIslemAdi: (value: string) => void;
   fiyat: number;
   setFiyat: (value: number) => void;
+  maliyet?: number;
+  setMaliyet?: (value: number) => void;
   puan: number;
   setPuan: (value: number) => void;
   kategoriId: number | undefined;
@@ -39,6 +41,9 @@ export interface ServiceFormProps {
   serviceId?: number;
   puanlamaAktif: boolean;
   showCategorySelect?: boolean;
+  duzenleId?: number | null;
+  onSubmit?: (e: React.FormEvent) => void;
+  onReset?: () => void;
 }
 
 export function ServiceForm({
@@ -49,6 +54,8 @@ export function ServiceForm({
   setIslemAdi,
   fiyat,
   setFiyat,
+  maliyet = 0,
+  setMaliyet = () => {},
   puan,
   setPuan,
   kategoriId,
@@ -57,12 +64,20 @@ export function ServiceForm({
   serviceId,
   puanlamaAktif,
   showCategorySelect = true,
+  duzenleId,
+  onSubmit,
+  onReset,
 }: ServiceFormProps) {
   const queryClient = useQueryClient();
 
   const handleFiyatChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseFloat(e.target.value);
     setFiyat(isNaN(value) ? 0 : value);
+  };
+
+  const handleMaliyetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseFloat(e.target.value);
+    setMaliyet(isNaN(value) ? 0 : value);
   };
 
   const handlePuanChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -97,9 +112,15 @@ export function ServiceForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (onSubmit) {
+      onSubmit(e);
+      return;
+    }
+
     const serviceData: any = {
       islem_adi: islemAdi,
       fiyat,
+      maliyet,
       puan,
     };
 
@@ -189,7 +210,10 @@ export function ServiceForm({
             <Button
               type="button"
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              onClick={() => {
+                if (onReset) onReset();
+                onOpenChange(false);
+              }}
             >
               İptal
             </Button>
