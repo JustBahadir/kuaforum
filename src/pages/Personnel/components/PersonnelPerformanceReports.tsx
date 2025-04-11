@@ -430,9 +430,6 @@ export function PersonnelPerformanceReports({ personnelId: propPersonnelId }: { 
                             name;
                           return shortName;
                         }}
-                        tooltip={{
-                          formatter: (value, name) => [formatCurrency(value as number), name]
-                        }}
                       >
                         {pieChartData.map((_: any, index: number) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />

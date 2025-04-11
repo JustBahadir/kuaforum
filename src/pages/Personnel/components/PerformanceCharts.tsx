@@ -10,6 +10,21 @@ interface PerformanceChartsProps {
   islemGecmisi?: any[];
 }
 
+// Define interfaces for data structures to fix TypeScript errors
+interface CategoryData {
+  name: string;
+  count: number;
+  revenue: number;
+}
+
+interface PersonnelPerformanceData {
+  name: string;
+  revenue: number;
+  operations: number;
+  points: number;
+  id: number;
+}
+
 export function PerformanceCharts({ personeller = [], islemGecmisi = [] }: PerformanceChartsProps) {
   const [displayMode, setDisplayMode] = useState<"daily" | "weekly" | "monthly">("daily");
 
@@ -45,7 +60,7 @@ export function PerformanceCharts({ personeller = [], islemGecmisi = [] }: Perfo
     return acc;
   }, {});
 
-  const popularCategoriesData = Object.entries(categoryCounts)
+  const popularCategoriesData: CategoryData[] = Object.entries(categoryCounts)
     .map(([name, data]) => ({
       name,
       count: data.count,
@@ -53,7 +68,7 @@ export function PerformanceCharts({ personeller = [], islemGecmisi = [] }: Perfo
     }))
     .sort((a, b) => b.count - a.count);
 
-  const revenueCategoriesData = Object.entries(categoryCounts)
+  const revenueCategoriesData: CategoryData[] = Object.entries(categoryCounts)
     .map(([name, data]) => ({
       name,
       count: data.count,
