@@ -51,8 +51,12 @@ export function PersonnelList({
   const [personnelToDelete, setPersonnelToDelete] = useState<number | null>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
 
-  const filteredPersonnel = personnel.filter(p => {
-    const matchesSearch = p.ad_soyad.toLowerCase().includes(searchTerm.toLowerCase());
+  // Make sure personnel is always an array
+  const personnelArray = Array.isArray(personnel) ? personnel : [];
+
+  const filteredPersonnel = personnelArray.filter(p => {
+    if (!p) return false;
+    const matchesSearch = p.ad_soyad?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter = filter === "all" || p.calisma_sistemi === filter;
     return matchesSearch && matchesFilter;
   });
@@ -88,6 +92,7 @@ export function PersonnelList({
   };
 
   const getInitials = (name: string) => {
+    if (!name) return "??";
     return name
       .split(" ")
       .map(n => n[0])
@@ -122,15 +127,17 @@ export function PersonnelList({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tümü</SelectItem>
-            <SelectItem value="maaşlı">Maaşlı</SelectItem>
-            <SelectItem value="yüzdelik">Yüzdelik</SelectItem>
+            <SelectItem value="aylik_maas">Maaşlı</SelectItem>
+            <SelectItem value="prim_komisyon">Yüzdelik</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
       {filteredPersonnel.length === 0 ? (
         <div className="text-center py-8">
-          <p className="text-muted-foreground">Personel bulunamadı.</p>
+          <p className="text-muted-foreground">
+            {personnelArray.length === 0 ? "Personel bulunamadı." : "Arama kriterleriyle eşleşen personel bulunamadı."}
+          </p>
         </div>
       ) : (
         <ScrollArea className="h-[calc(100vh-250px)]">
@@ -145,8 +152,8 @@ export function PersonnelList({
                     </Avatar>
                     <div className="flex-1 min-w-0">
                       <CardTitle className="text-base truncate">{p.ad_soyad}</CardTitle>
-                      <Badge variant={p.calisma_sistemi === "maaşlı" ? "outline" : "secondary"} className="mt-1">
-                        {p.calisma_sistemi === "maaşlı" ? "Maaşlı" : `%${p.prim_yuzdesi}`}
+                      <Badge variant={p.calisma_sistemi === "aylik_maas" ? "outline" : "secondary"} className="mt-1">
+                        {p.calisma_sistemi === "aylik_maas" ? "Maaşlı" : `%${p.prim_yuzdesi}`}
                       </Badge>
                     </div>
                     <DropdownMenu>

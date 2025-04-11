@@ -206,7 +206,7 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart
                   data={timeData}
-                  margin={{ top: 20, right: 30, left: 20, bottom: 30 }}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 40 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis 
@@ -214,23 +214,36 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
                     height={60}
                     tick={renderCustomAxisTick}
                   />
-                  <YAxis yAxisId="left" />
+                  <YAxis 
+                    yAxisId="left" 
+                    orientation="left"
+                    allowDecimals={false}
+                    domain={[0, 'dataMax + 1']}
+                  />
                   <YAxis yAxisId="right" orientation="right" />
-                  <Tooltip />
+                  <Tooltip formatter={(value, name) => {
+                    if (name === 'islemSayisi') {
+                      return [Math.round(Number(value)), 'İşlem Sayısı'];
+                    }
+                    return [
+                      formatCurrency(Number(value)), 
+                      name === 'ciro' ? 'Ciro' : String(name)
+                    ];
+                  }} />
                   <Legend />
                   <Bar 
-                    yAxisId="left" 
-                    dataKey="islemSayisi" 
-                    name="İşlem Sayısı" 
-                    fill="#8884d8" 
+                    yAxisId="right" 
+                    dataKey="ciro" 
+                    name="Ciro (₺)" 
+                    fill="#82ca9d" 
                     barSize={20} 
                   />
                   <Line
-                    yAxisId="right"
+                    yAxisId="left"
                     type="monotone"
-                    dataKey="ciro"
-                    name="Ciro (₺)"
-                    stroke="#82ca9d"
+                    dataKey="islemSayisi"
+                    name="İşlem Sayısı"
+                    stroke="#8884d8"
                     strokeWidth={2}
                     dot={{ r: 4 }}
                     activeDot={{ r: 6 }}
@@ -257,7 +270,11 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
                   margin={{ top: 20, right: 30, left: 120, bottom: 5 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" />
+                  <XAxis 
+                    type="number" 
+                    allowDecimals={false}
+                    domain={[0, 'dataMax + 1']}
+                  />
                   <YAxis 
                     dataKey="kategoriAdi" 
                     type="category" 
@@ -266,7 +283,7 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
                   />
                   <Tooltip 
                     formatter={(value, name) => {
-                      return [`${value} işlem`, 'İşlem Sayısı'];
+                      return [`${Math.round(Number(value))} işlem`, 'İşlem Sayısı'];
                     }} 
                     labelFormatter={(label) => `${label}`} 
                   />

@@ -9,17 +9,19 @@ import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { addDays, format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { formatCurrency } from "@/lib/utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-interface PersonnelPerformanceReportsProps {
-  personnelId: number;
-}
-
-export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanceReportsProps) {
+export function PersonnelPerformanceReports({ personnelId }: { personnelId: number }) {
   const [dateRange, setDateRange] = useState({
     from: addDays(new Date(), -30),
     to: new Date()
   });
   
+  const { data: personeller = [] } = useQuery({
+    queryKey: ['personel-list'],
+    queryFn: () => personelServisi.hepsiniGetir()
+  });
+
   const { data: personel } = useQuery({
     queryKey: ['personel-detail', personnelId],
     queryFn: () => personelServisi.getirById(personnelId),
@@ -124,6 +126,27 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
   // Colors for pie chart
   const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088fe', '#00C49F'];
   
+  // Custom render function for XAxis tick to create angled text
+  const renderCustomAxisTick = (props: any) => {
+    const { x, y, payload } = props;
+    
+    return (
+      <g transform={`translate(${x},${y})`}>
+        <text 
+          x={0} 
+          y={0} 
+          dy={16} 
+          textAnchor="end" 
+          fill="#666"
+          transform="rotate(-45)"
+          style={{ fontSize: '12px' }}
+        >
+          {payload.value}
+        </text>
+      </g>
+    );
+  };
+  
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -135,6 +158,13 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
             {personel?.calisma_sistemi === 'haftalik_yevmiye' && 'Haftalık Yevmiyeli'}
             {personel?.calisma_sistemi === 'prim_komisyon' && 'Prim / Komisyon Bazlı'}
           </p>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <DateRangePicker
+            from={dateRange.from}
+            to={dateRange.to}
+            onSelect={({from, to}) => setDateRange({from: from || dateRange.from, to: to || dateRange.to})}
+          />
         </div>
       </div>
       
@@ -221,10 +251,14 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart
                     data={timeSeriesData}
-                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 40 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
+                    <XAxis 
+                      dataKey="date" 
+                      height={60}
+                      tick={renderCustomAxisTick}
+                    />
                     <YAxis yAxisId="left" orientation="left" />
                     <YAxis yAxisId="right" orientation="right" />
                     <Tooltip formatter={(value) => formatCurrency(value as number)} />
@@ -261,13 +295,30 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart
                     data={timeSeriesData}
-                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 40 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
-                    <YAxis yAxisId="left" orientation="left" />
-                    <YAxis yAxisId="right" orientation="right" />
-                    <Tooltip />
+                    <XAxis 
+                      dataKey="date" 
+                      height={60}
+                      tick={renderCustomAxisTick}
+                    />
+                    <YAxis 
+                      yAxisId="left" 
+                      orientation="left"
+                      allowDecimals={false}
+                      domain={[0, 'dataMax + 1']}
+                    />
+                    <YAxis 
+                      yAxisId="right" 
+                      orientation="right"
+                    />
+                    <Tooltip formatter={(value, name) => {
+                      if (name === 'operations') {
+                        return [Math.round(Number(value)), 'İşlem Sayısı'];
+                      }
+                      return [value, name === 'points' ? 'Puan' : name];
+                    }} />
                     <Legend />
                     <Bar 
                       yAxisId="left"
@@ -306,10 +357,11 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
                         cx="50%"
                         cy="50%"
                         labelLine={false}
-                        label={({ name, percent }) => `${name}: %${(percent * 100).toFixed(0)}`}
+                        innerRadius={30}
                         outerRadius={80}
                         fill="#8884d8"
                         dataKey="value"
+                        label={(entry) => entry.name.substring(0, 15) + (entry.name.length > 15 ? '...' : '')}
                       >
                         {pieChartData.map((_: any, index: number) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -320,21 +372,21 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
                   </ResponsiveContainer>
                 </div>
                 <div className="w-full md:w-1/2">
-                  <h4 className="font-medium mb-2">En Çok Yapılan İşlemler</h4>
-                  <div className="space-y-2">
+                  <h4 className="font-medium mb-2 text-center md:text-left">En Çok Yapılan İşlemler</h4>
+                  <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
                     {pieChartData
                       .sort((a: any, b: any) => b.count - a.count)
-                      .slice(0, 5)
+                      .slice(0, 7)
                       .map((item: any, index: number) => (
-                        <div key={index} className="flex justify-between items-center">
+                        <div key={index} className="flex justify-between items-center bg-gray-50 p-2 rounded-md">
                           <div className="flex items-center">
                             <div 
-                              className="w-3 h-3 rounded-full mr-2" 
+                              className="w-3 h-3 rounded-full mr-2 flex-shrink-0" 
                               style={{backgroundColor: COLORS[index % COLORS.length]}}
                             />
-                            <span title={item.name} className="truncate max-w-40">{item.name}</span>
+                            <span className="truncate max-w-36" title={item.name}>{item.name}</span>
                           </div>
-                          <div className="text-sm font-medium">{item.count} işlem</div>
+                          <div className="text-sm font-medium">{Math.round(item.count)} işlem</div>
                         </div>
                       ))}
                   </div>
