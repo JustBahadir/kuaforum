@@ -16,6 +16,7 @@ import { Navigate } from "react-router-dom";
 import { formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function Personnel() {
   const { userRole, refreshProfile } = useCustomerAuth();
@@ -35,7 +36,7 @@ export default function Personnel() {
     enabled: userRole === 'admin'
   });
 
-  const { data: personeller = [] } = useQuery({
+  const { data: personeller = [], refetch: refetchPersonnel, isLoading: personnelLoading } = useQuery({
     queryKey: ['personel'],
     queryFn: () => personelServisi.hepsiniGetir(),
     retry: 1,
@@ -45,7 +46,7 @@ export default function Personnel() {
   const [selectedPersonnelId, setSelectedPersonnelId] = useState<number | null>(null);
   
   // We'll use the personnel ID if selected, otherwise we'll use all personnel
-  const activePersonnelId = selectedPersonnelId || (personeller.length > 0 ? personeller[0].id : null);
+  const activePersonnelId = selectedPersonnelId || (personeller.length > 0 ? personeller[0]?.id : null);
 
   const { data: islemGecmisi = [], isLoading: islemlerLoading, refetch: refetchOperations }: UseQueryResult<PersonelIslemi[], Error> = useQuery({
     queryKey: ['personelIslemleri', dateRange.from, dateRange.to, activePersonnelId],
@@ -156,6 +157,10 @@ export default function Personnel() {
   const totalCommission = islemGecmisi.reduce((sum, islem) => sum + (islem.odenen || 0), 0);
   const operationCount = islemGecmisi.length;
 
+  const handlePersonnelChange = (value: string) => {
+    setSelectedPersonnelId(value === "all" ? null : Number(value));
+  };
+
   return (
     <StaffLayout>
       <div className="container mx-auto">
@@ -168,7 +173,18 @@ export default function Personnel() {
           </TabsList>
 
           <TabsContent value="personel">
-            <PersonnelList onPersonnelSelect={setSelectedPersonnelId} />
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle>Personel Listesi</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <PersonnelList 
+                  personnel={personeller} 
+                  isLoading={personnelLoading} 
+                  onPersonnelSelect={setSelectedPersonnelId} 
+                />
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="islemler">
@@ -282,9 +298,32 @@ export default function Personnel() {
             <Card>
               <CardHeader>
                 <CardTitle>Personel Performans Çizelgeleri</CardTitle>
+                <div className="flex justify-between items-center gap-4 mt-2">
+                  <Select 
+                    value={selectedPersonnelId ? String(selectedPersonnelId) : "all"}
+                    onValueChange={handlePersonnelChange}
+                  >
+                    <SelectTrigger className="w-[240px]">
+                      <SelectValue placeholder="Personel seçin" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Tüm Personel</SelectItem>
+                      {personeller.map((personel) => (
+                        <SelectItem key={personel.id} value={String(personel.id)}>
+                          {personel.ad_soyad}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <DateRangePicker
+                    from={dateRange.from}
+                    to={dateRange.to}
+                    onSelect={({from, to}) => setDateRange({from: from || dateRange.from, to: to || dateRange.to})}
+                  />
+                </div>
               </CardHeader>
               <CardContent>
-                <PersonnelPerformanceReports personnelId={selectedPersonnelId || personeller[0]?.id || 1} />
+                <PersonnelPerformanceReports personnelId={activePersonnelId || 0} />
               </CardContent>
             </Card>
           </TabsContent>

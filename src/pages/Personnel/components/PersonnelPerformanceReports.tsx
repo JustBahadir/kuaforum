@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { personelIslemleriServisi, personelServisi } from "@/lib/supabase";
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, ComposedChart } from "recharts";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { addDays, format } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -128,7 +128,7 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold">{personel?.ad_soyad}</h2>
+          <h2 className="text-2xl font-bold">{personel?.ad_soyad || 'Personel Seçiniz'}</h2>
           <p className="text-gray-500">
             {personel?.calisma_sistemi === 'aylik_maas' && 'Sabit Aylık Maaşlı'}
             {personel?.calisma_sistemi === 'gunluk_yevmiye' && 'Günlük Yevmiyeli'}
@@ -136,16 +136,6 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
             {personel?.calisma_sistemi === 'prim_komisyon' && 'Prim / Komisyon Bazlı'}
           </p>
         </div>
-        
-        <DateRangePicker
-          from={dateRange.from}
-          to={dateRange.to}
-          onSelect={(range) => {
-            if (range?.from && range?.to) {
-              setDateRange({ from: range.from, to: range.to });
-            }
-          }}
-        />
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -229,7 +219,7 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
             <CardContent>
               <div className="h-[400px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart
+                  <ComposedChart
                     data={timeSeriesData}
                     margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
                   >
@@ -239,13 +229,12 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
                     <YAxis yAxisId="right" orientation="right" />
                     <Tooltip formatter={(value) => formatCurrency(value as number)} />
                     <Legend />
-                    <Line 
+                    <Bar 
                       yAxisId="left"
-                      type="monotone" 
                       dataKey="revenue" 
                       name="Ciro" 
-                      stroke="#8884d8" 
-                      activeDot={{ r: 8 }} 
+                      fill="#8884d8" 
+                      barSize={20}
                     />
                     <Line 
                       yAxisId="right"
@@ -253,8 +242,9 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
                       dataKey="commission" 
                       name="Kazanç" 
                       stroke="#82ca9d" 
+                      strokeWidth={2}
                     />
-                  </LineChart>
+                  </ComposedChart>
                 </ResponsiveContainer>
               </div>
             </CardContent>
@@ -269,7 +259,7 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
             <CardContent>
               <div className="h-[400px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
+                  <ComposedChart
                     data={timeSeriesData}
                     margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
                   >
@@ -284,14 +274,17 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
                       dataKey="operations" 
                       name="İşlem Sayısı" 
                       fill="#8884d8" 
+                      barSize={20}
                     />
-                    <Bar 
+                    <Line 
                       yAxisId="right"
+                      type="monotone" 
                       dataKey="points" 
                       name="Puan" 
-                      fill="#82ca9d" 
+                      stroke="#82ca9d" 
+                      strokeWidth={2}
                     />
-                  </BarChart>
+                  </ComposedChart>
                 </ResponsiveContainer>
               </div>
             </CardContent>
@@ -339,7 +332,7 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
                               className="w-3 h-3 rounded-full mr-2" 
                               style={{backgroundColor: COLORS[index % COLORS.length]}}
                             />
-                            <span>{item.name}</span>
+                            <span title={item.name} className="truncate max-w-40">{item.name}</span>
                           </div>
                           <div className="text-sm font-medium">{item.count} işlem</div>
                         </div>
