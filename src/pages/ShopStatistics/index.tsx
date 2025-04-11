@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -8,7 +9,16 @@ import { Button } from "@/components/ui/button";
 import { RefreshCw, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
-import { addDays, endOfDay, endOfMonth, endOfWeek, startOfDay, startOfMonth, startOfWeek, subDays } from "date-fns";
+import { 
+  addDays, 
+  endOfDay, 
+  endOfMonth, 
+  endOfWeek, 
+  startOfDay, 
+  startOfMonth, 
+  startOfWeek, 
+  subDays 
+} from "date-fns";
 
 // Import components
 import { MetricsCards } from "./components/MetricsCards";
@@ -22,6 +32,8 @@ import { CustomerFrequencyChart } from "./components/CustomerFrequencyChart";
 import { HourHeatmapChart } from "./components/HourHeatmapChart";
 import { CustomerLoyaltyChart } from "./components/CustomerLoyaltyChart";
 import { RevenueSourceChart } from "./components/RevenueSourceChart";
+import { CategoryDistributionChart } from "./components/CategoryDistributionChart";
+import { OperationDistributionChart } from "./components/OperationDistributionChart";
 import { ShopAnalyst } from "@/components/analyst/ShopAnalyst";
 import { ProfitAnalysis } from "@/components/dashboard/ProfitAnalysis";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -170,6 +182,7 @@ export default function ShopStatistics() {
   const [weeklyData, setWeeklyData] = useState<ChartDataItem[]>([]);
   const [monthlyData, setMonthlyData] = useState<ChartDataItem[]>([]);
   const [serviceData, setServiceData] = useState<ServiceDataItem[]>([]);
+  const [categoryData, setCategoryData] = useState<ServiceDataItem[]>([]);
   
   // Otomatik hesaplama için tahmini randevu sayısını belirle
   useEffect(() => {
@@ -211,11 +224,16 @@ export default function ShopStatistics() {
       // Prepare service performance data
       const serviceStats = prepareServiceData(filteredIslemler);
       setServiceData(serviceStats);
+      
+      // Prepare category data
+      const categoryStats = prepareCategoryData(filteredIslemler);
+      setCategoryData(categoryStats);
     } catch (error) {
       console.error("Error preparing chart data:", error);
     }
   }, [filteredIslemler]);
   
+  // Helper function to prepare hourly data
   const prepareHourlyData = (operations: any[]): ChartDataItem[] => {
     // Group operations by hour for today
     const hours: ChartDataItem[] = [];
@@ -255,6 +273,7 @@ export default function ShopStatistics() {
     return hours;
   };
   
+  // Helper function to prepare daily data
   const prepareDailyData = (operations: any[]): ChartDataItem[] => {
     // Group operations by day for the last 7 days
     const days: ChartDataItem[] = [];
@@ -296,6 +315,7 @@ export default function ShopStatistics() {
     return days;
   };
   
+  // Helper function to prepare weekly data
   const prepareWeeklyData = (operations: any[]): ChartDataItem[] => {
     // Group operations by week for the last 4 weeks
     const weeks: (ChartDataItem & {
@@ -342,6 +362,7 @@ export default function ShopStatistics() {
     return weeks.map(({ name, ciro, islemSayisi }) => ({ name, ciro, islemSayisi }));
   };
   
+  // Helper function to prepare monthly data
   const prepareMonthlyData = (operations: any[]): ChartDataItem[] => {
     // Group operations by month for the last 6 months
     const months: (ChartDataItem & {
@@ -386,6 +407,7 @@ export default function ShopStatistics() {
     return months.map(({ name, ciro, islemSayisi }) => ({ name, ciro, islemSayisi }));
   };
   
+  // Helper function to prepare service data
   const prepareServiceData = (operations: any[]): ServiceDataItem[] => {
     // Group operations by service type
     const services: Record<string, ServiceDataItem> = {};
@@ -424,6 +446,37 @@ export default function ShopStatistics() {
     // Convert to array and sort by revenue
     return Object.values(services)
       .sort((a, b) => b.revenue - a.revenue);
+  };
+  
+  // Helper function to prepare category data
+  const prepareCategoryData = (operations: any[]): ServiceDataItem[] => {
+    // Group operations by category
+    const categories: Record<string, ServiceDataItem> = {};
+    
+    operations.forEach(op => {
+      try {
+        if (!op.islem || !op.islem.kategori) return;
+        
+        const categoryName = op.islem.kategori.kategori_adi || "Diğer";
+        
+        if (!categories[categoryName]) {
+          categories[categoryName] = {
+            name: categoryName,
+            count: 0,
+            revenue: 0
+          };
+        }
+        
+        categories[categoryName].count += 1;
+        categories[categoryName].revenue += (op.tutar || 0);
+      } catch (e) {
+        console.error("Error processing operation for category chart:", e);
+      }
+    });
+    
+    // Convert to array and sort by count
+    return Object.values(categories)
+      .sort((a, b) => b.count - a.count);
   };
   
   const handleRefresh = async () => {
@@ -514,31 +567,43 @@ export default function ShopStatistics() {
               loyalCustomers={shopStats?.loyalCustomers || 0}
             />
             
-            {/* Common charts for all views */}
+            {/* Main performance chart based on selected period */}
+            {period === "daily" && (
+              <HourlyPerformanceChart data={hourlyData} isLoading={isLoading} />
+            )}
+            {period === "weekly" && (
+              <DailyPerformanceChart data={dailyData} isLoading={isLoading} />
+            )}
+            {period === "monthly" && (
+              <WeeklyPerformanceChart data={weeklyData} isLoading={isLoading} />
+            )}
+            {period === "yearly" && (
+              <MonthlyPerformanceChart data={monthlyData} isLoading={isLoading} />
+            )}
+            {period === "custom" && dateRange && (
+              <DailyPerformanceChart data={dailyData} isLoading={isLoading} />
+            )}
+
+            {/* Service and operation distribution charts */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-              <ServicePerformanceChart data={serviceData} isLoading={isLoading} />
-              <CustomerLoyaltyChart data={filteredIslemler} isLoading={isLoading} />
+              <ServicePerformanceChart 
+                data={serviceData} 
+                isLoading={isLoading} 
+                title="Hizmet Performansı"
+              />
+              <OperationDistributionChart data={serviceData} isLoading={isLoading} />
             </div>
             
+            {/* Category distribution and revenue source charts */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-              <CustomerFrequencyChart data={filteredIslemler} isLoading={isLoading} />
+              <CategoryDistributionChart data={categoryData} isLoading={isLoading} />
               <RevenueSourceChart data={serviceData} isLoading={isLoading} />
             </div>
             
+            {/* Additional insights charts */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
               <HourHeatmapChart data={filteredIslemler} isLoading={isLoading} />
-              {period === "daily" && (
-                <HourlyPerformanceChart data={hourlyData} isLoading={isLoading} />
-              )}
-              {period === "weekly" && (
-                <DailyPerformanceChart data={dailyData} isLoading={isLoading} />
-              )}
-              {period === "monthly" && (
-                <WeeklyPerformanceChart data={weeklyData} isLoading={isLoading} />
-              )}
-              {period === "yearly" && (
-                <MonthlyPerformanceChart data={monthlyData} isLoading={isLoading} />
-              )}
+              <CustomerFrequencyChart data={filteredIslemler} isLoading={isLoading} />
             </div>
           </TabsContent>
           
