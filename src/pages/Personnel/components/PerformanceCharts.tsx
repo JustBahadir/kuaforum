@@ -25,6 +25,12 @@ interface PersonnelPerformanceData {
   id: number;
 }
 
+// Define the structure for categoryCounts
+interface CategoryCount {
+  count: number;
+  revenue: number;
+}
+
 export function PerformanceCharts({ personeller = [], islemGecmisi = [] }: PerformanceChartsProps) {
   const [displayMode, setDisplayMode] = useState<"daily" | "weekly" | "monthly">("daily");
 
@@ -45,7 +51,7 @@ export function PerformanceCharts({ personeller = [], islemGecmisi = [] }: Perfo
   }).sort((a, b) => b.revenue - a.revenue);
 
   // Group operations by category for the categories chart
-  const categoryCounts = islemGecmisi.reduce((acc: Record<string, { count: number, revenue: number }>, islem) => {
+  const categoryCounts: Record<string, CategoryCount> = islemGecmisi.reduce((acc: Record<string, CategoryCount>, islem) => {
     const categoryId = islem.islem?.kategori_id;
     const categoryName = islem.islem?.kategori?.kategori_adi || "Diğer";
     const revenue = islem.tutar || 0;
