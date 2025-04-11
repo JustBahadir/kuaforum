@@ -3,18 +3,26 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { CircleAlert } from "lucide-react";
 
-export function YearlyStatisticsPlaceholder() {
+interface YearlyStatisticsPlaceholderProps {
+  title?: string;
+  description?: string;
+}
+
+export function YearlyStatisticsPlaceholder({ 
+  title = "Veri Hazırlanıyor", 
+  description = "Yeterli veri bulunmuyor. Daha sonra tekrar kontrol edin."
+}: YearlyStatisticsPlaceholderProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Veri Hazırlanıyor</CardTitle>
+        <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent>
         <Alert>
           <CircleAlert className="h-4 w-4" />
           <AlertTitle>Bilgi</AlertTitle>
           <AlertDescription>
-            Yıllık istatistik verileri için yeterli veri bulunmuyor. Daha sonra tekrar kontrol edin.
+            {description}
           </AlertDescription>
         </Alert>
       </CardContent>

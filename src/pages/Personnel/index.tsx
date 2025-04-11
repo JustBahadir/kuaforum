@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { useQuery, type UseQueryResult } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { PersonelIslemi, islemServisi, personelIslemleriServisi, personelServisi } from "@/lib/supabase";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -56,7 +56,7 @@ export default function Personnel() {
   // We'll use the personnel ID if selected, otherwise we'll use all personnel
   const activePersonnelId = selectedPersonnelId || (personeller.length > 0 ? personeller[0]?.id : null);
 
-  const { data: islemGecmisi = [], isLoading: islemlerLoading, refetch: refetchOperations }: UseQueryResult<PersonelIslemi[], Error> = useQuery({
+  const { data: islemGecmisi = [], isLoading: islemlerLoading, refetch: refetchOperations } = useQuery({
     queryKey: ['personelIslemleri', dateRange.from, dateRange.to, activePersonnelId],
     queryFn: async () => {
       try {
@@ -64,20 +64,6 @@ export default function Personnel() {
         const data = selectedPersonnelId 
           ? await personelIslemleriServisi.personelIslemleriGetir(selectedPersonnelId) 
           : await personelIslemleriServisi.hepsiniGetir();
-        
-        // If no operations found, try to recover from appointments
-        if (!data || data.length === 0) {
-          console.log(`No operations found for ${selectedPersonnelId ? 'personnel #' + selectedPersonnelId : 'any personnel'}, attempting to recover...`);
-          
-          await recoverPersonnelOperations();
-          
-          // Try fetching again after recovery
-          const recoveredData = selectedPersonnelId 
-            ? await personelIslemleriServisi.personelIslemleriGetir(selectedPersonnelId)
-            : await personelIslemleriServisi.hepsiniGetir();
-            
-          return filterOperationsByDateRange(recoveredData);
-        }
         
         return filterOperationsByDateRange(data);
       } catch (error) {
@@ -113,30 +99,6 @@ export default function Personnel() {
            customerName.includes(searchLower) || 
            operationName.includes(searchLower);
   });
-
-  // Function to call the edge function and recover operations
-  const recoverPersonnelOperations = async () => {
-    try {
-      // Call edge function to recover operations
-      const response = await fetch(`https://xkbjjcizncwkrouvoujw.supabase.co/functions/v1/recover_customer_operations`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhrYmpqY2l6bmN3a3JvdXZvdWp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzk5Njg0NzksImV4cCI6MjA1NTU0NDQ3OX0.RyaC2G1JPHUGQetAcvMgjsTp_nqBB2rZe3U-inU2osw`
-        },
-        body: JSON.stringify({ personnel_id: selectedPersonnelId, get_all_shop_operations: !selectedPersonnelId })
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to recover operations: ${response.statusText}`);
-      }
-      
-      return [];
-    } catch (error) {
-      console.error("Error recovering operations:", error);
-      return [];
-    }
-  };
 
   if (userRole === 'staff') {
     return <Navigate to="/shop-home" replace />;
@@ -293,7 +255,7 @@ export default function Personnel() {
           <TabsContent value="performans">
             <PersonnelAnalyst />
             <div className="mt-4">
-              <PersonnelPerformanceReports />
+              <PersonnelPerformanceReports personnelId={selectedPersonnelId} />
             </div>
           </TabsContent>
 

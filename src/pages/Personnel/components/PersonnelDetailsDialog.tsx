@@ -19,6 +19,7 @@ import { PersonnelOperationsTable } from "./PersonnelOperationsTable";
 import { PersonnelPerformance } from "./PersonnelPerformance";
 import { PersonnelEditDialog } from "./PersonnelEditDialog";
 import { Button } from "@/components/ui/button";
+import { Pencil } from "lucide-react";
 
 interface PersonnelDetailsDialogProps {
   isOpen: boolean;
@@ -43,29 +44,30 @@ export function PersonnelDetailsDialog({
     <>
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Personel Bilgileri</DialogTitle>
-            <DialogDescription>
-              <div className="flex items-center justify-between mt-2">
-                <span className="font-medium text-foreground">{personnel.ad_soyad}</span>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={handleEditClick}
-                >
-                  Düzenle
-                </Button>
-              </div>
-            </DialogDescription>
+          <DialogHeader className="flex flex-row items-center justify-between">
+            <div>
+              <DialogTitle>Personel Bilgileri</DialogTitle>
+              <DialogDescription className="mt-1">
+                {personnel.ad_soyad}
+              </DialogDescription>
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={handleEditClick}
+              className="mt-0 flex items-center gap-1"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              Düzenle
+            </Button>
           </DialogHeader>
           
           <div className="mt-4">
             <Tabs defaultValue="personal-info" className="w-full">
-              <TabsList className="grid grid-cols-4 mb-6">
+              <TabsList className="grid grid-cols-3 mb-6">
                 <TabsTrigger value="personal-info">Kişisel Bilgiler</TabsTrigger>
                 <TabsTrigger value="work-info">Çalışma Bilgileri</TabsTrigger>
                 <TabsTrigger value="history">İşlem Geçmişi</TabsTrigger>
-                <TabsTrigger value="performance">Performans</TabsTrigger>
               </TabsList>
               
               <TabsContent value="personal-info">
@@ -79,12 +81,12 @@ export function PersonnelDetailsDialog({
                       <h3 className="text-lg font-medium mb-2">Çalışma Bilgileri</h3>
                       <div className="space-y-2">
                         <div className="flex justify-between border-b pb-1">
-                          <span className="text-muted-foreground">Personel No</span>
-                          <span>{personnel.personel_no}</span>
-                        </div>
-                        <div className="flex justify-between border-b pb-1">
                           <span className="text-muted-foreground">Çalışma Sistemi</span>
-                          <span>{personnel.calisma_sistemi}</span>
+                          <span>
+                            {personnel.calisma_sistemi === "aylik_maas" ? "Aylık Maaş" : 
+                             personnel.calisma_sistemi === "prim_komisyon" ? "Prim/Komisyon" : 
+                             personnel.calisma_sistemi}
+                          </span>
                         </div>
                         <div className="flex justify-between border-b pb-1">
                           <span className="text-muted-foreground">Maaş</span>
@@ -95,10 +97,12 @@ export function PersonnelDetailsDialog({
                             }).format(personnel.maas || 0)}
                           </span>
                         </div>
-                        <div className="flex justify-between border-b pb-1">
-                          <span className="text-muted-foreground">Prim Yüzdesi</span>
-                          <span>%{personnel.prim_yuzdesi}</span>
-                        </div>
+                        {personnel.calisma_sistemi !== "aylik_maas" && (
+                          <div className="flex justify-between border-b pb-1">
+                            <span className="text-muted-foreground">Prim Yüzdesi</span>
+                            <span>%{personnel.prim_yuzdesi}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -129,10 +133,6 @@ export function PersonnelDetailsDialog({
               
               <TabsContent value="history">
                 <PersonnelOperationsTable personnelId={personnel.id} />
-              </TabsContent>
-              
-              <TabsContent value="performance">
-                <PersonnelPerformance personnelId={personnel.id} />
               </TabsContent>
             </Tabs>
           </div>

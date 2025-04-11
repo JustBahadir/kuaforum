@@ -3,12 +3,6 @@ import { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { 
   Card, 
   CardHeader,
   CardContent,
@@ -16,7 +10,7 @@ import {
   CardTitle
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, MoreHorizontal, Pencil, Trash2, Phone, Mail, Calendar } from "lucide-react";
+import { Search, Phone, Mail, Calendar, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -78,10 +72,6 @@ export function PersonnelList({
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
-  };
-
-  const handleEditClick = (personnel: any) => {
-    onEdit(personnel);
   };
 
   const handleDeleteClick = (id: number) => {
@@ -158,11 +148,11 @@ export function PersonnelList({
         <ScrollArea className="h-[calc(100vh-250px)]">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredPersonnel.map((p) => (
-              <Card key={p.id} className="overflow-hidden hover:shadow-md transition-shadow">
-                <CardHeader className="p-4 pb-2 cursor-pointer" onClick={() => handlePersonnelClick(p)}>
+              <Card key={p.id} className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer" onClick={() => handlePersonnelClick(p)}>
+                <CardHeader className="p-4 pb-2">
                   <div className="flex items-center space-x-4">
                     <Avatar className="h-12 w-12 border">
-                      <AvatarImage src={p.avatar_url} />
+                      <AvatarImage src={p.avatar_url} alt={p.ad_soyad} />
                       <AvatarFallback>{getInitials(p.ad_soyad)}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
@@ -171,32 +161,20 @@ export function PersonnelList({
                         {p.calisma_sistemi === "aylik_maas" ? "Maaşlı" : `%${p.prim_yuzdesi}`}
                       </Badge>
                     </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleEditClick(p)}>
-                          <Pencil className="mr-2 h-4 w-4" />
-                          <span>Düzenle</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteClick(p.id);
-                          }}
-                          className="text-red-600 hover:text-red-600 focus:text-red-600"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          <span>Sil</span>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteClick(p.id);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </CardHeader>
-                <CardContent className="p-4 pt-2 cursor-pointer" onClick={() => handlePersonnelClick(p)}>
+                <CardContent className="p-4 pt-2">
                   <div className="space-y-1 text-sm">
                     <div className="flex items-center text-muted-foreground">
                       <Phone className="h-3.5 w-3.5 mr-2" />
@@ -214,15 +192,6 @@ export function PersonnelList({
                     )}
                   </div>
                 </CardContent>
-                <CardFooter className="p-4 pt-0">
-                  <Button 
-                    variant="outline" 
-                    className="w-full"
-                    onClick={() => handleEditClick(p)}
-                  >
-                    Düzenle
-                  </Button>
-                </CardFooter>
               </Card>
             ))}
           </div>

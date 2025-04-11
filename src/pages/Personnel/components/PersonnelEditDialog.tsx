@@ -16,10 +16,16 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { personelServisi } from "@/lib/supabase";
-
-import { PersonnelForm } from "./PersonnelForm";
-import { PersonnelOperationsTable } from "./PersonnelOperationsTable";
-import { PersonnelPerformance } from "./PersonnelPerformance";
+import { 
+  Form, 
+  FormControl, 
+  FormField, 
+  FormItem, 
+  FormLabel 
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useForm } from "react-hook-form";
 
 interface PersonnelEditDialogProps {
   isOpen: boolean;
@@ -33,17 +39,13 @@ export function PersonnelEditDialog({
   personnel
 }: PersonnelEditDialogProps) {
   const queryClient = useQueryClient();
-  const [formData, setFormData] = useState({
-    ad_soyad: personnel?.ad_soyad || "",
-    telefon: personnel?.telefon || "",
-    eposta: personnel?.eposta || "",
-    adres: personnel?.adres || "",
-    birth_date: personnel?.birth_date || "",
-    iban: personnel?.iban || "",
-    personel_no: personnel?.personel_no || "",
-    calisma_sistemi: personnel?.calisma_sistemi || "maaşlı",
-    maas: personnel?.maas || 0,
-    prim_yuzdesi: personnel?.prim_yuzdesi || 0,
+  
+  const form = useForm({
+    defaultValues: {
+      calisma_sistemi: personnel?.calisma_sistemi || "aylik_maas",
+      maas: personnel?.maas || 0,
+      prim_yuzdesi: personnel?.prim_yuzdesi || 0,
+    }
   });
 
   const updateMutation = useMutation({
@@ -53,6 +55,8 @@ export function PersonnelEditDialog({
     onSuccess: () => {
       toast.success("Personel başarıyla güncellendi!");
       queryClient.invalidateQueries({ queryKey: ["personeller"] });
+      queryClient.invalidateQueries({ queryKey: ["personel-list"] });
+      queryClient.invalidateQueries({ queryKey: ["personel"] });
       onOpenChange(false);
     },
     onError: (error) => {
@@ -61,69 +65,96 @@ export function PersonnelEditDialog({
     },
   });
 
-  const handleFormChange = (field: string, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const onSubmit = (data: any) => {
+    updateMutation.mutate(data);
   };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    updateMutation.mutate(formData);
-  };
+  
+  // Watch for changes to the working system field to conditionally show/hide the commission field
+  const calisma_sistemi = form.watch("calisma_sistemi");
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Personel Düzenle</DialogTitle>
+          <DialogTitle>Personel Bilgilerini Düzenle</DialogTitle>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit}>
-          <Tabs defaultValue="personal-info" className="w-full">
-            <TabsList className="grid grid-cols-4 mb-6">
-              <TabsTrigger value="personal-info">Kişisel Bilgiler</TabsTrigger>
-              <TabsTrigger value="work-info">Çalışma Bilgileri</TabsTrigger>
-              <TabsTrigger value="history">İşlem Geçmişi</TabsTrigger>
-              <TabsTrigger value="performance">Performans</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="personal-info">
-              <PersonnelForm 
-                personnel={formData}
-                onChange={handleFormChange}
-                readOnly={false}
-              />
-            </TabsContent>
-            
-            <TabsContent value="work-info">
-              <div className="space-y-6">
-                <PersonnelForm 
-                  personnel={formData}
-                  onChange={handleFormChange}
-                  readOnly={false}
-                  showWorkInfo={true}
-                  showPersonalInfo={false}
-                />
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="history">
-              <PersonnelOperationsTable personnelId={personnel.id} />
-            </TabsContent>
-            
-            <TabsContent value="performance">
-              <PersonnelPerformance personnelId={personnel.id} />
-            </TabsContent>
-          </Tabs>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <FormField
+              control={form.control}
+              name="calisma_sistemi"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Çalışma Sistemi</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seçiniz" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="aylik_maas">Aylık Maaş</SelectItem>
+                      <SelectItem value="prim_komisyon">Prim/Komisyon</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              )}
+            />
           
-          <div className="mt-6 flex justify-end space-x-3">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              İptal
-            </Button>
-            <Button type="submit" disabled={updateMutation.isPending}>
-              {updateMutation.isPending ? "Kaydediliyor..." : "Kaydet"}
-            </Button>
-          </div>
-        </form>
+            <FormField
+              control={form.control}
+              name="maas"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Maaş</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      {...field}
+                      value={field.value || ''}
+                      onChange={(e) => field.onChange(Number(e.target.value))}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            
+            {calisma_sistemi === "prim_komisyon" && (
+              <FormField
+                control={form.control}
+                name="prim_yuzdesi"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Prim Yüzdesi (%)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        {...field}
+                        value={field.value || ''}
+                        onChange={(e) => field.onChange(Number(e.target.value))}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            )}
+            
+            <div className="flex justify-end space-x-3">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                İptal
+              </Button>
+              <Button type="submit" disabled={updateMutation.isPending}>
+                {updateMutation.isPending ? "Kaydediliyor..." : "Kaydet"}
+              </Button>
+            </div>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

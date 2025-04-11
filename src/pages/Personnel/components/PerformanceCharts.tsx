@@ -1,312 +1,297 @@
-
 import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, Line, ComposedChart } from "recharts";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend, 
+  ResponsiveContainer,
+  Cell,
+  LineChart,
+  Line,
+  PieChart,
+  Pie
+} from "recharts";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { formatCurrency } from "@/lib/utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { CircleAlert } from "lucide-react";
+
+interface PersonelIslemi {
+  id: number;
+  personel_id: number;
+  tutar: number;
+  odenen: number;
+  prim_yuzdesi: number;
+  // other fields...
+}
+
+interface Personel {
+  id: number;
+  ad_soyad: string;
+  // other fields...
+}
 
 interface PerformanceChartsProps {
-  personeller?: any[];
-  islemGecmisi?: any[];
+  personeller: Personel[];
+  islemGecmisi: PersonelIslemi[];
 }
 
-// Define interfaces for data structures to fix TypeScript errors
-interface CategoryData {
+interface PersonelPerformanceData {
   name: string;
-  count: number;
-  revenue: number;
-}
-
-interface PersonnelPerformanceData {
-  name: string;
-  revenue: number;
-  operations: number;
-  points: number;
   id: number;
+  totalRevenue: number;
+  totalCount: number;
+  totalCommission: number;
+  averageRevenue: number;
 }
 
-// Define the structure for categoryCounts
-interface CategoryCount {
-  count: number;
-  revenue: number;
+interface TimeFilterOption {
+  label: string;
+  value: string;
+  days: number;
 }
 
-export function PerformanceCharts({ personeller = [], islemGecmisi = [] }: PerformanceChartsProps) {
-  const [displayMode, setDisplayMode] = useState<"daily" | "weekly" | "monthly">("daily");
+const TIME_FILTER_OPTIONS: TimeFilterOption[] = [
+  { label: "Son 7 Gün", value: "7days", days: 7 },
+  { label: "Son 30 Gün", value: "30days", days: 30 },
+  { label: "Son 90 Gün", value: "90days", days: 90 },
+  { label: "Tüm Zaman", value: "all", days: 0 }
+];
 
-  // Calculate personnel performance data
-  const personnelPerformanceData = personeller.map(personel => {
-    const personelIslemler = islemGecmisi.filter(islem => islem.personel_id === personel.id);
-    const totalRevenue = personelIslemler.reduce((sum, islem) => sum + (islem.tutar || 0), 0);
-    const operationsCount = personelIslemler.length;
-    const totalPoints = personelIslemler.reduce((sum, islem) => sum + (islem.puan || 0), 0);
+const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088FE', '#00C49F', '#FFBB28'];
+
+export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChartsProps) {
+  const [timeFilter, setTimeFilter] = useState<string>("30days");
+  const [dateRange, setDateRange] = useState({
+    from: new Date(new Date().setDate(new Date().getDate() - 30)),
+    to: new Date()
+  });
+  const [selectedTab, setSelectedTab] = useState("revenue");
+
+  const filteredOperations = islemGecmisi.filter(islem => {
+    if (!islem.created_at) return false;
+    
+    const date = new Date(islem.created_at);
+    return date >= dateRange.from && date <= dateRange.to;
+  });
+
+  const personnelPerformance = personeller.map(personel => {
+    const personelIslemleri = filteredOperations.filter(islem => islem.personel_id === personel.id);
+    
+    const totalRevenue = personelIslemleri.reduce((sum, islem) => sum + (islem.tutar || 0), 0);
+    const totalCount = personelIslemleri.length;
+    const totalCommission = personelIslemleri.reduce((sum, islem) => sum + (islem.odenen || 0), 0);
     
     return {
       name: personel.ad_soyad,
-      revenue: totalRevenue,
-      operations: operationsCount,
-      points: totalPoints,
-      id: personel.id
+      id: personel.id,
+      totalRevenue,
+      totalCount,
+      totalCommission,
+      averageRevenue: totalCount > 0 ? totalRevenue / totalCount : 0
     };
-  }).sort((a, b) => b.revenue - a.revenue);
+  }).filter(p => p.totalCount > 0);
 
-  // Group operations by category for the categories chart
-  const categoryCounts: Record<string, CategoryCount> = islemGecmisi.reduce((acc: Record<string, CategoryCount>, islem) => {
-    const categoryId = islem.islem?.kategori_id;
-    const categoryName = islem.islem?.kategori?.kategori_adi || "Diğer";
-    const revenue = islem.tutar || 0;
-    
-    if (!acc[categoryName]) {
-      acc[categoryName] = { count: 0, revenue: 0 };
-    }
-    
-    acc[categoryName].count += 1;
-    acc[categoryName].revenue += revenue;
-    
-    return acc;
-  }, {});
-
-  const popularCategoriesData: CategoryData[] = Object.entries(categoryCounts)
-    .map(([name, data]) => ({
-      name,
-      count: data.count,
-      revenue: data.revenue
-    }))
-    .sort((a, b) => b.count - a.count);
-
-  const revenueCategoriesData: CategoryData[] = Object.entries(categoryCounts)
-    .map(([name, data]) => ({
-      name,
-      count: data.count,
-      revenue: data.revenue
-    }))
-    .sort((a, b) => b.revenue - a.revenue);
-
-  // Custom colors
-  const COLORS = [
-    "#8884d8", "#82ca9d", "#ffc658", "#ff8042", 
-    "#0088fe", "#00C49F", "#FFBB28", "#FF8042"
-  ];
-
-  // Custom tick renderer function for x-axis labels
-  const renderCustomAxisTick = ({ x, y, payload }: any) => {
-    return (
-      <g transform={`translate(${x},${y})`}>
-        <text 
-          x={0} 
-          y={0} 
-          dy={16}
-          textAnchor="end"
-          fill="#666"
-          transform="rotate(-35)"
-          fontSize={12}
-          dominantBaseline="central"
-        >
-          {payload.value}
-        </text>
-      </g>
-    );
+  const getSortedData = (data: PersonelPerformanceData[], metric: string) => {
+    return [...data].sort((a, b) => {
+      if (metric === "count") return b.totalCount - a.totalCount;
+      if (metric === "commission") return b.totalCommission - a.totalCommission;
+      return b.totalRevenue - a.totalRevenue;
+    });
   };
 
+  const sortedByRevenue = getSortedData(personnelPerformance, "revenue");
+  const sortedByCount = getSortedData(personnelPerformance, "count");
+  const sortedByCommission = getSortedData(personnelPerformance, "commission");
+
+  const handleTimeFilterChange = (value: string) => {
+    setTimeFilter(value);
+    
+    if (value === "all") {
+      setDateRange({
+        from: new Date(new Date().setFullYear(new Date().getFullYear() - 10)),
+        to: new Date()
+      });
+      return;
+    }
+    
+    const option = TIME_FILTER_OPTIONS.find(opt => opt.value === value);
+    if (option) {
+      setDateRange({
+        from: new Date(new Date().setDate(new Date().getDate() - option.days)),
+        to: new Date()
+      });
+    }
+  };
+
+  const generateInsights = () => {
+    if (personnelPerformance.length === 0) {
+      return ["Henüz yeterli veri bulunmamaktadır."];
+    }
+
+    const insights = [];
+    
+    if (sortedByCount.length > 0) {
+      insights.push(`${sortedByCount[0].name} bu dönemde ${sortedByCount[0].totalCount} işlemle en çok işlem yapan personel oldu.`);
+    }
+    
+    if (sortedByRevenue.length > 0) {
+      insights.push(`${sortedByRevenue[0].name} toplam ${formatCurrency(sortedByRevenue[0].totalRevenue)} ciro ile lider durumda.`);
+    }
+    
+    if (sortedByRevenue.length > 1) {
+      const topRevenue = sortedByRevenue[0].totalRevenue;
+      const avgRevenue = personnelPerformance.reduce((sum, p) => sum + p.totalRevenue, 0) / personnelPerformance.length;
+      
+      const percentage = Math.round((topRevenue - avgRevenue) / avgRevenue * 100);
+      
+      if (percentage > 0) {
+        insights.push(`${sortedByRevenue[0].name}, ortalamadan %${percentage} daha fazla ciro yapıyor.`);
+      }
+    }
+    
+    if (sortedByCount.length > 0 && filteredOperations.length > 0) {
+      const topOperationsCount = sortedByCount[0].totalCount;
+      const totalOperationsCount = filteredOperations.length;
+      
+      const percentage = Math.round(topOperationsCount / totalOperationsCount * 100);
+      
+      insights.push(`Her ${Math.round(100 / percentage)} işlemden ${percentage > 50 ? `${Math.round(percentage/10)*10}'ı` : "1'i"} ${sortedByCount[0].name} tarafından yapılmış.`);
+    }
+    
+    return insights;
+  };
+
+  const insights = generateInsights();
+  const hasData = personnelPerformance.length > 0;
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Personel Performans Karşılaştırması</CardTitle>
-          <CardDescription>Personellerin toplam ciro ve işlem sayısı karşılaştırması</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[450px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart
-                layout="vertical"
-                data={personnelPerformanceData}
-                margin={{ top: 20, right: 30, left: 90, bottom: 20 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" domain={[0, 'auto']} />
-                <YAxis 
-                  dataKey="name"
-                  type="category"
-                  width={80}
-                  tick={{ fontSize: 12 }}
-                />
-                <Tooltip
-                  formatter={(value, name) => {
-                    if (name === 'revenue') return [formatCurrency(value as number), 'Toplam Ciro'];
-                    if (name === 'operations') return [Math.round(Number(value)), 'İşlem Sayısı'];
-                    return [value, name];
-                  }}
-                />
-                <Legend />
-                <Bar 
-                  dataKey="revenue" 
-                  name="Toplam Ciro (₺)" 
-                  barSize={20} 
-                  fill="#82ca9d"
-                >
-                  {personnelPerformanceData.map((_: any, index: number) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Bar>
-                <Line
-                  dataKey="operations"
-                  name="İşlem Sayısı"
-                  stroke="#8884d8"
-                  strokeWidth={3}
-                  dot={{ r: 5 }}
-                />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between gap-4">
+        <Select value={timeFilter} onValueChange={handleTimeFilterChange}>
+          <SelectTrigger className="w-full sm:w-40">
+            <SelectValue placeholder="Zaman Filtresi" />
+          </SelectTrigger>
+          <SelectContent>
+            {TIME_FILTER_OPTIONS.map(option => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        
+        <DateRangePicker 
+          from={dateRange.from}
+          to={dateRange.to}
+          onSelect={({from, to}) => setDateRange({from, to})}
+        />
+      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Zaman Bazlı Performans</CardTitle>
-          <div className="flex justify-between items-center">
-            <CardDescription>Seçilen zaman aralığına göre personel performansı</CardDescription>
-            <Tabs defaultValue={displayMode} onValueChange={(v) => setDisplayMode(v as any)}>
-              <TabsList>
-                <TabsTrigger value="daily">Günlük</TabsTrigger>
-                <TabsTrigger value="weekly">Haftalık</TabsTrigger>
-                <TabsTrigger value="monthly">Aylık</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[450px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart
-                data={personnelPerformanceData}
-                margin={{ top: 20, right: 30, left: 20, bottom: 40 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="name" 
-                  height={60}
-                  tick={renderCustomAxisTick}
-                />
-                <YAxis 
-                  yAxisId="left" 
-                  orientation="left"
-                  tickFormatter={(value) => `₺${value}`}
-                />
-                <YAxis 
-                  yAxisId="right" 
-                  orientation="right"
-                  domain={[0, (dataMax: number) => Math.max(5, Math.ceil(dataMax * 1.2))]}
-                  allowDecimals={false}
-                />
-                <Tooltip formatter={(value, name) => {
-                  if (name === 'revenue') return [formatCurrency(value as number), 'Ciro'];
-                  if (name === 'operations') return [Math.round(Number(value)), 'İşlem Sayısı'];
-                  return [value, name];
-                }} />
-                <Legend />
-                <Bar 
-                  yAxisId="left"
-                  dataKey="revenue" 
-                  name="Ciro (₺)" 
-                  fill="#8884d8" 
-                  barSize={30}
-                >
-                  {personnelPerformanceData.map((_: any, index: number) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Bar>
-                <Line 
-                  yAxisId="right"
-                  type="monotone" 
-                  dataKey="operations" 
-                  name="İşlem Sayısı" 
-                  stroke="#82ca9d" 
-                  strokeWidth={2}
-                  dot={{ r: 4 }}
-                />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
+      {!hasData ? (
+        <Alert>
+          <CircleAlert className="h-4 w-4" />
+          <AlertDescription>
+            Seçilen zaman aralığında personel performans verisi bulunmamaktadır.
+          </AlertDescription>
+        </Alert>
+      ) : (
+        <>
+          <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <CardTitle>Personel Performans Karşılaştırması</CardTitle>
+                  <TabsList>
+                    <TabsTrigger value="revenue">Ciro</TabsTrigger>
+                    <TabsTrigger value="count">İşlem Sayısı</TabsTrigger>
+                    <TabsTrigger value="commission">Prim</TabsTrigger>
+                  </TabsList>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[400px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      layout="vertical"
+                      data={
+                        selectedTab === "revenue" ? sortedByRevenue :
+                        selectedTab === "count" ? sortedByCount : 
+                        sortedByCommission
+                      }
+                      margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis 
+                        type="number" 
+                        tickFormatter={
+                          selectedTab === "count" ? 
+                            (value) => `${value}` : 
+                            (value) => formatCurrency(value)
+                        }
+                      />
+                      <YAxis 
+                        dataKey="name" 
+                        type="category" 
+                        width={120}
+                        tick={{ fontSize: 12 }}
+                      />
+                      <Tooltip 
+                        formatter={
+                          (value: any, name: any) => {
+                            if (selectedTab === "count") return [`${value} adet`, "İşlem Sayısı"];
+                            return [formatCurrency(value as number), selectedTab === "revenue" ? "Ciro" : "Prim"];
+                          }
+                        }
+                      />
+                      <Legend />
+                      <Bar 
+                        dataKey={
+                          selectedTab === "revenue" ? "totalRevenue" : 
+                          selectedTab === "count" ? "totalCount" : 
+                          "totalCommission"
+                        }
+                        name={
+                          selectedTab === "revenue" ? "Ciro" : 
+                          selectedTab === "count" ? "İşlem Sayısı" : 
+                          "Prim"
+                        }
+                        fill="#8884d8"
+                      >
+                        {personnelPerformance.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </Tabs>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>En Popüler Kategoriler</CardTitle>
-          <CardDescription>İşlem sayısına göre en popüler kategoriler</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[400px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                layout="vertical"
-                data={popularCategoriesData.slice(0, 7)}
-                margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
-                <YAxis 
-                  dataKey="name" 
-                  type="category" 
-                  tick={{ fontSize: 12 }} 
-                  width={100}
-                />
-                <Tooltip formatter={(value) => Math.round(Number(value))} />
-                <Legend />
-                <Bar 
-                  dataKey="count" 
-                  name="İşlem Sayısı" 
-                  fill="#8884d8"
-                >
-                  {popularCategoriesData.map((_: any, index: number) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>En Kazançlı Kategoriler</CardTitle>
-          <CardDescription>Toplam ciroya göre en kazançlı kategoriler</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[400px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                layout="vertical"
-                data={revenueCategoriesData.slice(0, 7)}
-                margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" tickFormatter={(value) => `₺${value}`} />
-                <YAxis 
-                  dataKey="name" 
-                  type="category" 
-                  tick={{ fontSize: 12 }} 
-                  width={100}
-                />
-                <Tooltip formatter={(value) => formatCurrency(value as number)} />
-                <Legend />
-                <Bar 
-                  dataKey="revenue" 
-                  name="Toplam Ciro" 
-                  fill="#82ca9d"
-                >
-                  {revenueCategoriesData.map((_: any, index: number) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Akıllı Analiz</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2">
+                {insights.map((insight, i) => (
+                  <li key={i} className="flex items-baseline gap-2">
+                    <span className="text-purple-600 text-lg">•</span>
+                    <span>{insight}</span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
   );
 }
