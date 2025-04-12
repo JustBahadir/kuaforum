@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -51,6 +50,7 @@ interface ServiceData {
   count: number;
   revenue: number;
   percentage?: number;
+  details?: Array<{ name: string, count: number }>;
 }
 
 export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanceReportsProps) {

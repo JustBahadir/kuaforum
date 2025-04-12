@@ -1,9 +1,8 @@
-
 import { useState, useEffect, useMemo } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { islemServisi, islemKategoriServisi, personelIslemleriServisi, personelServisi } from "@/lib/supabase";
+import { islemServisi, kategoriServisi, personelIslemleriServisi, personelServisi } from "@/lib/supabase";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import {
   BarChart,
@@ -83,7 +82,7 @@ export default function ShopStatistics() {
   // Fetch categories data
   const { data: categories = [], isLoading: isCategoriesLoading } = useQuery({
     queryKey: ['categories'],
-    queryFn: () => islemKategoriServisi.hepsiniGetir(),
+    queryFn: () => kategoriServisi.hepsiniGetir(),
   });
 
   const isLoading = isPersonnelLoading || isOperationsLoading || isServicesLoading || isCategoriesLoading;
@@ -201,7 +200,9 @@ export default function ShopStatistics() {
     const categoryMap: Record<string, { value: number; count: number }> = {};
     
     filteredOperations.forEach(op => {
-      const categoryName = op.islem?.kategori?.kategori_adi || 'Diğer';
+      const categoryId = op.islem?.kategori_id;
+      const category = categories.find(c => c.id === categoryId);
+      const categoryName = category ? category.kategori_adi : 'Diğer';
       
       if (!categoryMap[categoryName]) {
         categoryMap[categoryName] = { value: 0, count: 0 };
@@ -216,7 +217,7 @@ export default function ShopStatistics() {
       value,
       count
     }));
-  }, [operations, categories]);
+  }, [operations, categories, filteredOperations, isLoading]);
   
   // Filter operations based on date range
   const filteredOperations = useMemo(() => {

@@ -10,7 +10,6 @@ import {
 import { cn } from "@/lib/utils";
 import { format, getDaysInMonth } from "date-fns";
 import { tr } from "date-fns/locale";
-import { Badge } from "./badge";
 
 interface CustomMonthCycleProps {
   selectedDay: number;

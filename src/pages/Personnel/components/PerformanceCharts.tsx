@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -127,8 +126,8 @@ export function PerformanceCharts({
       
       if (statistics[personelId]) {
         statistics[personelId].operations += 1;
-        statistics[personelId].revenue += op.tutar || 0;
-        statistics[personelId].prim += op.odenen || 0;
+        statistics[personelId].revenue += Number(op.tutar) || 0;
+        statistics[personelId].prim += Number(op.odenen) || 0;
       }
     });
     

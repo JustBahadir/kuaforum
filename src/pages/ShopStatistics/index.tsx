@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { useQuery } from "@tanstack/react-query";
 import { format, addMonths, setDate } from "date-fns";
-import { personelIslemleriServisi, personelServisi, islemServisi, islemKategoriServisi } from "@/lib/supabase";
+import { personelIslemleriServisi, personelServisi, islemServisi, kategoriServisi } from "@/lib/supabase";
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
 import { formatCurrency } from "@/lib/utils";
 import { AnalystBox } from "@/components/analyst/AnalystBox";
@@ -131,7 +130,7 @@ export default function ShopStatistics() {
   // Fetch categories
   const { data: categories = [], isLoading: categoriesLoading } = useQuery({
     queryKey: ["categories-stats"],
-    queryFn: () => islemKategoriServisi.hepsiniGetir(),
+    queryFn: () => kategoriServisi.hepsiniGetir(),
   });
 
   // Calculate service data
@@ -178,7 +177,10 @@ export default function ShopStatistics() {
     let totalRevenue = 0;
 
     operations.forEach((op) => {
-      const categoryName = op.islem?.kategori?.kategori_adi || "Diğer";
+      // Fix for accessing the category property
+      const categoryId = op.islem?.kategori_id;
+      const category = categories.find(c => c.id === categoryId);
+      const categoryName = category ? category.kategori_adi : "Diğer";
 
       if (!categoryMap.has(categoryName)) {
         categoryMap.set(categoryName, {
@@ -379,6 +381,7 @@ export default function ShopStatistics() {
           className="mb-6"
         />
 
+        {/* Date range and custom month cycle selection */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
           <Select value={activeView} onValueChange={setActiveView}>
             <SelectTrigger className="w-[180px]">
@@ -458,142 +461,102 @@ export default function ShopStatistics() {
           </Card>
         </div>
 
-        {/* Tab content */}
-        <Tabs
-          value={activeView}
-          onValueChange={setActiveView}
-          className="space-y-8"
-        >
-          <TabsList className="mb-4">
-            <TabsTrigger value="daily">Günlük</TabsTrigger>
-            <TabsTrigger value="weekly">Haftalık</TabsTrigger>
-            <TabsTrigger value="monthly">Aylık</TabsTrigger>
-            <TabsTrigger value="yearly">Yıllık</TabsTrigger>
-            <TabsTrigger value="custom">Özel Tarih</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="daily" className="space-y-4">
-            <DailyView dateRange={dateRange} />
-          </TabsContent>
-
-          <TabsContent value="weekly" className="space-y-4">
-            <WeeklyView dateRange={dateRange} />
-          </TabsContent>
-
-          <TabsContent value="monthly" className="space-y-4">
-            <MonthlyView dateRange={dateRange} />
-          </TabsContent>
-
-          <TabsContent value="yearly" className="space-y-4">
-            <YearlyView />
-          </TabsContent>
-
-          <TabsContent value="custom" className="space-y-4">
+        {/* Main content section with performance charts */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Performans Verileri</CardTitle>
+          </CardHeader>
+          <CardContent>
             {isLoading ? (
               <div className="flex justify-center py-8">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
               </div>
             ) : (
-              <>
-                {/* Performance data */}
-                <Card className="mb-6">
-                  <CardHeader>
-                    <CardTitle>Performans Verileri</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                      {/* Revenue by service chart */}
-                      <div>
-                        <h3 className="text-sm font-medium mb-1">
-                          Hizmet Bazlı Gelir Dağılımı
-                        </h3>
-                        <div className="h-[300px]">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                              <Pie
-                                data={serviceData}
-                                dataKey="revenue"
-                                nameKey="name"
-                                cx="50%"
-                                cy="50%"
-                                outerRadius={100}
-                                label={({ name, percent }) =>
-                                  `${name} ${(percent * 100).toFixed(0)}%`
-                                }
-                                labelLine={false}
-                              >
-                                {serviceData.map((entry, index) => (
-                                  <Cell
-                                    key={`cell-${index}`}
-                                    fill={COLORS[index % COLORS.length]}
-                                  />
-                                ))}
-                              </Pie>
-                              <Tooltip
-                                formatter={(value: number) =>
-                                  formatCurrency(value)
-                                }
-                              />
-                            </PieChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </div>
-
-                      {/* Category distribution chart */}
-                      <div>
-                        <h3 className="text-sm font-medium mb-1">
-                          Kategori Dağılımı
-                        </h3>
-                        <div className="h-[300px]">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                              <Pie
-                                data={categoryData}
-                                dataKey="value"
-                                nameKey="name"
-                                cx="50%"
-                                cy="50%"
-                                outerRadius={100}
-                                label={({ name, percent }) =>
-                                  `${name} ${(percent * 100).toFixed(0)}%`
-                                }
-                                labelLine={false}
-                              >
-                                {categoryData.map((entry, index) => (
-                                  <Cell
-                                    key={`cell-${index}`}
-                                    fill={COLORS[index % COLORS.length]}
-                                  />
-                                ))}
-                              </Pie>
-                              <Tooltip
-                                formatter={(value: number) =>
-                                  formatCurrency(value)
-                                }
-                              />
-                              <Legend />
-                            </PieChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                {/* Category distribution and revenue source charts */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-                  <CategoryDistributionChart data={categoryData.map(item => ({
-                    name: item.name,
-                    value: item.value,
-                    count: item.count,
-                    percentage: item.percentage || 0
-                  }))} isLoading={isLoading} />
-                  <RevenueSourceChart data={serviceData} isLoading={isLoading} />
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Revenue by service chart */}
+                <div>
+                  <h3 className="text-sm font-medium mb-1">
+                    Hizmet Bazlı Gelir Dağılımı
+                  </h3>
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={serviceData}
+                          dataKey="revenue"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={100}
+                          label={({ name, percent }) =>
+                            `${name} ${(percent * 100).toFixed(0)}%`
+                          }
+                          labelLine={false}
+                        >
+                          {serviceData.map((entry, index) => (
+                            <Cell
+                              key={`cell-${index}`}
+                              fill={COLORS[index % COLORS.length]}
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          formatter={(value: number) =>
+                            formatCurrency(value)
+                          }
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
-              </>
+
+                {/* Category distribution chart */}
+                <div>
+                  <h3 className="text-sm font-medium mb-1">
+                    Kategori Dağılımı
+                  </h3>
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={categoryData}
+                          dataKey="value"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={100}
+                          label={({ name, percent }) =>
+                            `${name} ${(percent * 100).toFixed(0)}%`
+                          }
+                          labelLine={false}
+                        >
+                          {categoryData.map((entry, index) => (
+                            <Cell
+                              key={`cell-${index}`}
+                              fill={COLORS[index % COLORS.length]}
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          formatter={(value: number) =>
+                            formatCurrency(value)
+                          }
+                        />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </div>
             )}
-          </TabsContent>
-        </Tabs>
+          </CardContent>
+        </Card>
+                
+        {/* Category distribution and revenue source charts */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+          <CategoryDistributionChart data={categoryData} isLoading={isLoading} />
+          <RevenueSourceChart data={serviceData} isLoading={isLoading} />
+        </div>
       </div>
     </StaffLayout>
   );
