@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -227,7 +226,7 @@ export default function ShopStatistics() {
     const categoryMap: Record<string, { value: number; count: number }> = {};
     
     filteredOperations.forEach(op => {
-      const categoryName = op.islem?.kategori_adi || 'Diğer';
+      const categoryName = op.islem?.kategori?.kategori_adi || 'Diğer';
       
       if (!categoryMap[categoryName]) {
         categoryMap[categoryName] = { value: 0, count: 0 };

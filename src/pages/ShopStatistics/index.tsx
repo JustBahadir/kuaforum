@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -596,7 +595,12 @@ export default function ShopStatistics() {
             
             {/* Category distribution and revenue source charts */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-              <CategoryDistributionChart data={categoryData} isLoading={isLoading} />
+              <CategoryDistributionChart data={categoryData.map(item => ({
+                name: item.name,
+                value: item.revenue,
+                count: item.count,
+                percentage: 0 // Will be calculated by the component
+              }))} isLoading={isLoading} />
               <RevenueSourceChart data={serviceData} isLoading={isLoading} />
             </div>
             
