@@ -11,7 +11,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Search, Phone, Mail, Calendar, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Select,
@@ -21,8 +20,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PersonnelDetailsDialog } from "./PersonnelDetailsDialog";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { personelServisi } from "@/lib/supabase";
+import { toast } from "sonner";
+import { PersonnelDeleteDialog } from "./PersonnelDeleteDialog";
 
 interface PersonnelListProps {
   personnel?: any[];
@@ -42,9 +43,11 @@ export function PersonnelList({
   const [searchTerm, setSearchTerm] = useState("");
   const [filter, setFilter] = useState("all");
   const [selectedPersonnel, setSelectedPersonnel] = useState<any>(null);
-  const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
-  const [personnelToDelete, setPersonnelToDelete] = useState<number | null>(null);
+  const [personnelToDelete, setPersonnelToDelete] = useState<{id: number, name: string} | null>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+  const queryClient = useQueryClient();
 
   // Use internal data fetching if external data is not provided
   const { data: fetchedPersonnel = [], isLoading: fetchLoading } = useQuery({
@@ -63,25 +66,25 @@ export function PersonnelList({
   const filteredPersonnel = personnelArray.filter(p => {
     if (!p) return false;
     const matchesSearch = p.ad_soyad?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter = filter === "all" || p.calisma_sistemi === filter;
-    return matchesSearch && matchesFilter;
+    
+    if (filter === "all") return matchesSearch;
+    if (filter === "maasli") {
+      return matchesSearch && ["aylik_maas", "haftalik_maas", "gunluk_maas"].includes(p.calisma_sistemi);
+    }
+    if (filter === "yuzdelik") {
+      return matchesSearch && p.calisma_sistemi === "prim_komisyon";
+    }
+    
+    return matchesSearch && p.calisma_sistemi === filter;
   });
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
   };
 
-  const handleDeleteClick = (id: number) => {
-    setPersonnelToDelete(id);
-    setIsDeleteAlertOpen(true);
-  };
-
-  const confirmDelete = () => {
-    if (personnelToDelete !== null) {
-      onDelete(personnelToDelete);
-    }
-    setIsDeleteAlertOpen(false);
-    setPersonnelToDelete(null);
+  const handleDeleteClick = (id: number, name: string) => {
+    setPersonnelToDelete({ id, name });
+    setIsDeleteDialogOpen(true);
   };
 
   const handlePersonnelClick = (personnel: any) => {
@@ -101,6 +104,23 @@ export function PersonnelList({
       .join("")
       .toUpperCase()
       .slice(0, 2);
+  };
+
+  const getWorkingSystemLabel = (system: string) => {
+    switch (system) {
+      case "aylik_maas": return "Aylık Maaş";
+      case "haftalik_maas": return "Haftalık Maaş";
+      case "gunluk_maas": return "Günlük Maaş";
+      case "prim_komisyon": return `%${personnel.prim_yuzdesi}`;
+      default: return system;
+    }
+  };
+
+  const getBadgeVariant = (system: string) => {
+    if (["aylik_maas", "haftalik_maas", "gunluk_maas"].includes(system)) {
+      return "outline";
+    }
+    return "secondary";
   };
 
   if (isLoading) {
@@ -129,8 +149,8 @@ export function PersonnelList({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tümü</SelectItem>
-            <SelectItem value="aylik_maas">Maaşlı</SelectItem>
-            <SelectItem value="prim_komisyon">Yüzdelik</SelectItem>
+            <SelectItem value="maasli">Maaşlı</SelectItem>
+            <SelectItem value="yuzdelik">Yüzdelik</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -154,8 +174,14 @@ export function PersonnelList({
                     </Avatar>
                     <div className="flex-1 min-w-0">
                       <CardTitle className="text-base truncate">{p.ad_soyad}</CardTitle>
-                      <Badge variant={p.calisma_sistemi === "aylik_maas" ? "outline" : "secondary"} className="mt-1">
-                        {p.calisma_sistemi === "aylik_maas" ? "Maaşlı" : `%${p.prim_yuzdesi}`}
+                      <Badge 
+                        variant={getBadgeVariant(p.calisma_sistemi)} 
+                        className="mt-1"
+                      >
+                        {p.calisma_sistemi === "prim_komisyon" 
+                          ? `%${p.prim_yuzdesi}` 
+                          : getWorkingSystemLabel(p.calisma_sistemi)
+                        }
                       </Badge>
                     </div>
                     <Button 
@@ -164,7 +190,7 @@ export function PersonnelList({
                       className="text-destructive hover:text-destructive hover:bg-destructive/10"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDeleteClick(p.id);
+                        handleDeleteClick(p.id, p.ad_soyad);
                       }}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -195,27 +221,17 @@ export function PersonnelList({
         </ScrollArea>
       )}
 
-      <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Personeli silmek istediğinize emin misiniz?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Bu personel kaydı kalıcı olarak silinecek. Bu işlem geri alınamaz.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>İptal</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-red-500 hover:bg-red-600">
-              Sil
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      
       <PersonnelDetailsDialog
         isOpen={isDetailsDialogOpen}
         onOpenChange={setIsDetailsDialogOpen}
         personnel={selectedPersonnel}
+      />
+      
+      <PersonnelDeleteDialog 
+        isOpen={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        personnelId={personnelToDelete?.id || null}
+        personnelName={personnelToDelete?.name || ""}
       />
     </div>
   );

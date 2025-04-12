@@ -129,11 +129,11 @@ export function PerformanceCharts({
         statistics[personelId].operations += 1;
         
         // Convert string to number if needed and provide default value for tutar
-        const tutar = typeof op.tutar === 'string' ? parseFloat(op.tutar) : (typeof op.tutar === 'number' ? op.tutar : 0);
+        const tutar = typeof op.tutar === 'string' ? parseFloat(op.tutar) || 0 : (typeof op.tutar === 'number' ? op.tutar : 0);
         statistics[personelId].revenue += tutar;
         
         // Convert string to number if needed and provide default value for odenen
-        const odenen = typeof op.odenen === 'string' ? parseFloat(op.odenen) : (typeof op.odenen === 'number' ? op.odenen : 0);
+        const odenen = typeof op.odenen === 'string' ? parseFloat(op.odenen) || 0 : (typeof op.odenen === 'number' ? op.odenen : 0);
         statistics[personelId].prim += odenen;
       }
     });

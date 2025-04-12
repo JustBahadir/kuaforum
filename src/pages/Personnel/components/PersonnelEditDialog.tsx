@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm } from "react-hook-form";
 import { Personel } from "@/lib/supabase/types";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 interface PersonnelEditDialogProps {
   isOpen: boolean;
@@ -64,8 +65,11 @@ export function PersonnelEditDialog({
     updateMutation.mutate(data);
   };
   
-  // Watch for changes to the working system field to conditionally show/hide the commission field
+  // Watch for changes to the working system field to conditionally show/hide fields
   const calisma_sistemi = form.watch("calisma_sistemi");
+  
+  // Check if the working system is a salary type
+  const isSalaryType = ["aylik_maas", "haftalik_maas", "gunluk_maas"].includes(calisma_sistemi);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -82,20 +86,44 @@ export function PersonnelEditDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Çalışma Sistemi</FormLabel>
-                  <Select
+                  <RadioGroup
                     onValueChange={field.onChange}
                     defaultValue={field.value}
+                    className="grid grid-cols-2 gap-4"
                   >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seçiniz" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="aylik_maas">Aylık Maaş</SelectItem>
-                      <SelectItem value="prim_komisyon">Prim/Komisyon</SelectItem>
-                    </SelectContent>
-                  </Select>
+                    <FormItem className="flex items-center space-x-3 space-y-0">
+                      <FormControl>
+                        <RadioGroupItem value="aylik_maas" />
+                      </FormControl>
+                      <FormLabel className="font-normal">
+                        Aylık Maaşlı
+                      </FormLabel>
+                    </FormItem>
+                    <FormItem className="flex items-center space-x-3 space-y-0">
+                      <FormControl>
+                        <RadioGroupItem value="haftalik_maas" />
+                      </FormControl>
+                      <FormLabel className="font-normal">
+                        Haftalık Maaşlı
+                      </FormLabel>
+                    </FormItem>
+                    <FormItem className="flex items-center space-x-3 space-y-0">
+                      <FormControl>
+                        <RadioGroupItem value="gunluk_maas" />
+                      </FormControl>
+                      <FormLabel className="font-normal">
+                        Günlük Maaşlı
+                      </FormLabel>
+                    </FormItem>
+                    <FormItem className="flex items-center space-x-3 space-y-0">
+                      <FormControl>
+                        <RadioGroupItem value="prim_komisyon" />
+                      </FormControl>
+                      <FormLabel className="font-normal">
+                        Yüzdelik Çalışan
+                      </FormLabel>
+                    </FormItem>
+                  </RadioGroup>
                 </FormItem>
               )}
             />
@@ -105,12 +133,13 @@ export function PersonnelEditDialog({
               name="maas"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Maaş</FormLabel>
+                  <FormLabel>Maaş Bilgisi</FormLabel>
                   <FormControl>
                     <Input
                       type="number"
                       {...field}
-                      value={field.value || ''}
+                      disabled={!isSalaryType}
+                      value={isSalaryType ? (field.value || '') : ''}
                       onChange={(e) => field.onChange(Number(e.target.value))}
                     />
                   </FormControl>
@@ -118,27 +147,26 @@ export function PersonnelEditDialog({
               )}
             />
             
-            {calisma_sistemi === "prim_komisyon" && (
-              <FormField
-                control={form.control}
-                name="prim_yuzdesi"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Prim Yüzdesi (%)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min="0"
-                        max="100"
-                        {...field}
-                        value={field.value || ''}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-            )}
+            <FormField
+              control={form.control}
+              name="prim_yuzdesi"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Prim Oranı (%)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="100"
+                      {...field}
+                      disabled={isSalaryType}
+                      value={!isSalaryType ? (field.value || '') : ''}
+                      onChange={(e) => field.onChange(Number(e.target.value))}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
             
             <div className="flex justify-end space-x-3">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

@@ -18,6 +18,7 @@ import { PersonnelForm } from "./PersonnelForm";
 import { PersonnelOperationsTable } from "./PersonnelOperationsTable";
 import { PersonnelPerformance } from "./PersonnelPerformance";
 import { PersonnelEditDialog } from "./PersonnelEditDialog";
+import { PersonnelDeleteDialog } from "./PersonnelDeleteDialog";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Pencil } from "lucide-react";
@@ -34,6 +35,7 @@ export function PersonnelDetailsDialog({
   personnel
 }: PersonnelDetailsDialogProps) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
   if (!personnel) return null;
 
@@ -129,22 +131,26 @@ export function PersonnelDetailsDialog({
                           <span className="text-muted-foreground">Çalışma Sistemi</span>
                           <span>
                             {personnel.calisma_sistemi === "aylik_maas" ? "Aylık Maaş" : 
+                             personnel.calisma_sistemi === "haftalik_maas" ? "Haftalık Maaş" : 
+                             personnel.calisma_sistemi === "gunluk_maas" ? "Günlük Maaş" :
                              personnel.calisma_sistemi === "prim_komisyon" ? "Prim/Komisyon" : 
                              personnel.calisma_sistemi}
                           </span>
                         </div>
-                        <div className="flex justify-between border-b pb-1">
-                          <span className="text-muted-foreground">Maaş</span>
-                          <span>
-                            {new Intl.NumberFormat("tr-TR", {
-                              style: "currency",
-                              currency: "TRY",
-                            }).format(personnel.maas || 0)}
-                          </span>
-                        </div>
-                        {personnel.calisma_sistemi !== "aylik_maas" && (
+                        {["aylik_maas", "haftalik_maas", "gunluk_maas"].includes(personnel.calisma_sistemi) && (
                           <div className="flex justify-between border-b pb-1">
-                            <span className="text-muted-foreground">Prim Yüzdesi</span>
+                            <span className="text-muted-foreground">Maaş Bilgisi</span>
+                            <span>
+                              {new Intl.NumberFormat("tr-TR", {
+                                style: "currency",
+                                currency: "TRY",
+                              }).format(personnel.maas || 0)}
+                            </span>
+                          </div>
+                        )}
+                        {personnel.calisma_sistemi === "prim_komisyon" && (
+                          <div className="flex justify-between border-b pb-1">
+                            <span className="text-muted-foreground">Prim Oranı</span>
                             <span>%{personnel.prim_yuzdesi}</span>
                           </div>
                         )}
@@ -169,6 +175,13 @@ export function PersonnelDetailsDialog({
           personnel={personnel}
         />
       )}
+      
+      <PersonnelDeleteDialog
+        isOpen={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        personnelId={personnel?.id}
+        personnelName={personnel?.ad_soyad}
+      />
     </>
   );
 }
