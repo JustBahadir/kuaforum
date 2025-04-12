@@ -127,8 +127,13 @@ export function PerformanceCharts({
       
       if (statistics[personelId]) {
         statistics[personelId].operations += 1;
-        statistics[personelId].revenue += Number(op.tutar) || 0;
-        statistics[personelId].prim += Number(op.odenen) || 0;
+        // Convert string to number if needed and provide default value
+        const tutar = typeof op.tutar === 'string' ? parseFloat(op.tutar) : (typeof op.tutar === 'number' ? op.tutar : 0);
+        statistics[personelId].revenue += tutar;
+        
+        // Convert string to number if needed and provide default value
+        const odenen = typeof op.odenen === 'string' ? parseFloat(op.odenen) : (typeof op.odenen === 'number' ? op.odenen : 0);
+        statistics[personelId].prim += odenen;
       }
     });
     
