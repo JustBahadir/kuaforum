@@ -9,7 +9,7 @@ import {
   CardTitle
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, Phone, Mail, Calendar, Trash2 } from "lucide-react";
+import { Phone, Mail, Calendar, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
@@ -111,7 +111,7 @@ export function PersonnelList({
       case "aylik_maas": return "Aylık Maaş";
       case "haftalik_maas": return "Haftalık Maaş";
       case "gunluk_maas": return "Günlük Maaş";
-      case "prim_komisyon": return `%${personnel.prim_yuzdesi}`;
+      case "prim_komisyon": return `%${personnel?.prim_yuzdesi}`;
       default: return system;
     }
   };

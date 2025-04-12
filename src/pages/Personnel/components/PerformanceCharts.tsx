@@ -128,12 +128,14 @@ export function PerformanceCharts({
       if (statistics[personelId]) {
         statistics[personelId].operations += 1;
         
-        // Convert string to number if needed and provide default value for tutar
-        const tutar = typeof op.tutar === 'string' ? parseFloat(op.tutar) || 0 : (typeof op.tutar === 'number' ? op.tutar : 0);
+        // Convert tutar to number safely
+        const tutarValue = typeof op.tutar === 'string' ? parseFloat(op.tutar) : op.tutar;
+        const tutar = !isNaN(Number(tutarValue)) ? Number(tutarValue) : 0;
         statistics[personelId].revenue += tutar;
         
-        // Convert string to number if needed and provide default value for odenen
-        const odenen = typeof op.odenen === 'string' ? parseFloat(op.odenen) || 0 : (typeof op.odenen === 'number' ? op.odenen : 0);
+        // Convert odenen to number safely
+        const odenenValue = typeof op.odenen === 'string' ? parseFloat(op.odenen) : op.odenen;
+        const odenen = !isNaN(Number(odenenValue)) ? Number(odenenValue) : 0;
         statistics[personelId].prim += odenen;
       }
     });
