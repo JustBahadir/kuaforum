@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useMemo } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,7 +28,7 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 
-import { formatCurrency, debounce } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
 import { format, subDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfYear, endOfYear } from "date-fns";
 import { tr } from "date-fns/locale";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -35,6 +36,9 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AnalystBox } from "@/components/analyst/AnalystBox";
 import { Loader2 } from "lucide-react";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
+
+// Import debounce from utils/index.ts instead of lib/utils
+import { debounce } from "@/utils";
 
 // Color scheme for charts
 const CHART_COLORS = [
@@ -123,6 +127,15 @@ export default function ShopStatistics() {
     setDateRange(range);
     setTimeRange('custom');
   };
+  
+  // Filter operations based on date range - Define this before it's used
+  const filteredOperations = useMemo(() => {
+    return operations.filter(operation => {
+      if (!operation.created_at) return false;
+      const date = new Date(operation.created_at);
+      return date >= dateRange.from && date <= dateRange.to;
+    });
+  }, [operations, dateRange]);
   
   // Transform operations data by date for performance chart
   const performanceData = useMemo(() => {
@@ -218,15 +231,6 @@ export default function ShopStatistics() {
       count
     }));
   }, [operations, categories, filteredOperations, isLoading]);
-  
-  // Filter operations based on date range
-  const filteredOperations = useMemo(() => {
-    return operations.filter(operation => {
-      if (!operation.created_at) return false;
-      const date = new Date(operation.created_at);
-      return date >= dateRange.from && date <= dateRange.to;
-    });
-  }, [operations, dateRange]);
   
   // Calculate summary statistics
   const stats = useMemo(() => {
