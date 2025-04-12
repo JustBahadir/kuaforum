@@ -134,7 +134,7 @@ export function PerformanceCharts({
         statistics[personelId].revenue += tutar;
         
         // Convert odenen to number safely
-        const odenenValue = typeof op.odenen === 'string' ? parseFloat(op.odenen) : op.odenen;
+        const odenenValue = typeof op.odenen === 'string' ? parseFloat(op.odenen || '0') : (op.odenen || 0);
         const odenen = !isNaN(Number(odenenValue)) ? Number(odenenValue) : 0;
         statistics[personelId].prim += odenen;
       }
@@ -242,3 +242,4 @@ export function PerformanceCharts({
     </div>
   );
 }
+
