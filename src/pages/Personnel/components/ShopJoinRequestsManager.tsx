@@ -1,24 +1,18 @@
 
-import { useState, useEffect } from "react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Check, X, AlertCircle } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase/client";
-import { toast } from "sonner";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Check, X, PhoneCall, Mail } from "lucide-react";
 
-interface JoinRequest {
+interface ShopJoinRequest {
   id: number;
   personel_id: number;
   dukkan_id: number;
   status: string;
   created_at: string;
-  auth_id?: string;
-  personel?: {
+  personel: {
     id: number;
     ad_soyad: string;
     telefon: string;
@@ -27,90 +21,62 @@ interface JoinRequest {
   };
 }
 
-export function ShopJoinRequestsManager() {
-  const { dukkanId, userRole } = useCustomerAuth();
-  const [requests, setRequests] = useState<JoinRequest[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [processingId, setProcessingId] = useState<number | null>(null);
+interface ShopJoinRequestsManagerProps {
+  isLoading?: boolean;
+  requests: ShopJoinRequest[];
+  onRequestApproved?: () => void;
+  onRequestRejected?: () => void;
+}
 
-  useEffect(() => {
-    if (dukkanId) {
-      loadJoinRequests();
-    }
-  }, [dukkanId]);
+export function ShopJoinRequestsManager({ 
+  isLoading = false, 
+  requests = [],
+  onRequestApproved,
+  onRequestRejected
+}: ShopJoinRequestsManagerProps) {
+  const { dukkanId } = useCustomerAuth();
 
-  const loadJoinRequests = async () => {
-    setLoading(true);
+  const handleApprove = async (request: ShopJoinRequest) => {
     try {
-      const { data, error } = await supabase
-        .from('personel_shop_requests')
-        .select('*, personel:personel_id(id, ad_soyad, telefon, eposta, avatar_url)')
-        .eq('dukkan_id', dukkanId)
-        .eq('status', 'pending')
-        .order('created_at', { ascending: false });
-        
-      if (error) throw error;
-      setRequests(data || []);
-    } catch (error) {
-      console.error("Error loading join requests:", error);
-      toast.error("Katılım istekleri yüklenirken bir hata oluştu");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleApprove = async (request: JoinRequest) => {
-    setProcessingId(request.id);
-    
-    try {
-      // Update request status
-      const { error: updateStatusError } = await supabase
+      // Update the request status to approved
+      const { error: requestError } = await supabase
         .from('personel_shop_requests')
         .update({ status: 'approved' })
         .eq('id', request.id);
-        
-      if (updateStatusError) throw updateStatusError;
-      
-      // Update personnel record with shop connection
-      const { error: updatePersonnelError } = await supabase
+
+      if (requestError) throw requestError;
+
+      // Update the personnel record with the shop ID
+      const { error: personnelError } = await supabase
         .from('personel')
         .update({ dukkan_id: dukkanId })
         .eq('id', request.personel_id);
-        
-      if (updatePersonnelError) throw updatePersonnelError;
-      
-      toast.success("Personel dükkana başarıyla eklendi");
-      
-      // Refresh requests
-      loadJoinRequests();
+
+      if (personnelError) throw personnelError;
+
+      // Callback to refresh the requests list
+      if (onRequestApproved) onRequestApproved();
+
     } catch (error) {
       console.error("Error approving request:", error);
-      toast.error("İstek onaylanırken bir hata oluştu");
-    } finally {
-      setProcessingId(null);
     }
   };
 
   const handleReject = async (requestId: number) => {
-    setProcessingId(requestId);
-    
     try {
+      // Update the request status to rejected
       const { error } = await supabase
         .from('personel_shop_requests')
         .update({ status: 'rejected' })
         .eq('id', requestId);
-        
+
       if (error) throw error;
-      
-      toast.success("İstek reddedildi");
-      
-      // Refresh requests
-      loadJoinRequests();
+
+      // Callback to refresh the requests list
+      if (onRequestRejected) onRequestRejected();
+
     } catch (error) {
       console.error("Error rejecting request:", error);
-      toast.error("İstek reddedilirken bir hata oluştu");
-    } finally {
-      setProcessingId(null);
     }
   };
 
@@ -124,74 +90,71 @@ export function ShopJoinRequestsManager() {
       .slice(0, 2);
   };
 
-  if (!dukkanId || userRole !== 'admin') {
-    return (
-      <Alert>
-        <AlertCircle className="h-4 w-4" />
-        <AlertDescription>
-          Personel katılım isteklerini görüntülemek için dükkan sahibi olmanız gerekmektedir.
-        </AlertDescription>
-      </Alert>
-    );
-  }
-
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex justify-between items-center">
-          <span>Personel Katılım İstekleri</span>
-          <Badge variant="outline">{requests.length}</Badge>
-        </CardTitle>
+        <CardTitle>Bekleyen Katılım İstekleri</CardTitle>
+        <CardDescription>
+          Dükkana katılmak isteyen personeller aşağıda listelenmiştir.
+        </CardDescription>
       </CardHeader>
       <CardContent>
-        {loading ? (
-          <div className="flex justify-center p-4">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+        {isLoading ? (
+          <div className="flex justify-center p-12">
+            <div className="w-10 h-10 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
           </div>
-        ) : requests.length === 0 ? (
-          <div className="text-center py-6 text-muted-foreground">
-            <p>Bekleyen katılım isteği bulunmuyor.</p>
-          </div>
-        ) : (
-          <ScrollArea className="h-[340px] pr-4">
-            <div className="space-y-4">
-              {requests.map((request) => (
-                <div key={request.id} className="flex items-center justify-between border p-4 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <Avatar>
-                      <AvatarImage src={request.personel?.avatar_url} />
-                      <AvatarFallback>{getInitials(request.personel?.ad_soyad || '')}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="font-medium">{request.personel?.ad_soyad}</p>
-                      <p className="text-sm text-muted-foreground">{request.personel?.telefon}</p>
-                      <p className="text-xs text-muted-foreground">{request.personel?.eposta}</p>
+        ) : requests.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {requests.map((request) => (
+              <Card key={request.id} className="overflow-hidden">
+                <div className="p-4 flex items-start">
+                  <Avatar className="h-12 w-12 mr-4">
+                    <AvatarImage src={request.personel.avatar_url} />
+                    <AvatarFallback>{getInitials(request.personel.ad_soyad)}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <h4 className="font-semibold">{request.personel.ad_soyad}</h4>
+                    <div className="flex flex-col gap-1 mt-2 text-sm">
+                      <div className="flex items-center">
+                        <PhoneCall className="h-3.5 w-3.5 mr-2 text-gray-500" />
+                        <span>{request.personel.telefon}</span>
+                      </div>
+                      <div className="flex items-center">
+                        <Mail className="h-3.5 w-3.5 mr-2 text-gray-500" />
+                        <span>{request.personel.eposta}</span>
+                      </div>
+                    </div>
+                    <div className="text-xs text-gray-500 mt-2">
+                      İstek tarihi: {new Date(request.created_at).toLocaleDateString('tr-TR')}
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10" 
-                      onClick={() => handleReject(request.id)}
-                      disabled={processingId === request.id}
-                    >
-                      <X className="h-4 w-4 mr-1" />
-                      Reddet
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={() => handleApprove(request)}
-                      disabled={processingId === request.id}
-                    >
-                      <Check className="h-4 w-4 mr-1" />
-                      Onayla
-                    </Button>
-                  </div>
                 </div>
-              ))}
-            </div>
-          </ScrollArea>
+                <div className="bg-gray-50 p-4 flex justify-end gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => handleReject(request.id)}
+                    className="gap-1"
+                  >
+                    <X className="h-4 w-4" />
+                    Reddet
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    onClick={() => handleApprove(request)}
+                    className="gap-1"
+                  >
+                    <Check className="h-4 w-4" />
+                    Onayla
+                  </Button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center p-8 text-gray-500">
+            Bekleyen personel katılım isteği bulunmamaktadır.
+          </div>
         )}
       </CardContent>
     </Card>

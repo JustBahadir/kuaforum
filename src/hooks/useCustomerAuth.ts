@@ -1,13 +1,18 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase/client';
+import { useProfileManagement } from './auth/useProfileManagement';
 
 export function useCustomerAuth() {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [dukkanId, setDukkanId] = useState<number | null>(null);
+  const [userName, setUserName] = useState<string>("");
+  
+  // Use our profile management hook
+  const profileManagement = useProfileManagement(userRole, !!user, setUserName);
   
   useEffect(() => {
     // Set up auth listener
@@ -28,6 +33,7 @@ export function useCustomerAuth() {
           setProfile(null);
           setDukkanId(null);
           setUserRole(null);
+          setUserName("");
         }
       }
     );
@@ -82,6 +88,11 @@ export function useCustomerAuth() {
       if (!userRole && profile?.role) {
         setUserRole(profile.role);
       }
+      
+      // Set user name for display
+      if (profile?.first_name || profile?.last_name) {
+        setUserName(`${profile.first_name || ''} ${profile.last_name || ''}`.trim());
+      }
     } catch (error) {
       console.error('Error fetching profile:', error);
     }
@@ -128,12 +139,42 @@ export function useCustomerAuth() {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      setProfile(null);
+      setUserRole(null);
+      setDukkanId(null);
+      setUserName("");
+      profileManagement.resetProfile();
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+  
+  // Function to refresh profile and dukkan data
+  const refreshProfile = async () => {
+    if (!user?.id) return;
+    await fetchUserProfile(user.id);
+    await fetchDukkanId(user);
+    return profileManagement.refreshProfile();
+  };
+  
+  // Check if the user is authenticated
+  const isAuthenticated = !!user;
+
   return {
     user,
     profile,
     userRole,
     loading,
     dukkanId,
+    userName,
+    isAuthenticated,
     checkSession,
+    handleLogout,
+    refreshProfile,
+    ...profileManagement
   };
 }
