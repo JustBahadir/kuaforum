@@ -6,7 +6,6 @@ import {
   Card, 
   CardHeader,
   CardContent,
-  CardFooter,
   CardTitle
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -61,8 +60,6 @@ export function PersonnelList({
   // Make sure personnel is always an array
   const personnelArray = Array.isArray(personnel) ? personnel : [];
   
-  console.log("Personnel List Rendered with data:", personnelArray);
-
   const filteredPersonnel = personnelArray.filter(p => {
     if (!p) return false;
     const matchesSearch = p.ad_soyad?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -201,7 +198,7 @@ export function PersonnelList({
       <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Emin misiniz?</AlertDialogTitle>
+            <AlertDialogTitle>Personeli silmek istediğinize emin misiniz?</AlertDialogTitle>
             <AlertDialogDescription>
               Bu personel kaydı kalıcı olarak silinecek. Bu işlem geri alınamaz.
             </AlertDialogDescription>

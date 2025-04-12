@@ -1,228 +1,203 @@
+
 import { useState, useEffect, useMemo } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { islemServisi, islemKategoriServisi, personelIslemleriServisi, personelServisi } from "@/lib/supabase";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  Cell,
+  PieChart,
+  Pie
+} from "recharts";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+
+import { formatCurrency, debounce } from "@/lib/utils";
+import { format, subDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfYear, endOfYear } from "date-fns";
+import { tr } from "date-fns/locale";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+import { AnalystBox } from "@/components/analyst/AnalystBox";
+import { Loader2 } from "lucide-react";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { useQuery } from "@tanstack/react-query";
-import { personelIslemleriServisi } from "@/lib/supabase/services/personelIslemleriServisi";
-import { randevuServisi } from "@/lib/supabase/services/randevuServisi";
-import { personelServisi } from "@/lib/supabase";
-import { CircleAlert, Info } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
-import { DailyPerformanceChart } from "./ShopStatistics/components/DailyPerformanceChart";
-import { WeeklyPerformanceChart } from "./ShopStatistics/components/WeeklyPerformanceChart";
-import { MonthlyPerformanceChart } from "./ShopStatistics/components/MonthlyPerformanceChart";
-import { HourlyPerformanceChart } from "./ShopStatistics/components/HourlyPerformanceChart";
-import { ServiceDistributionChart } from "./ShopStatistics/components/ServiceDistributionChart";
-import { CategoryDistributionChart } from "./ShopStatistics/components/CategoryDistributionChart";
-import { OperationDistributionChart } from "./ShopStatistics/components/OperationDistributionChart";
-import { DateRangeControls } from "./ShopStatistics/components/DateRangeControls";
-import { ShopAnalyst } from "@/components/analyst/ShopAnalyst";
+
+// Color scheme for charts
+const CHART_COLORS = [
+  "#8884d8", "#82ca9d", "#ffc658", "#ff8042", "#0088FE", 
+  "#00C49F", "#FFBB28", "#FF8042", "#a4de6c", "#d0ed57"
+];
 
 export default function ShopStatistics() {
-  const { userRole, dukkanId } = useCustomerAuth();
-  const [period, setPeriod] = useState<string>("weekly");
-  const [customMonthDay, setCustomMonthDay] = useState<number>(1);
-  const [hasData, setHasData] = useState(false);
+  const { dukkanId } = useCustomerAuth();
+  const queryClient = useQueryClient();
+  const [timeRange, setTimeRange] = useState("month");
   const [dateRange, setDateRange] = useState({
-    from: new Date(new Date().setDate(new Date().getDate() - 30)),
+    from: subDays(new Date(), 30),
     to: new Date()
   });
   
+  const [aiInsights, setAiInsights] = useState<string[]>([]);
+  const [isAiLoading, setIsAiLoading] = useState(true);
+  
   // Fetch personnel data
-  const { data: personeller = [], isLoading: isLoadingPersoneller } = useQuery({
-    queryKey: ['personel-list'],
+  const { data: personnel = [], isLoading: isPersonnelLoading } = useQuery({
+    queryKey: ['personnel'],
     queryFn: () => personelServisi.hepsiniGetir(),
-    enabled: !!dukkanId
   });
-
+  
   // Fetch operations data
-  const { data: islemler = [], isLoading: isLoadingIslemler, refetch: refetchIslemler } = useQuery({
-    queryKey: ['personel-islemleri', dateRange.from, dateRange.to],
+  const { data: operations = [], isLoading: isOperationsLoading } = useQuery({
+    queryKey: ['operations', dateRange.from, dateRange.to],
     queryFn: async () => {
-      return await personelIslemleriServisi.hepsiniGetir();
+      const data = await personelIslemleriServisi.hepsiniGetir();
+      return data.filter(op => {
+        if (!op.created_at) return false;
+        const date = new Date(op.created_at);
+        return date >= dateRange.from && date <= dateRange.to;
+      });
     },
-    enabled: !!dukkanId
   });
-
-  // Fetch appointment data
-  const { data: randevular = [], isLoading: isLoadingRandevular, refetch: refetchRandevular } = useQuery({
-    queryKey: ['randevular', dateRange.from, dateRange.to],
-    queryFn: async () => {
-      if (dukkanId) {
-        return await randevuServisi.dukkanRandevulariniGetir(dukkanId);
-      }
-      return [];
-    },
-    enabled: !!dukkanId
-  });
-
-  const isLoading = isLoadingIslemler || isLoadingRandevular || isLoadingPersoneller;
-
-  // Filter operations by date range
-  const filteredOperations = useMemo(() => {
-    return islemler.filter(op => {
-      if (!op.created_at) return false;
-      const date = new Date(op.created_at);
-      return date >= dateRange.from && date <= dateRange.to;
-    });
-  }, [islemler, dateRange]);
   
-  // Refresh data
-  const handleRefresh = async () => {
-    await Promise.all([refetchIslemler(), refetchRandevular()]);
+  // Fetch services data
+  const { data: services = [], isLoading: isServicesLoading } = useQuery({
+    queryKey: ['services'],
+    queryFn: () => islemServisi.hepsiniGetir(),
+  });
+  
+  // Fetch categories data
+  const { data: categories = [], isLoading: isCategoriesLoading } = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => islemKategoriServisi.hepsiniGetir(),
+  });
+
+  const isLoading = isPersonnelLoading || isOperationsLoading || isServicesLoading || isCategoriesLoading;
+  
+  // Handle time range change
+  const handleTimeRangeChange = (value: string) => {
+    setTimeRange(value);
+    
+    const now = new Date();
+    let from, to;
+    
+    switch(value) {
+      case 'day':
+        from = new Date(now.setHours(0, 0, 0, 0));
+        to = new Date();
+        break;
+      case 'week':
+        from = startOfWeek(now, { weekStartsOn: 1 });
+        to = endOfWeek(now, { weekStartsOn: 1 });
+        break;
+      case 'month':
+        from = startOfMonth(now);
+        to = endOfMonth(now);
+        break;
+      case 'year':
+        from = startOfYear(now);
+        to = endOfYear(now);
+        break;
+      default: // custom range, don't change
+        return;
+    }
+    
+    setDateRange({ from, to });
   };
-
-  useEffect(() => {
-    if (!isLoading) {
-      setHasData(islemler.length > 0 || randevular.length > 0);
-    }
-  }, [islemler, randevular, isLoading]);
-
-  // Process data for main charts based on period
-  const { dailyData, weeklyData, monthlyData, hourlyData } = useMemo(() => {
-    // Initialize data structures
-    const dailyData: any[] = [];
-    const weeklyData: any[] = [];
-    const monthlyData: any[] = [];
-    const hourlyData: any[] = [];
-    
-    // Process operations
-    if (filteredOperations.length > 0) {
-      // Group by day for daily data (last 7 days)
-      const last7Days = [...Array(7)].map((_, i) => {
-        const date = new Date();
-        date.setDate(date.getDate() - i);
-        return date;
-      }).reverse();
-      
-      last7Days.forEach(day => {
-        const dayStr = day.toLocaleDateString('tr-TR', { day: 'numeric', month: 'numeric' });
-        const dayStart = new Date(day.setHours(0, 0, 0, 0));
-        const dayEnd = new Date(day.setHours(23, 59, 59, 999));
-        
-        const dayOperations = filteredOperations.filter(op => {
-          const opDate = new Date(op.created_at);
-          return opDate >= dayStart && opDate <= dayEnd;
-        });
-        
-        dailyData.push({
-          name: dayStr,
-          ciro: dayOperations.reduce((sum, op) => sum + (op.tutar || 0), 0),
-          islemSayisi: dayOperations.length
-        });
-      });
-      
-      // Group by weekday for weekly data
-      const weekDays = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
-      const weekdayMap: Record<number, { ciro: number, islemSayisi: number }> = {};
-      
-      filteredOperations.forEach(op => {
-        if (!op.created_at) return;
-        const date = new Date(op.created_at);
-        // Get day index (0 = Sunday in JS, we want 0 = Monday)
-        const dayIndex = date.getDay() === 0 ? 6 : date.getDay() - 1;
-        
-        if (!weekdayMap[dayIndex]) {
-          weekdayMap[dayIndex] = { ciro: 0, islemSayisi: 0 };
-        }
-        
-        weekdayMap[dayIndex].ciro += op.tutar || 0;
-        weekdayMap[dayIndex].islemSayisi += 1;
-      });
-      
-      weekDays.forEach((day, index) => {
-        weeklyData.push({
-          name: day,
-          ciro: weekdayMap[index]?.ciro || 0,
-          islemSayisi: weekdayMap[index]?.islemSayisi || 0
-        });
-      });
-      
-      // Group by month/week for monthly data
-      const monthlyGroups = ['1. Hafta', '2. Hafta', '3. Hafta', '4. Hafta', '5+ Hafta'];
-      const monthlyMap: Record<number, { ciro: number, islemSayisi: number }> = {};
-      
-      filteredOperations.forEach(op => {
-        if (!op.created_at) return;
-        const date = new Date(op.created_at);
-        // Calculate week of month (1-indexed)
-        const weekOfMonth = Math.ceil(date.getDate() / 7);
-        const weekIndex = weekOfMonth > 4 ? 4 : weekOfMonth - 1;
-        
-        if (!monthlyMap[weekIndex]) {
-          monthlyMap[weekIndex] = { ciro: 0, islemSayisi: 0 };
-        }
-        
-        monthlyMap[weekIndex].ciro += op.tutar || 0;
-        monthlyMap[weekIndex].islemSayisi += 1;
-      });
-      
-      monthlyGroups.forEach((week, index) => {
-        monthlyData.push({
-          name: week,
-          ciro: monthlyMap[index]?.ciro || 0,
-          islemSayisi: monthlyMap[index]?.islemSayisi || 0
-        });
-      });
-      
-      // Group by hour for hourly data
-      const hours = Array(24).fill(0).map((_, i) => `${i}:00`);
-      const hourlyMap: Record<number, { ciro: number, islemSayisi: number }> = {};
-      
-      filteredOperations.forEach(op => {
-        if (!op.created_at) return;
-        const date = new Date(op.created_at);
-        const hour = date.getHours();
-        
-        if (!hourlyMap[hour]) {
-          hourlyMap[hour] = { ciro: 0, islemSayisi: 0 };
-        }
-        
-        hourlyMap[hour].ciro += op.tutar || 0;
-        hourlyMap[hour].islemSayisi += 1;
-      });
-      
-      hours.forEach((hourLabel, index) => {
-        hourlyData.push({
-          name: hourLabel,
-          ciro: hourlyMap[index]?.ciro || 0,
-          islemSayisi: hourlyMap[index]?.islemSayisi || 0
-        });
-      });
-    }
-    
-    return { dailyData, weeklyData, monthlyData, hourlyData };
-  }, [filteredOperations]);
   
-  // Process service distribution data
-  const serviceData = useMemo(() => {
-    const serviceMap: Record<string, { ciro: number; islemSayisi: number }> = {};
+  // Handle date range change
+  const handleDateRangeChange = (range: { from: Date, to: Date }) => {
+    setDateRange(range);
+    setTimeRange('custom');
+  };
+  
+  // Transform operations data by date for performance chart
+  const performanceData = useMemo(() => {
+    if (isLoading || operations.length === 0) return [];
     
-    filteredOperations.forEach(op => {
-      const serviceName = op.islem?.islem_adi || 
-                         (op.aciklama?.includes(' hizmeti verildi') ? 
-                         op.aciklama.split(' hizmeti verildi')[0] : op.aciklama) || 
-                         'Bilinmeyen İşlem';
-                         
-      if (!serviceMap[serviceName]) {
-        serviceMap[serviceName] = { ciro: 0, islemSayisi: 0 };
+    const dataMap = new Map();
+    
+    operations.forEach(operation => {
+      if (!operation.created_at) return;
+      
+      const date = new Date(operation.created_at);
+      let key;
+      
+      // Format the date key based on time range
+      if (timeRange === 'day') {
+        key = format(date, 'HH:00', { locale: tr });
+      } else if (timeRange === 'week' || timeRange === 'custom' && dateRange.to.getTime() - dateRange.from.getTime() < 8 * 24 * 60 * 60 * 1000) {
+        key = format(date, 'EEEE', { locale: tr });
+      } else if (timeRange === 'month' || timeRange === 'custom' && dateRange.to.getTime() - dateRange.from.getTime() < 32 * 24 * 60 * 60 * 1000) {
+        key = format(date, 'd MMM', { locale: tr });
+      } else {
+        key = format(date, 'MMM yyyy', { locale: tr });
       }
       
-      serviceMap[serviceName].ciro += op.tutar || 0;
-      serviceMap[serviceName].islemSayisi += 1;
+      if (!dataMap.has(key)) {
+        dataMap.set(key, { name: key, operations: 0, revenue: 0 });
+      }
+      
+      const entry = dataMap.get(key);
+      entry.operations += 1;
+      entry.revenue += operation.tutar || 0;
     });
     
-    return Object.entries(serviceMap).map(([name, data]) => ({
-      name,
-      ciro: data.ciro,
-      islemSayisi: data.islemSayisi
-    })).sort((a, b) => b.ciro - a.ciro);
-  }, [filteredOperations]);
+    // Convert map to array and sort by date
+    return Array.from(dataMap.values());
+  }, [operations, timeRange, dateRange]);
   
-  // Process category distribution data
+  // Transform operations data by service for service chart
+  const serviceData = useMemo(() => {
+    if (isLoading || operations.length === 0) return [];
+    
+    const dataMap = new Map();
+    
+    operations.forEach(operation => {
+      const serviceId = operation.islem_id;
+      if (!serviceId) return;
+      
+      const service = services.find(s => s.id === serviceId);
+      if (!service) return;
+      
+      const serviceName = service.islem_adi;
+      
+      if (!dataMap.has(serviceName)) {
+        dataMap.set(serviceName, { 
+          name: serviceName, 
+          count: 0, 
+          revenue: 0 
+        });
+      }
+      
+      const entry = dataMap.get(serviceName);
+      entry.count += 1;
+      entry.revenue += operation.tutar || 0;
+    });
+    
+    // Convert map to array and sort by revenue
+    return Array.from(dataMap.values())
+      .sort((a, b) => b.revenue - a.revenue);
+  }, [operations, services]);
+  
+  // Transform operations data by category
   const categoryData = useMemo(() => {
+    if (isLoading || operations.length === 0) return [];
+    
     const categoryMap: Record<string, { value: number; count: number }> = {};
     
     filteredOperations.forEach(op => {
@@ -236,209 +211,437 @@ export default function ShopStatistics() {
       categoryMap[categoryName].count += 1;
     });
     
-    // Calculate percentages
-    const total = Object.values(categoryMap).reduce((sum, item) => sum + item.value, 0);
-    
-    return Object.entries(categoryMap).map(([name, data]) => ({
+    return Object.entries(categoryMap).map(([name, { value, count }]) => ({
       name,
-      value: data.value,
-      count: data.count,
-      percentage: total > 0 ? data.value / total : 0
-    })).sort((a, b) => b.value - a.value);
-  }, [filteredOperations]);
+      value,
+      count
+    }));
+  }, [operations, categories]);
   
-  // Process operation distribution data
-  const operationData = useMemo(() => {
-    const operationMap: Record<string, { count: number; revenue: number }> = {};
+  // Filter operations based on date range
+  const filteredOperations = useMemo(() => {
+    return operations.filter(operation => {
+      if (!operation.created_at) return false;
+      const date = new Date(operation.created_at);
+      return date >= dateRange.from && date <= dateRange.to;
+    });
+  }, [operations, dateRange]);
+  
+  // Calculate summary statistics
+  const stats = useMemo(() => {
+    const totalRevenue = filteredOperations.reduce((sum, op) => sum + (op.tutar || 0), 0);
+    const totalOperations = filteredOperations.length;
+    const averageTicket = totalOperations > 0 ? totalRevenue / totalOperations : 0;
     
-    filteredOperations.forEach(op => {
-      const serviceName = op.islem?.islem_adi || 
-                         (op.aciklama?.includes(' hizmeti verildi') ? 
-                         op.aciklama.split(' hizmeti verildi')[0] : op.aciklama) || 
-                         'Bilinmeyen İşlem';
-                         
-      if (!operationMap[serviceName]) {
-        operationMap[serviceName] = { count: 0, revenue: 0 };
+    return { totalRevenue, totalOperations, averageTicket };
+  }, [filteredOperations]);
+
+  // Function to generate AI insights
+  const generateAiInsights = () => {
+    setIsAiLoading(true);
+    
+    try {
+      const insights = [];
+      
+      // If no data, return empty insights
+      if (filteredOperations.length === 0) {
+        setAiInsights([]);
+        setIsAiLoading(false);
+        return;
       }
       
-      operationMap[serviceName].count += 1;
-      operationMap[serviceName].revenue += op.tutar || 0;
-    });
-    
-    return Object.entries(operationMap).map(([name, data]) => ({
-      name,
-      count: data.count,
-      revenue: data.revenue
-    })).sort((a, b) => b.count - a.count);
-  }, [filteredOperations]);
+      // Most revenue service
+      if (serviceData.length > 0) {
+        const topService = serviceData[0];
+        insights.push(`En yüksek ciro "${topService.name}" hizmetinden geldi (${formatCurrency(topService.revenue)}).`);
+      }
+      
+      // Most popular service by count
+      const sortedByCount = [...serviceData].sort((a, b) => b.count - a.count);
+      if (sortedByCount.length > 0) {
+        insights.push(`En çok tercih edilen hizmet "${sortedByCount[0].name}" oldu (${sortedByCount[0].count} işlem).`);
+      }
+      
+      // Least popular service
+      if (sortedByCount.length > 2) {
+        const leastPopular = sortedByCount[sortedByCount.length - 1];
+        insights.push(`En az tercih edilen hizmet "${leastPopular.name}" oldu (${leastPopular.count} işlem).`);
+      }
+      
+      // Busiest day or time period
+      if (performanceData.length > 0) {
+        const busiestPeriod = [...performanceData].sort((a, b) => b.operations - a.operations)[0];
+        
+        let timeLabel;
+        if (timeRange === 'day') timeLabel = 'saat';
+        else if (timeRange === 'week') timeLabel = 'gün';
+        else if (timeRange === 'month') timeLabel = 'gün';
+        else timeLabel = 'ay';
+        
+        insights.push(`En yoğun ${timeLabel} "${busiestPeriod.name}" oldu (${busiestPeriod.operations} işlem).`);
+      }
+      
+      // Period with highest revenue
+      if (performanceData.length > 0) {
+        const highestRevenuePeriod = [...performanceData].sort((a, b) => b.revenue - a.revenue)[0];
+        insights.push(`En yüksek ciro "${highestRevenuePeriod.name}" döneminde elde edildi (${formatCurrency(highestRevenuePeriod.revenue)}).`);
+      }
 
-  // Calculate summary data
-  const summaryData = useMemo(() => {
-    const totalRevenue = filteredOperations.reduce((sum, op) => sum + (op.tutar || 0), 0);
-    const customerIds = new Set(filteredOperations.map(op => op.musteri_id).filter(Boolean));
-    const customerCount = customerIds.size;
-    const operationCount = filteredOperations.length;
-    const averageSpending = customerCount > 0 ? totalRevenue / customerCount : 0;
-    const completedAppointments = randevular.filter(r => 
-      r.durum === 'tamamlandi' && 
-      new Date(r.tarih) >= dateRange.from &&
-      new Date(r.tarih) <= dateRange.to
-    ).length;
+      // Most productive personnel
+      const personnelStats = new Map();
+      filteredOperations.forEach(op => {
+        if (!op.personel_id) return;
+        
+        if (!personnelStats.has(op.personel_id)) {
+          const person = personnel.find(p => p.id === op.personel_id);
+          personnelStats.set(op.personel_id, { 
+            name: person ? person.ad_soyad : 'Bilinmeyen Personel', 
+            operations: 0,
+            revenue: 0
+          });
+        }
+        
+        const entry = personnelStats.get(op.personel_id);
+        entry.operations += 1;
+        entry.revenue += op.tutar || 0;
+      });
+      
+      if (personnelStats.size > 0) {
+        const topPersonByOps = Array.from(personnelStats.values())
+          .sort((a, b) => b.operations - a.operations)[0];
+          
+        const topPersonByRevenue = Array.from(personnelStats.values())
+          .sort((a, b) => b.revenue - a.revenue)[0];
+        
+        insights.push(`En çok işlem yapan personel ${topPersonByOps.name} (${topPersonByOps.operations} işlem).`);
+        insights.push(`En yüksek ciroyu getiren personel ${topPersonByRevenue.name} (${formatCurrency(topPersonByRevenue.revenue)}).`);
+      }
+      
+      // Randomize and limit insights
+      const shuffledInsights = [...insights].sort(() => 0.5 - Math.random());
+      setAiInsights(shuffledInsights.slice(0, 4));
+      
+    } catch (error) {
+      console.error("Error generating insights:", error);
+      setAiInsights(["Veri analizi sırasında bir sorun oluştu."]);
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
 
-    return {
-      totalRevenue,
-      customerCount,
-      operationCount,
-      averageSpending,
-      completedAppointments
-    };
-  }, [filteredOperations, randevular, dateRange]);
+  // Generate insights when data changes
+  useEffect(() => {
+    if (!isLoading) {
+      generateAiInsights();
+    }
+  }, [filteredOperations, timeRange]);
+  
+  // Format ToolTip
+  const formatTooltip = (value: number, name: string) => {
+    if (name === 'revenue') {
+      return [formatCurrency(value), 'Ciro'];
+    }
+    return [value, 'İşlem Sayısı'];
+  };
+  
+  const refreshInsights = debounce(() => {
+    setIsAiLoading(true);
+    generateAiInsights();
+  }, 300);
+
+  const hasEnoughData = filteredOperations.length > 0;
 
   return (
     <StaffLayout>
-      <div className="container mx-auto py-6">
-        <h1 className="text-3xl font-bold mb-4">Dükkan İstatistikleri</h1>
+      <div className="container mx-auto py-6 px-4">
+        <h1 className="text-2xl font-bold mb-6">Dükkan İstatistikleri</h1>
         
-        <div className="mb-6">
-          <DateRangeControls
-            period={period}
-            setPeriod={setPeriod}
-            dateRange={dateRange}
-            setDateRange={setDateRange}
-            customMonthDay={customMonthDay}
-            setCustomMonthDay={setCustomMonthDay}
-            onRefresh={handleRefresh}
+        <AnalystBox
+          title="Akıllı Analiz"
+          insights={aiInsights}
+          isLoading={isAiLoading}
+          onRefresh={refreshInsights}
+          hasEnoughData={hasEnoughData}
+          className="mb-6"
+        />
+
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+          <div>
+            <Select value={timeRange} onValueChange={handleTimeRangeChange}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Zaman aralığı" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="day">Günlük</SelectItem>
+                <SelectItem value="week">Haftalık</SelectItem>
+                <SelectItem value="month">Aylık</SelectItem>
+                <SelectItem value="year">Yıllık</SelectItem>
+                <SelectItem value="custom">Özel</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <DateRangePicker
+            from={dateRange.from}
+            to={dateRange.to}
+            onSelect={handleDateRangeChange}
           />
         </div>
-        
-        {isLoading ? (
-          <div className="flex justify-center p-12">
-            <div className="w-10 h-10 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
-          </div>
-        ) : !hasData ? (
-          <Alert className="mb-6">
-            <Info className="h-4 w-4" />
-            <AlertTitle>Henüz veri bulunmuyor</AlertTitle>
-            <AlertDescription>
-              İstatistikler, yapılan işlemler ve randevular sonrasında otomatik olarak oluşturulacaktır.
-              Önce birkaç randevu ve işlem girişi yapınız.
-            </AlertDescription>
-          </Alert>
-        ) : (
-          <>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-6">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Toplam Ciro
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{formatCurrency(summaryData.totalRevenue)}</div>
-                  <p className="text-xs text-muted-foreground">
-                    Seçili dönem ciro bilgisi
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Müşteri Sayısı
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{summaryData.customerCount}</div>
-                  <p className="text-xs text-muted-foreground">
-                    Seçili dönem müşteri sayısı
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    İşlem Sayısı
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{summaryData.operationCount}</div>
-                  <p className="text-xs text-muted-foreground">
-                    Seçili dönem işlem sayısı
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Ortalama Harcama
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{formatCurrency(summaryData.averageSpending)}</div>
-                  <p className="text-xs text-muted-foreground">
-                    Müşteri başına ortalama
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Tamamlanan Randevular
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{summaryData.completedAppointments}</div>
-                  <p className="text-xs text-muted-foreground">
-                    Seçili dönem tamamlanan randevu
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-            
-            <div className="grid gap-6 md:grid-cols-2 mb-6">
-              <div className="col-span-2">
-                <ShopAnalyst 
-                  dukkanId={dukkanId || undefined}
-                  dateRange={dateRange}
-                  period={period}
-                />
+
+        {/* Summary statistics */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-medium">Toplam İşlem</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">{stats.totalOperations}</div>
+              <p className="text-sm text-muted-foreground">Seçili tarih aralığında</p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-medium">Toplam Ciro</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-green-600">{formatCurrency(stats.totalRevenue)}</div>
+              <p className="text-sm text-muted-foreground">Seçili tarih aralığında</p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-medium">Ortalama Fiş</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-blue-600">{formatCurrency(stats.averageTicket)}</div>
+              <p className="text-sm text-muted-foreground">İşlem başına ortalama</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Performance Chart */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Performans Grafiği</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="flex justify-center items-center h-[400px]">
+                <Loader2 className="h-8 w-8 text-primary animate-spin" />
               </div>
-            </div>
+            ) : performanceData.length === 0 ? (
+              <div className="flex justify-center items-center h-[400px]">
+                <p className="text-muted-foreground">Bu aralıkta veri bulunamadı</p>
+              </div>
+            ) : (
+              <div className="h-[400px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={performanceData}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 70 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis 
+                      dataKey="name" 
+                      angle={-45} 
+                      textAnchor="end"
+                      height={70}
+                      tick={{ fontSize: 12 }}
+                    />
+                    <YAxis 
+                      yAxisId="left" 
+                      tickFormatter={(value) => `₺${value}`}
+                      tick={{ fontSize: 12 }}
+                    />
+                    <YAxis 
+                      yAxisId="right" 
+                      orientation="right" 
+                      tick={{ fontSize: 12 }}
+                    />
+                    <Tooltip 
+                      formatter={(value: any, name: string) => {
+                        if (name === "revenue") return [formatCurrency(value as number), "Ciro"];
+                        return [value, "İşlem Sayısı"];
+                      }}
+                    />
+                    <Legend />
+                    <Bar 
+                      yAxisId="left" 
+                      dataKey="revenue" 
+                      fill="#8884d8" 
+                      name="Ciro" 
+                      barSize={30} 
+                    />
+                    <Line 
+                      yAxisId="right" 
+                      type="monotone" 
+                      dataKey="operations" 
+                      stroke="#82ca9d" 
+                      name="İşlem Sayısı"
+                      strokeWidth={2} 
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        
+        {/* Service Performance */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Hizmet Performansı</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="flex justify-center items-center h-[400px]">
+                <Loader2 className="h-8 w-8 text-primary animate-spin" />
+              </div>
+            ) : serviceData.length === 0 ? (
+              <div className="flex justify-center items-center h-[400px]">
+                <p className="text-muted-foreground">Bu aralıkta veri bulunamadı</p>
+              </div>
+            ) : (
+              <div className="h-[400px] overflow-x-auto">
+                <div style={{ width: `max(100%, ${serviceData.length * 80}px)` }} className="h-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={serviceData}
+                      margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis 
+                        dataKey="name" 
+                        angle={-45} 
+                        textAnchor="end"
+                        height={60}
+                        tick={{ fontSize: 12 }}
+                      />
+                      <YAxis 
+                        yAxisId="left" 
+                        tickFormatter={(value) => `₺${value}`}
+                        tick={{ fontSize: 12 }}
+                      />
+                      <YAxis 
+                        yAxisId="right" 
+                        orientation="right" 
+                        tick={{ fontSize: 12 }}
+                      />
+                      <Tooltip 
+                        formatter={(value: any, name: string) => {
+                          if (name === "revenue") return [formatCurrency(value as number), "Ciro"];
+                          return [value, "İşlem Sayısı"];
+                        }}
+                      />
+                      <Legend />
+                      <Bar 
+                        yAxisId="left" 
+                        dataKey="revenue" 
+                        fill="#8884d8" 
+                        name="Ciro"
+                      >
+                        {serviceData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                        ))}
+                      </Bar>
+                      <Line 
+                        yAxisId="right" 
+                        type="monotone" 
+                        dataKey="count" 
+                        stroke="#ff7300" 
+                        name="İşlem Sayısı"
+                        strokeWidth={2} 
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
             
-            <Tabs defaultValue={period} onValueChange={setPeriod} className="space-y-6">
-              <TabsList>
-                <TabsTrigger value="daily">Günlük</TabsTrigger>
-                <TabsTrigger value="weekly">Haftalık</TabsTrigger>
-                <TabsTrigger value="monthly">Aylık</TabsTrigger>
-                <TabsTrigger value="hourly">Saatlik</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="daily">
-                <DailyPerformanceChart data={dailyData} isLoading={isLoading} />
-              </TabsContent>
-              
-              <TabsContent value="weekly">
-                <WeeklyPerformanceChart data={weeklyData} isLoading={isLoading} />
-              </TabsContent>
-              
-              <TabsContent value="monthly">
-                <MonthlyPerformanceChart data={monthlyData} isLoading={isLoading} />
-              </TabsContent>
-              
-              <TabsContent value="hourly">
-                <HourlyPerformanceChart data={hourlyData} isLoading={isLoading} />
-              </TabsContent>
-            </Tabs>
-            
-            <div className="grid gap-6 md:grid-cols-2 mt-6">
-              <ServiceDistributionChart data={serviceData} isLoading={isLoading} />
-              <CategoryDistributionChart data={categoryData} isLoading={isLoading} />
-            </div>
-            
-            <div className="mt-6">
-              <OperationDistributionChart data={operationData} isLoading={isLoading} />
-            </div>
-          </>
-        )}
+        {/* Category distribution and revenue source charts */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Kategori Dağılımı</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="flex justify-center items-center h-[300px]">
+                  <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                </div>
+              ) : categoryData.length === 0 ? (
+                <div className="flex justify-center items-center h-[300px]">
+                  <p className="text-muted-foreground">Bu aralıkta veri bulunamadı</p>
+                </div>
+              ) : (
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={categoryData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        outerRadius={120}
+                        fill="#8884d8"
+                        dataKey="value"
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      >
+                        {categoryData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value) => formatCurrency(value as number)} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+                  
+          <Card>
+            <CardHeader>
+              <CardTitle>İşlem Dağılımı</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="flex justify-center items-center h-[300px]">
+                  <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                </div>
+              ) : serviceData.length === 0 ? (
+                <div className="flex justify-center items-center h-[300px]">
+                  <p className="text-muted-foreground">Bu aralıkta veri bulunamadı</p>
+                </div>
+              ) : (
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={serviceData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        outerRadius={120}
+                        fill="#8884d8"
+                        dataKey="count"
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      >
+                        {serviceData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </StaffLayout>
   );

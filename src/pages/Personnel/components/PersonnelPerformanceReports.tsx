@@ -1,5 +1,5 @@
+
 import { useState, useEffect } from "react";
-import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useQuery } from "@tanstack/react-query";
@@ -19,14 +19,15 @@ import {
   PieChart,
   Pie,
   Cell,
-  TooltipProps
 } from "recharts";
 import { formatCurrency } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CircleAlert } from "lucide-react";
+import { CircleAlert, InfoIcon } from "lucide-react";
 import { YearlyStatisticsPlaceholder } from "@/pages/ShopStatistics/components/YearlyStatisticsPlaceholder";
 import { PersonelIslemi as PersonelIslemiType } from "@/lib/supabase/types";
+import { CustomMonthCycleSelector } from "@/components/ui/custom-month-cycle-selector";
+import { Tooltip as TooltipUI, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088FE', '#00C49F', '#FFBB28'];
 
@@ -49,6 +50,7 @@ interface ServiceData {
   name: string;
   count: number;
   revenue: number;
+  percentage?: number;
 }
 
 export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanceReportsProps) {
@@ -58,6 +60,8 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
   });
   const [selectedTab, setSelectedTab] = useState("daily");
   const [selectedPersonnelId, setSelectedPersonnelId] = useState<number | null>(personnelId || null);
+  const [monthCycleDay, setMonthCycleDay] = useState(1);
+  const [useMonthCycle, setUseMonthCycle] = useState(false);
 
   const { data: personeller = [], isLoading: personnelLoading } = useQuery({
     queryKey: ['personel-for-performance'],
@@ -71,6 +75,37 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
       setSelectedPersonnelId(personeller[0].id);
     }
   }, [personnelId, personeller, selectedPersonnelId]);
+
+  const handleDateRangeChange = ({from, to}: {from: Date, to: Date}) => {
+    setDateRange({from, to});
+    setUseMonthCycle(false);
+  };
+
+  const handleMonthCycleChange = (day: number, date: Date) => {
+    setMonthCycleDay(day);
+    
+    const currentDate = new Date();
+    const selectedDay = day;
+    
+    let fromDate = new Date();
+    
+    // Set to previous month's cycle day
+    fromDate.setDate(selectedDay);
+    if (currentDate.getDate() < selectedDay) {
+      fromDate.setMonth(fromDate.getMonth() - 1);
+    }
+    
+    // Create the end date (same day, current month)
+    const toDate = new Date(fromDate);
+    toDate.setMonth(toDate.getMonth() + 1);
+    
+    setDateRange({
+      from: fromDate,
+      to: toDate
+    });
+    
+    setUseMonthCycle(true);
+  };
 
   const { data: operationsData = [], isLoading: operationsLoading } = useQuery({
     queryKey: ['personnel-operations', selectedPersonnelId, dateRange.from, dateRange.to],
@@ -101,7 +136,7 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
     setSelectedPersonnelId(Number(personnelId));
   };
 
-  const dailyData = React.useMemo(() => {
+  const dailyData = useState(() => {
     if (!operationsData?.length) return [];
 
     const dailyMap = new Map<string, PerformanceData>();
@@ -126,12 +161,14 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
       const dateB = new Date(b.date.split('.').reverse().join('-'));
       return dateA.getTime() - dateB.getTime();
     });
-  }, [operationsData]);
+  })[0];
 
-  const serviceData = React.useMemo(() => {
+  const serviceData = useState(() => {
     if (!operationsData?.length) return [];
 
     const serviceMap = new Map<string, ServiceData>();
+    let totalRevenue = 0;
+    let totalOperations = 0;
     
     operationsData.forEach(op => {
       const serviceName = op.islem?.islem_adi || op.aciklama || "Diğer";
@@ -143,13 +180,38 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
       const entry = serviceMap.get(serviceName)!;
       entry.count += 1;
       entry.revenue += op.tutar || 0;
+      
+      totalRevenue += op.tutar || 0;
+      totalOperations += 1;
     });
+    
+    // Calculate percentages and prepare for visualization
+    const result = Array.from(serviceMap.values())
+      .sort((a, b) => b.revenue - a.revenue)
+      .map(item => ({
+        ...item,
+        percentage: totalRevenue > 0 ? (item.revenue / totalRevenue) * 100 : 0
+      }));
+    
+    // Group small items into "Other" if there are more than 5 services
+    if (result.length > 5) {
+      const topItems = result.slice(0, 4);
+      const otherItems = result.slice(4);
+      
+      const otherGroup: ServiceData = {
+        name: "Diğer",
+        count: otherItems.reduce((sum, item) => sum + item.count, 0),
+        revenue: otherItems.reduce((sum, item) => sum + item.revenue, 0),
+        percentage: otherItems.reduce((sum, item) => sum + (item.percentage || 0), 0)
+      };
+      
+      return [...topItems, otherGroup];
+    }
+    
+    return result;
+  })[0];
 
-    return Array.from(serviceMap.values())
-      .sort((a, b) => b.count - a.count);
-  }, [operationsData]);
-
-  const performanceSummary = React.useMemo(() => {
+  const performanceSummary = useState(() => {
     if (!operationsData?.length) {
       return { totalOperations: 0, totalRevenue: 0, averageRevenue: 0 };
     }
@@ -162,9 +224,9 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
       totalRevenue,
       averageRevenue: totalRevenue / totalOperations,
     };
-  }, [operationsData]);
+  })[0];
 
-  const aiInsights = React.useMemo(() => {
+  const aiInsights = useState(() => {
     if (!operationsData?.length || !selectedPersonnel) {
       return ["Bu personel için yeterli veri bulunmamaktadır."];
     }
@@ -196,7 +258,7 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
     }
     
     return insights;
-  }, [operationsData, selectedPersonnel, performanceSummary, serviceData, dailyData]);
+  })[0];
 
   const isLoading = personnelLoading || operationsLoading || selectedPersonnelLoading;
   const hasNoData = !isLoading && operationsData.length === 0;
@@ -223,11 +285,22 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
           </Select>
         </div>
         
-        <DateRangePicker 
-          from={dateRange.from}
-          to={dateRange.to}
-          onSelect={({from, to}) => setDateRange({from, to})}
-        />
+        <div className="flex gap-2">
+          {!useMonthCycle && (
+            <DateRangePicker 
+              from={dateRange.from}
+              to={dateRange.to}
+              onSelect={handleDateRangeChange}
+            />
+          )}
+          
+          <CustomMonthCycleSelector 
+            selectedDay={monthCycleDay}
+            onChange={handleMonthCycleChange}
+            active={useMonthCycle}
+            onClear={() => setUseMonthCycle(false)}
+          />
+        </div>
       </div>
 
       {selectedPersonnel && (
@@ -350,74 +423,154 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
                     
                     <TabsContent value="services" className="mt-0">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="h-[300px]">
-                          <h3 className="font-medium mb-2">İşlem Dağılımı</h3>
-                          {isLoading ? (
-                            <div className="h-full flex items-center justify-center">
-                              <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
+                        <div>
+                          <div className="flex justify-between items-center mb-2">
+                            <h3 className="font-medium">İşlem Dağılımı</h3>
+                            <TooltipProvider>
+                              <TooltipUI>
+                                <TooltipTrigger>
+                                  <InfoIcon className="h-4 w-4 text-muted-foreground" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="max-w-xs">
+                                    Her bir işlem tipi için yapılan toplam işlem sayısı. Çok sayıda az tekrarlanan işlem varsa, bunlar "Diğer" kategorisinde toplanır.
+                                  </p>
+                                </TooltipContent>
+                              </TooltipUI>
+                            </TooltipProvider>
+                          </div>
+                          
+                          <div className="h-[300px]">
+                            {isLoading ? (
+                              <div className="h-full flex items-center justify-center">
+                                <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
+                              </div>
+                            ) : serviceData.length === 0 ? (
+                              <div className="h-full flex items-center justify-center">
+                                <p className="text-muted-foreground">Bu personel için yeterli veri bulunmamaktadır.</p>
+                              </div>
+                            ) : (
+                              <div className="h-full w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                  <PieChart>
+                                    <Pie
+                                      data={serviceData}
+                                      cx="50%"
+                                      cy="50%"
+                                      labelLine={false}
+                                      innerRadius={60}
+                                      outerRadius={80}
+                                      fill="#8884d8"
+                                      dataKey="count"
+                                    >
+                                      {serviceData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                      ))}
+                                    </Pie>
+                                    <Legend />
+                                    <Tooltip formatter={(value, name, props) => [value, 'İşlem Sayısı']} />
+                                  </PieChart>
+                                </ResponsiveContainer>
+                              </div>
+                            )}
+                          </div>
+                          
+                          {serviceData.find(item => item.name === "Diğer") && (
+                            <div className="mt-4">
+                              <h4 className="text-sm font-medium mb-1">"Diğer" kategorisi içeriği:</h4>
+                              <div className="bg-gray-50 p-2 rounded text-xs max-h-28 overflow-y-auto">
+                                {serviceData.find(item => item.name === "Diğer")?.details?.map((detail, index) => (
+                                  <div key={index} className="flex justify-between py-1">
+                                    <span>{detail.name}</span>
+                                    <span>{detail.count} işlem</span>
+                                  </div>
+                                ))}
+                              </div>
                             </div>
-                          ) : serviceData.length === 0 ? (
-                            <div className="h-full flex items-center justify-center">
-                              <p className="text-muted-foreground">Bu personel için yeterli veri bulunmamaktadır.</p>
-                            </div>
-                          ) : (
-                            <ResponsiveContainer width="100%" height="100%">
-                              <PieChart>
-                                <Pie
-                                  data={serviceData}
-                                  cx="50%"
-                                  cy="50%"
-                                  labelLine={false}
-                                  innerRadius={60}
-                                  outerRadius={80}
-                                  fill="#8884d8"
-                                  dataKey="count"
-                                  label={({ name }) => name}
-                                >
-                                  {serviceData.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                  ))}
-                                </Pie>
-                                <Legend />
-                                <Tooltip formatter={(value, name, props) => [value, 'İşlem Sayısı']} />
-                              </PieChart>
-                            </ResponsiveContainer>
                           )}
                         </div>
                         
-                        <div className="h-[300px]">
-                          <h3 className="font-medium mb-2">Ciro Dağılımı</h3>
-                          {isLoading ? (
-                            <div className="h-full flex items-center justify-center">
-                              <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
-                            </div>
-                          ) : serviceData.length === 0 ? (
-                            <div className="h-full flex items-center justify-center">
-                              <p className="text-muted-foreground">Bu personel için yeterli veri bulunmamaktadır.</p>
-                            </div>
-                          ) : (
-                            <ResponsiveContainer width="100%" height="100%">
-                              <PieChart>
-                                <Pie
-                                  data={serviceData}
-                                  cx="50%"
-                                  cy="50%"
-                                  labelLine={false}
-                                  innerRadius={60}
-                                  outerRadius={80}
-                                  fill="#8884d8"
-                                  dataKey="revenue"
-                                  label={({ name }) => name}
-                                >
-                                  {serviceData.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                  ))}
-                                </Pie>
-                                <Legend />
-                                <Tooltip formatter={(value, name, props) => [formatCurrency(value as number), 'Ciro']} />
-                              </PieChart>
-                            </ResponsiveContainer>
-                          )}
+                        <div>
+                          <div className="flex justify-between items-center mb-2">
+                            <h3 className="font-medium">Ciro Dağılımı</h3>
+                            <TooltipProvider>
+                              <TooltipUI>
+                                <TooltipTrigger>
+                                  <InfoIcon className="h-4 w-4 text-muted-foreground" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="max-w-xs">
+                                    Her bir işlem tipinin toplam ciroya katkısı. Grafikteki büyük dilimler en çok gelir getiren işlemleri gösterir.
+                                  </p>
+                                </TooltipContent>
+                              </TooltipUI>
+                            </TooltipProvider>
+                          </div>
+                          
+                          <div className="h-[300px]">
+                            {isLoading ? (
+                              <div className="h-full flex items-center justify-center">
+                                <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
+                              </div>
+                            ) : serviceData.length === 0 ? (
+                              <div className="h-full flex items-center justify-center">
+                                <p className="text-muted-foreground">Bu personel için yeterli veri bulunmamaktadır.</p>
+                              </div>
+                            ) : (
+                              <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                  <Pie
+                                    data={serviceData}
+                                    cx="50%"
+                                    cy="50%"
+                                    labelLine={false}
+                                    innerRadius={60}
+                                    outerRadius={80}
+                                    fill="#8884d8"
+                                    dataKey="revenue"
+                                  >
+                                    {serviceData.map((entry, index) => (
+                                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                    ))}
+                                  </Pie>
+                                  <Legend />
+                                  <Tooltip formatter={(value, name, props) => [formatCurrency(value as number), 'Ciro']} />
+                                </PieChart>
+                              </ResponsiveContainer>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="mt-6">
+                        <h3 className="font-medium mb-2">İşlem Detayları</h3>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="bg-gray-50">
+                                <th className="text-left p-2">İşlem</th>
+                                <th className="text-right p-2">Sayı</th>
+                                <th className="text-right p-2">Toplam Ciro</th>
+                                <th className="text-right p-2">Oran</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {serviceData.map((service, index) => (
+                                <tr key={index} className="border-t">
+                                  <td className="p-2">{service.name}</td>
+                                  <td className="text-right p-2">{service.count}</td>
+                                  <td className="text-right p-2">{formatCurrency(service.revenue)}</td>
+                                  <td className="text-right p-2">%{service.percentage?.toFixed(1)}</td>
+                                </tr>
+                              ))}
+                              <tr className="border-t font-medium">
+                                <td className="p-2">Toplam</td>
+                                <td className="text-right p-2">{performanceSummary.totalOperations}</td>
+                                <td className="text-right p-2">{formatCurrency(performanceSummary.totalRevenue)}</td>
+                                <td className="text-right p-2">%100</td>
+                              </tr>
+                            </tbody>
+                          </table>
                         </div>
                       </div>
                     </TabsContent>

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { PersonelIslemi as PersonelIslemiType, islemServisi, personelIslemleriServisi, personelServisi } from "@/lib/supabase";
@@ -15,6 +16,7 @@ import { Navigate } from "react-router-dom";
 import { formatCurrency } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { PersonnelAnalyst } from "@/components/analyst/PersonnelAnalyst";
+import { CustomMonthCycleSelector } from "@/components/ui/custom-month-cycle-selector";
 
 interface PersonelIslemi extends PersonelIslemiType {
   personel_id: number;
@@ -28,6 +30,8 @@ export default function Personnel() {
     to: new Date()
   });
 
+  const [monthCycleDay, setMonthCycleDay] = useState(1);
+  const [useMonthCycle, setUseMonthCycle] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
@@ -57,6 +61,37 @@ export default function Personnel() {
   }, [personeller, selectedPersonnelId]);
   
   const activePersonnelId = selectedPersonnelId || (personeller.length > 0 ? personeller[0]?.id : null);
+
+  const handleDateRangeChange = ({from, to}: {from: Date, to: Date}) => {
+    setDateRange({from, to});
+    setUseMonthCycle(false);
+  };
+
+  const handleMonthCycleChange = (day: number, date: Date) => {
+    setMonthCycleDay(day);
+    
+    const currentDate = new Date();
+    const selectedDay = day;
+    
+    let fromDate = new Date();
+    
+    // Set to previous month's cycle day
+    fromDate.setDate(selectedDay);
+    if (currentDate.getDate() < selectedDay) {
+      fromDate.setMonth(fromDate.getMonth() - 1);
+    }
+    
+    // Create the end date (same day, current month)
+    const toDate = new Date(fromDate);
+    toDate.setMonth(toDate.getMonth() + 1);
+    
+    setDateRange({
+      from: fromDate,
+      to: toDate
+    });
+    
+    setUseMonthCycle(true);
+  };
 
   const { data: rawIslemGecmisi = [], isLoading: islemlerLoading, refetch: refetchOperations } = useQuery({
     queryKey: ['personelIslemleri', dateRange.from, dateRange.to, activePersonnelId],
@@ -137,11 +172,14 @@ export default function Personnel() {
   }
 
   const totalRevenue = filteredOperations.reduce((sum, islem) => sum + (islem.tutar || 0), 0);
+  const totalCommission = filteredOperations.reduce((sum, islem) => sum + (islem.odenen || 0), 0);
   const operationCount = filteredOperations.length;
 
   return (
     <StaffLayout>
       <div className="container mx-auto">
+        <PersonnelAnalyst />
+        
         <Tabs defaultValue="personel" className="space-y-4">
           <TabsList>
             <TabsTrigger value="personel">Personel Yönetimi</TabsTrigger>
@@ -169,11 +207,23 @@ export default function Personnel() {
                         onChange={(e) => setSearchTerm(e.target.value)}
                       />
                     </div>
-                    <DateRangePicker 
-                      from={dateRange.from}
-                      to={dateRange.to}
-                      onSelect={({from, to}) => setDateRange({from, to})}
-                    />
+                    
+                    <div className="flex gap-2">
+                      {!useMonthCycle && (
+                        <DateRangePicker 
+                          from={dateRange.from}
+                          to={dateRange.to}
+                          onSelect={handleDateRangeChange}
+                        />
+                      )}
+                      
+                      <CustomMonthCycleSelector 
+                        selectedDay={monthCycleDay}
+                        onChange={handleMonthCycleChange}
+                        active={useMonthCycle}
+                        onClear={() => setUseMonthCycle(false)}
+                      />
+                    </div>
                   </div>
                   
                   <div className="flex gap-2 w-full sm:w-auto">
@@ -197,6 +247,10 @@ export default function Personnel() {
                     <span className="font-medium">Toplam Ciro:</span> 
                     <span className="text-green-600">{formatCurrency(totalRevenue)}</span>
                   </div>
+                  <div className="text-sm bg-gray-100 p-2 rounded-md">
+                    <span className="font-medium">Toplam Ödenen:</span> 
+                    <span className="text-blue-600">{formatCurrency(totalCommission)}</span>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -215,6 +269,7 @@ export default function Personnel() {
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlem</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prim %</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tutar</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ödenen</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
@@ -242,11 +297,14 @@ export default function Personnel() {
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                 {formatCurrency(islem.tutar || 0)}
                               </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {islem.prim_yuzdesi > 0 ? formatCurrency(islem.odenen || 0) : "-"}
+                              </td>
                             </tr>
                           ))
                         ) : (
                           <tr>
-                            <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">
+                            <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">
                               {searchTerm ? "Arama kriterleriyle eşleşen işlem bulunamadı" : "Seçilen tarih aralığında işlem bulunamadı"}
                             </td>
                           </tr>
@@ -260,7 +318,6 @@ export default function Personnel() {
           </TabsContent>
 
           <TabsContent value="performans">
-            <PersonnelAnalyst />
             <div className="mt-4">
               <PersonnelPerformanceReports personnelId={selectedPersonnelId} />
             </div>

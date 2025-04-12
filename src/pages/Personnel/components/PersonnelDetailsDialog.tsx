@@ -19,6 +19,7 @@ import { PersonnelOperationsTable } from "./PersonnelOperationsTable";
 import { PersonnelPerformance } from "./PersonnelPerformance";
 import { PersonnelEditDialog } from "./PersonnelEditDialog";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Pencil } from "lucide-react";
 
 interface PersonnelDetailsDialogProps {
@@ -40,16 +41,32 @@ export function PersonnelDetailsDialog({
     setIsEditModalOpen(true);
   };
   
+  const getInitials = (name: string) => {
+    if (!name) return "??";
+    return name
+      .split(" ")
+      .map(n => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
+  
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
           <DialogHeader className="flex flex-row items-center justify-between">
-            <div>
-              <DialogTitle>Personel Bilgileri</DialogTitle>
-              <DialogDescription className="mt-1">
-                {personnel.ad_soyad}
-              </DialogDescription>
+            <div className="flex items-center gap-3">
+              <Avatar className="h-10 w-10 border">
+                <AvatarImage src={personnel.avatar_url} alt={personnel.ad_soyad} />
+                <AvatarFallback>{getInitials(personnel.ad_soyad)}</AvatarFallback>
+              </Avatar>
+              <div>
+                <DialogTitle>{personnel.ad_soyad}</DialogTitle>
+                <DialogDescription className="mt-1">
+                  {personnel.calisma_sistemi === "aylik_maas" ? "Maaşlı Çalışan" : "Yüzdelik Çalışan"}
+                </DialogDescription>
+              </div>
             </div>
             <Button 
               variant="outline" 
@@ -71,7 +88,35 @@ export function PersonnelDetailsDialog({
               </TabsList>
               
               <TabsContent value="personal-info">
-                <PersonnelForm personnel={personnel} readOnly />
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <h3 className="text-lg font-medium mb-2">İletişim Bilgileri</h3>
+                      <div className="space-y-2">
+                        <div className="flex justify-between border-b pb-1">
+                          <span className="text-muted-foreground">Ad Soyad</span>
+                          <span>{personnel.ad_soyad}</span>
+                        </div>
+                        <div className="flex justify-between border-b pb-1">
+                          <span className="text-muted-foreground">Telefon</span>
+                          <span>{personnel.telefon}</span>
+                        </div>
+                        <div className="flex justify-between border-b pb-1">
+                          <span className="text-muted-foreground">E-posta</span>
+                          <span>{personnel.eposta}</span>
+                        </div>
+                        <div className="flex justify-between border-b pb-1">
+                          <span className="text-muted-foreground">Adres</span>
+                          <span className="text-right">{personnel.adres}</span>
+                        </div>
+                        <div className="flex justify-between border-b pb-1">
+                          <span className="text-muted-foreground">IBAN</span>
+                          <span>{personnel.iban}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </TabsContent>
               
               <TabsContent value="work-info">
@@ -103,28 +148,6 @@ export function PersonnelDetailsDialog({
                             <span>%{personnel.prim_yuzdesi}</span>
                           </div>
                         )}
-                      </div>
-                    </div>
-
-                    <div>
-                      <h3 className="text-lg font-medium mb-2">İletişim Bilgileri</h3>
-                      <div className="space-y-2">
-                        <div className="flex justify-between border-b pb-1">
-                          <span className="text-muted-foreground">Telefon</span>
-                          <span>{personnel.telefon}</span>
-                        </div>
-                        <div className="flex justify-between border-b pb-1">
-                          <span className="text-muted-foreground">E-posta</span>
-                          <span>{personnel.eposta}</span>
-                        </div>
-                        <div className="flex justify-between border-b pb-1">
-                          <span className="text-muted-foreground">Adres</span>
-                          <span className="text-right">{personnel.adres}</span>
-                        </div>
-                        <div className="flex justify-between border-b pb-1">
-                          <span className="text-muted-foreground">IBAN</span>
-                          <span>{personnel.iban}</span>
-                        </div>
                       </div>
                     </div>
                   </div>

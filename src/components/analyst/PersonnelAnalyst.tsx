@@ -1,66 +1,140 @@
 
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AnalystBox } from "@/components/analyst/AnalystBox";
 import { useQuery } from "@tanstack/react-query";
-import { AnalystBox } from "./AnalystBox";
-import { analyzePersonnelData } from "@/lib/utils/analysisUtils";
-import { personelIslemleriServisi } from "@/lib/supabase";
+import { personelIslemleriServisi, personelServisi } from "@/lib/supabase";
+import { useState, useEffect } from "react";
+import { formatCurrency } from "@/lib/utils";
 
-interface PersonnelAnalystProps {
-  personnelId?: number;
-  dateRange?: { from: Date; to: Date };
-  period?: string;
-}
+export function PersonnelAnalyst() {
+  const [insights, setInsights] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasEnoughData, setHasEnoughData] = useState(true);
 
-export function PersonnelAnalyst({ personnelId, dateRange, period = "weekly" }: PersonnelAnalystProps) {
-  const { data: operations = [], isLoading: isLoadingOperations } = 
-    useQuery({
-      queryKey: ['personel-islemleri-analysis', personnelId, dateRange],
-      queryFn: async () => {
-        return await personelIslemleriServisi.hepsiniGetir();
-      },
-      enabled: !!personnelId,
-      staleTime: 0 // Force refetch every time to ensure fresh data
-    });
+  const { data: personeller = [] } = useQuery({
+    queryKey: ['personel-analyst'],
+    queryFn: personelServisi.hepsiniGetir,
+  });
+
+  const { data: islemler = [] } = useQuery({
+    queryKey: ['personel-operations-analyst'],
+    queryFn: personelIslemleriServisi.hepsiniGetir,
+  });
+
+  useEffect(() => {
+    const analyzeData = () => {
+      setIsLoading(true);
+      
+      try {
+        // Check if we have enough data
+        if (personeller.length === 0 || islemler.length < 3) {
+          setHasEnoughData(false);
+          setInsights([]);
+          return;
+        }
+        
+        setHasEnoughData(true);
+        
+        // Calculate key metrics
+        const personnelMetrics = personeller.map(p => {
+          const personnelOps = islemler.filter(op => op.personel_id === p.id);
+          const totalOps = personnelOps.length;
+          const totalRevenue = personnelOps.reduce((sum, op) => sum + (op.tutar || 0), 0);
+          const avgRevenue = totalOps > 0 ? totalRevenue / totalOps : 0;
+          
+          return {
+            id: p.id,
+            name: p.ad_soyad,
+            totalOps,
+            totalRevenue,
+            avgRevenue
+          };
+        }).filter(p => p.totalOps > 0);
+        
+        // Sort by various metrics for analysis
+        const sortedByOps = [...personnelMetrics].sort((a, b) => b.totalOps - a.totalOps);
+        const sortedByRevenue = [...personnelMetrics].sort((a, b) => b.totalRevenue - a.totalRevenue);
+        const totalOperations = islemler.length;
+        
+        // Generate insights
+        const newInsights: string[] = [];
+        
+        if (sortedByOps.length > 0) {
+          newInsights.push(`Bu dönemde en çok işlem yapan kişi: ${sortedByOps[0].name} (${sortedByOps[0].totalOps} işlem)`);
+        }
+        
+        if (sortedByRevenue.length > 0) {
+          newInsights.push(`Toplamda en fazla ciroyu elde eden kişi: ${sortedByRevenue[0].name} (${formatCurrency(sortedByRevenue[0].totalRevenue)})`);
+        }
+        
+        // Calculate average metrics for comparison
+        const avgTotalRevenue = personnelMetrics.reduce((sum, p) => sum + p.totalRevenue, 0) / personnelMetrics.length;
+        
+        // Find interesting outliers and patterns
+        personnelMetrics.forEach(p => {
+          const revenueDiffPercent = Math.round((p.totalRevenue - avgTotalRevenue) / avgTotalRevenue * 100);
+          if (Math.abs(revenueDiffPercent) >= 10) {
+            newInsights.push(`${p.name} ortalamadan %${Math.abs(revenueDiffPercent)} ${revenueDiffPercent > 0 ? 'daha fazla' : 'daha az'} ciro yaptı`);
+          }
+        });
+        
+        // Add operation distribution insight
+        if (sortedByOps.length > 0 && totalOperations > 0) {
+          const topPerformer = sortedByOps[0];
+          const opPercentage = Math.round((topPerformer.totalOps / totalOperations) * 100);
+          if (opPercentage > 20) {
+            newInsights.push(`Toplam işlemlerin %${opPercentage}'ı ${topPerformer.name} tarafından gerçekleştirildi`);
+          }
+        }
+        
+        setInsights(newInsights);
+      } catch (error) {
+        console.error("Personnel analysis error:", error);
+        setHasEnoughData(false);
+      } finally {
+        setIsLoading(false);
+      }
+    };
     
-  // Filter data by personnel id
-  const personnelOperations = operations.filter(op => op.personel_id === personnelId);
-    
-  // Filter data by date range
-  const filteredOperations = dateRange 
-    ? personnelOperations.filter(op => {
-        if (!op.created_at) return false;
-        const date = new Date(op.created_at);
-        return date >= dateRange.from && date <= dateRange.to;
-      })
-    : personnelOperations;
+    analyzeData();
+  }, [personeller, islemler]);
 
-  // Get period-specific title
-  const getPeriodTitle = () => {
-    switch (period) {
-      case "daily": return "Günlük Analiz";
-      case "weekly": return "Haftalık Analiz";
-      case "monthly": return "Aylık Analiz";
-      case "yearly": return "Yıllık Analiz";
-      case "custom": return "Özel Tarih Analizi";
-      default: return "Personel Analizi";
-    }
+  const handleRefresh = () => {
+    setIsLoading(true);
+    setInsights([]);
+    
+    // Short timeout to simulate refresh
+    setTimeout(() => {
+      const { data: currentPersonnel = [], refetch: refetchPersonnel } = useQuery({
+        queryKey: ['personel-analyst'],
+        queryFn: personelServisi.hepsiniGetir,
+      });
+      
+      const { data: currentOps = [], refetch: refetchOps } = useQuery({
+        queryKey: ['personel-operations-analyst'],
+        queryFn: personelIslemleriServisi.hepsiniGetir,
+      });
+      
+      Promise.all([refetchPersonnel(), refetchOps()]).finally(() => {
+        setIsLoading(false);
+      });
+    }, 500);
   };
 
-  // Analyze data
-  const analysis = analyzePersonnelData(filteredOperations, period);
-  
-  const insights = [
-    analysis.mostProfitableService,
-    analysis.mostPopularService,
-    analysis.busiestDays,
-    analysis.revenueChange,
-  ].filter(Boolean);
-
   return (
-    <AnalystBox
-      title={getPeriodTitle()}
-      insights={insights}
-      isLoading={isLoadingOperations}
-      hasEnoughData={analysis.hasEnoughData}
-    />
+    <Card className="mb-6">
+      <CardHeader className="pb-2">
+        <CardTitle>Akıllı Analiz</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <AnalystBox
+          title=""
+          insights={insights}
+          isLoading={isLoading}
+          onRefresh={handleRefresh}
+          hasEnoughData={hasEnoughData}
+        />
+      </CardContent>
+    </Card>
   );
 }

@@ -1,714 +1,597 @@
+
 import { useState, useEffect } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useCustomerAuth } from "@/hooks/useCustomerAuth";
-import { useQuery } from "@tanstack/react-query";
-import { personelIslemleriServisi, randevuServisi } from "@/lib/supabase";
-import { Button } from "@/components/ui/button";
-import { RefreshCw, Calendar } from "lucide-react";
-import { toast } from "sonner";
+import { Separator } from "@/components/ui/separator";
+import { DailyView } from "./components/DailyView";
+import { WeeklyView } from "./components/WeeklyView";
+import { MonthlyView } from "./components/MonthlyView";
+import { YearlyView } from "./components/YearlyView";
+import { PersonnelPerformance } from "./components/PersonnelPerformance";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
-import { 
-  addDays, 
-  endOfDay, 
-  endOfMonth, 
-  endOfWeek, 
-  startOfDay, 
-  startOfMonth, 
-  startOfWeek, 
-  subDays 
-} from "date-fns";
-
-// Import components
-import { MetricsCards } from "./components/MetricsCards";
-import { WeeklyPerformanceChart } from "./components/WeeklyPerformanceChart";
-import { MonthlyPerformanceChart } from "./components/MonthlyPerformanceChart";
-import { ServicePerformanceChart } from "./components/ServicePerformanceChart";
-import { YearlyStatisticsPlaceholder } from "./components/YearlyStatisticsPlaceholder";
-import { DailyPerformanceChart } from "./components/DailyPerformanceChart";
-import { HourlyPerformanceChart } from "./components/HourlyPerformanceChart";
-import { CustomerFrequencyChart } from "./components/CustomerFrequencyChart";
-import { HourHeatmapChart } from "./components/HourHeatmapChart";
-import { CustomerLoyaltyChart } from "./components/CustomerLoyaltyChart";
+import { useQuery } from "@tanstack/react-query";
+import { format, addMonths, setDate } from "date-fns";
+import { personelIslemleriServisi, personelServisi, islemServisi, islemKategoriServisi } from "@/lib/supabase";
+import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
+import { formatCurrency } from "@/lib/utils";
+import { AnalystBox } from "@/components/analyst/AnalystBox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2 } from "lucide-react";
+import { useCustomerAuth } from "@/hooks/useCustomerAuth";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
+import { CustomMonthCycleSelector } from "@/components/ui/custom-month-cycle-selector";
 import { RevenueSourceChart } from "./components/RevenueSourceChart";
 import { CategoryDistributionChart } from "./components/CategoryDistributionChart";
-import { OperationDistributionChart } from "./components/OperationDistributionChart";
-import { ShopAnalyst } from "@/components/analyst/ShopAnalyst";
-import { ProfitAnalysis } from "@/components/dashboard/ProfitAnalysis";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
 
-// Define interfaces for chart data
-interface ChartDataItem {
-  name: string;
-  ciro: number;
-  islemSayisi: number;
-}
-
+// Define type for service data
 interface ServiceDataItem {
   name: string;
   count: number;
   revenue: number;
+  percentage?: number;
 }
 
+// Define type for category data
+interface CategoryData {
+  name: string;
+  value: number;
+  count: number;
+  percentage?: number;
+}
+
+const COLORS = [
+  "#8884d8",
+  "#82ca9d",
+  "#ffc658",
+  "#ff8042",
+  "#0088FE",
+  "#00C49F",
+  "#FFBB28",
+  "#FF8042",
+  "#a4de6c",
+  "#d0ed57",
+];
+
 export default function ShopStatistics() {
-  const { userRole, dukkanId } = useCustomerAuth();
-  const [period, setPeriod] = useState<string>("daily"); // Default to daily view
-  const [activeTab, setActiveTab] = useState<string>("overview");
-  
-  // Date range state
+  const { dukkanId, userRole } = useCustomerAuth();
+  const [activeView, setActiveView] = useState("monthly");
   const [dateRange, setDateRange] = useState({
-    from: startOfDay(subDays(new Date(), 30)),
-    to: endOfDay(new Date())
+    from: new Date(new Date().setDate(new Date().getDate() - 30)),
+    to: new Date(),
   });
-  
-  // Sabit gider yönetimi için state
-  const [fixedExpenses, setFixedExpenses] = useState<number>(0);
-  const [estimatedMonthlyAppointments, setEstimatedMonthlyAppointments] = useState<number>(0);
-  const [expenseCalculationType, setExpenseCalculationType] = useState<string>("automatic");
-  
-  // Set preset date ranges based on selected period
-  useEffect(() => {
-    const now = new Date();
-    
-    switch(period) {
-      case "daily":
-        setDateRange({
-          from: startOfDay(now),
-          to: endOfDay(now)
-        });
-        break;
-      case "weekly":
-        setDateRange({
-          from: startOfWeek(now, { weekStartsOn: 1 }),
-          to: endOfWeek(now, { weekStartsOn: 1 })
-        });
-        break;
-      case "monthly":
-        setDateRange({
-          from: startOfMonth(now),
-          to: endOfMonth(now)
-        });
-        break;
-      case "yearly":
-        // Set to current year
-        const startOfYear = new Date(now.getFullYear(), 0, 1);
-        const endOfYear = new Date(now.getFullYear(), 11, 31);
-        setDateRange({
-          from: startOfYear,
-          to: endOfYear
-        });
-        break;
-      default:
-        // Custom period stays as is
-        break;
-    }
-  }, [period]);
-  
-  // Handle date range change
-  const handleDateRangeChange = (range: { from: Date; to: Date }) => {
-    setDateRange(range);
-    // Custom period when user manually selects dates
-    setPeriod("custom");
+
+  const [monthCycleDay, setMonthCycleDay] = useState(1);
+  const [useMonthCycle, setUseMonthCycle] = useState(false);
+  const [insights, setInsights] = useState<string[]>([]);
+  const [isInsightsLoading, setIsInsightsLoading] = useState(true);
+
+  // Fetch personnel data
+  const { data: personnel = [], isLoading: personnelLoading } = useQuery({
+    queryKey: ["personnel-stats"],
+    queryFn: personelServisi.hepsiniGetir,
+  });
+
+  const handleDateRangeChange = ({from, to}: {from: Date, to: Date}) => {
+    setDateRange({from, to});
+    setUseMonthCycle(false);
   };
-  
-  const { data: shopStats, isLoading: isStatsLoading, refetch: refetchStats, isRefetching } = useQuery({
-    queryKey: ['shop-statistics', dateRange],
+
+  const handleMonthCycleChange = (day: number, date: Date) => {
+    setMonthCycleDay(day);
+    
+    const currentDate = new Date();
+    const selectedDay = day;
+    
+    let fromDate = new Date();
+    
+    // Set to previous month's cycle day
+    fromDate.setDate(selectedDay);
+    if (currentDate.getDate() < selectedDay) {
+      fromDate.setMonth(fromDate.getMonth() - 1);
+    }
+    
+    // Create the end date (same day, current month)
+    const toDate = new Date(fromDate);
+    toDate.setMonth(toDate.getMonth() + 1);
+    
+    setDateRange({
+      from: fromDate,
+      to: toDate
+    });
+    
+    setUseMonthCycle(true);
+  };
+
+  // Fetch operations data based on date range
+  const { data: operations = [], isLoading: operationsLoading } = useQuery({
+    queryKey: ["operations-stats", dateRange.from, dateRange.to],
     queryFn: async () => {
       try {
-        // Retrieve and update shop statistics
-        const stats = await personelIslemleriServisi.getShopStatistics();
-        await personelIslemleriServisi.updateShopStatistics();
-        return stats;
+        const data = await personelIslemleriServisi.hepsiniGetir();
+        return data.filter((op) => {
+          if (!op.created_at) return false;
+          const date = new Date(op.created_at);
+          return date >= dateRange.from && date <= dateRange.to;
+        });
       } catch (error) {
-        console.error("Error fetching shop statistics:", error);
-        toast.error("İstatistikler yüklenirken bir hata oluştu");
-        return null;
+        console.error("Failed to fetch operations data:", error);
+        return [];
       }
     },
-    enabled: !!dukkanId,
-    refetchOnWindowFocus: false,
-    staleTime: 60000 // Consider data fresh for 1 minute
   });
-  
-  const { data: islemler = [], isLoading: isIslemlerLoading, refetch: refetchIslemler } = useQuery({
-    queryKey: ['personel-islemleri', dateRange],
-    queryFn: async () => {
-      // Filter operations by date range
-      return await personelIslemleriServisi.hepsiniGetir();
-    },
-    enabled: !!dukkanId,
-    refetchOnWindowFocus: false,
-    staleTime: 60000 // Consider data fresh for 1 minute
+
+  // Fetch services
+  const { data: services = [], isLoading: servicesLoading } = useQuery({
+    queryKey: ["services-stats"],
+    queryFn: () => islemServisi.hepsiniGetir(),
   });
-  
-  const { data: randevular = [], isLoading: isRandevularLoading, refetch: refetchRandevular } = useQuery({
-    queryKey: ['randevular-analysis', dateRange],
-    queryFn: async () => {
-      if (dukkanId) {
-        return await randevuServisi.dukkanRandevulariniGetir(dukkanId);
+
+  // Fetch categories
+  const { data: categories = [], isLoading: categoriesLoading } = useQuery({
+    queryKey: ["categories-stats"],
+    queryFn: () => islemKategoriServisi.hepsiniGetir(),
+  });
+
+  // Calculate service data
+  const serviceData = useState(() => {
+    if (!operations.length) return [];
+
+    const serviceMap = new Map<string, ServiceDataItem>();
+    let totalRevenue = 0;
+
+    operations.forEach((op) => {
+      const serviceName = op.islem?.islem_adi || op.aciklama || "Diğer";
+
+      if (!serviceMap.has(serviceName)) {
+        serviceMap.set(serviceName, {
+          name: serviceName,
+          count: 0,
+          revenue: 0,
+        });
       }
-      return [];
-    },
-    enabled: !!dukkanId,
-    staleTime: 60000 // 1 minute
-  });
-  
-  // Filter data by date range
-  const filteredIslemler = islemler.filter(islem => {
-    if (!islem.created_at) return false;
-    const date = new Date(islem.created_at);
-    return date >= dateRange.from && date <= dateRange.to;
-  });
-  
-  const filteredRandevular = randevular.filter(randevu => {
-    if (!randevu.tarih) return false;
-    const date = new Date(randevu.tarih);
-    return date >= dateRange.from && date <= dateRange.to;
-  });
-  
-  // Calculate data for charts based on filtered operations
-  const [hourlyData, setHourlyData] = useState<ChartDataItem[]>([]);
-  const [dailyData, setDailyData] = useState<ChartDataItem[]>([]);
-  const [weeklyData, setWeeklyData] = useState<ChartDataItem[]>([]);
-  const [monthlyData, setMonthlyData] = useState<ChartDataItem[]>([]);
-  const [serviceData, setServiceData] = useState<ServiceDataItem[]>([]);
-  const [categoryData, setCategoryData] = useState<ServiceDataItem[]>([]);
-  
-  // Otomatik hesaplama için tahmini randevu sayısını belirle
+
+      const entry = serviceMap.get(serviceName)!;
+      entry.count += 1;
+      entry.revenue += op.tutar || 0;
+
+      totalRevenue += op.tutar || 0;
+    });
+
+    // Sort by revenue and calculate percentages
+    const result = Array.from(serviceMap.values())
+      .sort((a, b) => b.revenue - a.revenue)
+      .map((item) => ({
+        ...item,
+        percentage: totalRevenue > 0 ? (item.revenue / totalRevenue) * 100 : 0,
+      }));
+
+    return result;
+  })[0];
+
+  // Calculate category data
+  const categoryData: CategoryData[] = useState(() => {
+    if (!operations.length) return [];
+
+    const categoryMap = new Map<string, CategoryData>();
+    let totalRevenue = 0;
+
+    operations.forEach((op) => {
+      const categoryName = op.islem?.kategori?.kategori_adi || "Diğer";
+
+      if (!categoryMap.has(categoryName)) {
+        categoryMap.set(categoryName, {
+          name: categoryName,
+          value: 0,
+          count: 0,
+        });
+      }
+
+      const entry = categoryMap.get(categoryName)!;
+      entry.value += op.tutar || 0;
+      entry.count += 1;
+
+      totalRevenue += op.tutar || 0;
+    });
+
+    // Calculate percentages
+    const result = Array.from(categoryMap.values()).map((item) => ({
+      ...item,
+      percentage: totalRevenue > 0 ? (item.value / totalRevenue) * 100 : 0,
+    }));
+
+    return result;
+  })[0];
+
+  // Common statistics
+  const stats = useState(() => {
+    if (!operations.length)
+      return { totalRevenue: 0, totalOperations: 0, averageRevenue: 0 };
+
+    const totalOperations = operations.length;
+    const totalRevenue = operations.reduce((sum, op) => sum + (op.tutar || 0), 0);
+    const averageRevenue = totalRevenue / totalOperations;
+
+    return { totalRevenue, totalOperations, averageRevenue };
+  })[0];
+
+  // Generate AI insights
   useEffect(() => {
-    if (expenseCalculationType === "automatic" && randevular.length > 0) {
-      // Son 3 ayın randevuları
-      const threeMonthsAgo = new Date();
-      threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-      
-      const recentAppointments = randevular.filter(r => 
-        new Date(r.tarih) >= threeMonthsAgo && r.durum !== 'iptal'
-      );
-      
-      const monthlyAverage = Math.ceil(recentAppointments.length / 3);
-      setEstimatedMonthlyAppointments(monthlyAverage > 0 ? monthlyAverage : 100); // En az 100 göster
-    }
-  }, [randevular, expenseCalculationType]);
-  
-  // Generate chart data based on operations
-  useEffect(() => {
-    if (!filteredIslemler || filteredIslemler.length === 0) return;
-    
-    try {
-      // Prepare hourly data (today's operations by hour)
-      const hourlyStats = prepareHourlyData(filteredIslemler);
-      setHourlyData(hourlyStats);
-      
-      // Prepare daily data (last 7 days)
-      const dailyStats = prepareDailyData(filteredIslemler);
-      setDailyData(dailyStats);
-      
-      // Prepare weekly data (last 4 weeks)
-      const weeklyStats = prepareWeeklyData(filteredIslemler);
-      setWeeklyData(weeklyStats);
-      
-      // Prepare monthly data (last 6 months)
-      const monthlyStats = prepareMonthlyData(filteredIslemler);
-      setMonthlyData(monthlyStats);
-      
-      // Prepare service performance data
-      const serviceStats = prepareServiceData(filteredIslemler);
-      setServiceData(serviceStats);
-      
-      // Prepare category data
-      const categoryStats = prepareCategoryData(filteredIslemler);
-      setCategoryData(categoryStats);
-    } catch (error) {
-      console.error("Error preparing chart data:", error);
-    }
-  }, [filteredIslemler]);
-  
-  // Helper function to prepare hourly data
-  const prepareHourlyData = (operations: any[]): ChartDataItem[] => {
-    // Group operations by hour for today
-    const hours: ChartDataItem[] = [];
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Set to beginning of today
-    
-    // Initialize hours array with all 24 hours
-    for (let i = 0; i < 24; i++) {
-      hours.push({
-        name: `${i}:00`,
-        ciro: 0,
-        islemSayisi: 0
-      });
-    }
-    
-    // Aggregate data for today only
-    operations.forEach(op => {
+    const generateInsights = () => {
+      setIsInsightsLoading(true);
+
       try {
-        if (!op.created_at) return;
-        
-        const opDate = new Date(op.created_at);
-        const opDay = new Date(opDate);
-        opDay.setHours(0, 0, 0, 0);
-        
-        // Check if operation happened today
-        if (opDay.getTime() === today.getTime()) {
-          const hourIndex = opDate.getHours();
-          
-          hours[hourIndex].ciro += (op.tutar || 0);
-          hours[hourIndex].islemSayisi += 1;
+        if (operations.length === 0) {
+          setInsights([]);
+          setIsInsightsLoading(false);
+          return;
         }
-      } catch (e) {
-        console.error("Error processing operation for hourly chart:", e);
+
+        const insights = [];
+
+        // Top service by revenue
+        if (serviceData.length > 0) {
+          const topService = serviceData[0];
+          insights.push(
+            `En çok kazandıran hizmet: ${formatCurrency(
+              topService.revenue
+            )} ile ${topService.name}.`
+          );
+        }
+
+        // Top service by count
+        const sortedByCount = [...serviceData].sort((a, b) => b.count - a.count);
+        if (sortedByCount.length > 0) {
+          insights.push(
+            `En çok tercih edilen hizmet: ${sortedByCount[0].count} işlem ile ${sortedByCount[0].name}.`
+          );
+        }
+
+        // Busiest day
+        const dayMap = new Map<string, number>();
+        operations.forEach((op) => {
+          if (!op.created_at) return;
+          const date = new Date(op.created_at);
+          const day = date.toLocaleDateString("tr-TR", { weekday: "long" });
+
+          dayMap.set(day, (dayMap.get(day) || 0) + 1);
+        });
+
+        if (dayMap.size > 0) {
+          const entries = Array.from(dayMap.entries());
+          const busiestDay = entries.reduce((a, b) =>
+            a[1] > b[1] ? a : b
+          );
+          insights.push(`En yoğun gün: ${busiestDay[1]} işlem ile ${busiestDay[0]}.`);
+        }
+
+        // Most productive personnel
+        const personnelMap = new Map<string, { count: number; revenue: number }>();
+        operations.forEach((op) => {
+          if (!op.personel_id) return;
+          const person = personnel.find((p) => p.id === op.personel_id);
+          if (!person) return;
+
+          const name = person.ad_soyad;
+          if (!personnelMap.has(name)) {
+            personnelMap.set(name, { count: 0, revenue: 0 });
+          }
+
+          const entry = personnelMap.get(name)!;
+          entry.count += 1;
+          entry.revenue += op.tutar || 0;
+        });
+
+        if (personnelMap.size > 0) {
+          const entries = Array.from(personnelMap.entries());
+          const topByRevenue = entries.sort(
+            (a, b) => b[1].revenue - a[1].revenue
+          )[0];
+          const topByCount = entries.sort(
+            (a, b) => b[1].count - a[1].count
+          )[0];
+
+          if (topByRevenue) {
+            insights.push(
+              `En çok ciro yapan: ${formatCurrency(
+                topByRevenue[1].revenue
+              )} ile ${topByRevenue[0]}.`
+            );
+          }
+
+          if (
+            topByCount &&
+            topByCount[0] !== topByRevenue[0] &&
+            insights.length < 4
+          ) {
+            insights.push(
+              `En çok işlem yapan: ${topByCount[1].count} işlem ile ${topByCount[0]}.`
+            );
+          }
+        }
+
+        // Least popular service
+        if (sortedByCount.length > 2 && insights.length < 4) {
+          const leastPopular =
+            sortedByCount[sortedByCount.length - 1];
+          insights.push(
+            `En az tercih edilen hizmet: ${leastPopular.count} işlem ile ${leastPopular.name}.`
+          );
+        }
+
+        setInsights(insights.slice(0, 4));
+      } catch (error) {
+        console.error("Error generating insights:", error);
+        setInsights(["Veri analizi sırasında bir hata oluştu."]);
+      } finally {
+        setIsInsightsLoading(false);
       }
-    });
-    
-    return hours;
-  };
-  
-  // Helper function to prepare daily data
-  const prepareDailyData = (operations: any[]): ChartDataItem[] => {
-    // Group operations by day for the last 7 days
-    const days: ChartDataItem[] = [];
-    const today = new Date();
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(today.getDate() - i);
-      const dayStr = date.toISOString().split('T')[0];
-      days.push({
-        name: dayStr,
-        ciro: 0,
-        islemSayisi: 0
-      });
+    };
+
+    if (!operationsLoading && !servicesLoading && !categoriesLoading) {
+      generateInsights();
     }
-    
-    // Aggregate data
-    operations.forEach(op => {
-      try {
-        if (!op.created_at) return;
-        
-        const opDate = new Date(op.created_at).toISOString().split('T')[0];
-        const dayItem = days.find(d => d.name === opDate);
-        
-        if (dayItem) {
-          dayItem.ciro += (op.tutar || 0);
-          dayItem.islemSayisi += 1;
-        }
-      } catch (e) {
-        console.error("Error processing operation for daily chart:", e);
-      }
-    });
-    
-    // Format dates for display
-    days.forEach(day => {
-      const date = new Date(day.name);
-      day.name = date.toLocaleDateString('tr-TR', { month: 'short', day: 'numeric' });
-    });
-    
-    return days;
+  }, [operations, serviceData, personnel, operationsLoading, servicesLoading, categoriesLoading]);
+
+  // Handle refresh of insights
+  const handleRefreshInsights = () => {
+    setIsInsightsLoading(true);
+    setTimeout(() => {
+      // Re-generate insights with some randomization for variety
+      const currentInsights = [...insights];
+      const shuffled = currentInsights.sort(() => 0.5 - Math.random());
+      setInsights(shuffled);
+      setIsInsightsLoading(false);
+    }, 600);
   };
-  
-  // Helper function to prepare weekly data
-  const prepareWeeklyData = (operations: any[]): ChartDataItem[] => {
-    // Group operations by week for the last 4 weeks
-    const weeks: (ChartDataItem & {
-      startDate: string;
-      endDate: string;
-    })[] = [];
-    const today = new Date();
-    for (let i = 3; i >= 0; i--) {
-      const startDate = new Date(today);
-      startDate.setDate(today.getDate() - (i * 7 + 6));
-      const endDate = new Date(today);
-      endDate.setDate(today.getDate() - (i * 7));
-      
-      weeks.push({
-        name: `Hafta ${4-i}`,
-        ciro: 0,
-        islemSayisi: 0,
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString()
-      });
-    }
-    
-    // Aggregate data
-    operations.forEach(op => {
-      try {
-        if (!op.created_at) return;
-        
-        const opDate = new Date(op.created_at);
-        const weekItem = weeks.find(w => 
-          opDate >= new Date(w.startDate) && 
-          opDate <= new Date(w.endDate)
-        );
-        
-        if (weekItem) {
-          weekItem.ciro += (op.tutar || 0);
-          weekItem.islemSayisi += 1;
-        }
-      } catch (e) {
-        console.error("Error processing operation for weekly chart:", e);
-      }
-    });
-    
-    // Remove extra properties
-    return weeks.map(({ name, ciro, islemSayisi }) => ({ name, ciro, islemSayisi }));
-  };
-  
-  // Helper function to prepare monthly data
-  const prepareMonthlyData = (operations: any[]): ChartDataItem[] => {
-    // Group operations by month for the last 6 months
-    const months: (ChartDataItem & {
-      month: number;
-      year: number;
-    })[] = [];
-    const today = new Date();
-    for (let i = 5; i >= 0; i--) {
-      const date = new Date(today);
-      date.setMonth(today.getMonth() - i);
-      
-      months.push({
-        name: date.toLocaleDateString('tr-TR', { month: 'short', year: 'numeric' }),
-        ciro: 0,
-        islemSayisi: 0,
-        month: date.getMonth(),
-        year: date.getFullYear()
-      });
-    }
-    
-    // Aggregate data
-    operations.forEach(op => {
-      try {
-        if (!op.created_at) return;
-        
-        const opDate = new Date(op.created_at);
-        const monthItem = months.find(m => 
-          opDate.getMonth() === m.month && 
-          opDate.getFullYear() === m.year
-        );
-        
-        if (monthItem) {
-          monthItem.ciro += (op.tutar || 0);
-          monthItem.islemSayisi += 1;
-        }
-      } catch (e) {
-        console.error("Error processing operation for monthly chart:", e);
-      }
-    });
-    
-    // Remove extra properties
-    return months.map(({ name, ciro, islemSayisi }) => ({ name, ciro, islemSayisi }));
-  };
-  
-  // Helper function to prepare service data
-  const prepareServiceData = (operations: any[]): ServiceDataItem[] => {
-    // Group operations by service type
-    const services: Record<string, ServiceDataItem> = {};
-    
-    operations.forEach(op => {
-      try {
-        if (!op.islem && !op.aciklama) return;
-        
-        // Get service name either from islem.islem_adi or clean up aciklama
-        let serviceName = '';
-        if (op.islem && op.islem.islem_adi) {
-          serviceName = op.islem.islem_adi;
-        } else if (op.aciklama) {
-          serviceName = op.aciklama.split(' hizmeti verildi')[0];
-        }
-        
-        if (!serviceName) return;
-        
-        const serviceId = serviceName; // Use name as ID
-        
-        if (!services[serviceId]) {
-          services[serviceId] = {
-            name: serviceName,
-            count: 0,
-            revenue: 0
-          };
-        }
-        
-        services[serviceId].count += 1;
-        services[serviceId].revenue += (op.tutar || 0);
-      } catch (e) {
-        console.error("Error processing operation for service chart:", e);
-      }
-    });
-    
-    // Convert to array and sort by revenue
-    return Object.values(services)
-      .sort((a, b) => b.revenue - a.revenue);
-  };
-  
-  // Helper function to prepare category data
-  const prepareCategoryData = (operations: any[]): ServiceDataItem[] => {
-    // Group operations by category
-    const categories: Record<string, ServiceDataItem> = {};
-    
-    operations.forEach(op => {
-      try {
-        if (!op.islem || !op.islem.kategori) return;
-        
-        const categoryName = op.islem.kategori.kategori_adi || "Diğer";
-        
-        if (!categories[categoryName]) {
-          categories[categoryName] = {
-            name: categoryName,
-            count: 0,
-            revenue: 0
-          };
-        }
-        
-        categories[categoryName].count += 1;
-        categories[categoryName].revenue += (op.tutar || 0);
-      } catch (e) {
-        console.error("Error processing operation for category chart:", e);
-      }
-    });
-    
-    // Convert to array and sort by count
-    return Object.values(categories)
-      .sort((a, b) => b.count - a.count);
-  };
-  
-  const handleRefresh = async () => {
-    toast.info("İstatistikler güncelleniyor...");
-    
-    try {
-      // Force recovery of operations from appointments
-      await personelIslemleriServisi.recoverOperations({ get_all: true });
-      await personelIslemleriServisi.updateShopStatistics();
-      
-      // Refetch data
-      await Promise.all([
-        refetchStats(),
-        refetchIslemler(),
-        refetchRandevular()
-      ]);
-      
-      toast.success("İstatistikler güncellendi");
-    } catch (error) {
-      console.error("Error refreshing statistics:", error);
-      toast.error("İstatistikler güncellenirken bir hata oluştu");
-    }
-  };
-  
-  const isLoading = isStatsLoading || isIslemlerLoading || isRandevularLoading;
+
+  const isLoading =
+    operationsLoading || servicesLoading || personnelLoading || categoriesLoading;
+  const hasEnoughData = operations.length > 0;
+
+  if (userRole !== "admin") {
+    return (
+      <StaffLayout>
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Bu sayfaya erişim yetkiniz bulunmamaktadır. Yalnızca yöneticiler
+            dükkan istatistiklerini görüntüleyebilir.
+          </AlertDescription>
+        </Alert>
+      </StaffLayout>
+    );
+  }
 
   return (
     <StaffLayout>
       <div className="container mx-auto py-6">
-        <div className="flex justify-between items-center mb-4">
-          <h1 className="text-3xl font-bold">Dükkan İstatistikleri</h1>
-          
-          <Button 
-            variant="outline"
-            onClick={handleRefresh}
-            disabled={isRefetching}
-            className="gap-2"
-          >
-            <RefreshCw className={`h-4 w-4 ${isRefetching ? 'animate-spin' : ''}`} />
-            Verileri Güncelle
-          </Button>
+        <h1 className="text-2xl font-bold mb-6">Dükkan İstatistikleri</h1>
+
+        {/* AI analyst section */}
+        <AnalystBox
+          title=""
+          insights={insights}
+          isLoading={isInsightsLoading}
+          onRefresh={handleRefreshInsights}
+          hasEnoughData={hasEnoughData}
+          className="mb-6"
+        />
+
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+          <Select value={activeView} onValueChange={setActiveView}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Görünüm seç" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="daily">Günlük</SelectItem>
+              <SelectItem value="weekly">Haftalık</SelectItem>
+              <SelectItem value="monthly">Aylık</SelectItem>
+              <SelectItem value="yearly">Yıllık</SelectItem>
+              <SelectItem value="custom">Özel Tarih</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <div className="flex gap-2">
+            {!useMonthCycle && (
+              <DateRangePicker
+                from={dateRange.from}
+                to={dateRange.to}
+                onSelect={handleDateRangeChange}
+              />
+            )}
+            
+            <CustomMonthCycleSelector 
+              selectedDay={monthCycleDay}
+              onChange={handleMonthCycleChange}
+              active={useMonthCycle}
+              onClear={() => setUseMonthCycle(false)}
+            />
+          </div>
         </div>
 
-        <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="w-full border-b pb-0 mb-6">
-            <TabsTrigger value="overview">Genel Bakış</TabsTrigger>
-            <TabsTrigger value="profitability">Kârlılık Analizi</TabsTrigger>
-            <TabsTrigger value="settings">Maliyet Ayarları</TabsTrigger>
+        {/* Basic stats */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-medium">
+                Toplam İşlem
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">{stats.totalOperations}</div>
+              <p className="text-sm text-muted-foreground">
+                Seçili tarih aralığında
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-medium">
+                Toplam Ciro
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-green-600">
+                {formatCurrency(stats.totalRevenue)}
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Seçili tarih aralığında
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-medium">
+                Ortalama İşlem
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-blue-600">
+                {formatCurrency(stats.averageRevenue)}
+              </div>
+              <p className="text-sm text-muted-foreground">İşlem başına</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Tab content */}
+        <Tabs
+          value={activeView}
+          onValueChange={setActiveView}
+          className="space-y-8"
+        >
+          <TabsList className="mb-4">
+            <TabsTrigger value="daily">Günlük</TabsTrigger>
+            <TabsTrigger value="weekly">Haftalık</TabsTrigger>
+            <TabsTrigger value="monthly">Aylık</TabsTrigger>
+            <TabsTrigger value="yearly">Yıllık</TabsTrigger>
+            <TabsTrigger value="custom">Özel Tarih</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview" className="space-y-6">
-            <div className="mb-6">
-              <ShopAnalyst 
-                dukkanId={dukkanId} 
-                dateRange={dateRange}
-                period={period} 
-              />
-            </div>
-            
-            <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-6">
-              <Tabs defaultValue={period} onValueChange={setPeriod} className="space-y-4 flex-1">
-                <TabsList className="grid w-full grid-cols-4">
-                  <TabsTrigger value="daily">Günlük</TabsTrigger>
-                  <TabsTrigger value="weekly">Haftalık</TabsTrigger>
-                  <TabsTrigger value="monthly">Aylık</TabsTrigger>
-                  <TabsTrigger value="yearly">Yıllık</TabsTrigger>
-                </TabsList>
-              </Tabs>
-              
-              <div className="flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-muted-foreground" />
-                <DateRangePicker 
-                  from={dateRange.from}
-                  to={dateRange.to}
-                  onSelect={handleDateRangeChange}
-                />
-              </div>
-            </div>
-            
-            <MetricsCards 
-              isLoading={isLoading}
-              totalRevenue={shopStats?.totalRevenue || 0}
-              totalServices={shopStats?.totalServices || 0}
-              uniqueCustomerCount={shopStats?.uniqueCustomerCount || 0}
-              totalCompletedAppointments={shopStats?.totalCompletedAppointments || 0}
-              cancelledAppointments={shopStats?.cancelledAppointments || 0}
-              newCustomers={shopStats?.newCustomers || 0}
-              loyalCustomers={shopStats?.loyalCustomers || 0}
-            />
-            
-            {/* Main performance chart based on selected period */}
-            {period === "daily" && (
-              <HourlyPerformanceChart data={hourlyData} isLoading={isLoading} />
-            )}
-            {period === "weekly" && (
-              <DailyPerformanceChart data={dailyData} isLoading={isLoading} />
-            )}
-            {period === "monthly" && (
-              <WeeklyPerformanceChart data={weeklyData} isLoading={isLoading} />
-            )}
-            {period === "yearly" && (
-              <MonthlyPerformanceChart data={monthlyData} isLoading={isLoading} />
-            )}
-            {period === "custom" && dateRange && (
-              <DailyPerformanceChart data={dailyData} isLoading={isLoading} />
-            )}
+          <TabsContent value="daily" className="space-y-4">
+            <DailyView dateRange={dateRange} />
+          </TabsContent>
 
-            {/* Service and operation distribution charts */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-              <ServicePerformanceChart 
-                data={serviceData} 
-                isLoading={isLoading} 
-                title="Hizmet Performansı"
-              />
-              <OperationDistributionChart data={serviceData} isLoading={isLoading} />
-            </div>
-            
-            {/* Category distribution and revenue source charts */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-              <CategoryDistributionChart data={categoryData.map(item => ({
-                name: item.name,
-                value: item.revenue,
-                count: item.count,
-                percentage: 0 // Will be calculated by the component
-              }))} isLoading={isLoading} />
-              <RevenueSourceChart data={serviceData} isLoading={isLoading} />
-            </div>
-            
-            {/* Additional insights charts */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-              <HourHeatmapChart data={filteredIslemler} isLoading={isLoading} />
-              <CustomerFrequencyChart data={filteredIslemler} isLoading={isLoading} />
-            </div>
+          <TabsContent value="weekly" className="space-y-4">
+            <WeeklyView dateRange={dateRange} />
           </TabsContent>
-          
-          <TabsContent value="profitability" className="space-y-6">
-            <ProfitAnalysis 
-              operations={filteredIslemler} 
-              fixedExpenses={fixedExpenses}
-              monthlyAppointments={estimatedMonthlyAppointments}
-            />
+
+          <TabsContent value="monthly" className="space-y-4">
+            <MonthlyView dateRange={dateRange} />
           </TabsContent>
-          
-          <TabsContent value="settings" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Maliyet Ayarları</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <h3 className="text-lg font-medium">Sabit Giderler</h3>
-                  <div className="grid gap-4">
-                    <div>
-                      <Label htmlFor="fixedExpenses">Aylık Sabit Giderler (₺)</Label>
-                      <Input
-                        id="fixedExpenses"
-                        type="number" 
-                        min="0"
-                        value={fixedExpenses}
-                        onChange={(e) => setFixedExpenses(Number(e.target.value))}
-                        placeholder="Kira, fatura, temizlik vb. giderler"
-                        className="mt-1"
-                      />
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Kiranız, elektrik, su, doğalgaz gibi sabit giderlerin toplamını girin
-                      </p>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label>Sabit Gider Dağıtım Yöntemi</Label>
-                      <Select 
-                        value={expenseCalculationType} 
-                        onValueChange={setExpenseCalculationType}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Hesaplama yöntemi seçin" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="automatic">Otomatik Hesaplama (Son 3 ay ortalaması)</SelectItem>
-                          <SelectItem value="manual">Manuel Hesaplama</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    {expenseCalculationType === "manual" && (
+
+          <TabsContent value="yearly" className="space-y-4">
+            <YearlyView />
+          </TabsContent>
+
+          <TabsContent value="custom" className="space-y-4">
+            {isLoading ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </div>
+            ) : (
+              <>
+                {/* Performance data */}
+                <Card className="mb-6">
+                  <CardHeader>
+                    <CardTitle>Performans Verileri</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      {/* Revenue by service chart */}
                       <div>
-                        <Label htmlFor="estimatedMonthlyAppointments">Tahmini Aylık Randevu Sayısı</Label>
-                        <Input
-                          id="estimatedMonthlyAppointments"
-                          type="number" 
-                          min="1"
-                          value={estimatedMonthlyAppointments}
-                          onChange={(e) => setEstimatedMonthlyAppointments(Number(e.target.value))}
-                          placeholder="Örn: 200"
-                          className="mt-1"
-                        />
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Ortalama aylık randevu sayınızı girin
-                        </p>
+                        <h3 className="text-sm font-medium mb-1">
+                          Hizmet Bazlı Gelir Dağılımı
+                        </h3>
+                        <div className="h-[300px]">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie
+                                data={serviceData}
+                                dataKey="revenue"
+                                nameKey="name"
+                                cx="50%"
+                                cy="50%"
+                                outerRadius={100}
+                                label={({ name, percent }) =>
+                                  `${name} ${(percent * 100).toFixed(0)}%`
+                                }
+                                labelLine={false}
+                              >
+                                {serviceData.map((entry, index) => (
+                                  <Cell
+                                    key={`cell-${index}`}
+                                    fill={COLORS[index % COLORS.length]}
+                                  />
+                                ))}
+                              </Pie>
+                              <Tooltip
+                                formatter={(value: number) =>
+                                  formatCurrency(value)
+                                }
+                              />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </div>
                       </div>
-                    )}
-                    
-                    {expenseCalculationType === "automatic" && (
-                      <div className="bg-slate-50 p-4 rounded-md border">
-                        <p className="text-sm">
-                          <span className="font-medium">Hesaplanan ortalama aylık randevu sayısı: </span>
-                          <span className="font-bold">{estimatedMonthlyAppointments}</span>
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Bu değer son 3 ayın randevu verileri baz alınarak hesaplanmıştır
-                        </p>
+
+                      {/* Category distribution chart */}
+                      <div>
+                        <h3 className="text-sm font-medium mb-1">
+                          Kategori Dağılımı
+                        </h3>
+                        <div className="h-[300px]">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie
+                                data={categoryData}
+                                dataKey="value"
+                                nameKey="name"
+                                cx="50%"
+                                cy="50%"
+                                outerRadius={100}
+                                label={({ name, percent }) =>
+                                  `${name} ${(percent * 100).toFixed(0)}%`
+                                }
+                                labelLine={false}
+                              >
+                                {categoryData.map((entry, index) => (
+                                  <Cell
+                                    key={`cell-${index}`}
+                                    fill={COLORS[index % COLORS.length]}
+                                  />
+                                ))}
+                              </Pie>
+                              <Tooltip
+                                formatter={(value: number) =>
+                                  formatCurrency(value)
+                                }
+                              />
+                              <Legend />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </div>
                       </div>
-                    )}
-                    
-                    <div className="bg-blue-50 p-4 rounded-md border border-blue-100">
-                      <p className="text-sm">
-                        <span className="font-medium">İşlem başına düşen sabit gider: </span>
-                        <span className="font-bold">
-                          {estimatedMonthlyAppointments > 0
-                            ? new Intl.NumberFormat('tr-TR', {
-                                style: 'currency',
-                                currency: 'TRY',
-                                minimumFractionDigits: 2
-                              }).format(fixedExpenses / estimatedMonthlyAppointments)
-                            : "0 ₺"
-                          }
-                        </span>
-                      </p>
                     </div>
-                  </div>
+                  </CardContent>
+                </Card>
+                
+                {/* Category distribution and revenue source charts */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                  <CategoryDistributionChart data={categoryData.map(item => ({
+                    name: item.name,
+                    value: item.value,
+                    count: item.count,
+                    percentage: item.percentage || 0
+                  }))} isLoading={isLoading} />
+                  <RevenueSourceChart data={serviceData} isLoading={isLoading} />
                 </div>
-              </CardContent>
-            </Card>
+              </>
+            )}
           </TabsContent>
         </Tabs>
       </div>

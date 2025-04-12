@@ -1,112 +1,226 @@
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { personelIslemleriServisi } from "@/lib/supabase";
-import { format } from "date-fns";
-import { formatCurrency } from "@/lib/utils";
 
-export interface PersonnelOperationsTableProps {
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { personelIslemleriServisi, personelServisi } from "@/lib/supabase";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { formatCurrency } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
+import { Search, CalendarIcon } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { format, addMonths, setDate } from "date-fns";
+import { CustomMonthCycleSelector } from "@/components/ui/custom-month-cycle-selector";
+
+interface PersonnelOperationsTableProps {
   personnelId?: number;
-  personelId?: number; // For backwards compatibility
 }
 
-export function PersonnelOperationsTable({ personnelId, personelId }: PersonnelOperationsTableProps) {
-  const actualPersonnelId = personnelId || personelId;
+export function PersonnelOperationsTable({ 
+  personnelId 
+}: PersonnelOperationsTableProps) {
+  const [dateRange, setDateRange] = useState({
+    from: new Date(new Date().setDate(new Date().getDate() - 30)),
+    to: new Date()
+  });
   
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<any>(null);
-  const [operations, setOperations] = useState<any[]>([]);
-  
-  useEffect(() => {
-    async function fetchOperations() {
-      if (!actualPersonnelId) return;
-      
-      setIsLoading(true);
-      setError(null);
-      
-      try {
-        console.info("Fetching operations for personnel ID:", actualPersonnelId);
-        console.info("Directly fetching operations for personnel ID:", actualPersonnelId);
-        const results = await personelIslemleriServisi.personelIslemleriGetirById(actualPersonnelId);
-        setOperations(results);
-      } catch (err) {
-        console.error("Error fetching personnel operations:", err);
-        setError(err);
-      } finally {
-        setIsLoading(false);
-      }
+  const [searchTerm, setSearchTerm] = useState("");
+  const [monthCycleDay, setMonthCycleDay] = useState(1);
+  const [useMonthCycle, setUseMonthCycle] = useState(false);
+
+  const handleDateRangeChange = ({from, to}: {from: Date, to: Date}) => {
+    setDateRange({from, to});
+    setUseMonthCycle(false);
+  };
+
+  const handleMonthCycleChange = (day: number, date: Date) => {
+    setMonthCycleDay(day);
+    
+    const currentDate = new Date();
+    const selectedDay = day;
+    
+    let fromDate = new Date();
+    
+    // Set to previous month's cycle day
+    fromDate.setDate(selectedDay);
+    if (currentDate.getDate() < selectedDay) {
+      fromDate.setMonth(fromDate.getMonth() - 1);
     }
     
-    fetchOperations();
-  }, [actualPersonnelId]);
+    // Create the end date (same day, current month)
+    const toDate = new Date(fromDate);
+    toDate.setMonth(toDate.getMonth() + 1);
+    
+    setDateRange({
+      from: fromDate,
+      to: toDate
+    });
+    
+    setUseMonthCycle(true);
+  };
 
-  if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center p-8">
-        <div className="w-12 h-12 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin mb-4"></div>
-        <p className="text-gray-500">İşlem verileri yükleniyor...</p>
-      </div>
-    );
-  }
+  const { data: operations = [], isLoading } = useQuery({
+    queryKey: ['personnel-operations', personnelId, dateRange.from, dateRange.to],
+    queryFn: async () => {
+      try {
+        const data = personnelId
+          ? await personelIslemleriServisi.personelIslemleriGetir(personnelId)
+          : await personelIslemleriServisi.hepsiniGetir();
+        
+        return data.filter(op => {
+          if (!op.created_at) return false;
+          const date = new Date(op.created_at);
+          return date >= dateRange.from && date <= dateRange.to;
+        });
+      } catch (error) {
+        console.error("Failed to fetch operations:", error);
+        return [];
+      }
+    },
+    enabled: true,
+  });
 
-  if (error) {
-    return (
-      <div className="bg-red-50 border border-red-200 rounded-md p-4 my-4">
-        <p className="text-red-600 font-medium">İşlem geçmişi yüklenirken bir hata oluştu</p>
-        <p className="text-red-500 text-sm mt-1">{error.message || "Bilinmeyen hata"}</p>
-        <button 
-          className="mt-3 text-sm bg-red-100 hover:bg-red-200 text-red-700 py-1 px-3 rounded transition-colors"
-          onClick={() => window.location.reload()}
-        >
-          Sayfayı Yenile
-        </button>
-      </div>
-    );
-  }
+  const { data: personnelData = [] } = useQuery({
+    queryKey: ['personnel-list-for-table'],
+    queryFn: () => personelServisi.hepsiniGetir(),
+  });
 
-  if (!operations || operations.length === 0) {
-    return (
-      <div className="text-center p-8 bg-gray-50 rounded-lg">
-        <p className="text-gray-500">Bu personel için işlem geçmişi bulunamadı</p>
-      </div>
-    );
-  }
+  const filteredOperations = operations.filter(op => {
+    if (!searchTerm) return true;
+    
+    const searchLower = searchTerm.toLowerCase();
+    const personnelName = personnelData.find(p => p.id === op.personel_id)?.ad_soyad?.toLowerCase() || '';
+    const customerName = op.musteri 
+      ? `${op.musteri.first_name || ''} ${op.musteri.last_name || ''}`.toLowerCase()
+      : '';
+    const operationName = op.islem?.islem_adi?.toLowerCase() || op.aciklama?.toLowerCase() || '';
+    
+    return personnelName.includes(searchLower) || 
+           customerName.includes(searchLower) || 
+           operationName.includes(searchLower);
+  });
+
+  const totalRevenue = filteredOperations.reduce((sum, op) => sum + (op.tutar || 0), 0);
+  const operationCount = filteredOperations.length;
+  const totalCommission = filteredOperations.reduce((sum, op) => sum + (op.odenen || 0), 0);
 
   return (
-    <div className="overflow-x-auto rounded-md border">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
-          <tr>
-            <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tarih</th>
-            <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlem</th>
-            <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Müşteri</th>
-            <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tutar</th>
-            <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Puan</th>
-          </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
-          {operations.map((operation) => (
-            <tr key={operation.id} className="hover:bg-gray-50">
-              <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
-                {operation.created_at ? format(new Date(operation.created_at), "dd.MM.yyyy HH:mm") : "Bilinmiyor"}
-              </td>
-              <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
-                {operation.aciklama}
-              </td>
-              <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
-                {operation.musteri ? 
-                  `${operation.musteri.first_name} ${operation.musteri.last_name || ''}` : 
-                  "Belirtilmemiş"}
-              </td>
-              <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
-                {formatCurrency(operation.tutar || 0)}
-              </td>
-              <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
-                {operation.puan}
-              </td>
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row justify-between gap-4 flex-wrap">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative sm:w-64">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Ara: Müşteri, İşlem..."
+              className="pl-8"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          
+          <div className="flex gap-2">
+            {!useMonthCycle && (
+              <DateRangePicker 
+                from={dateRange.from}
+                to={dateRange.to}
+                onSelect={handleDateRangeChange}
+              />
+            )}
+            
+            <CustomMonthCycleSelector 
+              selectedDay={monthCycleDay}
+              onChange={handleMonthCycleChange}
+              active={useMonthCycle}
+              onClear={() => setUseMonthCycle(false)}
+            />
+          </div>
+        </div>
+        
+        <div className="flex flex-wrap gap-2 text-xs sm:text-sm">
+          <div className="bg-gray-100 p-2 rounded-md">
+            <span className="font-medium">Toplam İşlem:</span> 
+            <span className="ml-1">{operationCount}</span>
+          </div>
+          <div className="bg-gray-100 p-2 rounded-md">
+            <span className="font-medium">Toplam Ciro:</span> 
+            <span className="ml-1 text-green-600">{formatCurrency(totalRevenue)}</span>
+          </div>
+          <div className="bg-gray-100 p-2 rounded-md">
+            <span className="font-medium">Toplam Prim:</span> 
+            <span className="ml-1 text-blue-600">{formatCurrency(totalCommission)}</span>
+          </div>
+        </div>
+      </div>
+      
+      <div className="rounded-md border overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tarih</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Personel</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Müşteri</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlem</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prim %</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tutar</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ödenen</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {isLoading ? (
+              <tr>
+                <td colSpan={7} className="px-6 py-4">
+                  <div className="flex justify-center">
+                    <div className="animate-spin h-5 w-5 border-2 border-t-purple-500 border-purple-200 rounded-full"></div>
+                  </div>
+                </td>
+              </tr>
+            ) : filteredOperations.length > 0 ? (
+              filteredOperations.map((op) => (
+                <tr key={op.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {op.created_at ? new Date(op.created_at).toLocaleDateString('tr-TR') : '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {personnelData?.find(p => p.id === op.personel_id)?.ad_soyad || '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {op.musteri ? `${op.musteri.first_name || ''} ${op.musteri.last_name || ''}` : '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {op.islem?.islem_adi || op.aciklama || '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {op.prim_yuzdesi > 0 ? `%${op.prim_yuzdesi}` : "-"}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
+                    {formatCurrency(op.tutar || 0)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-medium">
+                    {op.prim_yuzdesi > 0 ? formatCurrency(op.odenen || 0) : "-"}
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">
+                  {searchTerm ? "Arama kriterleriyle eşleşen işlem bulunamadı" : "Bu personel için işlem bulunmamaktadır"}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
