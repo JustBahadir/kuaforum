@@ -16,10 +16,10 @@ interface PersonelIslemi {
   islem_id?: number;
   musteri_id?: number;
   aciklama: string;
-  tutar: number;
+  tutar: number | string;
   created_at: string;
   prim_yuzdesi?: number;
-  odenen?: number;
+  odenen?: number | string;
   islem?: any;
   musteri?: any;
   personel?: any;
@@ -127,11 +127,12 @@ export function PerformanceCharts({
       
       if (statistics[personelId]) {
         statistics[personelId].operations += 1;
-        // Convert string to number if needed and provide default value
+        
+        // Convert string to number if needed and provide default value for tutar
         const tutar = typeof op.tutar === 'string' ? parseFloat(op.tutar) : (typeof op.tutar === 'number' ? op.tutar : 0);
         statistics[personelId].revenue += tutar;
         
-        // Convert string to number if needed and provide default value
+        // Convert string to number if needed and provide default value for odenen
         const odenen = typeof op.odenen === 'string' ? parseFloat(op.odenen) : (typeof op.odenen === 'number' ? op.odenen : 0);
         statistics[personelId].prim += odenen;
       }
