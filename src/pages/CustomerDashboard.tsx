@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Route, Routes, Navigate } from "react-router-dom";
+import { Route, Routes, Navigate, useLocation } from "react-router-dom";
 import { SidebarNav } from "@/components/customer-dashboard/SidebarNav";
 import { MobileNav } from "@/components/customer-dashboard/MobileNav";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
@@ -13,8 +13,8 @@ import CustomerHome from "./CustomerDashboard/CustomerHome";
 export default function CustomerDashboard() {
   const { userName, loading, handleLogout } = useCustomerAuth();
   // Get the current path to determine active tab
-  const location = window.location.pathname;
-  const activeTab = location.split("/").pop() || "";
+  const location = useLocation();
+  const activeTab = location.pathname.split("/").pop() || "";
 
   if (loading) {
     return (

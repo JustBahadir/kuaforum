@@ -24,7 +24,7 @@ export default function StaffLogin() {
           if (role === 'staff' || role === 'admin') {
             // Doğrudan navigasyon - bekleme olmadan
             console.log("Oturum açık, hemen yönlendiriliyor...");
-            navigate("/shop-home", { replace: true });
+            navigate("/admin/dashboard", { replace: true });
             return;
           }
         }
@@ -49,8 +49,8 @@ export default function StaffLogin() {
   const handleLoginSuccess = () => {
     console.log("Login success detected");
     // Başarılı girişten sonra doğrudan yönlendirme - bekleme olmadan
-    console.log("Hemen yönlendirme yapılıyor: /shop-home");
-    navigate("/shop-home", { replace: true });
+    console.log("Hemen yönlendirme yapılıyor: /admin/dashboard");
+    navigate("/admin/dashboard", { replace: true });
   };
 
   const handleBackClick = () => {

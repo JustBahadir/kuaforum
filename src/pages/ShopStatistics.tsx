@@ -20,31 +20,18 @@ import { StatsHeader } from "./ShopStatistics/components/StatsHeader";
 import { StatsSummaryCards } from "./ShopStatistics/components/StatsSummaryCards";
 import { StatisticsCommentary } from "./ShopStatistics/components/StatisticsCommentary";
 
-declare module 'jspdf' {
-  interface jsPDF {
-    autoTable: (options: any) => jsPDF;
-    lastAutoTable: {
-      finalY: number;
+interface CustomJsPDF extends jsPDF {
+  autoTable: (options: any) => CustomJsPDF;
+  lastAutoTable: {
+    finalY: number;
+  };
+  internal: {
+    getNumberOfPages: () => number;
+    pageSize: {
+      width: number;
+      height: number;
     };
-  }
-}
-
-declare global {
-  namespace JsPDF {
-    interface Internal {
-      getNumberOfPages: () => number;
-      pageSize: {
-        width: number;
-        height: number;
-      };
-    }
-  }
-}
-
-declare module 'jspdf' {
-  interface jsPDF {
-    internal: JsPDF.Internal;
-  }
+  };
 }
 
 export default function ShopStatistics() {
@@ -108,7 +95,7 @@ export default function ShopStatistics() {
 
     const summaryData = [
       ['Tarih Aralığı', `${dateRange.from.toLocaleDateString()} - ${dateRange.to.toLocaleDateString()}`],
-      ['Toplam İşlem Sayısı', operations.length],
+      ['Toplam İşlem Say��sı', operations.length],
       ['Toplam Ciro', formatCurrency(operations.reduce((sum, op) => sum + (op.tutar || 0), 0))],
       ['Ortalama İşlem', formatCurrency(operations.length ? operations.reduce((sum, op) => sum + (op.tutar || 0), 0) / operations.length : 0)],
     ];
@@ -175,7 +162,7 @@ export default function ShopStatistics() {
   const exportToPdf = () => {
     if (!hasData) return;
     
-    const doc = new jsPDF();
+    const doc = new jsPDF() as CustomJsPDF;
     
     doc.setFontSize(20);
     doc.text('Dükkan İstatistikleri Raporu', 105, 15, { align: 'center' });

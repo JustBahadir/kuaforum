@@ -1,5 +1,5 @@
 
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "sonner";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -18,6 +18,7 @@ import StaffProfile from "./pages/StaffProfile";
 import ShopJoinRequests from "./pages/ShopJoinRequests";
 import CustomerDashboard from "./pages/CustomerDashboard";
 import Appointments from "./pages/Appointments";
+import ShopStatistics from "./pages/ShopStatistics";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -45,14 +46,15 @@ function App() {
               <Route path="/shop-requests" element={<ShopJoinRequests />} />
               
               {/* Admin / Staff Routes */}
-              <Route path="/shop-home" element={<Dashboard />} />
-              <Route path="/shop-personnel" element={<Personnel />} />
+              <Route path="/shop-home" element={<Navigate to="/admin/dashboard" replace />} />
+              <Route path="/shop-personnel" element={<Navigate to="/admin/personnel" replace />} />
+              <Route path="/shop-statistics" element={<ShopStatistics />} />
               <Route path="/admin/dashboard" element={<Dashboard />} />
               <Route path="/admin/personnel" element={<Personnel />} />
               <Route path="/admin/appointments" element={<Appointments />} />
               
               {/* Customer Routes */}
-              <Route path="/customer-dashboard" element={<CustomerDashboard />} />
+              <Route path="/customer-dashboard/*" element={<CustomerDashboard />} />
             </Routes>
           </RouteProtection>
         </Router>
