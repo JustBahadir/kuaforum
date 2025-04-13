@@ -11,18 +11,8 @@ import { useCustomerAuth } from '@/hooks/useCustomerAuth';
 declare module 'jspdf' {
   interface jsPDF {
     autoTable: (options: any) => jsPDF;
-    internal: {
-      events: any;
-      scaleFactor: number;
-      pageSize: {
-        width: number;
-        height: number;
-        getWidth(): number;
-        getHeight(): number;
-      };
-      pages: number[];
-      getNumberOfPages(): number;
-      getEncryptor(objectId: number): (data: string) => string;
+    previousAutoTable?: {
+      finalY: number;
     };
   }
 }
@@ -93,7 +83,7 @@ export default function ShopStatistics() {
     doc.text(totalServices.toString(), 170, finalY);
     
     // Add page numbers
-    const pageCount = doc.internal.getNumberOfPages();
+    const pageCount = doc.internal.pages.length - 1;
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
       doc.setFontSize(10);

@@ -134,7 +134,9 @@ export function useCustomerAuth() {
         
         if (!personelError && personelData && personelData.dukkan_id) {
           setDukkanId(personelData.dukkan_id);
-          setDukkanAdi(personelData.dukkanlar?.ad || null);
+          if (personelData.dukkanlar) {
+            setDukkanAdi(personelData.dukkanlar.ad || null);
+          }
           return;
         }
       }
