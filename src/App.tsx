@@ -53,6 +53,7 @@ function App() {
               
               {/* Customer Routes */}
               <Route path="/customer-dashboard" element={<CustomerDashboard />} />
+              <Route path="/customer-dashboard/*" element={<CustomerDashboard />} />
             </Routes>
           </RouteProtection>
         </Router>

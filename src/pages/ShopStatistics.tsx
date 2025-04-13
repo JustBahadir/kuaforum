@@ -1,355 +1,220 @@
-
-import { useState, useEffect, useRef } from "react";
-import { StaffLayout } from "@/components/ui/staff-layout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useQuery } from "@tanstack/react-query";
-import { islemServisi, kategoriServisi, personelIslemleriServisi, personelServisi } from "@/lib/supabase";
-import { formatCurrency } from "@/lib/utils";
-import { Loader2, Download, FileDown, FileText } from "lucide-react";
-import { useCustomerAuth } from "@/hooks/useCustomerAuth";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
+import React, { useState } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { format } from 'date-fns';
+import { tr } from 'date-fns/locale';
+import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
-import { ComboChart } from "./ShopStatistics/components/ComboChart";
-import { CategoryEvaluation } from "./ShopStatistics/components/CategoryEvaluation";
-import { ServiceEvaluation } from "./ShopStatistics/components/ServiceEvaluation";
-import { StatsDateControls } from "./ShopStatistics/components/StatsDateControls";
-import { StatsHeader } from "./ShopStatistics/components/StatsHeader";
-import { StatsSummaryCards } from "./ShopStatistics/components/StatsSummaryCards";
-import { StatisticsCommentary } from "./ShopStatistics/components/StatisticsCommentary";
 
-export default function ShopStatistics() {
-  const { dukkanId, userRole } = useCustomerAuth();
-  const [period, setPeriod] = useState("monthly");
-  const [dateRange, setDateRange] = useState({
-    from: new Date(new Date().setDate(new Date().getDate() - 30)),
-    to: new Date(),
-  });
-  const [customMonthDay, setCustomMonthDay] = useState(1);
-  const [useMonthCycle, setUseMonthCycle] = useState(false);
-  const downloadRef = useRef(null);
+// Add module augmentation for jsPDF to include autoTable and related properties
+declare module 'jspdf' {
+  interface jsPDF {
+    autoTable: (options: any) => jsPDF;
+    lastAutoTable: {
+      finalY: number;
+    };
+    internal: {
+      getNumberOfPages: () => number;
+      pageSize: {
+        width: number;
+        height: number;
+      };
+      events: any;
+      scaleFactor: number;
+      pageSize: {
+        width: number;
+        getWidth: () => number;
+        height: number;
+        getHeight: () => number;
+      };
+      pages: number[];
+      getEncryptor(objectId: number): (data: string) => string;
+    };
+  }
+}
 
-  // Fetch personnel data
-  const { data: personnel = [], isLoading: personnelLoading } = useQuery({
-    queryKey: ["personnel-stats"],
-    queryFn: personelServisi.hepsiniGetir,
-  });
+interface ShopStatisticsProps {
+  shopId: number;
+}
 
-  // Fetch operations data based on date range
-  const { data: operations = [], isLoading: operationsLoading } = useQuery({
-    queryKey: ["operations-stats", dateRange.from, dateRange.to],
-    queryFn: async () => {
-      try {
-        const data = await personelIslemleriServisi.hepsiniGetir();
-        return data.filter((op) => {
-          if (!op.created_at) return false;
-          const date = new Date(op.created_at);
-          return date >= dateRange.from && date <= dateRange.to;
-        });
-      } catch (error) {
-        console.error("Failed to fetch operations data:", error);
-        return [];
-      }
-    },
-  });
+export default function ShopStatistics({ shopId }: ShopStatisticsProps) {
+  const [loading, setLoading] = useState(false);
 
-  // Fetch services
-  const { data: services = [], isLoading: servicesLoading } = useQuery({
-    queryKey: ["services-stats"],
-    queryFn: () => islemServisi.hepsiniGetir(),
-  });
+  const generatePdf = async () => {
+    setLoading(true);
+    try {
+      // Create a new PDF document with A4 size
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
 
-  // Fetch categories
-  const { data: categories = [], isLoading: categoriesLoading } = useQuery({
-    queryKey: ["categories-stats"],
-    queryFn: () => kategoriServisi.hepsiniGetir(),
-  });
-
-  const isLoading = operationsLoading || servicesLoading || personnelLoading || categoriesLoading;
-  const hasData = operations.length > 0;
-
-  // Process data for different visualizations
-  const processedData = {
-    operations,
-    personnel,
-    services,
-    categories,
-    dateRange
-  };
-
-  // Function to export data as Excel
-  const exportToExcel = () => {
-    if (!hasData) return;
-
-    // Create workbook with multiple sheets
-    const wb = XLSX.utils.book_new();
-
-    // Summary sheet
-    const summaryData = [
-      ['Tarih Aralığı', `${dateRange.from.toLocaleDateString()} - ${dateRange.to.toLocaleDateString()}`],
-      ['Toplam İşlem Sayısı', operations.length],
-      ['Toplam Ciro', formatCurrency(operations.reduce((sum, op) => sum + (op.tutar || 0), 0))],
-      ['Ortalama İşlem', formatCurrency(operations.length ? operations.reduce((sum, op) => sum + (op.tutar || 0), 0) / operations.length : 0)],
-    ];
-    const summaryWs = XLSX.utils.aoa_to_sheet(summaryData);
-    XLSX.utils.book_append_sheet(wb, summaryWs, "Özet");
-
-    // Operations sheet
-    const operationsData = [
-      ['Tarih', 'İşlem', 'Personel', 'Müşteri', 'Tutar', 'Komisyon']
-    ];
-    operations.forEach(op => {
-      const personelAdi = personnel.find(p => p.id === op.personel_id)?.ad_soyad || 'Bilinmeyen';
-      const islemAdi = services.find(s => s.id === op.islem_id)?.islem_adi || op.aciklama || 'Bilinmeyen';
-      const musteriAdi = op.musteri?.first_name || 'Bilinmeyen';
+      // Add shop information to the header
+      doc.setFontSize(18);
+      doc.setTextColor(44, 62, 80);
+      doc.text('Salon Statistics Report', 105, 15, { align: 'center' });
       
-      operationsData.push([
-        new Date(op.created_at).toLocaleDateString(),
-        islemAdi,
-        personelAdi,
-        musteriAdi,
-        op.tutar || 0,
-        op.odenen || 0
-      ]);
-    });
-    const operationsWs = XLSX.utils.aoa_to_sheet(operationsData);
-    XLSX.utils.book_append_sheet(wb, operationsWs, "İşlemler");
-
-    // Personnel performance sheet
-    const personnelPerformanceData = [
-      ['Personel', 'İşlem Sayısı', 'Ciro', 'Komisyon']
-    ];
-    const personnelMap = new Map();
-    operations.forEach(op => {
-      if (!op.personel_id) return;
+      doc.setFontSize(12);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Generated on: ${format(new Date(), 'PPP', { locale: tr })}`, 105, 22, { align: 'center' });
+      doc.text(`Shop ID: ${shopId}`, 105, 28, { align: 'center' });
       
-      if (!personnelMap.has(op.personel_id)) {
-        const person = personnel.find(p => p.id === op.personel_id);
-        personnelMap.set(op.personel_id, { 
-          name: person?.ad_soyad || 'Bilinmeyen', 
-          count: 0, 
-          revenue: 0,
-          commission: 0 
-        });
-      }
+      // Add separator line
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.5);
+      doc.line(20, 32, 190, 32);
       
-      const entry = personnelMap.get(op.personel_id);
-      entry.count += 1;
-      entry.revenue += op.tutar || 0;
-      entry.commission += op.odenen || 0;
-    });
-    
-    Array.from(personnelMap.entries()).forEach(([_, data]) => {
-      personnelPerformanceData.push([
-        data.name,
-        data.count,
-        data.revenue,
-        data.commission
-      ]);
-    });
-    const personnelWs = XLSX.utils.aoa_to_sheet(personnelPerformanceData);
-    XLSX.utils.book_append_sheet(wb, personnelWs, "Personel Performansı");
-
-    // Save the file
-    XLSX.writeFile(wb, `Dukkan_Istatistikleri_${new Date().toLocaleDateString()}.xlsx`);
-  };
-
-  // Function to export data as PDF
-  const exportToPdf = () => {
-    if (!hasData) return;
-    
-    const doc = new jsPDF();
-    
-    // Title
-    doc.setFontSize(20);
-    doc.text('Dükkan İstatistikleri Raporu', 105, 15, { align: 'center' });
-    
-    // Date range
-    doc.setFontSize(12);
-    doc.text(`Tarih Aralığı: ${dateRange.from.toLocaleDateString()} - ${dateRange.to.toLocaleDateString()}`, 105, 25, { align: 'center' });
-    
-    // Summary section
-    doc.setFontSize(16);
-    doc.text('Özet Bilgiler', 14, 40);
-    
-    const totalRevenue = operations.reduce((sum, op) => sum + (op.tutar || 0), 0);
-    const avgTicket = operations.length ? totalRevenue / operations.length : 0;
-    
-    // Summary table
-    doc.autoTable({
-      startY: 45,
-      head: [['Metrik', 'Değer']],
-      body: [
-        ['Toplam İşlem Sayısı', operations.length.toString()],
-        ['Toplam Ciro', formatCurrency(totalRevenue)],
-        ['Ortalama İşlem', formatCurrency(avgTicket)],
-      ]
-    });
-    
-    // Personnel performance section
-    doc.setFontSize(16);
-    doc.text('Personel Performans', 14, doc.lastAutoTable.finalY + 15);
-    
-    // Calculate personnel data
-    const personnelData = [];
-    const personnelMap = new Map();
-    
-    operations.forEach(op => {
-      if (!op.personel_id) return;
+      // Performance Summary Section
+      doc.setFontSize(14);
+      doc.setTextColor(44, 62, 80);
+      doc.text('Performance Summary', 20, 40);
       
-      if (!personnelMap.has(op.personel_id)) {
-        const person = personnel.find(p => p.id === op.personel_id);
-        personnelMap.set(op.personel_id, { 
-          name: person?.ad_soyad || 'Bilinmeyen', 
-          count: 0, 
-          revenue: 0 
-        });
-      }
+      // Sample performance data
+      const performanceData = [
+        ['Last Month Revenue', '15,245 TL'],
+        ['Monthly Growth', '+12%'],
+        ['Most Popular Service', 'Hair Coloring'],
+        ['Average Rating', '4.7/5'],
+      ];
       
-      const entry = personnelMap.get(op.personel_id);
-      entry.count += 1;
-      entry.revenue += op.tutar || 0;
-    });
-    
-    Array.from(personnelMap.entries()).forEach(([_, data]) => {
-      personnelData.push([data.name, data.count.toString(), formatCurrency(data.revenue)]);
-    });
-    
-    // Personnel performance table
-    doc.autoTable({
-      startY: doc.lastAutoTable.finalY + 20,
-      head: [['Personel', 'İşlem Sayısı', 'Ciro']],
-      body: personnelData
-    });
-    
-    // Service performance section if we have space
-    if (doc.lastAutoTable.finalY < 220) {
-      doc.setFontSize(16);
-      doc.text('Hizmet Dağılımı', 14, doc.lastAutoTable.finalY + 15);
-      
-      // Calculate service data
-      const serviceData = [];
-      const serviceMap = new Map();
-      
-      operations.forEach(op => {
-        const serviceName = op.islem?.islem_adi || op.aciklama || 'Diğer';
-        
-        if (!serviceMap.has(serviceName)) {
-          serviceMap.set(serviceName, { count: 0, revenue: 0 });
-        }
-        
-        const entry = serviceMap.get(serviceName);
-        entry.count += 1;
-        entry.revenue += op.tutar || 0;
+      doc.autoTable({
+        startY: 45,
+        head: [['Metric', 'Value']],
+        body: performanceData,
+        theme: 'grid',
+        headStyles: { 
+          fillColor: [79, 129, 189],
+          textColor: 255,
+        },
+        styles: { 
+          fontSize: 10,
+          cellPadding: 5,
+        },
+        margin: { left: 20, right: 20 },
       });
       
-      Array.from(serviceMap.entries()).forEach(([name, data]) => {
-        serviceData.push([name, data.count.toString(), formatCurrency(data.revenue)]);
-      });
+      // Staff Performance Section
+      doc.setFontSize(14);
+      doc.setTextColor(44, 62, 80);
+      doc.text('Staff Performance', 20, doc.lastAutoTable.finalY + 15);
       
-      // Service performance table
+      // Sample staff performance data
+      const staffData = [
+        ['Ayşe Yılmaz', '45', '12,450 TL', '4.9/5'],
+        ['Mehmet Kaya', '32', '10,320 TL', '4.7/5'],
+        ['Zeynep Demir', '38', '11,680 TL', '4.8/5'],
+        ['Ali Öztürk', '28', '8,950 TL', '4.6/5'],
+      ];
+      
       doc.autoTable({
         startY: doc.lastAutoTable.finalY + 20,
-        head: [['Hizmet', 'İşlem Sayısı', 'Ciro']],
-        body: serviceData
+        head: [['Staff Name', 'Appointments', 'Revenue', 'Rating']],
+        body: staffData,
+        theme: 'striped',
+        headStyles: { 
+          fillColor: [192, 80, 77],
+          textColor: 255,
+        },
+        styles: { 
+          fontSize: 10,
+          cellPadding: 5,
+        },
+        margin: { left: 20, right: 20 },
       });
+      
+      // Service Popularity Section
+      doc.setFontSize(14);
+      doc.setTextColor(44, 62, 80);
+      const servicesY = doc.lastAutoTable.finalY + 15;
+      doc.text('Service Popularity', 20, servicesY);
+      
+      // Sample service data
+      const serviceData = [
+        ['Hair Coloring', '68', '23%'],
+        ['Haircut', '52', '18%'],
+        ['Hair Treatment', '45', '15%'],
+        ['Hair Styling', '42', '14%'],
+        ['Facial', '38', '13%'],
+        ['Manicure', '25', '9%'],
+        ['Massage', '22', '8%'],
+      ];
+      
+      doc.autoTable({
+        startY: doc.lastAutoTable.finalY + 20,
+        head: [['Service', 'Count', 'Percentage']],
+        body: serviceData,
+        theme: 'grid',
+        headStyles: { 
+          fillColor: [155, 187, 89],
+          textColor: 255,
+        },
+        styles: { 
+          fontSize: 10,
+          cellPadding: 5,
+        },
+        margin: { left: 20, right: 20 },
+      });
+      
+      // Add page number at the bottom
+      const totalPages = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.setFontSize(10);
+        doc.setTextColor(150, 150, 150);
+        doc.text(`Page ${i} of ${totalPages}`, 105, 285, { align: 'center' });
+      }
+      
+      // Save and download the PDF
+      doc.save(`salon-statistics-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+    } catch (error) {
+      console.error('PDF generation error:', error);
+    } finally {
+      setLoading(false);
     }
-    
-    // Footer with date
-    const pageCount = doc.internal.getNumberOfPages();
-    doc.setFontSize(10);
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.text(
-        `Rapor Tarihi: ${new Date().toLocaleDateString()} | Sayfa ${i} / ${pageCount}`,
-        105, 
-        doc.internal.pageSize.height - 10, 
-        { align: 'center' }
-      );
-    }
-    
-    // Save the PDF
-    doc.save(`Dukkan_Istatistikleri_${new Date().toLocaleDateString()}.pdf`);
   };
 
-  if (userRole !== "admin") {
-    return (
-      <StaffLayout>
-        <Alert variant="destructive" className="mb-4">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Bu sayfaya erişim yetkiniz bulunmamaktadır. Yalnızca yöneticiler
-            dükkan istatistiklerini görüntüleyebilir.
-          </AlertDescription>
-        </Alert>
-      </StaffLayout>
-    );
-  }
-
   return (
-    <StaffLayout>
-      <div className="container mx-auto py-6 px-4">
-        <StatsHeader title="Dükkan İstatistikleri">
-          <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="flex items-center gap-2"
-              onClick={exportToExcel}
-              disabled={!hasData || isLoading}
-              title="Excel olarak indir"
-            >
-              <FileText className="h-4 w-4" />
-              <span className="hidden sm:inline">Excel</span>
-            </Button>
-            <Button 
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
-              onClick={exportToPdf}
-              disabled={!hasData || isLoading}
-              title="PDF olarak indir"
-              ref={downloadRef}
-            >
-              <FileDown className="h-4 w-4" />
-              <span className="hidden sm:inline">PDF</span>
-            </Button>
-          </div>
-        </StatsHeader>
-
-        <StatsDateControls
-          period={period}
-          setPeriod={setPeriod}
-          dateRange={dateRange}
-          setDateRange={setDateRange}
-          customMonthDay={customMonthDay}
-          setCustomMonthDay={setCustomMonthDay}
-          useMonthCycle={useMonthCycle}
-          setUseMonthCycle={setUseMonthCycle}
-        />
-
-        {/* AI analyst section */}
-        <StatisticsCommentary data={processedData} isLoading={isLoading} />
-
-        {/* Summary stats cards */}
-        <StatsSummaryCards data={processedData} isLoading={isLoading} />
-
-        {/* Combined Revenue and Transaction Count Chart */}
-        <ComboChart 
-          data={processedData}
-          isLoading={isLoading}
-          period={period}
-        />
-
-        {/* Category and Service Evaluation */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
-          <CategoryEvaluation data={processedData} isLoading={isLoading} />
-          <ServiceEvaluation data={processedData} isLoading={isLoading} />
-        </div>
+    <div className="p-6 space-y-6">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold">Shop Statistics</h1>
+        <button
+          onClick={generatePdf}
+          disabled={loading}
+          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+        >
+          {loading ? 'Generating...' : 'Export as PDF'}
+        </button>
       </div>
-    </StaffLayout>
+      
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardContent className="p-6">
+            <h2 className="text-xl font-bold mb-4">Revenue Statistics</h2>
+            <p>This is a placeholder for revenue statistics charts.</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-6">
+            <h2 className="text-xl font-bold mb-4">Customer Analytics</h2>
+            <p>This is a placeholder for customer analytics charts.</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-6">
+            <h2 className="text-xl font-bold mb-4">Staff Performance</h2>
+            <p>This is a placeholder for staff performance metrics.</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-6">
+            <h2 className="text-xl font-bold mb-4">Service Popularity</h2>
+            <p>This is a placeholder for service popularity charts.</p>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 }
