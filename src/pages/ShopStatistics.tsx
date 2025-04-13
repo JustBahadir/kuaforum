@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,6 +21,7 @@ import { StatsHeader } from "./ShopStatistics/components/StatsHeader";
 import { StatsSummaryCards } from "./ShopStatistics/components/StatsSummaryCards";
 import { StatisticsCommentary } from "./ShopStatistics/components/StatisticsCommentary";
 
+// Use module augmentation instead of a separate interface
 declare module 'jspdf' {
   interface jsPDF {
     autoTable: (options: any) => jsPDF;
