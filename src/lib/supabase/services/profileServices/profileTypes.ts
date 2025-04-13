@@ -3,7 +3,7 @@ export interface ProfileUpdateData {
   first_name?: string;
   last_name?: string;
   phone?: string;
-  role?: 'admin' | 'staff' | 'customer';
+  role?: string;
   gender?: "erkek" | "kadın" | null;
   birthdate?: string;
   avatar_url?: string;
@@ -19,7 +19,7 @@ export interface ProfileServiceError {
 export interface ProfileCreationParams {
   first_name?: string;
   last_name?: string;
-  role?: 'admin' | 'staff' | 'customer';
+  role?: string;
   phone?: string;
   gender?: "erkek" | "kadın" | null;
   birthdate?: string;

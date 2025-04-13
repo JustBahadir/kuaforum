@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -117,7 +118,10 @@ export default function Customers() {
               <ArrowLeft className="h-4 w-4" /> Müşteri Listesine Dön
             </Button>
             <CustomerDetails 
-              customerId={selectedCustomer.id} 
+              customer={selectedCustomer} 
+              onEdit={handleCustomerUpdated}
+              onDelete={handleCustomerDeleted}
+              dukkanId={dukkanData?.id}
             />
           </>
         ) : (

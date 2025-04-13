@@ -79,6 +79,11 @@ serve(async (req: Request) => {
     
     console.log(`Filtered to ${filteredAppointments.length} appointments`);
     
+    // Check for existing operations
+    const processedAppointments = [];
+    const operations = [];
+    let countProcessed = 0;
+    
     // Get service details for all services in appointments
     const allServiceIds = new Set<number>();
     filteredAppointments.forEach(app => {
@@ -112,11 +117,6 @@ serve(async (req: Request) => {
     
     const existingOperationIds = new Set(existingOperations?.map(op => op.randevu_id) || []);
     console.log(`Found ${existingOperationIds.size} existing operations`);
-    
-    // Process each appointment
-    const processedAppointments = [];
-    const operations = [];
-    let countProcessed = 0;
     
     // Process each appointment
     for (const appointment of filteredAppointments) {
@@ -160,8 +160,7 @@ serve(async (req: Request) => {
                 musteri_id: appointment.musteri_id,
                 randevu_id: appointment.id,
                 created_at: appointmentDateTime.toISOString(),
-                notlar: appointment.notlar || null,
-                photos: [] // Initialize with empty photos array
+                notlar: appointment.notlar || null
               };
               
               operations.push(operation);

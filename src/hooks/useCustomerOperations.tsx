@@ -11,13 +11,6 @@ import { supabase } from "@/lib/supabase/client";
 const SUPABASE_URL = "https://xkbjjcizncwkrouvoujw.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhrYmpqY2l6bmN3a3JvdXZvdWp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzk5Njg0NzksImV4cCI6MjA1NTU0NDQ3OX0.RyaC2G1JPHUGQetAcvMgjsTp_nqBB2rZe3U-inU2osw";
 
-interface OperationTotals {
-  totalAmount: number;
-  totalPoints: number;
-  totalPaid: number;
-  showPoints?: boolean; // Add this to the interface
-}
-
 export function useCustomerOperations(customerId?: number) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState({
@@ -134,18 +127,13 @@ export function useCustomerOperations(customerId?: number) {
     }
   };
   
-  // Calculate totals with the showPoints property
-  const totals: OperationTotals | undefined = operations?.length > 0 ? operations.reduce((acc, op) => {
+  // Calculate totals
+  const totals = operations?.reduce((acc, op) => {
     acc.totalAmount += (op.amount || 0);
     acc.totalPoints += (op.points || 0);
     acc.totalPaid += 0; // This needs to be fixed if we have paid data
     return acc;
-  }, { totalAmount: 0, totalPoints: 0, totalPaid: 0, showPoints: false } as OperationTotals) : undefined;
-
-  // Set showPoints to true if we have any operations with points
-  if (totals && totals.totalPoints > 0) {
-    totals.showPoints = true;
-  }
+  }, { totalAmount: 0, totalPoints: 0, totalPaid: 0 });
 
   return { 
     operations,

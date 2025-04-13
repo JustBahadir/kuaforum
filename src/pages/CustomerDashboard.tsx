@@ -16,8 +16,7 @@ export default function CustomerDashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-600"></div>
-        <p className="ml-2 text-sm text-gray-600">Yükleniyor...</p>
+        <p>Yükleniyor...</p>
       </div>
     );
   }
@@ -33,13 +32,12 @@ export default function CustomerDashboard() {
 
       {/* Mobile Navigation */}
       <MobileNav 
-        activeTab={activeTab}
-        userName={userName}
+        activeTab={activeTab} 
         onLogout={handleLogout} 
       />
       
-      {/* Main content - adjusted for both mobile top and bottom nav */}
-      <div className="flex-1 md:p-8 p-4 pt-20 md:pt-8 pb-24 md:pb-8 md:ml-64">
+      {/* Main content */}
+      <div className="flex-1 md:p-8 p-4 mt-16 md:mt-0">
         <Routes>
           <Route path="/" element={<CustomerHome />} />
           <Route path="/profile" element={<CustomerProfile />} />

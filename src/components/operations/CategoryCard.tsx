@@ -13,7 +13,6 @@ export function CategoryCard({ kategori, islemler, isStaff, onServiceEdit, onSer
   const [isServiceFormOpen, setIsServiceFormOpen] = useState(false);
   const [islemAdi, setIslemAdi] = useState("");
   const [fiyat, setFiyat] = useState(0);
-  const [maliyet, setMaliyet] = useState(0);
   const [puan, setPuan] = useState(0);
   const [duzenleId, setDuzenleId] = useState(null);
   
@@ -41,7 +40,6 @@ export function CategoryCard({ kategori, islemler, isStaff, onServiceEdit, onSer
   const handleAddServiceClick = () => {
     setIslemAdi("");
     setFiyat(0);
-    setMaliyet(0);
     setPuan(0);
     setDuzenleId(null);
     setIsServiceFormOpen(true);
@@ -53,7 +51,6 @@ export function CategoryCard({ kategori, islemler, isStaff, onServiceEdit, onSer
     const service = {
       islem_adi: islemAdi,
       fiyat,
-      maliyet,
       puan,
       kategori_id: kategori.id
     };
@@ -150,8 +147,6 @@ export function CategoryCard({ kategori, islemler, isStaff, onServiceEdit, onSer
         setIslemAdi={setIslemAdi}
         fiyat={fiyat}
         setFiyat={setFiyat}
-        maliyet={maliyet}
-        setMaliyet={setMaliyet}
         puan={puan}
         setPuan={setPuan}
         kategoriId={kategori.id}

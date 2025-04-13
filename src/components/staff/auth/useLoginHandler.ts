@@ -2,7 +2,6 @@
 import { useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
 
 export function useLoginHandler(onSuccess: () => void) {
   const [loading, setLoading] = useState(false);
@@ -48,12 +47,13 @@ export function useLoginHandler(onSuccess: () => void) {
       console.log("Kullanıcı rolü:", userRole);
       
       if (userRole === 'staff' || userRole === 'admin') {
-        console.log("Personel/admin girişi başarılı. Hemen yönlendirme yapılacak.");
+        console.log("Personel/admin girişi başarılı. Yönlendirme yapılacak.");
         toast.success("Giriş başarılı!");
         
-        // Başarılı giriş sonrası callback'i hemen çağır
-        console.log("onSuccess callback çağırılıyor...");
-        onSuccess();
+        // Başarılı giriş sonrası callback'i çağır
+        setTimeout(() => {
+          onSuccess();
+        }, 100);
       } else {
         console.error("Kullanıcının rolü personel veya admin değil:", userRole);
         setLoginError("Bu hesap personel girişi için yetkilendirilmemiş. Lütfen personel hesabınızla giriş yapın.");

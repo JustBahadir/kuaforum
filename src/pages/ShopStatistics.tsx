@@ -1,183 +1,437 @@
-
-import React, { useState } from 'react';
+import { useState, useEffect } from "react";
+import { StaffLayout } from "@/components/ui/staff-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Download } from "lucide-react";
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
-import { useCustomerAuth } from '@/hooks/useCustomerAuth';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useCustomerAuth } from "@/hooks/useCustomerAuth";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useQuery } from "@tanstack/react-query";
+import { personelIslemleriServisi } from "@/lib/supabase/services/personelIslemleriServisi";
+import { randevuServisi } from "@/lib/supabase/services/randevuServisi";
+import { personelServisi } from "@/lib/supabase";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
+import { CircleAlert, Info } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
 
-// Create declarations for the extended jsPDF type with autoTable
-declare module 'jspdf' {
-  interface jsPDF {
-    autoTable: (options: any) => jsPDF;
-    previousAutoTable?: {
-      finalY: number;
-    };
+const CHART_COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ff7300'];
+
+const formatValue = (value: number | string): string | number => {
+  if (typeof value === 'number') {
+    return formatCurrency(value);
   }
-}
+  return value;
+};
+
+const formatTooltipValue = (value: any): string => {
+  if (typeof value === 'number') {
+    return formatCurrency(value);
+  }
+  if (Array.isArray(value)) {
+    return formatCurrency(value[1] as number - (value[0] as number));
+  }
+  return String(value);
+};
+
+const tooltipFormatter = (value: any): string => {
+  return formatTooltipValue(value);
+};
 
 export default function ShopStatistics() {
-  const { dukkanAdi } = useCustomerAuth();
-  const [activeView, setActiveView] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('daily');
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const { userRole, dukkanId } = useCustomerAuth();
+  const [period, setPeriod] = useState<string>("weekly");
+  const [hasData, setHasData] = useState(false);
+  
+  const { data: personeller = [], isLoading: isLoadingPersoneller } = useQuery({
+    queryKey: ['personel-list'],
+    queryFn: () => personelServisi.hepsiniGetir(),
+    enabled: !!dukkanId
+  });
 
-  // Sample data for demonstration
-  const sampleData = [
-    { date: '2023-01-01', revenue: 1500, customers: 12, services: 15 },
-    { date: '2023-01-02', revenue: 1200, customers: 9, services: 11 },
-    { date: '2023-01-03', revenue: 1800, customers: 15, services: 18 },
-    { date: '2023-01-04', revenue: 900, customers: 7, services: 8 },
-    { date: '2023-01-05', revenue: 2200, customers: 18, services: 22 },
-  ];
+  const { data: islemler = [], isLoading: isLoadingIslemler } = useQuery({
+    queryKey: ['personel-islemleri', dukkanId],
+    queryFn: async () => {
+      return await personelIslemleriServisi.hepsiniGetir();
+    },
+    enabled: !!dukkanId
+  });
 
-  // Format currency
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('tr-TR', {
-      style: 'currency',
-      currency: 'TRY'
-    }).format(amount);
-  };
+  const { data: randevular = [], isLoading: isLoadingRandevular } = useQuery({
+    queryKey: ['randevular', dukkanId],
+    queryFn: async () => {
+      if (dukkanId) {
+        return await randevuServisi.dukkanRandevulariniGetir(dukkanId);
+      }
+      return [];
+    },
+    enabled: !!dukkanId
+  });
 
-  // Function to export statistics as PDF
-  const exportToPDF = () => {
-    const doc = new jsPDF();
-    const shopName = dukkanAdi || 'Dükkan';
-    
-    // Add shop name and title
-    doc.setFontSize(20);
-    doc.text(shopName, 105, 15, { align: 'center' });
-    
-    doc.setFontSize(16);
-    doc.text('İstatistik Raporu', 105, 25, { align: 'center' });
-    
-    // Add date
-    doc.setFontSize(10);
-    doc.text(`Rapor tarihi: ${new Date().toLocaleDateString('tr-TR')}`, 105, 35, { align: 'center' });
-    
-    // Generate table
-    doc.autoTable({
-      head: [['Tarih', 'Gelir', 'Müşteri Sayısı', 'Hizmet Sayısı']],
-      body: sampleData.map(row => [
-        row.date,
-        formatCurrency(row.revenue),
-        row.customers,
-        row.services
-      ]),
-      startY: 40,
-      theme: 'grid',
-      headStyles: { fillColor: [75, 0, 130] }
-    });
-    
-    // Calculate totals
-    const totalRevenue = sampleData.reduce((sum, row) => sum + row.revenue, 0);
-    const totalCustomers = sampleData.reduce((sum, row) => sum + row.customers, 0);
-    const totalServices = sampleData.reduce((sum, row) => sum + row.services, 0);
-    
-    // Add totals row
-    const finalY = (doc.previousAutoTable?.finalY || 40) + 10;
-    doc.setFont('helvetica', 'bold');
-    doc.text('Toplam:', 20, finalY);
-    doc.text(formatCurrency(totalRevenue), 70, finalY);
-    doc.text(totalCustomers.toString(), 120, finalY);
-    doc.text(totalServices.toString(), 170, finalY);
-    
-    // Add page numbers
-    const pageCount = doc.internal.pages.length - 1;
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(10);
-      doc.text(`Sayfa ${i} / ${pageCount}`, 105, doc.internal.pageSize.height - 10, { align: 'center' });
+  const [weeklyData, setWeeklyData] = useState<any[]>([]);
+  const [monthlyData, setMonthlyData] = useState<any[]>([]);
+  const [servicePerformanceData, setServicePerformanceData] = useState<any[]>([]);
+  const [personnelPerformanceData, setPersonnelPerformanceData] = useState<any[]>([]);
+  const [summaryData, setSummaryData] = useState({
+    totalRevenue: 0,
+    customerCount: 0,
+    operationCount: 0,
+    averageSpending: 0,
+    completedAppointments: 0
+  });
+
+  const isLoading = isLoadingIslemler || isLoadingRandevular || isLoadingPersoneller;
+
+  useEffect(() => {
+    if (!isLoading) {
+      setHasData(islemler.length > 0 || randevular.length > 0);
+      
+      const totalRevenue = islemler.reduce((sum, islem) => sum + (islem.tutar || 0), 0);
+      const customerCount = [...new Set(randevular.map(r => r.musteri_id).filter(Boolean))].length;
+      const operationCount = islemler.length;
+      const averageSpending = customerCount > 0 ? totalRevenue / customerCount : 0;
+      const completedAppointments = randevular.filter(r => r.durum === 'tamamlandi').length;
+      
+      setSummaryData({
+        totalRevenue,
+        customerCount,
+        operationCount,
+        averageSpending,
+        completedAppointments
+      });
+      
+      const weekDays = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
+      const weeklyStats = weekDays.map(day => ({
+        name: day,
+        ciro: 0,
+        musteri: 0
+      }));
+      
+      islemler.forEach(islem => {
+        if (islem.created_at) {
+          const date = new Date(islem.created_at);
+          const dayIndex = date.getDay() === 0 ? 6 : date.getDay() - 1;
+          weeklyStats[dayIndex].ciro += islem.tutar || 0;
+          weeklyStats[dayIndex].musteri += 1;
+        }
+      });
+      
+      setWeeklyData(weeklyStats);
+      
+      const monthlyStats = [
+        { name: 'Hafta 1', ciro: 0, musteri: 0 },
+        { name: 'Hafta 2', ciro: 0, musteri: 0 },
+        { name: 'Hafta 3', ciro: 0, musteri: 0 },
+        { name: 'Hafta 4', ciro: 0, musteri: 0 },
+      ];
+      
+      islemler.forEach(islem => {
+        if (islem.created_at) {
+          const date = new Date(islem.created_at);
+          const weekOfMonth = Math.floor((date.getDate() - 1) / 7);
+          if (weekOfMonth < 4) {
+            monthlyStats[weekOfMonth].ciro += islem.tutar || 0;
+            monthlyStats[weekOfMonth].musteri += 1;
+          }
+        }
+      });
+      
+      setMonthlyData(monthlyStats);
+      
+      const serviceStats: Record<string, { count: number, revenue: number }> = {};
+      
+      islemler.forEach(islem => {
+        const serviceName = islem.aciklama ? 
+          (islem.aciklama.includes(' hizmeti verildi') ? 
+            islem.aciklama.split(' hizmeti verildi')[0] : 
+            islem.aciklama) : 
+          'Bilinmeyen Hizmet';
+            
+        if (!serviceStats[serviceName]) {
+          serviceStats[serviceName] = { count: 0, revenue: 0 };
+        }
+        serviceStats[serviceName].count += 1;
+        serviceStats[serviceName].revenue += islem.tutar || 0;
+      });
+      
+      const servicePerformance = Object.keys(serviceStats).map(name => ({
+        name,
+        count: serviceStats[name].count,
+        revenue: serviceStats[name].revenue
+      })).sort((a, b) => b.revenue - a.revenue);
+      
+      setServicePerformanceData(servicePerformance);
+      
+      const personnelPerformance = personeller.map(personel => {
+        const personelIslemleri = islemler.filter(islem => islem.personel_id === personel.id);
+        const totalRevenue = personelIslemleri.reduce((sum, islem) => sum + (islem.tutar || 0), 0);
+        const operationCount = personelIslemleri.length;
+        
+        return {
+          name: personel.ad_soyad,
+          ciro: totalRevenue,
+          islemSayisi: operationCount,
+          prim: personelIslemleri.reduce((sum, islem) => sum + (islem.odenen || 0), 0)
+        };
+      }).filter(item => item.islemSayisi > 0);
+      
+      setPersonnelPerformanceData(personnelPerformance);
     }
-    
-    // Save the PDF
-    doc.save(`${shopName}_istatistik_raporu.pdf`);
-  };
+  }, [islemler, randevular, personeller, isLoading, dukkanId]);
 
   return (
-    <div className="container mx-auto p-4">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Dükkan İstatistikleri</h1>
-        <Button onClick={exportToPDF} variant="outline" className="flex items-center gap-2">
-          <Download size={16} />
-          PDF İndir
-        </Button>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Toplam Gelir</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(7600)}</div>
-            <p className="text-xs text-muted-foreground mt-1">Son 30 gün</p>
-          </CardContent>
-        </Card>
+    <StaffLayout>
+      <div className="container mx-auto py-6">
+        <h1 className="text-3xl font-bold mb-6">Dükkan İstatistikleri</h1>
         
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Müşteri Sayısı</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">61</div>
-            <p className="text-xs text-muted-foreground mt-1">Son 30 gün</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Hizmet Sayısı</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">74</div>
-            <p className="text-xs text-muted-foreground mt-1">Son 30 gün</p>
-          </CardContent>
-        </Card>
+        {isLoading ? (
+          <div className="flex justify-center p-12">
+            <div className="w-10 h-10 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
+          </div>
+        ) : !hasData ? (
+          <Alert className="mb-6">
+            <Info className="h-4 w-4" />
+            <AlertTitle>Henüz veri bulunmuyor</AlertTitle>
+            <AlertDescription>
+              İstatistikler, yapılan işlemler ve randevular sonrasında otomatik olarak oluşturulacaktır.
+              Önce birkaç randevu ve işlem girişi yapınız.
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <Tabs defaultValue={period} onValueChange={setPeriod} className="space-y-4">
+            <div className="flex justify-between items-center">
+              <TabsList>
+                <TabsTrigger value="weekly">Haftalık</TabsTrigger>
+                <TabsTrigger value="monthly">Aylık</TabsTrigger>
+                <TabsTrigger value="yearly">Yıllık</TabsTrigger>
+              </TabsList>
+            </div>
+            
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Toplam Ciro
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{formatCurrency(summaryData.totalRevenue)}</div>
+                  <p className="text-xs text-muted-foreground">
+                    Güncel ciro bilgisi
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Müşteri Sayısı
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{summaryData.customerCount}</div>
+                  <p className="text-xs text-muted-foreground">
+                    Toplam müşteri sayısı
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    İşlem Sayısı
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{summaryData.operationCount}</div>
+                  <p className="text-xs text-muted-foreground">
+                    Toplam işlem sayısı
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Ortalama Harcama
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{formatCurrency(summaryData.averageSpending)}</div>
+                  <p className="text-xs text-muted-foreground">
+                    Müşteri başına ortalama
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Tamamlanan Randevular
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{summaryData.completedAppointments}</div>
+                  <p className="text-xs text-muted-foreground">
+                    Toplam tamamlanan randevu
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+            
+            <TabsContent value="weekly" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Haftalık Performans</CardTitle>
+                </CardHeader>
+                <CardContent className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={weeklyData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis yAxisId="left" />
+                      <YAxis yAxisId="right" orientation="right" />
+                      <Tooltip formatter={tooltipFormatter} />
+                      <Legend />
+                      <Line 
+                        yAxisId="left" 
+                        type="monotone" 
+                        dataKey="ciro" 
+                        stroke="#8884d8" 
+                        activeDot={{ r: 8 }} 
+                        name="Ciro (₺)" 
+                      />
+                      <Line 
+                        yAxisId="right" 
+                        type="monotone" 
+                        dataKey="musteri" 
+                        stroke="#82ca9d" 
+                        name="Müşteri Sayısı" 
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+              
+              <div className="grid md:grid-cols-2 gap-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Hizmet Performansı</CardTitle>
+                  </CardHeader>
+                  <CardContent className="h-[300px]">
+                    {servicePerformanceData.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={servicePerformanceData.slice(0, 5)}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="name" />
+                          <YAxis />
+                          <Tooltip 
+                            formatter={(value: any) => {
+                              return formatValue(Number(value)).toString();
+                            }}
+                          />
+                          <Legend />
+                          <Bar dataKey="count" fill="#8884d8" name="İşlem Sayısı" />
+                          <Bar dataKey="revenue" fill="#82ca9d" name="Ciro (₺)" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="flex items-center justify-center h-full">
+                        <p className="text-muted-foreground">Henüz hizmet verisi bulunmuyor</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Personel Performansı</CardTitle>
+                  </CardHeader>
+                  <CardContent className="h-[300px]">
+                    {personnelPerformanceData.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={personnelPerformanceData}
+                            dataKey="ciro"
+                            nameKey="name"
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={80}
+                            label={({name, percent}) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                          >
+                            {personnelPerformanceData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip formatter={(value: any) => formatCurrency(value as number)} />
+                          <Legend />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="flex items-center justify-center h-full">
+                        <p className="text-muted-foreground">Henüz personel performans verisi bulunmuyor</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="monthly" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Aylık Performans</CardTitle>
+                </CardHeader>
+                <CardContent className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={monthlyData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis yAxisId="left" />
+                      <YAxis yAxisId="right" orientation="right" />
+                      <Tooltip 
+                        formatter={(value: any) => {
+                          if (typeof value === 'number') {
+                            return formatCurrency(value);
+                          }
+                          return value.toString();
+                        }}
+                      />
+                      <Legend />
+                      <Line 
+                        yAxisId="left" 
+                        type="monotone" 
+                        dataKey="ciro" 
+                        stroke="#8884d8" 
+                        activeDot={{ r: 8 }} 
+                        name="Ciro (₺)" 
+                      />
+                      <Line 
+                        yAxisId="right" 
+                        type="monotone" 
+                        dataKey="musteri" 
+                        stroke="#82ca9d" 
+                        name="Müşteri Sayısı" 
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="yearly">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Veri Hazırlanıyor</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Alert>
+                    <CircleAlert className="h-4 w-4" />
+                    <AlertTitle>Bilgi</AlertTitle>
+                    <AlertDescription>
+                      Yıllık istatistik verileri için yeterli veri bulunmuyor. Daha sonra tekrar kontrol edin.
+                    </AlertDescription>
+                  </Alert>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        )}
       </div>
-      
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold mb-4">Görünüm Seçin</h2>
-        <div className="flex space-x-2">
-          <Button 
-            variant={activeView === 'daily' ? 'default' : 'outline'} 
-            onClick={() => setActiveView('daily')}
-          >
-            Günlük
-          </Button>
-          <Button 
-            variant={activeView === 'weekly' ? 'default' : 'outline'} 
-            onClick={() => setActiveView('weekly')}
-          >
-            Haftalık
-          </Button>
-          <Button 
-            variant={activeView === 'monthly' ? 'default' : 'outline'} 
-            onClick={() => setActiveView('monthly')}
-          >
-            Aylık
-          </Button>
-          <Button 
-            variant={activeView === 'yearly' ? 'default' : 'outline'} 
-            onClick={() => setActiveView('yearly')}
-          >
-            Yıllık
-          </Button>
-        </div>
-      </div>
-      
-      <div className="bg-white rounded-lg p-4 shadow">
-        <h2 className="text-xl font-semibold mb-4">
-          {activeView === 'daily' && 'Günlük İstatistikler'}
-          {activeView === 'weekly' && 'Haftalık İstatistikler'}
-          {activeView === 'monthly' && 'Aylık İstatistikler'}
-          {activeView === 'yearly' && 'Yıllık İstatistikler'}
-        </h2>
-        
-        <p className="text-gray-500">
-          Bu bölüm seçilen zaman aralığına göre detaylı istatistikleri gösterecektir.
-        </p>
-      </div>
-    </div>
+    </StaffLayout>
   );
 }

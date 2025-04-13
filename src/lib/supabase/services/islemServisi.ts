@@ -1,3 +1,4 @@
+
 import { supabase } from '../client';
 import { Islem } from '../types';
 
@@ -50,7 +51,7 @@ export const islemServisi = {
     }
   },
 
-  async ekle(islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number; maliyet?: number }) {
+  async ekle(islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) {
     try {
       // Get the max sira value for the category
       const query = supabase
@@ -88,7 +89,7 @@ export const islemServisi = {
     }
   },
 
-  islemEkle: async (islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number; maliyet?: number }) => {
+  islemEkle: async (islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) => {
     try {
       console.log("İşlem ekleniyor:", islem);
       return await islemServisi.ekle(islem);
@@ -98,7 +99,7 @@ export const islemServisi = {
     }
   },
 
-  async guncelle(id: number, islem: { islem_adi?: string; fiyat?: number; puan?: number; kategori_id?: number; maliyet?: number }) {
+  async guncelle(id: number, islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) {
     try {
       const { data, error } = await supabase
         .from('islemler')
@@ -115,7 +116,7 @@ export const islemServisi = {
     }
   },
 
-  islemGuncelle: async (id: number, islem: { islem_adi?: string; fiyat?: number; puan?: number; kategori_id?: number; maliyet?: number }) => {
+  islemGuncelle: async (id: number, islem: { islem_adi: string; fiyat: number; puan: number; kategori_id?: number }) => {
     try {
       return await islemServisi.guncelle(id, islem);
     } catch (error) {
@@ -165,8 +166,7 @@ export const islemServisi = {
         islem_adi: islem.islem_adi,
         fiyat: islem.fiyat,
         puan: islem.puan,
-        kategori_id: islem.kategori_id,
-        maliyet: islem.maliyet
+        kategori_id: islem.kategori_id
       }));
 
       const { data, error } = await supabase

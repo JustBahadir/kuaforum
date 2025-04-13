@@ -1,238 +1,242 @@
 
 import { useState } from "react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { PersonnelDetailsDialog } from "./PersonnelDetailsDialog";
+import { PersonnelDialog } from "./PersonnelDialog";
+import { Plus, Trash, UserMinus } from "lucide-react";
+import { toast } from "sonner";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { LoadingButton } from "@/components/ui/loading-button";
+import { personelServisi } from "@/lib/supabase";
+import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import {
-  Card, 
-  CardHeader,
-  CardContent,
-  CardTitle
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Phone, Mail, Calendar, Trash2, Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { 
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
-  SelectValue,
+  SelectValue
 } from "@/components/ui/select";
-import { PersonnelDetailsDialog } from "./PersonnelDetailsDialog";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { personelServisi } from "@/lib/supabase";
-import { toast } from "sonner";
-import { PersonnelDeleteDialog } from "./PersonnelDeleteDialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
-interface PersonnelListProps {
-  personnel?: any[];
-  isLoading?: boolean;
-  onEdit?: (personnel: any) => void;
-  onDelete?: (id: number) => void;
-  onPersonnelSelect?: (id: number | null) => void;
+interface Personnel {
+  id: number;
+  ad_soyad: string;
+  unvan: string;
+  auth_id: string;
+  dukkan_id: number;
+  avatar_url?: string;
 }
 
-export function PersonnelList({ 
-  personnel: externalPersonnel, 
-  isLoading: externalLoading = false, 
-  onEdit = () => {}, 
-  onDelete = () => {},
-  onPersonnelSelect = () => {}
-}: PersonnelListProps) {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filter, setFilter] = useState("all");
-  const [selectedPersonnel, setSelectedPersonnel] = useState<any>(null);
-  const [personnelToDelete, setPersonnelToDelete] = useState<{id: number, name: string} | null>(null);
-  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+interface PersonnelListProps {
+  onPersonnelSelect?: (personelId: number) => void;
+}
 
+export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
+  const [openDetails, setOpenDetails] = useState(false);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [selectedPersonnel, setSelectedPersonnel] = useState<Personnel | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedPersonnelToDelete, setSelectedPersonnelToDelete] = useState<number | null>(null);
+  const { dukkanId } = useCustomerAuth();
   const queryClient = useQueryClient();
 
-  // Use internal data fetching if external data is not provided
-  const { data: fetchedPersonnel = [], isLoading: fetchLoading } = useQuery({
-    queryKey: ['personel-list'],
+  const { data: personelListesi = [], isLoading } = useQuery({
+    queryKey: ['personel', dukkanId],
     queryFn: () => personelServisi.hepsiniGetir(),
-    enabled: !externalPersonnel,
+    enabled: !!dukkanId,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true
   });
 
-  // Determine which personnel data and loading state to use
-  const personnel = externalPersonnel || fetchedPersonnel;
-  const isLoading = externalLoading || fetchLoading;
-
-  // Make sure personnel is always an array
-  const personnelArray = Array.isArray(personnel) ? personnel : [];
-  
-  const filteredPersonnel = personnelArray.filter(p => {
-    if (!p) return false;
-    const matchesSearch = p.ad_soyad?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    if (filter === "all") return matchesSearch;
-    if (filter === "maasli") {
-      return matchesSearch && ["aylik_maas", "haftalik_maas", "gunluk_maas"].includes(p.calisma_sistemi);
+  const deletePersonnelMutation = useMutation({
+    mutationFn: (id: number) => personelServisi.sil(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['personel'] });
+      toast.success("Personel başarıyla silindi");
+    },
+    onError: (error) => {
+      console.error("Personel silinirken hata:", error);
+      toast.error("Personel silinirken bir hata oluştu");
     }
-    if (filter === "yuzdelik") {
-      return matchesSearch && p.calisma_sistemi === "prim_komisyon";
-    }
-    
-    return matchesSearch && p.calisma_sistemi === filter;
   });
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
-  };
-
-  const handleDeleteClick = (id: number, name: string) => {
-    setPersonnelToDelete({ id, name });
-    setIsDeleteDialogOpen(true);
-  };
-
-  const handlePersonnelClick = (personnel: any) => {
-    setSelectedPersonnel(personnel);
-    setIsDetailsDialogOpen(true);
-    // Call the onPersonnelSelect prop with the selected personnel id
+  const handleDetailsOpen = (personel: Personnel) => {
+    setSelectedPersonnel(personel);
+    setOpenDetails(true);
     if (onPersonnelSelect) {
-      onPersonnelSelect(personnel.id);
+      onPersonnelSelect(personel.id);
     }
   };
 
-  const getInitials = (name: string) => {
-    if (!name) return "??";
-    return name
-      .split(" ")
-      .map(n => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
+  const openDeletePersonnelDialog = () => {
+    setDeleteDialogOpen(true);
   };
 
-  const getWorkingSystemLabel = (system: string, p: any) => {
-    switch (system) {
-      case "aylik_maas": return "Aylık Maaş";
-      case "haftalik_maas": return "Haftalık Maaş";
-      case "gunluk_maas": return "Günlük Maaş";
-      case "prim_komisyon": return `%${p?.prim_yuzdesi || 0}`;
-      default: return system;
+  const confirmDelete = async () => {
+    if (selectedPersonnelToDelete) {
+      setIsDeleting(true);
+      try {
+        await deletePersonnelMutation.mutateAsync(selectedPersonnelToDelete);
+      } catch (error) {
+        console.error("Personel silinirken hata:", error);
+      } finally {
+        setIsDeleting(false);
+        setDeleteOpen(false);
+        setDeleteDialogOpen(false);
+        setSelectedPersonnelToDelete(null);
+      }
     }
   };
 
-  const getBadgeVariant = (system: string) => {
-    if (["aylik_maas", "haftalik_maas", "gunluk_maas"].includes(system)) {
-      return "outline";
-    }
-    return "secondary";
+  const handlePersonnelToDeleteChange = (value: string) => {
+    setSelectedPersonnelToDelete(Number(value));
   };
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-10">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      <div className="flex justify-center items-center p-8">
+        <div className="w-10 h-10 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Personel ara..."
-            className="pl-8"
-            value={searchTerm}
-            onChange={handleSearchChange}
-          />
+    <div>
+      <div className="md:flex md:items-center md:justify-between mb-6">
+        <div className="mb-4 md:mb-0">
+          <h1 className="text-2xl font-semibold">Personel Listesi</h1>
         </div>
-        <Select value={filter} onValueChange={setFilter}>
-          <SelectTrigger className="sm:w-[180px]">
-            <SelectValue placeholder="Çalışma şekli" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tümü</SelectItem>
-            <SelectItem value="maasli">Maaşlı</SelectItem>
-            <SelectItem value="yuzdelik">Yüzdelik</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex gap-2">
+          <Button variant="destructive" onClick={openDeletePersonnelDialog}>
+            <UserMinus className="w-5 h-5 mr-2" />
+            Personel Sil
+          </Button>
+          <Button onClick={() => setOpenDialog(true)}>
+            <Plus className="w-5 h-5 mr-2" />
+            Personel Ekle
+          </Button>
+        </div>
       </div>
 
-      {filteredPersonnel.length === 0 ? (
-        <div className="text-center py-8">
-          <p className="text-muted-foreground">
-            {personnelArray.length === 0 ? "Personel bulunamadı." : "Arama kriterleriyle eşleşen personel bulunamadı."}
-          </p>
-        </div>
-      ) : (
-        <ScrollArea className="h-[calc(100vh-250px)]">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredPersonnel.map((p) => (
-              <Card key={p.id} className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer" onClick={() => handlePersonnelClick(p)}>
-                <CardHeader className="p-4 pb-2">
-                  <div className="flex items-center space-x-4">
-                    <Avatar className="h-12 w-12 border">
-                      <AvatarImage src={p.avatar_url} alt={p.ad_soyad} />
-                      <AvatarFallback>{getInitials(p.ad_soyad)}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <CardTitle className="text-base truncate">{p.ad_soyad}</CardTitle>
-                      <Badge 
-                        variant={getBadgeVariant(p.calisma_sistemi)} 
-                        className="mt-1"
-                      >
-                        {p.calisma_sistemi === "prim_komisyon" 
-                          ? `%${p.prim_yuzdesi || 0}` 
-                          : getWorkingSystemLabel(p.calisma_sistemi, p)
-                        }
-                      </Badge>
-                    </div>
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteClick(p.id, p.ad_soyad);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-4 pt-2">
-                  <div className="space-y-1 text-sm">
-                    <div className="flex items-center text-muted-foreground">
-                      <Phone className="h-3.5 w-3.5 mr-2" />
-                      <span>{p.telefon}</span>
-                    </div>
-                    <div className="flex items-center text-muted-foreground">
-                      <Mail className="h-3.5 w-3.5 mr-2" />
-                      <span className="truncate">{p.eposta}</span>
-                    </div>
-                    {p.birth_date && (
-                      <div className="flex items-center text-muted-foreground">
-                        <Calendar className="h-3.5 w-3.5 mr-2" />
-                        <span>{new Date(p.birth_date).toLocaleDateString('tr-TR')}</span>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+        {personelListesi.map((personel) => (
+          <div 
+            key={personel.id} 
+            className="bg-white rounded-lg shadow-md p-5 cursor-pointer hover:bg-gray-50 transition-colors duration-200"
+            onClick={() => handleDetailsOpen(personel)}
+          >
+            <div className="flex items-center space-x-4">
+              <Avatar className="h-16 w-16">
+                {personel.avatar_url ? (
+                  <AvatarImage src={personel.avatar_url} alt={personel.ad_soyad} />
+                ) : (
+                  <AvatarFallback className="bg-purple-100 text-purple-800 text-lg">
+                    {personel.ad_soyad
+                      .split(' ')
+                      .map((name: string) => name[0])
+                      .join('')
+                      .substring(0, 2)
+                      .toUpperCase()}
+                  </AvatarFallback>
+                )}
+              </Avatar>
+              <div className="flex-grow">
+                <h2 className="text-lg font-semibold">{personel.ad_soyad}</h2>
+                <p className="text-gray-500">{personel.unvan || "Personel"}</p>
+              </div>
+            </div>
           </div>
-        </ScrollArea>
+        ))}
+      </div>
+
+      <PersonnelDialog 
+        open={openDialog} 
+        onOpenChange={setOpenDialog} 
+      />
+
+      {selectedPersonnel && (
+        <PersonnelDetailsDialog
+          personel={selectedPersonnel}
+          open={openDetails}
+          onOpenChange={setOpenDetails}
+        />
       )}
 
-      <PersonnelDetailsDialog
-        isOpen={isDetailsDialogOpen}
-        onOpenChange={setIsDetailsDialogOpen}
-        personnel={selectedPersonnel}
-      />
-      
-      <PersonnelDeleteDialog 
-        isOpen={isDeleteDialogOpen}
-        onOpenChange={setIsDeleteDialogOpen}
-        personnelId={personnelToDelete?.id || null}
-        personnelName={personnelToDelete?.name || ""}
-      />
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Personel Sil</DialogTitle>
+            <DialogDescription>
+              Silmek istediğiniz personeli seçin. Bu işlem geri alınamaz.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <Select onValueChange={handlePersonnelToDeleteChange}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Personel seç" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectLabel>Personeller</SelectLabel>
+                  {personelListesi.map((personel) => (
+                    <SelectItem key={personel.id} value={personel.id.toString()}>
+                      {personel.ad_soyad}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>İptal</Button>
+            <Button 
+              variant="destructive"
+              onClick={() => selectedPersonnelToDelete ? setDeleteOpen(true) : toast.error("Lütfen bir personel seçin")}
+              disabled={!selectedPersonnelToDelete}
+            >
+              Personeli Sil
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Emin misiniz?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bu işlemi gerçekleştirmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>İptal</AlertDialogCancel>
+            <LoadingButton
+              variant="destructive"
+              loading={isDeleting}
+              onClick={confirmDelete}
+            >
+              Evet, Sil
+            </LoadingButton>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

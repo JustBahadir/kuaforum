@@ -9,9 +9,6 @@ import { PersonnelForm } from "./PersonnelForm";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { personelServisi } from "@/lib/supabase";
 import { toast } from "sonner";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
-import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 
 interface PersonnelDialogProps {
   open: boolean;
@@ -20,7 +17,6 @@ interface PersonnelDialogProps {
 
 export function PersonnelDialog({ open, onOpenChange }: PersonnelDialogProps) {
   const queryClient = useQueryClient();
-  const { userRole } = useCustomerAuth();
   
   const { mutate, isPending } = useMutation({
     mutationFn: (personelData: any) => personelServisi.ekle(personelData),
@@ -39,27 +35,9 @@ export function PersonnelDialog({ open, onOpenChange }: PersonnelDialogProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Personel Sistemi</DialogTitle>
+          <DialogTitle>Yeni Personel Ekle</DialogTitle>
         </DialogHeader>
-        
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Personel eklemek için, personellerinizin dükkan kodunuzu kullanarak üye olmalarını sağlayın. 
-            Dükkanınızın kodunu Dükkan Ayarları sayfasından öğrenebilirsiniz.
-          </AlertDescription>
-        </Alert>
-        
-        {userRole === 'admin' ? (
-          <PersonnelForm onSubmit={mutate} isLoading={isPending} />
-        ) : (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Yalnızca dükkan yöneticileri personel ekleyebilir.
-            </AlertDescription>
-          </Alert>
-        )}
+        <PersonnelForm onSubmit={mutate} isLoading={isPending} />
       </DialogContent>
     </Dialog>
   );

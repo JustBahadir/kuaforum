@@ -1,183 +1,218 @@
 
-import { useState } from "react";
-import { 
-  Dialog, 
+import { useState, useEffect } from "react";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
+import { Personel, personelServisi, profilServisi } from "@/lib/supabase";
+import { toast } from "sonner";
+import {
+  Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { personelServisi } from "@/lib/supabase";
-import { 
-  Form, 
-  FormControl, 
-  FormField, 
-  FormItem, 
-  FormLabel 
-} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useForm } from "react-hook-form";
-import { Personel } from "@/lib/supabase/types";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { useCustomerAuth } from "@/hooks/useCustomerAuth";
+import { Copy } from "lucide-react";
 
 interface PersonnelEditDialogProps {
-  isOpen: boolean;
+  personelId: number;
+  open: boolean;
   onOpenChange: (open: boolean) => void;
-  personnel: Personel;
+  onEditComplete?: () => void;
 }
 
-export function PersonnelEditDialog({
-  isOpen,
-  onOpenChange,
-  personnel
-}: PersonnelEditDialogProps) {
+export function PersonnelEditDialog({ personelId, open, onOpenChange, onEditComplete }: PersonnelEditDialogProps) {
+  const [personelDuzenle, setPersonelDuzenle] = useState<Personel | null>(null);
+  const [formattedIBAN, setFormattedIBAN] = useState<string>('');
+  const [isSaving, setIsSaving] = useState(false);
+  const { userRole } = useCustomerAuth();
   const queryClient = useQueryClient();
-  
-  const form = useForm({
-    defaultValues: {
-      calisma_sistemi: personnel?.calisma_sistemi || "aylik_maas",
-      maas: personnel?.maas || 0,
-      prim_yuzdesi: personnel?.prim_yuzdesi || 0,
+
+  // Fetch personel data based on personelId
+  const { data: personel, isLoading, refetch } = useQuery({
+    queryKey: ['personel', personelId],
+    queryFn: () => personelServisi.getirById(personelId),
+    enabled: open && personelId > 0,
+    retry: 3,
+    retryDelay: 1000
+  });
+
+  // Update personelDuzenle state when personel data is loaded
+  useEffect(() => {
+    if (personel) {
+      setPersonelDuzenle(personel);
+      // Format IBAN if it exists
+      if (personel.iban) {
+        setFormattedIBAN(profilServisi.formatIBAN(personel.iban));
+      } else {
+        setFormattedIBAN('');
+      }
+    }
+  }, [personel]);
+
+  // Copy IBAN to clipboard
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success("IBAN kopyalandı");
+  };
+
+  const { mutate: personelGuncelle } = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Partial<Personel> }) =>
+      personelServisi.guncelle(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['personel'] });
+      setIsSaving(false);
+      toast.success("Personel başarıyla güncellendi.");
+      onOpenChange(false);
+      if (onEditComplete) {
+        onEditComplete();
+      }
+    },
+    onError: (error) => {
+      setIsSaving(false);
+      toast.error("Personel güncellenirken bir hata oluştu: " + (error as Error).message);
     }
   });
 
-  const updateMutation = useMutation({
-    mutationFn: async (data: any) => {
-      return await personelServisi.guncelle(personnel.id, data);
-    },
-    onSuccess: () => {
-      toast.success("Personel başarıyla güncellendi!");
-      queryClient.invalidateQueries({ queryKey: ["personeller"] });
-      queryClient.invalidateQueries({ queryKey: ["personel-list"] });
-      queryClient.invalidateQueries({ queryKey: ["personel"] });
-      onOpenChange(false);
-    },
-    onError: (error) => {
-      console.error(error);
-      toast.error("Personel güncellenirken bir hata oluştu.");
-    },
-  });
-
-  const onSubmit = (data: any) => {
-    updateMutation.mutate(data);
+  const handleUpdate = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (personelDuzenle) {
+      setIsSaving(true);
+      
+      // Only send the fields that should be editable by admin
+      const { id } = personelDuzenle;
+      const guncellenecekVeriler: Partial<Personel> = {
+        maas: personelDuzenle.maas
+      };
+      
+      console.log("Güncellenecek maaş değeri:", personelDuzenle.maas);
+      personelGuncelle({ id, data: guncellenecekVeriler });
+    }
   };
-  
-  // Watch for changes to the working system field to conditionally show/hide fields
-  const calisma_sistemi = form.watch("calisma_sistemi");
-  
-  // Check if the working system is a salary type
-  const isSalaryType = ["aylik_maas", "haftalik_maas", "gunluk_maas"].includes(calisma_sistemi);
+
+  if (isLoading || !personelDuzenle) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Personel Düzenle</DialogTitle>
+            <DialogDescription>Personel bilgileri yükleniyor, lütfen bekleyin...</DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-center p-4">
+            <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Çalışma Bilgilerini Düzenle</DialogTitle>
-        </DialogHeader>
-        
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="calisma_sistemi"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Çalışma Sistemi</FormLabel>
-                  <RadioGroup
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                    className="grid grid-cols-2 gap-4"
-                  >
-                    <FormItem className="flex items-center space-x-3 space-y-0">
-                      <FormControl>
-                        <RadioGroupItem value="aylik_maas" />
-                      </FormControl>
-                      <FormLabel className="font-normal">
-                        Aylık Maaşlı
-                      </FormLabel>
-                    </FormItem>
-                    <FormItem className="flex items-center space-x-3 space-y-0">
-                      <FormControl>
-                        <RadioGroupItem value="haftalik_maas" />
-                      </FormControl>
-                      <FormLabel className="font-normal">
-                        Haftalık Maaşlı
-                      </FormLabel>
-                    </FormItem>
-                    <FormItem className="flex items-center space-x-3 space-y-0">
-                      <FormControl>
-                        <RadioGroupItem value="gunluk_maas" />
-                      </FormControl>
-                      <FormLabel className="font-normal">
-                        Günlük Maaşlı
-                      </FormLabel>
-                    </FormItem>
-                    <FormItem className="flex items-center space-x-3 space-y-0">
-                      <FormControl>
-                        <RadioGroupItem value="prim_komisyon" />
-                      </FormControl>
-                      <FormLabel className="font-normal">
-                        Yüzdelik Çalışan
-                      </FormLabel>
-                    </FormItem>
-                  </RadioGroup>
-                </FormItem>
-              )}
-            />
-          
-            <FormField
-              control={form.control}
-              name="maas"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Maaş Bilgisi</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      {...field}
-                      disabled={!isSalaryType}
-                      value={isSalaryType ? (field.value || '') : ''}
-                      onChange={(e) => field.onChange(Number(e.target.value))}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="prim_yuzdesi"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Prim Oranı (%)</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      min="0"
-                      max="100"
-                      {...field}
-                      disabled={isSalaryType}
-                      value={!isSalaryType ? (field.value || '') : ''}
-                      onChange={(e) => field.onChange(Number(e.target.value))}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-            
-            <div className="flex justify-end space-x-3">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                İptal
-              </Button>
-              <Button type="submit" disabled={updateMutation.isPending}>
-                {updateMutation.isPending ? "Kaydediliyor..." : "Kaydet"}
-              </Button>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <form onSubmit={handleUpdate}>
+          <DialogHeader>
+            <DialogTitle>Personel Düzenle</DialogTitle>
+            <DialogDescription>
+              Personelin maaş bilgisini düzenleyebilirsiniz. Diğer bilgiler personelin kendi profilinden senkronize edilir.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit_ad_soyad">Ad Soyad</Label>
+              <Input
+                id="edit_ad_soyad"
+                value={personelDuzenle.ad_soyad}
+                className="bg-gray-100"
+                disabled={true}
+              />
+              <p className="text-xs text-gray-500">Ad Soyad bilgisi personel profilinden senkronize edilecektir.</p>
             </div>
-          </form>
-        </Form>
+            
+            <div className="space-y-2">
+              <Label htmlFor="edit_telefon">Telefon</Label>
+              <Input
+                id="edit_telefon"
+                type="tel"
+                value={personelDuzenle.telefon}
+                className="bg-gray-100"
+                disabled={true}
+              />
+              <p className="text-xs text-gray-500">Telefon bilgisi personel profilinden senkronize edilecektir.</p>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="edit_eposta">E-posta</Label>
+              <Input
+                id="edit_eposta"
+                type="email"
+                value={personelDuzenle.eposta}
+                className="bg-gray-100"
+                disabled={true}
+              />
+              <p className="text-xs text-gray-500">E-posta bilgisi personel profilinden senkronize edilecektir.</p>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="edit_adres">Adres</Label>
+              <Input
+                id="edit_adres"
+                value={personelDuzenle.adres}
+                className="bg-gray-100"
+                disabled={true}
+              />
+              <p className="text-xs text-gray-500">Adres bilgisi personel profilinden senkronize edilecektir.</p>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="edit_maas">Maaş</Label>
+              <Input
+                id="edit_maas"
+                type="number"
+                value={personelDuzenle.maas || 0}
+                onChange={(e) =>
+                  setPersonelDuzenle((prev) =>
+                    prev ? { ...prev, maas: Number(e.target.value) } : null
+                  )
+                }
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="edit_iban">IBAN</Label>
+              <div className="flex">
+                <Input
+                  id="edit_iban"
+                  value={formattedIBAN}
+                  className="bg-gray-100 flex-1"
+                  disabled={true}
+                />
+                {formattedIBAN && (
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => copyToClipboard(formattedIBAN)}
+                    className="ml-2"
+                  >
+                    <Copy size={16} />
+                  </Button>
+                )}
+              </div>
+              <p className="text-xs text-gray-500">
+                IBAN bilgisi personel profilinden senkronize edilecektir.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="submit" disabled={isSaving}>
+              {isSaving ? "Kaydediliyor..." : "Değişiklikleri Kaydet"}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

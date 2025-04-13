@@ -1,175 +1,306 @@
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { StaffLayout } from "@/components/ui/staff-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { supabase } from "@/lib/supabase/client";
-import { toast } from "sonner";
-import { Building2, Mail, Phone, MapPin, Briefcase, UserCircle, AlertCircle, UserCog } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { StaffLayout } from "@/components/layout/StaffLayout";
-import { formatCurrency } from "@/lib/utils";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { toast } from "sonner";
+import { supabase } from "@/lib/supabase/client";
+import { profilServisi } from "@/lib/supabase/services/profilServisi";
+import { useCustomerAuth } from "@/hooks/useCustomerAuth";
+import { formatPhoneNumber } from "@/utils/phoneFormatter";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import { User, Phone, Mail, Calendar, MapPin, CreditCard, Camera, Trash2, Edit, Save } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-export default function StaffProfile() {
-  const navigate = useNavigate();
-  const [user, setUser] = useState<any>(null);
-  const [profile, setProfile] = useState<any>(null);
-  const [personnelData, setPersonnelData] = useState<any>(null);
-  const [shopData, setShopData] = useState<any>(null);
+const StaffProfile = () => {
+  const { refreshProfile } = useCustomerAuth();
   const [loading, setLoading] = useState(true);
-  const [updating, setUpdating] = useState(false);
-  const [activeTab, setActiveTab] = useState("profile");
+  const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [editMode, setEditMode] = useState(false);
   
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
-    email: "",
     phone: "",
+    email: "",
+    gender: null as ("erkek" | "kadın" | null),
+    birthdate: "",
     address: "",
-    bio: "",
-    skills: ""
+    iban: "",
+    avatarUrl: ""
   });
 
   useEffect(() => {
-    loadUserData();
+    const fetchProfile = async () => {
+      setLoading(true);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          toast.error("Kullanıcı bilgisi alınamadı");
+          return;
+        }
+
+        setFormData(prev => ({ ...prev, email: user.email || "" }));
+
+        if (user.user_metadata) {
+          const metaFirstName = user.user_metadata.first_name;
+          const metaLastName = user.user_metadata.last_name;
+          const metaPhone = user.user_metadata.phone;
+          const metaGender = user.user_metadata.gender;
+          const metaBirthdate = user.user_metadata.birthdate;
+          const metaAddress = user.user_metadata.address;
+          const metaIban = user.user_metadata.iban;
+          const metaAvatarUrl = user.user_metadata.avatar_url;
+
+          if (metaFirstName || metaLastName || metaPhone || metaGender || metaBirthdate) {
+            console.log("Kullanıcı metadata'sinden profil verisi kullanılıyor");
+            let formattedPhone = metaPhone ? formatPhoneNumber(metaPhone) : "";
+
+            setFormData({
+              firstName: metaFirstName || "",
+              lastName: metaLastName || "",
+              phone: formattedPhone,
+              email: user.email || "",
+              gender: metaGender || null,
+              birthdate: metaBirthdate || "",
+              address: metaAddress || "",
+              iban: metaIban || "",
+              avatarUrl: metaAvatarUrl || ""
+            });
+
+            setLoading(false);
+            return;
+          }
+        }
+
+        const profile = await profilServisi.getir();
+        if (profile) {
+          setFormData({
+            firstName: profile.first_name || "",
+            lastName: profile.last_name || "",
+            phone: profile.phone ? formatPhoneNumber(profile.phone) : "",
+            gender: profile.gender || null,
+            birthdate: profile.birthdate || "",
+            email: user.email || "",
+            address: profile.address || "",
+            iban: profile.iban || "",
+            avatarUrl: profile.avatar_url || ""
+          });
+        }
+      } catch (error) {
+        console.error("Profil bilgileri alınırken hata:", error);
+        toast.error("Profil bilgileri alınırken bir hata oluştu");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
   }, []);
-  
-  const loadUserData = async () => {
-    setLoading(true);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    
+    if (name === 'phone') {
+      setFormData(prev => ({ ...prev, [name]: formatPhoneNumber(value) }));
+    } else if (name === 'iban') {
+      // Format IBAN as you type with 26 character limit (TR + 24 digits)
+      // Only allow TR prefix and digits, limit the total length
+      
+      // Strip all non-digits except for TR at beginning
+      let cleaned = '';
+      if (value.startsWith('TR')) {
+        cleaned = 'TR' + value.substring(2).replace(/\D/g, '');
+      } else {
+        cleaned = 'TR' + value.replace(/\D/g, '');
+      }
+      
+      // Limit to exactly 26 characters (TR + 24 digits)
+      cleaned = cleaned.substring(0, 26);
+      
+      // Add spaces every 4 characters for readability
+      let displayValue = '';
+      for (let i = 0; i < cleaned.length; i++) {
+        if (i > 0 && i % 4 === 0) {
+          displayValue += ' ';
+        }
+        displayValue += cleaned[i];
+      }
+      
+      setFormData(prev => ({ ...prev, [name]: displayValue }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
+  };
+
+  const handleSelectChange = (name: string, value: "erkek" | "kadın" | "") => {
+    setFormData(prev => ({ 
+      ...prev, 
+      [name]: value === "" ? null : value
+    }));
+  };
+
+  const handleAvatarUpload = async (file: File) => {
     try {
-      // Get current user data
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        navigate("/staff-login");
+      setIsUploading(true);
+      
+      // Validate file
+      if (!file.type.startsWith('image/')) {
+        toast.error('Lütfen sadece resim dosyası yükleyin');
+        return;
+      }
+
+      // File size check (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Dosya boyutu 5MB\'ı geçemez');
         return;
       }
       
-      setUser(user);
+      // Generate a unique filename
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
       
-      // Get profile data
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-        
-      if (!profileError && profileData) {
-        setProfile(profileData);
-        
-        // Set form data
-        setFormData({
-          firstName: profileData.first_name || "",
-          lastName: profileData.last_name || "",
-          email: user.email || "",
-          phone: profileData.phone || "",
-          address: profileData.address || "",
-          bio: profileData.bio || "",
-          skills: profileData.skills || ""
-        });
-      }
+      // Upload file to Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('photos')
+        .upload(filePath, file, { upsert: true });
       
-      // Get personnel data
-      const { data: personnelData, error: personnelError } = await supabase
-        .from('personel')
-        .select('*')
-        .eq('auth_id', user.id)
-        .single();
-        
-      if (!personnelError && personnelData) {
-        setPersonnelData(personnelData);
-        
-        // Get shop data if dukkan_id exists
-        if (personnelData.dukkan_id) {
-          const { data: shopData, error: shopError } = await supabase
-            .from('dukkanlar')
-            .select('*')
-            .eq('id', personnelData.dukkan_id)
-            .single();
-            
-          if (!shopError && shopData) {
-            setShopData(shopData);
-          }
+      if (error) {
+        if (error.message.includes('Bucket not found')) {
+          throw new Error('Depolama alanı bulunamadı. Lütfen sistem yöneticisiyle iletişime geçin.');
+        } else if (error.message.includes('Failed to fetch')) {
+          throw new Error('Bağlantı hatası. Lütfen internet bağlantınızı kontrol edin ve tekrar deneyin.');
         } else {
-          // Check for pending shop join requests
-          const { data: pendingRequests, error: requestsError } = await supabase
-            .from('personel_shop_requests')
-            .select('*, dukkanlar:dukkan_id(*)')
-            .eq('personel_id', personnelData.id)
-            .eq('status', 'pending');
-            
-          if (!requestsError && pendingRequests?.length > 0) {
-            // Set shop status as pending
-            setShopData({
-              ad: pendingRequests[0].dukkanlar.ad,
-              status: 'pending'
-            });
-          }
+          throw error;
         }
       }
-    } catch (error) {
-      console.error("Error loading user data:", error);
-      toast.error("Profil bilgileri yüklenirken bir hata oluştu");
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  const handleUpdateProfile = async () => {
-    setUpdating(true);
-    try {
-      // Update profile data
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          first_name: formData.firstName,
-          last_name: formData.lastName,
-          phone: formData.phone,
-          address: formData.address,
-          bio: formData.bio,
-          skills: formData.skills
-        })
-        .eq('id', user.id);
-        
-      if (profileError) throw profileError;
       
-      // Update personnel record if exists
-      if (personnelData) {
-        const { error: personnelError } = await supabase
-          .from('personel')
-          .update({
-            ad_soyad: `${formData.firstName} ${formData.lastName}`,
-            telefon: formData.phone,
-            adres: formData.address
-          })
-          .eq('id', personnelData.id);
-          
-        if (personnelError) throw personnelError;
+      // Get public URL for the uploaded file
+      const { data: { publicUrl } } = supabase.storage.from('photos').getPublicUrl(filePath);
+      
+      // Update form and user metadata
+      setFormData(prev => ({ ...prev, avatarUrl: publicUrl }));
+      
+      await supabase.auth.updateUser({
+        data: { avatar_url: publicUrl }
+      });
+      
+      // Also update profile to ensure consistency
+      const { error: updateError } = await supabase.from('profiles')
+        .update({ avatar_url: publicUrl })
+        .eq('id', (await supabase.auth.getUser()).data.user?.id);
+      
+      if (updateError && !updateError.message.includes('Could not find the') && !updateError.message.includes('column')) {
+        console.error("Profil güncelleme hatası:", updateError);
       }
       
-      toast.success("Profil bilgileriniz güncellendi");
-      loadUserData();
+      toast.success("Profil fotoğrafı başarıyla güncellendi");
+      refreshProfile();
     } catch (error) {
-      console.error("Error updating profile:", error);
-      toast.error("Profil güncellenirken bir hata oluştu");
+      console.error("Avatar yükleme hatası:", error);
+      toast.error("Profil fotoğrafı yüklenirken bir hata oluştu: " + (error instanceof Error ? error.message : String(error)));
     } finally {
-      setUpdating(false);
+      setIsUploading(false);
     }
   };
   
-  const getInitials = (firstName: string, lastName: string) => {
-    return `${firstName?.charAt(0) || ''}${lastName?.charAt(0) || ''}`.toUpperCase();
+  const handleRemoveAvatar = async () => {
+    try {
+      setIsUploading(true);
+      
+      // Update user metadata to remove avatar_url
+      await supabase.auth.updateUser({
+        data: { avatar_url: '' }
+      });
+      
+      // Update form state
+      setFormData(prev => ({ ...prev, avatarUrl: '' }));
+      
+      // Also update profile to ensure consistency
+      const { error: updateError } = await supabase.from('profiles')
+        .update({ avatar_url: null })
+        .eq('id', (await supabase.auth.getUser()).data.user?.id);
+      
+      if (updateError && !updateError.message.includes('Could not find the') && !updateError.message.includes('column')) {
+        console.error("Profil güncelleme hatası:", updateError);
+      }
+      
+      toast.success("Profil fotoğrafı başarıyla kaldırıldı");
+      refreshProfile();
+    } catch (error) {
+      console.error("Avatar silme hatası:", error);
+      toast.error("Profil fotoğrafı kaldırılırken bir hata oluştu");
+    } finally {
+      setIsUploading(false);
+    }
   };
-  
+
+  const handleAvatarInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleAvatarUpload(file);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+
+    try {
+      // Clean IBAN by removing spaces
+      const phoneForSaving = formData.phone.replace(/\s/g, '');
+      const ibanForSaving = formData.iban.replace(/\s/g, '');
+
+      await profilServisi.guncelle({
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        phone: phoneForSaving,
+        gender: formData.gender,
+        birthdate: formData.birthdate,
+        address: formData.address,
+        iban: ibanForSaving
+      });
+
+      // Update user metadata for consistency
+      await supabase.auth.updateUser({
+        data: {
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          phone: phoneForSaving,
+          gender: formData.gender,
+          birthdate: formData.birthdate,
+          address: formData.address,
+          iban: ibanForSaving
+        }
+      });
+
+      toast.success("Profil bilgileriniz başarıyla güncellendi");
+      refreshProfile();
+      setEditMode(false); // Düzenleme modunu kapat
+    } catch (error: any) {
+      console.error("Profil güncelleme hatası:", error);
+      toast.error(error.message || "Profil güncellenirken bir hata oluştu");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   if (loading) {
     return (
       <StaffLayout>
-        <div className="flex items-center justify-center h-[60vh]">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        <div className="flex justify-center items-center h-64">
+          <p>Yükleniyor...</p>
         </div>
       </StaffLayout>
     );
@@ -177,205 +308,253 @@ export default function StaffProfile() {
 
   return (
     <StaffLayout>
-      <div className="container mx-auto py-6">
-        <div className="flex flex-col md:flex-row gap-6">
-          <div className="md:w-1/3">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle>Profil Bilgileri</CardTitle>
-                <CardDescription>Kişisel bilgilerinizi görüntüleyin ve güncelleyin</CardDescription>
-              </CardHeader>
-              
-              <CardContent className="space-y-4">
-                <div className="flex flex-col items-center space-y-3 pt-2">
-                  <Avatar className="h-24 w-24">
-                    <AvatarImage src={profile?.avatar_url} />
-                    <AvatarFallback className="text-lg">
-                      {getInitials(profile?.first_name || '', profile?.last_name || '')}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="text-center">
-                    <h3 className="font-medium text-lg">
-                      {profile?.first_name} {profile?.last_name}
-                    </h3>
-                    <p className="text-muted-foreground text-sm">{user?.email}</p>
+      <div className="container mx-auto p-4">
+        <h1 className="text-2xl font-bold mb-6">Profil Bilgilerim</h1>
+        
+        <Card>
+          <CardHeader className="flex flex-row justify-between items-center">
+            <CardTitle>Profil Bilgilerini Düzenle</CardTitle>
+            <Button
+              onClick={() => {
+                if (editMode) {
+                  // Düzenleme modunda ise formu gönder
+                  document.getElementById('profileForm')?.dispatchEvent(
+                    new Event('submit', { cancelable: true, bubbles: true })
+                  );
+                } else {
+                  // Düzenleme modunda değilse düzenleme modunu aç
+                  setEditMode(true);
+                }
+              }}
+              disabled={isSaving || isUploading}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              {editMode ? (
+                <>
+                  <Save className="h-4 w-4 mr-1" />
+                  {isSaving ? "Kaydediliyor..." : "Değişiklikleri Kaydet"}
+                </>
+              ) : (
+                <>
+                  <Edit className="h-4 w-4 mr-1" />
+                  Düzenle
+                </>
+              )}
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <form id="profileForm" onSubmit={handleSubmit} className="space-y-6">
+              {/* Avatar Upload Section - Photo on right side now */}
+              <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-6">
+                <div className="flex-1 order-2 md:order-1">
+                  <h3 className="text-lg font-medium mb-2">Profil Fotoğrafı</h3>
+                  <p className="text-sm text-gray-500 mb-4">
+                    PNG, JPG, GIF dosyası yükleyin (max 5MB)
+                  </p>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline"
+                      type="button"
+                      className="flex items-center gap-2"
+                      onClick={() => document.getElementById('avatar-input')?.click()}
+                      disabled={isUploading || !editMode}
+                    >
+                      <Camera size={16} />
+                      Fotoğraf {formData.avatarUrl ? "Değiştir" : "Ekle"}
+                    </Button>
+                    
+                    {formData.avatarUrl && (
+                      <Button
+                        variant="destructive"
+                        type="button"
+                        className="flex items-center gap-2"
+                        onClick={handleRemoveAvatar}
+                        disabled={isUploading || !editMode}
+                      >
+                        <Trash2 size={16} />
+                        Fotoğrafı Kaldır
+                      </Button>
+                    )}
+                    
+                    <input
+                      type="file"
+                      id="avatar-input"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleAvatarInputChange}
+                      disabled={isUploading || !editMode}
+                    />
                   </div>
                 </div>
-                
-                <div className="pt-4 space-y-3">
-                  {personnelData?.dukkan_id && shopData ? (
-                    <div className="flex items-center gap-2">
-                      <Building2 className="h-4 w-4 text-muted-foreground" />
-                      <span>{shopData.ad}</span>
+                <div className="w-32 h-32 flex-shrink-0 relative rounded-full overflow-hidden border order-1 md:order-2">
+                  {isUploading ? (
+                    <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                      <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
                     </div>
-                  ) : shopData?.status === 'pending' ? (
-                    <Alert variant="warning">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription className="text-sm">
-                        {shopData.ad} dükkanına katılım isteğiniz onay bekliyor.
-                      </AlertDescription>
-                    </Alert>
+                  ) : formData.avatarUrl ? (
+                    <Avatar className="w-full h-full">
+                      <AvatarImage src={formData.avatarUrl} alt="Profil Fotoğrafı" className="object-cover" />
+                      <AvatarFallback>
+                        {formData.firstName && formData.lastName 
+                          ? formData.firstName[0] + formData.lastName[0] 
+                          : "KU"}
+                      </AvatarFallback>
+                    </Avatar>
                   ) : (
-                    <Alert>
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription className="text-sm">
-                        Henüz bir dükkana bağlı değilsiniz.
-                      </AlertDescription>
-                    </Alert>
+                    <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-400">
+                      <User size={40} />
+                    </div>
                   )}
-                  
-                  {personnelData && (
-                    <>
-                      <div className="flex items-center gap-2">
-                        <Briefcase className="h-4 w-4 text-muted-foreground" />
-                        <span>{personnelData.calisma_sistemi === 'prim_komisyon' ? 
-                          `Prim/Komisyon (${personnelData.prim_yuzdesi}%)` : 
-                          personnelData.calisma_sistemi === 'aylik_maas' ? 'Aylık Maaş' : 
-                          personnelData.calisma_sistemi === 'haftalik_maas' ? 'Haftalık Maaş' : 
-                          'Günlük Maaş'
-                        }</span>
-                      </div>
-                      
-                      {personnelData.maas > 0 && personnelData.calisma_sistemi !== 'prim_komisyon' && (
-                        <div className="flex items-center gap-2">
-                          <UserCog className="h-4 w-4 text-muted-foreground" />
-                          <span>Maaş: {formatCurrency(personnelData.maas)}</span>
-                        </div>
-                      )}
-                    </>
-                  )}
-                  
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span>{profile?.phone || '--'}</span>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <span>{user?.email}</span>
-                  </div>
-                  
-                  <div className="flex items-start gap-2">
-                    <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                    <span>{profile?.address || '--'}</span>
-                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-          
-          <div className="md:w-2/3">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle>Profil Yönetimi</CardTitle>
-                <CardDescription>Profilinizi güncelleyin ve düzenleyin</CardDescription>
-              </CardHeader>
+              </div>
               
-              <CardContent className="p-6">
-                <Tabs 
-                  defaultValue={activeTab} 
-                  value={activeTab} 
-                  onValueChange={setActiveTab} 
-                  className="space-y-6"
-                >
-                  <TabsList>
-                    <TabsTrigger value="profile">Kişisel Bilgiler</TabsTrigger>
-                    <TabsTrigger value="professional">Mesleki Bilgiler</TabsTrigger>
-                  </TabsList>
-                  
-                  <TabsContent value="profile" className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="firstName">Ad</Label>
-                        <Input
-                          id="firstName"
-                          value={formData.firstName}
-                          onChange={(e) => setFormData({...formData, firstName: e.target.value})}
-                        />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="lastName">Soyad</Label>
-                        <Input
-                          id="lastName"
-                          value={formData.lastName}
-                          onChange={(e) => setFormData({...formData, lastName: e.target.value})}
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="email">E-posta</Label>
-                      <Input
-                        id="email"
-                        value={formData.email}
-                        disabled
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Telefon</Label>
-                      <Input
-                        id="phone"
-                        value={formData.phone}
-                        onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="address">Adres</Label>
-                      <Input
-                        id="address"
-                        value={formData.address}
-                        onChange={(e) => setFormData({...formData, address: e.target.value})}
-                      />
-                    </div>
-                  </TabsContent>
-                  
-                  <TabsContent value="professional" className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="bio">Hakkımda</Label>
-                      <Textarea
-                        id="bio"
-                        value={formData.bio}
-                        onChange={(e) => setFormData({...formData, bio: e.target.value})}
-                        placeholder="Kendiniz hakkında kısa bir bilgi..."
-                        rows={4}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="skills">Uzmanlık Alanları</Label>
-                      <Textarea
-                        id="skills"
-                        value={formData.skills}
-                        onChange={(e) => setFormData({...formData, skills: e.target.value})}
-                        placeholder="Saç kesimi, ombre, perma, vb..."
-                        rows={3}
-                      />
-                    </div>
-                    
-                    <div className="mt-2">
-                      <Alert>
-                        <UserCircle className="h-4 w-4" />
-                        <AlertDescription>
-                          Doldurduğunuz mesleki bilgiler ileride iş başvurularında kullanılacaktır.
-                        </AlertDescription>
-                      </Alert>
-                    </div>
-                  </TabsContent>
-                </Tabs>
-                
-                <div className="mt-6 flex justify-end">
-                  <Button onClick={handleUpdateProfile} disabled={updating}>
-                    {updating ? "Güncelleniyor..." : "Profili Güncelle"}
-                  </Button>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="firstName" className="flex items-center gap-2">
+                    <User size={16} />
+                    Ad
+                  </Label>
+                  <Input
+                    id="firstName"
+                    name="firstName"
+                    value={formData.firstName}
+                    onChange={handleChange}
+                    placeholder="Adınız"
+                    disabled={!editMode}
+                  />
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="lastName" className="flex items-center gap-2">
+                    <User size={16} />
+                    Soyad
+                  </Label>
+                  <Input
+                    id="lastName"
+                    name="lastName"
+                    value={formData.lastName}
+                    onChange={handleChange}
+                    placeholder="Soyadınız"
+                    disabled={!editMode}
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="phone" className="flex items-center gap-2">
+                  <Phone size={16} />
+                  Telefon
+                </Label>
+                <Input
+                  id="phone"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  placeholder="05XX XXX XX XX"
+                  maxLength={14}
+                  disabled={!editMode}
+                />
+              </div>
+              
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="gender" className="flex items-center gap-2">
+                    <User size={16} />
+                    Cinsiyet
+                  </Label>
+                  <Select
+                    value={formData.gender || ""}
+                    onValueChange={(value) => handleSelectChange("gender", value as "erkek" | "kadın")}
+                    disabled={!editMode}
+                  >
+                    <SelectTrigger id="gender">
+                      <SelectValue placeholder="Cinsiyet seçin" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="erkek">Erkek</SelectItem>
+                      <SelectItem value="kadın">Kadın</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="birthdate" className="flex items-center gap-2">
+                    <Calendar size={16} />
+                    Doğum Tarihi
+                  </Label>
+                  <Input
+                    id="birthdate"
+                    name="birthdate"
+                    type="date"
+                    value={formData.birthdate || ""}
+                    onChange={handleChange}
+                    disabled={!editMode}
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="address" className="flex items-center gap-2">
+                  <MapPin size={16} />
+                  Ev Adresi
+                </Label>
+                <Textarea
+                  id="address"
+                  name="address"
+                  value={formData.address}
+                  onChange={handleChange}
+                  placeholder="Açık adresinizi girin"
+                  rows={3}
+                  disabled={!editMode}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="iban" className="flex items-center gap-2">
+                  <CreditCard size={16} />
+                  IBAN
+                </Label>
+                <Input
+                  id="iban"
+                  name="iban"
+                  value={formData.iban}
+                  onChange={handleChange}
+                  placeholder="TR00 0000 0000 0000 0000 0000 00"
+                  disabled={!editMode}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="email" className="flex items-center gap-2 opacity-70">
+                  <Mail size={16} />
+                  E-posta (değiştirilemez)
+                </Label>
+                <Input
+                  id="email"
+                  name="email"
+                  value={formData.email}
+                  disabled
+                  className="bg-gray-50"
+                />
+                <p className="text-xs text-gray-500">E-posta adresinizi değiştirmek için lütfen yetkili ile iletişime geçin.</p>
+              </div>
+            </form>
+          </CardContent>
+          {/* Düzenleme modu aktif değilse footer'ı kaldıralım */}
+          {/* <CardFooter className="justify-end">
+            <Button 
+              type="submit"
+              form="profileForm"
+              disabled={isSaving || isUploading}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              {isSaving ? "Kaydediliyor..." : "Bilgilerimi Güncelle"}
+            </Button>
+          </CardFooter> */}
+        </Card>
       </div>
     </StaffLayout>
   );
-}
+};
+
+export default StaffProfile;

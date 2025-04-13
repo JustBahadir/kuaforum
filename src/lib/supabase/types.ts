@@ -1,157 +1,154 @@
-// Personel tablosu için arayüz
+
+import { PostgrestError } from '@supabase/supabase-js';
+
+export interface Profile {
+  id: string;
+  first_name: string;
+  last_name: string;
+  role: string;
+  created_at: string;
+  phone?: string;
+  gender?: "erkek" | "kadın" | null;
+  birthdate?: string | null;
+  avatar_url?: string;
+  address?: string;
+  iban?: string;
+  dukkan_id?: number | null;
+}
+
+export interface Dukkan {
+  id: number;
+  ad: string;
+  telefon?: string;
+  adres?: string;
+  acik_adres?: string;
+  sahibi_id: string;
+  kod: string;
+  created_at: string;
+  logo_url?: string;
+  active: boolean;
+}
+
+export interface Kategori {
+  id: number;
+  kategori_adi: string;
+  sira: number;
+  created_at: string;
+}
+
+export interface Islem {
+  id: number;
+  islem_adi: string;
+  fiyat: number;
+  kategori_id?: number;
+  sira: number;
+  puan: number;
+  created_at: string;
+}
+
 export interface Personel {
   id: number;
   ad_soyad: string;
   telefon: string;
   eposta: string;
   adres: string;
-  created_at?: string;
   personel_no: string;
   maas: number;
-  gunluk_ucret?: number;
-  haftalik_ucret?: number;
+  calisma_sistemi: "haftalik" | "aylik";
   prim_yuzdesi: number;
-  calisma_sistemi: string;
-  iban?: string;
-  dukkan_id?: number;
   auth_id?: string;
+  dukkan_id?: number;
+  dukkan?: Dukkan;
+  created_at: string;
+  iban?: string;
   avatar_url?: string;
-  baslama_tarihi?: string;
-  aktif?: boolean;
+  birth_date?: string | null;
 }
 
-// İşlemler tablosu için arayüz
-export interface Islem {
-  id: number;
-  islem_adi: string;
-  kategori_id?: number;
-  fiyat: number;
-  puan: number;
-  maliyet?: number;
-  sira?: number;
-  created_at?: string;
-}
-
-// İşlem kategorileri tablosu için arayüz
-export interface IslemKategori {
-  id: number;
-  kategori_adi: string;
-  sira?: number;
-  created_at?: string;
-}
-
-// Kategori alias for backward compatibility
-export type Kategori = IslemKategori;
-
-// Personel işlemi veri modeli
 export interface PersonelIslemi {
   id: number;
-  personel_id?: number;
-  islem_id?: number;
+  personel_id: number;
+  islem_id: number;
   tutar: number;
   odenen: number;
   prim_yuzdesi: number;
-  aciklama: string;
-  musteri_id?: number;
-  randevu_id?: number;
-  created_at?: string;
   puan: number;
-  islem?: Islem;
-  personel?: Personel;
-  musteri?: {
-    id: number;
-    first_name: string;
-    last_name?: string;
-  };
+  aciklama: string;
   notlar?: string;
   photos?: string[];
+  randevu_id?: number;
+  created_at: string;
+  islem?: Islem;
+  personel?: Personel;
+  musteri_id?: number;
+  musteri?: Musteri;
 }
 
-// Müşteri verileri
 export interface Musteri {
   id: number;
   first_name: string;
   last_name?: string;
   phone?: string;
+  birthdate?: string | null;
+  created_at: string;
   dukkan_id?: number;
-  birthdate?: string;
-  created_at?: string;
+  auth_id?: string;
 }
 
-// Randevu durum tipi
-export type RandevuDurumu = 'beklemede' | 'onaylandi' | 'iptal_edildi' | 'tamamlandi';
+export type RandevuDurumu = "beklemede" | "onaylandi" | "iptal_edildi" | "tamamlandi";
 
-// Randevu veri modeli
 export interface Randevu {
   id: number;
-  dukkan_id?: number;
   musteri_id?: number;
-  personel_id?: number;
   customer_id?: string;
+  personel_id?: number;
+  dukkan_id?: number;
   tarih: string;
   saat: string;
-  durum: string;
+  durum: RandevuDurumu;
   notlar?: string;
-  islemler: any;
-  created_at?: string;
-  // Add these properties to the interface to fix the TS errors
-  musteri?: Musteri;
+  admin_notes?: string;
+  created_at: string;
+  islemler?: number[];
+  customer_accepted?: boolean;
+  counter_proposal_date?: string;
+  counter_proposal_time?: string;
+  musteri?: Profile;
   personel?: Personel;
 }
 
-// Profil veri modeli
-export interface Profil {
-  id: string;
-  first_name?: string;
-  last_name?: string;
-  phone?: string;
-  address?: string;
-  avatar_url?: string;
-  birthdate?: string;
-  role?: 'admin' | 'staff' | 'customer';
-  dukkan_id?: number;
-  iban?: string;
-  created_at?: string;
-  gender?: string;  // Added gender field
+export interface ResponseError {
+  message: string;
+  details?: string;
+  hint?: string;
+  code?: string;
 }
 
-// Profile alias for backward compatibility
-export type Profile = Profil;
-
-// Dükkan veri modeli
-export interface Dukkan {
-  id: number;
-  ad: string;
-  adres?: string;
-  acik_adres?: string;
-  telefon?: string;
-  kod: string;
-  logo_url?: string;
-  sahibi_id: string;
-  active?: boolean;
-  created_at?: string;
+export interface ApiError {
+  message: string;
+  status?: number;
+  details?: any;
+  original?: PostgrestError;
 }
 
-// Çalışma saatleri veri modeli
-export interface CalismaSaati {
-  id: number;
-  dukkan_id?: number;
-  gun: string;
-  gun_sira: number;
-  acilis?: string;
-  kapanis?: string;
-  kapali?: boolean;
-  created_at?: string;
-}
-
-// Notifications interface
 export interface Notification {
   id: number;
   user_id: string;
   title: string;
   message: string;
-  type: string;
   read: boolean;
-  created_at: string;
   related_appointment_id?: number;
+  type: string;
+  created_at: string;
+}
+
+export interface CalismaSaati {
+  id?: number;
+  gun: string;
+  acilis: string | null;
+  kapanis: string | null;
+  kapali: boolean;
+  gun_sira?: number;
+  created_at?: string;
+  dukkan_id?: number;
 }
