@@ -9,7 +9,6 @@ export function useLoginHandler(onSuccess: () => void) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState<string | null>(null);
-  const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,7 +53,6 @@ export function useLoginHandler(onSuccess: () => void) {
         
         // Başarılı giriş sonrası callback'i hemen çağır
         console.log("onSuccess callback çağırılıyor...");
-        navigate("/admin/dashboard", { replace: true });
         onSuccess();
       } else {
         console.error("Kullanıcının rolü personel veya admin değil:", userRole);

@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,20 +21,6 @@ import { StatsHeader } from "./ShopStatistics/components/StatsHeader";
 import { StatsSummaryCards } from "./ShopStatistics/components/StatsSummaryCards";
 import { StatisticsCommentary } from "./ShopStatistics/components/StatisticsCommentary";
 
-interface CustomJsPDF extends jsPDF {
-  autoTable: (options: any) => CustomJsPDF;
-  lastAutoTable: {
-    finalY: number;
-  };
-  internal: {
-    getNumberOfPages: () => number;
-    pageSize: {
-      width: number;
-      height: number;
-    };
-  };
-}
-
 export default function ShopStatistics() {
   const { dukkanId, userRole } = useCustomerAuth();
   const [period, setPeriod] = useState("monthly");
@@ -45,11 +32,13 @@ export default function ShopStatistics() {
   const [useMonthCycle, setUseMonthCycle] = useState(false);
   const downloadRef = useRef(null);
 
+  // Fetch personnel data
   const { data: personnel = [], isLoading: personnelLoading } = useQuery({
     queryKey: ["personnel-stats"],
     queryFn: personelServisi.hepsiniGetir,
   });
 
+  // Fetch operations data based on date range
   const { data: operations = [], isLoading: operationsLoading } = useQuery({
     queryKey: ["operations-stats", dateRange.from, dateRange.to],
     queryFn: async () => {
@@ -67,11 +56,13 @@ export default function ShopStatistics() {
     },
   });
 
+  // Fetch services
   const { data: services = [], isLoading: servicesLoading } = useQuery({
     queryKey: ["services-stats"],
     queryFn: () => islemServisi.hepsiniGetir(),
   });
 
+  // Fetch categories
   const { data: categories = [], isLoading: categoriesLoading } = useQuery({
     queryKey: ["categories-stats"],
     queryFn: () => kategoriServisi.hepsiniGetir(),
@@ -80,6 +71,7 @@ export default function ShopStatistics() {
   const isLoading = operationsLoading || servicesLoading || personnelLoading || categoriesLoading;
   const hasData = operations.length > 0;
 
+  // Process data for different visualizations
   const processedData = {
     operations,
     personnel,
@@ -88,20 +80,24 @@ export default function ShopStatistics() {
     dateRange
   };
 
+  // Function to export data as Excel
   const exportToExcel = () => {
     if (!hasData) return;
 
+    // Create workbook with multiple sheets
     const wb = XLSX.utils.book_new();
 
+    // Summary sheet
     const summaryData = [
       ['Tarih Aralığı', `${dateRange.from.toLocaleDateString()} - ${dateRange.to.toLocaleDateString()}`],
-      ['Toplam İşlem Say��sı', operations.length],
+      ['Toplam İşlem Sayısı', operations.length],
       ['Toplam Ciro', formatCurrency(operations.reduce((sum, op) => sum + (op.tutar || 0), 0))],
       ['Ortalama İşlem', formatCurrency(operations.length ? operations.reduce((sum, op) => sum + (op.tutar || 0), 0) / operations.length : 0)],
     ];
     const summaryWs = XLSX.utils.aoa_to_sheet(summaryData);
     XLSX.utils.book_append_sheet(wb, summaryWs, "Özet");
 
+    // Operations sheet
     const operationsData = [
       ['Tarih', 'İşlem', 'Personel', 'Müşteri', 'Tutar', 'Komisyon']
     ];
@@ -122,6 +118,7 @@ export default function ShopStatistics() {
     const operationsWs = XLSX.utils.aoa_to_sheet(operationsData);
     XLSX.utils.book_append_sheet(wb, operationsWs, "İşlemler");
 
+    // Personnel performance sheet
     const personnelPerformanceData = [
       ['Personel', 'İşlem Sayısı', 'Ciro', 'Komisyon']
     ];
@@ -156,26 +153,32 @@ export default function ShopStatistics() {
     const personnelWs = XLSX.utils.aoa_to_sheet(personnelPerformanceData);
     XLSX.utils.book_append_sheet(wb, personnelWs, "Personel Performansı");
 
+    // Save the file
     XLSX.writeFile(wb, `Dukkan_Istatistikleri_${new Date().toLocaleDateString()}.xlsx`);
   };
 
+  // Function to export data as PDF
   const exportToPdf = () => {
     if (!hasData) return;
     
-    const doc = new jsPDF() as CustomJsPDF;
+    const doc = new jsPDF();
     
+    // Title
     doc.setFontSize(20);
     doc.text('Dükkan İstatistikleri Raporu', 105, 15, { align: 'center' });
     
+    // Date range
     doc.setFontSize(12);
     doc.text(`Tarih Aralığı: ${dateRange.from.toLocaleDateString()} - ${dateRange.to.toLocaleDateString()}`, 105, 25, { align: 'center' });
     
+    // Summary section
     doc.setFontSize(16);
     doc.text('Özet Bilgiler', 14, 40);
     
     const totalRevenue = operations.reduce((sum, op) => sum + (op.tutar || 0), 0);
     const avgTicket = operations.length ? totalRevenue / operations.length : 0;
     
+    // Summary table
     doc.autoTable({
       startY: 45,
       head: [['Metrik', 'Değer']],
@@ -186,9 +189,11 @@ export default function ShopStatistics() {
       ]
     });
     
+    // Personnel performance section
     doc.setFontSize(16);
     doc.text('Personel Performans', 14, doc.lastAutoTable.finalY + 15);
     
+    // Calculate personnel data
     const personnelData = [];
     const personnelMap = new Map();
     
@@ -213,16 +218,19 @@ export default function ShopStatistics() {
       personnelData.push([data.name, data.count.toString(), formatCurrency(data.revenue)]);
     });
     
+    // Personnel performance table
     doc.autoTable({
       startY: doc.lastAutoTable.finalY + 20,
       head: [['Personel', 'İşlem Sayısı', 'Ciro']],
       body: personnelData
     });
     
+    // Service performance section if we have space
     if (doc.lastAutoTable.finalY < 220) {
       doc.setFontSize(16);
       doc.text('Hizmet Dağılımı', 14, doc.lastAutoTable.finalY + 15);
       
+      // Calculate service data
       const serviceData = [];
       const serviceMap = new Map();
       
@@ -242,6 +250,7 @@ export default function ShopStatistics() {
         serviceData.push([name, data.count.toString(), formatCurrency(data.revenue)]);
       });
       
+      // Service performance table
       doc.autoTable({
         startY: doc.lastAutoTable.finalY + 20,
         head: [['Hizmet', 'İşlem Sayısı', 'Ciro']],
@@ -249,6 +258,7 @@ export default function ShopStatistics() {
       });
     }
     
+    // Footer with date
     const pageCount = doc.internal.getNumberOfPages();
     doc.setFontSize(10);
     for (let i = 1; i <= pageCount; i++) {
@@ -261,6 +271,7 @@ export default function ShopStatistics() {
       );
     }
     
+    // Save the PDF
     doc.save(`Dukkan_Istatistikleri_${new Date().toLocaleDateString()}.pdf`);
   };
 
@@ -320,16 +331,20 @@ export default function ShopStatistics() {
           setUseMonthCycle={setUseMonthCycle}
         />
 
+        {/* AI analyst section */}
         <StatisticsCommentary data={processedData} isLoading={isLoading} />
 
+        {/* Summary stats cards */}
         <StatsSummaryCards data={processedData} isLoading={isLoading} />
 
+        {/* Combined Revenue and Transaction Count Chart */}
         <ComboChart 
           data={processedData}
           isLoading={isLoading}
           period={period}
         />
 
+        {/* Category and Service Evaluation */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
           <CategoryEvaluation data={processedData} isLoading={isLoading} />
           <ServiceEvaluation data={processedData} isLoading={isLoading} />

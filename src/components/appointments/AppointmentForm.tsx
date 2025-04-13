@@ -23,8 +23,7 @@ interface AppointmentFormProps {
 }
 
 export function AppointmentForm({ onAppointmentCreated, initialDate, initialServiceId }: AppointmentFormProps) {
-  const { dukkanId, user } = useCustomerAuth();
-  const userId = user?.id; // Get user ID safely from user object
+  const { dukkanId, userId } = useCustomerAuth();
   const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState(initialDate || format(new Date(), 'yyyy-MM-dd'));
   const [selectedTime, setSelectedTime] = useState("");
@@ -130,12 +129,14 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
     }
   };
   
+  // Force fetch times when component mounts or date changes
   useEffect(() => {
     if (selectedDate) {
       fetchAvailableTimes(selectedDate);
     }
   }, [selectedDate, dukkanId]);
   
+  // Handle date change
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const date = e.target.value;
     setSelectedDate(date);

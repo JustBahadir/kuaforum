@@ -2,7 +2,6 @@
 import React, { ReactNode, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase/client';
-import { toast } from 'sonner';
 
 interface RouteProtectionProps {
   children: ReactNode;
@@ -45,35 +44,18 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
         const userRole = data.session.user.user_metadata?.role;
         console.log("Current user role:", userRole, "at pathname:", location.pathname);
         
-        // Check if customer is trying to access admin pages
-        if (userRole === 'customer' && (
-            location.pathname.startsWith('/admin') || 
-            location.pathname.startsWith('/shop-')
-        )) {
-          if (isMounted) {
-            toast.error("Bu sayfaya erişim yetkiniz bulunmamaktadır");
-            navigate('/customer-dashboard');
+        // Check admin/staff routes access
+        if (location.pathname.startsWith('/shop-') || 
+            location.pathname === '/shop-home' || 
+            location.pathname.startsWith('/admin') ||
+            location.pathname === '/admin/operations') {
+          if (userRole !== 'admin' && userRole !== 'staff') {
+            if (isMounted) {
+              console.log("User is not staff/admin, redirecting to staff-login");
+              navigate('/staff-login');
+            }
+            return;
           }
-          return;
-        }
-        
-        // Check if admin/staff is trying to access customer pages
-        if ((userRole === 'admin' || userRole === 'staff') && 
-            location.pathname.startsWith('/customer-dashboard')) {
-          if (isMounted) {
-            toast.info("Personel hesabınızla müşteri sayfalarına erişemezsiniz");
-            navigate('/admin/dashboard');
-          }
-          return;
-        }
-        
-        // Automatically redirect staff/admin from login pages to dashboard
-        if ((userRole === 'admin' || userRole === 'staff') && 
-            (location.pathname === '/staff-login' || location.pathname === '/login')) {
-          if (isMounted) {
-            navigate('/admin/dashboard');
-          }
-          return;
         }
         
         if (isMounted) setChecking(false);

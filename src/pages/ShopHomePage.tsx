@@ -7,8 +7,6 @@ import { Button } from "@/components/ui/button";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { useQueryClient } from "@tanstack/react-query";
 import { useShopData } from "@/hooks/useShopData";
-import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { ShopProfileHeader } from "@/components/shop/ShopProfileHeader";
 import { ShopContactCard } from "@/components/shop/ShopContactCard";
 import { ShopWorkingHoursCard } from "@/components/shop/ShopWorkingHoursCard";
@@ -19,7 +17,6 @@ import { ShopServicesCard } from "@/components/shop/ShopServicesCard";
 export default function ShopHomePage() {
   const { dukkanId, userRole } = useCustomerAuth();
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
   const { 
     dukkanData, 
     loading, 
@@ -28,11 +25,6 @@ export default function ShopHomePage() {
     calisma_saatleri,
     isLoadingSaatler
   } = useShopData(dukkanId);
-
-  // Redirect to admin/dashboard when accessing shop-home
-  useEffect(() => {
-    navigate('/admin/dashboard');
-  }, [navigate]);
 
   if (loading) {
     return (
