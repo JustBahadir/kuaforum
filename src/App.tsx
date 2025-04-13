@@ -3,21 +3,21 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Toaster } from "sonner";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ThemeProvider } from "@/components/theme-provider";
+import { ThemeProvider } from "@/components/ui/theme-provider";
 import { RouteProtection } from "@/components/auth/RouteProtection";
 
 // Import pages
-import Home from "./pages/Home";
+import Home from "./pages/HomePage";
 import Auth from "./pages/Auth";
 import StaffLogin from "./pages/StaffLogin";
 import StaffRegister from "./pages/StaffRegister";
 import Login from "./pages/Login";
-import Dashboard from "./pages/admin/Dashboard";
+import Dashboard from "./pages/Dashboard";
 import Personnel from "./pages/Personnel";
 import StaffProfile from "./pages/StaffProfile";
 import ShopJoinRequests from "./pages/ShopJoinRequests";
 import CustomerDashboard from "./pages/CustomerDashboard";
-import Appointments from "./pages/admin/Appointments";
+import Appointments from "./pages/Appointments";
 
 // Create a client
 const queryClient = new QueryClient({

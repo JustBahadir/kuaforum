@@ -11,7 +11,10 @@ import CustomerServices from "./CustomerDashboard/CustomerServices";
 import CustomerHome from "./CustomerDashboard/CustomerHome";
 
 export default function CustomerDashboard() {
-  const { userName, loading, activeTab, handleLogout } = useCustomerAuth();
+  const { userName, loading, handleLogout } = useCustomerAuth();
+  // Get the current path to determine active tab
+  const location = window.location.pathname;
+  const activeTab = location.split("/").pop() || "";
 
   if (loading) {
     return (
