@@ -21,12 +21,16 @@ export function useCustomerAuth() {
     // Set up auth listener
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        setUser(session?.user || null);
-        setUserId(session?.user?.id || null);
+        console.log("Auth state changed event:", event);
         
         if (session?.user) {
+          setUser(session.user);
+          setUserId(session.user.id);
+          
           // Get user metadata
-          setUserRole(session.user.user_metadata?.role || null);
+          const role = session.user.user_metadata?.role;
+          setUserRole(role || null);
+          console.log("Setting user role from metadata:", role);
           
           // Get profile
           await fetchUserProfile(session.user.id);
@@ -34,12 +38,15 @@ export function useCustomerAuth() {
           // Get dukkan ID
           await fetchDukkanId(session.user);
         } else {
+          // Clear all state on logout
+          setUser(null);
           setProfile(null);
           setDukkanId(null);
           setDukkanAdi(null);
           setUserRole(null);
           setUserName("");
           setUserId(null);
+          console.log("Cleared all authentication state");
         }
       }
     );
@@ -56,18 +63,23 @@ export function useCustomerAuth() {
     setLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user || null);
-      setUserId(session?.user?.id || null);
       
       if (session?.user) {
+        setUser(session.user);
+        setUserId(session.user.id);
+        
         // Get user metadata
-        setUserRole(session.user.user_metadata?.role || null);
+        const role = session.user.user_metadata?.role;
+        setUserRole(role || null);
+        console.log("Setting user role from session check:", role);
         
         // Get profile data
         await fetchUserProfile(session.user.id);
         
         // Get dukkan ID
         await fetchDukkanId(session.user);
+      } else {
+        console.log("No active session found");
       }
     } catch (error) {
       console.error('Session check error:', error);
@@ -94,6 +106,7 @@ export function useCustomerAuth() {
       // If role isn't set in the auth metadata, fallback to profile role
       if (!userRole && profile?.role) {
         setUserRole(profile.role);
+        console.log("Setting user role from profile:", profile.role);
       }
       
       // Set user name for display
@@ -134,7 +147,8 @@ export function useCustomerAuth() {
         
         if (!personelError && personelData && personelData.dukkan_id) {
           setDukkanId(personelData.dukkan_id);
-          if (personelData.dukkanlar) {
+          // Fix TypeScript error by correctly checking and accessing the property
+          if (personelData.dukkanlar && typeof personelData.dukkanlar === 'object') {
             setDukkanAdi(personelData.dukkanlar.ad || null);
           }
           return;
@@ -161,7 +175,14 @@ export function useCustomerAuth() {
 
   const handleLogout = async () => {
     try {
+      // Clear localStorage and sessionStorage to prevent stale data
+      localStorage.removeItem('supabase.auth.token');
+      sessionStorage.removeItem('supabase.auth.token');
+      
+      // Sign out from Supabase
       await supabase.auth.signOut();
+      
+      // Clear all state
       setUser(null);
       setUserId(null);
       setProfile(null);
@@ -170,6 +191,9 @@ export function useCustomerAuth() {
       setDukkanAdi(null);
       setUserName("");
       profileManagement.resetProfile();
+      
+      // Force reload the page to ensure clean state
+      window.location.href = '/';
     } catch (error) {
       console.error('Error signing out:', error);
     }
