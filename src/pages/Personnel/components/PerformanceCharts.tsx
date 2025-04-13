@@ -40,13 +40,13 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
         const personnel = personnelMap.get(islem.personel_id);
         
         // Ensure tutar and odenen are treated as numbers
-        const tutar = typeof islem.tutar === 'number' ? islem.tutar : Number(islem.tutar || 0);
-        const odenen = typeof islem.odenen === 'number' ? islem.odenen : Number(islem.odenen || 0);
+        const tutar = typeof islem.tutar === 'number' ? islem.tutar : parseFloat(islem.tutar || '0');
+        const odenen = typeof islem.odenen === 'number' ? islem.odenen : parseFloat(islem.odenen || '0');
         
         // Add data to personnel
-        personnel.revenue += tutar;
+        personnel.revenue += tutar || 0;
         personnel.operations += 1;
-        personnel.commissions += odenen;
+        personnel.commissions += odenen || 0;
       }
     });
     
