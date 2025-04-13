@@ -7,17 +7,17 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { RouteProtection } from "@/components/auth/RouteProtection";
 
 // Import pages
-import Home from "./pages/Home";
-import Auth from "./pages/Auth";
-import StaffLogin from "./pages/StaffLogin";
-import StaffRegister from "./pages/StaffRegister";
-import Login from "./pages/Login";
-import Dashboard from "./pages/admin/Dashboard";
-import Personnel from "./pages/Personnel";
-import StaffProfile from "./pages/StaffProfile";
-import ShopJoinRequests from "./pages/ShopJoinRequests";
-import CustomerDashboard from "./pages/CustomerDashboard";
-import Appointments from "./pages/admin/Appointments";
+import Home from "@/pages/Home";
+import Auth from "@/pages/Auth";
+import StaffLogin from "@/pages/StaffLogin";
+import StaffRegister from "@/pages/StaffRegister";
+import Login from "@/pages/Login";
+import Dashboard from "@/pages/admin/Dashboard";
+import Personnel from "@/pages/Personnel";
+import StaffProfile from "@/pages/StaffProfile";
+import ShopJoinRequests from "@/pages/ShopJoinRequests";
+import CustomerDashboard from "@/pages/CustomerDashboard";
+import Appointments from "@/pages/admin/Appointments";
 
 // Create a client
 const queryClient = new QueryClient({
