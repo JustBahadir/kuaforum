@@ -2,7 +2,6 @@
 import React, { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ServicePerformanceView } from "./performance-tabs/ServicePerformanceView";
 import { CategoryPerformanceView } from "./performance-tabs/CategoryPerformanceView";
 
@@ -11,7 +10,18 @@ interface PerformanceTabProps {
 }
 
 export function PerformanceTab({ personnel }: PerformanceTabProps) {
-  const [activeTab, setActiveTab] = useState("hizmet");
+  const [activeView, setActiveView] = useState("hizmet");
+  const [pageIndex, setPageIndex] = useState(0);
+  
+  const handlePrevClick = () => {
+    setActiveView("hizmet");
+    setPageIndex(0);
+  };
+  
+  const handleNextClick = () => {
+    setActiveView("kategori");
+    setPageIndex(1);
+  };
   
   return (
     <div className="space-y-6">
@@ -55,43 +65,51 @@ export function PerformanceTab({ personnel }: PerformanceTabProps) {
         </ul>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <div className="relative">
         <div className="flex items-center justify-between mb-2">
-          <TabsList>
-            <TabsTrigger value="hizmet">Hizmet Bazlı</TabsTrigger>
-            <TabsTrigger value="kategori">Kategori Bazlı</TabsTrigger>
-          </TabsList>
-          
-          <div className="flex space-x-1">
+          <h3 className="font-medium">
+            {activeView === "hizmet" ? "Hizmet Bazlı Değerlendirme" : "Kategori Bazlı Değerlendirme"}
+          </h3>
+          <div className="flex space-x-2">
             <Button 
               variant="ghost" 
               size="icon" 
-              className="h-8 w-8 opacity-70 hover:opacity-100 hover:bg-muted"
-              onClick={() => setActiveTab("hizmet")}
-              disabled={activeTab === "hizmet"}
+              className="h-8 w-8 hover:bg-muted"
+              onClick={handlePrevClick}
+              disabled={activeView === "hizmet"}
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <Button 
               variant="ghost" 
               size="icon"
-              className="h-8 w-8 opacity-70 hover:opacity-100 hover:bg-muted"
-              onClick={() => setActiveTab("kategori")}
-              disabled={activeTab === "kategori"}
+              className="h-8 w-8 hover:bg-muted"
+              onClick={handleNextClick}
+              disabled={activeView === "kategori"}
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
+
+            <div className="text-xs text-muted-foreground flex items-center">
+              {pageIndex + 1}/2
+            </div>
           </div>
         </div>
         
-        <TabsContent value="hizmet" className="mt-0">
-          <ServicePerformanceView personnel={personnel} />
-        </TabsContent>
-        
-        <TabsContent value="kategori" className="mt-0">
-          <CategoryPerformanceView personnel={personnel} />
-        </TabsContent>
-      </Tabs>
+        <div className="overflow-hidden">
+          <div 
+            className="flex transition-transform duration-300 ease-in-out" 
+            style={{ transform: `translateX(-${pageIndex * 100}%)`, width: '200%' }}
+          >
+            <div className="w-full flex-shrink-0">
+              <ServicePerformanceView personnel={personnel} />
+            </div>
+            <div className="w-full flex-shrink-0">
+              <CategoryPerformanceView personnel={personnel} />
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

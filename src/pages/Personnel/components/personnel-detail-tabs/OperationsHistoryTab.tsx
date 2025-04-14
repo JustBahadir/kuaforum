@@ -68,8 +68,8 @@ export function OperationsHistoryTab({
       // When enabling single date mode, set both from and to to the same day
       const today = new Date();
       setDateRange({
-        from: new Date(today.setHours(0, 0, 0, 0)),
-        to: new Date(today.setHours(23, 59, 59, 999))
+        from: today,
+        to: today
       });
     }
     
@@ -78,18 +78,7 @@ export function OperationsHistoryTab({
   
   const handleSingleDateChange = (date: Date | null) => {
     if (!date) return;
-    
-    // Set the date range to span just this one day
-    const startOfDay = new Date(date);
-    startOfDay.setHours(0, 0, 0, 0);
-    
-    const endOfDay = new Date(date);
-    endOfDay.setHours(23, 59, 59, 999);
-    
-    setDateRange({
-      from: startOfDay,
-      to: endOfDay
-    });
+    setDateRange({ from: date, to: date });
   };
 
   // Filter operations by date range and search term
@@ -138,7 +127,7 @@ export function OperationsHistoryTab({
       </div>
 
       {/* Date Selection Controls - Horizontal Layout */}
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap gap-3 items-center">
         <Button
           variant={singleDateMode ? "secondary" : "outline"}
           size="sm"

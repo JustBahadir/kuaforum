@@ -93,8 +93,11 @@ export function DateRangePicker({
               selected={date}
               onSelect={(selectedDate) => {
                 if (selectedDate) {
-                  setDate(selectedDate)
-                  onSelect({ from: selectedDate.from || from, to: selectedDate.to || to })
+                  setDate(selectedDate);
+                  onSelect({ 
+                    from: selectedDate.from || from, 
+                    to: selectedDate.to || selectedDate.from || to 
+                  });
                 }
               }}
               weekStartsOn={1}

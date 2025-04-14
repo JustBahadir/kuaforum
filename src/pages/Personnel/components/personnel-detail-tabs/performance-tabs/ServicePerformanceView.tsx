@@ -6,7 +6,6 @@ import {
   Bar,
   BarChart,
   Line,
-  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -38,12 +37,13 @@ export function ServicePerformanceView({ personnel }: ServicePerformanceViewProp
 
   const COLORS = ['#8884d8', '#83a6ed', '#8dd1e1', '#82ca9d', '#a4de6c'];
 
-  const renderCustomTooltip = ({ active, payload }: any) => {
+  const renderCustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-white p-2 border rounded shadow-sm text-xs">
-          <p className="font-medium">{payload[0].name}</p>
-          <p>Ciro: {formatCurrency(payload[0].value)}</p>
+          <p className="font-medium">{label || payload[0].name}</p>
+          <p>Ciro: {formatCurrency(payload[0].value || payload[0].payload.revenue)}</p>
+          {payload[1] && <p>İşlem Sayısı: {payload[1].value}</p>}
         </div>
       );
     }
@@ -69,7 +69,7 @@ export function ServicePerformanceView({ personnel }: ServicePerformanceViewProp
               />
               <YAxis yAxisId="revenue" orientation="left" tick={{ fontSize: 12 }} />
               <YAxis yAxisId="count" orientation="right" tick={{ fontSize: 12 }} />
-              <Tooltip />
+              <Tooltip content={renderCustomTooltip} />
               <Bar 
                 yAxisId="revenue" 
                 dataKey="revenue" 
@@ -102,6 +102,7 @@ export function ServicePerformanceView({ personnel }: ServicePerformanceViewProp
                   outerRadius={80}
                   paddingAngle={5}
                   dataKey="value"
+                  label={false}
                 >
                   {pieData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />

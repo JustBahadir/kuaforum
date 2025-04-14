@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Pencil, Phone, Mail, Copy, MapPin, CreditCard, Calendar } from "lucide-react";
+import { Phone, Mail, Copy, MapPin, CreditCard, Calendar } from "lucide-react";
 import { personelServisi, personelIslemleriServisi } from "@/lib/supabase";
 import { formatCurrency } from "@/lib/utils";
 import { WorkInfoTab } from "./personnel-detail-tabs/WorkInfoTab";
@@ -76,9 +76,6 @@ export function PersonnelDetailsDialog({
       .toUpperCase()
       .slice(0, 2);
   };
-
-  // Only show edit button on the working info tab
-  const showEditButton = activeTab === "calisma";
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>

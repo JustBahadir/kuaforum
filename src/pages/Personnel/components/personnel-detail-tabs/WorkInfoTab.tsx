@@ -1,6 +1,6 @@
+
 import React, { useState } from "react";
 import { formatCurrency } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -90,23 +90,26 @@ export function WorkInfoTab({ personnel }: WorkInfoTabProps) {
   const isSalaryType = ["aylik_maas", "haftalik_maas", "gunluk_maas"].includes(formData.calisma_sistemi);
   const isCommissionType = formData.calisma_sistemi === "prim_komisyon";
 
+  // Get the proper display format for monetary values
+  const isCommissionBased = personnel.calisma_sistemi === "prim_komisyon";
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <h3 className="text-sm font-medium text-muted-foreground mb-1">Çalışma Sistemi</h3>
           {!isEditing ? (
-            <Badge variant={isCommissionType ? "secondary" : "outline"}>
+            <div className="text-base font-normal">
               {getWorkingSystemLabel(personnel.calisma_sistemi)}
-            </Badge>
+            </div>
           ) : (
             <div className="space-y-3 mt-2">
               <div className="space-y-2">
                 <div className="space-x-2">
                   <RadioGroup
-                    value={isCommissionType ? "prim_komisyon" : "maaşlı"}
+                    value={isCommissionType ? "komisyonlu" : "maaşlı"}
                     onValueChange={(value) => {
-                      if (value === "prim_komisyon") {
+                      if (value === "komisyonlu") {
                         setFormData(prev => ({ 
                           ...prev, 
                           calisma_sistemi: "prim_komisyon",
@@ -129,8 +132,8 @@ export function WorkInfoTab({ personnel }: WorkInfoTabProps) {
                       <Label htmlFor="maasli" className="text-base font-normal">Maaşlı</Label>
                     </div>
                     <div className="flex items-center space-x-2 ml-4">
-                      <RadioGroupItem value="prim_komisyon" id="prim_komisyon" />
-                      <Label htmlFor="prim_komisyon" className="text-base font-normal">Komisyonlu</Label>
+                      <RadioGroupItem value="komisyonlu" id="komisyonlu" />
+                      <Label htmlFor="komisyonlu" className="text-base font-normal">Komisyonlu</Label>
                     </div>
                   </RadioGroup>
                 </div>
@@ -160,61 +163,58 @@ export function WorkInfoTab({ personnel }: WorkInfoTabProps) {
           )}
         </div>
 
-        {!isEditing ? (
-          <div>
-            <h3 className="text-sm font-medium text-muted-foreground mb-1">
-              {isCommissionType ? "Prim Yüzdesi" : "Maaş Tutarı"}
-            </h3>
-            <div className="font-semibold">
+        <div>
+          <h3 className="text-sm font-medium text-muted-foreground mb-1">
+            {isCommissionType ? "Prim Yüzdesi" : "Maaş Tutarı"}
+          </h3>
+          {!isEditing ? (
+            <div className="font-normal">
               {isCommissionType 
                 ? `%${personnel.prim_yuzdesi}` 
                 : formatCurrency(personnel.maas)}
             </div>
-          </div>
-        ) : (
-          <div>
-            <h3 className="text-sm font-medium text-muted-foreground mb-1">
-              {isCommissionType ? "Prim Yüzdesi" : "Maaş Tutarı"}
-            </h3>
-            {isCommissionType ? (
-              <div className="flex items-center">
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                    <span className="text-gray-500">%</span>
+          ) : (
+            <>
+              {isCommissionType ? (
+                <div className="flex items-center">
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                      <span className="text-gray-500">%</span>
+                    </div>
+                    <Input 
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={formData.prim_yuzdesi}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value);
+                        if ((value >= 0 && value <= 100) || e.target.value === "") {
+                          setFormData(prev => ({ ...prev, prim_yuzdesi: e.target.value === "" ? 0 : value }));
+                        }
+                      }}
+                      className="pl-8 w-24"
+                    />
                   </div>
-                  <Input 
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={formData.prim_yuzdesi}
-                    onChange={(e) => {
-                      const value = parseInt(e.target.value);
-                      if (value >= 0 && value <= 100) {
-                        setFormData(prev => ({ ...prev, prim_yuzdesi: value }));
-                      }
-                    }}
-                    className="pl-8 w-24"
-                  />
                 </div>
-              </div>
-            ) : (
-              <Input 
-                type="number"
-                min="0"
-                value={formData.maas}
-                onChange={(e) => setFormData(prev => ({ ...prev, maas: Number(e.target.value) }))}
-                className="w-40"
-              />
-            )}
-          </div>
-        )}
+              ) : (
+                <Input 
+                  type="number"
+                  min="0"
+                  value={formData.maas}
+                  onChange={(e) => setFormData(prev => ({ ...prev, maas: Number(e.target.value) }))}
+                  className="w-40"
+                />
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       <div className="bg-muted p-4 rounded-md">
         <h3 className="font-medium mb-3">Özet Bilgiler</h3>
         <table className="w-full">
           <tbody>
-            {isCommissionType && (
+            {isCommissionBased && (
               <tr className="border-b">
                 <td className="py-2 text-sm text-muted-foreground">Toplam Prim</td>
                 <td className="py-2 text-right font-medium">{formatCurrency(personnel.toplam_prim || 0)}</td>
