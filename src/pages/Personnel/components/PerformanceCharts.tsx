@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -129,23 +128,13 @@ export function PerformanceCharts({
         statistics[personelId].operations += 1;
         
         // Convert tutar to number safely
-        let tutar: number = 0;
-        if (typeof op.tutar === 'string') {
-          tutar = parseFloat(op.tutar) || 0;
-        } else if (typeof op.tutar === 'number') {
-          tutar = op.tutar;
-        }
-        
+        const tutarValue = typeof op.tutar === 'string' ? parseFloat(op.tutar) : op.tutar;
+        const tutar = !isNaN(Number(tutarValue)) ? Number(tutarValue) : 0;
         statistics[personelId].revenue += tutar;
         
         // Convert odenen to number safely
-        let odenen: number = 0;
-        if (typeof op.odenen === 'string') {
-          odenen = parseFloat(op.odenen || '0') || 0;
-        } else if (typeof op.odenen === 'number') {
-          odenen = op.odenen;
-        }
-        
+        const odenenValue = typeof op.odenen === 'string' ? parseFloat(op.odenen || '0') : (op.odenen || 0);
+        const odenen = !isNaN(Number(odenenValue)) ? Number(odenenValue) : 0;
         statistics[personelId].prim += odenen;
       }
     });

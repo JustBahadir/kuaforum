@@ -1,260 +1,584 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
-import { supabase } from "@/lib/supabase/client";
+import { Lock, Mail, Phone, User, Store, MapPin } from "lucide-react";
 import { toast } from "sonner";
-import { authService } from "@/lib/auth/services/authService";
+import { z } from "zod";
+import { authService } from "@/lib/auth/authService";
+import { AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { dukkanServisi } from "@/lib/supabase/services/dukkanServisi";
+import { personelServisi } from "@/lib/supabase/services/personelServisi";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface RegisterFormProps {
   onSuccess: () => void;
 }
 
+// Turkey cities and districts data
+interface District {
+  name: string;
+  value: string;
+}
+
+interface City {
+  name: string;
+  value: string;
+  districts: District[];
+}
+
+const staffSchema = z.object({
+  firstName: z.string().min(2, "Ad en az 2 karakter olmalıdır"),
+  lastName: z.string().min(2, "Soyad en az 2 karakter olmalıdır"),
+  email: z.string().email("Geçerli bir e-posta adresi giriniz"),
+  phone: z.string().min(10, "Geçerli bir telefon numarası giriniz"),
+  password: z.string().min(6, "Şifre en az 6 karakter olmalıdır"),
+  role: z.enum(["staff", "admin"]),
+  shopName: z.string().optional(),
+  shopAddress: z.string().optional(),
+  shopPhone: z.string().optional(),
+  city: z.string().optional(),
+  district: z.string().optional(),
+});
+
 export function RegisterForm({ onSuccess }: RegisterFormProps) {
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [shopValidated, setShopValidated] = useState(false);
-  const [shopName, setShopName] = useState('');
-  const [shopId, setShopId] = useState<number | null>(null);
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    firstName: '',
-    lastName: '',
-    phone: '',
-    address: '',
-    shopCode: '',
-  });
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("password123"); // Default password
+  const [role, setRole] = useState<"staff" | "admin">("staff");
+  const [shopName, setShopName] = useState("");
+  const [shopAddress, setShopAddress] = useState("");
+  const [shopPhone, setShopPhone] = useState("");
+  const [city, setCity] = useState("");
+  const [district, setDistrict] = useState("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [globalError, setGlobalError] = useState<string | null>(null);
+  const [cities, setCities] = useState<City[]>([]);
+  const [districts, setDistricts] = useState<District[]>([]);
+  const [dukkanKodu, setDukkanKodu] = useState("");
 
-  const validateShopCode = async () => {
-    if (!formData.shopCode.trim()) {
-      setError("Dükkan kodu boş olamaz");
-      return;
-    }
-    
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const shop = await authService.verifyShopCode(formData.shopCode);
-      
-      if (!shop) {
-        setError("Geçersiz dükkan kodu. Lütfen kod bilgisini kontrol ediniz.");
-        setLoading(false);
-        return;
+  // Fetch Turkey cities and districts
+  useEffect(() => {
+    const fetchCitiesData = async () => {
+      try {
+        // This is a placeholder URL - you should replace with a real API
+        const response = await fetch('https://turkiyeapi.cyclic.app/api/v1/provinces');
+        if (!response.ok) {
+          throw new Error('Failed to fetch cities data');
+        }
+        
+        const data = await response.json();
+        
+        // Transform the data into the format we need
+        const formattedCities = data.data.map((city: any) => {
+          return {
+            name: city.name,
+            value: city.id.toString(),
+            districts: city.districts.map((district: any) => ({
+              name: district.name,
+              value: district.id.toString()
+            }))
+          };
+        });
+        
+        setCities(formattedCities);
+      } catch (error) {
+        console.error('Error fetching cities data:', error);
+        // Fallback with some major cities
+        setCities([
+          {
+            name: "İstanbul",
+            value: "istanbul",
+            districts: [
+              { name: "Kadıköy", value: "kadikoy" },
+              { name: "Beşiktaş", value: "besiktas" },
+              { name: "Şişli", value: "sisli" },
+              { name: "Üsküdar", value: "uskudar" },
+              { name: "Maltepe", value: "maltepe" }
+            ]
+          },
+          {
+            name: "Ankara",
+            value: "ankara",
+            districts: [
+              { name: "Çankaya", value: "cankaya" },
+              { name: "Keçiören", value: "kecioren" },
+              { name: "Yenimahalle", value: "yenimahalle" }
+            ]
+          },
+          {
+            name: "İzmir",
+            value: "izmir",
+            districts: [
+              { name: "Konak", value: "konak" },
+              { name: "Karşıyaka", value: "karsiyaka" },
+              { name: "Bornova", value: "bornova" }
+            ]
+          }
+        ]);
       }
-      
-      setShopId(shop.id);
-      setShopName(shop.ad);
-      setShopValidated(true);
-      toast.success(`"${shop.ad}" dükkanı doğrulandı`);
-    } catch (err: any) {
-      setError(err.message || "Dükkan kodu doğrulanırken bir hata oluştu");
-    } finally {
-      setLoading(false);
+    };
+
+    fetchCitiesData();
+  }, []);
+
+  // Update districts when city is selected
+  useEffect(() => {
+    if (city) {
+      const cityData = cities.find(c => c.value === city);
+      if (cityData) {
+        setDistricts(cityData.districts);
+      } else {
+        setDistricts([]);
+      }
+      // Reset selected district when city changes
+      setDistrict("");
+    } else {
+      setDistricts([]);
+    }
+  }, [city, cities]);
+
+  const validateForm = () => {
+    setGlobalError(null);
+    try {
+      staffSchema.parse({
+        firstName,
+        lastName,
+        email,
+        phone,
+        password,
+        role,
+        shopName: role === "admin" ? shopName : undefined,
+        shopAddress: role === "admin" ? shopAddress : undefined,
+        shopPhone: role === "admin" ? shopPhone : undefined,
+        city: role === "admin" ? city : undefined,
+        district: role === "admin" ? district : undefined,
+      });
+      setErrors({});
+      return true;
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const newErrors: Record<string, string> = {};
+        error.errors.forEach((err) => {
+          if (err.path[0]) {
+            newErrors[err.path[0] as string] = err.message;
+          }
+        });
+        setErrors(newErrors);
+      }
+      return false;
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const clearForm = () => {
+    setFirstName("");
+    setLastName("");
+    setEmail("");
+    setPhone("");
+    setPassword("password123");
+    setRole("staff");
+    setShopName("");
+    setShopAddress("");
+    setShopPhone("");
+    setCity("");
+    setDistrict("");
+    setDukkanKodu("");
+    setErrors({});
+    setGlobalError(null);
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.email || !formData.password || !formData.firstName || !formData.lastName || !formData.phone) {
-      setError("Lütfen tüm zorunlu alanları doldurun");
+    if (!validateForm()) {
+      return;
+    }
+
+    if (role === "admin") {
+      if (!shopName) {
+        setErrors({ shopName: "Dükkan adı gereklidir" });
+        return;
+      }
+      
+      if (!city) {
+        setErrors({ city: "İl seçimi gereklidir" });
+        return;
+      }
+    } else if (role === "staff" && !dukkanKodu) {
+      setErrors({ dukkanKodu: "Dükkan kodu gereklidir" });
       return;
     }
     
     setLoading(true);
-    setError(null);
+    setGlobalError(null);
     
     try {
-      // Create auth user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: {
-          data: {
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-            role: 'staff',
-          }
-        }
-      });
-
-      if (authError) throw authError;
-
-      if (authData.user) {
-        // Create personnel record with initial shop connection if provided
-        const personnelData: any = {
-          auth_id: authData.user.id,
-          ad_soyad: `${formData.firstName} ${formData.lastName}`,
-          telefon: formData.phone,
-          eposta: formData.email,
-          adres: formData.address,
-          personel_no: `P${Math.floor(Math.random() * 10000)}`,
-          maas: 0,
-          prim_yuzdesi: 0,
-          calisma_sistemi: 'aylik_maas',
-          baslama_tarihi: new Date().toISOString().split('T')[0],
-        };
-
-        // If shop code was validated, add shop connection or request
-        if (shopValidated && shopId) {
-          // Create shop join request
-          const { error: requestError } = await supabase
-            .from('personel_shop_requests')
-            .insert([{
-              personel_id: null, // Will be updated after personnel record is created
-              dukkan_id: shopId,
-              status: 'pending',
-              auth_id: authData.user.id
-            }]);
-
-          if (requestError) throw requestError;
-        }
-
-        // Create personnel record
-        const { data: personnelRecord, error: personnelError } = await supabase
-          .from('personel')
-          .insert([personnelData])
-          .select()
-          .single();
-
-        if (personnelError) throw personnelError;
-          
-        // Update shop join request with personnel id if it was created
-        if (shopValidated && shopId && personnelRecord) {
-          await supabase
-            .from('personel_shop_requests')
-            .update({ personel_id: personnelRecord.id })
-            .eq('auth_id', authData.user.id)
-            .eq('dukkan_id', shopId);
-        }
-
-        // Create profile record
-        await supabase
-          .from('profiles')
-          .upsert({
-            id: authData.user.id,
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-            phone: formData.phone,
-            address: formData.address,
-            role: 'staff'
-          });
-
-        toast.success('Hesabınız başarıyla oluşturuldu! Giriş yapabilirsiniz.');
-        onSuccess();
+      console.log("Kayıt yapılıyor:", email, "olarak", role);
+      
+      // Generate shop code for admin
+      let shopCode: string | null = null;
+      let dukkanId: number | null = null;
+      
+      if (role === "admin") {
+        shopCode = authService.generateShopCode(shopName);
       }
+      
+      // Register user with Supabase Auth
+      const { user, error } = await authService.signUp(
+        email,
+        password,
+        {
+          first_name: firstName,
+          last_name: lastName,
+          full_name: `${firstName} ${lastName}`,
+          phone,
+          role: role,
+          shop_name: shopName,
+          shop_code: shopCode
+        }
+      );
+      
+      if (error) {
+        if (error.message?.includes("already registered")) {
+          setGlobalError("Bu e-posta adresi zaten kayıtlı. Lütfen giriş yapın veya farklı bir e-posta adresi kullanın.");
+        } else {
+          setGlobalError(error.message || "Kayıt işlemi sırasında bir hata oluştu");
+        }
+        return;
+      }
+      
+      // Eğer admin ise ve dükkan adı belirtilmişse dükkan oluştur
+      if (role === "admin" && shopName && user) {
+        try {
+          const cityInfo = cities.find(c => c.value === city);
+          const districtInfo = districts.find(d => d.value === district);
+          
+          const shopAddress = districtInfo && cityInfo
+            ? `${districtInfo.name}, ${cityInfo.name}`
+            : city;
+          
+          const dukkan = await dukkanServisi.ekle({
+            ad: shopName,
+            adres: shopAddress || "",
+            telefon: shopPhone || phone,
+            sahibi_id: user.id,
+            kod: shopCode || authService.generateShopCode(shopName),
+            active: true
+          } as any); // Using type assertion to bypass type checking for now
+          
+          dukkanId = dukkan.id;
+          
+          // Dükkan sahibini aynı zamanda personel olarak da ekleyelim
+          await personelServisi.ekle({
+            ad_soyad: `${firstName} ${lastName}`,
+            personel_no: authService.generateShopCode(`${firstName}${lastName}`),
+            telefon: phone,
+            eposta: email,
+            adres: shopAddress || "",
+            maas: 0, // Dükkan sahibi için maaş 0 olarak ayarlanabilir
+            calisma_sistemi: "haftalik",
+            prim_yuzdesi: 100, // Dükkan sahibi kendi primini alır
+            auth_id: user.id,
+            dukkan_id: dukkanId
+          });
+          
+          toast.success("Dükkanınız başarıyla oluşturuldu!");
+        } catch (dukkanError: any) {
+          console.error("Dükkan oluşturma hatası:", dukkanError);
+          toast.error("Dükkan oluşturulurken bir hata oluştu: " + (dukkanError.message || "Bilinmeyen bir hata"));
+        }
+      } else if (role === "staff" && dukkanKodu && user) {
+        // Personel dükkan kodunu doğrulama
+        try {
+          const dukkan = await dukkanServisi.getirByKod(dukkanKodu);
+          
+          if (!dukkan) {
+            setGlobalError("Geçersiz dükkan kodu. Lütfen dükkan yöneticinizden doğru kodu alınız.");
+            return;
+          }
+          
+          // Personeli dükkan ile ilişkilendir
+          await personelServisi.ekle({
+            ad_soyad: `${firstName} ${lastName}`,
+            personel_no: authService.generateShopCode(`${firstName}${lastName}`),
+            telefon: phone,
+            eposta: email,
+            adres: "",
+            maas: 0, // Maaş bilgisi dükkan sahibi tarafından sonradan ayarlanacak
+            calisma_sistemi: "haftalik",
+            prim_yuzdesi: 50, // Varsayılan prim yüzdesi
+            auth_id: user.id,
+            dukkan_id: dukkan.id
+          });
+          
+          toast.success(`${dukkan.ad} dükkanına personel olarak kaydınız oluşturuldu!`);
+        } catch (personelError: any) {
+          console.error("Personel ekleme hatası:", personelError);
+          toast.error("Personel kaydı oluşturulurken bir hata oluştu: " + (personelError.message || "Bilinmeyen bir hata"));
+        }
+      }
+      
+      toast.success("Kayıt başarılı! Şimdi giriş yapabilirsiniz.");
+      clearForm();
+      onSuccess();
+      
     } catch (error: any) {
-      console.error('Registration error:', error);
-      toast.error(error.message || 'Kayıt sırasında bir hata oluştu');
-      setError(error.message || 'Kayıt sırasında bir hata oluştu');
+      console.error("Kayıt hatası:", error);
+      
+      if (error.message?.includes("already registered") || error.message?.includes("User already registered")) {
+        setGlobalError("Bu e-posta adresi zaten kayıtlı. Lütfen giriş yapın veya farklı bir e-posta adresi kullanın.");
+      } else {
+        setGlobalError(error.message || "Kayıt işlemi sırasında bir hata oluştu");
+      }
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      {error && (
+    <form onSubmit={handleRegister} className="space-y-4">
+      {globalError && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>{globalError}</AlertDescription>
         </Alert>
       )}
       
       <div className="space-y-2">
-        <Label htmlFor="shopCode">Dükkan Kodu (İsteğe Bağlı)</Label>
-        <div className="flex space-x-2">
-          <Input
-            id="shopCode"
-            value={formData.shopCode}
-            onChange={(e) => setFormData({ ...formData, shopCode: e.target.value })}
-            disabled={shopValidated}
-            placeholder="Dükkan kodu"
-          />
-          <Button 
-            type="button" 
-            onClick={validateShopCode} 
-            disabled={loading || shopValidated || !formData.shopCode.trim()}
-            variant="outline"
-          >
-            {loading ? "..." : shopValidated ? "Doğrulandı" : "Doğrula"}
-          </Button>
-        </div>
-        {shopValidated && (
-          <p className="text-sm text-green-600">"{shopName}" dükkanına katılım isteği gönderilecek.</p>
-        )}
+        <Label htmlFor="role">Kayıt Türü</Label>
+        <Select
+          value={role}
+          onValueChange={(value: "staff" | "admin") => {
+            setRole(value);
+          }}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Kayıt türü seçin" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="admin">Dükkan Sahibi</SelectItem>
+            <SelectItem value="staff">Personel</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
       
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="firstName">Ad</Label>
-          <Input
-            id="firstName"
-            value={formData.firstName}
-            onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-            required
-          />
+          <div className="relative">
+            <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+            <Input
+              id="firstName"
+              type="text"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              className="pl-10"
+              required
+            />
+          </div>
+          {errors.firstName && (
+            <p className="text-xs text-red-500">{errors.firstName}</p>
+          )}
         </div>
+        
         <div className="space-y-2">
           <Label htmlFor="lastName">Soyad</Label>
           <Input
             id="lastName"
-            value={formData.lastName}
-            onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+            type="text"
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
             required
           />
+          {errors.lastName && (
+            <p className="text-xs text-red-500">{errors.lastName}</p>
+          )}
         </div>
       </div>
       
       <div className="space-y-2">
         <Label htmlFor="email">E-posta</Label>
-        <Input
-          id="email"
-          type="email"
-          value={formData.email}
-          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-          required
-        />
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="password">Şifre</Label>
-        <Input
-          id="password"
-          type="password"
-          value={formData.password}
-          onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-          required
-        />
+        <div className="relative">
+          <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+          <Input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="pl-10"
+            required
+          />
+        </div>
+        {errors.email && (
+          <p className="text-xs text-red-500">{errors.email}</p>
+        )}
       </div>
       
       <div className="space-y-2">
         <Label htmlFor="phone">Telefon</Label>
-        <Input
-          id="phone"
-          type="tel"
-          value={formData.phone}
-          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-          required
-        />
+        <div className="relative">
+          <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+          <Input
+            id="phone"
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            className="pl-10"
+            required
+          />
+        </div>
+        {errors.phone && (
+          <p className="text-xs text-red-500">{errors.phone}</p>
+        )}
       </div>
+      
+      {role === "staff" && (
+        <div className="space-y-2">
+          <Label htmlFor="dukkanKodu">Dükkan Kodu</Label>
+          <div className="relative">
+            <Store className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+            <Input
+              id="dukkanKodu"
+              type="text"
+              value={dukkanKodu}
+              onChange={(e) => setDukkanKodu(e.target.value)}
+              className="pl-10"
+              placeholder="Dükkan yöneticisinden alınan kod"
+              required
+            />
+          </div>
+          {errors.dukkanKodu && (
+            <p className="text-xs text-red-500">{errors.dukkanKodu}</p>
+          )}
+          <p className="text-xs text-gray-500">
+            Personel kaydı için dükkan yöneticinizden alacağınız dükkan kodunu giriniz.
+          </p>
+        </div>
+      )}
+
+      {role === "admin" && (
+        <>
+          <div className="space-y-2">
+            <Label htmlFor="shopName">Dükkan Adı</Label>
+            <div className="relative">
+              <Store className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <Input
+                id="shopName"
+                type="text"
+                value={shopName}
+                onChange={(e) => setShopName(e.target.value)}
+                className="pl-10"
+                placeholder="Dükkanınızın adını giriniz"
+                required
+              />
+            </div>
+            {errors.shopName && (
+              <p className="text-xs text-red-500">{errors.shopName}</p>
+            )}
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="city">İl</Label>
+              <Select
+                value={city}
+                onValueChange={setCity}
+              >
+                <SelectTrigger id="city">
+                  <SelectValue placeholder="İl seçin" />
+                </SelectTrigger>
+                <SelectContent>
+                  {cities.map((cityItem) => (
+                    <SelectItem key={cityItem.value} value={cityItem.value}>
+                      {cityItem.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.city && (
+                <p className="text-xs text-red-500">{errors.city}</p>
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="district">İlçe</Label>
+              <Select
+                value={district}
+                onValueChange={setDistrict}
+                disabled={!city}
+              >
+                <SelectTrigger id="district">
+                  <SelectValue placeholder={city ? "İlçe seçin" : "Önce il seçin"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {districts.map((districtItem) => (
+                    <SelectItem key={districtItem.value} value={districtItem.value}>
+                      {districtItem.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.district && (
+                <p className="text-xs text-red-500">{errors.district}</p>
+              )}
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="shopPhone">Dükkan Telefonu</Label>
+            <div className="relative">
+              <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <Input
+                id="shopPhone"
+                type="tel"
+                value={shopPhone}
+                onChange={(e) => setShopPhone(e.target.value)}
+                className="pl-10"
+                placeholder="Dükkanınızın telefon numarası (isteğe bağlı)"
+              />
+            </div>
+          </div>
+        </>
+      )}
       
       <div className="space-y-2">
-        <Label htmlFor="address">Adres</Label>
-        <Input
-          id="address"
-          value={formData.address}
-          onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-        />
+        <Label htmlFor="password">Şifre</Label>
+        <div className="relative">
+          <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+          <Input
+            id="password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="pl-10"
+            required
+          />
+        </div>
+        <p className="text-xs text-gray-500">
+          Varsayılan şifre: password123 (Sonradan değiştirebilirsiniz)
+        </p>
+        {errors.password && (
+          <p className="text-xs text-red-500">{errors.password}</p>
+        )}
       </div>
       
-      <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? 'Kaydediliyor...' : 'Kayıt Ol'}
+      <Button
+        type="submit"
+        className="w-full"
+        disabled={loading}
+      >
+        {loading ? "Kayıt yapılıyor..." : "Kayıt Ol"}
       </Button>
     </form>
   );
