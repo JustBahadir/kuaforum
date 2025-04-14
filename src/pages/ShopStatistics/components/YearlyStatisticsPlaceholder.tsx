@@ -1,19 +1,19 @@
 
-import { Card, CardContent } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import React from 'react';
+import { Info } from 'lucide-react';
 
 export function YearlyStatisticsPlaceholder() {
   return (
-    <Card>
-      <CardContent className="p-6">
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Yeterli veri bulunmadığından istatistik gösterilemiyor. Lütfen daha sonra tekrar deneyiniz.
-          </AlertDescription>
-        </Alert>
-      </CardContent>
-    </Card>
+    <div className="bg-muted/50 rounded-lg p-8 flex flex-col items-center justify-center text-center space-y-4">
+      <div className="bg-background rounded-full p-4 inline-flex">
+        <Info className="h-10 w-10 text-primary/60" />
+      </div>
+      <div>
+        <h3 className="text-xl font-medium mb-2">Veri Bulunamadı</h3>
+        <p className="text-muted-foreground max-w-md mx-auto">
+          Seçilen tarih aralığında herhangi bir işlem kaydı bulunmuyor. Farklı bir tarih aralığı seçerek veya yeni işlemler ekleyerek istatistikleri görüntüleyebilirsiniz.
+        </p>
+      </div>
+    </div>
   );
 }

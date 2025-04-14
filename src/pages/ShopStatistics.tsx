@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { islemServisi, kategoriServisi, personelIslemleriServisi, personelServisi } from "@/lib/supabase";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { CustomMonthCycleSelector } from "@/components/ui/custom-month-cycle-selector";
 import {
   BarChart,
   Bar,
@@ -55,6 +56,8 @@ export default function ShopStatistics() {
     to: new Date()
   });
   
+  const [monthCycleDay, setMonthCycleDay] = useState(1);
+  const [useMonthCycle, setUseMonthCycle] = useState(false);
   const [aiInsights, setAiInsights] = useState<string[]>([]);
   const [isAiLoading, setIsAiLoading] = useState(true);
   
@@ -94,6 +97,7 @@ export default function ShopStatistics() {
   // Handle time range change
   const handleTimeRangeChange = (value: string) => {
     setTimeRange(value);
+    setUseMonthCycle(false);
     
     const now = new Date();
     let from, to;
@@ -126,6 +130,35 @@ export default function ShopStatistics() {
   const handleDateRangeChange = (range: { from: Date, to: Date }) => {
     setDateRange(range);
     setTimeRange('custom');
+    setUseMonthCycle(false);
+  };
+
+  // Handle month cycle change
+  const handleMonthCycleChange = (day: number, date: Date) => {
+    setMonthCycleDay(day);
+    
+    const currentDate = new Date();
+    const selectedDay = day;
+    
+    let fromDate = new Date();
+    
+    // Set to previous month's cycle day
+    fromDate.setDate(selectedDay);
+    if (currentDate.getDate() < selectedDay) {
+      fromDate.setMonth(fromDate.getMonth() - 1);
+    }
+    
+    // Create the end date (same day, current month)
+    const toDate = new Date(fromDate);
+    toDate.setMonth(toDate.getMonth() + 1);
+    
+    setDateRange({
+      from: fromDate,
+      to: toDate
+    });
+    
+    setTimeRange('custom');
+    setUseMonthCycle(true);
   };
   
   // Filter operations based on date range - Define this before it's used
@@ -166,7 +199,7 @@ export default function ShopStatistics() {
       
       const entry = dataMap.get(key);
       entry.operations += 1;
-      entry.revenue += operation.tutar || 0;
+      entry.revenue += Number(operation.tutar) || 0;
     });
     
     // Convert map to array and sort by date
@@ -198,7 +231,7 @@ export default function ShopStatistics() {
       
       const entry = dataMap.get(serviceName);
       entry.count += 1;
-      entry.revenue += operation.tutar || 0;
+      entry.revenue += Number(operation.tutar) || 0;
     });
     
     // Convert map to array and sort by revenue
@@ -221,7 +254,7 @@ export default function ShopStatistics() {
         categoryMap[categoryName] = { value: 0, count: 0 };
       }
       
-      categoryMap[categoryName].value += op.tutar || 0;
+      categoryMap[categoryName].value += Number(op.tutar) || 0;
       categoryMap[categoryName].count += 1;
     });
     
@@ -234,7 +267,7 @@ export default function ShopStatistics() {
   
   // Calculate summary statistics
   const stats = useMemo(() => {
-    const totalRevenue = filteredOperations.reduce((sum, op) => sum + (op.tutar || 0), 0);
+    const totalRevenue = filteredOperations.reduce((sum, op) => sum + (Number(op.tutar) || 0), 0);
     const totalOperations = filteredOperations.length;
     const averageTicket = totalOperations > 0 ? totalRevenue / totalOperations : 0;
     
@@ -308,7 +341,7 @@ export default function ShopStatistics() {
         
         const entry = personnelStats.get(op.personel_id);
         entry.operations += 1;
-        entry.revenue += op.tutar || 0;
+        entry.revenue += Number(op.tutar) || 0;
       });
       
       if (personnelStats.size > 0) {
@@ -386,11 +419,22 @@ export default function ShopStatistics() {
             </Select>
           </div>
 
-          <DateRangePicker
-            from={dateRange.from}
-            to={dateRange.to}
-            onSelect={handleDateRangeChange}
-          />
+          <div className="flex gap-2">
+            {!useMonthCycle && (
+              <DateRangePicker
+                from={dateRange.from}
+                to={dateRange.to}
+                onSelect={handleDateRangeChange}
+              />
+            )}
+            
+            <CustomMonthCycleSelector
+              selectedDay={monthCycleDay}
+              onChange={handleMonthCycleChange}
+              active={useMonthCycle}
+              onClear={() => setUseMonthCycle(false)}
+            />
+          </div>
         </div>
 
         {/* Summary statistics */}

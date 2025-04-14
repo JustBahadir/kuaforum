@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useQuery } from "@tanstack/react-query";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
-import { personelServisi, personelIslemleriServisi } from "@/lib/supabase";
+import { personelServisi, personelIslemleriServisi, islemServisi } from "@/lib/supabase";
 import { 
   LineChart, 
   Line, 
@@ -68,6 +69,11 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
     queryFn: () => personelServisi.hepsiniGetir(),
   });
 
+  const { data: islemler = [], isLoading: islemlerLoading } = useQuery({
+    queryKey: ['islemler-for-performance'],
+    queryFn: () => islemServisi.hepsiniGetir(),
+  });
+
   useEffect(() => {
     if (personnelId) {
       setSelectedPersonnelId(personnelId);
@@ -112,13 +118,19 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
     queryFn: async () => {
       if (!selectedPersonnelId) return [];
       
-      const operations = await personelIslemleriServisi.personelIslemleriGetir(selectedPersonnelId);
-      
-      return operations.filter(op => {
-        if (!op.created_at) return false;
-        const date = new Date(op.created_at);
-        return date >= dateRange.from && date <= dateRange.to;
-      });
+      try {
+        console.log(`Fetching operations for personnel ${selectedPersonnelId}`);
+        const operations = await personelIslemleriServisi.personelIslemleriGetir(selectedPersonnelId);
+        
+        return operations.filter(op => {
+          if (!op.created_at) return false;
+          const date = new Date(op.created_at);
+          return date >= dateRange.from && date <= dateRange.to;
+        });
+      } catch (error) {
+        console.error("Error fetching personnel operations:", error);
+        return [];
+      }
     },
     enabled: !!selectedPersonnelId,
   });
@@ -136,7 +148,7 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
     setSelectedPersonnelId(Number(personnelId));
   };
 
-  const dailyData = useState(() => {
+  const dailyData = useMemo(() => {
     if (!operationsData?.length) return [];
 
     const dailyMap = new Map<string, PerformanceData>();
@@ -153,7 +165,7 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
       
       const entry = dailyMap.get(dateStr)!;
       entry.islemSayisi += 1;
-      entry.ciro += op.tutar || 0;
+      entry.ciro += Number(op.tutar) || 0;
     });
 
     return Array.from(dailyMap.values()).sort((a, b) => {
@@ -161,9 +173,9 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
       const dateB = new Date(b.date.split('.').reverse().join('-'));
       return dateA.getTime() - dateB.getTime();
     });
-  })[0];
+  }, [operationsData]);
 
-  const serviceData = useState(() => {
+  const serviceData = useMemo(() => {
     if (!operationsData?.length) return [];
 
     const serviceMap = new Map<string, ServiceData>();
@@ -179,9 +191,9 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
       
       const entry = serviceMap.get(serviceName)!;
       entry.count += 1;
-      entry.revenue += op.tutar || 0;
+      entry.revenue += Number(op.tutar) || 0;
       
-      totalRevenue += op.tutar || 0;
+      totalRevenue += Number(op.tutar) || 0;
       totalOperations += 1;
     });
     
@@ -198,35 +210,73 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
       const topItems = result.slice(0, 4);
       const otherItems = result.slice(4);
       
+      const otherDetails = otherItems.map(item => ({
+        name: item.name,
+        count: item.count
+      }));
+      
       const otherGroup: ServiceData = {
         name: "Diğer",
         count: otherItems.reduce((sum, item) => sum + item.count, 0),
         revenue: otherItems.reduce((sum, item) => sum + item.revenue, 0),
-        percentage: otherItems.reduce((sum, item) => sum + (item.percentage || 0), 0)
+        percentage: otherItems.reduce((sum, item) => sum + (item.percentage || 0), 0),
+        details: otherDetails
       };
       
       return [...topItems, otherGroup];
     }
     
     return result;
-  })[0];
+  }, [operationsData]);
 
-  const performanceSummary = useState(() => {
+  const categoryData = useMemo(() => {
+    if (!operationsData?.length || !islemler?.length) return [];
+    
+    const categoryMap = new Map();
+    
+    operationsData.forEach(op => {
+      if (!op.islem_id) return;
+      
+      const service = islemler.find(s => s.id === op.islem_id);
+      if (!service || !service.kategori_id) return;
+      
+      // Find category name from service's category_id
+      const kategoriId = service.kategori_id;
+      const kategoriAdi = "Kategori " + kategoriId; // You may want to fetch actual category names
+      
+      if (!categoryMap.has(kategoriAdi)) {
+        categoryMap.set(kategoriAdi, {
+          name: kategoriAdi,
+          count: 0,
+          revenue: 0
+        });
+      }
+      
+      const entry = categoryMap.get(kategoriAdi);
+      entry.count += 1;
+      entry.revenue += Number(op.tutar) || 0;
+    });
+    
+    return Array.from(categoryMap.values())
+      .sort((a, b) => b.revenue - a.revenue);
+  }, [operationsData, islemler]);
+
+  const performanceSummary = useMemo(() => {
     if (!operationsData?.length) {
       return { totalOperations: 0, totalRevenue: 0, averageRevenue: 0 };
     }
     
     const totalOperations = operationsData.length;
-    const totalRevenue = operationsData.reduce((sum, op) => sum + (op.tutar || 0), 0);
+    const totalRevenue = operationsData.reduce((sum, op) => sum + (Number(op.tutar) || 0), 0);
     
     return {
       totalOperations,
       totalRevenue,
-      averageRevenue: totalRevenue / totalOperations,
+      averageRevenue: totalOperations > 0 ? totalRevenue / totalOperations : 0,
     };
-  })[0];
+  }, [operationsData]);
 
-  const aiInsights = useState(() => {
+  const aiInsights = useMemo(() => {
     if (!operationsData?.length || !selectedPersonnel) {
       return ["Bu personel için yeterli veri bulunmamaktadır."];
     }
@@ -243,7 +293,7 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
     }
     
     if (serviceData.length > 0) {
-      const mostPopularService = serviceData[0];
+      const mostPopularService = serviceData.sort((a, b) => b.count - a.count)[0];
       insights.push(`En çok yaptığı işlem: ${mostPopularService.count} adet ile ${mostPopularService.name}.`);
     }
     
@@ -257,11 +307,16 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
       insights.push(`En yüksek ciroyu ${bestDay.date} tarihinde ${formatCurrency(bestDay.ciro)} ile elde etti.`);
     }
     
+    if (categoryData.length > 0) {
+      const topCategory = categoryData[0];
+      insights.push(`En çok performans gösterdiği kategori: ${topCategory.name} (${formatCurrency(topCategory.revenue)}).`);
+    }
+    
     return insights;
-  })[0];
+  }, [operationsData, selectedPersonnel, performanceSummary, serviceData, dailyData, categoryData]);
 
-  const isLoading = personnelLoading || operationsLoading || selectedPersonnelLoading;
-  const hasNoData = !isLoading && operationsData.length === 0;
+  const isLoading = personnelLoading || operationsLoading || selectedPersonnelLoading || islemlerLoading;
+  const hasNoData = !isLoading && (!operationsData || operationsData.length === 0);
 
   return (
     <div className="space-y-6">
@@ -307,6 +362,36 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
         <div>
           <h2 className="text-2xl font-bold mb-4">{selectedPersonnel.ad_soyad}</h2>
           
+          {/* AI Insights Box - Placed at the top as requested */}
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Akıllı Analiz</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="flex items-center justify-center py-4">
+                  <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
+                </div>
+              ) : aiInsights.length > 0 && aiInsights[0] !== "Bu personel için yeterli veri bulunmamaktadır." ? (
+                <ul className="space-y-2">
+                  {aiInsights.map((insight, i) => (
+                    <li key={i} className="flex items-baseline gap-2">
+                      <span className="text-purple-600 text-lg">•</span>
+                      <span>{insight}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <Alert>
+                  <CircleAlert className="h-4 w-4" />
+                  <AlertDescription>
+                    Bu personel için yeterli veri bulunmamaktadır.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </CardContent>
+          </Card>
+          
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             <Card>
               <CardHeader className="pb-2">
@@ -344,7 +429,16 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
           </div>
 
           {hasNoData ? (
-            <YearlyStatisticsPlaceholder />
+            <Alert className="my-6">
+              <CircleAlert className="h-4 w-4" />
+              <AlertDescription>
+                Seçilen tarih aralığında bu personel için işlem kaydı bulunamadı.
+              </AlertDescription>
+            </Alert>
+          ) : isLoading ? (
+            <div className="flex justify-center my-12">
+              <div className="w-10 h-10 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
+            </div>
           ) : (
             <>
               <Tabs defaultValue="daily" className="space-y-6" value={selectedTab} onValueChange={setSelectedTab}>
@@ -355,6 +449,7 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
                       <TabsList>
                         <TabsTrigger value="daily">Günlük</TabsTrigger>
                         <TabsTrigger value="services">Hizmet Analizi</TabsTrigger>
+                        <TabsTrigger value="categories">Kategori Analizi</TabsTrigger>
                       </TabsList>
                     </div>
                   </CardHeader>
@@ -362,17 +457,13 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
                   <CardContent>
                     <TabsContent value="daily" className="mt-0">
                       <div className="h-[400px]">
-                        {isLoading ? (
-                          <div className="h-full flex items-center justify-center">
-                            <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
-                          </div>
-                        ) : dailyData.length === 0 ? (
+                        {dailyData.length === 0 ? (
                           <div className="h-full flex items-center justify-center">
                             <p className="text-muted-foreground">Bu personel için yeterli veri bulunmamaktadır.</p>
                           </div>
                         ) : (
                           <ResponsiveContainer width="100%" height="100%">
-                            <LineChart
+                            <BarChart
                               data={dailyData}
                               margin={{ top: 5, right: 30, left: 20, bottom: 30 }}
                             >
@@ -415,7 +506,7 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
                                 name="İşlem Sayısı"
                                 strokeWidth={2} 
                               />
-                            </LineChart>
+                            </BarChart>
                           </ResponsiveContainer>
                         )}
                       </div>
@@ -441,11 +532,7 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
                           </div>
                           
                           <div className="h-[300px]">
-                            {isLoading ? (
-                              <div className="h-full flex items-center justify-center">
-                                <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
-                              </div>
-                            ) : serviceData.length === 0 ? (
+                            {serviceData.length === 0 ? (
                               <div className="h-full flex items-center justify-center">
                                 <p className="text-muted-foreground">Bu personel için yeterli veri bulunmamaktadır.</p>
                               </div>
@@ -462,6 +549,7 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
                                       outerRadius={80}
                                       fill="#8884d8"
                                       dataKey="count"
+                                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                                     >
                                       {serviceData.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -508,11 +596,7 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
                           </div>
                           
                           <div className="h-[300px]">
-                            {isLoading ? (
-                              <div className="h-full flex items-center justify-center">
-                                <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
-                              </div>
-                            ) : serviceData.length === 0 ? (
+                            {serviceData.length === 0 ? (
                               <div className="h-full flex items-center justify-center">
                                 <p className="text-muted-foreground">Bu personel için yeterli veri bulunmamaktadır.</p>
                               </div>
@@ -528,6 +612,7 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
                                     outerRadius={80}
                                     fill="#8884d8"
                                     dataKey="revenue"
+                                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                                   >
                                     {serviceData.map((entry, index) => (
                                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -574,38 +659,86 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
                         </div>
                       </div>
                     </TabsContent>
+
+                    <TabsContent value="categories" className="mt-0">
+                      <div>
+                        <div className="flex justify-between items-center mb-2">
+                          <h3 className="font-medium">Kategori Bazlı Performans</h3>
+                          <TooltipProvider>
+                            <TooltipUI>
+                              <TooltipTrigger>
+                                <InfoIcon className="h-4 w-4 text-muted-foreground" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="max-w-xs">
+                                  İşlemler hizmet kategorilerine göre gruplandırılmıştır. Her kategorinin toplam performansı gösterilir.
+                                </p>
+                              </TooltipContent>
+                            </TooltipUI>
+                          </TooltipProvider>
+                        </div>
+                        
+                        <div className="h-[300px]">
+                          {categoryData.length === 0 ? (
+                            <div className="h-full flex items-center justify-center">
+                              <p className="text-muted-foreground">Kategori verisi bulunamadı.</p>
+                            </div>
+                          ) : (
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart
+                                data={categoryData}
+                                margin={{ top: 5, right: 30, left: 20, bottom: 20 }}
+                              >
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="name" />
+                                <YAxis yAxisId="left" tickFormatter={(value) => `₺${value}`} />
+                                <YAxis yAxisId="right" orientation="right" />
+                                <Tooltip 
+                                  formatter={(value, name) => {
+                                    if (name === "revenue") return [formatCurrency(value as number), "Ciro"];
+                                    return [value, "İşlem Sayısı"];
+                                  }} 
+                                />
+                                <Legend />
+                                <Bar yAxisId="left" dataKey="revenue" name="Ciro" fill="#8884d8" />
+                                <Bar yAxisId="right" dataKey="count" name="İşlem Sayısı" fill="#82ca9d" />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          )}
+                        </div>
+                        
+                        <div className="mt-6">
+                          <h3 className="font-medium mb-2">Kategori Detayları</h3>
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                              <thead>
+                                <tr className="bg-gray-50">
+                                  <th className="text-left p-2">Kategori</th>
+                                  <th className="text-right p-2">İşlem Sayısı</th>
+                                  <th className="text-right p-2">Toplam Ciro</th>
+                                  <th className="text-right p-2">Ortalama İşlem</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {categoryData.map((category, index) => (
+                                  <tr key={index} className="border-t">
+                                    <td className="p-2">{category.name}</td>
+                                    <td className="text-right p-2">{category.count}</td>
+                                    <td className="text-right p-2">{formatCurrency(category.revenue)}</td>
+                                    <td className="text-right p-2">
+                                      {category.count > 0 ? formatCurrency(category.revenue / category.count) : "-"}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </div>
+                    </TabsContent>
                   </CardContent>
                 </Card>
               </Tabs>
-              
-              <Card className="mt-6">
-                <CardHeader>
-                  <CardTitle>Akıllı Analiz</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {isLoading ? (
-                    <div className="flex items-center justify-center py-4">
-                      <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
-                    </div>
-                  ) : aiInsights.length > 0 ? (
-                    <ul className="space-y-2">
-                      {aiInsights.map((insight, i) => (
-                        <li key={i} className="flex items-baseline gap-2">
-                          <span className="text-purple-600 text-lg">•</span>
-                          <span>{insight}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <Alert>
-                      <CircleAlert className="h-4 w-4" />
-                      <AlertDescription>
-                        Bu personel için yeterli veri bulunmamaktadır.
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                </CardContent>
-              </Card>
             </>
           )}
         </div>

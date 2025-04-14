@@ -1,10 +1,12 @@
 
 import React, { useState, useEffect } from "react";
 import { personelIslemleriServisi } from "@/lib/supabase";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { formatCurrency } from "@/lib/utils";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+
+const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088FE'];
 
 interface PerformanceTabProps {
   personnel: any;
@@ -13,7 +15,8 @@ interface PerformanceTabProps {
 export function PerformanceTab({ personnel }: PerformanceTabProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [performanceData, setPerformanceData] = useState<any[]>([]);
-  const [analysisText, setAnalysisText] = useState<string>("");
+  const [categoryData, setCategoryData] = useState<any[]>([]);
+  const [analysisText, setAnalysisText] = useState<string[]>([]);
   
   useEffect(() => {
     if (!personnel?.id) return;
@@ -42,12 +45,34 @@ export function PerformanceTab({ personnel }: PerformanceTabProps) {
             return acc;
           }, {});
           
-          // Convert to array and sort by count
-          const serviceArray = Object.values(serviceGroups).sort((a: any, b: any) => b.count - a.count);
+          // Convert to array and sort by revenue
+          const serviceArray = Object.values(serviceGroups).sort((a: any, b: any) => b.revenue - a.revenue);
           setPerformanceData(serviceArray);
           
+          // Group by category for the category chart
+          const categoryGroups = operations.reduce((acc: any, op: any) => {
+            const categoryId = op.islem?.kategori_id;
+            const categoryName = categoryId ? `Kategori ${categoryId}` : 'Diğer';
+            
+            if (!acc[categoryName]) {
+              acc[categoryName] = {
+                name: categoryName,
+                count: 0,
+                revenue: 0
+              };
+            }
+            
+            acc[categoryName].count += 1;
+            acc[categoryName].revenue += Number(op.tutar) || 0;
+            return acc;
+          }, {});
+          
+          // Convert to array and sort by revenue
+          const categoryArray = Object.values(categoryGroups).sort((a: any, b: any) => b.revenue - a.revenue);
+          setCategoryData(categoryArray);
+          
           // Generate analysis text
-          generateAnalysis(operations, serviceArray);
+          generateAnalysis(operations, serviceArray, categoryArray);
         }
       } catch (error) {
         console.error("Error fetching performance data:", error);
@@ -59,9 +84,9 @@ export function PerformanceTab({ personnel }: PerformanceTabProps) {
     fetchData();
   }, [personnel]);
   
-  const generateAnalysis = (operations: any[], serviceGroups: any[]) => {
+  const generateAnalysis = (operations: any[], serviceGroups: any[], categoryGroups: any[]) => {
     if (operations.length === 0 || serviceGroups.length === 0) {
-      setAnalysisText("Bu personel için yeterli veri bulunmamaktadır.");
+      setAnalysisText(["Bu personel için yeterli veri bulunmamaktadır."]);
       return;
     }
     
@@ -81,12 +106,18 @@ export function PerformanceTab({ personnel }: PerformanceTabProps) {
     
     // Generate analysis
     const analysis = [
-      `${personnel.ad_soyad} son 30 günde toplam ${totalOperations} işlem gerçekleştirdi ve ₺${totalRevenue.toLocaleString('tr-TR')} ciro oluşturdu.`,
+      `${personnel.ad_soyad} son 30 günde toplam ${totalOperations} işlem gerçekleştirdi ve ${formatCurrency(totalRevenue)} ciro oluşturdu.`,
       `En çok yapılan işlem "${mostFrequentService}" olarak görülüyor.`,
-      `Performans grafiğine göre personelin en güçlü olduğu alan ${serviceGroups[0]?.name || "belirlenmemiş"}.`
+      `Bu personelin işlem başına ortalama geliri: ${formatCurrency(totalRevenue / (totalOperations || 1))}.`
     ];
     
-    setAnalysisText(analysis.join(" "));
+    // Add category analysis if available
+    if (categoryGroups.length > 0) {
+      const topCategory = categoryGroups[0];
+      analysis.push(`En çok performans gösterdiği kategori: ${topCategory.name} (${formatCurrency(topCategory.revenue)}).`);
+    }
+    
+    setAnalysisText(analysis);
   };
 
   return (
@@ -99,7 +130,14 @@ export function PerformanceTab({ personnel }: PerformanceTabProps) {
         <>
           <div className="bg-muted/50 p-4 rounded-md">
             <h3 className="font-medium mb-2">Akıllı Analiz</h3>
-            <p className="text-sm">{analysisText}</p>
+            <ul className="space-y-1">
+              {analysisText.map((text, index) => (
+                <li key={index} className="flex items-baseline gap-2">
+                  <span className="text-purple-600 text-lg">•</span>
+                  <span className="text-sm">{text}</span>
+                </li>
+              ))}
+            </ul>
           </div>
           
           <div>
@@ -130,8 +168,66 @@ export function PerformanceTab({ personnel }: PerformanceTabProps) {
             </div>
           </div>
           
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h3 className="font-medium mb-2">Hizmet Dağılımı</h3>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={performanceData.slice(0, 5)}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="revenue"
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    >
+                      {performanceData.slice(0, 5).map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => formatCurrency(value as number)} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+            
+            <div>
+              <h3 className="font-medium mb-2">Kategori Bazlı Değerlendirme</h3>
+              <div className="h-64">
+                {categoryData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={categoryData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="revenue"
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      >
+                        {categoryData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value) => formatCurrency(value as number)} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <p className="text-muted-foreground">Kategori verisi bulunamadı</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          
           <div>
-            <h3 className="font-medium mb-2">Kategori Bazlı Değerlendirme</h3>
+            <h3 className="font-medium mb-2">Hizmet Detayları</h3>
             <table className="w-full">
               <thead className="bg-muted">
                 <tr>
@@ -150,6 +246,20 @@ export function PerformanceTab({ personnel }: PerformanceTabProps) {
                     <td className="p-2 text-sm text-right">{formatCurrency(service.commission)}</td>
                   </tr>
                 ))}
+                {performanceData.length > 0 && (
+                  <tr className="border-t font-medium">
+                    <td className="p-2 text-sm">Toplam</td>
+                    <td className="p-2 text-sm text-right">
+                      {performanceData.reduce((sum, item) => sum + item.count, 0)}
+                    </td>
+                    <td className="p-2 text-sm text-right">
+                      {formatCurrency(performanceData.reduce((sum, item) => sum + item.revenue, 0))}
+                    </td>
+                    <td className="p-2 text-sm text-right">
+                      {formatCurrency(performanceData.reduce((sum, item) => sum + item.commission, 0))}
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
