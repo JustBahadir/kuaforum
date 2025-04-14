@@ -55,11 +55,14 @@ export function PersonnelDetailsDialog({
   }, [personnel, isOpen]);
 
   const handleEdit = () => {
-    setIsEditDialogOpen(true);
+    if (activeTab === "calisma") {
+      setIsEditDialogOpen(true);
+    }
   };
 
   // Helper function to copy text to clipboard
   const copyToClipboard = (text: string, type: string) => {
+    if (!text) return;
     navigator.clipboard.writeText(text);
     toast.success(`${type} kopyalandı`);
   };
@@ -81,6 +84,9 @@ export function PersonnelDetailsDialog({
       .toUpperCase()
       .slice(0, 2);
   };
+
+  // Show edit button only on the working info tab
+  const showEditButton = activeTab === "calisma";
 
   return (
     <>
@@ -106,15 +112,17 @@ export function PersonnelDetailsDialog({
                   </DialogDescription>
                 </div>
               </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="flex gap-2"
-                onClick={handleEdit}
-              >
-                <Pencil className="h-4 w-4" />
-                <span>Düzenle</span>
-              </Button>
+              {showEditButton && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex gap-2"
+                  onClick={handleEdit}
+                >
+                  <Pencil className="h-4 w-4" />
+                  <span>Düzenle</span>
+                </Button>
+              )}
             </div>
           </DialogHeader>
 
@@ -169,6 +177,16 @@ export function PersonnelDetailsDialog({
                   <div className="flex items-center gap-2">
                     <Mail className="h-4 w-4 text-muted-foreground" />
                     <span className="truncate">{personnel.eposta || "Belirtilmemiş"}</span>
+                    {personnel.eposta && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className="h-6 w-6 p-0"
+                        onClick={() => copyToClipboard(personnel.eposta, "E-posta")}
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
                   </div>
                 </div>
                 
@@ -201,7 +219,7 @@ export function PersonnelDetailsDialog({
             </TabsContent>
 
             <TabsContent value="calisma" className="space-y-4 mt-4">
-              <WorkInfoTab personnel={personnel} />
+              <WorkInfoTab personnel={personnel} onEdit={handleEdit} />
             </TabsContent>
             
             <TabsContent value="performans" className="space-y-4 mt-4">

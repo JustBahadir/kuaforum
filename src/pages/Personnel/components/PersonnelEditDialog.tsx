@@ -29,6 +29,8 @@ interface PersonnelEditDialogProps {
   personnel: Personel;
 }
 
+// This component is now deprecated and only kept for backward compatibility
+// The functionality has been moved directly into the WorkInfoTab
 export function PersonnelEditDialog({
   isOpen,
   onOpenChange,
@@ -83,10 +85,8 @@ export function PersonnelEditDialog({
     updateMutation.mutate(updateData);
   };
   
-  // Watch for changes to the working system field to conditionally show/hide fields
-  const calisma_sistemi = form.watch("calisma_sistemi");
-  
   // Check if the working system is a salary type
+  const calisma_sistemi = form.watch("calisma_sistemi");
   const isSalaryType = ["aylik_maas", "haftalik_maas", "gunluk_maas"].includes(calisma_sistemi);
 
   return (

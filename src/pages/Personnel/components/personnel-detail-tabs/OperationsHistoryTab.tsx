@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { formatCurrency } from "@/lib/utils";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
@@ -25,7 +26,6 @@ export function OperationsHistoryTab({
   const [monthCycleDay, setMonthCycleDay] = useState(1);
   const [useMonthCycle, setUseMonthCycle] = useState(false);
   const [singleDateMode, setSingleDateMode] = useState(false);
-  const [singleDate, setSingleDate] = useState<Date | null>(new Date());
   
   const handleDateRangeChange = ({from, to}: {from: Date, to: Date}) => {
     setDateRange({from, to});
@@ -61,9 +61,10 @@ export function OperationsHistoryTab({
   };
   
   const handleSingleDateModeToggle = () => {
-    setSingleDateMode(!singleDateMode);
-    if (!singleDateMode) {
-      setSingleDate(new Date());
+    const newSingleDateMode = !singleDateMode;
+    setSingleDateMode(newSingleDateMode);
+    
+    if (newSingleDateMode) {
       // When enabling single date mode, set both from and to to the same day
       const today = new Date();
       setDateRange({
@@ -71,12 +72,12 @@ export function OperationsHistoryTab({
         to: new Date(today.setHours(23, 59, 59, 999))
       });
     }
+    
     setUseMonthCycle(false);
   };
   
   const handleSingleDateChange = (date: Date | null) => {
     if (!date) return;
-    setSingleDate(date);
     
     // Set the date range to span just this one day
     const startOfDay = new Date(date);
@@ -124,22 +125,21 @@ export function OperationsHistoryTab({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row items-start gap-4">
+      {/* Date and search controls */}
+      <div className="flex flex-col space-y-4">
         {/* Search Field */}
-        <div className="w-full sm:w-64">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Müşteri veya işlem ara..."
-              className="pl-9 w-full"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
+        <div className="w-full max-w-sm relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Müşteri veya işlem ara..."
+            className="pl-9 w-full"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </div>
 
         {/* Date Selection Controls */}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-3">
           <Button
             variant={singleDateMode ? "secondary" : "outline"}
             size="sm"
@@ -147,7 +147,7 @@ export function OperationsHistoryTab({
             onClick={handleSingleDateModeToggle}
           >
             <Calendar className="h-4 w-4" />
-            <span>{singleDateMode ? "Tek Gün Seçili" : "Tarih Aralığı"}</span>
+            <span>{singleDateMode ? "Tek Gün" : "Tarih Aralığı"}</span>
           </Button>
 
           {singleDateMode ? (
@@ -162,6 +162,7 @@ export function OperationsHistoryTab({
               from={dateRange.from}
               to={dateRange.to}
               onSelect={handleDateRangeChange}
+              singleDate={false}
             />
           )}
 

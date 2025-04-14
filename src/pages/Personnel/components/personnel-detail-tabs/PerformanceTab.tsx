@@ -1,13 +1,14 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { personelIslemleriServisi } from "@/lib/supabase";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, Line } from 'recharts';
 import { formatCurrency } from "@/lib/utils";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import { YearlyStatisticsPlaceholder } from "@/pages/ShopStatistics/components/YearlyStatisticsPlaceholder";
+import { Button } from "@/components/ui/button";
 
-const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088FE'];
+const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#9370DB', '#20B2AA'];
 
 interface PerformanceTabProps {
   personnel: any;
@@ -19,6 +20,10 @@ export function PerformanceTab({ personnel }: PerformanceTabProps) {
   const [categoryData, setCategoryData] = useState<any[]>([]);
   const [analysisText, setAnalysisText] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const maxSlides = 2; // Number of slides (services and categories)
+  
+  const chartContainerRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
     if (!personnel?.id) return;
@@ -55,7 +60,7 @@ export function PerformanceTab({ personnel }: PerformanceTabProps) {
           // Group by category for the category chart
           const categoryGroups = operations.reduce((acc: any, op: any) => {
             const categoryId = op.islem?.kategori_id;
-            const categoryName = categoryId ? `Kategori ${categoryId}` : 'Diğer';
+            const categoryName = op.islem?.islem_adi?.split(' ')[0] || `Kategori ${categoryId || 'Diğer'}`;
             
             if (!acc[categoryName]) {
               acc[categoryName] = {
@@ -135,6 +140,27 @@ export function PerformanceTab({ personnel }: PerformanceTabProps) {
     setAnalysisText(analysis);
   };
 
+  const handleNext = () => {
+    setCurrentSlide((prev) => (prev + 1) % maxSlides);
+  };
+
+  const handlePrev = () => {
+    setCurrentSlide((prev) => (prev - 1 + maxSlides) % maxSlides);
+  };
+
+  // Custom tooltip for pie charts to avoid text overflow
+  const PieChartCustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white p-2 border rounded shadow-sm">
+          <p className="font-medium">{payload[0].name}</p>
+          <p className="text-sm">{formatCurrency(payload[0].value)}</p>
+        </div>
+      );
+    }
+    return null;
+  };
+
   if (error) {
     return (
       <Alert variant="destructive">
@@ -170,33 +196,89 @@ export function PerformanceTab({ personnel }: PerformanceTabProps) {
         </ul>
       </div>
       
-      <div>
-        <h3 className="font-medium mb-2">Hizmet Performansı</h3>
-        <div className="h-72">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={performanceData.slice(0, 5)} // Show top 5 services
-              margin={{ top: 10, right: 30, left: 0, bottom: 20 }}
+      <div className="relative" ref={chartContainerRef}>
+        <div className="flex justify-between items-center mb-2">
+          <h3 className="font-medium">
+            {currentSlide === 0 ? "Hizmet Performansı" : "Kategori Bazlı Değerlendirme"}
+          </h3>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-8 w-8 p-0 rounded-full" 
+              onClick={handlePrev}
             >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-              <YAxis />
-              <Tooltip 
-                formatter={(value, name) => {
-                  if (name === "revenue" || name === "commission") {
-                    return [formatCurrency(value as number), name === "revenue" ? "Ciro" : "Prim"];
-                  }
-                  return [value, name === "count" ? "İşlem Sayısı" : name];
-                }}
-              />
-              <Legend />
-              <Bar dataKey="count" name="İşlem Sayısı" fill="#8884d8" />
-              <Bar dataKey="revenue" name="Ciro" fill="#82ca9d" />
-              {personnel.calisma_sistemi === "prim_komisyon" && (
-                <Bar dataKey="commission" name="Prim" fill="#ffc658" />
-              )}
-            </BarChart>
-          </ResponsiveContainer>
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <span className="text-sm">
+              {currentSlide + 1}/{maxSlides}
+            </span>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-8 w-8 p-0 rounded-full" 
+              onClick={handleNext}
+            >
+              <ChevronRight className="h-5 w-5" />
+            </Button>
+          </div>
+        </div>
+        
+        <div className="h-72 overflow-hidden">
+          <div className="transition-transform duration-300 w-full h-full" style={{transform: `translateX(-${currentSlide * 100}%)`}}>
+            <div className="absolute top-12 left-0 w-full h-[calc(100%-48px)]" style={{display: currentSlide === 0 ? 'block' : 'none'}}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={performanceData.slice(0, 5)} // Show top 5 services
+                  margin={{ top: 10, right: 30, left: 0, bottom: 20 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                  <YAxis yAxisId="left" orientation="left" stroke="#82ca9d" />
+                  <YAxis yAxisId="right" orientation="right" stroke="#8884d8" />
+                  <Tooltip 
+                    formatter={(value, name) => {
+                      if (name === "revenue" || name === "commission") {
+                        return [formatCurrency(value as number), name === "revenue" ? "Ciro" : "Prim"];
+                      }
+                      return [value, name === "count" ? "İşlem Sayısı" : name];
+                    }}
+                  />
+                  <Legend />
+                  <Bar yAxisId="left" dataKey="revenue" name="Ciro" fill="#82ca9d" />
+                  <Line yAxisId="right" type="monotone" dataKey="count" name="İşlem Sayısı" stroke="#8884d8" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                  {personnel.calisma_sistemi === "prim_komisyon" && (
+                    <Bar yAxisId="left" dataKey="commission" name="Prim" fill="#ffc658" />
+                  )}
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            
+            <div className="absolute top-12 left-0 w-full h-[calc(100%-48px)]" style={{display: currentSlide === 1 ? 'block' : 'none'}}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={categoryData.slice(0, 5)} // Show top 5 categories
+                  margin={{ top: 10, right: 30, left: 0, bottom: 20 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                  <YAxis yAxisId="left" orientation="left" stroke="#82ca9d" />
+                  <YAxis yAxisId="right" orientation="right" stroke="#8884d8" />
+                  <Tooltip 
+                    formatter={(value, name) => {
+                      if (name === "revenue") {
+                        return [formatCurrency(value as number), "Ciro"];
+                      }
+                      return [value, name === "count" ? "İşlem Sayısı" : name];
+                    }}
+                  />
+                  <Legend />
+                  <Bar yAxisId="left" dataKey="revenue" name="Ciro" fill="#82ca9d" />
+                  <Line yAxisId="right" type="monotone" dataKey="count" name="İşlem Sayısı" stroke="#8884d8" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
         </div>
       </div>
       
@@ -214,13 +296,14 @@ export function PerformanceTab({ personnel }: PerformanceTabProps) {
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="revenue"
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  nameKey="name"
+                  label={false}
                 >
                   {performanceData.slice(0, 5).map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value) => formatCurrency(value as number)} />
+                <Tooltip content={<PieChartCustomTooltip />} />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -240,13 +323,14 @@ export function PerformanceTab({ personnel }: PerformanceTabProps) {
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="revenue"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    nameKey="name"
+                    label={false}
                   >
                     {categoryData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value) => formatCurrency(value as number)} />
+                  <Tooltip content={<PieChartCustomTooltip />} />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
