@@ -1,10 +1,11 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { formatCurrency } from "@/lib/utils";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { CustomMonthCycleSelector } from "@/components/ui/custom-month-cycle-selector";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import { Search, Calendar } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface OperationsHistoryTabProps {
   personnel: any;
@@ -24,14 +25,18 @@ export function OperationsHistoryTab({
   const [searchTerm, setSearchTerm] = useState("");
   const [monthCycleDay, setMonthCycleDay] = useState(1);
   const [useMonthCycle, setUseMonthCycle] = useState(false);
+  const [singleDateMode, setSingleDateMode] = useState(false);
+  const [singleDate, setSingleDate] = useState<Date | null>(new Date());
   
   const handleDateRangeChange = ({from, to}: {from: Date, to: Date}) => {
     setDateRange({from, to});
     setUseMonthCycle(false);
+    setSingleDateMode(false);
   };
 
   const handleMonthCycleChange = (day: number, date: Date) => {
     setMonthCycleDay(day);
+    setSingleDateMode(false);
     
     const currentDate = new Date();
     const selectedDay = day;
@@ -54,6 +59,37 @@ export function OperationsHistoryTab({
     });
     
     setUseMonthCycle(true);
+  };
+  
+  const handleSingleDateModeToggle = () => {
+    setSingleDateMode(!singleDateMode);
+    if (!singleDateMode) {
+      setSingleDate(new Date());
+      // When enabling single date mode, set both from and to to the same day
+      const today = new Date();
+      setDateRange({
+        from: new Date(today.setHours(0, 0, 0, 0)),
+        to: new Date(today.setHours(23, 59, 59, 999))
+      });
+    }
+    setUseMonthCycle(false);
+  };
+  
+  const handleSingleDateChange = (date: Date | null) => {
+    if (!date) return;
+    setSingleDate(date);
+    
+    // Set the date range to span just this one day
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+    
+    setDateRange({
+      from: startOfDay,
+      to: endOfDay
+    });
   };
 
   // Filter operations by date range and search term
@@ -84,6 +120,9 @@ export function OperationsHistoryTab({
   const totalCommission = filteredOperations.reduce((sum, op) => sum + (Number(op.odenen) || 0), 0);
   const totalOperations = filteredOperations.length;
 
+  // Determine if this is a commission-based worker
+  const isCommissionBased = personnel.calisma_sistemi === "prim_komisyon";
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row justify-between gap-2">
@@ -97,8 +136,25 @@ export function OperationsHistoryTab({
           />
         </div>
         
-        <div className="flex gap-2">
-          {!useMonthCycle && (
+        <div className="flex flex-wrap gap-2 items-center">
+          <Button 
+            variant={singleDateMode ? "secondary" : "outline"}
+            size="sm" 
+            className="gap-1"
+            onClick={handleSingleDateModeToggle}
+          >
+            <Calendar className="h-4 w-4" />
+            <span>Tek Gün</span>
+          </Button>
+          
+          {singleDateMode ? (
+            <DateRangePicker 
+              from={dateRange.from}
+              to={dateRange.from} // Same date for single mode
+              onSelect={({ from }) => handleSingleDateChange(from)}
+              singleDate={true}
+            />
+          ) : !useMonthCycle && (
             <DateRangePicker 
               from={dateRange.from}
               to={dateRange.to}
@@ -124,10 +180,12 @@ export function OperationsHistoryTab({
           <span className="text-muted-foreground mr-1">Ciro:</span> 
           <span className="font-medium text-green-600">{formatCurrency(totalRevenue)}</span>
         </div>
-        <div className="bg-muted p-2 px-3 rounded-md text-sm">
-          <span className="text-muted-foreground mr-1">Prim:</span> 
-          <span className="font-medium text-blue-600">{formatCurrency(totalCommission)}</span>
-        </div>
+        {isCommissionBased && (
+          <div className="bg-muted p-2 px-3 rounded-md text-sm">
+            <span className="text-muted-foreground mr-1">Prim:</span> 
+            <span className="font-medium text-blue-600">{formatCurrency(totalCommission)}</span>
+          </div>
+        )}
       </div>
 
       {isLoading ? (
@@ -142,9 +200,13 @@ export function OperationsHistoryTab({
                 <th className="text-left p-2 text-xs font-medium text-muted-foreground">TARİH</th>
                 <th className="text-left p-2 text-xs font-medium text-muted-foreground">MÜŞTERİ</th>
                 <th className="text-left p-2 text-xs font-medium text-muted-foreground">İŞLEM</th>
-                <th className="text-right p-2 text-xs font-medium text-muted-foreground">PRİM %</th>
+                {isCommissionBased && (
+                  <th className="text-right p-2 text-xs font-medium text-muted-foreground">PRİM %</th>
+                )}
                 <th className="text-right p-2 text-xs font-medium text-muted-foreground">TUTAR</th>
-                <th className="text-right p-2 text-xs font-medium text-muted-foreground">ÖDENEN</th>
+                {isCommissionBased && (
+                  <th className="text-right p-2 text-xs font-medium text-muted-foreground">ÖDENEN</th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -159,15 +221,19 @@ export function OperationsHistoryTab({
                   <td className="p-2 text-sm">
                     {op.islem?.islem_adi || op.aciklama || '-'}
                   </td>
-                  <td className="p-2 text-sm text-right">
-                    %{op.prim_yuzdesi || 0}
-                  </td>
+                  {isCommissionBased && (
+                    <td className="p-2 text-sm text-right">
+                      %{op.prim_yuzdesi || 0}
+                    </td>
+                  )}
                   <td className="p-2 text-sm text-right">
                     {formatCurrency(op.tutar || 0)}
                   </td>
-                  <td className="p-2 text-sm text-right font-medium text-blue-600">
-                    {formatCurrency(op.odenen || 0)}
-                  </td>
+                  {isCommissionBased && (
+                    <td className="p-2 text-sm text-right font-medium text-blue-600">
+                      {formatCurrency(op.odenen || 0)}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

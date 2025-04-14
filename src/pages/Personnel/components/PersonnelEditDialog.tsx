@@ -15,10 +15,10 @@ import {
   FormControl, 
   FormField, 
   FormItem, 
-  FormLabel 
+  FormLabel, 
+  FormDescription 
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm } from "react-hook-form";
 import { Personel } from "@/lib/supabase/types";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -49,7 +49,7 @@ export function PersonnelEditDialog({
       return await personelServisi.guncelle(personnel.id, data);
     },
     onSuccess: () => {
-      toast.success("Personel başarıyla güncellendi!");
+      toast.success("Personel bilgileri başarıyla güncellendi!");
       queryClient.invalidateQueries({ queryKey: ["personeller"] });
       queryClient.invalidateQueries({ queryKey: ["personel-list"] });
       queryClient.invalidateQueries({ queryKey: ["personel"] });
@@ -62,7 +62,25 @@ export function PersonnelEditDialog({
   });
 
   const onSubmit = (data: any) => {
-    updateMutation.mutate(data);
+    // Prepare the data for submission
+    const updateData = {
+      calisma_sistemi: data.calisma_sistemi,
+    };
+    
+    // Add the appropriate salary or commission field based on working system
+    if (data.calisma_sistemi === "prim_komisyon") {
+      Object.assign(updateData, {
+        prim_yuzdesi: data.prim_yuzdesi,
+        maas: 0 // Set salary to 0 for commission-based workers
+      });
+    } else {
+      Object.assign(updateData, {
+        maas: data.maas,
+        prim_yuzdesi: 0 // Set commission to 0 for salaried workers
+      });
+    }
+    
+    updateMutation.mutate(updateData);
   };
   
   // Watch for changes to the working system field to conditionally show/hide fields
@@ -133,7 +151,13 @@ export function PersonnelEditDialog({
               name="maas"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Maaş Bilgisi</FormLabel>
+                  <FormLabel>Maaş Tutarı</FormLabel>
+                  <FormDescription>
+                    {isSalaryType 
+                      ? `${calisma_sistemi === "aylik_maas" ? "Aylık" : calisma_sistemi === "haftalik_maas" ? "Haftalık" : "Günlük"} maaş tutarını giriniz.`
+                      : "Maaşlı çalışanlar için geçerlidir."
+                    }
+                  </FormDescription>
                   <FormControl>
                     <Input
                       type="number"
@@ -153,6 +177,12 @@ export function PersonnelEditDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Prim Oranı (%)</FormLabel>
+                  <FormDescription>
+                    {!isSalaryType 
+                      ? "Personelin hizmet başına alacağı yüzdelik prim oranını giriniz."
+                      : "Yüzdelik çalışanlar için geçerlidir."
+                    }
+                  </FormDescription>
                   <FormControl>
                     <Input
                       type="number"

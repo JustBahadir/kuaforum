@@ -44,11 +44,6 @@ export function WorkInfoTab({ personnel }: WorkInfoTabProps) {
             <div className="font-semibold">{formatCurrency(personnel.maas)}</div>
           </div>
         )}
-
-        <div>
-          <h3 className="text-sm font-medium text-muted-foreground mb-1">Personel No</h3>
-          <div>{personnel.personel_no || "-"}</div>
-        </div>
       </div>
 
       <div className="bg-muted p-4 rounded-md">
