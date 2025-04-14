@@ -24,6 +24,7 @@ export function WorkingHours({ isStaff = true, dukkanId }: WorkingHoursProps) {
     saveHours,
     resetHours,
     isLoading,
+    error,
     isError,
     hasChanges,
     refetch

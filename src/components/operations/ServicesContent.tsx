@@ -44,6 +44,8 @@ interface ServicesContentProps {
   setIslemAdi: (value: string) => void;
   fiyat: number;
   setFiyat: (value: number) => void;
+  maliyet: number;
+  setMaliyet: (value: number) => void;
   puan: number;
   setPuan: (value: number) => void;
   kategoriId: number | null;
@@ -84,6 +86,8 @@ export function ServicesContent({
   setIslemAdi,
   fiyat,
   setFiyat,
+  maliyet,
+  setMaliyet,
   puan,
   setPuan,
   kategoriId,
@@ -207,6 +211,8 @@ export function ServicesContent({
               setIslemAdi={setIslemAdi}
               fiyat={fiyat}
               setFiyat={setFiyat}
+              maliyet={maliyet}
+              setMaliyet={setMaliyet}
               puan={puan}
               setPuan={setPuan}
               kategoriId={kategoriId}

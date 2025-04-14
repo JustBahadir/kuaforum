@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
-import { useQuery, type UseQueryResult } from "@tanstack/react-query";
-import { PersonelIslemi, islemServisi, personelIslemleriServisi, personelServisi } from "@/lib/supabase";
+import { useQuery } from "@tanstack/react-query";
+import { PersonelIslemi as PersonelIslemiType, islemServisi, personelIslemleriServisi, personelServisi } from "@/lib/supabase";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
@@ -11,11 +11,17 @@ import { PersonnelPerformanceReports } from "./components/PersonnelPerformanceRe
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, FileBarChart, RefreshCcw } from "lucide-react";
+import { AlertCircle, FileBarChart, RefreshCcw, Search } from "lucide-react";
 import { Navigate } from "react-router-dom";
 import { formatCurrency } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
+import { PersonnelAnalyst } from "@/components/analyst/PersonnelAnalyst";
+import { CustomMonthCycleSelector } from "@/components/ui/custom-month-cycle-selector";
+
+interface PersonelIslemi extends PersonelIslemiType {
+  personel_id: number;
+  created_at: string;
+}
 
 export default function Personnel() {
   const { userRole, refreshProfile } = useCustomerAuth();
@@ -23,6 +29,10 @@ export default function Personnel() {
     from: new Date(new Date().setDate(new Date().getDate() - 30)), // Default to last 30 days
     to: new Date()
   });
+
+  const [monthCycleDay, setMonthCycleDay] = useState(1);
+  const [useMonthCycle, setUseMonthCycle] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     refreshProfile().catch(console.error);
@@ -35,7 +45,7 @@ export default function Personnel() {
     enabled: userRole === 'admin'
   });
 
-  const { data: personeller = [] } = useQuery({
+  const { data: personeller = [], refetch: refetchPersonnel, isLoading: personnelLoading } = useQuery({
     queryKey: ['personel'],
     queryFn: () => personelServisi.hepsiniGetir(),
     retry: 1,
@@ -44,31 +54,52 @@ export default function Personnel() {
 
   const [selectedPersonnelId, setSelectedPersonnelId] = useState<number | null>(null);
   
-  // We'll use the personnel ID if selected, otherwise we'll use all personnel
-  const activePersonnelId = selectedPersonnelId || (personeller.length > 0 ? personeller[0].id : null);
+  useEffect(() => {
+    if (personeller.length > 0 && !selectedPersonnelId) {
+      setSelectedPersonnelId(personeller[0]?.id || null);
+    }
+  }, [personeller, selectedPersonnelId]);
+  
+  const activePersonnelId = selectedPersonnelId || (personeller.length > 0 ? personeller[0]?.id : null);
 
-  const { data: islemGecmisi = [], isLoading: islemlerLoading, refetch: refetchOperations }: UseQueryResult<PersonelIslemi[], Error> = useQuery({
+  const handleDateRangeChange = ({from, to}: {from: Date, to: Date}) => {
+    setDateRange({from, to});
+    setUseMonthCycle(false);
+  };
+
+  const handleMonthCycleChange = (day: number, date: Date) => {
+    setMonthCycleDay(day);
+    
+    const currentDate = new Date();
+    const selectedDay = day;
+    
+    let fromDate = new Date();
+    
+    // Set to previous month's cycle day
+    fromDate.setDate(selectedDay);
+    if (currentDate.getDate() < selectedDay) {
+      fromDate.setMonth(fromDate.getMonth() - 1);
+    }
+    
+    // Create the end date (same day, current month)
+    const toDate = new Date(fromDate);
+    toDate.setMonth(toDate.getMonth() + 1);
+    
+    setDateRange({
+      from: fromDate,
+      to: toDate
+    });
+    
+    setUseMonthCycle(true);
+  };
+
+  const { data: rawIslemGecmisi = [], isLoading: islemlerLoading, refetch: refetchOperations } = useQuery({
     queryKey: ['personelIslemleri', dateRange.from, dateRange.to, activePersonnelId],
     queryFn: async () => {
       try {
-        // Try getting from personnel service first
         const data = selectedPersonnelId 
           ? await personelIslemleriServisi.personelIslemleriGetir(selectedPersonnelId) 
           : await personelIslemleriServisi.hepsiniGetir();
-        
-        // If no operations found, try to recover from appointments
-        if (!data || data.length === 0) {
-          console.log(`No operations found for ${selectedPersonnelId ? 'personnel #' + selectedPersonnelId : 'any personnel'}, attempting to recover...`);
-          
-          await recoverPersonnelOperations();
-          
-          // Try fetching again after recovery
-          const recoveredData = selectedPersonnelId 
-            ? await personelIslemleriServisi.personelIslemleriGetir(selectedPersonnelId)
-            : await personelIslemleriServisi.hepsiniGetir();
-            
-          return filterOperationsByDateRange(recoveredData);
-        }
         
         return filterOperationsByDateRange(data);
       } catch (error) {
@@ -80,8 +111,15 @@ export default function Personnel() {
     enabled: userRole === 'admin' && !!activePersonnelId
   });
 
-  // Function to filter operations by date range
-  const filterOperationsByDateRange = (operations: PersonelIslemi[]) => {
+  const islemGecmisi: PersonelIslemi[] = rawIslemGecmisi
+    .filter(islem => islem.personel_id !== undefined && islem.created_at !== undefined)
+    .map(islem => ({
+      ...islem,
+      personel_id: islem.personel_id as number,
+      created_at: islem.created_at as string
+    }));
+
+  const filterOperationsByDateRange = (operations: PersonelIslemiType[]) => {
     return operations.filter(islem => {
       if (!islem.created_at) return true;
       const islemDate = new Date(islem.created_at);
@@ -89,39 +127,20 @@ export default function Personnel() {
     });
   };
 
-  // Function to call the edge function and recover operations
-  const recoverPersonnelOperations = async () => {
-    try {
-      toast.info(`İşlemler kurtarılıyor...`);
-      
-      // Call edge function to recover operations
-      const response = await fetch(`https://xkbjjcizncwkrouvoujw.supabase.co/functions/v1/recover_customer_operations`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhrYmpqY2l6bmN3a3JvdXZvdWp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzk5Njg0NzksImV4cCI6MjA1NTU0NDQ3OX0.RyaC2G1JPHUGQetAcvMgjsTp_nqBB2rZe3U-inU2osw`
-        },
-        body: JSON.stringify({ personnel_id: selectedPersonnelId, get_all_shop_operations: !selectedPersonnelId })
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to recover operations: ${response.statusText}`);
-      }
-      
-      const result = await response.json();
-      
-      if (result.error) {
-        throw new Error(result.error);
-      }
-      
-      toast.success(`${result.count} işlem kurtarıldı`);
-      return result.operations || [];
-    } catch (error) {
-      console.error("Error recovering operations:", error);
-      toast.error(`İşlemler kurtarılamadı: ${error.message}`);
-      return [];
-    }
-  };
+  const filteredOperations = islemGecmisi.filter(islem => {
+    if (!searchTerm) return true;
+    
+    const searchLower = searchTerm.toLowerCase();
+    const personelName = personeller.find(p => p.id === islem.personel_id)?.ad_soyad?.toLowerCase() || '';
+    const customerName = islem.musteri 
+      ? `${islem.musteri.first_name} ${islem.musteri.last_name || ''}`.toLowerCase() 
+      : '';
+    const operationName = (islem.islem?.islem_adi || islem.aciklama || '').toLowerCase();
+    
+    return personelName.includes(searchLower) || 
+           customerName.includes(searchLower) || 
+           operationName.includes(searchLower);
+  });
 
   if (userRole === 'staff') {
     return <Navigate to="/shop-home" replace />;
@@ -152,13 +171,15 @@ export default function Personnel() {
     );
   }
 
-  const totalRevenue = islemGecmisi.reduce((sum, islem) => sum + (islem.tutar || 0), 0);
-  const totalCommission = islemGecmisi.reduce((sum, islem) => sum + (islem.odenen || 0), 0);
-  const operationCount = islemGecmisi.length;
+  const totalRevenue = filteredOperations.reduce((sum, islem) => sum + (islem.tutar || 0), 0);
+  const totalCommission = filteredOperations.reduce((sum, islem) => sum + (islem.odenen || 0), 0);
+  const operationCount = filteredOperations.length;
 
   return (
     <StaffLayout>
       <div className="container mx-auto">
+        <PersonnelAnalyst />
+        
         <Tabs defaultValue="personel" className="space-y-4">
           <TabsList>
             <TabsTrigger value="personel">Personel Yönetimi</TabsTrigger>
@@ -168,39 +189,55 @@ export default function Personnel() {
           </TabsList>
 
           <TabsContent value="personel">
-            <PersonnelList onPersonnelSelect={setSelectedPersonnelId} />
+            <PersonnelList personnel={personeller} onPersonnelSelect={setSelectedPersonnelId} />
           </TabsContent>
 
           <TabsContent value="islemler">
             <Card>
               <CardHeader>
                 <CardTitle>İşlem Geçmişi</CardTitle>
-                <div className="flex justify-between items-center flex-wrap gap-4">
-                  <div className="flex gap-4 items-center">
-                    <span className="text-sm text-muted-foreground">Tarih aralığı seçin:</span>
-                    <DateRangePicker 
-                      from={dateRange.from}
-                      to={dateRange.to}
-                      onSelect={({from, to}) => setDateRange({from, to})}
-                    />
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 flex-wrap">
+                  <div className="flex flex-wrap gap-4 items-center w-full sm:w-auto">
+                    <div className="relative flex-1 sm:w-80">
+                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Personel, müşteri veya işlem ara..."
+                        className="pl-8"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                      />
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      {!useMonthCycle && (
+                        <DateRangePicker 
+                          from={dateRange.from}
+                          to={dateRange.to}
+                          onSelect={handleDateRangeChange}
+                        />
+                      )}
+                      
+                      <CustomMonthCycleSelector 
+                        selectedDay={monthCycleDay}
+                        onChange={handleMonthCycleChange}
+                        active={useMonthCycle}
+                        onClear={() => setUseMonthCycle(false)}
+                      />
+                    </div>
                   </div>
                   
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        recoverPersonnelOperations().then(() => refetchOperations());
-                      }}
-                      className="flex items-center gap-1"
+                  <div className="flex gap-2 w-full sm:w-auto">
+                    <button
+                      className="flex items-center gap-1 px-4 py-2 border rounded-md hover:bg-gray-100"
+                      onClick={() => refetchOperations()}
                     >
                       <RefreshCcw size={16} />
-                      Yenile
-                    </Button>
+                      <span>Yenile</span>
+                    </button>
                   </div>
                 </div>
                 
-                <div className="flex gap-4 mt-4">
+                <div className="flex flex-wrap gap-4 mt-4">
                   <div className="text-sm bg-gray-100 p-2 rounded-md flex items-center gap-1">
                     <FileBarChart className="h-4 w-4 text-purple-600" />
                     <span className="font-medium">Toplam İşlem:</span> 
@@ -222,22 +259,22 @@ export default function Personnel() {
                     <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
                   </div>
                 ) : (
-                  <div className="rounded-md border">
+                  <div className="rounded-md border overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tarih</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Personel</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Müşteri</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlem</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tutar</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prim %</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tutar</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ödenen</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Puan</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        {islemGecmisi.length > 0 ? (
-                          islemGecmisi.map((islem) => (
+                        {filteredOperations.length > 0 ? (
+                          filteredOperations.map((islem) => (
                             <tr key={islem.id} className="hover:bg-gray-50">
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                 {new Date(islem.created_at!).toLocaleDateString('tr-TR')}
@@ -247,26 +284,28 @@ export default function Personnel() {
                                  (islem.personel?.ad_soyad) || 'Belirtilmemiş'}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {islem.aciklama || (islem.islem?.islem_adi) || 'Belirtilmemiş'}
+                                {islem.musteri 
+                                  ? `${islem.musteri.first_name} ${islem.musteri.last_name || ''}` 
+                                  : 'Belirtilmemiş'}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {formatCurrency(islem.tutar)}
+                                {islem.islem?.islem_adi || islem.aciklama || 'Belirtilmemiş'}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                %{islem.prim_yuzdesi}
+                                {islem.prim_yuzdesi > 0 ? `%${islem.prim_yuzdesi}` : "-"}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {formatCurrency(islem.odenen)}
+                                {formatCurrency(islem.tutar || 0)}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {islem.puan}
+                                {islem.prim_yuzdesi > 0 ? formatCurrency(islem.odenen || 0) : "-"}
                               </td>
                             </tr>
                           ))
                         ) : (
                           <tr>
                             <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">
-                              Seçilen tarih aralığında işlem bulunamadı
+                              {searchTerm ? "Arama kriterleriyle eşleşen işlem bulunamadı" : "Seçilen tarih aralığında işlem bulunamadı"}
                             </td>
                           </tr>
                         )}
@@ -279,14 +318,9 @@ export default function Personnel() {
           </TabsContent>
 
           <TabsContent value="performans">
-            <Card>
-              <CardHeader>
-                <CardTitle>Personel Performans Çizelgeleri</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <PersonnelPerformanceReports personnelId={selectedPersonnelId || personeller[0]?.id || 1} />
-              </CardContent>
-            </Card>
+            <div className="mt-4">
+              <PersonnelPerformanceReports personnelId={selectedPersonnelId} />
+            </div>
           </TabsContent>
 
           <TabsContent value="raporlar">

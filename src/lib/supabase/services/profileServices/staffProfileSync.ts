@@ -1,11 +1,10 @@
-
-import { supabase } from '../../client';
-import { Profile } from '../../types';
+import { supabase } from "../../client";
+import { Profil } from "../../types";
 
 /**
  * Syncs a staff profile with the personel table
  */
-export async function handleStaffRecordSync(userId: string, profile: Profile): Promise<void> {
+export async function handleStaffRecordSync(userId: string, profile: Profil): Promise<void> {
   try {
     // Check if there's already a personel record with this auth_id
     const { data: existingPersonel } = await supabase

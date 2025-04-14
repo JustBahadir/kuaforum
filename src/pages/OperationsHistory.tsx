@@ -7,7 +7,7 @@ import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
-import { Search, FileBarChart, RefreshCcw, Download } from "lucide-react";
+import { Search, FileBarChart, RefreshCcw, Download, FileText } from "lucide-react";
 import { personelIslemleriServisi } from "@/lib/supabase/services/personelIslemleriServisi";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
@@ -19,6 +19,7 @@ export default function OperationsHistory() {
   });
   const [searchText, setSearchText] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
+  const [showPuntos, setShowPuntos] = useState(true);
   
   const { data: operationsData = [], isLoading, refetch } = useQuery({
     queryKey: ['operationsHistory', dateRange.from, dateRange.to],
@@ -63,6 +64,14 @@ export default function OperationsHistory() {
       }
     }
   });
+
+  // Check if any operation uses points
+  useEffect(() => {
+    if (operationsData && operationsData.length > 0) {
+      const hasPoints = operationsData.some(op => op.puan && op.puan > 0);
+      setShowPuntos(hasPoints);
+    }
+  }, [operationsData]);
 
   // Filter operations based on search and filter type
   const filteredOperations = operationsData.filter(operation => {
@@ -139,6 +148,100 @@ export default function OperationsHistory() {
       toast.error("İşlemler yenilenirken hata oluştu");
     }
   };
+
+  // Generate and download PDF report
+  const downloadReport = () => {
+    try {
+      // Create a window object
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        toast.error("Lütfen popup engelleyicisini kapatın");
+        return;
+      }
+      
+      // Generate HTML table for the report
+      const reportHTML = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>İşlem Raporu - ${format(dateRange.from)} - ${format(dateRange.to)}</title>
+          <style>
+            body { font-family: Arial, sans-serif; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; }
+            tr:nth-child(even) { background-color: #f9f9f9; }
+            .header { margin: 20px 0; }
+            .summary { margin: 20px 0; display: flex; gap: 20px; }
+            .summary-item { padding: 10px; background: #f2f2f2; border-radius: 4px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h2>İşlem Raporu</h2>
+            <p>Tarih Aralığı: ${format(dateRange.from)} - ${format(dateRange.to)}</p>
+          </div>
+          
+          <div class="summary">
+            <div class="summary-item">
+              <strong>Toplam İşlem:</strong> ${totalCount}
+            </div>
+            <div class="summary-item">
+              <strong>Toplam Ciro:</strong> ${formatCurrency(totalRevenue)}
+            </div>
+          </div>
+          
+          <table>
+            <thead>
+              <tr>
+                <th>Tarih</th>
+                <th>Personel</th>
+                <th>Müşteri</th>
+                <th>İşlem</th>
+                <th>Tutar</th>
+                ${showPuntos ? '<th>Puan</th>' : ''}
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredOperations.map(operation => `
+                <tr>
+                  <td>${format(new Date(operation.created_at || ''))}</td>
+                  <td>${operation.personel?.ad_soyad || 'Belirtilmemiş'}</td>
+                  <td>${operation.musteri 
+                    ? `${operation.musteri.first_name || ''} ${operation.musteri.last_name || ''}`.trim() || 'Belirtilmemiş'
+                    : 'Belirtilmemiş'}</td>
+                  <td>${operation.aciklama || (operation.islem?.islem_adi || 'Belirtilmemiş')}</td>
+                  <td>${formatCurrency(operation.tutar || 0)}</td>
+                  ${showPuntos ? `<td>${operation.puan || 0}</td>` : ''}
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </body>
+        </html>
+      `;
+      
+      // Write to the window
+      printWindow.document.write(reportHTML);
+      
+      // Function to format the date
+      function format(date) {
+        return date ? new Intl.DateTimeFormat('tr-TR').format(date) : '';
+      }
+      
+      // Print the document
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => {
+        printWindow.print();
+      }, 250);
+      
+      toast.success("Rapor hazırlanıyor...");
+    } catch (error) {
+      console.error("Rapor oluşturulurken hata:", error);
+      toast.error("Rapor indirilemedi");
+    }
+  };
   
   return (
     <StaffLayout>
@@ -150,13 +253,15 @@ export default function OperationsHistory() {
             <CardTitle>Filtreler</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2">
               <div>
                 <label className="text-sm font-medium mb-1 block">Tarih Aralığı</label>
                 <DateRangePicker 
                   from={dateRange.from}
                   to={dateRange.to}
-                  onSelect={({from, to}) => setDateRange({from, to})}
+                  onSelect={({from, to}) => {
+                    if (from && to) setDateRange({from, to});
+                  }}
                 />
               </div>
               <div>
@@ -171,16 +276,6 @@ export default function OperationsHistory() {
                     onChange={(e) => setSearchText(e.target.value)}
                   />
                 </div>
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-1 block">Filtre</label>
-                <Tabs defaultValue="all" className="w-full" value={filterType} onValueChange={setFilterType}>
-                  <TabsList className="w-full">
-                    <TabsTrigger value="all" className="flex-1">Tümü</TabsTrigger>
-                    <TabsTrigger value="tamamlanan" className="flex-1">Tamamlanan</TabsTrigger>
-                    <TabsTrigger value="iptal" className="flex-1">İptal</TabsTrigger>
-                  </TabsList>
-                </Tabs>
               </div>
             </div>
           </CardContent>
@@ -209,8 +304,13 @@ export default function OperationsHistory() {
               <RefreshCcw size={16} />
               Yenile
             </Button>
-            <Button variant="outline" size="sm" className="flex items-center gap-1">
-              <Download size={16} />
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="flex items-center gap-1"
+              onClick={downloadReport}
+            >
+              <FileText size={16} />
               Rapor İndir
             </Button>
           </div>
@@ -236,8 +336,9 @@ export default function OperationsHistory() {
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Müşteri</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">İşlem</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tutar</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Puan</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Notlar</th>
+                        {showPuntos && (
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Puan</th>
+                        )}
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
@@ -245,7 +346,11 @@ export default function OperationsHistory() {
                         filteredOperations.map((operation) => (
                           <tr key={operation.id} className="hover:bg-gray-50">
                             <td className="px-6 py-4 whitespace-nowrap text-sm">
-                              {new Date(operation.created_at || '').toLocaleDateString('tr-TR')}
+                              {new Date(operation.created_at || '').toLocaleDateString('tr-TR', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric'
+                              })}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm">
                               {operation.personel?.ad_soyad || 'Belirtilmemiş'}
@@ -261,17 +366,16 @@ export default function OperationsHistory() {
                             <td className="px-6 py-4 whitespace-nowrap text-sm">
                               {formatCurrency(operation.tutar || 0)}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm">
-                              {operation.puan || 0}
-                            </td>
-                            <td className="px-6 py-4 text-sm">
-                              {operation.notlar || '-'}
-                            </td>
+                            {showPuntos && (
+                              <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                {operation.puan || 0}
+                              </td>
+                            )}
                           </tr>
                         ))
                       ) : (
                         <tr>
-                          <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">
+                          <td colSpan={showPuntos ? 6 : 5} className="px-6 py-4 text-center text-sm text-gray-500">
                             Seçilen filtrelere uygun işlem bulunamadı
                           </td>
                         </tr>

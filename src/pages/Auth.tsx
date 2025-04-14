@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -7,6 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
+import { Home } from 'lucide-react';
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -199,12 +201,20 @@ export default function Auth() {
             </TabsContent>
           </Tabs>
 
-          <div className="mt-6 text-center">
+          <div className="mt-6 text-center space-y-3">
             <Button variant="link" asChild>
               <Link to="/admin">
                 Personel olarak giriş yapmak için tıklayın
               </Link>
             </Button>
+            <div className="space-y-2">
+              <Button variant="secondary" asChild className="w-full">
+                <Link to="/" className="flex items-center justify-center gap-2">
+                  <Home size={16} />
+                  <span>Ana Sayfaya Dön</span>
+                </Link>
+              </Button>
+            </div>
           </div>
         </CardContent>
         <CardFooter className="flex justify-center text-sm text-gray-600">

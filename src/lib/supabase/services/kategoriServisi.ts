@@ -1,9 +1,8 @@
-
 import { supabase } from "../client";
-import { Kategori } from "../types";
+import { IslemKategori } from "../types";
 
 export const kategoriServisi = {
-  async hepsiniGetir(): Promise<Kategori[]> {
+  async hepsiniGetir(): Promise<IslemKategori[]> {
     const { data, error } = await supabase
       .from('islem_kategorileri')
       .select('*')
@@ -13,7 +12,7 @@ export const kategoriServisi = {
     return data || [];
   },
   
-  async getir(id: number): Promise<Kategori> {
+  async getir(id: number): Promise<IslemKategori> {
     const { data, error } = await supabase
       .from('islem_kategorileri')
       .select('*')
@@ -24,7 +23,7 @@ export const kategoriServisi = {
     return data;
   },
   
-  async ekle(kategori: Partial<Kategori>): Promise<Kategori> {
+  async ekle(kategori: Partial<IslemKategori>): Promise<IslemKategori> {
     try {
       // Get the max sira value
       const { data: maxSiraData, error: maxSiraError } = await supabase
@@ -53,7 +52,7 @@ export const kategoriServisi = {
     }
   },
   
-  async guncelle(id: number, kategori: Partial<Kategori>): Promise<Kategori> {
+  async guncelle(id: number, kategori: Partial<IslemKategori>): Promise<IslemKategori> {
     try {
       const { data, error } = await supabase
         .from('islem_kategorileri')
@@ -83,7 +82,7 @@ export const kategoriServisi = {
     }
   },
   
-  async siraGuncelle(kategoriler: Kategori[]): Promise<Kategori[]> {
+  async siraGuncelle(kategoriler: IslemKategori[]): Promise<IslemKategori[]> {
     try {
       // Update each category with its new position
       const updates = kategoriler.map((kategori, index) => ({

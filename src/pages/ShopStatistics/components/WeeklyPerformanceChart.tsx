@@ -1,7 +1,6 @@
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, Legend, TooltipProps } from "recharts";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { formatCurrency } from "@/lib/utils";
 
 interface WeeklyPerformanceChartProps {
@@ -9,66 +8,66 @@ interface WeeklyPerformanceChartProps {
   isLoading: boolean;
 }
 
-type CustomTooltipProps = TooltipProps<number, string> & {
-  active?: boolean;
-  payload?: any[];
-  label?: string;
-}
-
 export function WeeklyPerformanceChart({ data, isLoading }: WeeklyPerformanceChartProps) {
-  const formatYAxisTick = (value: number): string => {
-    if (value >= 1000) {
-      return `${(value / 1000).toFixed(1)}k`;
-    }
-    return value.toString();
-  };
-  
-  const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white p-4 border rounded shadow">
-          <p className="text-sm font-medium">{label}</p>
-          <p className="text-sm text-blue-500">
-            Ciro: {formatCurrency(payload[0].value)}
-          </p>
-          <p className="text-sm text-green-500">
-            İşlem Sayısı: {payload[1].value}
-          </p>
-        </div>
-      );
-    }
-    return null;
-  };
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Haftalık Performans</CardTitle>
+        </CardHeader>
+        <CardContent className="h-[300px] flex items-center justify-center">
+          <div className="w-10 h-10 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Haftalık Performans</CardTitle>
-        <CardDescription>Son 4 haftaya ait ciro ve işlem sayıları</CardDescription>
+        <CardTitle className="text-lg">Haftalık Performans</CardTitle>
       </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <div className="w-full h-[300px] flex items-center justify-center">
-            <Skeleton className="h-[300px] w-full" />
-          </div>
-        ) : data.length === 0 ? (
-          <div className="w-full h-[300px] flex items-center justify-center">
-            <p className="text-muted-foreground">Henüz veri bulunmamaktadır</p>
-          </div>
-        ) : (
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis yAxisId="left" orientation="left" tickFormatter={formatYAxisTick} />
-              <YAxis yAxisId="right" orientation="right" />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend />
-              <Bar yAxisId="left" dataKey="ciro" name="Ciro (₺)" fill="#3b82f6" />
-              <Bar yAxisId="right" dataKey="islemSayisi" name="İşlem Sayısı" fill="#22c55e" />
-            </BarChart>
-          </ResponsiveContainer>
-        )}
+      <CardContent className="h-[300px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart
+            data={data}
+            margin={{
+              top: 5,
+              right: 30,
+              left: 20,
+              bottom: 5,
+            }}
+          >
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="name" />
+            <YAxis yAxisId="left" />
+            <YAxis yAxisId="right" orientation="right" />
+            <Tooltip 
+              formatter={(value: any) => {
+                if (typeof value === 'number' && value > 10) {
+                  return formatCurrency(value);
+                }
+                return value;
+              }}
+            />
+            <Legend />
+            <Line 
+              yAxisId="left" 
+              type="monotone" 
+              dataKey="ciro" 
+              stroke="#8884d8" 
+              name="Ciro (TL)" 
+              activeDot={{ r: 8 }}
+            />
+            <Line 
+              yAxisId="right" 
+              type="monotone" 
+              dataKey="islemSayisi" 
+              stroke="#82ca9d" 
+              name="İşlem Sayısı"
+            />
+          </LineChart>
+        </ResponsiveContainer>
       </CardContent>
     </Card>
   );

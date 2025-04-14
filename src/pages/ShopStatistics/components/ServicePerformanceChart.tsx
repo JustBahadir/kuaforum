@@ -1,86 +1,101 @@
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, Cell, TooltipProps } from "recharts";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Line, ComposedChart } from "recharts";
 import { formatCurrency } from "@/lib/utils";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
-interface ServicePerformanceChartProps {
-  data: any[];
-  isLoading: boolean;
-}
-
-interface ServiceData {
+interface ServiceDataItem {
   name: string;
   count: number;
   revenue: number;
 }
 
-type CustomTooltipProps = TooltipProps<number, string> & {
-  active?: boolean;
-  payload?: any[];
-  label?: string;
+interface ServicePerformanceChartProps {
+  data: ServiceDataItem[];
+  isLoading?: boolean;
+  title?: string;
 }
 
-export function ServicePerformanceChart({ data, isLoading }: ServicePerformanceChartProps) {
-  const colors = ["#3b82f6", "#22c55e", "#8b5cf6", "#f97316", "#ef4444", "#06b6d4", "#ec4899", "#f59e0b", "#10b981", "#6366f1"];
-  
-  const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload as ServiceData;
-      return (
-        <div className="bg-white p-4 border rounded shadow">
-          <p className="text-sm font-medium">{data.name}</p>
-          <p className="text-sm">
-            İşlem Sayısı: {data.count}
-          </p>
-          <p className="text-sm font-semibold">
-            Toplam Ciro: {formatCurrency(data.revenue)}
-          </p>
-        </div>
-      );
-    }
-    return null;
-  };
+export function ServicePerformanceChart({ 
+  data, 
+  isLoading = false, 
+  title = "Hizmet Performansı" 
+}: ServicePerformanceChartProps) {
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>{title}</CardTitle>
+        </CardHeader>
+        <CardContent className="h-[300px] flex items-center justify-center">
+          <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const chartData = data.slice(0, 10); // Limit to top 10 for better display
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Hizmet Performansı</CardTitle>
-        <CardDescription>En çok gelir getiren hizmetler</CardDescription>
+        <CardTitle>{title}</CardTitle>
       </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <div className="w-full h-[300px] flex items-center justify-center">
-            <Skeleton className="h-[300px] w-full" />
+      <CardContent className="h-[300px]">
+        <ScrollArea className="w-full h-full">
+          <div className="min-w-[600px] h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart
+                data={chartData}
+                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                barGap={0}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="name"
+                  tick={{ fontSize: 11 }}
+                />
+                <YAxis 
+                  yAxisId="left"
+                  orientation="left"
+                  tickFormatter={(value) => `₺${value}`}
+                />
+                <YAxis 
+                  yAxisId="right"
+                  orientation="right" 
+                  allowDecimals={false}
+                />
+                <Tooltip
+                  formatter={(value: any, name: string) => {
+                    if (name === 'revenue') return [formatCurrency(value as number), 'Ciro'];
+                    if (name === 'count') return [value, 'İşlem Sayısı'];
+                    return [value, name];
+                  }}
+                  labelStyle={{ fontWeight: 'bold' }}
+                />
+                <Legend />
+                <Bar 
+                  yAxisId="left"
+                  dataKey="revenue" 
+                  name="Ciro (₺)" 
+                  fill="#8884d8" 
+                  barSize={40} 
+                  radius={[4, 4, 0, 0]}
+                />
+                <Line 
+                  yAxisId="right"
+                  type="monotone" 
+                  dataKey="count" 
+                  name="İşlem Sayısı" 
+                  stroke="#82ca9d"
+                  strokeWidth={2}
+                  dot={{ r: 4 }}
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
           </div>
-        ) : data.length === 0 ? (
-          <div className="w-full h-[300px] flex items-center justify-center">
-            <p className="text-muted-foreground">Henüz veri bulunmamaktadır</p>
-          </div>
-        ) : (
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart 
-              data={data} 
-              layout="vertical"
-              margin={{ left: 120 }} // Add more margin for the service names
-            >
-              <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
-              <XAxis type="number" />
-              <YAxis 
-                type="category" 
-                dataKey="name" 
-                width={120}
-                tick={{ fontSize: 12 }}
-              />
-              <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey="revenue" name="Gelir">
-                {data.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        )}
+          <ScrollBar orientation="horizontal" />
+        </ScrollArea>
       </CardContent>
     </Card>
   );

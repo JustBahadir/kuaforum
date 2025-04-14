@@ -7,6 +7,7 @@ import { StaffCardHeader } from "@/components/staff/StaffCardHeader";
 import { LoginTabs } from "@/components/staff/LoginTabs";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import { Home } from "lucide-react";
 
 export default function StaffLogin() {
   const navigate = useNavigate();
@@ -21,12 +22,9 @@ export default function StaffLogin() {
         if (data?.session) {
           const role = data.session.user.user_metadata?.role;
           if (role === 'staff' || role === 'admin') {
-            // Rota değişikliğinin tamamlanması için biraz zaman tanıyalım
-            // ve ardından doğrudan navigasyon yapalım
-            setTimeout(() => {
-              console.log("Redirecting to shop-home from StaffLogin");
-              navigate("/shop-home", { replace: true });
-            }, 100);
+            // Doğrudan navigasyon - bekleme olmadan
+            console.log("Oturum açık, hemen yönlendiriliyor...");
+            navigate("/shop-home", { replace: true });
             return;
           }
         }
@@ -43,14 +41,15 @@ export default function StaffLogin() {
     // Yükleme ekranında sonsuz kalması durumuna karşı bir güvenlik önlemi
     const timeout = setTimeout(() => {
       setIsLoading(false);
-    }, 1500);
+    }, 2000);
     
     return () => clearTimeout(timeout);
   }, [navigate]);
   
   const handleLoginSuccess = () => {
-    console.log("Login success detected, navigating to shop-home");
-    // Başarılı girişten sonra doğrudan gezinme
+    console.log("Login success detected");
+    // Başarılı girişten sonra doğrudan yönlendirme - bekleme olmadan
+    console.log("Hemen yönlendirme yapılıyor: /shop-home");
     navigate("/shop-home", { replace: true });
   };
 
@@ -72,13 +71,22 @@ export default function StaffLogin() {
         <StaffCardHeader onBack={handleBackClick} />
         <CardContent className="p-6">
           <LoginTabs onSuccess={handleLoginSuccess} />
-          <div className="flex flex-col items-center mt-4">
+          <div className="flex flex-col items-center mt-4 space-y-2">
             <Button 
-              variant="link" 
-              onClick={handleBackClick}
-              className="text-purple-600 hover:text-purple-800"
+              variant="outline"
+              onClick={() => navigate("/login")}
+              className="w-full flex items-center justify-center gap-2"
             >
-              Ana Sayfaya Dön
+              <span>Müşteri Girişi</span>
+            </Button>
+            
+            <Button 
+              variant="secondary" 
+              onClick={handleBackClick}
+              className="w-full flex items-center justify-center gap-2"
+            >
+              <Home size={16} />
+              <span>Ana Sayfaya Dön</span>
             </Button>
           </div>
         </CardContent>

@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+
+import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { formatPhoneNumber } from "@/utils/phoneFormatter";
@@ -7,7 +8,7 @@ import { ProfileEditForm } from "@/components/customer-profile/ProfileEditForm";
 import { profilServisi } from "@/lib/supabase/services/profilServisi";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 
-export default function CustomerProfile() {
+const CustomerProfile = () => {
   const [profile, setProfile] = useState({
     firstName: "",
     lastName: "",
@@ -49,6 +50,7 @@ export default function CustomerProfile() {
           const metaPhone = user.user_metadata.phone;
           const metaGender = user.user_metadata.gender as "erkek" | "kadın" | null;
           const metaBirthdate = user.user_metadata.birthdate;
+          const metaAddress = user.user_metadata.address;
           const metaAvatarUrl = user.user_metadata.avatar_url;
           
           if (metaFirstName || metaLastName || metaPhone || metaGender || metaBirthdate) {
@@ -81,7 +83,7 @@ export default function CustomerProfile() {
               lastName: profileData.last_name || "",
               phone: formattedPhone,
               email: user.email || "",
-              gender: profileData.gender || null,
+              gender: profileData.gender as "erkek" | "kadın" | null || null,
               birthdate: profileData.birthdate || "",
               avatarUrl: profileData.avatar_url || ""
             });
@@ -118,7 +120,7 @@ export default function CustomerProfile() {
     if (name === 'gender') {
       setProfile(prev => ({ 
         ...prev, 
-        [name]: value ? value as "erkek" | "kadın" : null 
+        [name]: value ? (value as "erkek" | "kadın") : null 
       }));
     } else {
       setProfile(prev => ({ ...prev, [name]: value }));
@@ -248,4 +250,6 @@ export default function CustomerProfile() {
       />
     </div>
   );
-}
+};
+
+export default CustomerProfile;

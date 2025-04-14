@@ -1,256 +1,398 @@
 
 import { useState } from "react";
-import * as React from "react";
-import {
-  Dialog,
+import { 
+  Dialog, 
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+
+import { PersonnelOperationsTable } from "./PersonnelOperationsTable";
+import { PersonnelPerformance } from "./PersonnelPerformance";
+import { PersonnelDeleteDialog } from "./PersonnelDeleteDialog";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Copy, User, Calendar, Phone, Mail, Home, CreditCard } from "lucide-react";
+import { Copy, Pencil, Calendar, Phone, Mail, MapPin, CreditCard, User } from "lucide-react";
 import { toast } from "sonner";
+import { formatCurrency } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { profilServisi } from "@/lib/supabase";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PersonnelHistoryTable } from "./PersonnelHistoryTable";
-import { PersonnelPerformance } from "./PersonnelPerformance";
-import { PersonnelEditDialog } from "./PersonnelEditDialog";
-import { PersonnelOperationsTable } from "./PersonnelOperationsTable";
-import { format } from "date-fns";
 
 interface PersonnelDetailsDialogProps {
-  personel: any;
-  open: boolean;
+  isOpen: boolean;
   onOpenChange: (open: boolean) => void;
+  personnel: any;
 }
 
 export function PersonnelDetailsDialog({
-  personel,
-  open,
+  isOpen,
   onOpenChange,
+  personnel
 }: PersonnelDetailsDialogProps) {
-  const [activeTab, setActiveTab] = useState("details");
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+
+  // Form state for editing personnel
+  const [workingForm, setWorkingForm] = useState({
+    calisma_sistemi: personnel?.calisma_sistemi || "aylik_maas",
+    maas: personnel?.maas || 0,
+    prim_yuzdesi: personnel?.prim_yuzdesi || 0,
+  });
   
-  const copyToClipboard = (text: string, type: string) => {
+  if (!personnel) return null;
+
+  const handleCopy = (text: string, type: string) => {
     navigator.clipboard.writeText(text);
     toast.success(`${type} kopyalandı`);
   };
 
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return "Belirtilmemiş";
-    try {
-      return format(new Date(dateString), "dd.MM.yyyy");
-    } catch {
-      return "Geçersiz tarih";
-    }
+  const getInitials = (name: string) => {
+    if (!name) return "??";
+    return name
+      .split(" ")
+      .map(n => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
   };
 
-  const handleTabSwipe = (direction: 'left' | 'right') => {
-    const tabs = ["details", "operations", "performance"];
-    const currentIndex = tabs.indexOf(activeTab);
-    
-    if (direction === 'left' && currentIndex < tabs.length - 1) {
-      setActiveTab(tabs[currentIndex + 1]);
-    } else if (direction === 'right' && currentIndex > 0) {
-      setActiveTab(tabs[currentIndex - 1]);
-    }
-  };
-
-  const touchStartX = React.useRef<number | null>(null);
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
+  const formatIBAN = (iban: string) => {
+    if (!iban) return "Belirtilmemiş";
+    return profilServisi.formatIBAN(iban);
   };
   
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (touchStartX.current === null) return;
-    
-    const touchEndX = e.changedTouches[0].clientX;
-    const diff = touchStartX.current - touchEndX;
-    
-    if (Math.abs(diff) > 50) {
-      if (diff > 0) {
-        handleTabSwipe('left');
-      } else {
-        handleTabSwipe('right');
-      }
+  const handleSaveChanges = async () => {
+    try {
+      // Call the personelServisi to update the personnel data
+      const updatedPersonnel = await fetch(`/api/personnel/${personnel.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(workingForm),
+      }).then(res => res.json());
+      
+      toast.success("Çalışma bilgileri güncellendi");
+      setIsEditing(false);
+      
+      // Refresh the personnel data somehow (ideally through the parent component)
+      // You might want to call a callback function passed as prop
+    } catch (error) {
+      toast.error("Güncelleme sırasında bir hata oluştu");
+      console.error(error);
     }
-    
-    touchStartX.current = null;
   };
-
+  
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Personel Detayları</DialogTitle>
-        </DialogHeader>
-        
-        <div className="flex flex-col items-center mb-4">
-          <Avatar className="h-24 w-24 mb-3">
-            {personel.avatar_url ? (
-              <AvatarImage src={personel.avatar_url} alt={personel.ad_soyad} />
-            ) : (
-              <AvatarFallback className="text-lg bg-purple-100 text-purple-800">
-                {personel.ad_soyad
-                  .split(' ')
-                  .map((name: string) => name[0])
-                  .join('')
-                  .substring(0, 2)
-                  .toUpperCase()}
-              </AvatarFallback>
-            )}
-          </Avatar>
-          <h2 className="text-xl font-bold">{personel.ad_soyad}</h2>
-          <div className="badge bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs mt-1">
-            {personel.unvan || "Personel"}
-          </div>
-        </div>
-        
-        <Tabs 
-          defaultValue="details" 
-          value={activeTab} 
-          onValueChange={setActiveTab} 
-          className="w-full"
-        >
-          <div className="flex justify-center mb-4">
-            <TabsList className="grid grid-cols-3 min-w-[350px]">
-              <TabsTrigger value="details">Genel Bilgiler</TabsTrigger>
-              <TabsTrigger value="operations">İşlem Geçmişi</TabsTrigger>
-              <TabsTrigger value="performance">Performans</TabsTrigger>
-            </TabsList>
-          </div>
+    <>
+      <Dialog open={isOpen} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="flex flex-row items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Avatar className="h-10 w-10 border">
+                <AvatarImage src={personnel.avatar_url} alt={personnel.ad_soyad} />
+                <AvatarFallback>{getInitials(personnel.ad_soyad)}</AvatarFallback>
+              </Avatar>
+              <div>
+                <DialogTitle>{personnel.ad_soyad}</DialogTitle>
+                <div className="mt-1 text-sm text-muted-foreground">
+                  {personnel.calisma_sistemi === "aylik_maas" ? "Maaşlı Çalışan" : 
+                   personnel.calisma_sistemi === "haftalik_maas" ? "Maaşlı Çalışan" :
+                   personnel.calisma_sistemi === "gunluk_maas" ? "Maaşlı Çalışan" :
+                   "Yüzdelik Çalışan"}
+                </div>
+              </div>
+            </div>
+          </DialogHeader>
           
-          <div 
-            className="tab-content"
-            onTouchStart={handleTouchStart}
-            onTouchEnd={handleTouchEnd}
-          >
-            <TabsContent value="details" className="space-y-6">
-              <div className="grid gap-4 text-base">
-                <div className="grid grid-cols-1 sm:grid-cols-3 items-center border-b pb-2">
-                  <div className="font-medium flex items-center gap-2">
-                    <User size={18} className="text-purple-600" /> 
-                    Ad Soyad:
-                  </div>
-                  <div className="col-span-2">{personel.ad_soyad}</div>
-                </div>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-3 items-center border-b pb-2">
-                  <div className="font-medium flex items-center gap-2">
-                    <Calendar size={18} className="text-purple-600" />
-                    Doğum Tarihi:
-                  </div>
-                  <div className="col-span-2">{formatDate(personel.birth_date) || "Belirtilmemiş"}</div>
-                </div>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-3 items-center border-b pb-2">
-                  <div className="font-medium flex items-center gap-2">
-                    <Phone size={18} className="text-purple-600" />
-                    Telefon:
-                  </div>
-                  <div className="col-span-2 flex items-center">
-                    <span className="mr-2">{personel.telefon || "Belirtilmemiş"}</span>
-                    {personel.telefon && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0"
-                        onClick={() => copyToClipboard(personel.telefon, "Telefon numarası")}
-                      >
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-3 items-center border-b pb-2">
-                  <div className="font-medium flex items-center gap-2">
-                    <Mail size={18} className="text-purple-600" />
-                    E-posta:
-                  </div>
-                  <div className="col-span-2">
-                    <span className="mr-2">{personel.eposta || "Belirtilmemiş"}</span>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-3 items-center border-b pb-2">
-                  <div className="font-medium flex items-center gap-2">
-                    <Home size={18} className="text-purple-600" />
-                    Adres:
-                  </div>
-                  <div className="col-span-2">{personel.adres || "Belirtilmemiş"}</div>
-                </div>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-3 items-center border-b pb-2">
-                  <div className="font-medium flex items-center gap-2">
-                    <CreditCard size={18} className="text-purple-600" />
-                    Maaş:
-                  </div>
-                  <div className="col-span-2">
-                    {personel.maas ? 
-                      new Intl.NumberFormat("tr-TR", {
-                        style: "currency",
-                        currency: "TRY",
-                      }).format(personel.maas || 0) 
-                      : "₺0,00"}
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-3 items-center border-b pb-2">
-                  <div className="font-medium flex items-center gap-2">
-                    <CreditCard size={18} className="text-purple-600" />
-                    IBAN:
-                  </div>
-                  <div className="col-span-2 flex items-center">
-                    <span className="mr-2">
-                      {personel.iban ? profilServisi.formatIBAN(personel.iban) : "Belirtilmemiş"}
-                    </span>
-                    {personel.iban && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0"
-                        onClick={() => copyToClipboard(personel.iban, "IBAN")}
-                      >
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </div>
+          <div className="mt-4">
+            <Tabs defaultValue="personal-info" className="w-full">
+              <TabsList className="grid grid-cols-3 mb-6">
+                <TabsTrigger value="personal-info">Genel Bilgiler</TabsTrigger>
+                <TabsTrigger value="work-info">Çalışma Bilgileri</TabsTrigger>
+                <TabsTrigger value="history">İşlem Geçmişi</TabsTrigger>
+              </TabsList>
               
-              <div className="flex justify-end">
-                <Button onClick={() => setEditDialogOpen(true)}>
-                  Düzenle
-                </Button>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="operations" className="p-1">
-              <PersonnelOperationsTable personnelId={personel.id} />
-            </TabsContent>
-            
-            <TabsContent value="performance">
-              <PersonnelPerformance personnelId={personel.id} />
-            </TabsContent>
+              <TabsContent value="personal-info">
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 gap-6">
+                    <div>
+                      <h3 className="text-lg font-medium mb-4">İletişim Bilgileri</h3>
+                      <div className="space-y-4">
+                        {/* Ad Soyad */}
+                        <div className="flex items-center border-b pb-3">
+                          <User className="h-4 w-4 text-purple-500 mr-3" />
+                          <span className="w-28 text-muted-foreground">Ad Soyad</span>
+                          <span className="flex-1">{personnel.ad_soyad}</span>
+                        </div>
+                        
+                        {/* Doğum Tarihi */}
+                        <div className="flex items-center border-b pb-3">
+                          <Calendar className="h-4 w-4 text-purple-500 mr-3" />
+                          <span className="w-28 text-muted-foreground">Doğum Tarihi</span>
+                          <span className="flex-1">
+                            {personnel.birth_date 
+                              ? new Date(personnel.birth_date).toLocaleDateString('tr-TR')
+                              : "Belirtilmemiş"}
+                          </span>
+                        </div>
+                        
+                        {/* Telefon */}
+                        <div className="flex items-center border-b pb-3">
+                          <Phone className="h-4 w-4 text-purple-500 mr-3" />
+                          <span className="w-28 text-muted-foreground">Telefon</span>
+                          <span className="flex-1">{personnel.telefon || "Belirtilmemiş"}</span>
+                          {personnel.telefon && (
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => handleCopy(personnel.telefon, "Telefon numarası")}
+                              className="h-8 w-8"
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                        
+                        {/* E-posta */}
+                        <div className="flex items-center border-b pb-3">
+                          <Mail className="h-4 w-4 text-purple-500 mr-3" />
+                          <span className="w-28 text-muted-foreground">E-posta</span>
+                          <span className="flex-1">{personnel.eposta || "Belirtilmemiş"}</span>
+                          {personnel.eposta && (
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => handleCopy(personnel.eposta, "E-posta adresi")}
+                              className="h-8 w-8"
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                        
+                        {/* Adres */}
+                        <div className="flex items-start border-b pb-3">
+                          <MapPin className="h-4 w-4 text-purple-500 mr-3 mt-1" />
+                          <span className="w-28 text-muted-foreground mt-0.5">Adres</span>
+                          <span className="flex-1">{personnel.adres || "Belirtilmemiş"}</span>
+                        </div>
+                        
+                        {/* IBAN */}
+                        <div className="flex items-center border-b pb-3">
+                          <CreditCard className="h-4 w-4 text-purple-500 mr-3" />
+                          <span className="w-28 text-muted-foreground">IBAN</span>
+                          <span className="flex-1 font-mono text-sm">
+                            {formatIBAN(personnel.iban)}
+                          </span>
+                          {personnel.iban && (
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => handleCopy(personnel.iban, "IBAN")}
+                              className="h-8 w-8"
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="work-info">
+                <div className="space-y-6">
+                  {!isEditing ? (
+                    <>
+                      <div className="flex justify-end mb-4">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setIsEditing(true)}
+                          className="flex items-center gap-1"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          Düzenle
+                        </Button>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <h3 className="text-lg font-medium mb-4">Çalışma Bilgileri</h3>
+                          <div className="space-y-4">
+                            <div className="flex items-center border-b pb-3">
+                              <span className="w-36 text-muted-foreground">Çalışma Sistemi</span>
+                              <span>
+                                {personnel.calisma_sistemi === "aylik_maas" ? "Aylık Maaşlı" : 
+                                 personnel.calisma_sistemi === "haftalik_maas" ? "Haftalık Maaşlı" : 
+                                 personnel.calisma_sistemi === "gunluk_maas" ? "Günlük Maaşlı" :
+                                 "Yüzdelik Çalışan"}
+                              </span>
+                            </div>
+                            
+                            {["aylik_maas", "haftalik_maas", "gunluk_maas"].includes(personnel.calisma_sistemi) && (
+                              <div className="flex items-center border-b pb-3">
+                                <span className="w-36 text-muted-foreground">Maaş Bilgisi</span>
+                                <span>
+                                  {formatCurrency(personnel.maas || 0)}
+                                </span>
+                              </div>
+                            )}
+                            
+                            {personnel.calisma_sistemi === "prim_komisyon" && (
+                              <div className="flex items-center border-b pb-3">
+                                <span className="w-36 text-muted-foreground">Prim Oranı</span>
+                                <span>%{personnel.prim_yuzdesi}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="bg-gray-50 p-6 rounded-lg border">
+                      <h3 className="text-lg font-medium mb-4">Çalışma Bilgilerini Düzenle</h3>
+                      
+                      {/* Çalışma Türü Seçimi */}
+                      <div className="mb-6">
+                        <p className="text-sm text-muted-foreground mb-3">Çalışma Türü</p>
+                        <RadioGroup 
+                          value={workingForm.calisma_sistemi} 
+                          onValueChange={(value) => setWorkingForm({
+                            ...workingForm,
+                            calisma_sistemi: value,
+                            // Reset values when switching
+                            maas: value === "prim_komisyon" ? 0 : workingForm.maas,
+                            prim_yuzdesi: value !== "prim_komisyon" ? 0 : workingForm.prim_yuzdesi
+                          })}
+                          className="flex gap-4"
+                        >
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="aylik_maas" id="aylik" />
+                            <Label htmlFor="aylik">Maaşlı</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="prim_komisyon" id="prim" />
+                            <Label htmlFor="prim">Komisyonlu</Label>
+                          </div>
+                        </RadioGroup>
+                      </div>
+                      
+                      {/* Maaşlı Seçildiyse */}
+                      {workingForm.calisma_sistemi !== "prim_komisyon" && (
+                        <>
+                          <div className="mb-6">
+                            <p className="text-sm text-muted-foreground mb-3">Periyot</p>
+                            <RadioGroup 
+                              value={workingForm.calisma_sistemi} 
+                              onValueChange={(value) => setWorkingForm({
+                                ...workingForm,
+                                calisma_sistemi: value
+                              })}
+                              className="flex gap-4"
+                            >
+                              <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="gunluk_maas" id="gunluk" />
+                                <Label htmlFor="gunluk">Günlük</Label>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="haftalik_maas" id="haftalik" />
+                                <Label htmlFor="haftalik">Haftalık</Label>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="aylik_maas" id="aylik2" />
+                                <Label htmlFor="aylik2">Aylık</Label>
+                              </div>
+                            </RadioGroup>
+                          </div>
+                          
+                          <div className="mb-6">
+                            <Label htmlFor="maas">Maaş Miktarı</Label>
+                            <div className="relative mt-2">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2">₺</span>
+                              <Input
+                                id="maas"
+                                type="number"
+                                className="pl-8"
+                                value={workingForm.maas}
+                                onChange={(e) => setWorkingForm({
+                                  ...workingForm,
+                                  maas: Number(e.target.value)
+                                })}
+                              />
+                            </div>
+                          </div>
+                        </>
+                      )}
+                      
+                      {/* Komisyonlu Seçildiyse */}
+                      {workingForm.calisma_sistemi === "prim_komisyon" && (
+                        <div className="mb-6">
+                          <Label htmlFor="prim">Prim Yüzdesi (%)</Label>
+                          <div className="relative mt-2">
+                            <Input
+                              id="prim"
+                              type="number"
+                              max="100"
+                              value={workingForm.prim_yuzdesi}
+                              onChange={(e) => setWorkingForm({
+                                ...workingForm,
+                                prim_yuzdesi: Number(e.target.value)
+                              })}
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2">%</span>
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="flex justify-end gap-3 mt-8">
+                        <Button 
+                          variant="outline" 
+                          onClick={() => {
+                            setIsEditing(false);
+                            // Reset form to original values
+                            setWorkingForm({
+                              calisma_sistemi: personnel.calisma_sistemi,
+                              maas: personnel.maas || 0,
+                              prim_yuzdesi: personnel.prim_yuzdesi || 0,
+                            });
+                          }}
+                        >
+                          İptal
+                        </Button>
+                        <Button onClick={handleSaveChanges}>
+                          Kaydet
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="history">
+                <PersonnelOperationsTable personnelId={personnel.id} />
+              </TabsContent>
+            </Tabs>
           </div>
-        </Tabs>
-        
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Kapat
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-
-      <PersonnelEditDialog
-        personelId={personel.id}
-        open={editDialogOpen}
-        onOpenChange={setEditDialogOpen}
+        </DialogContent>
+      </Dialog>
+      
+      <PersonnelDeleteDialog
+        isOpen={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        personnelId={personnel?.id}
+        personnelName={personnel?.ad_soyad}
       />
-    </Dialog>
+    </>
   );
 }

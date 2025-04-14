@@ -1,20 +1,16 @@
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { CircleAlert } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 export function YearlyStatisticsPlaceholder() {
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Veri Hazırlanıyor</CardTitle>
-      </CardHeader>
-      <CardContent>
+      <CardContent className="p-6">
         <Alert>
-          <CircleAlert className="h-4 w-4" />
-          <AlertTitle>Bilgi</AlertTitle>
+          <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Yıllık istatistik verileri henüz hazır değil. Daha sonra tekrar kontrol edin.
+            Yeterli veri bulunmadığından istatistik gösterilemiyor. Lütfen daha sonra tekrar deneyiniz.
           </AlertDescription>
         </Alert>
       </CardContent>

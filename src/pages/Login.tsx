@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Home } from "lucide-react";
 
 // Form schema for login
 const loginSchema = z.object({
@@ -277,13 +278,22 @@ export default function Login() {
             </TabsContent>
           </Tabs>
 
-          <div className="flex flex-col items-center mt-4">
+          <div className="flex flex-col items-center mt-4 space-y-2">
             <Button 
-              variant="link" 
-              onClick={handleBackClick}
-              className="text-blue-600 hover:text-blue-800"
+              variant="outline"
+              onClick={() => navigate("/staff-login")}
+              className="w-full flex items-center justify-center gap-2"
             >
-              Ana Sayfaya Dön
+              <span>Personel Girişi</span>
+            </Button>
+            
+            <Button 
+              variant="secondary" 
+              onClick={handleBackClick}
+              className="w-full flex items-center justify-center gap-2"
+            >
+              <Home size={16} />
+              <span>Ana Sayfaya Dön</span>
             </Button>
           </div>
         </CardContent>

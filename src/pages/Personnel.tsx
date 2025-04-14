@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
-import { PersonelIslemi, islemServisi, personelIslemleriServisi, personelServisi } from "@/lib/supabase";
+import { PersonelIslemi as PersonelIslemiType, islemServisi, personelIslemleriServisi, personelServisi } from "@/lib/supabase";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
@@ -14,6 +13,12 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, FileBarChart } from "lucide-react";
 import { Navigate } from "react-router-dom";
 import { formatCurrency } from "@/lib/utils";
+import { PersonnelAnalyst } from "@/components/analyst/PersonnelAnalyst";
+
+interface PersonelIslemi extends PersonelIslemiType {
+  personel_id: number;
+  created_at: string;
+}
 
 export default function Personnel() {
   const { userRole, refreshProfile } = useCustomerAuth();
@@ -41,7 +46,7 @@ export default function Personnel() {
     enabled: userRole === 'admin'
   });
 
-  const { data: islemGecmisi = [], isLoading: islemlerLoading }: UseQueryResult<PersonelIslemi[], Error> = useQuery({
+  const { data: rawIslemGecmisi = [], isLoading: islemlerLoading }: UseQueryResult<PersonelIslemiType[], Error> = useQuery({
     queryKey: ['personelIslemleri', dateRange.from, dateRange.to],
     queryFn: async () => {
       const data = await personelIslemleriServisi.hepsiniGetir();
@@ -54,6 +59,14 @@ export default function Personnel() {
     retry: 1,
     enabled: userRole === 'admin'
   });
+  
+  const islemGecmisi: PersonelIslemi[] = rawIslemGecmisi
+    .filter(islem => islem.personel_id !== undefined && islem.created_at !== undefined)
+    .map(islem => ({
+      ...islem,
+      personel_id: islem.personel_id as number,
+      created_at: islem.created_at as string
+    }));
 
   if (userRole === 'staff') {
     return <Navigate to="/shop-home" replace />;
@@ -146,11 +159,11 @@ export default function Personnel() {
                         <tr>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tarih</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Personel</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Müşteri</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlem</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tutar</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prim %</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ödenen</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Puan</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
@@ -164,7 +177,10 @@ export default function Personnel() {
                                 {personeller?.find(p => p.id === islem.personel_id)?.ad_soyad}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {islem.aciklama}
+                                {islem.musteri?.first_name} {islem.musteri?.last_name}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {islem.islem?.islem_adi || islem.aciklama.split(' hizmeti verildi')[0]}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                 {formatCurrency(islem.tutar)}
@@ -174,9 +190,6 @@ export default function Personnel() {
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                 {formatCurrency(islem.odenen)}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {islem.puan}
                               </td>
                             </tr>
                           ))

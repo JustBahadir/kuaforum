@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Image, Upload, X, Trash2 } from "lucide-react";
+import { Image, Upload, X, Trash2, Camera } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
 
@@ -15,6 +15,7 @@ interface FileUploadProps {
   folderPath?: string;
   acceptedFileTypes?: string;
   maxFileSize?: number; // In bytes
+  useCamera?: boolean; // Added useCamera prop
 }
 
 export function FileUpload({
@@ -25,7 +26,8 @@ export function FileUpload({
   bucketName = "photos",
   folderPath = "avatars",
   acceptedFileTypes = "image/*",
-  maxFileSize = 20 * 1024 * 1024 // Default to 20MB
+  maxFileSize = 20 * 1024 * 1024, // Default to 20MB
+  useCamera = false // Default to false
 }: FileUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(currentImageUrl || null);
@@ -87,6 +89,10 @@ export function FileUpload({
 
   const inputId = id || "file-upload";
 
+  // Modify the input to use capture if useCamera is true
+  // Fix: Use the correct type for capture attribute - "environment" | "user" instead of string
+  const inputProps = useCamera ? { capture: "environment" as "environment" | "user" } : {};
+
   return (
     <div className="space-y-4">
       {previewUrl ? (
@@ -108,8 +114,12 @@ export function FileUpload({
         </div>
       ) : (
         <div className="border-2 border-dashed border-gray-300 rounded-md p-6 flex flex-col items-center justify-center h-48 bg-gray-50">
-          <Image className="h-10 w-10 text-gray-400 mb-2" />
-          <p className="text-sm text-gray-500">PNG, JPG, GIF dosyası yükleyin</p>
+          {useCamera ? (
+            <Camera className="h-10 w-10 text-gray-400 mb-2" />
+          ) : (
+            <Image className="h-10 w-10 text-gray-400 mb-2" />
+          )}
+          <p className="text-sm text-gray-500">{useCamera ? "Kamera ile fotoğraf çekin" : "PNG, JPG, GIF dosyası yükleyin"}</p>
           <p className="text-xs text-gray-400 mt-1">Max {Math.round(maxFileSize / (1024 * 1024))}MB</p>
         </div>
       )}
@@ -122,6 +132,7 @@ export function FileUpload({
           className="hidden"
           id={inputId}
           disabled={isUploading}
+          {...inputProps}
         />
         <label htmlFor={inputId} className="flex-1">
           <Button 

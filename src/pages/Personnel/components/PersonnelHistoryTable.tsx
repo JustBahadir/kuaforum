@@ -23,6 +23,14 @@ interface PersonnelHistoryTableProps {
 const SUPABASE_URL = "https://xkbjjcizncwkrouvoujw.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhrYmpqY2l6bmN3a3JvdXZvdWp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzk5Njg0NzksImV4cCI6MjA1NTU0NDQ3OX0.RyaC2G1JPHUGQetAcvMgjsTp_nqBB2rZe3U-inU2osw";
 
+// Function to clean operation descriptions
+const cleanOperationName = (description: string | null) => {
+  if (!description) return '';
+  // Remove " hizmeti verildi - Customer (Randevu #X)" from the description
+  const cleanedName = description.split(' hizmeti verildi')[0];
+  return cleanedName;
+};
+
 export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -173,15 +181,10 @@ export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProp
   // Calculate totals
   const totalAmount = islemGecmisi.reduce((sum, item) => sum + (item.tutar || 0), 0);
   const totalPaid = islemGecmisi.reduce((sum, item) => sum + (item.odenen || 0), 0);
-  const totalPoints = islemGecmisi.reduce((sum, item) => sum + (item.puan || 0), 0);
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-gray-50 p-4 rounded-lg">
-          <div className="text-sm text-muted-foreground">TOPLAM PUAN</div>
-          <div className="text-2xl font-bold text-purple-700">{totalPoints}</div>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-gray-50 p-4 rounded-lg">
           <div className="text-sm text-muted-foreground">TOPLAM TUTAR</div>
           <div className="text-2xl font-bold text-gray-900">{formatCurrency(totalAmount)}</div>
@@ -236,8 +239,6 @@ export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProp
               <TableHead>Müşteri</TableHead>
               <TableHead>Tutar</TableHead>
               <TableHead>Prim %</TableHead>
-              <TableHead>Ödenen</TableHead>
-              <TableHead>Puan</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -246,16 +247,14 @@ export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProp
                 <TableCell>
                   {new Date(islem.created_at!).toLocaleDateString('tr-TR')}
                 </TableCell>
-                <TableCell>{islem.islem?.islem_adi || islem.aciklama}</TableCell>
+                <TableCell>{islem.islem?.islem_adi || cleanOperationName(islem.aciklama)}</TableCell>
                 <TableCell>
                   {islem.musteri 
                     ? `${islem.musteri.first_name} ${islem.musteri.last_name || ''}` 
                     : ''}
                 </TableCell>
                 <TableCell>{formatCurrency(islem.tutar || 0)}</TableCell>
-                <TableCell>%{islem.prim_yuzdesi}</TableCell>
-                <TableCell>{formatCurrency(islem.odenen || 0)}</TableCell>
-                <TableCell>{islem.puan}</TableCell>
+                <TableCell>{islem.prim_yuzdesi > 0 ? `%${islem.prim_yuzdesi}` : "-"}</TableCell>
               </TableRow>
             ))}
           </TableBody>
