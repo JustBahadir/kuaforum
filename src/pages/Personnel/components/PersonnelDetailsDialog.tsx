@@ -1,187 +1,224 @@
 
-import { useState } from "react";
-import { 
-  Dialog, 
+import React, { useState, useEffect } from "react";
+import {
+  Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription
+  DialogDescription,
 } from "@/components/ui/dialog";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-
-import { PersonnelForm } from "./PersonnelForm";
-import { PersonnelOperationsTable } from "./PersonnelOperationsTable";
-import { PersonnelPerformance } from "./PersonnelPerformance";
-import { PersonnelEditDialog } from "./PersonnelEditDialog";
-import { PersonnelDeleteDialog } from "./PersonnelDeleteDialog";
-import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Pencil } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import { Pencil, Phone, Mail, Copy, MapPin, CreditCard, Calendar } from "lucide-react";
+import { personelServisi, personelIslemleriServisi } from "@/lib/supabase";
+import { formatCurrency } from "@/lib/utils";
+import { WorkInfoTab } from "./personnel-detail-tabs/WorkInfoTab";
+import { OperationsHistoryTab } from "./personnel-detail-tabs/OperationsHistoryTab";
+import { PerformanceTab } from "./personnel-detail-tabs/PerformanceTab";
 
 interface PersonnelDetailsDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  personnel: any;
+  personnel: any | null;
+  onEdit?: (personnel: any) => void;
 }
 
 export function PersonnelDetailsDialog({
   isOpen,
   onOpenChange,
-  personnel
+  personnel,
+  onEdit,
 }: PersonnelDetailsDialogProps) {
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  
+  const [activeTab, setActiveTab] = useState("kisisel");
+  const [operations, setOperations] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Fetch personnel operations when dialog opens or personnel changes
+  useEffect(() => {
+    if (personnel?.id && isOpen) {
+      setIsLoading(true);
+      personelIslemleriServisi
+        .personelIslemleriGetir(personnel.id)
+        .then((data) => {
+          setOperations(data || []);
+        })
+        .catch(console.error)
+        .finally(() => {
+          setIsLoading(false);
+        });
+    }
+  }, [personnel, isOpen]);
+
+  const handleEdit = () => {
+    if (onEdit && personnel) {
+      onEdit(personnel);
+    }
+  };
+
+  const getWorkingSystemLabel = (system: string, prim: number = 0) => {
+    switch (system) {
+      case "aylik_maas":
+        return "Aylık Maaş";
+      case "haftalik_maas":
+        return "Haftalık Maaş";
+      case "gunluk_maas":
+        return "Günlük Maaş";
+      case "prim_komisyon":
+        return `Yüzdelik (${prim}%)`;
+      default:
+        return system;
+    }
+  };
+
+  // Helper function to copy text to clipboard
+  const copyToClipboard = (text: string, type: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success(`${type} kopyalandı`);
+  };
+
+  // Format birth date
+  const formatBirthDate = (birthDate: string | null) => {
+    if (!birthDate) return "Belirtilmemiş";
+    return new Date(birthDate).toLocaleDateString("tr-TR");
+  };
+
   if (!personnel) return null;
 
-  const handleEditClick = () => {
-    setIsEditModalOpen(true);
-  };
-  
   const getInitials = (name: string) => {
     if (!name) return "??";
     return name
       .split(" ")
-      .map(n => n[0])
+      .map((n) => n[0])
       .join("")
       .toUpperCase()
       .slice(0, 2);
   };
-  
+
   return (
-    <>
-      <Dialog open={isOpen} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader className="flex flex-row items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10 border">
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-auto">
+        <DialogHeader className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <Avatar className="h-16 w-16 border-2 border-primary/20">
                 <AvatarImage src={personnel.avatar_url} alt={personnel.ad_soyad} />
                 <AvatarFallback>{getInitials(personnel.ad_soyad)}</AvatarFallback>
               </Avatar>
               <div>
-                <DialogTitle>{personnel.ad_soyad}</DialogTitle>
-                <DialogDescription className="mt-1">
-                  {personnel.calisma_sistemi === "aylik_maas" ? "Maaşlı Çalışan" : "Yüzdelik Çalışan"}
+                <DialogTitle className="text-xl">{personnel.ad_soyad}</DialogTitle>
+                <DialogDescription>
+                  {getWorkingSystemLabel(personnel.calisma_sistemi, personnel.prim_yuzdesi)}
                 </DialogDescription>
               </div>
             </div>
             <Button 
               variant="outline" 
-              size="sm"
-              onClick={handleEditClick}
-              className="mt-0 flex items-center gap-1"
+              size="sm" 
+              className="flex gap-2"
+              onClick={handleEdit}
             >
-              <Pencil className="h-3.5 w-3.5" />
-              Düzenle
+              <Pencil className="h-4 w-4" />
+              <span>Düzenle</span>
             </Button>
-          </DialogHeader>
-          
-          <div className="mt-4">
-            <Tabs defaultValue="personal-info" className="w-full">
-              <TabsList className="grid grid-cols-3 mb-6">
-                <TabsTrigger value="personal-info">Kişisel Bilgiler</TabsTrigger>
-                <TabsTrigger value="work-info">Çalışma Bilgileri</TabsTrigger>
-                <TabsTrigger value="history">İşlem Geçmişi</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="personal-info">
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <h3 className="text-lg font-medium mb-2">İletişim Bilgileri</h3>
-                      <div className="space-y-2">
-                        <div className="flex justify-between border-b pb-1">
-                          <span className="text-muted-foreground">Ad Soyad</span>
-                          <span>{personnel.ad_soyad}</span>
-                        </div>
-                        <div className="flex justify-between border-b pb-1">
-                          <span className="text-muted-foreground">Telefon</span>
-                          <span>{personnel.telefon}</span>
-                        </div>
-                        <div className="flex justify-between border-b pb-1">
-                          <span className="text-muted-foreground">E-posta</span>
-                          <span>{personnel.eposta}</span>
-                        </div>
-                        <div className="flex justify-between border-b pb-1">
-                          <span className="text-muted-foreground">Adres</span>
-                          <span className="text-right">{personnel.adres}</span>
-                        </div>
-                        <div className="flex justify-between border-b pb-1">
-                          <span className="text-muted-foreground">IBAN</span>
-                          <span>{personnel.iban}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="work-info">
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <h3 className="text-lg font-medium mb-2">Çalışma Bilgileri</h3>
-                      <div className="space-y-2">
-                        <div className="flex justify-between border-b pb-1">
-                          <span className="text-muted-foreground">Çalışma Sistemi</span>
-                          <span>
-                            {personnel.calisma_sistemi === "aylik_maas" ? "Aylık Maaş" : 
-                             personnel.calisma_sistemi === "haftalik_maas" ? "Haftalık Maaş" : 
-                             personnel.calisma_sistemi === "gunluk_maas" ? "Günlük Maaş" :
-                             personnel.calisma_sistemi === "prim_komisyon" ? "Prim/Komisyon" : 
-                             personnel.calisma_sistemi}
-                          </span>
-                        </div>
-                        {["aylik_maas", "haftalik_maas", "gunluk_maas"].includes(personnel.calisma_sistemi) && (
-                          <div className="flex justify-between border-b pb-1">
-                            <span className="text-muted-foreground">Maaş Bilgisi</span>
-                            <span>
-                              {new Intl.NumberFormat("tr-TR", {
-                                style: "currency",
-                                currency: "TRY",
-                              }).format(personnel.maas || 0)}
-                            </span>
-                          </div>
-                        )}
-                        {personnel.calisma_sistemi === "prim_komisyon" && (
-                          <div className="flex justify-between border-b pb-1">
-                            <span className="text-muted-foreground">Prim Oranı</span>
-                            <span>%{personnel.prim_yuzdesi}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="history">
-                <PersonnelOperationsTable personnelId={personnel.id} />
-              </TabsContent>
-            </Tabs>
           </div>
-        </DialogContent>
-      </Dialog>
-      
-      {isEditModalOpen && (
-        <PersonnelEditDialog 
-          isOpen={isEditModalOpen} 
-          onOpenChange={setIsEditModalOpen}
-          personnel={personnel}
-        />
-      )}
-      
-      <PersonnelDeleteDialog
-        isOpen={isDeleteDialogOpen}
-        onOpenChange={setIsDeleteDialogOpen}
-        personnelId={personnel?.id}
-        personnelName={personnel?.ad_soyad}
-      />
-    </>
+        </DialogHeader>
+
+        <Tabs 
+          defaultValue="kisisel" 
+          value={activeTab} 
+          onValueChange={setActiveTab} 
+          className="mt-2"
+        >
+          <TabsList className="grid grid-cols-4 w-full">
+            <TabsTrigger value="kisisel">Kişisel Bilgiler</TabsTrigger>
+            <TabsTrigger value="calisma">Çalışma Bilgileri</TabsTrigger>
+            <TabsTrigger value="performans">Performans</TabsTrigger>
+            <TabsTrigger value="islemler">İşlem Geçmişi</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="kisisel" className="space-y-4 mt-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <div className="text-sm font-medium text-muted-foreground">Ad Soyad</div>
+                <div>{personnel.ad_soyad}</div>
+              </div>
+              
+              <div className="space-y-2">
+                <div className="text-sm font-medium text-muted-foreground">Doğum Tarihi</div>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  {formatBirthDate(personnel.birth_date)}
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <div className="text-sm font-medium text-muted-foreground">Telefon</div>
+                <div className="flex items-center gap-2">
+                  <Phone className="h-4 w-4 text-muted-foreground" />
+                  <span>{personnel.telefon}</span>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    className="h-6 w-6 p-0"
+                    onClick={() => copyToClipboard(personnel.telefon, "Telefon")}
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <div className="text-sm font-medium text-muted-foreground">E-posta</div>
+                <div className="flex items-center gap-2">
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                  <span className="truncate">{personnel.eposta}</span>
+                </div>
+              </div>
+              
+              <div className="space-y-2 col-span-1 md:col-span-2">
+                <div className="text-sm font-medium text-muted-foreground">Adres</div>
+                <div className="flex items-start gap-2">
+                  <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+                  <span>{personnel.adres || "Adres belirtilmemiş"}</span>
+                </div>
+              </div>
+              
+              <div className="space-y-2 col-span-1 md:col-span-2">
+                <div className="text-sm font-medium text-muted-foreground">IBAN</div>
+                <div className="flex items-center gap-2">
+                  <CreditCard className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-mono">{personnel.iban || "IBAN belirtilmemiş"}</span>
+                  {personnel.iban && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      className="h-6 w-6 p-0"
+                      onClick={() => copyToClipboard(personnel.iban, "IBAN")}
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="calisma" className="space-y-4 mt-4">
+            <WorkInfoTab personnel={personnel} />
+          </TabsContent>
+          
+          <TabsContent value="performans" className="space-y-4 mt-4">
+            <PerformanceTab personnel={personnel} />
+          </TabsContent>
+          
+          <TabsContent value="islemler" className="mt-4">
+            <OperationsHistoryTab personnel={personnel} operations={operations} isLoading={isLoading} />
+          </TabsContent>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
   );
 }

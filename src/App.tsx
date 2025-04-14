@@ -5,6 +5,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { Toaster } from "@/components/ui/sonner";
 import { RouteProtection } from "@/components/auth/RouteProtection";
+import { ThemeProvider } from "@/components/ui/theme-provider";
 import HomePage from "./pages/HomePage";
 import StaffLogin from "./pages/StaffLogin";
 import StaffRegister from "./pages/StaffRegister";
@@ -26,7 +27,7 @@ import ShopSettings from "./pages/ShopSettings";
 import OperationsHistory from "./pages/OperationsHistory";
 import CustomerOperations from "./pages/operations/CustomerOperations";
 import StaffOperations from "./pages/operations/StaffOperations";
-import { ThemeProvider } from "./components/ui/theme-provider";
+import Login from "./pages/Login";
 
 // Create the query client
 const queryClient = new QueryClient({
@@ -49,7 +50,8 @@ function App() {
               <Route path="/" element={<HomePage />} />
               
               {/* Auth Routes */}
-              <Route path="/login" element={<CustomerAuth />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/auth" element={<CustomerAuth />} />
               <Route path="/staff-login" element={<StaffLogin />} />
               <Route path="/admin" element={<StaffLogin />} />
               <Route path="/admin/register" element={<StaffRegister />} />
