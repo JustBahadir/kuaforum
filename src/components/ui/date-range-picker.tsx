@@ -18,6 +18,7 @@ interface DateRangePickerProps {
   from: Date;
   to: Date;
   onSelect: (range: { from: Date; to: Date }) => void;
+  singleDate?: boolean;
 }
 
 export function DateRangePicker({
@@ -25,6 +26,7 @@ export function DateRangePicker({
   from,
   to,
   onSelect,
+  singleDate = false,
 }: DateRangePickerProps) {
   const [date, setDate] = React.useState<DateRange | undefined>({
     from,
@@ -45,13 +47,13 @@ export function DateRangePicker({
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
             {date?.from ? (
-              date.to ? (
+              singleDate || !date.to ? (
+                format(date.from, "LLL dd, y", { locale: tr })
+              ) : (
                 <>
                   {format(date.from, "LLL dd, y", { locale: tr })} -{" "}
                   {format(date.to, "LLL dd, y", { locale: tr })}
                 </>
-              ) : (
-                format(date.from, "LLL dd, y", { locale: tr })
               )
             ) : (
               <span>Tarih seçin</span>
@@ -61,17 +63,28 @@ export function DateRangePicker({
         <PopoverContent className="w-auto p-0" align="start">
           <Calendar
             initialFocus
-            mode="range"
+            mode={singleDate ? "single" : "range"}
             defaultMonth={date?.from}
-            selected={date}
+            selected={singleDate ? { from: date?.from, to: undefined } : date}
             onSelect={(selectedDate) => {
-              setDate(selectedDate);
-              // Only call onSelect when we have both from and to dates
-              if (selectedDate?.from && selectedDate?.to) {
+              if (singleDate && selectedDate) {
+                // For single date mode, we set both from and to as the same date
+                const singleDateValue = {
+                  from: selectedDate as Date,
+                  to: selectedDate as Date
+                };
+                setDate(singleDateValue);
+                onSelect(singleDateValue);
+              } else if (!singleDate && selectedDate?.from && selectedDate?.to) {
+                // For range mode, only call onSelect when we have both dates
+                setDate(selectedDate);
                 onSelect({
                   from: selectedDate.from,
                   to: selectedDate.to
                 });
+              } else {
+                // Just update the state for partial selection in range mode
+                setDate(selectedDate as DateRange);
               }
             }}
             weekStartsOn={1} // Set week starts on Monday (1) instead of Sunday (0)
