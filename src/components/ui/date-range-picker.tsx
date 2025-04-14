@@ -28,7 +28,7 @@ export function DateRangePicker({
   onSelect,
   singleDate = false,
 }: DateRangePickerProps) {
-  const [date, setDate] = React.useState<DateRange | undefined>({
+  const [date, setDate] = React.useState<DateRange>({
     from,
     to,
   });
@@ -47,12 +47,12 @@ export function DateRangePicker({
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
             {date?.from ? (
-              singleDate || !date.to ? (
+              singleDate ? (
                 format(date.from, "LLL dd, y", { locale: tr })
               ) : (
                 <>
                   {format(date.from, "LLL dd, y", { locale: tr })} -{" "}
-                  {format(date.to, "LLL dd, y", { locale: tr })}
+                  {format(date.to || date.from, "LLL dd, y", { locale: tr })}
                 </>
               )
             ) : (
@@ -65,29 +65,28 @@ export function DateRangePicker({
             initialFocus
             mode={singleDate ? "single" : "range"}
             defaultMonth={date?.from}
-            selected={singleDate ? { from: date?.from, to: undefined } : date}
+            selected={date}
             onSelect={(selectedDate) => {
-              if (singleDate && selectedDate) {
-                // For single date mode, we set both from and to as the same date
+              if (!selectedDate) return;
+              
+              if (singleDate) {
                 const singleDateValue = {
                   from: selectedDate as Date,
                   to: selectedDate as Date
                 };
                 setDate(singleDateValue);
                 onSelect(singleDateValue);
-              } else if (!singleDate && selectedDate?.from && selectedDate?.to) {
-                // For range mode, only call onSelect when we have both dates
+              } else if ('from' in selectedDate && selectedDate.from && selectedDate.to) {
                 setDate(selectedDate);
                 onSelect({
                   from: selectedDate.from,
                   to: selectedDate.to
                 });
               } else {
-                // Just update the state for partial selection in range mode
                 setDate(selectedDate as DateRange);
               }
             }}
-            weekStartsOn={1} // Set week starts on Monday (1) instead of Sunday (0)
+            weekStartsOn={1}
             numberOfMonths={2}
             locale={tr}
             className="rounded-md border"

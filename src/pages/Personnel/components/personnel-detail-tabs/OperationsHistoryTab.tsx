@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { formatCurrency } from "@/lib/utils";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
@@ -125,44 +124,48 @@ export function OperationsHistoryTab({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row justify-between gap-2">
-        <div className="relative flex-1 sm:w-52">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Müşteri veya işlem ara..."
-            className="pl-8"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+      <div className="flex flex-col sm:flex-row items-start gap-4">
+        {/* Search Field */}
+        <div className="w-full sm:w-64">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Müşteri veya işlem ara..."
+              className="pl-9 w-full"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
         </div>
-        
-        <div className="flex flex-wrap gap-2 items-center">
-          <Button 
+
+        {/* Date Selection Controls */}
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
             variant={singleDateMode ? "secondary" : "outline"}
-            size="sm" 
-            className="gap-1"
+            size="sm"
+            className="h-9 gap-1 whitespace-nowrap min-w-[120px]"
             onClick={handleSingleDateModeToggle}
           >
             <Calendar className="h-4 w-4" />
-            <span>Tek Gün</span>
+            <span>{singleDateMode ? "Tek Gün Seçili" : "Tarih Aralığı"}</span>
           </Button>
-          
+
           {singleDateMode ? (
-            <DateRangePicker 
+            <DateRangePicker
               from={dateRange.from}
-              to={dateRange.from} // Same date for single mode
+              to={dateRange.from}
               onSelect={({ from }) => handleSingleDateChange(from)}
               singleDate={true}
             />
           ) : !useMonthCycle && (
-            <DateRangePicker 
+            <DateRangePicker
               from={dateRange.from}
               to={dateRange.to}
               onSelect={handleDateRangeChange}
             />
           )}
-          
-          <CustomMonthCycleSelector 
+
+          <CustomMonthCycleSelector
             selectedDay={monthCycleDay}
             onChange={handleMonthCycleChange}
             active={useMonthCycle}
