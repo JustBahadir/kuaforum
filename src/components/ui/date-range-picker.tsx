@@ -61,36 +61,52 @@ export function DateRangePicker({
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
-          <Calendar
-            initialFocus
-            mode={singleDate ? "single" : "range"}
-            defaultMonth={date?.from}
-            selected={date}
-            onSelect={(selectedDate) => {
-              if (!selectedDate) return;
-              
-              if (singleDate) {
+          {singleDate ? (
+            <Calendar
+              initialFocus
+              mode="single"
+              defaultMonth={date?.from}
+              selected={date?.from}
+              onSelect={(selectedDate) => {
+                if (!selectedDate) return;
+                
                 const singleDateValue = {
-                  from: selectedDate as Date,
-                  to: selectedDate as Date
+                  from: selectedDate,
+                  to: selectedDate
                 };
                 setDate(singleDateValue);
                 onSelect(singleDateValue);
-              } else if ('from' in selectedDate && selectedDate.from && selectedDate.to) {
-                setDate(selectedDate);
-                onSelect({
-                  from: selectedDate.from,
-                  to: selectedDate.to
-                });
-              } else {
-                setDate(selectedDate as DateRange);
-              }
-            }}
-            weekStartsOn={1}
-            numberOfMonths={2}
-            locale={tr}
-            className="rounded-md border"
-          />
+              }}
+              weekStartsOn={1}
+              numberOfMonths={2}
+              locale={tr}
+              className="rounded-md border"
+            />
+          ) : (
+            <Calendar
+              initialFocus
+              mode="range"
+              defaultMonth={date?.from}
+              selected={date}
+              onSelect={(selectedDate) => {
+                if (!selectedDate) return;
+                
+                if ('from' in selectedDate && selectedDate.from && selectedDate.to) {
+                  setDate(selectedDate);
+                  onSelect({
+                    from: selectedDate.from,
+                    to: selectedDate.to
+                  });
+                } else {
+                  setDate(selectedDate as DateRange);
+                }
+              }}
+              weekStartsOn={1}
+              numberOfMonths={2}
+              locale={tr}
+              className="rounded-md border"
+            />
+          )}
         </PopoverContent>
       </Popover>
     </div>
