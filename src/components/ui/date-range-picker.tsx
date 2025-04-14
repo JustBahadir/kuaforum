@@ -1,24 +1,25 @@
 
-import * as React from "react";
-import { format } from "date-fns";
-import { tr } from "date-fns/locale";
-import { Calendar as CalendarIcon } from "lucide-react";
-import { DateRange } from "react-day-picker";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
+import * as React from "react"
+import { format } from "date-fns"
+import { tr } from "date-fns/locale"
+import { Calendar as CalendarIcon } from "lucide-react"
+import { DateRange } from "react-day-picker"
+
+import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
+import { Calendar } from "@/components/ui/calendar"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
+} from "@/components/ui/popover"
 
 interface DateRangePickerProps {
-  className?: string;
-  from: Date;
-  to: Date;
-  onSelect: (range: { from: Date; to: Date }) => void;
-  singleDate?: boolean;
+  className?: string
+  from: Date
+  to: Date
+  onSelect: (range: { from: Date; to: Date }) => void
+  singleDate?: boolean
 }
 
 export function DateRangePicker({
@@ -28,10 +29,15 @@ export function DateRangePicker({
   onSelect,
   singleDate = false,
 }: DateRangePickerProps) {
-  const [date, setDate] = React.useState<DateRange>({
+  const [date, setDate] = React.useState<DateRange | undefined>({
     from,
     to,
-  });
+  })
+
+  // Update internal state when props change
+  React.useEffect(() => {
+    setDate({ from, to })
+  }, [from, to])
 
   return (
     <div className={cn("grid gap-2", className)}>
@@ -40,19 +46,20 @@ export function DateRangePicker({
           <Button
             id="date"
             variant={"outline"}
+            size="sm"
             className={cn(
-              "w-[300px] justify-start text-left font-normal",
+              "justify-start text-left font-normal h-9",
               !date && "text-muted-foreground"
             )}
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
             {date?.from ? (
               singleDate ? (
-                format(date.from, "LLL dd, y", { locale: tr })
+                format(date.from, "dd MMM yyyy", { locale: tr })
               ) : (
                 <>
-                  {format(date.from, "LLL dd, y", { locale: tr })} -{" "}
-                  {format(date.to || date.from, "LLL dd, y", { locale: tr })}
+                  {format(date.from, "dd MMM yyyy", { locale: tr })} -{" "}
+                  {date.to ? format(date.to, "dd MMM yyyy", { locale: tr }) : "..."}
                 </>
               )
             ) : (
@@ -65,50 +72,38 @@ export function DateRangePicker({
             <Calendar
               initialFocus
               mode="single"
-              defaultMonth={date?.from}
-              selected={date?.from}
+              defaultMonth={from}
+              selected={from}
               onSelect={(selectedDate) => {
-                if (!selectedDate) return;
-                
-                const singleDateValue = {
-                  from: selectedDate,
-                  to: selectedDate
-                };
-                setDate(singleDateValue);
-                onSelect(singleDateValue);
+                if (selectedDate) {
+                  const newRange = { from: selectedDate, to: selectedDate };
+                  setDate(newRange);
+                  onSelect(newRange);
+                }
               }}
               weekStartsOn={1}
-              numberOfMonths={2}
+              numberOfMonths={1}
               locale={tr}
-              className="rounded-md border"
             />
           ) : (
             <Calendar
               initialFocus
               mode="range"
-              defaultMonth={date?.from}
+              defaultMonth={from}
               selected={date}
               onSelect={(selectedDate) => {
-                if (!selectedDate) return;
-                
-                if ('from' in selectedDate && selectedDate.from && selectedDate.to) {
-                  setDate(selectedDate);
-                  onSelect({
-                    from: selectedDate.from,
-                    to: selectedDate.to
-                  });
-                } else {
-                  setDate(selectedDate as DateRange);
+                if (selectedDate) {
+                  setDate(selectedDate)
+                  onSelect({ from: selectedDate.from || from, to: selectedDate.to || to })
                 }
               }}
               weekStartsOn={1}
               numberOfMonths={2}
               locale={tr}
-              className="rounded-md border"
             />
           )}
         </PopoverContent>
       </Popover>
     </div>
-  );
+  )
 }

@@ -1,118 +1,94 @@
 
-import * as React from "react";
-import { CalendarIcon, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
+import * as React from "react"
+import { format, addMonths, subMonths } from "date-fns"
+import { tr } from "date-fns/locale"
+import { Calendar as CalendarIcon, X } from "lucide-react"
+
+import { Button } from "@/components/ui/button"
+import { 
   Popover,
   PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
-import { format, getDaysInMonth } from "date-fns";
-import { tr } from "date-fns/locale";
+  PopoverTrigger
+} from "@/components/ui/popover"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { cn } from "@/lib/utils"
 
-interface CustomMonthCycleProps {
+interface CustomMonthCycleSelectorProps {
   selectedDay: number;
   onChange: (day: number, date: Date) => void;
-  active: boolean;
-  onClear: () => void;
-  className?: string;
+  active?: boolean;
+  onClear?: () => void;
 }
 
 export function CustomMonthCycleSelector({
-  selectedDay = 1,
+  selectedDay,
   onChange,
   active = false,
-  onClear,
-  className,
-}: CustomMonthCycleProps) {
+  onClear
+}: CustomMonthCycleSelectorProps) {
   const [open, setOpen] = React.useState(false);
   const today = new Date();
-  const daysInMonth = React.useMemo(() => getDaysInMonth(today), [today]);
-  
-  const days = React.useMemo(() => {
-    return Array.from({ length: daysInMonth }, (_, i) => i + 1);
-  }, [daysInMonth]);
 
-  const handleSelect = (day: number) => {
+  const handleDaySelect = (day: number) => {
     const date = new Date();
     date.setDate(day);
     onChange(day, date);
     setOpen(false);
   };
 
-  // Determine the month range to display
-  const displayDate = React.useMemo(() => {
-    const startDate = new Date();
-    startDate.setDate(selectedDay);
-    
-    if (today.getDate() < selectedDay) {
-      startDate.setMonth(startDate.getMonth() - 1);
-    }
-    
-    const endDate = new Date(startDate);
-    endDate.setMonth(endDate.getMonth() + 1);
-    
-    return {
-      start: format(startDate, "d MMMM", { locale: tr }),
-      end: format(endDate, "d MMMM", { locale: tr })
-    };
-  }, [selectedDay, today]);
+  // Create array of days 1-31 for the selector
+  const days = Array.from({ length: 31 }, (_, i) => i + 1);
 
   return (
-    <div className={cn("flex items-center gap-2", className)}>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant={active ? "default" : "outline"}
-            size="sm"
-            className={cn(
-              "justify-start text-left font-normal",
-              active && "bg-primary text-primary-foreground"
-            )}
-          >
-            <CalendarIcon className="mr-2 h-4 w-4" />
-            {active ? (
-              <span>
-                {displayDate.start} - {displayDate.end}
-              </span>
-            ) : (
-              <span>Özel Ay Döngüsü</span>
-            )}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
-          <div className="p-4">
-            <div className="mb-2 text-sm font-medium">
-              Ay döngüsü başlangıç günü seçin
-            </div>
-            <div className="flex flex-wrap gap-1 max-w-[240px]">
-              {days.map((day) => (
-                <Button
-                  key={day}
-                  variant={selectedDay === day ? "default" : "outline"}
-                  size="sm"
-                  className="w-10 h-10 p-0"
-                  onClick={() => handleSelect(day)}
-                >
-                  {day}
-                </Button>
-              ))}
-            </div>
-          </div>
-        </PopoverContent>
-      </Popover>
-      
-      {active && (
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="h-8 w-8" 
-          onClick={onClear}
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant={active ? "secondary" : "outline"}
+          size="sm"
+          className="h-9 justify-start gap-1 whitespace-nowrap"
         >
-          <X className="h-4 w-4" />
+          <CalendarIcon className="h-4 w-4" />
+          <span>
+            {active 
+              ? `Özel Döngü: ${selectedDay}. Gün` 
+              : "Özel Ay Döngüsü"}
+          </span>
+          {active && onClear && (
+            <X 
+              className="h-3 w-3 ml-1 opacity-70 hover:opacity-100" 
+              onClick={(e) => {
+                e.stopPropagation();
+                onClear();
+              }}
+            />
+          )}
         </Button>
-      )}
-    </div>
-  );
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start">
+        <div className="p-3 border-b">
+          <h4 className="text-sm font-medium">Ay Döngüsü Başlangıç Günü</h4>
+          <p className="text-xs text-muted-foreground mt-1">
+            Her ayın hangi gününden başlayarak raporlar gösterilsin?
+          </p>
+        </div>
+        <ScrollArea className="h-72 py-3">
+          <div className="grid grid-cols-5 gap-2 p-3">
+            {days.map((day) => (
+              <Button
+                key={day}
+                variant={selectedDay === day ? "secondary" : "outline"}
+                className={cn(
+                  "h-9 w-9 p-0",
+                  selectedDay === day && "font-bold"
+                )}
+                onClick={() => handleDaySelect(day)}
+              >
+                {day}
+              </Button>
+            ))}
+          </div>
+        </ScrollArea>
+      </PopoverContent>
+    </Popover>
+  )
 }

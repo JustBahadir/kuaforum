@@ -119,62 +119,61 @@ export function OperationsHistoryTab({
   const totalRevenue = filteredOperations.reduce((sum, op) => sum + (Number(op.tutar) || 0), 0);
   const totalCommission = filteredOperations.reduce((sum, op) => sum + (Number(op.odenen) || 0), 0);
   const totalOperations = filteredOperations.length;
+  const totalPoints = filteredOperations.reduce((sum, op) => sum + (Number(op.puan) || 0), 0);
 
   // Determine if this is a commission-based worker
   const isCommissionBased = personnel.calisma_sistemi === "prim_komisyon";
 
   return (
     <div className="space-y-4">
-      {/* Date and search controls */}
-      <div className="flex flex-col space-y-4">
-        {/* Search Field */}
-        <div className="w-full max-w-sm relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Müşteri veya işlem ara..."
-            className="pl-9 w-full"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-
-        {/* Date Selection Controls */}
-        <div className="flex flex-wrap items-center gap-3">
-          <Button
-            variant={singleDateMode ? "secondary" : "outline"}
-            size="sm"
-            className="h-9 gap-1 whitespace-nowrap min-w-[120px]"
-            onClick={handleSingleDateModeToggle}
-          >
-            <Calendar className="h-4 w-4" />
-            <span>{singleDateMode ? "Tek Gün" : "Tarih Aralığı"}</span>
-          </Button>
-
-          {singleDateMode ? (
-            <DateRangePicker
-              from={dateRange.from}
-              to={dateRange.from}
-              onSelect={({ from }) => handleSingleDateChange(from)}
-              singleDate={true}
-            />
-          ) : !useMonthCycle && (
-            <DateRangePicker
-              from={dateRange.from}
-              to={dateRange.to}
-              onSelect={handleDateRangeChange}
-              singleDate={false}
-            />
-          )}
-
-          <CustomMonthCycleSelector
-            selectedDay={monthCycleDay}
-            onChange={handleMonthCycleChange}
-            active={useMonthCycle}
-            onClear={() => setUseMonthCycle(false)}
-          />
-        </div>
+      {/* Search Field - Full Width */}
+      <div className="relative w-full">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Müşteri veya işlem ara..."
+          className="pl-9 w-full"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
       </div>
 
+      {/* Date Selection Controls - Horizontal Layout */}
+      <div className="flex flex-wrap items-center gap-3">
+        <Button
+          variant={singleDateMode ? "secondary" : "outline"}
+          size="sm"
+          className="h-9 gap-1 whitespace-nowrap"
+          onClick={handleSingleDateModeToggle}
+        >
+          <Calendar className="h-4 w-4" />
+          <span>{singleDateMode ? "Tek Gün" : "Tarih Aralığı"}</span>
+        </Button>
+
+        {singleDateMode ? (
+          <DateRangePicker
+            from={dateRange.from}
+            to={dateRange.from}
+            onSelect={({ from }) => handleSingleDateChange(from)}
+            singleDate={true}
+          />
+        ) : !useMonthCycle && (
+          <DateRangePicker
+            from={dateRange.from}
+            to={dateRange.to}
+            onSelect={handleDateRangeChange}
+            singleDate={false}
+          />
+        )}
+
+        <CustomMonthCycleSelector
+          selectedDay={monthCycleDay}
+          onChange={handleMonthCycleChange}
+          active={useMonthCycle}
+          onClear={() => setUseMonthCycle(false)}
+        />
+      </div>
+
+      {/* Summary Cards */}
       <div className="flex flex-wrap gap-2 mt-2">
         <div className="bg-muted p-2 px-3 rounded-md text-sm">
           <span className="text-muted-foreground mr-1">İşlem:</span> 
@@ -190,6 +189,10 @@ export function OperationsHistoryTab({
             <span className="font-medium text-blue-600">{formatCurrency(totalCommission)}</span>
           </div>
         )}
+        <div className="bg-muted p-2 px-3 rounded-md text-sm">
+          <span className="text-muted-foreground mr-1">Puan:</span> 
+          <span className="font-medium text-purple-600">{totalPoints}</span>
+        </div>
       </div>
 
       {isLoading ? (
