@@ -14,7 +14,7 @@ import {
   Cell,
   Pie,
   PieChart,
-  Legend
+  Legend,
 } from "recharts";
 
 interface ServicePerformanceViewProps {
@@ -26,14 +26,18 @@ interface ServicePerformanceViewProps {
   refreshKey?: number;
 }
 
-export function ServicePerformanceView({ personnel, dateRange, refreshKey = 0 }: ServicePerformanceViewProps) {
-  // Example data - in a real implementation, this would come from the API
+export function ServicePerformanceView({ 
+  personnel, 
+  dateRange, 
+  refreshKey = 0 
+}: ServicePerformanceViewProps) {
+  // Example data - in a real implementation, this would be fetched from API
   const serviceData = [
-    { name: "Saç Kesimi", revenue: 2500, count: 10 },
-    { name: "Saç Boyama", revenue: 1800, count: 6 },
-    { name: "Tıraş", revenue: 900, count: 15 },
-    { name: "Manikür", revenue: 1200, count: 8 },
-    { name: "Cilt Bakımı", revenue: 3000, count: 12 },
+    { name: "Saç Kesimi", revenue: 800, count: 8 },
+    { name: "Saç Boyama", revenue: 600, count: 4 },
+    { name: "Yüz Maskesi", revenue: 550, count: 5 },
+    { name: "Cilt Bakımı", revenue: 500, count: 4 },
+    { name: "Ense Tıraş", revenue: 450, count: 9 },
   ];
 
   const pieData = serviceData.map(item => ({
@@ -41,14 +45,14 @@ export function ServicePerformanceView({ personnel, dateRange, refreshKey = 0 }:
     value: item.revenue
   }));
 
-  const COLORS = ['#8884d8', '#83a6ed', '#8dd1e1', '#82ca9d', '#a4de6c'];
+  const COLORS = ['#8884d8', '#83a6ed', '#8dd1e1', '#82ca9d', '#ffc658'];
 
   const renderCustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-white p-2 border rounded shadow-sm text-xs">
-          <p className="font-medium">{label || payload[0].name}</p>
-          <p>Ciro: {formatCurrency(payload[0].value || payload[0].payload.revenue)}</p>
+          <p className="font-medium">{label}</p>
+          <p>Ciro: {formatCurrency(payload[0].value)}</p>
           {payload[1] && <p>İşlem Sayısı: {payload[1].value}</p>}
         </div>
       );
@@ -60,12 +64,13 @@ export function ServicePerformanceView({ personnel, dateRange, refreshKey = 0 }:
     <div className="space-y-6" key={refreshKey}>
       <Card className="p-4">
         <h3 className="font-medium mb-4">Hizmet Performansı</h3>
-        <ScrollArea className="h-[300px]">
+        <ScrollArea className="h-[300px] w-full">
           <div className="min-w-[600px] h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={serviceData}
                 margin={{ top: 5, right: 30, left: 20, bottom: 40 }}
+                barSize={60} // Narrower bars as requested
               >
                 <XAxis 
                   dataKey="name" 
@@ -81,7 +86,7 @@ export function ServicePerformanceView({ personnel, dateRange, refreshKey = 0 }:
                   yAxisId="revenue" 
                   dataKey="revenue" 
                   name="Ciro" 
-                  fill="#8884d8" 
+                  fill="#82ca9d" 
                   radius={[4, 4, 0, 0]}
                 />
                 <Line 
@@ -109,6 +114,7 @@ export function ServicePerformanceView({ personnel, dateRange, refreshKey = 0 }:
                   cx="50%"
                   cy="50%"
                   outerRadius={80}
+                  innerRadius={0}  // Changed to 0 for filled pie chart
                   fill="#8884d8"
                   dataKey="value"
                   label={(entry) => `${entry.name}: ${entry.value.toLocaleString('tr-TR')} ₺`}
@@ -131,19 +137,30 @@ export function ServicePerformanceView({ personnel, dateRange, refreshKey = 0 }:
               <thead className="border-b">
                 <tr>
                   <th className="text-left py-2">Hizmet</th>
+                  <th className="text-right py-2">İşlem Sayısı</th>
                   <th className="text-right py-2">Ciro</th>
-                  <th className="text-right py-2">Sayı</th>
                 </tr>
               </thead>
               <tbody>
                 {serviceData.sort((a, b) => b.revenue - a.revenue).map((service, index) => (
                   <tr key={index} className="border-b">
                     <td className="py-2">{service.name}</td>
-                    <td className="text-right py-2">{formatCurrency(service.revenue)}</td>
                     <td className="text-right py-2">{service.count}</td>
+                    <td className="text-right py-2">{formatCurrency(service.revenue)}</td>
                   </tr>
                 ))}
               </tbody>
+              <tfoot className="font-medium border-t">
+                <tr>
+                  <td className="py-2">Toplam</td>
+                  <td className="text-right py-2">
+                    {serviceData.reduce((sum, item) => sum + item.count, 0)}
+                  </td>
+                  <td className="text-right py-2">
+                    {formatCurrency(serviceData.reduce((sum, item) => sum + item.revenue, 0))}
+                  </td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         </Card>

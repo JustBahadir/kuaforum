@@ -59,12 +59,13 @@ export function CategoryPerformanceView({ personnel, dateRange, refreshKey = 0 }
     <div className="space-y-6" key={refreshKey}>
       <Card className="p-4">
         <h3 className="font-medium mb-4">Kategori Performansı</h3>
-        <ScrollArea className="h-[300px]">
+        <ScrollArea className="h-[300px] w-full">
           <div className="min-w-[600px] h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={categoryData}
                 margin={{ top: 5, right: 30, left: 20, bottom: 40 }}
+                barSize={60} // Narrower bars as requested
               >
                 <XAxis 
                   dataKey="name" 
@@ -108,6 +109,7 @@ export function CategoryPerformanceView({ personnel, dateRange, refreshKey = 0 }
                   cx="50%"
                   cy="50%"
                   outerRadius={80}
+                  innerRadius={0}  // Changed to 0 for filled pie chart
                   fill="#8884d8"
                   dataKey="value"
                   label={(entry) => `${entry.name}: ${entry.value.toLocaleString('tr-TR')} ₺`}
@@ -130,19 +132,30 @@ export function CategoryPerformanceView({ personnel, dateRange, refreshKey = 0 }
               <thead className="border-b">
                 <tr>
                   <th className="text-left py-2">Kategori</th>
+                  <th className="text-right py-2">İşlem Sayısı</th>
                   <th className="text-right py-2">Ciro</th>
-                  <th className="text-right py-2">Sayı</th>
                 </tr>
               </thead>
               <tbody>
                 {categoryData.sort((a, b) => b.revenue - a.revenue).map((category, index) => (
                   <tr key={index} className="border-b">
                     <td className="py-2">{category.name}</td>
-                    <td className="text-right py-2">{formatCurrency(category.revenue)}</td>
                     <td className="text-right py-2">{category.count}</td>
+                    <td className="text-right py-2">{formatCurrency(category.revenue)}</td>
                   </tr>
                 ))}
               </tbody>
+              <tfoot className="font-medium border-t">
+                <tr>
+                  <td className="py-2">Toplam</td>
+                  <td className="text-right py-2">
+                    {categoryData.reduce((sum, item) => sum + item.count, 0)}
+                  </td>
+                  <td className="text-right py-2">
+                    {formatCurrency(categoryData.reduce((sum, item) => sum + item.revenue, 0))}
+                  </td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         </Card>

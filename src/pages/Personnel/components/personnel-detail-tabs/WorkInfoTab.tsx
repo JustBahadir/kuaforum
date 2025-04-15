@@ -23,6 +23,13 @@ export function WorkInfoTab({ personnel }: WorkInfoTabProps) {
     prim_yuzdesi: personnel.prim_yuzdesi || 0,
   });
 
+  // State to track which top-level option is selected
+  const [selectedTopOption, setSelectedTopOption] = useState<'maaşlı' | 'komisyonlu'>(
+    ['aylik_maas', 'haftalik_maas', 'gunluk_maas'].includes(formData.calisma_sistemi) 
+      ? 'maaşlı' 
+      : 'komisyonlu'
+  );
+
   const updateMutation = useMutation({
     mutationFn: async (data: any) => {
       console.log("Sending update data:", data);
@@ -58,10 +65,9 @@ export function WorkInfoTab({ personnel }: WorkInfoTabProps) {
 
   const handleSave = () => {
     // Prepare the data for submission
-    const updateData: any = {};
-    
-    // Set working system type
-    updateData.calisma_sistemi = formData.calisma_sistemi;
+    const updateData: any = {
+      calisma_sistemi: formData.calisma_sistemi
+    };
     
     // Add the appropriate salary or commission field based on working system
     if (formData.calisma_sistemi === "prim_komisyon") {
@@ -82,6 +88,11 @@ export function WorkInfoTab({ personnel }: WorkInfoTabProps) {
       maas: personnel.maas || 0,
       prim_yuzdesi: personnel.prim_yuzdesi || 0,
     });
+    setSelectedTopOption(
+      ['aylik_maas', 'haftalik_maas', 'gunluk_maas'].includes(personnel.calisma_sistemi) 
+        ? 'maaşlı' 
+        : 'komisyonlu'
+    );
     setIsEditing(false);
   };
 
@@ -91,6 +102,27 @@ export function WorkInfoTab({ personnel }: WorkInfoTabProps) {
 
   // Get the proper display format for monetary values
   const isCommissionBased = personnel.calisma_sistemi === "prim_komisyon";
+
+  // Handle top-level selection change (Maaşlı/Komisyonlu)
+  const handleTopLevelChange = (value: 'maaşlı' | 'komisyonlu') => {
+    setSelectedTopOption(value);
+    
+    if (value === 'maaşlı') {
+      // Default to monthly salary when selecting "Maaşlı"
+      setFormData(prev => ({
+        ...prev,
+        calisma_sistemi: 'aylik_maas',
+        prim_yuzdesi: 0
+      }));
+    } else {
+      // Set to commission-based when selecting "Komisyonlu"
+      setFormData(prev => ({
+        ...prev,
+        calisma_sistemi: 'prim_komisyon',
+        maas: 0
+      }));
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -106,23 +138,8 @@ export function WorkInfoTab({ personnel }: WorkInfoTabProps) {
               <div className="space-y-2">
                 <div className="space-x-2">
                   <RadioGroup
-                    value={isCommissionType ? "komisyonlu" : "maaşlı"}
-                    onValueChange={(value) => {
-                      if (value === "komisyonlu") {
-                        setFormData(prev => ({ 
-                          ...prev, 
-                          calisma_sistemi: "prim_komisyon",
-                          maas: 0
-                        }));
-                      } else if (value === "maaşlı") {
-                        // Default to monthly salary
-                        setFormData(prev => ({ 
-                          ...prev, 
-                          calisma_sistemi: "aylik_maas",
-                          prim_yuzdesi: 0
-                        }));
-                      }
-                    }}
+                    value={selectedTopOption}
+                    onValueChange={(value) => handleTopLevelChange(value as 'maaşlı' | 'komisyonlu')}
                     className="flex items-center mb-3"
                   >
                     <div className="flex items-center space-x-2">
@@ -136,7 +153,7 @@ export function WorkInfoTab({ personnel }: WorkInfoTabProps) {
                   </RadioGroup>
                 </div>
               
-                {!isCommissionType && (
+                {selectedTopOption === 'maaşlı' && (
                   <RadioGroup
                     value={formData.calisma_sistemi}
                     onValueChange={(value) => setFormData(prev => ({ ...prev, calisma_sistemi: value }))}
@@ -173,7 +190,7 @@ export function WorkInfoTab({ personnel }: WorkInfoTabProps) {
             </div>
           ) : (
             <>
-              {isCommissionType ? (
+              {selectedTopOption === 'komisyonlu' ? (
                 <div className="flex items-center">
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
@@ -204,6 +221,7 @@ export function WorkInfoTab({ personnel }: WorkInfoTabProps) {
                   value={formData.maas}
                   onChange={(e) => setFormData(prev => ({ ...prev, maas: Number(e.target.value) }))}
                   className="w-40"
+                  disabled={!selectedTopOption || selectedTopOption !== 'maaşlı'}
                 />
               )}
             </>
