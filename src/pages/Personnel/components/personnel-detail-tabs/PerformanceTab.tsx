@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import { ServicePerformanceView } from "./performance-tabs/ServicePerformanceView";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { CustomMonthCycleSelector } from "@/components/ui/custom-month-cycle-selector";
@@ -13,6 +13,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface PerformanceTabProps {
   personnel: any;
@@ -34,16 +36,24 @@ export function PerformanceTab({
   const [useSingleDate, setUseSingleDate] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
+  const availableDates = useMemo(() => {
+    return [...new Set(operations.map(op => 
+      new Date(op.created_at).toISOString().split('T')[0]
+    ))].map(dateStr => new Date(dateStr));
+  }, [operations]);
+
   const handleDateRangeChange = ({from, to}: {from: Date, to: Date}) => {
     setDateRange({from, to});
     setUseMonthCycle(false);
     setUseSingleDate(false);
   };
 
-  const handleSingleDateChange = ({from}: {from: Date, to: Date}) => {
-    setDateRange({from, to: from});
-    setUseMonthCycle(false);
-    setUseSingleDate(true);
+  const handleSingleDateChange = (date: Date | undefined) => {
+    if (date) {
+      setDateRange({from: date, to: date});
+      setUseMonthCycle(false);
+      setUseSingleDate(true);
+    }
   };
 
   const handleMonthCycleChange = (day: number, date: Date) => {
@@ -66,11 +76,11 @@ export function PerformanceTab({
     setUseSingleDate(false);
   };
 
-  const filteredOperations = operations && operations.length > 0 ? operations.filter(op => {
+  const filteredOperations = operations.filter(op => {
     if (!op || !op.created_at) return false;
     const date = new Date(op.created_at);
     return date >= dateRange.from && date <= dateRange.to;
-  }) : [];
+  });
 
   const serviceData = processServiceData(filteredOperations);
   const insights = generateSmartInsights(filteredOperations, serviceData);
@@ -100,12 +110,35 @@ export function PerformanceTab({
             </TooltipProvider>
           )}
           
-          {!useMonthCycle && (
+          {useSingleDate ? (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="justify-start text-left font-normal">
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dateRange.from ? (
+                    dateRange.from.toLocaleDateString()
+                  ) : (
+                    <span>Tarih seçin</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={dateRange.from}
+                  onSelect={handleSingleDateChange}
+                  disabled={(date) => !availableDates.some(d => 
+                    d.toISOString().split('T')[0] === date.toISOString().split('T')[0]
+                  )}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+          ) : !useMonthCycle && (
             <DateRangePicker
               from={dateRange.from}
               to={dateRange.to}
-              onSelect={useSingleDate ? handleSingleDateChange : handleDateRangeChange}
-              singleDate={useSingleDate}
+              onSelect={handleDateRangeChange}
             />
           )}
           

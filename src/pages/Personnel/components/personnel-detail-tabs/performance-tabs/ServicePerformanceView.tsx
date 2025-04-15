@@ -3,6 +3,9 @@ import React from "react";
 import { Card } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { ServicePerformanceData } from "@/utils/performanceUtils";
+import { RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Bar,
   BarChart,
@@ -16,9 +19,6 @@ import {
   PieChart,
   Legend,
 } from "recharts";
-import { ServicePerformanceData } from "@/utils/performanceUtils";
-import { RefreshCw } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 interface ServicePerformanceViewProps {
   serviceData: ServicePerformanceData[];
@@ -26,20 +26,21 @@ interface ServicePerformanceViewProps {
   refreshAnalysis: () => void;
 }
 
-const COLORS = ['#8884d8', '#82ca9d', '#8dd1e1', '#a4de6c', '#83a6ed', '#8884d8', '#ffc658'];
+const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088FE', '#00C49F', '#FFBB28'];
 
-export function ServicePerformanceView({ 
+export function ServicePerformanceView({
   serviceData = [],
   insights = [],
   refreshAnalysis,
 }: ServicePerformanceViewProps) {
   const renderCustomBarTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length && payload[0] && payload[0].payload) {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
       return (
         <div className="bg-white p-2 border rounded shadow-sm text-xs">
-          <p className="font-medium">{payload[0].payload.name || 'Bilinmeyen'}</p>
-          <p>Ciro: {formatCurrency(payload[0].value || 0)}</p>
-          <p>İşlem Sayısı: {payload[1]?.value || 0}</p>
+          <p className="font-medium">{data.name || 'Bilinmeyen'}</p>
+          <p>Ciro: {formatCurrency(data.revenue || 0)}</p>
+          <p>İşlem Sayısı: {data.count || 0}</p>
         </div>
       );
     }
@@ -47,13 +48,13 @@ export function ServicePerformanceView({
   };
 
   const renderCustomPieTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length && payload[0] && payload[0].payload) {
+    if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
         <div className="bg-white p-2 border rounded shadow-sm text-xs">
           <p className="font-medium">{data.name || 'Bilinmeyen'}</p>
-          <p>Ciro: {formatCurrency(data.revenue || 0)}</p>
           <p>İşlem Sayısı: {data.count || 0}</p>
+          <p>Ciro: {formatCurrency(data.revenue || 0)}</p>
           <p>Oran: %{(data.percentage || 0).toFixed(1)}</p>
         </div>
       );
@@ -108,7 +109,7 @@ export function ServicePerformanceView({
                     textAnchor="end"
                     height={60}
                     tick={({ x, y, payload }) => (
-                      <g transform={`translate(${x || 0},${y || 0})`}>
+                      <g transform={`translate(${x},${y})`}>
                         <text
                           x={0}
                           y={0}
@@ -117,22 +118,23 @@ export function ServicePerformanceView({
                           fill="#666"
                           transform="rotate(-45)"
                         >
-                          {payload && payload.value ? payload.value : ""}
+                          {payload.value}
                         </text>
                       </g>
                     )}
                   />
-                  <YAxis yAxisId="revenue" orientation="left" />
-                  <YAxis yAxisId="count" orientation="right" />
+                  <YAxis yAxisId="left" tickFormatter={(value) => `₺${value}`} />
+                  <YAxis yAxisId="right" orientation="right" />
                   <Tooltip content={renderCustomBarTooltip} />
+                  <Legend />
                   <Bar 
-                    yAxisId="revenue"
-                    dataKey="revenue"
-                    fill="#3b82f6"
+                    yAxisId="left"
+                    dataKey="revenue" 
+                    fill="#3b82f6" 
                     name="Ciro"
                   />
                   <Line
-                    yAxisId="count"
+                    yAxisId="right"
                     type="monotone"
                     dataKey="count"
                     stroke="#ef4444"
@@ -150,81 +152,75 @@ export function ServicePerformanceView({
         )}
       </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Pie Chart */}
-        <Card className="p-4">
-          <h3 className="font-medium mb-4">Hizmet Dağılımı</h3>
-          {serviceData.length > 0 ? (
-            <div className="h-[250px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={serviceData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={0}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="revenue"
-                    labelLine={false}
-                    label={({ name, percent }) => percent ? `${name || ""} ${(percent * 100).toFixed(0)}%` : ""}
-                  >
-                    {serviceData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip content={renderCustomPieTooltip} />
-                  <Legend verticalAlign="middle" align="right" layout="vertical" />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          ) : (
-            <div className="h-[250px] flex items-center justify-center">
-              <p className="text-muted-foreground">Gösterilecek veri bulunmuyor</p>
-            </div>
-          )}
-        </Card>
-
-        {/* Table */}
-        <Card className="p-4">
-          <h3 className="font-medium mb-4">Hizmet Detayları</h3>
-          {serviceData.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-2">Hizmet</th>
-                    <th className="text-right p-2">İşlem Sayısı</th>
-                    <th className="text-right p-2">Ciro</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {serviceData.map((service, index) => (
-                    <tr key={index} className="border-b">
-                      <td className="p-2">{service.name || 'Bilinmeyen'}</td>
-                      <td className="text-right p-2">{service.count || 0}</td>
-                      <td className="text-right p-2">{formatCurrency(service.revenue || 0)}</td>
-                    </tr>
+      {/* Pie Chart */}
+      <Card className="p-4">
+        <h3 className="font-medium mb-4">Hizmet Dağılımı</h3>
+        {serviceData.length > 0 ? (
+          <div className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={serviceData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="revenue"
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                >
+                  {serviceData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
-                  <tr className="border-t font-medium">
-                    <td className="p-2">Toplam</td>
-                    <td className="text-right p-2">
-                      {serviceData.reduce((sum, item) => sum + (item.count || 0), 0)}
-                    </td>
-                    <td className="text-right p-2">
-                      {formatCurrency(serviceData.reduce((sum, item) => sum + (item.revenue || 0), 0))}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="text-center py-4">
-              <p className="text-muted-foreground">Gösterilecek veri bulunmuyor</p>
-            </div>
-          )}
-        </Card>
-      </div>
+                </Pie>
+                <Tooltip content={renderCustomPieTooltip} />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <div className="h-[300px] flex items-center justify-center">
+            <p className="text-muted-foreground">Gösterilecek veri bulunmuyor</p>
+          </div>
+        )}
+      </Card>
+
+      {/* Table */}
+      <Card className="p-4">
+        <h3 className="font-medium mb-4">Hizmet Detayları</h3>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b">
+                <th className="text-left p-2">Hizmet</th>
+                <th className="text-right p-2">İşlem Sayısı</th>
+                <th className="text-right p-2">Ciro</th>
+                <th className="text-right p-2">Oran</th>
+              </tr>
+            </thead>
+            <tbody>
+              {serviceData.map((service, index) => (
+                <tr key={index} className="border-b">
+                  <td className="p-2">{service.name}</td>
+                  <td className="text-right p-2">{service.count}</td>
+                  <td className="text-right p-2">{formatCurrency(service.revenue)}</td>
+                  <td className="text-right p-2">%{service.percentage?.toFixed(1) || 0}</td>
+                </tr>
+              ))}
+              <tr className="border-t font-medium">
+                <td className="p-2">Toplam</td>
+                <td className="text-right p-2">
+                  {serviceData.reduce((sum, item) => sum + item.count, 0)}
+                </td>
+                <td className="text-right p-2">
+                  {formatCurrency(serviceData.reduce((sum, item) => sum + item.revenue, 0))}
+                </td>
+                <td className="text-right p-2">%100</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </Card>
     </div>
   );
 }
