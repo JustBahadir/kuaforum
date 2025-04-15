@@ -36,10 +36,13 @@ export function PerformanceTab({
   const [useSingleDate, setUseSingleDate] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
+  // Extract all dates that have operations
   const availableDates = useMemo(() => {
-    return [...new Set(operations.map(op => 
-      new Date(op.created_at).toISOString().split('T')[0]
-    ))].map(dateStr => new Date(dateStr));
+    if (!operations || operations.length === 0) return [];
+    return operations
+      .filter(op => op && op.created_at)
+      .map(op => new Date(op.created_at))
+      .sort((a, b) => a.getTime() - b.getTime());
   }, [operations]);
 
   const handleDateRangeChange = ({from, to}: {from: Date, to: Date}) => {
@@ -76,14 +79,21 @@ export function PerformanceTab({
     setUseSingleDate(false);
   };
 
-  const filteredOperations = operations.filter(op => {
-    if (!op || !op.created_at) return false;
-    const date = new Date(op.created_at);
-    return date >= dateRange.from && date <= dateRange.to;
-  });
+  const filteredOperations = useMemo(() => {
+    return operations.filter(op => {
+      if (!op || !op.created_at) return false;
+      const date = new Date(op.created_at);
+      return date >= dateRange.from && date <= dateRange.to;
+    });
+  }, [operations, dateRange.from, dateRange.to]);
 
-  const serviceData = processServiceData(filteredOperations);
-  const insights = generateSmartInsights(filteredOperations, serviceData);
+  const serviceData = useMemo(() => {
+    return processServiceData(filteredOperations);
+  }, [filteredOperations]);
+  
+  const insights = useMemo(() => {
+    return generateSmartInsights(filteredOperations, serviceData);
+  }, [filteredOperations, serviceData]);
 
   return (
     <div className="space-y-6">
@@ -127,10 +137,8 @@ export function PerformanceTab({
                   mode="single"
                   selected={dateRange.from}
                   onSelect={handleSingleDateChange}
-                  disabled={(date) => !availableDates.some(d => 
-                    d.toISOString().split('T')[0] === date.toISOString().split('T')[0]
-                  )}
                   initialFocus
+                  className="pointer-events-auto"
                 />
               </PopoverContent>
             </Popover>

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -23,11 +22,14 @@ import {
 import { formatCurrency } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CircleAlert, InfoIcon } from "lucide-react";
-import { YearlyStatisticsPlaceholder } from "@/pages/ShopStatistics/components/YearlyStatisticsPlaceholder";
+import { CircleAlert, InfoIcon, CalendarIcon } from "lucide-react";
 import { PersonelIslemi as PersonelIslemiType } from "@/lib/supabase/types";
 import { CustomMonthCycleSelector } from "@/components/ui/custom-month-cycle-selector";
 import { Tooltip as TooltipUI, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088FE', '#00C49F', '#FFBB28'];
 
@@ -63,7 +65,8 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
   const [selectedPersonnelId, setSelectedPersonnelId] = useState<number | null>(personnelId || null);
   const [monthCycleDay, setMonthCycleDay] = useState(1);
   const [useMonthCycle, setUseMonthCycle] = useState(false);
-
+  const [useSingleDate, setUseSingleDate] = useState(false);
+  
   const { data: personeller = [], isLoading: personnelLoading } = useQuery({
     queryKey: ['personel-for-performance'],
     queryFn: () => personelServisi.hepsiniGetir(),
@@ -85,6 +88,15 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
   const handleDateRangeChange = ({from, to}: {from: Date, to: Date}) => {
     setDateRange({from, to});
     setUseMonthCycle(false);
+    setUseSingleDate(false);
+  };
+  
+  const handleSingleDateChange = (date: Date | undefined) => {
+    if (date) {
+      setDateRange({from: date, to: date});
+      setUseMonthCycle(false);
+      setUseSingleDate(true);
+    }
   };
 
   const handleMonthCycleChange = (day: number, date: Date) => {
@@ -111,6 +123,7 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
     });
     
     setUseMonthCycle(true);
+    setUseSingleDate(false);
   };
 
   const { data: operationsData = [], isLoading: operationsLoading } = useQuery({
@@ -148,6 +161,16 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
     setSelectedPersonnelId(Number(personnelId));
   };
 
+  const availableDates = useMemo(() => {
+    if (!operationsData || operationsData.length === 0) return [];
+    
+    return [...new Set(operationsData
+      .filter(op => op && op.created_at)
+      .map(op => new Date(op.created_at).toISOString().split('T')[0])
+    )].map(dateStr => new Date(dateStr))
+    .sort((a, b) => a.getTime() - b.getTime());
+  }, [operationsData]);
+  
   const dailyData = useMemo(() => {
     if (!operationsData?.length) return [];
 
@@ -342,6 +365,49 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
         
         <div className="flex gap-2">
           {!useMonthCycle && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant={useSingleDate ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setUseSingleDate(!useSingleDate)}
+                    className={cn(useSingleDate && "bg-purple-600 hover:bg-purple-700")}
+                  >
+                    <CalendarIcon className="h-4 w-4 mr-1" />
+                    <span>Tek Gün</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Tek gün seçin</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+
+          {useSingleDate ? (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="justify-start text-left font-normal">
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dateRange.from ? (
+                    dateRange.from.toLocaleDateString()
+                  ) : (
+                    <span>Tarih seçin</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={dateRange.from}
+                  onSelect={handleSingleDateChange}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
+          ) : !useMonthCycle && (
             <DateRangePicker 
               from={dateRange.from}
               to={dateRange.to}
@@ -362,7 +428,6 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
         <div>
           <h2 className="text-2xl font-bold mb-4">{selectedPersonnel.ad_soyad}</h2>
           
-          {/* AI Insights Box - Placed at the top as requested */}
           <Card className="mb-6">
             <CardHeader>
               <CardTitle>Akıllı Analiz</CardTitle>

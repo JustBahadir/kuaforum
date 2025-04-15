@@ -11,13 +11,14 @@ import {
   BarChart,
   Line,
   ResponsiveContainer,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   XAxis,
   YAxis,
   Cell,
   Pie,
   PieChart,
   Legend,
+  CartesianGrid,
 } from "recharts";
 
 interface ServicePerformanceViewProps {
@@ -26,7 +27,8 @@ interface ServicePerformanceViewProps {
   refreshAnalysis: () => void;
 }
 
-const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088FE', '#00C49F', '#FFBB28'];
+const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088FE', '#00C49F', '#FFBB28', 
+                '#FF8042', '#AF19FF', '#FF6B6B', '#10B981', '#2463EB', '#F59E0B', '#EC4899'];
 
 export function ServicePerformanceView({
   serviceData = [],
@@ -91,42 +93,38 @@ export function ServicePerformanceView({
         </ul>
       </Card>
 
-      {/* Karma Grafik */}
+      {/* Karma Grafik: Sütunlar için Ciro, Çizgi için İşlem Sayısı */}
       <Card className="p-4">
         <h3 className="font-medium mb-4">Hizmet Performansı</h3>
         {serviceData.length > 0 ? (
-          <ScrollArea className="h-[300px] w-full">
-            <div className="min-w-[600px] h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
+          <ScrollArea className="h-[300px]">
+            <div style={{ width: Math.max(serviceData.length * 80, 600) + 'px', minHeight: '280px' }}>
+              <ResponsiveContainer width="100%" height={280}>
                 <BarChart
                   data={serviceData}
-                  margin={{ top: 5, right: 30, left: 20, bottom: 60 }}
+                  margin={{ top: 5, right: 30, left: 20, bottom: 70 }}
                   barSize={30}
                 >
+                  <CartesianGrid strokeDasharray="3 3" />
                   <XAxis 
                     dataKey="name"
                     angle={-45} 
                     textAnchor="end"
-                    height={60}
-                    tick={({ x, y, payload }) => (
-                      <g transform={`translate(${x},${y})`}>
-                        <text
-                          x={0}
-                          y={0}
-                          dy={16}
-                          textAnchor="end"
-                          fill="#666"
-                          transform="rotate(-45)"
-                        >
-                          {payload.value}
-                        </text>
-                      </g>
-                    )}
+                    height={70}
+                    interval={0}
                   />
-                  <YAxis yAxisId="left" tickFormatter={(value) => `₺${value}`} />
-                  <YAxis yAxisId="right" orientation="right" />
-                  <Tooltip content={renderCustomBarTooltip} />
-                  <Legend />
+                  <YAxis 
+                    yAxisId="left"
+                    tickFormatter={(value) => `₺${value}`}
+                    label={{ value: 'Ciro (₺)', angle: -90, position: 'insideLeft', offset: -5 }}
+                  />
+                  <YAxis 
+                    yAxisId="right" 
+                    orientation="right" 
+                    label={{ value: 'İşlem Sayısı', angle: 90, position: 'insideRight', offset: 5 }}
+                  />
+                  <RechartsTooltip content={renderCustomBarTooltip} />
+                  <Legend wrapperStyle={{ bottom: -10 }} />
                   <Bar 
                     yAxisId="left"
                     dataKey="revenue" 
@@ -138,15 +136,16 @@ export function ServicePerformanceView({
                     type="monotone"
                     dataKey="count"
                     stroke="#ef4444"
-                    name="İşlem Sayısı"
                     strokeWidth={2}
+                    name="İşlem Sayısı"
+                    dot={{ r: 4 }}
                   />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </ScrollArea>
         ) : (
-          <div className="h-[300px] flex items-center justify-center">
+          <div className="h-[280px] flex items-center justify-center">
             <p className="text-muted-foreground">Gösterilecek veri bulunmuyor</p>
           </div>
         )}
@@ -163,18 +162,16 @@ export function ServicePerformanceView({
                   data={serviceData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
+                  outerRadius={100}
                   fill="#8884d8"
                   dataKey="revenue"
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                 >
                   {serviceData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip content={renderCustomPieTooltip} />
-                <Legend />
+                <RechartsTooltip content={renderCustomPieTooltip} />
+                <Legend layout="horizontal" verticalAlign="bottom" align="center" />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -192,10 +189,10 @@ export function ServicePerformanceView({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b">
-                <th className="text-left p-2">Hizmet</th>
-                <th className="text-right p-2">İşlem Sayısı</th>
-                <th className="text-right p-2">Ciro</th>
-                <th className="text-right p-2">Oran</th>
+                <th className="text-left p-2 min-w-36">Hizmet</th>
+                <th className="text-right p-2 w-24">İşlem Sayısı</th>
+                <th className="text-right p-2 w-24">Ciro</th>
+                <th className="text-right p-2 w-20">Oran</th>
               </tr>
             </thead>
             <tbody>
