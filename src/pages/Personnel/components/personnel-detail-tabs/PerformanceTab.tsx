@@ -1,9 +1,10 @@
 
 import React, { useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ServicePerformanceView } from "./performance-tabs/ServicePerformanceView";
 import { CategoryPerformanceView } from "./performance-tabs/CategoryPerformanceView";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 
 interface PerformanceTabProps {
   personnel: any;
@@ -12,6 +13,11 @@ interface PerformanceTabProps {
 export function PerformanceTab({ personnel }: PerformanceTabProps) {
   const [activeView, setActiveView] = useState("hizmet");
   const [pageIndex, setPageIndex] = useState(0);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [dateRange, setDateRange] = useState({
+    from: new Date(new Date().setDate(new Date().getDate() - 30)),
+    to: new Date()
+  });
   
   const handlePrevClick = () => {
     setActiveView("hizmet");
@@ -22,12 +28,37 @@ export function PerformanceTab({ personnel }: PerformanceTabProps) {
     setActiveView("kategori");
     setPageIndex(1);
   };
+
+  const handleRefresh = () => {
+    setRefreshKey(prev => prev + 1);
+  };
   
   return (
     <div className="space-y-6">
+      <div className="flex flex-wrap justify-between items-center gap-2 pb-2">
+        <div className="flex items-center gap-2">
+          <DateRangePicker
+            from={dateRange.from}
+            to={dateRange.to}
+            onSelect={setDateRange}
+          />
+          <Button 
+            variant="outline" 
+            size="icon" 
+            onClick={handleRefresh}
+            title="Analizleri yenile"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
       <div className="border rounded-md p-4 bg-muted/30">
-        <h3 className="font-medium mb-2">Akıllı Analiz</h3>
-        <ul className="space-y-2 pl-2">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="font-medium">Akıllı Analiz</h3>
+          <span className="text-xs text-muted-foreground">Son 30 gün</span>
+        </div>
+        <ul className="space-y-2 pl-2" key={refreshKey}>
           <li className="flex items-start gap-2">
             <span className="text-purple-600 font-bold">•</span>
             <span className="text-sm">
@@ -102,10 +133,18 @@ export function PerformanceTab({ personnel }: PerformanceTabProps) {
             style={{ transform: `translateX(-${pageIndex * 100}%)`, width: '200%' }}
           >
             <div className="w-full flex-shrink-0">
-              <ServicePerformanceView personnel={personnel} />
+              <ServicePerformanceView 
+                personnel={personnel}
+                dateRange={dateRange}
+                refreshKey={refreshKey} 
+              />
             </div>
             <div className="w-full flex-shrink-0">
-              <CategoryPerformanceView personnel={personnel} />
+              <CategoryPerformanceView 
+                personnel={personnel}
+                dateRange={dateRange} 
+                refreshKey={refreshKey}
+              />
             </div>
           </div>
         </div>

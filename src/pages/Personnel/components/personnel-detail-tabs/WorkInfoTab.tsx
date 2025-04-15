@@ -25,6 +25,7 @@ export function WorkInfoTab({ personnel }: WorkInfoTabProps) {
 
   const updateMutation = useMutation({
     mutationFn: async (data: any) => {
+      console.log("Sending update data:", data);
       return await personelServisi.guncelle(personnel.id, data);
     },
     onSuccess: () => {
@@ -35,7 +36,7 @@ export function WorkInfoTab({ personnel }: WorkInfoTabProps) {
       setIsEditing(false);
     },
     onError: (error) => {
-      console.error(error);
+      console.error("Update error:", error);
       toast.error("Personel güncellenirken bir hata oluştu.");
     },
   });
@@ -57,23 +58,21 @@ export function WorkInfoTab({ personnel }: WorkInfoTabProps) {
 
   const handleSave = () => {
     // Prepare the data for submission
-    const updateData = {
-      calisma_sistemi: formData.calisma_sistemi,
-    };
+    const updateData: any = {};
+    
+    // Set working system type
+    updateData.calisma_sistemi = formData.calisma_sistemi;
     
     // Add the appropriate salary or commission field based on working system
     if (formData.calisma_sistemi === "prim_komisyon") {
-      Object.assign(updateData, {
-        prim_yuzdesi: Number(formData.prim_yuzdesi),
-        maas: 0 // Set salary to 0 for commission-based workers
-      });
+      updateData.prim_yuzdesi = parseInt(formData.prim_yuzdesi.toString());
+      updateData.maas = 0; // Set salary to 0 for commission-based workers
     } else {
-      Object.assign(updateData, {
-        maas: Number(formData.maas),
-        prim_yuzdesi: 0 // Set commission to 0 for salaried workers
-      });
+      updateData.maas = Number(formData.maas);
+      updateData.prim_yuzdesi = 0; // Set commission to 0 for salaried workers
     }
     
+    console.log("Update data:", updateData);
     updateMutation.mutate(updateData);
   };
 
@@ -116,11 +115,10 @@ export function WorkInfoTab({ personnel }: WorkInfoTabProps) {
                           maas: 0
                         }));
                       } else if (value === "maaşlı") {
-                        // Keep the current maaş type or default to aylık
-                        const currentType = isSalaryType ? formData.calisma_sistemi : "aylik_maas";
+                        // Default to monthly salary
                         setFormData(prev => ({ 
                           ...prev, 
-                          calisma_sistemi: currentType,
+                          calisma_sistemi: "aylik_maas",
                           prim_yuzdesi: 0
                         }));
                       }
@@ -169,7 +167,7 @@ export function WorkInfoTab({ personnel }: WorkInfoTabProps) {
           </h3>
           {!isEditing ? (
             <div className="font-normal">
-              {isCommissionType 
+              {isCommissionBased 
                 ? `%${personnel.prim_yuzdesi}` 
                 : formatCurrency(personnel.maas)}
             </div>
@@ -188,8 +186,11 @@ export function WorkInfoTab({ personnel }: WorkInfoTabProps) {
                       value={formData.prim_yuzdesi}
                       onChange={(e) => {
                         const value = parseInt(e.target.value);
-                        if ((value >= 0 && value <= 100) || e.target.value === "") {
-                          setFormData(prev => ({ ...prev, prim_yuzdesi: e.target.value === "" ? 0 : value }));
+                        if (e.target.value === "" || (value >= 0 && value <= 100)) {
+                          setFormData(prev => ({ 
+                            ...prev, 
+                            prim_yuzdesi: e.target.value === "" ? 0 : value 
+                          }));
                         }
                       }}
                       className="pl-8 w-24"

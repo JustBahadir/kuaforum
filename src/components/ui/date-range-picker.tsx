@@ -84,6 +84,7 @@ export function DateRangePicker({
               weekStartsOn={1}
               numberOfMonths={1}
               locale={tr}
+              className="p-3 pointer-events-auto"
             />
           ) : (
             <Calendar
@@ -103,6 +104,7 @@ export function DateRangePicker({
               weekStartsOn={1}
               numberOfMonths={2}
               locale={tr}
+              className="p-3 pointer-events-auto"
             />
           )}
         </PopoverContent>

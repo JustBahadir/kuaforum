@@ -2,6 +2,7 @@
 import React from "react";
 import { Card } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Bar,
   BarChart,
@@ -18,9 +19,14 @@ import {
 
 interface CategoryPerformanceViewProps {
   personnel: any;
+  dateRange?: {
+    from: Date;
+    to: Date;
+  };
+  refreshKey?: number;
 }
 
-export function CategoryPerformanceView({ personnel }: CategoryPerformanceViewProps) {
+export function CategoryPerformanceView({ personnel, dateRange, refreshKey = 0 }: CategoryPerformanceViewProps) {
   // Example data - in a real implementation, this would come from the API
   const categoryData = [
     { name: "Saç Hizmeti", revenue: 4300, count: 16 },
@@ -50,43 +56,45 @@ export function CategoryPerformanceView({ personnel }: CategoryPerformanceViewPr
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" key={refreshKey}>
       <Card className="p-4">
         <h3 className="font-medium mb-4">Kategori Performansı</h3>
-        <div className="h-[300px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={categoryData}
-              margin={{ top: 5, right: 30, left: 20, bottom: 40 }}
-            >
-              <XAxis 
-                dataKey="name" 
-                angle={-45}
-                textAnchor="end"
-                height={70} 
-                tick={{ fontSize: 12 }}
-              />
-              <YAxis yAxisId="revenue" orientation="left" tick={{ fontSize: 12 }} />
-              <YAxis yAxisId="count" orientation="right" tick={{ fontSize: 12 }} />
-              <Tooltip content={renderCustomTooltip} />
-              <Bar 
-                yAxisId="revenue" 
-                dataKey="revenue" 
-                name="Ciro" 
-                fill="#8884d8" 
-                radius={[4, 4, 0, 0]}
-              />
-              <Line 
-                yAxisId="count" 
-                type="monotone" 
-                dataKey="count" 
-                name="İşlem Sayısı" 
-                stroke="#ff7300" 
-                strokeWidth={2}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+        <ScrollArea className="h-[300px]">
+          <div className="min-w-[600px] h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={categoryData}
+                margin={{ top: 5, right: 30, left: 20, bottom: 40 }}
+              >
+                <XAxis 
+                  dataKey="name" 
+                  angle={-45}
+                  textAnchor="end"
+                  height={70} 
+                  tick={{ fontSize: 12 }}
+                />
+                <YAxis yAxisId="revenue" orientation="left" tick={{ fontSize: 12 }} />
+                <YAxis yAxisId="count" orientation="right" tick={{ fontSize: 12 }} />
+                <Tooltip content={renderCustomTooltip} />
+                <Bar 
+                  yAxisId="revenue" 
+                  dataKey="revenue" 
+                  name="Ciro" 
+                  fill="#8884d8" 
+                  radius={[4, 4, 0, 0]}
+                />
+                <Line 
+                  yAxisId="count" 
+                  type="monotone" 
+                  dataKey="count" 
+                  name="İşlem Sayısı" 
+                  stroke="#ff7300" 
+                  strokeWidth={2}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </ScrollArea>
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -97,17 +105,18 @@ export function CategoryPerformanceView({ personnel }: CategoryPerformanceViewPr
               <PieChart>
                 <Pie
                   data={pieData}
-                  innerRadius={60}
+                  cx="50%"
+                  cy="50%"
                   outerRadius={80}
-                  paddingAngle={5}
+                  fill="#8884d8"
                   dataKey="value"
-                  label={false}
+                  label={(entry) => `${entry.name}: ${entry.value.toLocaleString('tr-TR')} ₺`}
                 >
                   {pieData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip content={renderCustomTooltip} />
+                <Tooltip formatter={(value) => `${value.toLocaleString('tr-TR')} ₺`} />
                 <Legend verticalAlign="bottom" height={36} />
               </PieChart>
             </ResponsiveContainer>

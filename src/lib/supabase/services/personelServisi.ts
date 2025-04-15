@@ -303,16 +303,26 @@ export const personelServisi = {
     try {
       console.log(`Personel ${id} güncelleniyor:`, personel);
       
-      // Remove the iban field from the update to prevent the error
-      const { maas, ...otherFields } = personel;
+      // Create update fields object
+      const updateFields: Record<string, any> = {};
       
-      const updateFields: any = {};
-      if (maas !== undefined) updateFields.maas = maas;
+      // Handle each field individually
+      if (personel.calisma_sistemi !== undefined) {
+        updateFields.calisma_sistemi = personel.calisma_sistemi;
+      }
       
-      // Add other fields if needed, excluding iban
-      Object.keys(otherFields).forEach(key => {
-        if (key !== 'iban' && otherFields[key as keyof typeof otherFields] !== undefined) {
-          updateFields[key] = otherFields[key as keyof typeof otherFields];
+      if (personel.maas !== undefined) {
+        updateFields.maas = personel.maas;
+      }
+      
+      if (personel.prim_yuzdesi !== undefined) {
+        updateFields.prim_yuzdesi = personel.prim_yuzdesi;
+      }
+      
+      // Add any other fields except iban (which needs special handling)
+      Object.keys(personel).forEach(key => {
+        if (key !== 'iban' && key !== 'calisma_sistemi' && key !== 'maas' && key !== 'prim_yuzdesi' && personel[key as keyof typeof personel] !== undefined) {
+          updateFields[key] = personel[key as keyof typeof personel];
         }
       });
       
