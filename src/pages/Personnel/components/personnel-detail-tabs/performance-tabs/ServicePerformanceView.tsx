@@ -101,33 +101,35 @@ export function ServicePerformanceView({
       {/* Bar and Line Chart */}
       <Card className="p-4">
         <h4 className="font-medium mb-3">Hizmet Performansı</h4>
-        <ScrollArea className="w-full" orientation="horizontal">
-          <div className="w-full min-w-[600px]">
-            <ResponsiveContainer width="100%" height={300}>
-              <ComposedChart
-                data={chartData}
-                margin={{ top: 20, right: 30, left: 20, bottom: 70 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="name" 
-                  angle={-45} 
-                  textAnchor="end"
-                  height={70}
-                />
-                <YAxis yAxisId="left" />
-                <YAxis yAxisId="right" orientation="right" />
-                <Tooltip formatter={(value: any, name: any) => [
-                  name === 'ciro' ? formatCurrency(value) : value,
-                  name === 'ciro' ? 'Ciro' : 'İşlem Sayısı'
-                ]} />
-                <Legend />
-                <Bar yAxisId="left" dataKey="ciro" fill="#8884d8" name="Ciro" />
-                <Line yAxisId="right" type="monotone" dataKey="islem" stroke="#ff7300" name="İşlem Sayısı" />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
-        </ScrollArea>
+        <div className="w-full overflow-auto">
+          <ScrollArea className="w-full">
+            <div className="w-full min-w-[600px]">
+              <ResponsiveContainer width="100%" height={300}>
+                <ComposedChart
+                  data={chartData}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 70 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="name" 
+                    angle={-45} 
+                    textAnchor="end"
+                    height={70}
+                  />
+                  <YAxis yAxisId="left" />
+                  <YAxis yAxisId="right" orientation="right" />
+                  <Tooltip formatter={(value: any, name: any) => [
+                    name === 'ciro' ? formatCurrency(value) : value,
+                    name === 'ciro' ? 'Ciro' : 'İşlem Sayısı'
+                  ]} />
+                  <Legend />
+                  <Bar yAxisId="left" dataKey="ciro" fill="#8884d8" name="Ciro" />
+                  <Line yAxisId="right" type="monotone" dataKey="islem" stroke="#ff7300" name="İşlem Sayısı" />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+          </ScrollArea>
+        </div>
       </Card>
       
       {/* Pie Chart */}

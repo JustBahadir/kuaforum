@@ -113,7 +113,7 @@ export function DateRangePicker({
                 id="single-date-mode"
                 checked={isSingleDate}
                 onCheckedChange={toggleSingleDate}
-                size="sm"
+                className="h-4 w-7" // Using className instead of size
               />
               <Label htmlFor="single-date-mode" className="text-xs">
                 Tek Gün
