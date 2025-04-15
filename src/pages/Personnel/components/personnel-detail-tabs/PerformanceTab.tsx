@@ -34,6 +34,18 @@ export function PerformanceTab({ personnel }: PerformanceTabProps) {
     setRefreshKey(prev => prev + 1);
   };
 
+  // Custom date presets for the "Özel Ay Döngüsü" button
+  const getCustomDateRange = () => {
+    const today = new Date();
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    
+    setDateRange({
+      from: startOfMonth,
+      to: endOfMonth
+    });
+  };
+
   const mockSmartAnalysis = [
     `${personnel.ad_soyad} son 30 günde toplam ${personnel.islem_sayisi || 0} işlem gerçekleştirdi ve ${personnel.toplam_ciro ? `₺${personnel.toplam_ciro.toLocaleString('tr-TR')}` : '₺0'} ciro oluşturdu.`,
     `En çok yapılan işlem "${personnel.en_cok_islem || 'Saç Kesimi'}" olarak görülüyor.`,
@@ -53,13 +65,28 @@ export function PerformanceTab({ personnel }: PerformanceTabProps) {
   
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap justify-between items-center gap-2 pb-2">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-wrap justify-between items-center gap-2 pb-4 border-b">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="flex items-center gap-1"
+          >
+            <span className="hidden md:inline">Tarih Aralığı</span>
+          </Button>
           <DateRangePicker
             from={dateRange.from}
             to={dateRange.to}
             onSelect={setDateRange}
           />
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="flex items-center gap-1"
+            onClick={getCustomDateRange}
+          >
+            <span className="hidden md:inline">Özel Ay Döngüsü</span>
+          </Button>
           <Button 
             variant="outline" 
             size="icon" 
@@ -93,7 +120,7 @@ export function PerformanceTab({ personnel }: PerformanceTabProps) {
       </div>
 
       <div className="relative">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-2 border-b pb-2">
           <h3 className="font-medium">
             {activeView === "hizmet" ? "Hizmet Bazlı Değerlendirme" : "Kategori Bazlı Değerlendirme"}
           </h3>
@@ -101,18 +128,16 @@ export function PerformanceTab({ personnel }: PerformanceTabProps) {
             <Button 
               variant="ghost" 
               size="icon" 
-              className={cn("h-8 w-8 hover:bg-muted", pageIndex === 0 && "text-muted-foreground")}
+              className={cn("h-8 w-8 hover:bg-muted", pageIndex === 0 && "text-primary")}
               onClick={handlePrevClick}
-              disabled={activeView === "hizmet"}
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <Button 
               variant="ghost" 
               size="icon"
-              className={cn("h-8 w-8 hover:bg-muted", pageIndex === 1 && "text-muted-foreground")}
+              className={cn("h-8 w-8 hover:bg-muted", pageIndex === 1 && "text-primary")}
               onClick={handleNextClick}
-              disabled={activeView === "kategori"}
             >
               <ChevronRight className="h-4 w-4" />
             </Button>

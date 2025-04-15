@@ -71,7 +71,9 @@ export function WorkInfoTab({ personnel }: WorkInfoTabProps) {
     
     // Add the appropriate salary or commission field based on working system
     if (formData.calisma_sistemi === "prim_komisyon") {
-      updateData.prim_yuzdesi = parseInt(formData.prim_yuzdesi.toString());
+      // Ensure prim_yuzdesi is a valid number between 0-100
+      const primValue = parseInt(formData.prim_yuzdesi.toString());
+      updateData.prim_yuzdesi = isNaN(primValue) ? 0 : primValue;
       updateData.maas = 0; // Set salary to 0 for commission-based workers
     } else {
       updateData.maas = Number(formData.maas);

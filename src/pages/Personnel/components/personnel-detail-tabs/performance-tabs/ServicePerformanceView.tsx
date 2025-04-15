@@ -1,169 +1,234 @@
 
-import React from "react";
-import { Card } from "@/components/ui/card";
-import { formatCurrency } from "@/lib/utils";
+import React, { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { personelIslemleriServisi } from "@/lib/supabase";
+import { Bar, BarChart, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis, Cell, Pie, PieChart, Sector } from "recharts";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Bar,
-  BarChart,
-  Line,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-  Cell,
-  Pie,
-  PieChart,
-  Legend,
-} from "recharts";
+import { formatCurrency } from "@/lib/utils";
 
 interface ServicePerformanceViewProps {
   personnel: any;
-  dateRange?: {
-    from: Date;
-    to: Date;
-  };
-  refreshKey?: number;
+  dateRange: { from: Date; to: Date };
+  refreshKey: number;
 }
 
-export function ServicePerformanceView({ 
-  personnel, 
-  dateRange, 
-  refreshKey = 0 
-}: ServicePerformanceViewProps) {
-  // Example data - in a real implementation, this would be fetched from API
-  const serviceData = [
-    { name: "Saç Kesimi", revenue: 800, count: 8 },
-    { name: "Saç Boyama", revenue: 600, count: 4 },
-    { name: "Yüz Maskesi", revenue: 550, count: 5 },
-    { name: "Cilt Bakımı", revenue: 500, count: 4 },
-    { name: "Ense Tıraş", revenue: 450, count: 9 },
-  ];
+export function ServicePerformanceView({ personnel, dateRange, refreshKey }: ServicePerformanceViewProps) {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [serviceData, setServiceData] = useState<any[]>([]);
+  const [pieData, setPieData] = useState<any[]>([]);
 
-  const pieData = serviceData.map(item => ({
-    name: item.name,
-    value: item.revenue
-  }));
-
-  const COLORS = ['#8884d8', '#83a6ed', '#8dd1e1', '#82ca9d', '#ffc658'];
-
-  const renderCustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white p-2 border rounded shadow-sm text-xs">
-          <p className="font-medium">{label}</p>
-          <p>Ciro: {formatCurrency(payload[0].value)}</p>
-          {payload[1] && <p>İşlem Sayısı: {payload[1].value}</p>}
-        </div>
-      );
+  const { data: personelIslemleri = [] } = useQuery({
+    queryKey: ['personel_islemleri', personnel.id, dateRange.from, dateRange.to, refreshKey],
+    queryFn: async () => {
+      const data = await personelIslemleriServisi.personelIslemleriGetir(personnel.id);
+      
+      // Filter by date range
+      return data.filter((islem: any) => {
+        if (!islem.created_at) return false;
+        const islemDate = new Date(islem.created_at);
+        return islemDate >= dateRange.from && islemDate <= dateRange.to;
+      });
     }
-    return null;
+  });
+
+  useEffect(() => {
+    // Process personel işlemleri for bar chart and pie chart
+    const serviceMap = new Map();
+    
+    personelIslemleri.forEach((islem: any) => {
+      const serviceKey = islem.islem?.islem_adi || islem.aciklama || "Bilinmeyen Hizmet";
+      
+      if (!serviceMap.has(serviceKey)) {
+        serviceMap.set(serviceKey, {
+          name: serviceKey,
+          count: 0,
+          revenue: 0,
+        });
+      }
+      
+      const service = serviceMap.get(serviceKey);
+      service.count += 1;
+      service.revenue += (islem.tutar || 0);
+    });
+    
+    // Convert to arrays for charts
+    const servicesArray = Array.from(serviceMap.values())
+      .sort((a, b) => b.revenue - a.revenue)
+      .map(item => ({
+        ...item,
+        revenue: Number(item.revenue.toFixed(2))
+      }));
+    
+    setServiceData(servicesArray);
+    
+    // Create pie chart data
+    const totalRevenue = servicesArray.reduce((sum, item) => sum + item.revenue, 0);
+    
+    const pieChartData = servicesArray.map(item => ({
+      name: item.name,
+      value: item.revenue,
+      percentage: totalRevenue > 0 ? (item.revenue / totalRevenue * 100).toFixed(1) : 0
+    }));
+    
+    setPieData(pieChartData);
+  }, [personelIslemleri, dateRange, refreshKey]);
+  
+  const onPieEnter = (_: any, index: number) => {
+    setActiveIndex(index);
+  };
+
+  const renderActiveShape = (props: any) => {
+    const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
+  
+    return (
+      <g>
+        <Sector
+          cx={cx}
+          cy={cy}
+          innerRadius={innerRadius}
+          outerRadius={outerRadius + 6}
+          startAngle={startAngle}
+          endAngle={endAngle}
+          fill={fill}
+        />
+      </g>
+    );
+  };
+
+  // Generate colors for pie chart
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658', '#A4DE6C'];
+
+  const getColor = (index: number) => {
+    return COLORS[index % COLORS.length];
   };
 
   return (
-    <div className="space-y-6" key={refreshKey}>
-      <Card className="p-4">
-        <h3 className="font-medium mb-4">Hizmet Performansı</h3>
-        <ScrollArea className="h-[300px] w-full">
-          <div className="min-w-[600px] h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={serviceData}
-                margin={{ top: 5, right: 30, left: 20, bottom: 40 }}
-                barSize={60} // Narrower bars as requested
-              >
+    <div className="space-y-6">
+      <div>
+        <h4 className="text-sm font-medium mb-3">Hizmet Performansı</h4>
+        <ScrollArea className="h-[300px]">
+          <div className="w-full pr-4" style={{ minWidth: serviceData.length * 80 }}>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={serviceData}>
                 <XAxis 
                   dataKey="name" 
-                  angle={-45}
-                  textAnchor="end"
-                  height={70} 
-                  tick={{ fontSize: 12 }}
+                  angle={-45} 
+                  textAnchor="end" 
+                  height={80} 
+                  tickMargin={8}
+                  interval={0}
+                  fontSize={12}
                 />
-                <YAxis yAxisId="revenue" orientation="left" tick={{ fontSize: 12 }} />
-                <YAxis yAxisId="count" orientation="right" tick={{ fontSize: 12 }} />
-                <Tooltip content={renderCustomTooltip} />
-                <Bar 
-                  yAxisId="revenue" 
-                  dataKey="revenue" 
-                  name="Ciro" 
-                  fill="#82ca9d" 
-                  radius={[4, 4, 0, 0]}
+                <YAxis />
+                <Tooltip 
+                  formatter={(value: any, name: string) => {
+                    return name === 'revenue' 
+                      ? formatCurrency(value) 
+                      : value;
+                  }} 
+                  labelFormatter={(label) => `Hizmet: ${label}`}
                 />
-                <Line 
-                  yAxisId="count" 
-                  type="monotone" 
-                  dataKey="count" 
-                  name="İşlem Sayısı" 
-                  stroke="#ff7300" 
-                  strokeWidth={2}
+                <Legend 
+                  formatter={(value) => {
+                    return value === 'revenue' ? 'Ciro' : 'İşlem Sayısı';
+                  }}
                 />
+                <Bar dataKey="count" name="İşlem Sayısı" fill="#8884d8" barSize={40} />
+                <Bar dataKey="revenue" name="Ciro" fill="#82ca9d" barSize={40} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </ScrollArea>
-      </Card>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="p-4">
-          <h3 className="font-medium mb-4">Hizmet Dağılımı</h3>
-          <div className="h-[200px] flex items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%">
+      <div className="grid md:grid-cols-2 gap-6">
+        <div>
+          <h4 className="text-sm font-medium mb-3">Hizmet Dağılımı</h4>
+          <div className="h-[250px] flex items-center justify-center">
+            <ResponsiveContainer width="100%" height={220}>
               <PieChart>
                 <Pie
+                  activeIndex={activeIndex}
+                  activeShape={renderActiveShape}
                   data={pieData}
                   cx="50%"
                   cy="50%"
+                  innerRadius={0}
                   outerRadius={80}
-                  innerRadius={0}  // Changed to 0 for filled pie chart
-                  fill="#8884d8"
                   dataKey="value"
-                  label={(entry) => `${entry.name}: ${entry.value.toLocaleString('tr-TR')} ₺`}
+                  onMouseEnter={onPieEnter}
+                  onTouchStart={onPieEnter}
                 >
                   {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    <Cell key={`cell-${index}`} fill={getColor(index)} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value) => `${value.toLocaleString('tr-TR')} ₺`} />
-                <Legend verticalAlign="bottom" height={36} />
+                <Tooltip 
+                  formatter={(value: any, name: string, props: any) => {
+                    const percentage = props.payload.percentage;
+                    return [`${formatCurrency(value)} (${percentage}%)`, name];
+                  }}
+                  labelFormatter={() => ''}
+                />
               </PieChart>
             </ResponsiveContainer>
           </div>
-        </Card>
+        </div>
 
-        <Card className="p-4">
-          <h3 className="font-medium mb-4">Hizmet Detayları</h3>
-          <div className="max-h-[200px] overflow-auto">
-            <table className="w-full text-sm">
-              <thead className="border-b">
-                <tr>
-                  <th className="text-left py-2">Hizmet</th>
-                  <th className="text-right py-2">İşlem Sayısı</th>
-                  <th className="text-right py-2">Ciro</th>
-                </tr>
-              </thead>
-              <tbody>
-                {serviceData.sort((a, b) => b.revenue - a.revenue).map((service, index) => (
-                  <tr key={index} className="border-b">
-                    <td className="py-2">{service.name}</td>
-                    <td className="text-right py-2">{service.count}</td>
-                    <td className="text-right py-2">{formatCurrency(service.revenue)}</td>
+        <div>
+          <h4 className="text-sm font-medium mb-3">Hizmet Dağılımı Açıklama</h4>
+          <div className="space-y-1">
+            {pieData.map((item, index) => (
+              <div key={index} className="flex items-center gap-2 text-sm">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: getColor(index) }} />
+                <span>{item.name} - %{item.percentage}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h4 className="text-sm font-medium mb-3">Hizmet Detayları</h4>
+        <div className="border rounded-md">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hizmet Adı</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlem Sayısı</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ciro</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {serviceData.length > 0 ? (
+                serviceData.map((service, index) => (
+                  <tr key={index}>
+                    <td className="px-4 py-2 text-sm text-gray-900">{service.name}</td>
+                    <td className="px-4 py-2 text-sm text-gray-900">{service.count}</td>
+                    <td className="px-4 py-2 text-sm text-gray-900">{formatCurrency(service.revenue)}</td>
                   </tr>
-                ))}
-              </tbody>
-              <tfoot className="font-medium border-t">
+                ))
+              ) : (
                 <tr>
-                  <td className="py-2">Toplam</td>
-                  <td className="text-right py-2">
+                  <td colSpan={3} className="px-4 py-3 text-sm text-center text-gray-500">
+                    Bu tarih aralığında hizmet verisi bulunamadı
+                  </td>
+                </tr>
+              )}
+              {serviceData.length > 0 && (
+                <tr className="bg-gray-50 font-medium">
+                  <td className="px-4 py-2 text-sm">Toplam</td>
+                  <td className="px-4 py-2 text-sm">
                     {serviceData.reduce((sum, item) => sum + item.count, 0)}
                   </td>
-                  <td className="text-right py-2">
+                  <td className="px-4 py-2 text-sm">
                     {formatCurrency(serviceData.reduce((sum, item) => sum + item.revenue, 0))}
                   </td>
                 </tr>
-              </tfoot>
-            </table>
-          </div>
-        </Card>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

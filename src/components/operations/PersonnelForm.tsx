@@ -87,6 +87,7 @@ export function PersonnelForm({
                       selected={personnel.birth_date ? new Date(personnel.birth_date) : undefined}
                       onSelect={(date) => handleInputChange("birth_date", date ? format(date, "yyyy-MM-dd") : "")}
                       initialFocus
+                      className="p-3 pointer-events-auto"
                     />
                   </PopoverContent>
                 </Popover>
@@ -161,7 +162,11 @@ export function PersonnelForm({
               {readOnly ? (
                 <Input
                   id="calisma_sistemi"
-                  value={personnel.calisma_sistemi}
+                  value={personnel.calisma_sistemi === "aylik_maas" ? "Aylık" :
+                         personnel.calisma_sistemi === "haftalik_maas" ? "Haftalık" :
+                         personnel.calisma_sistemi === "gunluk_maas" ? "Günlük" :
+                         personnel.calisma_sistemi === "prim_komisyon" ? "Yüzdelik" :
+                         personnel.calisma_sistemi}
                   readOnly
                 />
               ) : (
@@ -173,8 +178,10 @@ export function PersonnelForm({
                     <SelectValue placeholder="Çalışma sistemi seçin" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="maaşlı">Maaşlı</SelectItem>
-                    <SelectItem value="yüzdelik">Yüzdelik</SelectItem>
+                    <SelectItem value="aylik_maas">Aylık Maaş</SelectItem>
+                    <SelectItem value="haftalik_maas">Haftalık Maaş</SelectItem>
+                    <SelectItem value="gunluk_maas">Günlük Maaş</SelectItem>
+                    <SelectItem value="prim_komisyon">Yüzdelik</SelectItem>
                   </SelectContent>
                 </Select>
               )}
@@ -189,7 +196,9 @@ export function PersonnelForm({
                 type="number"
                 value={personnel.maas}
                 onChange={(e) => handleInputChange("maas", Number(e.target.value))}
-                disabled={readOnly || personnel.calisma_sistemi !== "maaşlı"}
+                disabled={readOnly || personnel.calisma_sistemi !== "aylik_maas" && 
+                          personnel.calisma_sistemi !== "haftalik_maas" && 
+                          personnel.calisma_sistemi !== "gunluk_maas"}
                 step="0.01"
               />
             </div>
@@ -201,7 +210,7 @@ export function PersonnelForm({
                 type="number"
                 value={personnel.prim_yuzdesi}
                 onChange={(e) => handleInputChange("prim_yuzdesi", Number(e.target.value))}
-                disabled={readOnly || personnel.calisma_sistemi !== "yüzdelik"}
+                disabled={readOnly || personnel.calisma_sistemi !== "prim_komisyon"}
                 step="0.01"
               />
             </div>
