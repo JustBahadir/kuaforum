@@ -6,6 +6,13 @@ import { ServicePerformanceView } from "./performance-tabs/ServicePerformanceVie
 import { CategoryPerformanceView } from "./performance-tabs/CategoryPerformanceView";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { cn } from "@/lib/utils";
+import { 
+  Tooltip, 
+  TooltipContent, 
+  TooltipProvider, 
+  TooltipTrigger 
+} from "@/components/ui/tooltip";
+import { CustomMonthCycleSelector } from "@/components/ui/custom-month-cycle-selector";
 
 interface PerformanceTabProps {
   personnel: any;
@@ -19,6 +26,8 @@ export function PerformanceTab({ personnel }: PerformanceTabProps) {
     from: new Date(new Date().setDate(new Date().getDate() - 30)),
     to: new Date()
   });
+  const [monthCycleDay, setMonthCycleDay] = useState(1);
+  const [useMonthCycle, setUseMonthCycle] = useState(false);
   
   const handlePrevClick = () => {
     setActiveView("hizmet");
@@ -32,6 +41,37 @@ export function PerformanceTab({ personnel }: PerformanceTabProps) {
 
   const handleRefresh = () => {
     setRefreshKey(prev => prev + 1);
+  };
+
+  const handleDateRangeChange = ({from, to}: {from: Date, to: Date}) => {
+    setDateRange({from, to});
+    setUseMonthCycle(false);
+  };
+
+  const handleMonthCycleChange = (day: number, date: Date) => {
+    setMonthCycleDay(day);
+    
+    const currentDate = new Date();
+    const selectedDay = day;
+    
+    let fromDate = new Date();
+    
+    // Set to previous month's cycle day
+    fromDate.setDate(selectedDay);
+    if (currentDate.getDate() < selectedDay) {
+      fromDate.setMonth(fromDate.getMonth() - 1);
+    }
+    
+    // Create the end date (same day, current month)
+    const toDate = new Date(fromDate);
+    toDate.setMonth(toDate.getMonth() + 1);
+    
+    setDateRange({
+      from: fromDate,
+      to: toDate
+    });
+    
+    setUseMonthCycle(true);
   };
 
   const mockSmartAnalysis = [
@@ -55,28 +95,49 @@ export function PerformanceTab({ personnel }: PerformanceTabProps) {
     <div className="space-y-6">
       <div className="flex flex-wrap justify-between items-center gap-2 pb-2">
         <div className="flex items-center gap-2">
-          <DateRangePicker
-            from={dateRange.from}
-            to={dateRange.to}
-            onSelect={setDateRange}
+          {!useMonthCycle && (
+            <DateRangePicker
+              from={dateRange.from}
+              to={dateRange.to}
+              onSelect={handleDateRangeChange}
+            />
+          )}
+          
+          <CustomMonthCycleSelector 
+            selectedDay={monthCycleDay}
+            onChange={handleMonthCycleChange}
+            active={useMonthCycle}
+            onClear={() => setUseMonthCycle(false)}
           />
-          <Button 
-            variant="outline" 
-            size="icon" 
-            onClick={handleRefresh}
-            title="Analizleri yenile"
-          >
-            <RefreshCw className="h-4 w-4" />
-          </Button>
+          
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  onClick={handleRefresh}
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Analizleri yenile</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+        
+        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+          <span>{dateRange.from.toLocaleDateString('tr-TR')}</span>
+          <span> - </span>
+          <span>{dateRange.to.toLocaleDateString('tr-TR')}</span>
         </div>
       </div>
 
       <div className="border rounded-md p-4 bg-muted/30">
         <div className="flex items-center justify-between mb-2">
           <h3 className="font-medium">Akıllı Analiz</h3>
-          <span className="text-xs text-muted-foreground">
-            {dateRange.from.toLocaleDateString('tr-TR')} - {dateRange.to.toLocaleDateString('tr-TR')}
-          </span>
         </div>
         <ul className="space-y-2 pl-2" key={refreshKey}>
           {/* Randomly select 3 different analysis items based on refresh key */}

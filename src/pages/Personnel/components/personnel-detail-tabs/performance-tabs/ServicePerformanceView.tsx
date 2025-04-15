@@ -70,14 +70,29 @@ export function ServicePerformanceView({
               <BarChart
                 data={serviceData}
                 margin={{ top: 5, right: 30, left: 20, bottom: 40 }}
-                barSize={60} // Narrower bars as requested
+                barSize={40} // Narrower bars as requested
               >
                 <XAxis 
                   dataKey="name" 
-                  angle={-45}
-                  textAnchor="end"
-                  height={70} 
-                  tick={{ fontSize: 12 }}
+                  tick={(props) => {
+                    const { x, y, payload } = props;
+                    return (
+                      <g transform={`translate(${x},${y})`}>
+                        <text 
+                          x={0} 
+                          y={0} 
+                          dy={16} 
+                          textAnchor="end" 
+                          fill="#666"
+                          transform="rotate(-45)"
+                          fontSize={12}
+                        >
+                          {payload.value}
+                        </text>
+                      </g>
+                    );
+                  }}
+                  height={70}
                 />
                 <YAxis yAxisId="revenue" orientation="left" tick={{ fontSize: 12 }} />
                 <YAxis yAxisId="count" orientation="right" tick={{ fontSize: 12 }} />
@@ -117,14 +132,14 @@ export function ServicePerformanceView({
                   innerRadius={0}  // Changed to 0 for filled pie chart
                   fill="#8884d8"
                   dataKey="value"
-                  label={(entry) => `${entry.name}: ${entry.value.toLocaleString('tr-TR')} ₺`}
+                  labelLine={false}
                 >
                   {pieData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value) => `${value.toLocaleString('tr-TR')} ₺`} />
-                <Legend verticalAlign="bottom" height={36} />
+                <Tooltip formatter={(value) => `${formatCurrency(value as number)}`} />
+                <Legend verticalAlign="middle" align="right" layout="vertical" />
               </PieChart>
             </ResponsiveContainer>
           </div>

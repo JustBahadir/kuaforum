@@ -32,7 +32,6 @@ export function WorkInfoTab({ personnel }: WorkInfoTabProps) {
 
   const updateMutation = useMutation({
     mutationFn: async (data: any) => {
-      console.log("Sending update data:", data);
       return await personelServisi.guncelle(personnel.id, data);
     },
     onSuccess: () => {
@@ -78,7 +77,6 @@ export function WorkInfoTab({ personnel }: WorkInfoTabProps) {
       updateData.prim_yuzdesi = 0; // Set commission to 0 for salaried workers
     }
     
-    console.log("Update data:", updateData);
     updateMutation.mutate(updateData);
   };
 
@@ -102,6 +100,15 @@ export function WorkInfoTab({ personnel }: WorkInfoTabProps) {
 
   // Get the proper display format for monetary values
   const isCommissionBased = personnel.calisma_sistemi === "prim_komisyon";
+  
+  // Check if form is valid for saving
+  const isFormValid = () => {
+    if (selectedTopOption === 'maaşlı') {
+      return formData.calisma_sistemi && formData.maas > 0;
+    } else {
+      return formData.prim_yuzdesi >= 0 && formData.prim_yuzdesi <= 100;
+    }
+  };
 
   // Handle top-level selection change (Maaşlı/Komisyonlu)
   const handleTopLevelChange = (value: 'maaşlı' | 'komisyonlu') => {
@@ -221,7 +228,7 @@ export function WorkInfoTab({ personnel }: WorkInfoTabProps) {
                   value={formData.maas}
                   onChange={(e) => setFormData(prev => ({ ...prev, maas: Number(e.target.value) }))}
                   className="w-40"
-                  disabled={!selectedTopOption || selectedTopOption !== 'maaşlı'}
+                  disabled={!selectedTopOption || selectedTopOption !== 'maaşlı' || !formData.calisma_sistemi}
                 />
               )}
             </>
@@ -260,7 +267,7 @@ export function WorkInfoTab({ personnel }: WorkInfoTabProps) {
           <Button 
             size="sm" 
             onClick={handleSave} 
-            disabled={updateMutation.isPending} 
+            disabled={updateMutation.isPending || !isFormValid()}
             className="gap-1"
           >
             <Check className="h-4 w-4" />
