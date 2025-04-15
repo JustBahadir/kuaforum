@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { personelServisi } from "@/lib/supabase";
-import { Check, X, Edit, RefreshCw } from "lucide-react";
+import { Check, X, Edit } from "lucide-react";
 
 interface WorkInfoTabProps {
   personnel: any;
@@ -25,7 +25,6 @@ export function WorkInfoTab({ personnel }: WorkInfoTabProps) {
 
   const updateMutation = useMutation({
     mutationFn: async (data: any) => {
-      console.log("Updating personnel with data:", data);
       return await personelServisi.guncelle(personnel.id, data);
     },
     onSuccess: () => {
@@ -36,7 +35,7 @@ export function WorkInfoTab({ personnel }: WorkInfoTabProps) {
       setIsEditing(false);
     },
     onError: (error) => {
-      console.error("Personel güncelleme hatası:", error);
+      console.error(error);
       toast.error("Personel güncellenirken bir hata oluştu.");
     },
   });
@@ -50,7 +49,7 @@ export function WorkInfoTab({ personnel }: WorkInfoTabProps) {
       case "gunluk_maas":
         return "Günlük Maaş";
       case "prim_komisyon":
-        return "Komisyonlu Çalışma";
+        return "Yüzdelik Çalışma";
       default:
         return system;
     }
@@ -106,35 +105,38 @@ export function WorkInfoTab({ personnel }: WorkInfoTabProps) {
           ) : (
             <div className="space-y-3 mt-2">
               <div className="space-y-2">
-                <RadioGroup
-                  value={isCommissionType ? "komisyonlu" : "maaşlı"}
-                  onValueChange={(value) => {
-                    if (value === "komisyonlu") {
-                      setFormData(prev => ({ 
-                        ...prev, 
-                        calisma_sistemi: "prim_komisyon",
-                        maas: 0
-                      }));
-                    } else if (value === "maaşlı") {
-                      // Default to monthly salary if switching to salary type
-                      setFormData(prev => ({ 
-                        ...prev, 
-                        calisma_sistemi: "aylik_maas",
-                        prim_yuzdesi: 0
-                      }));
-                    }
-                  }}
-                  className="flex items-center mb-3"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="maaşlı" id="maasli" />
-                    <Label htmlFor="maasli" className="text-base font-normal">Maaşlı</Label>
-                  </div>
-                  <div className="flex items-center space-x-2 ml-4">
-                    <RadioGroupItem value="komisyonlu" id="komisyonlu" />
-                    <Label htmlFor="komisyonlu" className="text-base font-normal">Komisyonlu</Label>
-                  </div>
-                </RadioGroup>
+                <div className="space-x-2">
+                  <RadioGroup
+                    value={isCommissionType ? "komisyonlu" : "maaşlı"}
+                    onValueChange={(value) => {
+                      if (value === "komisyonlu") {
+                        setFormData(prev => ({ 
+                          ...prev, 
+                          calisma_sistemi: "prim_komisyon",
+                          maas: 0
+                        }));
+                      } else if (value === "maaşlı") {
+                        // Keep the current maaş type or default to aylık
+                        const currentType = isSalaryType ? formData.calisma_sistemi : "aylik_maas";
+                        setFormData(prev => ({ 
+                          ...prev, 
+                          calisma_sistemi: currentType,
+                          prim_yuzdesi: 0
+                        }));
+                      }
+                    }}
+                    className="flex items-center mb-3"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="maaşlı" id="maasli" />
+                      <Label htmlFor="maasli" className="text-base font-normal">Maaşlı</Label>
+                    </div>
+                    <div className="flex items-center space-x-2 ml-4">
+                      <RadioGroupItem value="komisyonlu" id="komisyonlu" />
+                      <Label htmlFor="komisyonlu" className="text-base font-normal">Komisyonlu</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
               
                 {!isCommissionType && (
                   <RadioGroup
@@ -167,7 +169,7 @@ export function WorkInfoTab({ personnel }: WorkInfoTabProps) {
           </h3>
           {!isEditing ? (
             <div className="font-normal">
-              {isCommissionBased 
+              {isCommissionType 
                 ? `%${personnel.prim_yuzdesi}` 
                 : formatCurrency(personnel.maas)}
             </div>
@@ -186,11 +188,8 @@ export function WorkInfoTab({ personnel }: WorkInfoTabProps) {
                       value={formData.prim_yuzdesi}
                       onChange={(e) => {
                         const value = parseInt(e.target.value);
-                        if (isNaN(value) || (value >= 0 && value <= 100)) {
-                          setFormData(prev => ({ 
-                            ...prev, 
-                            prim_yuzdesi: isNaN(value) ? '' : Math.floor(value)
-                          }));
+                        if ((value >= 0 && value <= 100) || e.target.value === "") {
+                          setFormData(prev => ({ ...prev, prim_yuzdesi: e.target.value === "" ? 0 : value }));
                         }
                       }}
                       className="pl-8 w-24"
@@ -215,20 +214,20 @@ export function WorkInfoTab({ personnel }: WorkInfoTabProps) {
         <h3 className="font-medium mb-3">Özet Bilgiler</h3>
         <table className="w-full">
           <tbody>
+            {isCommissionBased && (
+              <tr className="border-b">
+                <td className="py-2 text-sm text-muted-foreground">Toplam Prim</td>
+                <td className="py-2 text-right font-medium">{formatCurrency(personnel.toplam_prim || 0)}</td>
+              </tr>
+            )}
             <tr className="border-b">
               <td className="py-2 text-sm text-muted-foreground">Toplam Ciro</td>
               <td className="py-2 text-right font-medium">{formatCurrency(personnel.toplam_ciro || 0)}</td>
             </tr>
-            <tr className="border-b">
+            <tr>
               <td className="py-2 text-sm text-muted-foreground">İşlem Sayısı</td>
               <td className="py-2 text-right font-medium">{personnel.islem_sayisi || 0}</td>
             </tr>
-            {isCommissionBased && (
-              <tr>
-                <td className="py-2 text-sm text-muted-foreground">Kazandığı Komisyon</td>
-                <td className="py-2 text-right font-medium">{formatCurrency(personnel.toplam_prim || 0)}</td>
-              </tr>
-            )}
           </tbody>
         </table>
       </div>
