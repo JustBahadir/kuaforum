@@ -1,6 +1,6 @@
 
 import { Card, CardContent } from "@/components/ui/card";
-import { Mail, Phone, User } from "lucide-react";
+import { Mail, Phone } from "lucide-react";
 
 interface PersonnelCardProps {
   name: string;
@@ -13,7 +13,9 @@ interface PersonnelCardProps {
 export function PersonnelCard({ name, phone, email, workingSystem, onClick }: PersonnelCardProps) {
   // Correctly format the working system label with proper Turkish characters
   const formatWorkingSystem = (system: string): string => {
-    switch (system?.toLowerCase()) {
+    if (!system) return "";
+    
+    switch (system.toLowerCase()) {
       case "aylik":
       case "aylık":
       case "aylik_maas":
@@ -31,7 +33,7 @@ export function PersonnelCard({ name, phone, email, workingSystem, onClick }: Pe
       case "yüzdelik":
         return "Yüzdelik";
       default:
-        return system || "";
+        return system;
     }
   };
 

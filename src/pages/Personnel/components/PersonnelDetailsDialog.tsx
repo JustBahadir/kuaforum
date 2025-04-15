@@ -204,7 +204,11 @@ export function PersonnelDetailsDialog({
           </TabsContent>
           
           <TabsContent value="islemler" className="mt-4">
-            <OperationsHistoryTab personnel={personnel} operations={operations} isLoading={isLoading} />
+            <OperationsHistoryTab 
+              personnel={personnel} 
+              operations={operations} 
+              isLoading={isLoading} 
+            />
           </TabsContent>
         </Tabs>
       </DialogContent>
