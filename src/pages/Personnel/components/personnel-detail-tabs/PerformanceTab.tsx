@@ -22,7 +22,7 @@ interface PerformanceTabProps {
 
 export function PerformanceTab({ 
   personnel, 
-  operations,
+  operations = [],
   isLoading = false 
 }: PerformanceTabProps) {
   const [dateRange, setDateRange] = useState({
@@ -66,11 +66,11 @@ export function PerformanceTab({
     setUseSingleDate(false);
   };
 
-  const filteredOperations = operations.filter(op => {
-    if (!op.created_at) return false;
+  const filteredOperations = operations && operations.length > 0 ? operations.filter(op => {
+    if (!op || !op.created_at) return false;
     const date = new Date(op.created_at);
     return date >= dateRange.from && date <= dateRange.to;
-  });
+  }) : [];
 
   const serviceData = processServiceData(filteredOperations);
   const insights = generateSmartInsights(filteredOperations, serviceData);
@@ -130,9 +130,7 @@ export function PerformanceTab({
 
       {isLoading ? (
         <div className="flex justify-center p-12">
-          <div className="w-10 h-10 border-4 border-t-purple-600 border-purple-200 rounded-full animate
-
--spin"></div>
+          <div className="w-10 h-10 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
         </div>
       ) : (
         <ServicePerformanceView

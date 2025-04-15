@@ -9,11 +9,17 @@ export interface ServicePerformanceData {
   percentage?: number;
 }
 
-export const processServiceData = (operations: PersonelIslemi[]): ServicePerformanceData[] => {
+export const processServiceData = (operations: PersonelIslemi[] = []): ServicePerformanceData[] => {
+  if (!operations || operations.length === 0) {
+    return [];
+  }
+
   const serviceMap = new Map<string, ServicePerformanceData>();
   let totalRevenue = 0;
   
   operations.forEach(op => {
+    if (!op) return;
+    
     const serviceName = op.islem?.islem_adi || op.aciklama || "Diğer";
     const amount = Number(op.tutar) || 0;
     
@@ -35,8 +41,10 @@ export const processServiceData = (operations: PersonelIslemi[]): ServicePerform
     .sort((a, b) => b.revenue - a.revenue);
 };
 
-export const generateSmartInsights = (operations: PersonelIslemi[], serviceData: ServicePerformanceData[]) => {
-  if (!operations.length) return ["Henüz yeterli veri bulunmamaktadır."];
+export const generateSmartInsights = (operations: PersonelIslemi[] = [], serviceData: ServicePerformanceData[] = []) => {
+  if (!operations || !serviceData || operations.length === 0) {
+    return ["Henüz yeterli veri bulunmamaktadır."];
+  }
   
   const totalRevenue = operations.reduce((sum, op) => sum + (Number(op.tutar) || 0), 0);
   const insights = [];
