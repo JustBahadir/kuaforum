@@ -10,7 +10,7 @@ import {
   XAxis, 
   YAxis, 
   CartesianGrid, 
-  Tooltip, 
+  Tooltip as RechartsTooltip, 
   Legend, 
   ResponsiveContainer,
   BarChart,
@@ -341,6 +341,27 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
   const isLoading = personnelLoading || operationsLoading || selectedPersonnelLoading || islemlerLoading;
   const hasNoData = !isLoading && (!operationsData || operationsData.length === 0);
 
+  const renderCustomTooltip = (props: any) => {
+    const { active, payload, label } = props;
+    
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white p-2 border rounded shadow-sm">
+          <p className="text-sm font-medium">{label}</p>
+          {payload.map((entry: any, index: number) => (
+            <p key={index} className="text-xs" style={{ color: entry.color }}>
+              {entry.name}: {entry.name === "ciro" 
+                ? formatCurrency(entry.value) 
+                : entry.value}
+            </p>
+          ))}
+        </div>
+      );
+    }
+    
+    return null;
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between gap-4">
@@ -550,7 +571,7 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
                                 orientation="right" 
                                 tick={{ fontSize: 12 }}
                               />
-                              <Tooltip 
+                              <RechartsTooltip 
                                 formatter={(value: any, name: string) => {
                                   if (name === "ciro") return [formatCurrency(value as number), "Ciro"];
                                   return [value, "İşlem Sayısı"];
@@ -621,7 +642,9 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
                                       ))}
                                     </Pie>
                                     <Legend />
-                                    <Tooltip formatter={(value, name, props) => [value, 'İşlem Sayısı']} />
+                                    <RechartsTooltip 
+                                      formatter={(value: any, name: string) => [value, 'İşlem Sayısı']} 
+                                    />
                                   </PieChart>
                                 </ResponsiveContainer>
                               </div>
@@ -684,7 +707,9 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
                                     ))}
                                   </Pie>
                                   <Legend />
-                                  <Tooltip formatter={(value, name, props) => [formatCurrency(value as number), 'Ciro']} />
+                                  <RechartsTooltip 
+                                    formatter={(value: any, name: string) => [formatCurrency(value as number), 'Ciro']} 
+                                  />
                                 </PieChart>
                               </ResponsiveContainer>
                             )}
@@ -758,9 +783,9 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
                                 <XAxis dataKey="name" />
                                 <YAxis yAxisId="left" tickFormatter={(value) => `₺${value}`} />
                                 <YAxis yAxisId="right" orientation="right" />
-                                <Tooltip 
-                                  formatter={(value, name) => {
-                                    if (name === "revenue") return [formatCurrency(value as number), "Ciro"];
+                                <RechartsTooltip 
+                                  formatter={(value: any, name: string) => {
+                                    if (name === "revenue") return [formatCurrency(value), "Ciro"];
                                     return [value, "İşlem Sayısı"];
                                   }} 
                                 />
