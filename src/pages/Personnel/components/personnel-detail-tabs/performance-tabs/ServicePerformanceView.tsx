@@ -38,6 +38,9 @@ export function ServicePerformanceView({
     { name: "Yüz Maskesi", revenue: 550, count: 5 },
     { name: "Cilt Bakımı", revenue: 500, count: 4 },
     { name: "Ense Tıraş", revenue: 450, count: 9 },
+    { name: "Klasik Makyaj", revenue: 400, count: 3 },
+    { name: "Özel Gün Makyajı", revenue: 350, count: 2 },
+    { name: "Sakal Şekillendirme", revenue: 300, count: 6 },
   ];
 
   const pieData = serviceData.map(item => ({
@@ -45,19 +48,38 @@ export function ServicePerformanceView({
     value: item.revenue
   }));
 
-  const COLORS = ['#8884d8', '#83a6ed', '#8dd1e1', '#82ca9d', '#ffc658'];
+  const COLORS = ['#8884d8', '#83a6ed', '#8dd1e1', '#82ca9d', '#ffc658', '#ff8042'];
 
   const renderCustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-white p-2 border rounded shadow-sm text-xs">
-          <p className="font-medium">{label}</p>
-          <p>Ciro: {formatCurrency(payload[0].value)}</p>
+          <p className="font-medium">{label || payload[0].name}</p>
+          <p>Ciro: {formatCurrency(payload[0].value || payload[0].payload.revenue)}</p>
           {payload[1] && <p>İşlem Sayısı: {payload[1].value}</p>}
         </div>
       );
     }
     return null;
+  };
+
+  const CustomXAxisTick = (props: any) => {
+    const { x, y, payload } = props;
+    return (
+      <g transform={`translate(${x},${y})`}>
+        <text 
+          x={0} 
+          y={0} 
+          dy={16} 
+          textAnchor="end" 
+          fill="#666"
+          fontSize={12}
+          transform="rotate(-45)"
+        >
+          {payload.value}
+        </text>
+      </g>
+    );
   };
 
   return (
@@ -70,28 +92,11 @@ export function ServicePerformanceView({
               <BarChart
                 data={serviceData}
                 margin={{ top: 5, right: 30, left: 20, bottom: 40 }}
-                barSize={40} // Narrower bars as requested
+                barSize={30} // Narrower bars
               >
                 <XAxis 
                   dataKey="name" 
-                  tick={(props) => {
-                    const { x, y, payload } = props;
-                    return (
-                      <g transform={`translate(${x},${y})`}>
-                        <text 
-                          x={0} 
-                          y={0} 
-                          dy={16} 
-                          textAnchor="end" 
-                          fill="#666"
-                          transform="rotate(-45)"
-                          fontSize={12}
-                        >
-                          {payload.value}
-                        </text>
-                      </g>
-                    );
-                  }}
+                  tick={CustomXAxisTick}
                   height={70}
                 />
                 <YAxis yAxisId="revenue" orientation="left" tick={{ fontSize: 12 }} />
@@ -101,7 +106,7 @@ export function ServicePerformanceView({
                   yAxisId="revenue" 
                   dataKey="revenue" 
                   name="Ciro" 
-                  fill="#82ca9d" 
+                  fill="#3b82f6" // Blue color
                   radius={[4, 4, 0, 0]}
                 />
                 <Line 
@@ -109,7 +114,7 @@ export function ServicePerformanceView({
                   type="monotone" 
                   dataKey="count" 
                   name="İşlem Sayısı" 
-                  stroke="#ff7300" 
+                  stroke="#ef4444" // Red color 
                   strokeWidth={2}
                 />
               </BarChart>
@@ -121,7 +126,7 @@ export function ServicePerformanceView({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="p-4">
           <h3 className="font-medium mb-4">Hizmet Dağılımı</h3>
-          <div className="h-[200px] flex items-center justify-center">
+          <div className="h-[250px] flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -129,7 +134,7 @@ export function ServicePerformanceView({
                   cx="50%"
                   cy="50%"
                   outerRadius={80}
-                  innerRadius={0}  // Changed to 0 for filled pie chart
+                  innerRadius={0}  // Filled pie chart
                   fill="#8884d8"
                   dataKey="value"
                   labelLine={false}
@@ -147,7 +152,7 @@ export function ServicePerformanceView({
 
         <Card className="p-4">
           <h3 className="font-medium mb-4">Hizmet Detayları</h3>
-          <div className="max-h-[200px] overflow-auto">
+          <div className="max-h-[250px] overflow-auto">
             <table className="w-full text-sm">
               <thead className="border-b">
                 <tr>

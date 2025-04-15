@@ -3,7 +3,7 @@ import React from "react";
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Phone, Mail, Edit, Trash2, ArrowUpRight, Users } from "lucide-react";
+import { Phone, Mail, Edit, Trash2, ArrowUpRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
 

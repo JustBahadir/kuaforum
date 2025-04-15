@@ -33,6 +33,7 @@ export function CategoryPerformanceView({ personnel, dateRange, refreshKey = 0 }
     { name: "Cilt Bakımı", revenue: 3500, count: 12 },
     { name: "Makyaj", revenue: 2800, count: 10 },
     { name: "Tırnak Bakımı", revenue: 1200, count: 8 },
+    { name: "Epilasyon", revenue: 900, count: 5 },
   ];
 
   const pieData = categoryData.map(item => ({
@@ -40,7 +41,7 @@ export function CategoryPerformanceView({ personnel, dateRange, refreshKey = 0 }
     value: item.revenue
   }));
 
-  const COLORS = ['#8884d8', '#83a6ed', '#8dd1e1', '#82ca9d'];
+  const COLORS = ['#8884d8', '#83a6ed', '#8dd1e1', '#82ca9d', '#ffc658', '#ff8042'];
 
   const renderCustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -55,6 +56,25 @@ export function CategoryPerformanceView({ personnel, dateRange, refreshKey = 0 }
     return null;
   };
 
+  const CustomXAxisTick = (props: any) => {
+    const { x, y, payload } = props;
+    return (
+      <g transform={`translate(${x},${y})`}>
+        <text 
+          x={0} 
+          y={0} 
+          dy={16} 
+          textAnchor="end" 
+          fill="#666"
+          fontSize={12}
+          transform="rotate(-45)"
+        >
+          {payload.value}
+        </text>
+      </g>
+    );
+  };
+
   return (
     <div className="space-y-6" key={refreshKey}>
       <Card className="p-4">
@@ -65,28 +85,11 @@ export function CategoryPerformanceView({ personnel, dateRange, refreshKey = 0 }
               <BarChart
                 data={categoryData}
                 margin={{ top: 5, right: 30, left: 20, bottom: 40 }}
-                barSize={40} // Narrower bars as requested
+                barSize={30} // Narrower bars
               >
                 <XAxis 
                   dataKey="name" 
-                  tick={(props) => {
-                    const { x, y, payload } = props;
-                    return (
-                      <g transform={`translate(${x},${y})`}>
-                        <text 
-                          x={0} 
-                          y={0} 
-                          dy={16} 
-                          textAnchor="end" 
-                          fill="#666"
-                          transform="rotate(-45)"
-                          fontSize={12}
-                        >
-                          {payload.value}
-                        </text>
-                      </g>
-                    );
-                  }}
+                  tick={CustomXAxisTick}
                   height={70}
                 />
                 <YAxis yAxisId="revenue" orientation="left" tick={{ fontSize: 12 }} />
@@ -96,7 +99,7 @@ export function CategoryPerformanceView({ personnel, dateRange, refreshKey = 0 }
                   yAxisId="revenue" 
                   dataKey="revenue" 
                   name="Ciro" 
-                  fill="#8884d8" 
+                  fill="#8884d8" // Purple color
                   radius={[4, 4, 0, 0]}
                 />
                 <Line 
@@ -104,7 +107,7 @@ export function CategoryPerformanceView({ personnel, dateRange, refreshKey = 0 }
                   type="monotone" 
                   dataKey="count" 
                   name="İşlem Sayısı" 
-                  stroke="#ff7300" 
+                  stroke="#ef4444" // Red color
                   strokeWidth={2}
                 />
               </BarChart>
@@ -116,7 +119,7 @@ export function CategoryPerformanceView({ personnel, dateRange, refreshKey = 0 }
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="p-4">
           <h3 className="font-medium mb-4">Kategori Dağılımı</h3>
-          <div className="h-[200px] flex items-center justify-center">
+          <div className="h-[250px] flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -124,7 +127,7 @@ export function CategoryPerformanceView({ personnel, dateRange, refreshKey = 0 }
                   cx="50%"
                   cy="50%"
                   outerRadius={80}
-                  innerRadius={0}  // Changed to 0 for filled pie chart
+                  innerRadius={0}  // Filled pie chart
                   fill="#8884d8"
                   dataKey="value"
                   labelLine={false}
@@ -142,7 +145,7 @@ export function CategoryPerformanceView({ personnel, dateRange, refreshKey = 0 }
 
         <Card className="p-4">
           <h3 className="font-medium mb-4">Kategori Detayları</h3>
-          <div className="max-h-[200px] overflow-auto">
+          <div className="max-h-[250px] overflow-auto">
             <table className="w-full text-sm">
               <thead className="border-b">
                 <tr>

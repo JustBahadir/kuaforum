@@ -50,7 +50,7 @@ export function CustomMonthCycleSelector({
             <Button 
               variant={active ? "default" : "outline"} 
               className={cn(
-                "flex gap-2",
+                "flex items-center gap-2",
                 active && "bg-purple-600 hover:bg-purple-700 text-white"
               )}
               onClick={() => setOpen(!open)}

@@ -28,6 +28,7 @@ export function PerformanceTab({ personnel }: PerformanceTabProps) {
   });
   const [monthCycleDay, setMonthCycleDay] = useState(1);
   const [useMonthCycle, setUseMonthCycle] = useState(false);
+  const [useSingleDate, setUseSingleDate] = useState(false);
   
   const handlePrevClick = () => {
     setActiveView("hizmet");
@@ -46,6 +47,14 @@ export function PerformanceTab({ personnel }: PerformanceTabProps) {
   const handleDateRangeChange = ({from, to}: {from: Date, to: Date}) => {
     setDateRange({from, to});
     setUseMonthCycle(false);
+    setUseSingleDate(false);
+  };
+
+  const handleSingleDateChange = ({from, to}: {from: Date, to: Date}) => {
+    // For single date selection, both from and to will be the same date
+    setDateRange({from, to: from});
+    setUseMonthCycle(false);
+    setUseSingleDate(true);
   };
 
   const handleMonthCycleChange = (day: number, date: Date) => {
@@ -72,6 +81,7 @@ export function PerformanceTab({ personnel }: PerformanceTabProps) {
     });
     
     setUseMonthCycle(true);
+    setUseSingleDate(false);
   };
 
   const mockSmartAnalysis = [
@@ -94,12 +104,41 @@ export function PerformanceTab({ personnel }: PerformanceTabProps) {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap justify-between items-center gap-2 pb-2">
-        <div className="flex items-center gap-2">
-          {!useMonthCycle && (
+        <div className="flex items-center gap-2 flex-wrap">
+          {!useSingleDate && !useMonthCycle && (
             <DateRangePicker
               from={dateRange.from}
               to={dateRange.to}
               onSelect={handleDateRangeChange}
+            />
+          )}
+          
+          {!useMonthCycle && !useSingleDate && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setUseSingleDate(true)}
+                  >
+                    <CalendarIcon className="h-4 w-4 mr-1" />
+                    <span>Tek Gün</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Tek gün seçin</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          
+          {useSingleDate && (
+            <DateRangePicker
+              from={dateRange.from}
+              to={dateRange.from}
+              onSelect={handleSingleDateChange}
+              singleDate={true}
             />
           )}
           
@@ -130,8 +169,8 @@ export function PerformanceTab({ personnel }: PerformanceTabProps) {
         
         <div className="flex items-center gap-1 text-sm text-muted-foreground">
           <span>{dateRange.from.toLocaleDateString('tr-TR')}</span>
-          <span> - </span>
-          <span>{dateRange.to.toLocaleDateString('tr-TR')}</span>
+          {!useSingleDate && <><span> - </span>
+          <span>{dateRange.to.toLocaleDateString('tr-TR')}</span></>}
         </div>
       </div>
 
@@ -209,3 +248,6 @@ export function PerformanceTab({ personnel }: PerformanceTabProps) {
     </div>
   );
 }
+
+// Import needed at the top but was moved here for formatting
+import { CalendarIcon } from "lucide-react";
