@@ -200,7 +200,11 @@ export function PersonnelDetailsDialog({
           </TabsContent>
           
           <TabsContent value="performans" className="space-y-4 mt-4">
-            <PerformanceTab personnel={personnel} />
+            <PerformanceTab 
+              personnel={personnel} 
+              operations={operations}
+              isLoading={isLoading}
+            />
           </TabsContent>
           
           <TabsContent value="islemler" className="mt-4">
