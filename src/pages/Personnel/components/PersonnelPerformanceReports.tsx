@@ -10,14 +10,14 @@ import {
   XAxis, 
   YAxis, 
   CartesianGrid, 
-  Tooltip as RechartsTooltip, 
+  RechartsTooltip, 
   Legend, 
   ResponsiveContainer,
   BarChart,
   Bar,
+  Cell,
   PieChart,
   Pie,
-  Cell,
 } from "recharts";
 import { formatCurrency } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -25,13 +25,13 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CircleAlert, InfoIcon, CalendarIcon } from "lucide-react";
 import { PersonelIslemi as PersonelIslemiType } from "@/lib/supabase/types";
 import { CustomMonthCycleSelector } from "@/components/ui/custom-month-cycle-selector";
-import { Tooltip as TooltipUI, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { TooltipProvider, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
-const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088FE', '#00C49F', '#FFBB28'];
+const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#a4de6c', '#d0ed57'];
 
 interface PersonelIslemi extends PersonelIslemiType {
   personel_id: number;
@@ -387,22 +387,20 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
         <div className="flex gap-2">
           {!useMonthCycle && (
             <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    variant={useSingleDate ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setUseSingleDate(!useSingleDate)}
-                    className={cn(useSingleDate && "bg-purple-600 hover:bg-purple-700")}
-                  >
-                    <CalendarIcon className="h-4 w-4 mr-1" />
-                    <span>Tek Gün</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Tek gün seçin</p>
-                </TooltipContent>
-              </Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant={useSingleDate ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setUseSingleDate(!useSingleDate)}
+                  className={cn(useSingleDate && "bg-purple-600 hover:bg-purple-700")}
+                >
+                  <CalendarIcon className="h-4 w-4 mr-1" />
+                  <span>Tek Gün</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Tek gün seçin</p>
+              </TooltipContent>
             </TooltipProvider>
           )}
 
@@ -604,16 +602,14 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
                           <div className="flex justify-between items-center mb-2">
                             <h3 className="font-medium">İşlem Dağılımı</h3>
                             <TooltipProvider>
-                              <TooltipUI>
-                                <TooltipTrigger>
-                                  <InfoIcon className="h-4 w-4 text-muted-foreground" />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p className="max-w-xs">
-                                    Her bir işlem tipi için yapılan toplam işlem sayısı. Çok sayıda az tekrarlanan işlem varsa, bunlar "Diğer" kategorisinde toplanır.
-                                  </p>
-                                </TooltipContent>
-                              </TooltipUI>
+                              <TooltipTrigger>
+                                <InfoIcon className="h-4 w-4 text-muted-foreground" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="max-w-xs">
+                                  Her bir işlem tipi için yapılan toplam işlem sayısı. Çok sayıda az tekrarlanan işlem varsa, bunlar "Diğer" kategorisinde toplanır.
+                                </p>
+                              </TooltipContent>
                             </TooltipProvider>
                           </div>
                           
@@ -670,16 +666,14 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
                           <div className="flex justify-between items-center mb-2">
                             <h3 className="font-medium">Ciro Dağılımı</h3>
                             <TooltipProvider>
-                              <TooltipUI>
-                                <TooltipTrigger>
-                                  <InfoIcon className="h-4 w-4 text-muted-foreground" />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p className="max-w-xs">
-                                    Her bir işlem tipinin toplam ciroya katkısı. Grafikteki büyük dilimler en çok gelir getiren işlemleri gösterir.
-                                  </p>
-                                </TooltipContent>
-                              </TooltipUI>
+                              <TooltipTrigger>
+                                <InfoIcon className="h-4 w-4 text-muted-foreground" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="max-w-xs">
+                                  Her bir işlem tipinin toplam ciroya katkısı. Grafikteki büyük dilimler en çok gelir getiren işlemleri gösterir.
+                                </p>
+                              </TooltipContent>
                             </TooltipProvider>
                           </div>
                           
