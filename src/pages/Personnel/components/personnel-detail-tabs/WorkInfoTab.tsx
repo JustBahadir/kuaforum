@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,16 +30,31 @@ export function WorkInfoTab({ personnel }: WorkInfoTabProps) {
       : 'komisyonlu'
   );
 
+  // Reset form data when personnel changes
+  useEffect(() => {
+    setFormData({
+      calisma_sistemi: personnel.calisma_sistemi || "aylik_maas",
+      maas: personnel.maas || 0,
+      prim_yuzdesi: personnel.prim_yuzdesi || 0,
+    });
+    
+    setSelectedTopOption(
+      ['aylik_maas', 'haftalik_maas', 'gunluk_maas'].includes(personnel.calisma_sistemi) 
+        ? 'maaşlı' 
+        : 'komisyonlu'
+    );
+  }, [personnel]);
+
   const updateMutation = useMutation({
     mutationFn: async (data: any) => {
-      console.log("Sending update data:", data);
       return await personelServisi.guncelle(personnel.id, data);
     },
     onSuccess: () => {
       toast.success("Personel bilgileri başarıyla güncellendi!");
       queryClient.invalidateQueries({ queryKey: ["personeller"] });
       queryClient.invalidateQueries({ queryKey: ["personel-list"] });
-      queryClient.invalidateQueries({ queryKey: ["personel"] });
+      queryClient.invalidateQueries({ queryKey: ["personel", personnel.id] });
+      queryClient.invalidateQueries({ queryKey: ["selected-personnel-details", personnel.id] });
       setIsEditing(false);
     },
     onError: (error) => {
@@ -96,6 +111,17 @@ export function WorkInfoTab({ personnel }: WorkInfoTabProps) {
         : 'komisyonlu'
     );
     setIsEditing(false);
+  };
+
+  // Check if the form is valid for submission
+  const isFormValid = () => {
+    if (selectedTopOption === 'maaşlı') {
+      // Must have selected a salary type and have a valid salary
+      return formData.calisma_sistemi && formData.maas >= 0;
+    } else {
+      // Must have a valid commission percentage between 0-100
+      return formData.prim_yuzdesi >= 0 && formData.prim_yuzdesi <= 100;
+    }
   };
 
   // Check if the working system is a salary type
@@ -262,7 +288,7 @@ export function WorkInfoTab({ personnel }: WorkInfoTabProps) {
           <Button 
             size="sm" 
             onClick={handleSave} 
-            disabled={updateMutation.isPending} 
+            disabled={updateMutation.isPending || !isFormValid()} 
             className="gap-1"
           >
             <Check className="h-4 w-4" />

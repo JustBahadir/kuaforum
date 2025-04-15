@@ -1,11 +1,12 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ServicePerformanceView } from "./performance-tabs/ServicePerformanceView";
 import { CategoryPerformanceView } from "./performance-tabs/CategoryPerformanceView";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { cn } from "@/lib/utils";
+import { CustomMonthCycleSelector } from "@/components/ui/custom-month-cycle-selector";
 
 interface PerformanceTabProps {
   personnel: any;
@@ -19,6 +20,8 @@ export function PerformanceTab({ personnel }: PerformanceTabProps) {
     from: new Date(new Date().setDate(new Date().getDate() - 30)),
     to: new Date()
   });
+  const [monthCycleDay, setMonthCycleDay] = useState(1);
+  const [useMonthCycle, setUseMonthCycle] = useState(false);
   
   const handlePrevClick = () => {
     setActiveView("hizmet");
@@ -34,38 +37,65 @@ export function PerformanceTab({ personnel }: PerformanceTabProps) {
     setRefreshKey(prev => prev + 1);
   };
 
-  // Custom date presets for the "Özel Ay Döngüsü" button
-  const getCustomDateRange = () => {
-    const today = new Date();
-    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-    
-    setDateRange({
-      from: startOfMonth,
-      to: endOfMonth
-    });
+  const handleDateRangeChange = ({from, to}: {from: Date, to: Date}) => {
+    setDateRange({from, to});
+    setUseMonthCycle(false);
   };
 
-  const mockSmartAnalysis = [
-    `${personnel.ad_soyad} son 30 günde toplam ${personnel.islem_sayisi || 0} işlem gerçekleştirdi ve ${personnel.toplam_ciro ? `₺${personnel.toplam_ciro.toLocaleString('tr-TR')}` : '₺0'} ciro oluşturdu.`,
-    `En çok yapılan işlem "${personnel.en_cok_islem || 'Saç Kesimi'}" olarak görülüyor.`,
-    `Bu personelin işlem başına ortalama geliri: ${personnel.toplam_ciro && personnel.islem_sayisi ? `₺${(personnel.toplam_ciro / personnel.islem_sayisi).toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : '₺0'}`,
-    `En çok performans gösterdiği kategori: ${personnel.en_cok_kategori || 'Saç Hizmeti'}`
-  ];
+  const handleMonthCycleChange = (day: number, date: Date) => {
+    setMonthCycleDay(day);
+    
+    const currentDate = new Date();
+    const selectedDay = day;
+    
+    let fromDate = new Date();
+    
+    // Set to previous month's cycle day
+    fromDate.setDate(selectedDay);
+    if (currentDate.getDate() < selectedDay) {
+      fromDate.setMonth(fromDate.getMonth() - 1);
+    }
+    
+    // Create the end date (same day, current month)
+    const toDate = new Date(fromDate);
+    toDate.setMonth(toDate.getMonth() + 1);
+    
+    setDateRange({
+      from: fromDate,
+      to: toDate
+    });
+    
+    setUseMonthCycle(true);
+  };
 
-  // Create 3 more smart analysis texts for variety
-  const extraAnalysis = [
-    `${personnel.ad_soyad} en verimli gününü ${new Date().toLocaleDateString('tr-TR')} tarihinde ${personnel.toplam_ciro ? (personnel.toplam_ciro * 0.15).toFixed(2) : 0} ₺ ciro ile gerçekleştirdi.`,
-    `${personnel.ad_soyad}'in müşteri memnuniyet puanı ortalama 4.7/5.`,
-    `En popüler hizmet kombinasyonu: ${personnel.en_cok_islem || 'Saç Kesimi'} + Fön`
-  ];
+  // Create smart analysis texts with variety
+  const generateSmartAnalysis = () => {
+    const mockAnalysis = [
+      `${personnel.ad_soyad} son 30 günde toplam ${personnel.islem_sayisi || 0} işlem gerçekleştirdi ve ${personnel.toplam_ciro ? `₺${personnel.toplam_ciro.toLocaleString('tr-TR')}` : '₺0'} ciro oluşturdu.`,
+      `En çok yapılan işlem "${personnel.en_cok_islem || 'Saç Kesimi'}" olarak görülüyor.`,
+      `Bu personelin işlem başına ortalama geliri: ${personnel.toplam_ciro && personnel.islem_sayisi ? `₺${(personnel.toplam_ciro / personnel.islem_sayisi).toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : '₺0'}`,
+      `En çok performans gösterdiği kategori: ${personnel.en_cok_kategori || 'Saç Hizmeti'}`,
+      `${personnel.ad_soyad} en verimli gününü ${new Date().toLocaleDateString('tr-TR')} tarihinde ${personnel.toplam_ciro ? (personnel.toplam_ciro * 0.15).toFixed(2) : 0} ₺ ciro ile gerçekleştirdi.`,
+      `${personnel.ad_soyad}'in müşteri memnuniyet puanı ortalama 4.7/5.`,
+      `En popüler hizmet kombinasyonu: ${personnel.en_cok_islem || 'Saç Kesimi'} + Fön`,
+      `${personnel.ad_soyad}, seçilen tarih aralığında günde ortalama ${personnel.islem_sayisi ? Math.round((personnel.islem_sayisi / 30) * 10) / 10 : 0} işlem yapmıştır.`
+    ];
+    
+    // Randomly select 3 different analysis items
+    return mockAnalysis
+      .sort(() => 0.5 - Math.random())
+      .slice(0, 3);
+  };
+
+  const [smartAnalysis, setSmartAnalysis] = useState<string[]>([]);
   
-  // Combine all analysis options
-  const allAnalysis = [...mockSmartAnalysis, ...extraAnalysis];
-  
+  useEffect(() => {
+    setSmartAnalysis(generateSmartAnalysis());
+  }, [refreshKey, personnel.id]);
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap justify-between items-center gap-2 pb-4 border-b">
+      <div className="flex flex-wrap justify-between items-center gap-2 pb-4">
         <div className="flex items-center gap-2 flex-wrap">
           <Button 
             variant="outline" 
@@ -77,16 +107,14 @@ export function PerformanceTab({ personnel }: PerformanceTabProps) {
           <DateRangePicker
             from={dateRange.from}
             to={dateRange.to}
-            onSelect={setDateRange}
+            onSelect={handleDateRangeChange}
           />
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="flex items-center gap-1"
-            onClick={getCustomDateRange}
-          >
-            <span className="hidden md:inline">Özel Ay Döngüsü</span>
-          </Button>
+          <CustomMonthCycleSelector 
+            selectedDay={monthCycleDay}
+            onChange={handleMonthCycleChange}
+            active={useMonthCycle}
+            onClear={() => setUseMonthCycle(false)}
+          />
           <Button 
             variant="outline" 
             size="icon" 
@@ -106,16 +134,12 @@ export function PerformanceTab({ personnel }: PerformanceTabProps) {
           </span>
         </div>
         <ul className="space-y-2 pl-2" key={refreshKey}>
-          {/* Randomly select 3 different analysis items based on refresh key */}
-          {allAnalysis
-            .sort(() => 0.5 - Math.random())
-            .slice(0, 3)
-            .map((analysis, index) => (
-              <li className="flex items-start gap-2" key={index}>
-                <span className="text-purple-600 font-bold">•</span>
-                <span className="text-sm">{analysis}</span>
-              </li>
-            ))}
+          {smartAnalysis.map((analysis, index) => (
+            <li className="flex items-start gap-2" key={index}>
+              <span className="text-purple-600 font-bold">•</span>
+              <span className="text-sm">{analysis}</span>
+            </li>
+          ))}
         </ul>
       </div>
 
