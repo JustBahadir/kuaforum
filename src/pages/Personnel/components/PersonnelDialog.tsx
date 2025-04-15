@@ -1,141 +1,65 @@
 
-import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { PersonnelForm } from "@/components/operations/PersonnelForm";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { PersonnelForm } from "./PersonnelForm";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { personelServisi } from "@/lib/supabase";
 import { toast } from "sonner";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
+import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 
 interface PersonnelDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onPersonnelAdded?: () => void;
 }
 
-export function PersonnelDialog({ 
-  open, 
-  onOpenChange,
-  onPersonnelAdded 
-}: PersonnelDialogProps) {
+export function PersonnelDialog({ open, onOpenChange }: PersonnelDialogProps) {
   const queryClient = useQueryClient();
-  const [formData, setFormData] = useState({
-    ad_soyad: "",
-    telefon: "",
-    eposta: "",
-    adres: "",
-    personel_no: "",
-    calisma_sistemi: "aylik_maas",
-    maas: 0,
-    prim_yuzdesi: 0,
-    iban: "",
-    birth_date: ""
-  });
-
-  const createMutation = useMutation({
-    mutationFn: async (data: any) => {
-      return await personelServisi.ekle(data);
-    },
+  const { userRole } = useCustomerAuth();
+  
+  const { mutate, isPending } = useMutation({
+    mutationFn: (personelData: any) => personelServisi.ekle(personelData),
     onSuccess: () => {
-      toast.success("Personel başarıyla eklendi!");
-      queryClient.invalidateQueries({ queryKey: ["personeller"] });
-      onPersonChange();
-      if (onPersonnelAdded) {
-        onPersonnelAdded();
-      }
+      queryClient.invalidateQueries({ queryKey: ['personel'] });
+      toast.success("Personel başarıyla eklendi");
+      onOpenChange(false);
     },
     onError: (error) => {
-      console.error("Create error:", error);
-      toast.error("Personel eklenirken bir hata oluştu.");
-    },
+      console.error("Personel eklenirken hata:", error);
+      toast.error("Personel eklenirken bir hata oluştu");
+    }
   });
-
-  // Reset form on open state change
-  useEffect(() => {
-    if (open) {
-      setFormData({
-        ad_soyad: "",
-        telefon: "",
-        eposta: "",
-        adres: "",
-        personel_no: "",
-        calisma_sistemi: "aylik_maas",
-        maas: 0,
-        prim_yuzdesi: 0,
-        iban: "",
-        birth_date: ""
-      });
-    }
-  }, [open]);
-
-  const handleFormChange = (field: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-
-    // If changing to commission-based, set salary to 0
-    if (field === "calisma_sistemi" && value === "prim_komisyon") {
-      setFormData(prev => ({
-        ...prev,
-        calisma_sistemi: value,
-        maas: 0
-      }));
-    }
-    
-    // If changing to salary-based, set commission to 0
-    if (field === "calisma_sistemi" && value !== "prim_komisyon") {
-      setFormData(prev => ({
-        ...prev,
-        calisma_sistemi: value,
-        prim_yuzdesi: 0
-      }));
-    }
-  };
-
-  const handleSubmit = () => {
-    // Validate form
-    if (!formData.ad_soyad.trim()) {
-      toast.error("Ad Soyad alanı boş olamaz.");
-      return;
-    }
-
-    // Create personnel
-    createMutation.mutate(formData);
-  };
-
-  const onPersonChange = () => {
-    onOpenChange(false);
-  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent>
         <DialogHeader>
-          <DialogTitle>Yeni Personel Ekle</DialogTitle>
+          <DialogTitle>Personel Sistemi</DialogTitle>
         </DialogHeader>
         
-        <div className="py-4">
-          <PersonnelForm 
-            personnel={formData}
-            onChange={handleFormChange}
-          />
-        </div>
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Personel eklemek için, personellerinizin dükkan kodunuzu kullanarak üye olmalarını sağlayın. 
+            Dükkanınızın kodunu Dükkan Ayarları sayfasından öğrenebilirsiniz.
+          </AlertDescription>
+        </Alert>
         
-        <div className="flex justify-end space-x-4 pt-4">
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-          >
-            İptal
-          </Button>
-          <Button 
-            onClick={handleSubmit}
-            disabled={createMutation.isPending}
-          >
-            {createMutation.isPending ? "Ekleniyor..." : "Personel Ekle"}
-          </Button>
-        </div>
+        {userRole === 'admin' ? (
+          <PersonnelForm onSubmit={mutate} isLoading={isPending} />
+        ) : (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Yalnızca dükkan yöneticileri personel ekleyebilir.
+            </AlertDescription>
+          </Alert>
+        )}
       </DialogContent>
     </Dialog>
   );

@@ -11,23 +11,18 @@ import { Plus, Search, FilterX } from "lucide-react";
 
 interface PersonnelListProps {
   onPersonnelSelect?: (personnelId: number) => void;
-  personnel?: any[];
 }
 
-export function PersonnelList({ onPersonnelSelect, personnel: initialPersonnel }: PersonnelListProps) {
+export function PersonnelList({ onPersonnelSelect }: PersonnelListProps) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [open, setOpen] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [selectedPersonnel, setSelectedPersonnel] = useState<any>(null);
 
-  const { data: fetchedPersonnel = [], isLoading } = useQuery({
+  const { data: personnel = [], isLoading } = useQuery({
     queryKey: ["personeller"],
     queryFn: () => personelServisi.hepsiniGetir(),
-    // Skip fetching if we already have personnel data
-    enabled: !initialPersonnel,
   });
-
-  const personnel = initialPersonnel || fetchedPersonnel;
 
   const handlePersonnelClick = useCallback((personnel: any) => {
     setSelectedPersonnel(personnel);
@@ -90,7 +85,7 @@ export function PersonnelList({ onPersonnelSelect, personnel: initialPersonnel }
             </Button>
           )}
         </div>
-        <Button onClick={() => setOpen(true)}>
+        <Button onClick={() => setIsDialogOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Yeni Personel
         </Button>
@@ -132,8 +127,8 @@ export function PersonnelList({ onPersonnelSelect, personnel: initialPersonnel }
 
       {/* Add New Personnel Dialog */}
       <PersonnelDialog
-        open={open}
-        onOpenChange={setOpen}
+        isOpen={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
         onPersonnelAdded={() => {
           // Do something when personnel is added
         }}

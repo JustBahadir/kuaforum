@@ -1,97 +1,245 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { formatCurrency } from "@/lib/utils";
-import { format } from "date-fns";
-import { tr } from "date-fns/locale";
-import { Loader2 } from "lucide-react";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { CustomMonthCycleSelector } from "@/components/ui/custom-month-cycle-selector";
+import { Input } from "@/components/ui/input";
+import { Search, Calendar } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface OperationsHistoryTabProps {
   personnel: any;
-  operations?: any[];
-  isLoading?: boolean;
+  operations: any[];
+  isLoading: boolean;
 }
 
-export function OperationsHistoryTab({ personnel, operations = [], isLoading = false }: OperationsHistoryTabProps) {
-  if (isLoading) {
-    return (
-      <div className="flex justify-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
+export function OperationsHistoryTab({ 
+  personnel, 
+  operations, 
+  isLoading 
+}: OperationsHistoryTabProps) {
+  const [dateRange, setDateRange] = useState({
+    from: new Date(new Date().setDate(new Date().getDate() - 30)),
+    to: new Date()
+  });
+  const [searchTerm, setSearchTerm] = useState("");
+  const [monthCycleDay, setMonthCycleDay] = useState(1);
+  const [useMonthCycle, setUseMonthCycle] = useState(false);
+  const [singleDateMode, setSingleDateMode] = useState(false);
+  
+  const handleDateRangeChange = ({from, to}: {from: Date, to: Date}) => {
+    setDateRange({from, to});
+    setUseMonthCycle(false);
+    setSingleDateMode(false);
+  };
 
-  if (!operations || operations.length === 0) {
-    return (
-      <div className="text-center p-8 border rounded-lg bg-muted/30">
-        <p className="text-muted-foreground">İşlem geçmişi bulunamadı.</p>
-      </div>
-    );
-  }
+  const handleMonthCycleChange = (day: number, date: Date) => {
+    setMonthCycleDay(day);
+    setSingleDateMode(false);
+    
+    const currentDate = new Date();
+    const selectedDay = day;
+    
+    let fromDate = new Date();
+    
+    // Set to previous month's cycle day
+    fromDate.setDate(selectedDay);
+    if (currentDate.getDate() < selectedDay) {
+      fromDate.setMonth(fromDate.getMonth() - 1);
+    }
+    
+    // Create the end date (same day, current month)
+    const toDate = new Date(fromDate);
+    toDate.setMonth(toDate.getMonth() + 1);
+    
+    setDateRange({
+      from: fromDate,
+      to: toDate
+    });
+    
+    setUseMonthCycle(true);
+  };
+  
+  const handleSingleDateModeToggle = () => {
+    const newSingleDateMode = !singleDateMode;
+    setSingleDateMode(newSingleDateMode);
+    
+    if (newSingleDateMode) {
+      // When enabling single date mode, set both from and to to the same day
+      const today = new Date();
+      setDateRange({
+        from: today,
+        to: today
+      });
+    }
+    
+    setUseMonthCycle(false);
+  };
+  
+  const handleSingleDateChange = (date: Date | null) => {
+    if (!date) return;
+    setDateRange({ from: date, to: date });
+  };
 
-  // Sort operations by date (newest first)
-  const sortedOperations = [...operations].sort((a, b) => {
-    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  // Filter operations by date range and search term
+  const filteredOperations = operations.filter(op => {
+    if (!op.created_at) return false;
+    const date = new Date(op.created_at);
+    const isInDateRange = date >= dateRange.from && date <= dateRange.to;
+    
+    if (!isInDateRange) return false;
+    
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      const customerName = op.musteri ? 
+        `${op.musteri.first_name || ''} ${op.musteri.last_name || ''}`.toLowerCase() : '';
+      const serviceName = op.islem ? op.islem.islem_adi?.toLowerCase() : '';
+      const description = op.aciklama?.toLowerCase() || '';
+      
+      return customerName.includes(searchLower) || 
+             serviceName.includes(searchLower) || 
+             description.includes(searchLower);
+    }
+    
+    return true;
   });
 
+  // Calculate totals
+  const totalRevenue = filteredOperations.reduce((sum, op) => sum + (Number(op.tutar) || 0), 0);
+  const totalCommission = filteredOperations.reduce((sum, op) => sum + (Number(op.odenen) || 0), 0);
+  const totalOperations = filteredOperations.length;
+  const totalPoints = filteredOperations.reduce((sum, op) => sum + (Number(op.puan) || 0), 0);
+
+  // Determine if this is a commission-based worker
+  const isCommissionBased = personnel.calisma_sistemi === "prim_komisyon";
+
   return (
-    <div className="space-y-6">
-      <div className="rounded-md border">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tarih</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Müşteri</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlem</th>
-              <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Tutar</th>
-              <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Prim %</th>
-              <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Kazanç</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {sortedOperations.map((operation) => (
-              <tr key={operation.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {operation.created_at ? format(new Date(operation.created_at), "dd MMM yyyy", { locale: tr }) : "Belirtilmemiş"}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {operation.musteri ? `${operation.musteri.first_name} ${operation.musteri.last_name || ''}` : "Belirtilmemiş"}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {operation.islem?.islem_adi || operation.aciklama || "Belirtilmemiş"}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
-                  {formatCurrency(operation.tutar)}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
-                  %{operation.prim_yuzdesi || 0}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
-                  {formatCurrency(operation.odenen)}
-                </td>
+    <div className="space-y-4">
+      {/* Search Field - Full Width */}
+      <div className="relative w-full">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Müşteri veya işlem ara..."
+          className="pl-9 w-full"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+      </div>
+
+      {/* Date Selection Controls - Horizontal Layout */}
+      <div className="flex flex-wrap gap-3 items-center">
+        <Button
+          variant={singleDateMode ? "secondary" : "outline"}
+          size="sm"
+          className="h-9 gap-1 whitespace-nowrap"
+          onClick={handleSingleDateModeToggle}
+        >
+          <Calendar className="h-4 w-4" />
+          <span>{singleDateMode ? "Tek Gün" : "Tarih Aralığı"}</span>
+        </Button>
+
+        {singleDateMode ? (
+          <DateRangePicker
+            from={dateRange.from}
+            to={dateRange.from}
+            onSelect={({ from }) => handleSingleDateChange(from)}
+            singleDate={true}
+          />
+        ) : !useMonthCycle && (
+          <DateRangePicker
+            from={dateRange.from}
+            to={dateRange.to}
+            onSelect={handleDateRangeChange}
+            singleDate={false}
+          />
+        )}
+
+        <CustomMonthCycleSelector
+          selectedDay={monthCycleDay}
+          onChange={handleMonthCycleChange}
+          active={useMonthCycle}
+          onClear={() => setUseMonthCycle(false)}
+        />
+      </div>
+
+      {/* Summary Cards */}
+      <div className="flex flex-wrap gap-2 mt-2">
+        <div className="bg-muted p-2 px-3 rounded-md text-sm">
+          <span className="text-muted-foreground mr-1">İşlem:</span> 
+          <span className="font-medium">{totalOperations}</span>
+        </div>
+        <div className="bg-muted p-2 px-3 rounded-md text-sm">
+          <span className="text-muted-foreground mr-1">Ciro:</span> 
+          <span className="font-medium text-green-600">{formatCurrency(totalRevenue)}</span>
+        </div>
+        {isCommissionBased && (
+          <div className="bg-muted p-2 px-3 rounded-md text-sm">
+            <span className="text-muted-foreground mr-1">Prim:</span> 
+            <span className="font-medium text-blue-600">{formatCurrency(totalCommission)}</span>
+          </div>
+        )}
+        <div className="bg-muted p-2 px-3 rounded-md text-sm">
+          <span className="text-muted-foreground mr-1">Puan:</span> 
+          <span className="font-medium text-purple-600">{totalPoints}</span>
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="flex justify-center p-12">
+          <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
+        </div>
+      ) : filteredOperations.length > 0 ? (
+        <div className="overflow-x-auto border rounded-md mt-2">
+          <table className="w-full">
+            <thead className="bg-muted">
+              <tr>
+                <th className="text-left p-2 text-xs font-medium text-muted-foreground">TARİH</th>
+                <th className="text-left p-2 text-xs font-medium text-muted-foreground">MÜŞTERİ</th>
+                <th className="text-left p-2 text-xs font-medium text-muted-foreground">İŞLEM</th>
+                {isCommissionBased && (
+                  <th className="text-right p-2 text-xs font-medium text-muted-foreground">PRİM %</th>
+                )}
+                <th className="text-right p-2 text-xs font-medium text-muted-foreground">TUTAR</th>
+                {isCommissionBased && (
+                  <th className="text-right p-2 text-xs font-medium text-muted-foreground">ÖDENEN</th>
+                )}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      
-      <div className="bg-muted/30 p-4 rounded-md">
-        <div className="flex justify-between items-center">
-          <span className="text-sm font-medium text-muted-foreground">Toplam İşlem</span>
-          <span className="text-sm font-medium">{operations.length}</span>
+            </thead>
+            <tbody>
+              {filteredOperations.map((op) => (
+                <tr key={op.id} className="border-t hover:bg-muted/50">
+                  <td className="p-2 text-sm">
+                    {new Date(op.created_at).toLocaleDateString("tr-TR")}
+                  </td>
+                  <td className="p-2 text-sm">
+                    {op.musteri ? `${op.musteri.first_name} ${op.musteri.last_name || ''}` : '-'}
+                  </td>
+                  <td className="p-2 text-sm">
+                    {op.islem?.islem_adi || op.aciklama || '-'}
+                  </td>
+                  {isCommissionBased && (
+                    <td className="p-2 text-sm text-right">
+                      %{op.prim_yuzdesi || 0}
+                    </td>
+                  )}
+                  <td className="p-2 text-sm text-right">
+                    {formatCurrency(op.tutar || 0)}
+                  </td>
+                  {isCommissionBased && (
+                    <td className="p-2 text-sm text-right font-medium text-blue-600">
+                      {formatCurrency(op.odenen || 0)}
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-        <div className="flex justify-between items-center mt-2">
-          <span className="text-sm font-medium text-muted-foreground">Toplam Ciro</span>
-          <span className="text-sm font-medium">
-            {formatCurrency(operations.reduce((sum, op) => sum + (Number(op.tutar) || 0), 0))}
-          </span>
+      ) : (
+        <div className="text-center p-8 text-muted-foreground">
+          {searchTerm ? "Arama kriterlerine uygun işlem bulunamadı." : "Seçilen tarih aralığında işlem bulunamadı."}
         </div>
-        <div className="flex justify-between items-center mt-2">
-          <span className="text-sm font-medium text-muted-foreground">Toplam Kazanç</span>
-          <span className="text-sm font-medium text-success">
-            {formatCurrency(operations.reduce((sum, op) => sum + (Number(op.odenen) || 0), 0))}
-          </span>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
