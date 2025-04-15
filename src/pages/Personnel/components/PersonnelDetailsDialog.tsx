@@ -91,7 +91,7 @@ export function PersonnelDetailsDialog({
                 <DialogTitle className="text-xl">{personnel.ad_soyad}</DialogTitle>
                 <DialogDescription>
                   {personnel.calisma_sistemi === "prim_komisyon" 
-                    ? `Yüzdelik Çalışan (%${personnel.prim_yuzdesi})` 
+                    ? `Komisyonlu Çalışan (%${personnel.prim_yuzdesi})` 
                     : personnel.calisma_sistemi === "aylik_maas" 
                       ? "Aylık Maaşlı" 
                       : personnel.calisma_sistemi === "haftalik_maas" 

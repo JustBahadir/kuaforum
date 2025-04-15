@@ -1,245 +1,251 @@
 
 import React, { useState, useEffect } from "react";
-import { formatCurrency } from "@/lib/utils";
+import { Card, CardContent } from "@/components/ui/card";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { CustomMonthCycleSelector } from "@/components/ui/custom-month-cycle-selector";
 import { Input } from "@/components/ui/input";
-import { Search, Calendar } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { 
+  Table, 
+  TableHeader, 
+  TableBody, 
+  TableRow, 
+  TableHead, 
+  TableCell 
+} from "@/components/ui/table";
+import { format, addMonths, subMonths, startOfMonth, endOfMonth } from "date-fns";
+import { formatCurrency } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Search } from "lucide-react";
 
 interface OperationsHistoryTabProps {
   personnel: any;
-  operations: any[];
-  isLoading: boolean;
+  operations?: any[];
+  isLoading?: boolean;
 }
 
 export function OperationsHistoryTab({ 
   personnel, 
-  operations, 
-  isLoading 
+  operations = [],
+  isLoading = false
 }: OperationsHistoryTabProps) {
-  const [dateRange, setDateRange] = useState({
-    from: new Date(new Date().setDate(new Date().getDate() - 30)),
-    to: new Date()
-  });
   const [searchTerm, setSearchTerm] = useState("");
-  const [monthCycleDay, setMonthCycleDay] = useState(1);
-  const [useMonthCycle, setUseMonthCycle] = useState(false);
-  const [singleDateMode, setSingleDateMode] = useState(false);
+  const [filteredOperations, setFilteredOperations] = useState<any[]>([]);
+  const [singleDate, setSingleDate] = useState(false);
   
-  const handleDateRangeChange = ({from, to}: {from: Date, to: Date}) => {
-    setDateRange({from, to});
-    setUseMonthCycle(false);
-    setSingleDateMode(false);
+  // Date range state
+  const today = new Date();
+  const [dateRange, setDateRange] = useState({
+    from: subMonths(today, 1),
+    to: today
+  });
+  
+  // Custom month cycle
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  const [cycleActive, setCycleActive] = useState(false);
+  
+  // Stats
+  const [stats, setStats] = useState({
+    totalOperations: 0,
+    totalRevenue: 0,
+    totalPoints: 0
+  });
+  
+  // Calculate stats from filtered operations
+  const calculateStats = (ops: any[]) => {
+    const newStats = {
+      totalOperations: ops.length,
+      totalRevenue: ops.reduce((sum, op) => sum + (op.tutar || 0), 0),
+      totalPoints: ops.reduce((sum, op) => sum + (op.puan || 0), 0)
+    };
+    setStats(newStats);
   };
-
-  const handleMonthCycleChange = (day: number, date: Date) => {
-    setMonthCycleDay(day);
-    setSingleDateMode(false);
+  
+  // Handle date range change
+  const handleDateRangeChange = (range: { from: Date; to: Date }) => {
+    setDateRange(range);
+    setSingleDate(range.from.toDateString() === range.to.toDateString());
+    setCycleActive(false);
+    setSelectedDay(null);
+  };
+  
+  // Handle custom month cycle selection
+  const handleCycleDaySelect = (day: number, date: Date) => {
+    setSelectedDay(day);
+    setCycleActive(true);
     
+    // Calculate date range based on selected day
     const currentDate = new Date();
-    const selectedDay = day;
+    const currentDay = currentDate.getDate();
     
-    let fromDate = new Date();
+    let from: Date, to: Date;
     
-    // Set to previous month's cycle day
-    fromDate.setDate(selectedDay);
-    if (currentDate.getDate() < selectedDay) {
-      fromDate.setMonth(fromDate.getMonth() - 1);
+    if (currentDay >= day) {
+      // If today is after or on the cycle day, cycle is current month to next month
+      from = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+      to = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, day - 1);
+    } else {
+      // If today is before the cycle day, cycle is previous month to this month
+      from = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, day);
+      to = new Date(currentDate.getFullYear(), currentDate.getMonth(), day - 1);
     }
     
-    // Create the end date (same day, current month)
-    const toDate = new Date(fromDate);
-    toDate.setMonth(toDate.getMonth() + 1);
-    
+    setDateRange({ from, to });
+    setSingleDate(false);
+  };
+  
+  // Clear cycle selection
+  const handleClearCycle = () => {
+    setCycleActive(false);
+    setSelectedDay(null);
     setDateRange({
-      from: fromDate,
-      to: toDate
+      from: subMonths(today, 1),
+      to: today
+    });
+    setSingleDate(false);
+  };
+  
+  // Filter operations by search term and date range
+  useEffect(() => {
+    if (!operations) return;
+    
+    const term = searchTerm.toLowerCase();
+    
+    const filtered = operations.filter(op => {
+      // Filter by search term
+      const matchesSearch = !term || 
+        (op.aciklama && op.aciklama.toLowerCase().includes(term)) ||
+        (op.notlar && op.notlar.toLowerCase().includes(term));
+      
+      // Filter by date range if date exists
+      let matchesDate = true;
+      if (op.created_at) {
+        const opDate = new Date(op.created_at);
+        matchesDate = opDate >= dateRange.from && opDate <= dateRange.to;
+      }
+      
+      return matchesSearch && matchesDate;
     });
     
-    setUseMonthCycle(true);
-  };
-  
-  const handleSingleDateModeToggle = () => {
-    const newSingleDateMode = !singleDateMode;
-    setSingleDateMode(newSingleDateMode);
-    
-    if (newSingleDateMode) {
-      // When enabling single date mode, set both from and to to the same day
-      const today = new Date();
-      setDateRange({
-        from: today,
-        to: today
-      });
-    }
-    
-    setUseMonthCycle(false);
-  };
-  
-  const handleSingleDateChange = (date: Date | null) => {
-    if (!date) return;
-    setDateRange({ from: date, to: date });
-  };
-
-  // Filter operations by date range and search term
-  const filteredOperations = operations.filter(op => {
-    if (!op.created_at) return false;
-    const date = new Date(op.created_at);
-    const isInDateRange = date >= dateRange.from && date <= dateRange.to;
-    
-    if (!isInDateRange) return false;
-    
-    if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase();
-      const customerName = op.musteri ? 
-        `${op.musteri.first_name || ''} ${op.musteri.last_name || ''}`.toLowerCase() : '';
-      const serviceName = op.islem ? op.islem.islem_adi?.toLowerCase() : '';
-      const description = op.aciklama?.toLowerCase() || '';
-      
-      return customerName.includes(searchLower) || 
-             serviceName.includes(searchLower) || 
-             description.includes(searchLower);
-    }
-    
-    return true;
-  });
-
-  // Calculate totals
-  const totalRevenue = filteredOperations.reduce((sum, op) => sum + (Number(op.tutar) || 0), 0);
-  const totalCommission = filteredOperations.reduce((sum, op) => sum + (Number(op.odenen) || 0), 0);
-  const totalOperations = filteredOperations.length;
-  const totalPoints = filteredOperations.reduce((sum, op) => sum + (Number(op.puan) || 0), 0);
-
-  // Determine if this is a commission-based worker
-  const isCommissionBased = personnel.calisma_sistemi === "prim_komisyon";
+    setFilteredOperations(filtered);
+    calculateStats(filtered);
+  }, [operations, searchTerm, dateRange]);
 
   return (
     <div className="space-y-4">
-      {/* Search Field - Full Width */}
-      <div className="relative w-full">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      {/* Search Bar */}
+      <div className="relative">
+        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Müşteri veya işlem ara..."
-          className="pl-9 w-full"
+          placeholder="İşlemlerde ara..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-8"
         />
       </div>
-
-      {/* Date Selection Controls - Horizontal Layout */}
-      <div className="flex flex-wrap gap-3 items-center">
-        <Button
-          variant={singleDateMode ? "secondary" : "outline"}
-          size="sm"
-          className="h-9 gap-1 whitespace-nowrap"
-          onClick={handleSingleDateModeToggle}
-        >
-          <Calendar className="h-4 w-4" />
-          <span>{singleDateMode ? "Tek Gün" : "Tarih Aralığı"}</span>
-        </Button>
-
-        {singleDateMode ? (
-          <DateRangePicker
-            from={dateRange.from}
-            to={dateRange.from}
-            onSelect={({ from }) => handleSingleDateChange(from)}
-            singleDate={true}
-          />
-        ) : !useMonthCycle && (
-          <DateRangePicker
-            from={dateRange.from}
-            to={dateRange.to}
-            onSelect={handleDateRangeChange}
-            singleDate={false}
-          />
-        )}
-
+      
+      {/* Date Controls */}
+      <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center">
+        <DateRangePicker
+          from={dateRange.from}
+          to={dateRange.to}
+          onSelect={handleDateRangeChange}
+          singleDate={singleDate}
+          className="flex-grow"
+        />
         <CustomMonthCycleSelector
-          selectedDay={monthCycleDay}
-          onChange={handleMonthCycleChange}
-          active={useMonthCycle}
-          onClear={() => setUseMonthCycle(false)}
+          selectedDay={selectedDay || 1}
+          onChange={handleCycleDaySelect}
+          active={cycleActive}
+          onClear={handleClearCycle}
         />
       </div>
-
-      {/* Summary Cards */}
-      <div className="flex flex-wrap gap-2 mt-2">
-        <div className="bg-muted p-2 px-3 rounded-md text-sm">
-          <span className="text-muted-foreground mr-1">İşlem:</span> 
-          <span className="font-medium">{totalOperations}</span>
-        </div>
-        <div className="bg-muted p-2 px-3 rounded-md text-sm">
-          <span className="text-muted-foreground mr-1">Ciro:</span> 
-          <span className="font-medium text-green-600">{formatCurrency(totalRevenue)}</span>
-        </div>
-        {isCommissionBased && (
-          <div className="bg-muted p-2 px-3 rounded-md text-sm">
-            <span className="text-muted-foreground mr-1">Prim:</span> 
-            <span className="font-medium text-blue-600">{formatCurrency(totalCommission)}</span>
-          </div>
-        )}
-        <div className="bg-muted p-2 px-3 rounded-md text-sm">
-          <span className="text-muted-foreground mr-1">Puan:</span> 
-          <span className="font-medium text-purple-600">{totalPoints}</span>
-        </div>
+      
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-sm font-medium text-muted-foreground">İşlem Sayısı</div>
+            <div className="text-2xl font-bold mt-2">
+              {isLoading ? <Skeleton className="h-8 w-16" /> : stats.totalOperations}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-sm font-medium text-muted-foreground">Toplam Ciro</div>
+            <div className="text-2xl font-bold mt-2">
+              {isLoading ? <Skeleton className="h-8 w-24" /> : formatCurrency(stats.totalRevenue)}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-sm font-medium text-muted-foreground">Toplam Puan</div>
+            <div className="text-2xl font-bold mt-2">
+              {isLoading ? <Skeleton className="h-8 w-16" /> : stats.totalPoints}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {isLoading ? (
-        <div className="flex justify-center p-12">
-          <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
-        </div>
-      ) : filteredOperations.length > 0 ? (
-        <div className="overflow-x-auto border rounded-md mt-2">
-          <table className="w-full">
-            <thead className="bg-muted">
-              <tr>
-                <th className="text-left p-2 text-xs font-medium text-muted-foreground">TARİH</th>
-                <th className="text-left p-2 text-xs font-medium text-muted-foreground">MÜŞTERİ</th>
-                <th className="text-left p-2 text-xs font-medium text-muted-foreground">İŞLEM</th>
-                {isCommissionBased && (
-                  <th className="text-right p-2 text-xs font-medium text-muted-foreground">PRİM %</th>
-                )}
-                <th className="text-right p-2 text-xs font-medium text-muted-foreground">TUTAR</th>
-                {isCommissionBased && (
-                  <th className="text-right p-2 text-xs font-medium text-muted-foreground">ÖDENEN</th>
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {filteredOperations.map((op) => (
-                <tr key={op.id} className="border-t hover:bg-muted/50">
-                  <td className="p-2 text-sm">
-                    {new Date(op.created_at).toLocaleDateString("tr-TR")}
-                  </td>
-                  <td className="p-2 text-sm">
-                    {op.musteri ? `${op.musteri.first_name} ${op.musteri.last_name || ''}` : '-'}
-                  </td>
-                  <td className="p-2 text-sm">
-                    {op.islem?.islem_adi || op.aciklama || '-'}
-                  </td>
-                  {isCommissionBased && (
-                    <td className="p-2 text-sm text-right">
-                      %{op.prim_yuzdesi || 0}
-                    </td>
+      {/* Operations Table */}
+      <Card>
+        <CardContent className="p-4">
+          <h3 className="font-medium mb-3">İşlem Geçmişi</h3>
+          {isLoading ? (
+            <div className="space-y-2">
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-full" />
+            </div>
+          ) : (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Tarih</TableHead>
+                    <TableHead>İşlem</TableHead>
+                    <TableHead>Müşteri</TableHead>
+                    <TableHead className="text-right">Tutar</TableHead>
+                    <TableHead className="text-right">Puan</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredOperations.length > 0 ? (
+                    filteredOperations.map((operation) => (
+                      <TableRow key={operation.id}>
+                        <TableCell>
+                          {operation.created_at ? 
+                            format(new Date(operation.created_at), 'dd.MM.yyyy') : 
+                            'Belirtilmemiş'}
+                        </TableCell>
+                        <TableCell>{operation.aciklama || 'Belirtilmemiş'}</TableCell>
+                        <TableCell>
+                          {operation.musteri_adi || 'Müşteri Yok'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {formatCurrency(operation.tutar || 0)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {operation.puan || 0}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
+                        {searchTerm 
+                          ? "Arama kriterlerine uygun işlem bulunamadı." 
+                          : "Bu tarih aralığında işlem bulunmamaktadır."}
+                      </TableCell>
+                    </TableRow>
                   )}
-                  <td className="p-2 text-sm text-right">
-                    {formatCurrency(op.tutar || 0)}
-                  </td>
-                  {isCommissionBased && (
-                    <td className="p-2 text-sm text-right font-medium text-blue-600">
-                      {formatCurrency(op.odenen || 0)}
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <div className="text-center p-8 text-muted-foreground">
-          {searchTerm ? "Arama kriterlerine uygun işlem bulunamadı." : "Seçilen tarih aralığında işlem bulunamadı."}
-        </div>
-      )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
