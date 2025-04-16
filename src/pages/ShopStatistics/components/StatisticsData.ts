@@ -26,15 +26,16 @@ export const servicePerformanceData = [
   { name: 'Pedikür', count: 20, revenue: 1000 },
 ];
 
+// Updated dailyData with property name included for better compatibility
 export const dailyData = [
-  { saat: '09:00', ciro: 150, musteri: 2 },
-  { saat: '10:00', ciro: 300, musteri: 3 },
-  { saat: '11:00', ciro: 450, musteri: 4 },
-  { saat: '12:00', ciro: 200, musteri: 2 },
-  { saat: '13:00', ciro: 100, musteri: 1 },
-  { saat: '14:00', ciro: 350, musteri: 3 },
-  { saat: '15:00', ciro: 400, musteri: 4 },
-  { saat: '16:00', ciro: 500, musteri: 5 },
-  { saat: '17:00', ciro: 450, musteri: 4 },
-  { saat: '18:00', ciro: 300, musteri: 3 },
+  { name: '09:00', saat: '09:00', ciro: 150, musteri: 2, islemSayisi: 2 },
+  { name: '10:00', saat: '10:00', ciro: 300, musteri: 3, islemSayisi: 3 },
+  { name: '11:00', saat: '11:00', ciro: 450, musteri: 4, islemSayisi: 4 },
+  { name: '12:00', saat: '12:00', ciro: 200, musteri: 2, islemSayisi: 2 },
+  { name: '13:00', saat: '13:00', ciro: 100, musteri: 1, islemSayisi: 1 },
+  { name: '14:00', saat: '14:00', ciro: 350, musteri: 3, islemSayisi: 3 },
+  { name: '15:00', saat: '15:00', ciro: 400, musteri: 4, islemSayisi: 4 },
+  { name: '16:00', saat: '16:00', ciro: 500, musteri: 5, islemSayisi: 5 },
+  { name: '17:00', saat: '17:00', ciro: 450, musteri: 4, islemSayisi: 4 },
+  { name: '18:00', saat: '18:00', ciro: 300, musteri: 3, islemSayisi: 3 },
 ];
