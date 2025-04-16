@@ -1,4 +1,3 @@
-
 import { supabase } from '../client';
 import { Personel } from '../types';
 import { profilServisi } from './profilServisi';
@@ -63,7 +62,7 @@ export const personelServisi = {
               
               if (profileData.address && profileData.address !== personel.adres) {
                 personel.adres = profileData.address;
-                updatedFields.adres = profileData.address;
+                updatedFields.adres = profileData.adres;
               }
               
               if (profileData.avatar_url) {

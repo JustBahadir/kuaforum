@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { personelIslemleriServisi, personelServisi } from "@/lib/supabase";
@@ -43,7 +44,7 @@ export function PersonnelOperationsTable({
     setUseMonthCycle(false);
   };
 
-  const handleMonthCycleChange = (day: number) => {
+  const handleMonthCycleChange = (day: number, date: Date) => {
     setMonthCycleDay(day);
     
     const currentDate = new Date();

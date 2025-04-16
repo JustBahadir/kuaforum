@@ -24,6 +24,7 @@ import { CustomMonthCycleSelector } from "@/components/ui/custom-month-cycle-sel
 import { RevenueSourceChart } from "./components/RevenueSourceChart";
 import { CategoryDistributionChart } from "./components/CategoryDistributionChart";
 
+// Define type for service data
 interface ServiceDataItem {
   name: string;
   count: number;
@@ -31,6 +32,7 @@ interface ServiceDataItem {
   percentage?: number;
 }
 
+// Define type for category data
 interface CategoryData {
   name: string;
   value: number;
@@ -64,6 +66,7 @@ export default function ShopStatistics() {
   const [insights, setInsights] = useState<string[]>([]);
   const [isInsightsLoading, setIsInsightsLoading] = useState(true);
 
+  // Fetch personnel data
   const { data: personnel = [], isLoading: personnelLoading } = useQuery({
     queryKey: ["personnel-stats"],
     queryFn: personelServisi.hepsiniGetir,
@@ -74,7 +77,7 @@ export default function ShopStatistics() {
     setUseMonthCycle(false);
   };
 
-  const handleMonthCycleChange = (day: number) => {
+  const handleMonthCycleChange = (day: number, date: Date) => {
     setMonthCycleDay(day);
     
     const currentDate = new Date();
@@ -82,11 +85,13 @@ export default function ShopStatistics() {
     
     let fromDate = new Date();
     
+    // Set to previous month's cycle day
     fromDate.setDate(selectedDay);
     if (currentDate.getDate() < selectedDay) {
       fromDate.setMonth(fromDate.getMonth() - 1);
     }
     
+    // Create the end date (same day, current month)
     const toDate = new Date(fromDate);
     toDate.setMonth(toDate.getMonth() + 1);
     
@@ -98,6 +103,7 @@ export default function ShopStatistics() {
     setUseMonthCycle(true);
   };
 
+  // Fetch operations data based on date range
   const { data: operations = [], isLoading: operationsLoading } = useQuery({
     queryKey: ["operations-stats", dateRange.from, dateRange.to],
     queryFn: async () => {
@@ -115,16 +121,19 @@ export default function ShopStatistics() {
     },
   });
 
+  // Fetch services
   const { data: services = [], isLoading: servicesLoading } = useQuery({
     queryKey: ["services-stats"],
     queryFn: () => islemServisi.hepsiniGetir(),
   });
 
+  // Fetch categories
   const { data: categories = [], isLoading: categoriesLoading } = useQuery({
     queryKey: ["categories-stats"],
     queryFn: () => kategoriServisi.hepsiniGetir(),
   });
 
+  // Calculate service data
   const serviceData = useState(() => {
     if (!operations.length) return [];
 
@@ -149,6 +158,7 @@ export default function ShopStatistics() {
       totalRevenue += op.tutar || 0;
     });
 
+    // Sort by revenue and calculate percentages
     const result = Array.from(serviceMap.values())
       .sort((a, b) => b.revenue - a.revenue)
       .map((item) => ({
@@ -159,6 +169,7 @@ export default function ShopStatistics() {
     return result;
   })[0];
 
+  // Calculate category data
   const categoryData: CategoryData[] = useState(() => {
     if (!operations.length) return [];
 
@@ -166,6 +177,7 @@ export default function ShopStatistics() {
     let totalRevenue = 0;
 
     operations.forEach((op) => {
+      // Fix for accessing the category property
       const categoryId = op.islem?.kategori_id;
       const category = categories.find(c => c.id === categoryId);
       const categoryName = category ? category.kategori_adi : "Diğer";
@@ -185,6 +197,7 @@ export default function ShopStatistics() {
       totalRevenue += op.tutar || 0;
     });
 
+    // Calculate percentages
     const result = Array.from(categoryMap.values()).map((item) => ({
       ...item,
       percentage: totalRevenue > 0 ? (item.value / totalRevenue) * 100 : 0,
@@ -193,6 +206,7 @@ export default function ShopStatistics() {
     return result;
   })[0];
 
+  // Common statistics
   const stats = useState(() => {
     if (!operations.length)
       return { totalRevenue: 0, totalOperations: 0, averageRevenue: 0 };
@@ -204,6 +218,7 @@ export default function ShopStatistics() {
     return { totalRevenue, totalOperations, averageRevenue };
   })[0];
 
+  // Generate AI insights
   useEffect(() => {
     const generateInsights = () => {
       setIsInsightsLoading(true);
@@ -217,6 +232,7 @@ export default function ShopStatistics() {
 
         const insights = [];
 
+        // Top service by revenue
         if (serviceData.length > 0) {
           const topService = serviceData[0];
           insights.push(
@@ -226,6 +242,7 @@ export default function ShopStatistics() {
           );
         }
 
+        // Top service by count
         const sortedByCount = [...serviceData].sort((a, b) => b.count - a.count);
         if (sortedByCount.length > 0) {
           insights.push(
@@ -233,6 +250,7 @@ export default function ShopStatistics() {
           );
         }
 
+        // Busiest day
         const dayMap = new Map<string, number>();
         operations.forEach((op) => {
           if (!op.created_at) return;
@@ -250,6 +268,7 @@ export default function ShopStatistics() {
           insights.push(`En yoğun gün: ${busiestDay[1]} işlem ile ${busiestDay[0]}.`);
         }
 
+        // Most productive personnel
         const personnelMap = new Map<string, { count: number; revenue: number }>();
         operations.forEach((op) => {
           if (!op.personel_id) return;
@@ -294,6 +313,7 @@ export default function ShopStatistics() {
           }
         }
 
+        // Least popular service
         if (sortedByCount.length > 2 && insights.length < 4) {
           const leastPopular =
             sortedByCount[sortedByCount.length - 1];
@@ -316,9 +336,11 @@ export default function ShopStatistics() {
     }
   }, [operations, serviceData, personnel, operationsLoading, servicesLoading, categoriesLoading]);
 
+  // Handle refresh of insights
   const handleRefreshInsights = () => {
     setIsInsightsLoading(true);
     setTimeout(() => {
+      // Re-generate insights with some randomization for variety
       const currentInsights = [...insights];
       const shuffled = currentInsights.sort(() => 0.5 - Math.random());
       setInsights(shuffled);
@@ -349,6 +371,7 @@ export default function ShopStatistics() {
       <div className="container mx-auto py-6">
         <h1 className="text-2xl font-bold mb-6">Dükkan İstatistikleri</h1>
 
+        {/* AI analyst section */}
         <AnalystBox
           title=""
           insights={insights}
@@ -358,6 +381,7 @@ export default function ShopStatistics() {
           className="mb-6"
         />
 
+        {/* Date range and custom month cycle selection */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
           <Select value={activeView} onValueChange={setActiveView}>
             <SelectTrigger className="w-[180px]">
@@ -390,6 +414,7 @@ export default function ShopStatistics() {
           </div>
         </div>
 
+        {/* Basic stats */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           <Card>
             <CardHeader className="pb-2">
@@ -436,6 +461,7 @@ export default function ShopStatistics() {
           </Card>
         </div>
 
+        {/* Main content section with performance charts */}
         <Card className="mb-6">
           <CardHeader>
             <CardTitle>Performans Verileri</CardTitle>
@@ -447,6 +473,7 @@ export default function ShopStatistics() {
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Revenue by service chart */}
                 <div>
                   <h3 className="text-sm font-medium mb-1">
                     Hizmet Bazlı Gelir Dağılımı
@@ -483,6 +510,7 @@ export default function ShopStatistics() {
                   </div>
                 </div>
 
+                {/* Category distribution chart */}
                 <div>
                   <h3 className="text-sm font-medium mb-1">
                     Kategori Dağılımı
@@ -524,6 +552,7 @@ export default function ShopStatistics() {
           </CardContent>
         </Card>
                 
+        {/* Category distribution and revenue source charts */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
           <CategoryDistributionChart data={categoryData} isLoading={isLoading} />
           <RevenueSourceChart data={serviceData} isLoading={isLoading} />
