@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
@@ -243,7 +242,11 @@ export function ServicePerformanceView({
         </TabsContent>
 
         <TabsContent value="categories">
-          <CategoryPerformanceView dateRange={dateRange} refreshKey={0} />
+          <CategoryPerformanceView 
+            operations={filteredOperations}
+            dateRange={dateRange}
+            refreshKey={refreshKey} // Pass the refreshKey prop
+          />
         </TabsContent>
       </Tabs>
     </div>

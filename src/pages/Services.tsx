@@ -1,15 +1,13 @@
-
 import { useState } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ServicesContent } from "@/components/operations/ServicesContent";
 import { ServiceCostManagement } from "@/components/operations/ServiceCostManagement";
 import { useQuery } from "@tanstack/react-query";
-import { kategoriServisi, islemServisi } from "@/lib/supabase";
+import { islemKategoriServisi, islemServisi } from "@/lib/supabase";
 
 export default function Services() {
   const [activeTab, setActiveTab] = useState("services");
-  // Add state variables needed for ServicesContent
   const [dialogAcik, setDialogAcik] = useState(false);
   const [kategoriDialogAcik, setKategoriDialogAcik] = useState(false);
   const [kategoriDuzenleDialogAcik, setKategoriDuzenleDialogAcik] = useState(false);
@@ -24,10 +22,9 @@ export default function Services() {
   const [duzenleId, setDuzenleId] = useState<number | null>(null);
   const [puanlamaAktif, setPuanlamaAktif] = useState(true);
 
-  // Fetch categories and services
   const { data: kategoriler = [] } = useQuery({
     queryKey: ['kategoriler'],
-    queryFn: kategoriServisi.hepsiniGetir
+    queryFn: islemKategoriServisi.hepsiniGetir
   });
 
   const { data: islemler = [] } = useQuery({
@@ -35,7 +32,6 @@ export default function Services() {
     queryFn: islemServisi.hepsiniGetir
   });
 
-  // Add placeholder functions for required props
   const handleServiceFormSubmit = () => {};
   const handleCategoryFormSubmit = () => {};
   const handleCategoryEditFormSubmit = () => {};

@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { kategoriServisi, islemServisi } from "@/lib/supabase";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { islemServisi, islemKategoriServisi } from "@/lib/supabase";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -11,9 +10,9 @@ export default function CustomerOperations() {
   const navigate = useNavigate();
   const [openCategory, setOpenCategory] = useState<string | null>(null);
 
-  const { data: kategoriler = [], isLoading: kategorilerLoading } = useQuery({
+  const { data: kategoriler = [] } = useQuery({
     queryKey: ['kategoriler'],
-    queryFn: kategoriServisi.hepsiniGetir,
+    queryFn: islemKategoriServisi.hepsiniGetir
   });
 
   const { data: islemler = [], isLoading: islemlerLoading } = useQuery({

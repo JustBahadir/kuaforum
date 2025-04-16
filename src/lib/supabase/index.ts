@@ -1,7 +1,6 @@
+
 // Export types
 export * from './types';
-export * from './services/customerOperationsService';
-export * from './services/customerPersonalDataService';
 
 // Export services
 import { personelServisi } from './services/personelServisi';
@@ -10,8 +9,17 @@ import { islemServisi } from './services/islemServisi';
 import { islemKategoriServisi } from './services/islemKategoriServisi';
 import { randevuServisi } from './services/randevuServisi';
 import { musteriServisi } from './services/musteriServisi';
-import { notificationServisi } from './services/notificationServisi';
 import { dukkanServisi } from './services/dukkanServisi';
+import { siralamaServisi } from './services/siralamaServisi';
+
+// Import from local files if they exist, otherwise export empty objects for compatibility
+let notificationServisi;
+try {
+  notificationServisi = require('./services/notificationServisi').notificationServisi;
+} catch (e) {
+  notificationServisi = {};
+  console.warn('notificationServisi not found, using empty object');
+}
 
 export {
   personelServisi,
@@ -22,10 +30,5 @@ export {
   musteriServisi,
   notificationServisi,
   dukkanServisi,
-  profilServisi,
-  bildirimServisi as notificationServisi,
-  customerPersonalDataService,
-  customerOperationsService,
-  supabase,
   siralamaServisi,
 };
