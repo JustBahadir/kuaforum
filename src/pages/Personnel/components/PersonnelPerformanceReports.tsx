@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -609,14 +610,16 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
                           <div className="flex justify-between items-center mb-2">
                             <h3 className="font-medium">İşlem Dağılımı</h3>
                             <TooltipProvider>
-                              <TooltipTrigger>
-                                <InfoIcon className="h-4 w-4 text-muted-foreground" />
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p className="max-w-xs">
-                                  Her bir işlem tipi için yapılan toplam işlem sayısı. Çok sayıda az tekrarlanan işlem varsa, bunlar "Diğer" kategorisinde toplanır.
-                                </p>
-                              </TooltipContent>
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <InfoIcon className="h-4 w-4 text-muted-foreground" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="max-w-xs">
+                                    Her bir işlem tipi için yapılan toplam işlem sayısı. Çok sayıda az tekrarlanan işlem varsa, bunlar "Diğer" kategorisinde toplanır.
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
                             </TooltipProvider>
                           </div>
                           
@@ -673,14 +676,16 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
                           <div className="flex justify-between items-center mb-2">
                             <h3 className="font-medium">Ciro Dağılımı</h3>
                             <TooltipProvider>
-                              <TooltipTrigger>
-                                <InfoIcon className="h-4 w-4 text-muted-foreground" />
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p className="max-w-xs">
-                                  Her bir işlem tipinin toplam ciroya katkısı. Grafikteki büyük dilimler en çok gelir getiren işlemleri gösterir.
-                                </p>
-                              </TooltipContent>
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <InfoIcon className="h-4 w-4 text-muted-foreground" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="max-w-xs">
+                                    Her bir işlem tipinin toplam ciroya katkısı. Grafikteki büyük dilimler en çok gelir getiren işlemleri gösterir.
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
                             </TooltipProvider>
                           </div>
                           
@@ -827,3 +832,13 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
                         </div>
                       </div>
                     </TabsContent>
+                  </CardContent>
+                </Card>
+              </Tabs>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
