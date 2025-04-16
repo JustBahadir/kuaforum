@@ -53,8 +53,8 @@ export function CategoryPerformanceView({
   const { data: categories = [], isLoading: categoriesLoading } = useQuery({
     queryKey: ['islem-kategorileri'],
     queryFn: async () => {
-      const { islemKategorileriServisi } = await import('@/lib/supabase');
-      return islemKategorileriServisi.hepsiniGetir();
+      const { kategoriServisi } = await import('@/lib/supabase');
+      return kategoriServisi.hepsiniGetir();
     }
   });
 

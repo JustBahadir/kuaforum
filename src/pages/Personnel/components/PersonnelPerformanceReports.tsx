@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -105,7 +104,7 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
     }
   };
 
-  const handleMonthCycleChange = (day: number, date: Date) => {
+  const handleMonthCycleChange = (day: number) => {
     setMonthCycleDay(day);
     
     const currentDate = new Date();
@@ -129,7 +128,6 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
     });
     
     setUseMonthCycle(true);
-    setUseSingleDate(false);
   };
 
   const { data: operationsData = [], isLoading: operationsLoading } = useQuery({

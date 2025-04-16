@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
@@ -47,15 +46,17 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
     setUseMonthCycle(false);
   };
 
-  const handleMonthCycleChange = (day: number, date: Date) => {
+  const handleMonthCycleChange = (day: number) => {
     setMonthCycleDay(day);
     
     const currentDate = new Date();
+    const selectedDay = day;
+    
     let fromDate = new Date();
     
     // Set to previous month's cycle day
-    fromDate.setDate(day);
-    if (currentDate.getDate() < day) {
+    fromDate.setDate(selectedDay);
+    if (currentDate.getDate() < selectedDay) {
       fromDate.setMonth(fromDate.getMonth() - 1);
     }
     
@@ -71,7 +72,6 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
     setUseMonthCycle(true);
   };
 
-  // Filter operations based on date range
   const filteredOperations = useMemo(() => {
     return islemGecmisi.filter(op => {
       if (!op.created_at) return false;
@@ -80,7 +80,6 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
     });
   }, [islemGecmisi, dateRange]);
 
-  // Group operations by personnel
   const personnelPerformance = useMemo(() => {
     const performanceMap = new Map();
     
@@ -105,11 +104,10 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
     });
     
     return Array.from(performanceMap.values())
-      .filter(entry => entry.islemSayisi > 0) // Only show personnel with operations
+      .filter(entry => entry.islemSayisi > 0)
       .sort((a, b) => b[sortBy] - a[sortBy]);
   }, [filteredOperations, personeller, sortBy]);
 
-  // Group operations by service
   const servicePerformance = useMemo(() => {
     const serviceMap = new Map();
     
@@ -136,7 +134,6 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
       .sort((a, b) => b.ciro - a.ciro);
   }, [filteredOperations]);
 
-  // Time-series data
   const timeSeriesData = useMemo(() => {
     const timeMap = new Map();
     
@@ -169,7 +166,6 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
       });
   }, [filteredOperations]);
 
-  // Calculate summary metrics
   const summaryMetrics = useMemo(() => {
     const totalRevenue = filteredOperations.reduce((sum, op) => sum + (Number(op.tutar) || 0), 0);
     const totalCommission = filteredOperations.reduce((sum, op) => sum + (Number(op.odenen) || 0), 0);
@@ -184,7 +180,6 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
     };
   }, [filteredOperations]);
 
-  // AI Insights
   const aiInsights = useMemo(() => {
     const insights = [];
     
@@ -192,29 +187,24 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
       return ["Bu dönem için yeterli veri bulunmamaktadır."];
     }
     
-    // Top personnel by revenue
     if (personnelPerformance.length > 0) {
       const topByRevenue = personnelPerformance[0];
       insights.push(`En yüksek ciroyu ${topByRevenue.name} elde etti (${formatCurrency(topByRevenue.ciro)}).`);
     }
     
-    // Top personnel by operation count
     const topByOps = [...personnelPerformance].sort((a, b) => b.islemSayisi - a.islemSayisi)[0];
     insights.push(`En fazla işlemi ${topByOps.name} gerçekleştirdi (${topByOps.islemSayisi} işlem).`);
     
-    // Top service
     if (servicePerformance.length > 0) {
       const topService = servicePerformance[0];
       insights.push(`En çok gelir getiren hizmet: ${topService.name} (${formatCurrency(topService.ciro)}).`);
     }
     
-    // Most productive day
     if (timeSeriesData.length > 0) {
       const mostProductiveDay = [...timeSeriesData].sort((a, b) => b.islemSayisi - a.islemSayisi)[0];
       insights.push(`En yoğun gün: ${mostProductiveDay.date} (${mostProductiveDay.islemSayisi} işlem).`);
     }
     
-    // Revenue distribution
     if (personnelPerformance.length > 1) {
       const totalRevenue = personnelPerformance.reduce((sum, p) => sum + p.ciro, 0);
       const topRevenue = personnelPerformance[0].ciro;
@@ -257,7 +247,6 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
         </div>
       </div>
       
-      {/* Summary metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="py-2">
@@ -296,7 +285,6 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
         </Card>
       </div>
       
-      {/* AI Insights */}
       <Card>
         <CardHeader>
           <CardTitle>Akıllı Analiz</CardTitle>
@@ -367,7 +355,6 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
                 </div>
               )}
               
-              {/* Detailed table */}
               <div className="mt-6 overflow-x-auto">
                 <table className="w-full border-collapse">
                   <thead>
@@ -545,7 +532,6 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
                 </div>
               )}
               
-              {/* Services table */}
               <div className="mt-6 overflow-x-auto">
                 <table className="w-full border-collapse">
                   <thead>

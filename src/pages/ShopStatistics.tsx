@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,10 +37,8 @@ import { AnalystBox } from "@/components/analyst/AnalystBox";
 import { Loader2 } from "lucide-react";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 
-// Import debounce from utils/index.ts instead of lib/utils
 import { debounce } from "@/utils";
 
-// Color scheme for charts
 const CHART_COLORS = [
   "#8884d8", "#82ca9d", "#ffc658", "#ff8042", "#0088FE", 
   "#00C49F", "#FFBB28", "#FF8042", "#a4de6c", "#d0ed57"
@@ -61,13 +58,11 @@ export default function ShopStatistics() {
   const [aiInsights, setAiInsights] = useState<string[]>([]);
   const [isAiLoading, setIsAiLoading] = useState(true);
   
-  // Fetch personnel data
   const { data: personnel = [], isLoading: isPersonnelLoading } = useQuery({
     queryKey: ['personnel'],
     queryFn: () => personelServisi.hepsiniGetir(),
   });
   
-  // Fetch operations data
   const { data: operations = [], isLoading: isOperationsLoading } = useQuery({
     queryKey: ['operations', dateRange.from, dateRange.to],
     queryFn: async () => {
@@ -80,13 +75,11 @@ export default function ShopStatistics() {
     },
   });
   
-  // Fetch services data
   const { data: services = [], isLoading: isServicesLoading } = useQuery({
     queryKey: ['services'],
     queryFn: () => islemServisi.hepsiniGetir(),
   });
   
-  // Fetch categories data
   const { data: categories = [], isLoading: isCategoriesLoading } = useQuery({
     queryKey: ['categories'],
     queryFn: () => kategoriServisi.hepsiniGetir(),
@@ -94,7 +87,6 @@ export default function ShopStatistics() {
 
   const isLoading = isPersonnelLoading || isOperationsLoading || isServicesLoading || isCategoriesLoading;
   
-  // Handle time range change
   const handleTimeRangeChange = (value: string) => {
     setTimeRange(value);
     setUseMonthCycle(false);
@@ -126,15 +118,13 @@ export default function ShopStatistics() {
     setDateRange({ from, to });
   };
   
-  // Handle date range change
   const handleDateRangeChange = (range: { from: Date, to: Date }) => {
     setDateRange(range);
     setTimeRange('custom');
     setUseMonthCycle(false);
   };
 
-  // Handle month cycle change
-  const handleMonthCycleChange = (day: number, date: Date) => {
+  const handleMonthCycleChange = (day: number) => {
     setMonthCycleDay(day);
     
     const currentDate = new Date();
@@ -161,7 +151,6 @@ export default function ShopStatistics() {
     setUseMonthCycle(true);
   };
   
-  // Filter operations based on date range - Define this before it's used
   const filteredOperations = useMemo(() => {
     return operations.filter(operation => {
       if (!operation.created_at) return false;
@@ -170,7 +159,6 @@ export default function ShopStatistics() {
     });
   }, [operations, dateRange]);
   
-  // Transform operations data by date for performance chart
   const performanceData = useMemo(() => {
     if (isLoading || operations.length === 0) return [];
     
@@ -182,7 +170,6 @@ export default function ShopStatistics() {
       const date = new Date(operation.created_at);
       let key;
       
-      // Format the date key based on time range
       if (timeRange === 'day') {
         key = format(date, 'HH:00', { locale: tr });
       } else if (timeRange === 'week' || timeRange === 'custom' && dateRange.to.getTime() - dateRange.from.getTime() < 8 * 24 * 60 * 60 * 1000) {
@@ -202,11 +189,9 @@ export default function ShopStatistics() {
       entry.revenue += Number(operation.tutar) || 0;
     });
     
-    // Convert map to array and sort by date
     return Array.from(dataMap.values());
   }, [operations, timeRange, dateRange]);
   
-  // Transform operations data by service for service chart
   const serviceData = useMemo(() => {
     if (isLoading || operations.length === 0) return [];
     
@@ -234,12 +219,10 @@ export default function ShopStatistics() {
       entry.revenue += Number(operation.tutar) || 0;
     });
     
-    // Convert map to array and sort by revenue
     return Array.from(dataMap.values())
       .sort((a, b) => b.revenue - a.revenue);
   }, [operations, services]);
   
-  // Transform operations data by category
   const categoryData = useMemo(() => {
     if (isLoading || operations.length === 0) return [];
     
@@ -265,7 +248,6 @@ export default function ShopStatistics() {
     }));
   }, [operations, categories, filteredOperations, isLoading]);
   
-  // Calculate summary statistics
   const stats = useMemo(() => {
     const totalRevenue = filteredOperations.reduce((sum, op) => sum + (Number(op.tutar) || 0), 0);
     const totalOperations = filteredOperations.length;
@@ -274,39 +256,33 @@ export default function ShopStatistics() {
     return { totalRevenue, totalOperations, averageTicket };
   }, [filteredOperations]);
 
-  // Function to generate AI insights
   const generateAiInsights = () => {
     setIsAiLoading(true);
     
     try {
       const insights = [];
       
-      // If no data, return empty insights
       if (filteredOperations.length === 0) {
         setAiInsights([]);
         setIsAiLoading(false);
         return;
       }
       
-      // Most revenue service
       if (serviceData.length > 0) {
         const topService = serviceData[0];
         insights.push(`En yüksek ciro "${topService.name}" hizmetinden geldi (${formatCurrency(topService.revenue)}).`);
       }
       
-      // Most popular service by count
       const sortedByCount = [...serviceData].sort((a, b) => b.count - a.count);
       if (sortedByCount.length > 0) {
         insights.push(`En çok tercih edilen hizmet "${sortedByCount[0].name}" oldu (${sortedByCount[0].count} işlem).`);
       }
       
-      // Least popular service
       if (sortedByCount.length > 2) {
         const leastPopular = sortedByCount[sortedByCount.length - 1];
         insights.push(`En az tercih edilen hizmet "${leastPopular.name}" oldu (${leastPopular.count} işlem).`);
       }
       
-      // Busiest day or time period
       if (performanceData.length > 0) {
         const busiestPeriod = [...performanceData].sort((a, b) => b.operations - a.operations)[0];
         
@@ -319,13 +295,11 @@ export default function ShopStatistics() {
         insights.push(`En yoğun ${timeLabel} "${busiestPeriod.name}" oldu (${busiestPeriod.operations} işlem).`);
       }
       
-      // Period with highest revenue
       if (performanceData.length > 0) {
         const highestRevenuePeriod = [...performanceData].sort((a, b) => b.revenue - a.revenue)[0];
         insights.push(`En yüksek ciro "${highestRevenuePeriod.name}" döneminde elde edildi (${formatCurrency(highestRevenuePeriod.revenue)}).`);
       }
 
-      // Most productive personnel
       const personnelStats = new Map();
       filteredOperations.forEach(op => {
         if (!op.personel_id) return;
@@ -355,7 +329,6 @@ export default function ShopStatistics() {
         insights.push(`En yüksek ciroyu getiren personel ${topPersonByRevenue.name} (${formatCurrency(topPersonByRevenue.revenue)}).`);
       }
       
-      // Randomize and limit insights
       const shuffledInsights = [...insights].sort(() => 0.5 - Math.random());
       setAiInsights(shuffledInsights.slice(0, 4));
       
@@ -367,14 +340,12 @@ export default function ShopStatistics() {
     }
   };
 
-  // Generate insights when data changes
   useEffect(() => {
     if (!isLoading) {
       generateAiInsights();
     }
   }, [filteredOperations, timeRange]);
   
-  // Format ToolTip
   const formatTooltip = (value: number, name: string) => {
     if (name === 'revenue') {
       return [formatCurrency(value), 'Ciro'];
@@ -437,7 +408,6 @@ export default function ShopStatistics() {
           </div>
         </div>
 
-        {/* Summary statistics */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           <Card>
             <CardHeader className="pb-2">
@@ -470,7 +440,6 @@ export default function ShopStatistics() {
           </Card>
         </div>
 
-        {/* Performance Chart */}
         <Card className="mb-6">
           <CardHeader>
             <CardTitle>Performans Grafiği</CardTitle>
@@ -538,7 +507,6 @@ export default function ShopStatistics() {
           </CardContent>
         </Card>
         
-        {/* Service Performance */}
         <Card className="mb-6">
           <CardHeader>
             <CardTitle>Hizmet Performansı</CardTitle>
@@ -611,7 +579,6 @@ export default function ShopStatistics() {
           </CardContent>
         </Card>
             
-        {/* Category distribution and revenue source charts */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
           <Card>
             <CardHeader>

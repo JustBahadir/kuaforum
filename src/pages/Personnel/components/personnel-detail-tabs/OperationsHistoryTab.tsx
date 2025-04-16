@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { formatCurrency } from "@/lib/utils";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
@@ -33,9 +32,8 @@ export function OperationsHistoryTab({
     setSingleDateMode(false);
   };
 
-  const handleMonthCycleChange = (day: number, date: Date) => {
+  const handleMonthCycleChange = (day: number) => {
     setMonthCycleDay(day);
-    setSingleDateMode(false);
     
     const currentDate = new Date();
     const selectedDay = day;
@@ -154,7 +152,7 @@ export function OperationsHistoryTab({
           />
         )}
 
-        <CustomMonthCycleSelector
+        <CustomMonthCycleSelector 
           selectedDay={monthCycleDay}
           onChange={handleMonthCycleChange}
           active={useMonthCycle}
