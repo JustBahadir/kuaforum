@@ -10,7 +10,7 @@ import {
   XAxis, 
   YAxis, 
   CartesianGrid, 
-  RechartsTooltip, 
+  Tooltip as RechartsTooltip, 
   Legend, 
   ResponsiveContainer,
   BarChart,
@@ -25,7 +25,12 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CircleAlert, InfoIcon, CalendarIcon } from "lucide-react";
 import { PersonelIslemi as PersonelIslemiType } from "@/lib/supabase/types";
 import { CustomMonthCycleSelector } from "@/components/ui/custom-month-cycle-selector";
-import { TooltipProvider, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { 
+  TooltipProvider, 
+  TooltipContent, 
+  TooltipTrigger, 
+  Tooltip 
+} from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -387,20 +392,22 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
         <div className="flex gap-2">
           {!useMonthCycle && (
             <TooltipProvider>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant={useSingleDate ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setUseSingleDate(!useSingleDate)}
-                  className={cn(useSingleDate && "bg-purple-600 hover:bg-purple-700")}
-                >
-                  <CalendarIcon className="h-4 w-4 mr-1" />
-                  <span>Tek Gün</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Tek gün seçin</p>
-              </TooltipContent>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant={useSingleDate ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setUseSingleDate(!useSingleDate)}
+                    className={cn(useSingleDate && "bg-purple-600 hover:bg-purple-700")}
+                  >
+                    <CalendarIcon className="h-4 w-4 mr-1" />
+                    <span>Tek Gün</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Tek gün seçin</p>
+                </TooltipContent>
+              </Tooltip>
             </TooltipProvider>
           )}
 
@@ -749,7 +756,7 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
                         <div className="flex justify-between items-center mb-2">
                           <h3 className="font-medium">Kategori Bazlı Performans</h3>
                           <TooltipProvider>
-                            <TooltipUI>
+                            <Tooltip>
                               <TooltipTrigger>
                                 <InfoIcon className="h-4 w-4 text-muted-foreground" />
                               </TooltipTrigger>
@@ -758,7 +765,7 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
                                   İşlemler hizmet kategorilerine göre gruplandırılmıştır. Her kategorinin toplam performansı gösterilir.
                                 </p>
                               </TooltipContent>
-                            </TooltipUI>
+                            </Tooltip>
                           </TooltipProvider>
                         </div>
                         
@@ -820,13 +827,3 @@ export function PersonnelPerformanceReports({ personnelId }: PersonnelPerformanc
                         </div>
                       </div>
                     </TabsContent>
-                  </CardContent>
-                </Card>
-              </Tabs>
-            </>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
