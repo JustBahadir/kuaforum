@@ -16,7 +16,6 @@ import { useQuery } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
 import { PerformanceTab } from "./personnel-detail-tabs/PerformanceTab";
-import { Button } from "@/components/ui/button";
 
 interface PersonnelDetailsDialogProps {
   personId?: number | null;
@@ -118,18 +117,12 @@ export function PersonnelDetailsDialog({
               </p>
             )}
           </div>
-          <div className="flex items-center">
-            <Button variant="outline" onClick={handleRefreshData}>
-              Yenile
-            </Button>
-          </div>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
-          <TabsList className="grid grid-cols-4">
+          <TabsList className="grid grid-cols-3">
             <TabsTrigger value="info">Genel Bilgiler</TabsTrigger>
             <TabsTrigger value="work">Çalışma Bilgileri</TabsTrigger>
-            <TabsTrigger value="photo">Fotoğraf</TabsTrigger>
             <TabsTrigger value="performance">Performans</TabsTrigger>
           </TabsList>
 
@@ -145,15 +138,6 @@ export function PersonnelDetailsDialog({
           <TabsContent value="work" className="mt-4">
             {personnel && (
               <WorkInfoTab
-                personnel={personnel}
-                onSave={handleRefreshData}
-              />
-            )}
-          </TabsContent>
-
-          <TabsContent value="photo" className="mt-4">
-            {personnel && (
-              <PersonnelImageTab
                 personnel={personnel}
                 onSave={handleRefreshData}
               />

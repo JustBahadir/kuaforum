@@ -53,7 +53,7 @@ export function PerformanceTab({
 
   const handleSingleDateChange = (date: Date | undefined) => {
     if (date) {
-      setDateRange({from: date, to: new Date(date)});
+      setDateRange({from: date, to: date});
       setUseMonthCycle(false);
       setUseSingleDate(true);
     }
@@ -95,6 +95,17 @@ export function PerformanceTab({
     return generateSmartInsights(filteredOperations, serviceData);
   }, [filteredOperations, serviceData]);
 
+  const toggleDateSelector = () => {
+    setUseSingleDate(!useSingleDate);
+    if (!useSingleDate) {
+      // When switching to single date mode, set both dates to the "from" date
+      setDateRange(prev => ({from: prev.from, to: prev.from}));
+    } else {
+      // When switching back to range mode, set the "to" date to today
+      setDateRange(prev => ({from: prev.from, to: new Date()}));
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap justify-between items-center gap-2 pb-2">
@@ -106,15 +117,15 @@ export function PerformanceTab({
                   <Button 
                     variant={useSingleDate ? "default" : "outline"}
                     size="sm"
-                    onClick={() => setUseSingleDate(!useSingleDate)}
+                    onClick={toggleDateSelector}
                     className={cn(useSingleDate && "bg-purple-600 hover:bg-purple-700")}
                   >
                     <CalendarIcon className="h-4 w-4 mr-1" />
-                    <span>Tek Gün</span>
+                    <span>{useSingleDate ? "Tarih Aralığı" : "Tek Gün"}</span>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Tek gün seçin</p>
+                  <p>{useSingleDate ? "Tarih aralığı seç" : "Tek gün seç"}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>

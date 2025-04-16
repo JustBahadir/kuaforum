@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -31,13 +32,13 @@ export function WorkInfoTab({ personnel, onSave }: WorkInfoTabProps) {
 
   const updateMutation = useMutation({
     mutationFn: async (data: any) => {
+      console.log("Sending data to server:", data);
       return await personelServisi.guncelle(personnel.id, data);
     },
     onSuccess: () => {
       toast.success("Personel bilgileri başarıyla güncellendi!");
       queryClient.invalidateQueries({ queryKey: ["personeller"] });
       queryClient.invalidateQueries({ queryKey: ["personel-list"] });
-      queryClient.invalidateQueries({ queryKey: ["personel"] });
       queryClient.invalidateQueries({ queryKey: ["personnel-detail", personnel.id] });
       setIsEditing(false);
       
@@ -67,18 +68,20 @@ export function WorkInfoTab({ personnel, onSave }: WorkInfoTabProps) {
   };
 
   const handleSave = () => {
-    const updateData: any = {
-      calisma_sistemi: formData.calisma_sistemi
-    };
+    // Create a properly structured update data object
+    const updateData: any = {};
     
-    if (formData.calisma_sistemi === "prim_komisyon") {
-      updateData.prim_yuzdesi = parseInt(formData.prim_yuzdesi.toString());
-      updateData.maas = 0;
-    } else {
+    if (selectedTopOption === 'maaşlı') {
+      updateData.calisma_sistemi = formData.calisma_sistemi;
       updateData.maas = Number(formData.maas);
       updateData.prim_yuzdesi = 0;
+    } else {
+      updateData.calisma_sistemi = 'prim_komisyon';
+      updateData.maas = 0;
+      updateData.prim_yuzdesi = Number(formData.prim_yuzdesi);
     }
-    
+
+    console.log("Submitting update with data:", updateData);
     updateMutation.mutate(updateData);
   };
 
@@ -95,9 +98,6 @@ export function WorkInfoTab({ personnel, onSave }: WorkInfoTabProps) {
     );
     setIsEditing(false);
   };
-
-  const isSalaryType = ["aylik_maas", "haftalik_maas", "gunluk_maas"].includes(formData.calisma_sistemi);
-  const isCommissionType = formData.calisma_sistemi === "prim_komisyon";
 
   const isCommissionBased = personnel.calisma_sistemi === "prim_komisyon";
   
@@ -183,7 +183,7 @@ export function WorkInfoTab({ personnel, onSave }: WorkInfoTabProps) {
 
         <div>
           <h3 className="text-sm font-medium text-muted-foreground mb-1">
-            {isCommissionType ? "Prim Yüzdesi" : "Maaş Tutarı"}
+            {selectedTopOption === 'komisyonlu' ? "Prim Yüzdesi" : "Maaş Tutarı"}
           </h3>
           {!isEditing ? (
             <div className="font-normal">

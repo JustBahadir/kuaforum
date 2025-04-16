@@ -6,7 +6,7 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { ServicePerformanceData } from "@/utils/performanceUtils";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { CategoryPerformanceView } from "./CategoryPerformanceView";
 import {
   Bar,
@@ -104,68 +104,68 @@ export function ServicePerformanceView({
       </Card>
 
       {/* Hizmet / Kategori Tabs */}
-      <Tabs defaultValue="services" className="w-full" onValueChange={(value) => setActiveView(value as "services" | "categories")}>
+      <Tabs defaultValue="services" className="w-full">
         <TabsList className="w-full grid grid-cols-2">
-          <TabsTrigger value="services">Hizmet Raporları</TabsTrigger>
-          <TabsTrigger value="categories">Kategori Raporları</TabsTrigger>
+          <TabsTrigger value="services" onClick={() => setActiveView("services")}>Hizmet Raporları</TabsTrigger>
+          <TabsTrigger value="categories" onClick={() => setActiveView("categories")}>Kategori Raporları</TabsTrigger>
         </TabsList>
-      </Tabs>
-      
-      {activeView === "services" ? (
-        <>
+
+        <TabsContent value="services">
           {/* Karma Grafik: Sütunlar için Ciro, Çizgi için İşlem Sayısı */}
           <Card className="p-4">
             <h3 className="font-medium mb-4">Hizmet Bazlı Performans</h3>
             {serviceData.length > 0 ? (
-              <ScrollArea className="h-[300px]">
-                <div style={{ width: Math.max(serviceData.length * 80, 600) + 'px', height: '280px' }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={serviceData}
-                      margin={{ top: 5, right: 60, left: 20, bottom: 70 }}
-                      barSize={30}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis 
-                        dataKey="name"
-                        angle={-45} 
-                        textAnchor="end"
-                        height={70}
-                        interval={0}
-                        tick={{ fontSize: 11 }}
-                      />
-                      <YAxis 
-                        yAxisId="left"
-                        tickFormatter={(value) => `₺${value}`}
-                        label={{ value: 'Ciro (₺)', angle: -90, position: 'insideLeft', offset: -5 }}
-                      />
-                      <YAxis 
-                        yAxisId="right" 
-                        orientation="right" 
-                        label={{ value: 'İşlem Sayısı', angle: 90, position: 'insideRight', offset: 5 }}
-                      />
-                      <RechartsTooltip content={renderCustomBarTooltip} />
-                      <Legend wrapperStyle={{ bottom: -10 }} />
-                      <Bar 
-                        yAxisId="left"
-                        dataKey="revenue" 
-                        fill="#3b82f6" 
-                        name="Ciro"
-                      />
-                      <Line
-                        yAxisId="right"
-                        type="monotone"
-                        dataKey="count"
-                        stroke="#ef4444"
-                        strokeWidth={2}
-                        name="İşlem Sayısı"
-                        dot={{ r: 4 }}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-                <ScrollBar orientation="horizontal" />
-              </ScrollArea>
+              <div className="overflow-hidden">
+                <ScrollArea className="h-[300px] w-full">
+                  <div style={{ width: Math.max(serviceData.length * 80, 600) + 'px', height: '280px' }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={serviceData}
+                        margin={{ top: 5, right: 60, left: 20, bottom: 70 }}
+                        barSize={30}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis 
+                          dataKey="name"
+                          angle={-45} 
+                          textAnchor="end"
+                          height={70}
+                          interval={0}
+                          tick={{ fontSize: 11 }}
+                        />
+                        <YAxis 
+                          yAxisId="left"
+                          tickFormatter={(value) => `₺${value}`}
+                          label={{ value: 'Ciro (₺)', angle: -90, position: 'insideLeft', offset: -5 }}
+                        />
+                        <YAxis 
+                          yAxisId="right" 
+                          orientation="right" 
+                          label={{ value: 'İşlem Sayısı', angle: 90, position: 'insideRight', offset: 5 }}
+                        />
+                        <RechartsTooltip content={renderCustomBarTooltip} />
+                        <Legend wrapperStyle={{ bottom: -10 }} />
+                        <Bar 
+                          yAxisId="left"
+                          dataKey="revenue" 
+                          fill="#3b82f6" 
+                          name="Ciro"
+                        />
+                        <Line
+                          yAxisId="right"
+                          type="monotone"
+                          dataKey="count"
+                          stroke="#ef4444"
+                          strokeWidth={2}
+                          name="İşlem Sayısı"
+                          dot={{ r: 4 }}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <ScrollBar orientation="horizontal" />
+                </ScrollArea>
+              </div>
             ) : (
               <div className="h-[280px] flex items-center justify-center">
                 <p className="text-muted-foreground">Gösterilecek veri bulunmuyor</p>
@@ -174,7 +174,7 @@ export function ServicePerformanceView({
           </Card>
 
           {/* Pie Chart */}
-          <Card className="p-4">
+          <Card className="p-4 mt-6">
             <h3 className="font-medium mb-4">Hizmet Dağılımı</h3>
             {serviceData.length > 0 ? (
               <div className="h-[300px]">
@@ -205,7 +205,7 @@ export function ServicePerformanceView({
           </Card>
 
           {/* Table */}
-          <Card className="p-4">
+          <Card className="p-4 mt-6">
             <h3 className="font-medium mb-4">Hizmet Detayları</h3>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -240,10 +240,12 @@ export function ServicePerformanceView({
               </table>
             </div>
           </Card>
-        </>
-      ) : (
-        <CategoryPerformanceView dateRange={dateRange} refreshKey={0} />
-      )}
+        </TabsContent>
+
+        <TabsContent value="categories">
+          <CategoryPerformanceView dateRange={dateRange} refreshKey={0} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

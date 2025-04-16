@@ -1,31 +1,30 @@
 
-import React from "react";
+import React, { useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { RefreshCw, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useQuery } from "@tanstack/react-query";
+import { islemServisi, kategoriServisi, personelIslemleriServisi } from "@/lib/supabase";
 import {
   Bar,
   BarChart,
   Line,
   ResponsiveContainer,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   XAxis,
   YAxis,
   Cell,
   Pie,
   PieChart,
   Legend,
-  CartesianGrid
+  CartesianGrid,
 } from "recharts";
-import { useQuery } from "@tanstack/react-query";
-import { islemServisi, kategoriServisi, personelIslemleriServisi } from "@/lib/supabase";
 
 interface CategoryPerformanceViewProps {
-  dateRange: {
-    from: Date;
-    to: Date;
-  };
-  refreshKey?: number;
+  dateRange: { from: Date; to: Date };
+  refreshKey: number;
 }
 
 const COLORS = [
@@ -33,10 +32,21 @@ const COLORS = [
   '#FF8042', '#AF19FF', '#FF6B6B', '#10B981', '#2463EB', '#F59E0B', '#EC4899'
 ];
 
-export function CategoryPerformanceView({ dateRange, refreshKey = 0 }: CategoryPerformanceViewProps) {
-  // Fetch operations data based on date range
-  const { data: operations = [], isLoading: operationsLoading } = useQuery({
-    queryKey: ["operations", dateRange.from, dateRange.to, refreshKey],
+export function CategoryPerformanceView({
+  dateRange,
+  refreshKey
+}: CategoryPerformanceViewProps) {
+  const [insights, setInsights] = useState<string[]>([]);
+  
+  // Fetch categories
+  const { data: categories = [], isLoading: isCategoriesLoading } = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => kategoriServisi.hepsiniGetir(),
+  });
+  
+  // Fetch operations
+  const { data: operations = [], isLoading: isOperationsLoading } = useQuery({
+    queryKey: ['category-operations', dateRange.from, dateRange.to, refreshKey],
     queryFn: async () => {
       const data = await personelIslemleriServisi.hepsiniGetir();
       return data.filter(op => {
@@ -47,162 +57,258 @@ export function CategoryPerformanceView({ dateRange, refreshKey = 0 }: CategoryP
     },
   });
 
-  // Fetch services data
-  const { data: services = [], isLoading: servicesLoading } = useQuery({
-    queryKey: ["services", refreshKey],
+  // Fetch services for mapping
+  const { data: services = [], isLoading: isServicesLoading } = useQuery({
+    queryKey: ['services'],
     queryFn: () => islemServisi.hepsiniGetir(),
   });
+  
+  const isLoading = isCategoriesLoading || isOperationsLoading || isServicesLoading;
 
-  // Fetch categories data
-  const { data: categories = [], isLoading: categoriesLoading } = useQuery({
-    queryKey: ["categories", refreshKey],
-    queryFn: () => kategoriServisi.hepsiniGetir(),
-  });
-
-  const isLoading = operationsLoading || servicesLoading || categoriesLoading;
-
-  // Generate category data
-  const categoryData = React.useMemo(() => {
-    if (isLoading || operations.length === 0 || categories.length === 0) return [];
-
+  // Process category data
+  const categoryData = useMemo(() => {
+    if (isLoading || categories.length === 0 || operations.length === 0) return [];
+    
     const categoryMap = new Map();
-    let totalRevenue = 0;
-
+    
+    // Initialize with all categories (so we show zero counts too)
+    categories.forEach(category => {
+      categoryMap.set(category.id, {
+        id: category.id,
+        name: category.kategori_adi,
+        count: 0,
+        revenue: 0,
+        percentage: 0
+      });
+    });
+    
+    // Process each operation
     operations.forEach(op => {
-      const serviceId = op.islem_id;
-      if (!serviceId) return;
-      
-      const service = services.find(s => s.id === serviceId);
-      if (!service) return;
+      // Find the service to get its category
+      const service = services.find(s => s.id === op.islem_id);
+      if (!service || !service.kategori_id) return;
       
       const categoryId = service.kategori_id;
-      const category = categories.find(c => c.id === categoryId);
-      if (!category) return;
       
-      const categoryName = category.kategori_adi;
-      
-      if (!categoryMap.has(categoryName)) {
-        categoryMap.set(categoryName, { 
-          name: categoryName, 
-          count: 0, 
-          revenue: 0 
+      // If this category wasn't initialized (shouldn't happen with our setup)
+      if (!categoryMap.has(categoryId)) {
+        const category = categories.find(c => c.id === categoryId);
+        categoryMap.set(categoryId, {
+          id: categoryId,
+          name: category ? category.kategori_adi : 'Bilinmeyen Kategori',
+          count: 0,
+          revenue: 0,
+          percentage: 0
         });
       }
       
-      const entry = categoryMap.get(categoryName);
-      entry.count += 1;
-      entry.revenue += Number(op.tutar) || 0;
-      totalRevenue += Number(op.tutar) || 0;
+      // Update the category data
+      const categoryData = categoryMap.get(categoryId);
+      categoryData.count += 1;
+      categoryData.revenue += Number(op.tutar) || 0;
     });
     
-    // Calculate percentages and prepare for visualization
-    return Array.from(categoryMap.values())
-      .map(item => ({
-        ...item,
-        percentage: totalRevenue > 0 ? (item.revenue / totalRevenue) * 100 : 0
-      }))
-      .sort((a, b) => b.revenue - a.revenue);
-  }, [operations, services, categories, isLoading]);
+    // Convert to array
+    const result = Array.from(categoryMap.values());
+    
+    // Calculate percentages
+    const totalRevenue = result.reduce((sum, item) => sum + item.revenue, 0);
+    result.forEach(item => {
+      item.percentage = totalRevenue > 0 ? (item.revenue / totalRevenue) * 100 : 0;
+    });
+    
+    // Sort by revenue
+    return result.sort((a, b) => b.revenue - a.revenue);
+  }, [categories, operations, services, isLoading]);
+  
+  const generateInsights = () => {
+    const newInsights = [];
+    
+    if (categoryData.length === 0) {
+      setInsights(['Henüz yeterli veri bulunmamaktadır.']);
+      return;
+    }
+    
+    // Top revenue category
+    const topCategory = categoryData[0];
+    if (topCategory) {
+      newInsights.push(`En yüksek ciro "${topCategory.name}" kategorisinden geldi (${formatCurrency(topCategory.revenue)}).`);
+    }
+    
+    // Most popular category by count
+    const sortedByCount = [...categoryData].sort((a, b) => b.count - a.count);
+    if (sortedByCount.length > 0) {
+      const popularCategory = sortedByCount[0];
+      newInsights.push(`En çok işlem yapılan kategori "${popularCategory.name}" oldu (${popularCategory.count} işlem).`);
+    }
+    
+    // Category distribution
+    if (categoryData.length > 1) {
+      const totalRevenueFromTop3 = categoryData
+        .slice(0, Math.min(3, categoryData.length))
+        .reduce((sum, cat) => sum + cat.revenue, 0);
+        
+      const totalRevenue = categoryData.reduce((sum, cat) => sum + cat.revenue, 0);
+      
+      if (totalRevenue > 0) {
+        const percentage = (totalRevenueFromTop3 / totalRevenue) * 100;
+        newInsights.push(`İlk 3 kategori toplam cironun %${percentage.toFixed(1)}'ını oluşturuyor.`);
+      }
+    }
+    
+    // Low performing categories
+    const lowCategories = categoryData.filter(cat => cat.count === 0);
+    if (lowCategories.length > 0) {
+      newInsights.push(`${lowCategories.length} kategoride hiç işlem yapılmamış.`);
+    }
+    
+    // Selected period summary
+    newInsights.push(`Seçili dönemde toplam ${formatCurrency(categoryData.reduce((sum, cat) => sum + cat.revenue, 0))} ciro elde edildi.`);
+    
+    setInsights(newInsights);
+  };
+  
+  // Generate insights when data changes
+  React.useEffect(() => {
+    if (!isLoading) {
+      generateInsights();
+    }
+  }, [categoryData, isLoading, refreshKey, dateRange]);
 
-  const renderCustomTooltip = ({ active, payload }: any) => {
+  const renderCustomBarTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
+      const data = payload[0].payload;
       return (
         <div className="bg-white p-2 border rounded shadow-sm text-xs">
-          <p className="font-medium">{payload[0].name || payload[0].payload.name}</p>
-          <p>Ciro: {formatCurrency(payload[0].value || payload[0].payload.revenue)}</p>
-          {payload[1] && <p>İşlem Sayısı: {payload[1].value || payload[0].payload.count}</p>}
+          <p className="font-medium">{data.name || 'Bilinmeyen'}</p>
+          <p>Ciro: {formatCurrency(data.revenue || 0)}</p>
+          <p>İşlem Sayısı: {data.count || 0}</p>
         </div>
       );
     }
     return null;
   };
 
-  const CustomXAxisTick = (props: any) => {
-    const { x, y, payload } = props;
-    return (
-      <g transform={`translate(${x},${y})`}>
-        <text 
-          x={0} 
-          y={0} 
-          dy={16} 
-          textAnchor="end" 
-          fill="#666"
-          fontSize={12}
-          transform="rotate(-45)"
-        >
-          {payload.value}
-        </text>
-      </g>
-    );
+  const renderCustomPieTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div className="bg-white p-2 border rounded shadow-sm text-xs">
+          <p className="font-medium">{data.name || 'Bilinmeyen'}</p>
+          <p>İşlem Sayısı: {data.count || 0}</p>
+          <p>Ciro: {formatCurrency(data.revenue || 0)}</p>
+          <p>Oran: %{(data.percentage || 0).toFixed(1)}</p>
+        </div>
+      );
+    }
+    return null;
   };
 
   return (
-    <div className="space-y-6" key={refreshKey}>
+    <div className="space-y-6">
+      {/* Akıllı Analiz */}
+      <Card className="p-4">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="font-medium">Akıllı Analiz</h3>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={generateInsights}
+            className="h-8 w-8 p-0"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+        </div>
+        <ul className="space-y-2">
+          {isLoading ? (
+            <div className="flex justify-center p-4">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            </div>
+          ) : insights.length > 0 ? (
+            insights.map((insight, i) => (
+              <li key={i} className="flex items-baseline gap-2">
+                <span className="text-purple-600 text-lg">•</span>
+                <span className="text-sm">{insight}</span>
+              </li>
+            ))
+          ) : (
+            <li className="text-sm text-muted-foreground">Henüz yeterli veri bulunmamaktadır.</li>
+          )}
+        </ul>
+      </Card>
+
+      {/* Karma Grafik: Sütunlar için Ciro, Çizgi için İşlem Sayısı */}
       <Card className="p-4">
         <h3 className="font-medium mb-4">Kategori Bazlı Performans</h3>
         {isLoading ? (
-          <div className="h-[300px] flex items-center justify-center">
-            <div className="w-10 h-10 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
+          <div className="flex justify-center items-center h-[300px]">
+            <Loader2 className="h-8 w-8 text-primary animate-spin" />
           </div>
         ) : categoryData.length > 0 ? (
-          <ScrollArea className="h-[300px]">
-            <div style={{ width: Math.max(categoryData.length * 120, 600) + 'px', height: '280px' }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={categoryData}
-                  margin={{ top: 5, right: 60, left: 20, bottom: 70 }}
-                  barSize={30}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    dataKey="name" 
-                    height={70}
-                    tick={CustomXAxisTick}
-                  />
-                  <YAxis 
-                    yAxisId="left" 
-                    tickFormatter={(value) => `₺${value}`}
-                    label={{ value: 'Ciro (₺)', angle: -90, position: 'insideLeft', offset: -5 }}
-                  />
-                  <YAxis 
-                    yAxisId="right" 
-                    orientation="right"
-                    label={{ value: 'İşlem Sayısı', angle: 90, position: 'insideRight', offset: 5 }}
-                  />
-                  <Tooltip content={renderCustomTooltip} />
-                  <Legend wrapperStyle={{ bottom: -10 }} />
-                  <Bar 
-                    yAxisId="left"
-                    dataKey="revenue" 
-                    fill="#8884d8" 
-                    name="Ciro"
-                  />
-                  <Line 
-                    yAxisId="right"
-                    type="monotone" 
-                    dataKey="count" 
-                    name="İşlem Sayısı" 
-                    stroke="#ef4444"
-                    strokeWidth={2}
-                    dot={{ r: 4 }}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
+          <div className="overflow-hidden">
+            <ScrollArea className="h-[300px] w-full">
+              <div style={{ width: Math.max(categoryData.length * 120, 600) + 'px', height: '280px' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={categoryData}
+                    margin={{ top: 5, right: 60, left: 20, bottom: 70 }}
+                    barSize={40}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis 
+                      dataKey="name"
+                      angle={-45} 
+                      textAnchor="end"
+                      height={70}
+                      interval={0}
+                      tick={{ fontSize: 11 }}
+                    />
+                    <YAxis 
+                      yAxisId="left"
+                      tickFormatter={(value) => `₺${value}`}
+                      label={{ value: 'Ciro (₺)', angle: -90, position: 'insideLeft', offset: -5 }}
+                    />
+                    <YAxis 
+                      yAxisId="right" 
+                      orientation="right" 
+                      label={{ value: 'İşlem Sayısı', angle: 90, position: 'insideRight', offset: 5 }}
+                    />
+                    <RechartsTooltip content={renderCustomBarTooltip} />
+                    <Legend wrapperStyle={{ bottom: -10 }} />
+                    <Bar 
+                      yAxisId="left"
+                      dataKey="revenue" 
+                      fill="#3b82f6" 
+                      name="Ciro"
+                    />
+                    <Line
+                      yAxisId="right"
+                      type="monotone"
+                      dataKey="count"
+                      stroke="#ef4444"
+                      strokeWidth={2}
+                      name="İşlem Sayısı"
+                      dot={{ r: 4 }}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
+          </div>
         ) : (
           <div className="h-[280px] flex items-center justify-center">
-            <p className="text-muted-foreground">Kategori verisi bulunmuyor</p>
+            <p className="text-muted-foreground">Gösterilecek veri bulunmuyor</p>
           </div>
         )}
       </Card>
 
-      <Card className="p-4">
+      {/* Pie Chart */}
+      <Card className="p-4 mt-6">
         <h3 className="font-medium mb-4">Kategori Dağılımı</h3>
         {isLoading ? (
-          <div className="h-[300px] flex items-center justify-center">
-            <div className="w-10 h-10 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
+          <div className="flex justify-center items-center h-[300px]">
+            <Loader2 className="h-8 w-8 text-primary animate-spin" />
           </div>
         ) : categoryData.length > 0 ? (
           <div className="h-[300px]">
@@ -220,25 +326,26 @@ export function CategoryPerformanceView({ dateRange, refreshKey = 0 }: CategoryP
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip content={renderCustomTooltip} />
+                <RechartsTooltip content={renderCustomPieTooltip} />
                 <Legend layout="horizontal" verticalAlign="bottom" align="center" />
               </PieChart>
             </ResponsiveContainer>
           </div>
         ) : (
           <div className="h-[300px] flex items-center justify-center">
-            <p className="text-muted-foreground">Kategori verisi bulunmuyor</p>
+            <p className="text-muted-foreground">Gösterilecek veri bulunmuyor</p>
           </div>
         )}
       </Card>
 
-      <Card className="p-4">
+      {/* Table */}
+      <Card className="p-4 mt-6">
         <h3 className="font-medium mb-4">Kategori Detayları</h3>
         {isLoading ? (
-          <div className="flex justify-center p-6">
-            <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
+          <div className="flex justify-center items-center h-[200px]">
+            <Loader2 className="h-6 w-6 text-primary animate-spin" />
           </div>
-        ) : categoryData.length > 0 ? (
+        ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -271,8 +378,6 @@ export function CategoryPerformanceView({ dateRange, refreshKey = 0 }: CategoryP
               </tbody>
             </table>
           </div>
-        ) : (
-          <p className="text-center text-muted-foreground py-4">Kategori verisi bulunmuyor</p>
         )}
       </Card>
     </div>
