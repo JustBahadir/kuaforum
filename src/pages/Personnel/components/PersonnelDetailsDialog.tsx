@@ -83,7 +83,7 @@ export function PersonnelDetailsDialog({
       setOperations(refreshedOperations || []);
       
       // Also refresh personnel data
-      const refreshedPersonnel = await personelServisi.getir(personnel.id);
+      const refreshedPersonnel = await personelServisi.getirById(personnel.id);
       if (onEdit && refreshedPersonnel) {
         onEdit({
           ...refreshedPersonnel,
