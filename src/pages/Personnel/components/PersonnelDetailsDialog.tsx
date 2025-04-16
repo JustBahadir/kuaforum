@@ -5,210 +5,151 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
-import { Phone, Mail, Copy, MapPin, CreditCard, Calendar } from "lucide-react";
-import { personelServisi, personelIslemleriServisi } from "@/lib/supabase";
-import { formatCurrency } from "@/lib/utils";
+import { PersonnelInfoTab } from "./personnel-detail-tabs/PersonnelInfoTab";
+import { PersonnelImageTab } from "./personnel-detail-tabs/PersonnelImageTab";
 import { WorkInfoTab } from "./personnel-detail-tabs/WorkInfoTab";
-import { OperationsHistoryTab } from "./personnel-detail-tabs/OperationsHistoryTab";
+import { personelServisi, personelIslemleriServisi } from "@/lib/supabase";
+import { Loader2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { formatDistanceToNow } from "date-fns";
+import { tr } from "date-fns/locale";
 import { PerformanceTab } from "./personnel-detail-tabs/PerformanceTab";
+import { Button } from "@/components/ui/button";
 
 interface PersonnelDetailsDialogProps {
+  personId?: number | null;
   isOpen: boolean;
-  onOpenChange: (open: boolean) => void;
-  personnel: any | null;
-  onEdit?: (personnel: any) => void;
+  onClose: () => void;
+  onRefreshList?: () => void;
 }
 
 export function PersonnelDetailsDialog({
+  personId,
   isOpen,
-  onOpenChange,
-  personnel,
-  onEdit,
+  onClose,
+  onRefreshList,
 }: PersonnelDetailsDialogProps) {
-  const [activeTab, setActiveTab] = useState("kisisel");
-  const [operations, setOperations] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState("info");
+  const [selectedPersonId, setSelectedPersonId] = useState<number | null>(null);
 
-  // Fetch personnel operations when dialog opens or personnel changes
+  const { data: personnel, isLoading: isPersonnelLoading, refetch: refetchPersonnel } = useQuery({
+    queryKey: ["personnel-detail", personId],
+    queryFn: () => personId ? personelServisi.getirById(personId) : null,
+    enabled: !!personId && isOpen,
+  });
+
+  const { data: operations = [], isLoading: isOperationsLoading, refetch: refetchOperations } = useQuery({
+    queryKey: ["personnel-operations", personId],
+    queryFn: async () => {
+      if (!personId) return [];
+      
+      const operations = await personelIslemleriServisi.hepsiniGetir();
+      return operations.filter(op => op.personel_id === personId);
+    },
+    enabled: !!personId && isOpen,
+  });
+
   useEffect(() => {
-    if (personnel?.id && isOpen) {
-      setIsLoading(true);
-      personelIslemleriServisi
-        .personelIslemleriGetir(personnel.id)
-        .then((data) => {
-          setOperations(data || []);
-        })
-        .catch(console.error)
-        .finally(() => {
-          setIsLoading(false);
-        });
+    if (personId) {
+      setSelectedPersonId(personId);
+      // Reset to default tab when dialog opens with a new personnel
+      setActiveTab("info");
     }
-  }, [personnel, isOpen]);
+  }, [personId]);
 
-  // Helper function to copy text to clipboard
-  const copyToClipboard = (text: string, type: string) => {
-    if (!text) return;
-    navigator.clipboard.writeText(text);
-    toast.success(`${type} kopyalandı`);
+  const handleRefreshData = async () => {
+    if (selectedPersonId) {
+      await refetchPersonnel();
+      await refetchOperations();
+      if (onRefreshList) {
+        onRefreshList();
+      }
+    }
   };
 
-  // Format birth date
-  const formatBirthDate = (birthDate: string | null) => {
-    if (!birthDate) return "Belirtilmemiş";
-    return new Date(birthDate).toLocaleDateString("tr-TR");
-  };
-
-  if (!personnel) return null;
-
-  const getInitials = (name: string) => {
-    if (!name) return "??";
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  };
+  if (isPersonnelLoading) {
+    return (
+      <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="mb-4">
+            <DialogTitle>Personel Detayları</DialogTitle>
+          </DialogHeader>
+          <div className="flex justify-center p-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-auto">
-        <DialogHeader className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Avatar className="h-16 w-16 border-2 border-primary/20">
-                <AvatarImage src={personnel.avatar_url} alt={personnel.ad_soyad} />
-                <AvatarFallback>{getInitials(personnel.ad_soyad)}</AvatarFallback>
-              </Avatar>
-              <div>
-                <DialogTitle className="text-xl">{personnel.ad_soyad}</DialogTitle>
-                <DialogDescription>
-                  {personnel.calisma_sistemi === "prim_komisyon" 
-                    ? `Yüzdelik Çalışan (%${personnel.prim_yuzdesi})` 
-                    : personnel.calisma_sistemi === "aylik_maas" 
-                      ? "Aylık Maaşlı" 
-                      : personnel.calisma_sistemi === "haftalik_maas" 
-                        ? "Haftalık Maaşlı"
-                        : "Günlük Maaşlı"}
-                </DialogDescription>
-              </div>
-            </div>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader className="flex flex-row items-center justify-between">
+          <div>
+            <DialogTitle className="text-xl">
+              {personnel?.ad_soyad || "Personel Detayları"}
+            </DialogTitle>
+            {personnel?.created_at && (
+              <p className="text-sm text-muted-foreground mt-1">
+                {formatDistanceToNow(new Date(personnel.created_at), {
+                  addSuffix: true,
+                  locale: tr,
+                })}{" "}
+                eklendi
+              </p>
+            )}
+          </div>
+          <div className="flex items-center">
+            <Button variant="outline" onClick={handleRefreshData}>
+              Yenile
+            </Button>
           </div>
         </DialogHeader>
 
-        <Tabs 
-          defaultValue="kisisel" 
-          value={activeTab} 
-          onValueChange={setActiveTab} 
-          className="mt-2"
-        >
-          <TabsList className="grid grid-cols-4 w-full">
-            <TabsTrigger value="kisisel">Kişisel Bilgiler</TabsTrigger>
-            <TabsTrigger value="calisma">Çalışma Bilgileri</TabsTrigger>
-            <TabsTrigger value="performans">Performans</TabsTrigger>
-            <TabsTrigger value="islemler">İşlem Geçmişi</TabsTrigger>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
+          <TabsList className="grid grid-cols-4">
+            <TabsTrigger value="info">Genel Bilgiler</TabsTrigger>
+            <TabsTrigger value="work">Çalışma Bilgileri</TabsTrigger>
+            <TabsTrigger value="photo">Fotoğraf</TabsTrigger>
+            <TabsTrigger value="performance">Performans</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="kisisel" className="space-y-4 mt-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <div className="text-sm font-medium text-muted-foreground">Ad Soyad</div>
-                <div>{personnel.ad_soyad}</div>
-              </div>
-              
-              <div className="space-y-2">
-                <div className="text-sm font-medium text-muted-foreground">Doğum Tarihi</div>
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  {formatBirthDate(personnel.birth_date)}
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <div className="text-sm font-medium text-muted-foreground">Telefon</div>
-                <div className="flex items-center gap-2">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                  <span>{personnel.telefon || "Belirtilmemiş"}</span>
-                  {personnel.telefon && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      className="h-6 w-6 p-0"
-                      onClick={() => copyToClipboard(personnel.telefon, "Telefon")}
-                    >
-                      <Copy className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <div className="text-sm font-medium text-muted-foreground">E-posta</div>
-                <div className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <span className="truncate">{personnel.eposta || "Belirtilmemiş"}</span>
-                  {personnel.eposta && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      className="h-6 w-6 p-0"
-                      onClick={() => copyToClipboard(personnel.eposta, "E-posta")}
-                    >
-                      <Copy className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-              
-              <div className="space-y-2 col-span-1 md:col-span-2">
-                <div className="text-sm font-medium text-muted-foreground">Adres</div>
-                <div className="flex items-start gap-2">
-                  <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                  <span>{personnel.adres || "Adres belirtilmemiş"}</span>
-                </div>
-              </div>
-              
-              <div className="space-y-2 col-span-1 md:col-span-2">
-                <div className="text-sm font-medium text-muted-foreground">IBAN</div>
-                <div className="flex items-center gap-2">
-                  <CreditCard className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-mono">{personnel.iban || "IBAN belirtilmemiş"}</span>
-                  {personnel.iban && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      className="h-6 w-6 p-0"
-                      onClick={() => copyToClipboard(personnel.iban, "IBAN")}
-                    >
-                      <Copy className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </div>
+          <TabsContent value="info" className="mt-4">
+            {personnel && (
+              <PersonnelInfoTab
+                personnel={personnel}
+                onSave={handleRefreshData}
+              />
+            )}
           </TabsContent>
 
-          <TabsContent value="calisma" className="space-y-4 mt-4">
-            <WorkInfoTab personnel={personnel} />
+          <TabsContent value="work" className="mt-4">
+            {personnel && (
+              <WorkInfoTab
+                personnel={personnel}
+                onSave={handleRefreshData}
+              />
+            )}
           </TabsContent>
-          
-          <TabsContent value="performans" className="space-y-4 mt-4">
+
+          <TabsContent value="photo" className="mt-4">
+            {personnel && (
+              <PersonnelImageTab
+                personnel={personnel}
+                onSave={handleRefreshData}
+              />
+            )}
+          </TabsContent>
+
+          <TabsContent value="performance" className="mt-4">
             <PerformanceTab 
               personnel={personnel} 
               operations={operations}
-              isLoading={isLoading}
+              isLoading={isOperationsLoading} 
             />
-          </TabsContent>
-          
-          <TabsContent value="islemler" className="mt-4">
-            <OperationsHistoryTab personnel={personnel} operations={operations} isLoading={isLoading} />
           </TabsContent>
         </Tabs>
       </DialogContent>

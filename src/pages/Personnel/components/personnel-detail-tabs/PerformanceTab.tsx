@@ -53,7 +53,7 @@ export function PerformanceTab({
 
   const handleSingleDateChange = (date: Date | undefined) => {
     if (date) {
-      setDateRange({from: date, to: date});
+      setDateRange({from: date, to: new Date(date)});
       setUseMonthCycle(false);
       setUseSingleDate(true);
     }
@@ -178,6 +178,7 @@ export function PerformanceTab({
           serviceData={serviceData}
           insights={insights}
           refreshAnalysis={() => setRefreshKey(prev => prev + 1)}
+          dateRange={dateRange}
         />
       )}
     </div>

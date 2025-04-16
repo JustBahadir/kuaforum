@@ -6,6 +6,13 @@ export interface ServicePerformanceData {
   percentage?: number;
 }
 
+export interface CategoryPerformanceData {
+  name: string;
+  count: number;
+  revenue: number;
+  percentage?: number;
+}
+
 export function processServiceData(operations: any[]): ServicePerformanceData[] {
   if (!operations || operations.length === 0) {
     return [];
@@ -37,6 +44,50 @@ export function processServiceData(operations: any[]): ServicePerformanceData[] 
   
   // Calculate percentages and prepare for visualization
   return Array.from(serviceMap.values())
+    .map(item => ({
+      ...item,
+      percentage: totalRevenue > 0 ? (item.revenue / totalRevenue) * 100 : 0
+    }))
+    .sort((a, b) => b.revenue - a.revenue);
+}
+
+export function processCategoryData(operations: any[], services: any[], categories: any[]): CategoryPerformanceData[] {
+  if (!operations || operations.length === 0 || !services || !categories) {
+    return [];
+  }
+
+  // Group by category
+  const categoryMap = new Map<string, CategoryPerformanceData>();
+  let totalRevenue = 0;
+
+  operations.forEach(op => {
+    if (!op || !op.islem_id) return;
+    
+    const service = services.find(s => s.id === op.islem_id);
+    if (!service || !service.kategori_id) return;
+    
+    const category = categories.find(c => c.id === service.kategori_id);
+    if (!category) return;
+    
+    const categoryName = category.kategori_adi;
+    const revenue = Number(op.tutar) || 0;
+    
+    if (!categoryMap.has(categoryName)) {
+      categoryMap.set(categoryName, {
+        name: categoryName,
+        count: 0,
+        revenue: 0
+      });
+    }
+    
+    const entry = categoryMap.get(categoryName)!;
+    entry.count += 1;
+    entry.revenue += revenue;
+    totalRevenue += revenue;
+  });
+  
+  // Calculate percentages and prepare for visualization
+  return Array.from(categoryMap.values())
     .map(item => ({
       ...item,
       percentage: totalRevenue > 0 ? (item.revenue / totalRevenue) * 100 : 0
@@ -120,6 +171,39 @@ export function generateSmartInsights(operations: any[], serviceData: ServicePer
   
   insights.push(`Toplam ciro: ${formatCurrency(totalRevenue)}`);
   insights.push(`Toplam işlem sayısı: ${totalOperations}`);
+  
+  return insights;
+}
+
+export function generateCategoryInsights(categoryData: CategoryPerformanceData[]): string[] {
+  if (!categoryData || categoryData.length === 0) {
+    return [];
+  }
+  
+  const insights: string[] = [];
+  const totalOperations = categoryData.reduce((sum, c) => sum + c.count, 0);
+  const totalRevenue = categoryData.reduce((sum, c) => sum + c.revenue, 0);
+  
+  // Sort categories by count and revenue
+  const mostFrequent = [...categoryData].sort((a, b) => b.count - a.count)[0];
+  const mostRevenue = [...categoryData].sort((a, b) => b.revenue - a.revenue)[0];
+  const leastFrequent = [...categoryData].sort((a, b) => a.count - b.count)[0];
+  
+  if (mostFrequent) {
+    insights.push(`En çok işlem yapılan kategori "${mostFrequent.name}" olarak görülüyor (${mostFrequent.count} işlem).`);
+  }
+  
+  if (mostRevenue && mostRevenue.name !== mostFrequent.name) {
+    insights.push(`En yüksek ciro "${mostRevenue.name}" kategorisinden elde edildi (${formatCurrency(mostRevenue.revenue)}).`);
+  }
+  
+  if (leastFrequent && categoryData.length > 1) {
+    insights.push(`En az tercih edilen kategori "${leastFrequent.name}" olarak görülüyor (${leastFrequent.count} işlem).`);
+  }
+  
+  // Calculate average revenue per category
+  const avgRevenuePerCategory = totalRevenue / categoryData.length;
+  insights.push(`Kategori başına ortalama ciro: ${formatCurrency(avgRevenuePerCategory)}`);
   
   return insights;
 }
