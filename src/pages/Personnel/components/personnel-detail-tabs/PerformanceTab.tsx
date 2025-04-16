@@ -1,6 +1,7 @@
 
 import React, { useState, useCallback, useMemo } from "react";
 import { ServicePerformanceView } from "./performance-tabs/ServicePerformanceView";
+import { CategoryPerformanceView } from "./performance-tabs/CategoryPerformanceView";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { CustomMonthCycleSelector } from "@/components/ui/custom-month-cycle-selector";
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,7 @@ export function PerformanceTab({
   const [useMonthCycle, setUseMonthCycle] = useState(false);
   const [useSingleDate, setUseSingleDate] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [activeView, setActiveView] = useState<'service' | 'category'>('service');
 
   // Extract all dates that have operations
   const availableDates = useMemo(() => {
@@ -180,16 +182,48 @@ export function PerformanceTab({
         </div>
       </div>
 
+      {/* Report type toggle buttons */}
+      <div className="flex rounded-lg border overflow-hidden w-full mt-2">
+        <button
+          onClick={() => setActiveView('service')}
+          className={cn(
+            "flex-1 py-2 px-4 text-center transition-colors",
+            activeView === 'service'
+              ? "bg-purple-600 text-white"
+              : "bg-transparent hover:bg-gray-100"
+          )}
+        >
+          Hizmet Raporları
+        </button>
+        <button
+          onClick={() => setActiveView('category')}
+          className={cn(
+            "flex-1 py-2 px-4 text-center transition-colors",
+            activeView === 'category'
+              ? "bg-purple-600 text-white"
+              : "bg-transparent hover:bg-gray-100"
+          )}
+        >
+          Kategori Raporları
+        </button>
+      </div>
+
       {isLoading ? (
         <div className="flex justify-center p-12">
           <div className="w-10 h-10 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
         </div>
-      ) : (
+      ) : activeView === 'service' ? (
         <ServicePerformanceView
           serviceData={serviceData}
           insights={insights}
           refreshAnalysis={() => setRefreshKey(prev => prev + 1)}
           dateRange={dateRange}
+        />
+      ) : (
+        <CategoryPerformanceView 
+          operations={filteredOperations}
+          dateRange={dateRange}
+          key={refreshKey} // Use key to ensure proper re-rendering
         />
       )}
     </div>

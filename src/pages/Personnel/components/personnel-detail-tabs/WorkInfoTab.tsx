@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { personelServisi } from "@/lib/supabase";
 import { Check, X, Edit } from "lucide-react";
+import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 
 interface WorkInfoTabProps {
   personnel: any;
@@ -17,6 +18,8 @@ interface WorkInfoTabProps {
 
 export function WorkInfoTab({ personnel, onSave }: WorkInfoTabProps) {
   const queryClient = useQueryClient();
+  const { userRole } = useCustomerAuth();
+  const isAdmin = userRole === "admin";
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     calisma_sistemi: personnel.calisma_sistemi || "aylik_maas",
@@ -25,10 +28,25 @@ export function WorkInfoTab({ personnel, onSave }: WorkInfoTabProps) {
   });
 
   const [selectedTopOption, setSelectedTopOption] = useState<'maaşlı' | 'komisyonlu'>(
-    ['aylik_maas', 'haftalik_maas', 'gunluk_maas'].includes(formData.calisma_sistemi) 
+    ['aylik_maas', 'haftalik_maas', 'gunluk_maas'].includes(personnel.calisma_sistemi) 
       ? 'maaşlı' 
       : 'komisyonlu'
   );
+
+  // Update form data when personnel changes
+  useEffect(() => {
+    setFormData({
+      calisma_sistemi: personnel.calisma_sistemi || "aylik_maas",
+      maas: personnel.maas || 0,
+      prim_yuzdesi: personnel.prim_yuzdesi || 0,
+    });
+    
+    setSelectedTopOption(
+      ['aylik_maas', 'haftalik_maas', 'gunluk_maas'].includes(personnel.calisma_sistemi) 
+        ? 'maaşlı' 
+        : 'komisyonlu'
+    );
+  }, [personnel]);
 
   const updateMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -272,7 +290,7 @@ export function WorkInfoTab({ personnel, onSave }: WorkInfoTabProps) {
         </div>
       )}
 
-      {!isEditing && (
+      {!isEditing && isAdmin && (
         <div className="flex justify-end">
           <Button 
             variant="outline" 

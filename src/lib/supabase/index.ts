@@ -1,21 +1,31 @@
-
 // Export types
 export * from './types';
 export * from './services/customerOperationsService';
 export * from './services/customerPersonalDataService';
 
 // Export services
-export { dukkanServisi } from './services/dukkanServisi';
-export { personelServisi } from './services/personelServisi';
-export { profilServisi } from './services/profilServisi';
-export { randevuServisi } from './services/randevuServisi';
-export { islemServisi } from './services/islemServisi';
-export { personelIslemleriServisi } from './services/personelIslemleriServisi';
-export { kategoriServisi } from './services/kategoriServisi';
-export { musteriServisi } from './services/musteriServisi';
-export { calismaSaatleriServisi } from './services/calismaSaatleriServisi';
-export { bildirimServisi as notificationServisi } from './services/bildirimServisi';
-export { customerPersonalDataService } from './services/customerPersonalDataService';
-export { customerOperationsService } from './services/customerOperationsService';
-export { supabase } from './client';
-export { siralamaServisi } from './services/siralamaServisi';
+import { personelServisi } from './services/personelServisi';
+import { personelIslemleriServisi } from './services/personelIslemleriServisi';
+import { islemServisi } from './services/islemServisi';
+import { islemKategoriServisi } from './services/islemKategoriServisi';
+import { randevuServisi } from './services/randevuServisi';
+import { musteriServisi } from './services/musteriServisi';
+import { notificationServisi } from './services/notificationServisi';
+import { dukkanServisi } from './services/dukkanServisi';
+
+export {
+  personelServisi,
+  personelIslemleriServisi,
+  islemServisi,
+  islemKategoriServisi,
+  randevuServisi,
+  musteriServisi,
+  notificationServisi,
+  dukkanServisi,
+  profilServisi,
+  bildirimServisi as notificationServisi,
+  customerPersonalDataService,
+  customerOperationsService,
+  supabase,
+  siralamaServisi,
+};

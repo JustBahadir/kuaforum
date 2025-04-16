@@ -8,7 +8,6 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PersonnelInfoTab } from "./personnel-detail-tabs/PersonnelInfoTab";
-import { PersonnelImageTab } from "./personnel-detail-tabs/PersonnelImageTab";
 import { WorkInfoTab } from "./personnel-detail-tabs/WorkInfoTab";
 import { personelServisi, personelIslemleriServisi } from "@/lib/supabase";
 import { Loader2 } from "lucide-react";
@@ -16,14 +15,15 @@ import { useQuery } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
 import { PerformanceTab } from "./personnel-detail-tabs/PerformanceTab";
+import { OperationsHistoryTab } from "./personnel-detail-tabs/OperationsHistoryTab";
 
 interface PersonnelDetailsDialogProps {
   personId?: number | null;
   isOpen: boolean;
   onClose: () => void;
-  onOpenChange?: (open: boolean) => void; // Add this prop
+  onOpenChange?: (open: boolean) => void;
   onRefreshList?: () => void;
-  personnel?: any; // Add this prop
+  personnel?: any;
 }
 
 export function PersonnelDetailsDialog({
@@ -32,7 +32,7 @@ export function PersonnelDetailsDialog({
   onClose,
   onOpenChange,
   onRefreshList,
-  personnel: externalPersonnel, // Accept external personnel data
+  personnel: externalPersonnel,
 }: PersonnelDetailsDialogProps) {
   const [activeTab, setActiveTab] = useState("info");
   const [selectedPersonId, setSelectedPersonId] = useState<number | null>(null);
@@ -41,7 +41,7 @@ export function PersonnelDetailsDialog({
     queryKey: ["personnel-detail", personId],
     queryFn: () => personId ? personelServisi.getirById(personId) : null,
     enabled: !!personId && isOpen,
-    initialData: externalPersonnel || null, // Use external data if provided
+    initialData: externalPersonnel || null,
   });
 
   const { data: operations = [], isLoading: isOperationsLoading, refetch: refetchOperations } = useQuery({
@@ -123,7 +123,7 @@ export function PersonnelDetailsDialog({
           <TabsList className="grid grid-cols-3">
             <TabsTrigger value="info">Genel Bilgiler</TabsTrigger>
             <TabsTrigger value="work">Çalışma Bilgileri</TabsTrigger>
-            <TabsTrigger value="performance">Performans</TabsTrigger>
+            <TabsTrigger value="operations">İşlem Geçmişi</TabsTrigger>
           </TabsList>
 
           <TabsContent value="info" className="mt-4">
@@ -144,11 +144,11 @@ export function PersonnelDetailsDialog({
             )}
           </TabsContent>
 
-          <TabsContent value="performance" className="mt-4">
-            <PerformanceTab 
-              personnel={personnel} 
+          <TabsContent value="operations" className="mt-4">
+            <OperationsHistoryTab 
+              personnel={personnel}
               operations={operations}
-              isLoading={isOperationsLoading} 
+              isLoading={isOperationsLoading}
             />
           </TabsContent>
         </Tabs>
