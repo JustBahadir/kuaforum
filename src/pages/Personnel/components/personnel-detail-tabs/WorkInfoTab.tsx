@@ -1,290 +1,169 @@
 
-import React, { useState } from "react";
-import { formatCurrency } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import React, { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { useMutation } from "@tanstack/react-query";
 import { personelServisi } from "@/lib/supabase";
-import { Check, X, Edit } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface WorkInfoTabProps {
   personnel: any;
-  onSave: () => void;
+  onSave?: () => void;
+  operations?: any[];
 }
 
-export function WorkInfoTab({ personnel, onSave }: WorkInfoTabProps) {
-  const queryClient = useQueryClient();
-  const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({
-    calisma_sistemi: personnel.calisma_sistemi || "aylik_maas",
-    maas: personnel.maas || 0,
-    prim_yuzdesi: personnel.prim_yuzdesi || 0,
+export function WorkInfoTab({ personnel, onSave, operations = [] }: WorkInfoTabProps) {
+  const [loading, setLoading] = useState(false);
+  const [workSystem, setWorkSystem] = useState(personnel?.calisma_sistemi || "prim_komisyon");
+  
+  // Calculate revenue from operations
+  const totalRevenue = operations.reduce((sum, op) => sum + (op.tutar || 0), 0);
+  const operationCount = operations.length;
+
+  // Using React Hook Form for better validation
+  const { register, handleSubmit, setValue, watch } = useForm({
+    defaultValues: {
+      calisma_sistemi: personnel?.calisma_sistemi || "prim_komisyon",
+      maas: personnel?.maas || 0,
+      prim_yuzdesi: personnel?.prim_yuzdesi || 0
+    }
   });
 
-  const [selectedTopOption, setSelectedTopOption] = useState<'maaşlı' | 'komisyonlu'>(
-    ['aylik_maas', 'haftalik_maas', 'gunluk_maas'].includes(formData.calisma_sistemi) 
-      ? 'maaşlı' 
-      : 'komisyonlu'
-  );
+  // Update form values when personnel data changes
+  useEffect(() => {
+    if (personnel) {
+      setValue("calisma_sistemi", personnel.calisma_sistemi || "prim_komisyon");
+      setValue("maas", personnel.maas || 0);
+      setValue("prim_yuzdesi", personnel.prim_yuzdesi || 0);
+      setWorkSystem(personnel.calisma_sistemi || "prim_komisyon");
+    }
+  }, [personnel, setValue]);
+
+  // Watch for changes in the form
+  const watchWorkSystem = watch("calisma_sistemi");
+  
+  // Effect to update work system state when form value changes
+  useEffect(() => {
+    setWorkSystem(watchWorkSystem);
+  }, [watchWorkSystem]);
 
   const updateMutation = useMutation({
     mutationFn: async (data: any) => {
+      console.log("Submitting update with data:", data);
       console.log("Sending data to server:", data);
       return await personelServisi.guncelle(personnel.id, data);
     },
     onSuccess: () => {
-      toast.success("Personel bilgileri başarıyla güncellendi!");
-      queryClient.invalidateQueries({ queryKey: ["personeller"] });
-      queryClient.invalidateQueries({ queryKey: ["personel-list"] });
-      queryClient.invalidateQueries({ queryKey: ["personnel-detail", personnel.id] });
-      setIsEditing(false);
-      
-      if (onSave) {
-        onSave();
-      }
+      toast.success("Personel bilgileri başarıyla güncellendi");
+      setLoading(false);
+      if (onSave) onSave();
     },
     onError: (error) => {
       console.error("Update error:", error);
-      toast.error("Personel güncellenirken bir hata oluştu.");
-    },
+      toast.error(`Personel güncellenirken bir hata oluştu: ${error instanceof Error ? error.message : "Bilinmeyen hata"}`);
+      setLoading(false);
+    }
   });
 
-  const getWorkingSystemLabel = (system: string) => {
-    switch (system) {
-      case "aylik_maas":
-        return "Aylık Maaş";
-      case "haftalik_maas":
-        return "Haftalık Maaş";
-      case "gunluk_maas":
-        return "Günlük Maaş";
-      case "prim_komisyon":
-        return "Yüzdelik Çalışma";
-      default:
-        return system;
-    }
-  };
-
-  const handleSave = () => {
-    // Create a properly structured update data object
-    const updateData: any = {};
+  const onSubmit = (data: any) => {
+    setLoading(true);
+    // Make sure data has correct types
+    const updateData = {
+      calisma_sistemi: data.calisma_sistemi,
+      maas: parseFloat(data.maas),
+      prim_yuzdesi: parseFloat(data.prim_yuzdesi)
+    };
     
-    if (selectedTopOption === 'maaşlı') {
-      updateData.calisma_sistemi = formData.calisma_sistemi;
-      updateData.maas = Number(formData.maas);
-      updateData.prim_yuzdesi = 0;
-    } else {
-      updateData.calisma_sistemi = 'prim_komisyon';
-      updateData.maas = 0;
-      updateData.prim_yuzdesi = Number(formData.prim_yuzdesi);
-    }
-
-    console.log("Submitting update with data:", updateData);
     updateMutation.mutate(updateData);
-  };
-
-  const handleCancel = () => {
-    setFormData({
-      calisma_sistemi: personnel.calisma_sistemi || "aylik_maas",
-      maas: personnel.maas || 0,
-      prim_yuzdesi: personnel.prim_yuzdesi || 0,
-    });
-    setSelectedTopOption(
-      ['aylik_maas', 'haftalik_maas', 'gunluk_maas'].includes(personnel.calisma_sistemi) 
-        ? 'maaşlı' 
-        : 'komisyonlu'
-    );
-    setIsEditing(false);
-  };
-
-  const isCommissionBased = personnel.calisma_sistemi === "prim_komisyon";
-  
-  const isFormValid = () => {
-    if (selectedTopOption === 'maaşlı') {
-      return formData.calisma_sistemi && formData.maas > 0;
-    } else {
-      return formData.prim_yuzdesi >= 0 && formData.prim_yuzdesi <= 100;
-    }
-  };
-
-  const handleTopLevelChange = (value: 'maaşlı' | 'komisyonlu') => {
-    setSelectedTopOption(value);
-    
-    if (value === 'maaşlı') {
-      setFormData(prev => ({
-        ...prev,
-        calisma_sistemi: 'aylik_maas',
-        prim_yuzdesi: 0
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        calisma_sistemi: 'prim_komisyon',
-        maas: 0
-      }));
-    }
   };
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <h3 className="text-sm font-medium text-muted-foreground mb-1">Çalışma Sistemi</h3>
-          {!isEditing ? (
-            <div className="text-base font-normal">
-              {getWorkingSystemLabel(personnel.calisma_sistemi)}
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-lg font-medium">Çalışma Sistemi</h3>
+            <RadioGroup 
+              className="grid grid-cols-2 gap-4 mt-2"
+              value={watchWorkSystem}
+              onValueChange={(value) => setValue("calisma_sistemi", value)}
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="aylik_maas" id="maasli" />
+                <Label htmlFor="maasli">Maaşlı</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="prim_komisyon" id="komisyonlu" />
+                <Label htmlFor="komisyonlu">Komisyonlu</Label>
+              </div>
+            </RadioGroup>
+          </div>
+
+          {watchWorkSystem === "aylik_maas" ? (
+            <div className="grid gap-2">
+              <Label htmlFor="maas">Maaş (₺)</Label>
+              <Input 
+                id="maas" 
+                type="number" 
+                placeholder="0" 
+                {...register("maas")}
+                min="0"
+              />
             </div>
           ) : (
-            <div className="space-y-3 mt-2">
-              <div className="space-y-2">
-                <div className="space-x-2">
-                  <RadioGroup
-                    value={selectedTopOption}
-                    onValueChange={(value) => handleTopLevelChange(value as 'maaşlı' | 'komisyonlu')}
-                    className="flex items-center mb-3"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="maaşlı" id="maasli" />
-                      <Label htmlFor="maasli" className="text-base font-normal">Maaşlı</Label>
-                    </div>
-                    <div className="flex items-center space-x-2 ml-4">
-                      <RadioGroupItem value="komisyonlu" id="komisyonlu" />
-                      <Label htmlFor="komisyonlu" className="text-base font-normal">Komisyonlu</Label>
-                    </div>
-                  </RadioGroup>
-                </div>
-              
-                {selectedTopOption === 'maaşlı' && (
-                  <RadioGroup
-                    value={formData.calisma_sistemi}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, calisma_sistemi: value }))}
-                    className="flex space-x-4 mt-2"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="aylik_maas" id="aylik_maas_option" />
-                      <Label htmlFor="aylik_maas_option" className="text-base font-normal">Aylık</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="haftalik_maas" id="haftalik_maas" />
-                      <Label htmlFor="haftalik_maas" className="text-base font-normal">Haftalık</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="gunluk_maas" id="gunluk_maas" />
-                      <Label htmlFor="gunluk_maas" className="text-base font-normal">Günlük</Label>
-                    </div>
-                  </RadioGroup>
-                )}
+            <div className="grid gap-2">
+              <Label htmlFor="prim">Prim Yüzdesi (%)</Label>
+              <div className="flex items-center">
+                <span className="mr-2">%</span>
+                <Input 
+                  id="prim" 
+                  type="number" 
+                  placeholder="0" 
+                  {...register("prim_yuzdesi")}
+                  min="0"
+                  max="100"
+                />
               </div>
             </div>
           )}
-        </div>
-
-        <div>
-          <h3 className="text-sm font-medium text-muted-foreground mb-1">
-            {selectedTopOption === 'komisyonlu' ? "Prim Yüzdesi" : "Maaş Tutarı"}
-          </h3>
-          {!isEditing ? (
-            <div className="font-normal">
-              {isCommissionBased 
-                ? `%${personnel.prim_yuzdesi}` 
-                : formatCurrency(personnel.maas)}
+          
+          <div className="bg-gray-50 p-4 rounded-md">
+            <h4 className="font-medium mb-2">Özet Bilgiler</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-gray-600">Toplam Ciro</p>
+                <p className="font-medium">{formatCurrency(totalRevenue)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">İşlem Sayısı</p>
+                <p className="font-medium">{operationCount}</p>
+              </div>
             </div>
-          ) : (
-            <>
-              {selectedTopOption === 'komisyonlu' ? (
-                <div className="flex items-center">
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                      <span className="text-gray-500">%</span>
-                    </div>
-                    <Input 
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={formData.prim_yuzdesi}
-                      onChange={(e) => {
-                        const value = parseInt(e.target.value);
-                        if (e.target.value === "" || (value >= 0 && value <= 100)) {
-                          setFormData(prev => ({ 
-                            ...prev, 
-                            prim_yuzdesi: e.target.value === "" ? 0 : value 
-                          }));
-                        }
-                      }}
-                      className="pl-8 w-24"
-                    />
-                  </div>
-                </div>
-              ) : (
-                <Input 
-                  type="number"
-                  min="0"
-                  value={formData.maas}
-                  onChange={(e) => setFormData(prev => ({ ...prev, maas: Number(e.target.value) }))}
-                  className="w-40"
-                  disabled={!selectedTopOption || selectedTopOption !== 'maaşlı' || !formData.calisma_sistemi}
-                />
-              )}
-            </>
-          )}
-        </div>
-      </div>
+          </div>
 
-      <div className="bg-muted p-4 rounded-md">
-        <h3 className="font-medium mb-3">Özet Bilgiler</h3>
-        <table className="w-full">
-          <tbody>
-            {isCommissionBased && (
-              <tr className="border-b">
-                <td className="py-2 text-sm text-muted-foreground">Toplam Prim</td>
-                <td className="py-2 text-right font-medium">{formatCurrency(personnel.toplam_prim || 0)}</td>
-              </tr>
-            )}
-            <tr className="border-b">
-              <td className="py-2 text-sm text-muted-foreground">Toplam Ciro</td>
-              <td className="py-2 text-right font-medium">{formatCurrency(personnel.toplam_ciro || 0)}</td>
-            </tr>
-            <tr>
-              <td className="py-2 text-sm text-muted-foreground">İşlem Sayısı</td>
-              <td className="py-2 text-right font-medium">{personnel.islem_sayisi || 0}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      {isEditing && (
-        <div className="flex justify-end space-x-3">
-          <Button variant="outline" size="sm" onClick={handleCancel} className="gap-1">
-            <X className="h-4 w-4" />
-            İptal
-          </Button>
-          <Button 
-            size="sm" 
-            onClick={handleSave} 
-            disabled={updateMutation.isPending || !isFormValid()}
-            className="gap-1"
-          >
-            <Check className="h-4 w-4" />
-            {updateMutation.isPending ? "Kaydediliyor..." : "Kaydet"}
-          </Button>
+          <div className="flex justify-end space-x-2 mt-4">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => onSave ? onSave() : null}
+              disabled={loading}
+            >
+              İptal
+            </Button>
+            <Button 
+              type="submit" 
+              disabled={loading}
+              className="min-w-[100px]"
+            >
+              {loading ? "Kaydediliyor..." : "Kaydet"}
+            </Button>
+          </div>
         </div>
-      )}
-
-      {!isEditing && (
-        <div className="flex justify-end">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => setIsEditing(true)}
-            className="gap-1"
-          >
-            <Edit className="h-4 w-4" />
-            Düzenle
-          </Button>
-        </div>
-      )}
+      </form>
     </div>
   );
 }

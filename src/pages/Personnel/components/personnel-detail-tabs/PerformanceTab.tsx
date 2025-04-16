@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/tooltip";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CategoryPerformanceView } from "./performance-tabs/CategoryPerformanceView";
 
 interface PerformanceTabProps {
   personnel: any;
@@ -35,6 +37,7 @@ export function PerformanceTab({
   const [useMonthCycle, setUseMonthCycle] = useState(false);
   const [useSingleDate, setUseSingleDate] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [activeView, setActiveView] = useState<"services" | "categories">("services");
 
   // Extract all dates that have operations
   const availableDates = useMemo(() => {
@@ -59,20 +62,20 @@ export function PerformanceTab({
     }
   };
 
-  const handleMonthCycleChange = (day: number, date: Date) => {
+  const handleMonthCycleChange = (day: number) => {
     setMonthCycleDay(day);
     
     const currentDate = new Date();
     const selectedDay = day;
     
-    let fromDate = new Date();
-    fromDate.setDate(selectedDay);
+    let fromDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), selectedDay);
     if (currentDate.getDate() < selectedDay) {
       fromDate.setMonth(fromDate.getMonth() - 1);
     }
     
     const toDate = new Date(fromDate);
     toDate.setMonth(toDate.getMonth() + 1);
+    toDate.setDate(toDate.getDate() - 1);
     
     setDateRange({from: fromDate, to: toDate});
     setUseMonthCycle(true);
@@ -180,18 +183,45 @@ export function PerformanceTab({
         </div>
       </div>
 
-      {isLoading ? (
-        <div className="flex justify-center p-12">
-          <div className="w-10 h-10 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
-        </div>
-      ) : (
-        <ServicePerformanceView
-          serviceData={serviceData}
-          insights={insights}
-          refreshAnalysis={() => setRefreshKey(prev => prev + 1)}
-          dateRange={dateRange}
-        />
-      )}
+      <Tabs 
+        value={activeView} 
+        onValueChange={(value) => setActiveView(value as "services" | "categories")}
+        className="w-full"
+      >
+        <TabsList className="w-full grid grid-cols-2">
+          <TabsTrigger value="services">Hizmet Raporları</TabsTrigger>
+          <TabsTrigger value="categories">Kategori Raporları</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="services">
+          {isLoading ? (
+            <div className="flex justify-center p-12">
+              <div className="w-10 h-10 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
+            </div>
+          ) : (
+            <ServicePerformanceView
+              serviceData={serviceData}
+              insights={insights}
+              refreshAnalysis={() => setRefreshKey(prev => prev + 1)}
+              dateRange={dateRange}
+            />
+          )}
+        </TabsContent>
+
+        <TabsContent value="categories">
+          {isLoading ? (
+            <div className="flex justify-center p-12">
+              <div className="w-10 h-10 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
+            </div>
+          ) : (
+            <CategoryPerformanceView 
+              dateRange={dateRange} 
+              refreshKey={refreshKey}
+              operations={filteredOperations}
+            />
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
