@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StaffLayout } from "@/components/ui/staff-layout";
@@ -10,9 +11,21 @@ import { formatCurrency } from "@/lib/utils";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { Button } from "@/components/ui/button";
 import { personelServisi, islemServisi, personelIslemleriServisi, islemKategoriServisi } from "@/lib/supabase";
-import { Calendar, DollarSign } from "lucide-react";
+import { Calendar, DollarSign, Loader2 } from "lucide-react";
 import { CustomMonthCycleSelector } from "@/components/ui/custom-month-cycle-selector";
 import { cn } from "@/lib/utils";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
+import { Alert, AlertCircle, AlertDescription } from "@/components/ui/alert";
+import { useCustomerAuth } from "@/hooks/useCustomerAuth";
+import { CategoryDistributionChart } from "./components/CategoryDistributionChart";
+import { RevenueSourceChart } from "./components/RevenueSourceChart";
+import { AnalystBox } from "@/components/analyst/AnalystBox";
 
 // Define type for service data
 interface ServiceDataItem {
