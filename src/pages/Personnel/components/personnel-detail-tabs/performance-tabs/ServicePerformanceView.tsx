@@ -43,6 +43,7 @@ export function ServicePerformanceView({
   dateRange,
 }: ServicePerformanceViewProps) {
   const [activeView, setActiveView] = useState<"services" | "categories">("services");
+  const [refreshKey, setRefreshKey] = useState(0);
   
   const renderCustomBarTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
@@ -72,6 +73,8 @@ export function ServicePerformanceView({
     }
     return null;
   };
+
+  const filteredOperations = categoryData || [];
 
   return (
     <div className="space-y-6">
@@ -245,7 +248,7 @@ export function ServicePerformanceView({
           <CategoryPerformanceView 
             operations={filteredOperations}
             dateRange={dateRange}
-            refreshKey={refreshKey} // Pass the refreshKey prop
+            refreshKey={refreshKey} 
           />
         </TabsContent>
       </Tabs>

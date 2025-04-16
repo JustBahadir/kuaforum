@@ -76,7 +76,7 @@ export default function StaffOperations() {
   });
 
   const { mutate: kategoriEkle } = useMutation({
-    mutationFn: async (kategoriAdi: string) => {
+    mutationFn: (kategoriAdi: string) => {
       return islemKategoriServisi.ekle({ kategori_adi: kategoriAdi });
     },
     onSuccess: () => {
@@ -108,7 +108,7 @@ export default function StaffOperations() {
   });
 
   const { mutate: kategoriSil } = useMutation({
-    mutationFn: islemKategoriServisi.sil,
+    mutationFn: (id: number) => islemKategoriServisi.sil(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['kategoriler'] });
       toast.success("Kategori başarıyla silindi");

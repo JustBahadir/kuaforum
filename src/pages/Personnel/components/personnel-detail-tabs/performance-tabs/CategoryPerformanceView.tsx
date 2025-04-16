@@ -1,13 +1,23 @@
+
 import React, { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { islemKategoriServisi } from "@/lib/supabase";
 import { useQuery } from "@tanstack/react-query";
 import { formatCurrency } from "@/lib/utils";
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
+import { 
+  PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip,
+  ComposedChart, CartesianGrid, XAxis, YAxis, Bar, Line 
+} from "recharts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Clipboard, TrendingDown, TrendingUp } from "lucide-react";
+
+// Define colors array for charts
+const COLORS = [
+  '#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088FE', '#00C49F', '#FFBB28', 
+  '#FF8042', '#AF19FF', '#FF6B6B', '#10B981', '#2463EB', '#F59E0B', '#EC4899'
+];
 
 interface CategoryPerformanceViewProps {
   operations: any[];

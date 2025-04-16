@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { islemServisi, islemKategoriServisi } from "@/lib/supabase";
@@ -10,7 +11,7 @@ export default function CustomerOperations() {
   const navigate = useNavigate();
   const [openCategory, setOpenCategory] = useState<string | null>(null);
 
-  const { data: kategoriler = [] } = useQuery({
+  const { data: kategoriler = [], isLoading: kategorilerLoading } = useQuery({
     queryKey: ['kategoriler'],
     queryFn: islemKategoriServisi.hepsiniGetir
   });

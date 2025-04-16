@@ -1,28 +1,18 @@
-import { useState, useEffect } from "react";
-import { StaffLayout } from "@/components/ui/staff-layout";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
-import { DailyView } from "./components/DailyView";
-import { WeeklyView } from "./components/WeeklyView";
-import { MonthlyView } from "./components/MonthlyView";
-import { YearlyView } from "./components/YearlyView";
-import { PersonnelPerformance } from "./components/PersonnelPerformance";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { format, addMonths, setDate } from "date-fns";
-import { personelIslemleriServisi, personelServisi, islemServisi, kategoriServisi } from "@/lib/supabase";
-import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StaffLayout } from "@/components/ui/staff-layout";
+import {
+  PieChart, Pie, Tooltip, Cell, Legend, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line
+} from "recharts";
 import { formatCurrency } from "@/lib/utils";
-import { AnalystBox } from "@/components/analyst/AnalystBox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
-import { useCustomerAuth } from "@/hooks/useCustomerAuth";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { Button } from "@/components/ui/button";
+import { personelServisi, islemServisi, personelIslemleriServisi, islemKategoriServisi } from "@/lib/supabase";
+import { Calendar, DollarSign } from "lucide-react";
 import { CustomMonthCycleSelector } from "@/components/ui/custom-month-cycle-selector";
-import { RevenueSourceChart } from "./components/RevenueSourceChart";
-import { CategoryDistributionChart } from "./components/CategoryDistributionChart";
+import { cn } from "@/lib/utils";
 
 // Define type for service data
 interface ServiceDataItem {
@@ -130,7 +120,7 @@ export default function ShopStatistics() {
   // Fetch categories
   const { data: categories = [], isLoading: categoriesLoading } = useQuery({
     queryKey: ["categories-stats"],
-    queryFn: () => kategoriServisi.hepsiniGetir(),
+    queryFn: () => islemKategoriServisi.hepsiniGetir(),
   });
 
   // Calculate service data

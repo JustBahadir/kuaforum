@@ -2,6 +2,10 @@
 // Export types
 export * from './types';
 
+// Import and export supabase client
+import { supabase } from './client';
+export { supabase };
+
 // Export services
 import { personelServisi } from './services/personelServisi';
 import { personelIslemleriServisi } from './services/personelIslemleriServisi';
