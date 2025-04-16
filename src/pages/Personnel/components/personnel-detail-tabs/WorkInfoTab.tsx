@@ -1,211 +1,294 @@
 
-import React, { useState } from 'react';
+import React, { useState } from "react";
+import { formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { personelServisi } from "@/lib/supabase";
+import { Check, X, Edit } from "lucide-react";
 
 interface WorkInfoTabProps {
   personnel: any;
-  onUpdate?: () => void;
 }
 
-export function WorkInfoTab({ personnel, onUpdate }: WorkInfoTabProps) {
+export function WorkInfoTab({ personnel }: WorkInfoTabProps) {
+  const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [workType, setWorkType] = useState(personnel.calisma_sistemi || 'prim_komisyon');
-  const [salaryType, setSalaryType] = useState(
-    personnel.calisma_sistemi === 'aylik_maas' ? 'aylik' : 
-    personnel.calisma_sistemi === 'haftalik_maas' ? 'haftalik' : 'gunluk'
+  const [formData, setFormData] = useState({
+    calisma_sistemi: personnel.calisma_sistemi || "aylik_maas",
+    maas: personnel.maas || 0,
+    prim_yuzdesi: personnel.prim_yuzdesi || 0,
+  });
+
+  // State to track which top-level option is selected
+  const [selectedTopOption, setSelectedTopOption] = useState<'maaşlı' | 'komisyonlu'>(
+    ['aylik_maas', 'haftalik_maas', 'gunluk_maas'].includes(formData.calisma_sistemi) 
+      ? 'maaşlı' 
+      : 'komisyonlu'
   );
-  const [salary, setSalary] = useState(personnel.maas || 0);
-  const [commission, setCommission] = useState(personnel.prim_yuzdesi || 0);
-  
-  // Calculate summary data
-  const totalRevenue = personnel.operations?.reduce((sum: number, op: any) => sum + (Number(op.tutar) || 0), 0) || 0;
-  const totalOperations = personnel.operations?.length || 0;
-  
-  const handleSave = async () => {
-    if (workType === 'maasli' && !salaryType) {
-      toast.error("Lütfen maaş türünü seçin.");
-      return;
-    }
-    
-    // Validate salary or commission
-    if (workType === 'maasli' && !salary) {
-      toast.error("Lütfen maaş tutarını girin.");
-      return;
-    }
-    
-    if (workType === 'prim_komisyon' && !commission) {
-      toast.error("Lütfen komisyon yüzdesini girin.");
-      return;
-    }
-    
-    setIsSubmitting(true);
-    
-    try {
-      // Determine the full work type
-      let fullWorkType = workType;
-      if (workType === 'maasli') {
-        fullWorkType = `${salaryType}_maas`;
-      }
-      
-      await personelServisi.guncelle(personnel.id, {
-        calisma_sistemi: fullWorkType,
-        maas: Number(salary),
-        prim_yuzdesi: Number(commission)
-      });
-      
-      toast.success("Çalışma bilgileri güncellendi");
+
+  const updateMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return await personelServisi.guncelle(personnel.id, data);
+    },
+    onSuccess: () => {
+      toast.success("Personel bilgileri başarıyla güncellendi!");
+      queryClient.invalidateQueries({ queryKey: ["personeller"] });
+      queryClient.invalidateQueries({ queryKey: ["personel-list"] });
+      queryClient.invalidateQueries({ queryKey: ["personel"] });
       setIsEditing(false);
-      if (onUpdate) onUpdate();
-    } catch (error) {
-      console.error("Güncelleme hatası:", error);
-      toast.error("Çalışma bilgileri güncellenirken bir hata oluştu.");
-    } finally {
-      setIsSubmitting(false);
+    },
+    onError: (error) => {
+      console.error("Update error:", error);
+      toast.error("Personel güncellenirken bir hata oluştu.");
+    },
+  });
+
+  const getWorkingSystemLabel = (system: string) => {
+    switch (system) {
+      case "aylik_maas":
+        return "Aylık Maaş";
+      case "haftalik_maas":
+        return "Haftalık Maaş";
+      case "gunluk_maas":
+        return "Günlük Maaş";
+      case "prim_komisyon":
+        return "Yüzdelik Çalışma";
+      default:
+        return system;
     }
   };
-  
+
+  const handleSave = () => {
+    // Prepare the data for submission
+    const updateData: any = {
+      calisma_sistemi: formData.calisma_sistemi
+    };
+    
+    // Add the appropriate salary or commission field based on working system
+    if (formData.calisma_sistemi === "prim_komisyon") {
+      updateData.prim_yuzdesi = parseInt(formData.prim_yuzdesi.toString());
+      updateData.maas = 0; // Set salary to 0 for commission-based workers
+    } else {
+      updateData.maas = Number(formData.maas);
+      updateData.prim_yuzdesi = 0; // Set commission to 0 for salaried workers
+    }
+    
+    updateMutation.mutate(updateData);
+  };
+
   const handleCancel = () => {
-    setWorkType(personnel.calisma_sistemi || 'prim_komisyon');
-    setSalary(personnel.maas || 0);
-    setCommission(personnel.prim_yuzdesi || 0);
-    setSalaryType(
-      personnel.calisma_sistemi === 'aylik_maas' ? 'aylik' : 
-      personnel.calisma_sistemi === 'haftalik_maas' ? 'haftalik' : 'gunluk'
+    setFormData({
+      calisma_sistemi: personnel.calisma_sistemi || "aylik_maas",
+      maas: personnel.maas || 0,
+      prim_yuzdesi: personnel.prim_yuzdesi || 0,
+    });
+    setSelectedTopOption(
+      ['aylik_maas', 'haftalik_maas', 'gunluk_maas'].includes(personnel.calisma_sistemi) 
+        ? 'maaşlı' 
+        : 'komisyonlu'
     );
     setIsEditing(false);
   };
+
+  // Check if the working system is a salary type
+  const isSalaryType = ["aylik_maas", "haftalik_maas", "gunluk_maas"].includes(formData.calisma_sistemi);
+  const isCommissionType = formData.calisma_sistemi === "prim_komisyon";
+
+  // Get the proper display format for monetary values
+  const isCommissionBased = personnel.calisma_sistemi === "prim_komisyon";
   
+  // Check if form is valid for saving
+  const isFormValid = () => {
+    if (selectedTopOption === 'maaşlı') {
+      return formData.calisma_sistemi && formData.maas > 0;
+    } else {
+      return formData.prim_yuzdesi >= 0 && formData.prim_yuzdesi <= 100;
+    }
+  };
+
+  // Handle top-level selection change (Maaşlı/Komisyonlu)
+  const handleTopLevelChange = (value: 'maaşlı' | 'komisyonlu') => {
+    setSelectedTopOption(value);
+    
+    if (value === 'maaşlı') {
+      // Default to monthly salary when selecting "Maaşlı"
+      setFormData(prev => ({
+        ...prev,
+        calisma_sistemi: 'aylik_maas',
+        prim_yuzdesi: 0
+      }));
+    } else {
+      // Set to commission-based when selecting "Komisyonlu"
+      setFormData(prev => ({
+        ...prev,
+        calisma_sistemi: 'prim_komisyon',
+        maas: 0
+      }));
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-4">
-        {!isEditing ? (
-          <>
-            <div className="space-y-1">
-              <div className="text-sm font-medium text-muted-foreground">Çalışma Sistemi</div>
-              <div>
-                {personnel.calisma_sistemi === 'prim_komisyon' 
-                  ? `Yüzdelik Çalışan (%${personnel.prim_yuzdesi})` 
-                  : personnel.calisma_sistemi === 'aylik_maas' 
-                    ? "Aylık Maaşlı" 
-                    : personnel.calisma_sistemi === 'haftalik_maas' 
-                      ? "Haftalık Maaşlı"
-                      : "Günlük Maaşlı"}
-              </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <h3 className="text-sm font-medium text-muted-foreground mb-1">Çalışma Sistemi</h3>
+          {!isEditing ? (
+            <div className="text-base font-normal">
+              {getWorkingSystemLabel(personnel.calisma_sistemi)}
             </div>
-            
-            <div className="space-y-1">
-              <div className="text-sm font-medium text-muted-foreground">Maaş/Komisyon</div>
-              <div>
-                {personnel.calisma_sistemi === 'prim_komisyon'
-                  ? `%${personnel.prim_yuzdesi} Komisyon`
-                  : formatCurrency(personnel.maas || 0)}
-              </div>
-            </div>
-          </>
-        ) : (
-          <div className="col-span-2 space-y-4">
-            <RadioGroup value={workType} onValueChange={setWorkType} className="flex flex-col space-y-3">
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="prim_komisyon" id="komisyonlu" />
-                <Label htmlFor="komisyonlu">Komisyonlu Çalışan</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="maasli" id="maasli" />
-                <Label htmlFor="maasli">Maaşlı Çalışan</Label>
-              </div>
-            </RadioGroup>
-            
-            {workType === 'prim_komisyon' && (
+          ) : (
+            <div className="space-y-3 mt-2">
               <div className="space-y-2">
-                <Label htmlFor="commission">Komisyon Yüzdesi</Label>
-                <div className="flex items-center">
-                  <Input
-                    id="commission"
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={commission}
-                    onChange={(e) => setCommission(Number(e.target.value))}
-                    className="w-24"
-                  />
-                  <span className="ml-2">%</span>
+                <div className="space-x-2">
+                  <RadioGroup
+                    value={selectedTopOption}
+                    onValueChange={(value) => handleTopLevelChange(value as 'maaşlı' | 'komisyonlu')}
+                    className="flex items-center mb-3"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="maaşlı" id="maasli" />
+                      <Label htmlFor="maasli" className="text-base font-normal">Maaşlı</Label>
+                    </div>
+                    <div className="flex items-center space-x-2 ml-4">
+                      <RadioGroupItem value="komisyonlu" id="komisyonlu" />
+                      <Label htmlFor="komisyonlu" className="text-base font-normal">Komisyonlu</Label>
+                    </div>
+                  </RadioGroup>
                 </div>
+              
+                {selectedTopOption === 'maaşlı' && (
+                  <RadioGroup
+                    value={formData.calisma_sistemi}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, calisma_sistemi: value }))}
+                    className="flex space-x-4 mt-2"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="aylik_maas" id="aylik_maas_option" />
+                      <Label htmlFor="aylik_maas_option" className="text-base font-normal">Aylık</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="haftalik_maas" id="haftalik_maas" />
+                      <Label htmlFor="haftalik_maas" className="text-base font-normal">Haftalık</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="gunluk_maas" id="gunluk_maas" />
+                      <Label htmlFor="gunluk_maas" className="text-base font-normal">Günlük</Label>
+                    </div>
+                  </RadioGroup>
+                )}
               </div>
-            )}
-            
-            {workType === 'maasli' && (
-              <>
-                <RadioGroup value={salaryType} onValueChange={setSalaryType} className="flex space-x-4">
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="gunluk" id="gunluk" />
-                    <Label htmlFor="gunluk">Günlük</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="haftalik" id="haftalik" />
-                    <Label htmlFor="haftalik">Haftalık</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="aylik" id="aylik" />
-                    <Label htmlFor="aylik">Aylık</Label>
-                  </div>
-                </RadioGroup>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="salary">Maaş Tutarı</Label>
-                  <div className="flex items-center">
-                    <Input
-                      id="salary"
+            </div>
+          )}
+        </div>
+
+        <div>
+          <h3 className="text-sm font-medium text-muted-foreground mb-1">
+            {isCommissionType ? "Prim Yüzdesi" : "Maaş Tutarı"}
+          </h3>
+          {!isEditing ? (
+            <div className="font-normal">
+              {isCommissionBased 
+                ? `%${personnel.prim_yuzdesi}` 
+                : formatCurrency(personnel.maas)}
+            </div>
+          ) : (
+            <>
+              {selectedTopOption === 'komisyonlu' ? (
+                <div className="flex items-center">
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                      <span className="text-gray-500">%</span>
+                    </div>
+                    <Input 
                       type="number"
                       min="0"
-                      value={salary}
-                      onChange={(e) => setSalary(Number(e.target.value))}
+                      max="100"
+                      value={formData.prim_yuzdesi}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value);
+                        if (e.target.value === "" || (value >= 0 && value <= 100)) {
+                          setFormData(prev => ({ 
+                            ...prev, 
+                            prim_yuzdesi: e.target.value === "" ? 0 : value 
+                          }));
+                        }
+                      }}
+                      className="pl-8 w-24"
                     />
-                    <span className="ml-2">₺</span>
                   </div>
                 </div>
-              </>
-            )}
-          </div>
-        )}
-      </div>
-      
-      <div className="bg-muted/30 rounded-md p-4">
-        <h3 className="text-sm font-medium mb-3">Özet Bilgiler</h3>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <div className="text-sm text-muted-foreground">Toplam Ciro</div>
-            <div className="font-medium">{formatCurrency(totalRevenue)}</div>
-          </div>
-          <div>
-            <div className="text-sm text-muted-foreground">İşlem Sayısı</div>
-            <div className="font-medium">{totalOperations}</div>
-          </div>
+              ) : (
+                <Input 
+                  type="number"
+                  min="0"
+                  value={formData.maas}
+                  onChange={(e) => setFormData(prev => ({ ...prev, maas: Number(e.target.value) }))}
+                  className="w-40"
+                  disabled={!selectedTopOption || selectedTopOption !== 'maaşlı' || !formData.calisma_sistemi}
+                />
+              )}
+            </>
+          )}
         </div>
       </div>
-      
-      <div className="flex justify-end">
-        {isEditing ? (
-          <div className="space-x-2">
-            <Button variant="outline" onClick={handleCancel} disabled={isSubmitting}>
-              İptal
-            </Button>
-            <Button onClick={handleSave} disabled={isSubmitting}>
-              {isSubmitting ? "Kaydediliyor..." : "Kaydet"}
-            </Button>
-          </div>
-        ) : (
-          <Button onClick={() => setIsEditing(true)}>
+
+      <div className="bg-muted p-4 rounded-md">
+        <h3 className="font-medium mb-3">Özet Bilgiler</h3>
+        <table className="w-full">
+          <tbody>
+            {isCommissionBased && (
+              <tr className="border-b">
+                <td className="py-2 text-sm text-muted-foreground">Toplam Prim</td>
+                <td className="py-2 text-right font-medium">{formatCurrency(personnel.toplam_prim || 0)}</td>
+              </tr>
+            )}
+            <tr className="border-b">
+              <td className="py-2 text-sm text-muted-foreground">Toplam Ciro</td>
+              <td className="py-2 text-right font-medium">{formatCurrency(personnel.toplam_ciro || 0)}</td>
+            </tr>
+            <tr>
+              <td className="py-2 text-sm text-muted-foreground">İşlem Sayısı</td>
+              <td className="py-2 text-right font-medium">{personnel.islem_sayisi || 0}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      {isEditing && (
+        <div className="flex justify-end space-x-3">
+          <Button variant="outline" size="sm" onClick={handleCancel} className="gap-1">
+            <X className="h-4 w-4" />
+            İptal
+          </Button>
+          <Button 
+            size="sm" 
+            onClick={handleSave} 
+            disabled={updateMutation.isPending || !isFormValid()}
+            className="gap-1"
+          >
+            <Check className="h-4 w-4" />
+            {updateMutation.isPending ? "Kaydediliyor..." : "Kaydet"}
+          </Button>
+        </div>
+      )}
+
+      {!isEditing && (
+        <div className="flex justify-end">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setIsEditing(true)}
+            className="gap-1"
+          >
+            <Edit className="h-4 w-4" />
             Düzenle
           </Button>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

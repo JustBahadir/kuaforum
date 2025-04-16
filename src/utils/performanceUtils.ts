@@ -6,14 +6,6 @@ export interface ServicePerformanceData {
   percentage?: number;
 }
 
-export interface CategoryPerformanceData {
-  name: string;
-  count: number;
-  revenue: number;
-  percentage?: number;
-  services?: ServicePerformanceData[];
-}
-
 export function processServiceData(operations: any[]): ServicePerformanceData[] {
   if (!operations || operations.length === 0) {
     return [];
@@ -48,66 +40,6 @@ export function processServiceData(operations: any[]): ServicePerformanceData[] 
     .map(item => ({
       ...item,
       percentage: totalRevenue > 0 ? (item.revenue / totalRevenue) * 100 : 0
-    }))
-    .sort((a, b) => b.revenue - a.revenue);
-}
-
-export function processCategoryData(operations: any[], categories: any[]): CategoryPerformanceData[] {
-  if (!operations || operations.length === 0 || !categories || categories.length === 0) {
-    return [];
-  }
-
-  // Group by category
-  const categoryMap = new Map<string, CategoryPerformanceData>();
-  let totalRevenue = 0;
-
-  operations.forEach(op => {
-    if (!op || !op.islem) return;
-    
-    const categoryId = op.islem.kategori_id;
-    const category = categories.find(c => c.id === categoryId);
-    const categoryName = category ? category.kategori_adi : 'Kategorisiz';
-    const serviceName = op.islem.islem_adi || 'Bilinmeyen Hizmet';
-    const revenue = Number(op.tutar) || 0;
-    
-    if (!categoryMap.has(categoryName)) {
-      categoryMap.set(categoryName, {
-        name: categoryName,
-        count: 0,
-        revenue: 0,
-        services: []
-      });
-    }
-    
-    const categoryEntry = categoryMap.get(categoryName)!;
-    categoryEntry.count += 1;
-    categoryEntry.revenue += revenue;
-    totalRevenue += revenue;
-    
-    // Also track service within category
-    let serviceEntry = categoryEntry.services!.find(s => s.name === serviceName);
-    if (!serviceEntry) {
-      serviceEntry = {
-        name: serviceName,
-        count: 0,
-        revenue: 0
-      };
-      categoryEntry.services!.push(serviceEntry);
-    }
-    
-    serviceEntry.count += 1;
-    serviceEntry.revenue += revenue;
-  });
-  
-  // Calculate percentages and sort
-  return Array.from(categoryMap.values())
-    .map(item => ({
-      ...item,
-      percentage: totalRevenue > 0 ? (item.revenue / totalRevenue) * 100 : 0,
-      services: item.services?.map(service => ({
-        ...service,
-        percentage: item.revenue > 0 ? (service.revenue / item.revenue) * 100 : 0
-      })).sort((a, b) => b.revenue - a.revenue)
     }))
     .sort((a, b) => b.revenue - a.revenue);
 }
@@ -187,45 +119,6 @@ export function generateSmartInsights(operations: any[], serviceData: ServicePer
   }
   
   insights.push(`Toplam ciro: ${formatCurrency(totalRevenue)}`);
-  insights.push(`Toplam işlem sayısı: ${totalOperations}`);
-  
-  return insights;
-}
-
-export function generateCategoryInsights(categoryData: CategoryPerformanceData[]): string[] {
-  if (!categoryData || categoryData.length === 0) {
-    return [];
-  }
-  
-  const insights: string[] = [];
-  const totalRevenue = categoryData.reduce((sum, c) => sum + c.revenue, 0);
-  const totalOperations = categoryData.reduce((sum, c) => sum + c.count, 0);
-  
-  // Top category by revenue
-  const topRevenueCategory = [...categoryData].sort((a, b) => b.revenue - a.revenue)[0];
-  if (topRevenueCategory) {
-    insights.push(`En yüksek ciro "${topRevenueCategory.name}" kategorisinden elde edildi (${formatCurrency(topRevenueCategory.revenue)}).`);
-  }
-  
-  // Top category by count
-  const topCountCategory = [...categoryData].sort((a, b) => b.count - a.count)[0];
-  if (topCountCategory && topCountCategory.name !== topRevenueCategory.name) {
-    insights.push(`En çok işlem "${topCountCategory.name}" kategorisinde yapıldı (${topCountCategory.count} işlem).`);
-  }
-  
-  // Most profitable service in top category
-  if (topRevenueCategory.services && topRevenueCategory.services.length > 0) {
-    const topService = topRevenueCategory.services[0];
-    insights.push(`"${topRevenueCategory.name}" kategorisinde en karlı hizmet: ${topService.name} (${formatCurrency(topService.revenue)})`);
-  }
-  
-  // Category distribution
-  if (categoryData.length > 1) {
-    const topCategoryPercentage = Math.round(topRevenueCategory.percentage || 0);
-    insights.push(`Toplam cironun %${topCategoryPercentage}'i "${topRevenueCategory.name}" kategorisinden geliyor.`);
-  }
-  
-  insights.push(`Kategoriler arası toplam ciro: ${formatCurrency(totalRevenue)}`);
   insights.push(`Toplam işlem sayısı: ${totalOperations}`);
   
   return insights;
