@@ -1,15 +1,44 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase/client';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuthState } from './auth/useAuthState';
+import { useProfileManagement } from './auth/useProfileManagement';
+import { useSessionManagement } from './auth/useSessionManagement';
 
 export const useCustomerAuth = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userRole, setUserRole] = useState<string | null>(null);
+  const {
+    userName,
+    setUserName,
+    userRole, 
+    setUserRole,
+    loading,
+    setLoading,
+    isAuthenticated,
+    setIsAuthenticated,
+    initialLoadDone,
+    setInitialLoadDone,
+    authCheckInProgress,
+    setAuthCheckInProgress,
+    activeTab,
+    resetAuthState,
+  } = useAuthState();
+
   const [userId, setUserId] = useState<string | null>(null);
   const [dukkanId, setDukkanId] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
+  
+  const {
+    dukkanId: profileDukkanId,
+    dukkanAdi,
+    refreshProfile: refreshProfileData,
+    resetProfile,
+  } = useProfileManagement(userRole, isAuthenticated, setUserName);
+
+  const { handleLogout, resetSession } = useSessionManagement(
+    resetAuthState,
+    resetProfile,
+    setInitialLoadDone
+  );
   
   useEffect(() => {
     const checkAuth = async () => {
@@ -63,13 +92,35 @@ export const useCustomerAuth = () => {
     return () => {
       authListener?.subscription.unsubscribe();
     };
-  }, [navigate]);
+  }, [setIsAuthenticated, setUserRole, setLoading]);
+
+  // Sync dukkanId from profile management
+  useEffect(() => {
+    if (profileDukkanId !== null) {
+      setDukkanId(profileDukkanId);
+    }
+  }, [profileDukkanId]);
+
+  // Create a wrapper for refreshProfile to handle errors
+  const refreshProfile = async () => {
+    try {
+      await refreshProfileData();
+    } catch (error) {
+      console.error("Error refreshing profile:", error);
+    }
+  };
 
   return {
     isAuthenticated,
     userRole,
     userId,
     dukkanId,
-    loading
+    dukkanAdi,
+    loading,
+    userName,
+    activeTab,
+    handleLogout,
+    refreshProfile,
+    resetSession
   };
 };
