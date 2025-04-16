@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -12,9 +11,10 @@ import { Check, X, Edit } from "lucide-react";
 
 interface WorkInfoTabProps {
   personnel: any;
+  onSave: () => void;
 }
 
-export function WorkInfoTab({ personnel }: WorkInfoTabProps) {
+export function WorkInfoTab({ personnel, onSave }: WorkInfoTabProps) {
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
@@ -23,7 +23,6 @@ export function WorkInfoTab({ personnel }: WorkInfoTabProps) {
     prim_yuzdesi: personnel.prim_yuzdesi || 0,
   });
 
-  // State to track which top-level option is selected
   const [selectedTopOption, setSelectedTopOption] = useState<'maaşlı' | 'komisyonlu'>(
     ['aylik_maas', 'haftalik_maas', 'gunluk_maas'].includes(formData.calisma_sistemi) 
       ? 'maaşlı' 
@@ -39,7 +38,12 @@ export function WorkInfoTab({ personnel }: WorkInfoTabProps) {
       queryClient.invalidateQueries({ queryKey: ["personeller"] });
       queryClient.invalidateQueries({ queryKey: ["personel-list"] });
       queryClient.invalidateQueries({ queryKey: ["personel"] });
+      queryClient.invalidateQueries({ queryKey: ["personnel-detail", personnel.id] });
       setIsEditing(false);
+      
+      if (onSave) {
+        onSave();
+      }
     },
     onError: (error) => {
       console.error("Update error:", error);
@@ -63,18 +67,16 @@ export function WorkInfoTab({ personnel }: WorkInfoTabProps) {
   };
 
   const handleSave = () => {
-    // Prepare the data for submission
     const updateData: any = {
       calisma_sistemi: formData.calisma_sistemi
     };
     
-    // Add the appropriate salary or commission field based on working system
     if (formData.calisma_sistemi === "prim_komisyon") {
       updateData.prim_yuzdesi = parseInt(formData.prim_yuzdesi.toString());
-      updateData.maas = 0; // Set salary to 0 for commission-based workers
+      updateData.maas = 0;
     } else {
       updateData.maas = Number(formData.maas);
-      updateData.prim_yuzdesi = 0; // Set commission to 0 for salaried workers
+      updateData.prim_yuzdesi = 0;
     }
     
     updateMutation.mutate(updateData);
@@ -94,14 +96,11 @@ export function WorkInfoTab({ personnel }: WorkInfoTabProps) {
     setIsEditing(false);
   };
 
-  // Check if the working system is a salary type
   const isSalaryType = ["aylik_maas", "haftalik_maas", "gunluk_maas"].includes(formData.calisma_sistemi);
   const isCommissionType = formData.calisma_sistemi === "prim_komisyon";
 
-  // Get the proper display format for monetary values
   const isCommissionBased = personnel.calisma_sistemi === "prim_komisyon";
   
-  // Check if form is valid for saving
   const isFormValid = () => {
     if (selectedTopOption === 'maaşlı') {
       return formData.calisma_sistemi && formData.maas > 0;
@@ -110,19 +109,16 @@ export function WorkInfoTab({ personnel }: WorkInfoTabProps) {
     }
   };
 
-  // Handle top-level selection change (Maaşlı/Komisyonlu)
   const handleTopLevelChange = (value: 'maaşlı' | 'komisyonlu') => {
     setSelectedTopOption(value);
     
     if (value === 'maaşlı') {
-      // Default to monthly salary when selecting "Maaşlı"
       setFormData(prev => ({
         ...prev,
         calisma_sistemi: 'aylik_maas',
         prim_yuzdesi: 0
       }));
     } else {
-      // Set to commission-based when selecting "Komisyonlu"
       setFormData(prev => ({
         ...prev,
         calisma_sistemi: 'prim_komisyon',

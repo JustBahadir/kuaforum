@@ -223,8 +223,11 @@ export function PersonnelList({
 
       <PersonnelDetailsDialog
         isOpen={isDetailsDialogOpen}
+        onClose={() => setIsDetailsDialogOpen(false)}
         onOpenChange={setIsDetailsDialogOpen}
+        personId={selectedPersonnel?.id || null}
         personnel={selectedPersonnel}
+        onRefreshList={() => queryClient.invalidateQueries({ queryKey: ['personel-list'] })}
       />
       
       <PersonnelDeleteDialog 

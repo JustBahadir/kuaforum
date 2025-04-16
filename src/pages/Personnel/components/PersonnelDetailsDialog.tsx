@@ -22,14 +22,18 @@ interface PersonnelDetailsDialogProps {
   personId?: number | null;
   isOpen: boolean;
   onClose: () => void;
+  onOpenChange?: (open: boolean) => void; // Add this prop
   onRefreshList?: () => void;
+  personnel?: any; // Add this prop
 }
 
 export function PersonnelDetailsDialog({
   personId,
   isOpen,
   onClose,
+  onOpenChange,
   onRefreshList,
+  personnel: externalPersonnel, // Accept external personnel data
 }: PersonnelDetailsDialogProps) {
   const [activeTab, setActiveTab] = useState("info");
   const [selectedPersonId, setSelectedPersonId] = useState<number | null>(null);
@@ -38,6 +42,7 @@ export function PersonnelDetailsDialog({
     queryKey: ["personnel-detail", personId],
     queryFn: () => personId ? personelServisi.getirById(personId) : null,
     enabled: !!personId && isOpen,
+    initialData: externalPersonnel || null, // Use external data if provided
   });
 
   const { data: operations = [], isLoading: isOperationsLoading, refetch: refetchOperations } = useQuery({
@@ -69,9 +74,20 @@ export function PersonnelDetailsDialog({
     }
   };
 
+  // Handle the onOpenChange callback
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      onClose();
+    }
+    
+    if (onOpenChange) {
+      onOpenChange(open);
+    }
+  };
+
   if (isPersonnelLoading) {
     return (
-      <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <Dialog open={isOpen} onOpenChange={handleOpenChange}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader className="mb-4">
             <DialogTitle>Personel Detayları</DialogTitle>
@@ -85,7 +101,7 @@ export function PersonnelDetailsDialog({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader className="flex flex-row items-center justify-between">
           <div>
