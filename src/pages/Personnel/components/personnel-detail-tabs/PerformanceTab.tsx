@@ -1,12 +1,14 @@
 
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useEffect } from "react";
 import { ServicePerformanceView } from "./performance-tabs/ServicePerformanceView";
+import { CategoryPerformanceView } from "./performance-tabs/CategoryPerformanceView";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { CustomMonthCycleSelector } from "@/components/ui/custom-month-cycle-selector";
 import { Button } from "@/components/ui/button";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { processServiceData, generateSmartInsights } from "@/utils/performanceUtils";
+import { processServiceData, processCategoryData, generateSmartInsights, generateCategoryInsights } from "@/utils/performanceUtils";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Tooltip,
   TooltipContent,
@@ -15,6 +17,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { kategoriServisi } from "@/lib/supabase";
 
 interface PerformanceTabProps {
   personnel: any;
@@ -35,6 +38,26 @@ export function PerformanceTab({
   const [useMonthCycle, setUseMonthCycle] = useState(false);
   const [useSingleDate, setUseSingleDate] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [activeTab, setActiveTab] = useState("services");
+  const [categories, setCategories] = useState<any[]>([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(false);
+
+  // Load categories data
+  useEffect(() => {
+    const loadCategories = async () => {
+      setIsLoadingCategories(true);
+      try {
+        const data = await kategoriServisi.hepsiniGetir();
+        setCategories(data);
+      } catch (error) {
+        console.error("Kategoriler yüklenirken hata:", error);
+      } finally {
+        setIsLoadingCategories(false);
+      }
+    };
+    
+    loadCategories();
+  }, []);
 
   // Extract all dates that have operations
   const availableDates = useMemo(() => {
@@ -53,7 +76,12 @@ export function PerformanceTab({
 
   const handleSingleDateChange = (date: Date | undefined) => {
     if (date) {
-      setDateRange({from: date, to: date});
+      // Set both from and to to the same date
+      // For "to", we set it to the end of the day to include all operations on that date
+      const endOfDay = new Date(date);
+      endOfDay.setHours(23, 59, 59, 999);
+      
+      setDateRange({from: date, to: endOfDay});
       setUseMonthCycle(false);
       setUseSingleDate(true);
     }
@@ -73,6 +101,7 @@ export function PerformanceTab({
     
     const toDate = new Date(fromDate);
     toDate.setMonth(toDate.getMonth() + 1);
+    toDate.setDate(toDate.getDate() - 1);
     
     setDateRange({from: fromDate, to: toDate});
     setUseMonthCycle(true);
@@ -91,9 +120,17 @@ export function PerformanceTab({
     return processServiceData(filteredOperations);
   }, [filteredOperations]);
   
-  const insights = useMemo(() => {
+  const categoryData = useMemo(() => {
+    return processCategoryData(filteredOperations, categories);
+  }, [filteredOperations, categories]);
+  
+  const serviceInsights = useMemo(() => {
     return generateSmartInsights(filteredOperations, serviceData);
   }, [filteredOperations, serviceData]);
+  
+  const categoryInsights = useMemo(() => {
+    return generateCategoryInsights(categoryData);
+  }, [categoryData]);
 
   return (
     <div className="space-y-6">
@@ -169,16 +206,33 @@ export function PerformanceTab({
         </div>
       </div>
 
-      {isLoading ? (
+      {isLoading || isLoadingCategories ? (
         <div className="flex justify-center p-12">
           <div className="w-10 h-10 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
         </div>
       ) : (
-        <ServicePerformanceView
-          serviceData={serviceData}
-          insights={insights}
-          refreshAnalysis={() => setRefreshKey(prev => prev + 1)}
-        />
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="mb-4">
+            <TabsTrigger value="services">Hizmetler</TabsTrigger>
+            <TabsTrigger value="categories">Kategoriler</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="services">
+            <ServicePerformanceView
+              serviceData={serviceData}
+              insights={serviceInsights}
+              refreshAnalysis={() => setRefreshKey(prev => prev + 1)}
+            />
+          </TabsContent>
+          
+          <TabsContent value="categories">
+            <CategoryPerformanceView
+              categoryData={categoryData}
+              insights={categoryInsights}
+              refreshAnalysis={() => setRefreshKey(prev => prev + 1)}
+            />
+          </TabsContent>
+        </Tabs>
       )}
     </div>
   );

@@ -5,16 +5,13 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Phone, Mail, Copy, MapPin, CreditCard, Calendar } from "lucide-react";
 import { personelServisi, personelIslemleriServisi } from "@/lib/supabase";
-import { formatCurrency } from "@/lib/utils";
 import { WorkInfoTab } from "./personnel-detail-tabs/WorkInfoTab";
 import { OperationsHistoryTab } from "./personnel-detail-tabs/OperationsHistoryTab";
 import { PerformanceTab } from "./personnel-detail-tabs/PerformanceTab";
@@ -76,6 +73,32 @@ export function PersonnelDetailsDialog({
       .toUpperCase()
       .slice(0, 2);
   };
+  
+  const handleRefreshData = async () => {
+    if (!personnel?.id) return;
+    
+    setIsLoading(true);
+    try {
+      const refreshedOperations = await personelIslemleriServisi.personelIslemleriGetir(personnel.id);
+      setOperations(refreshedOperations || []);
+      
+      // Also refresh personnel data
+      const refreshedPersonnel = await personelServisi.getir(personnel.id);
+      if (onEdit && refreshedPersonnel) {
+        onEdit({
+          ...refreshedPersonnel,
+          operations: refreshedOperations
+        });
+      }
+      
+      toast.success("Veriler güncellendi");
+    } catch (error) {
+      console.error("Veri yenileme hatası:", error);
+      toast.error("Veriler yenilenirken bir hata oluştu");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -89,15 +112,6 @@ export function PersonnelDetailsDialog({
               </Avatar>
               <div>
                 <DialogTitle className="text-xl">{personnel.ad_soyad}</DialogTitle>
-                <DialogDescription>
-                  {personnel.calisma_sistemi === "prim_komisyon" 
-                    ? `Yüzdelik Çalışan (%${personnel.prim_yuzdesi})` 
-                    : personnel.calisma_sistemi === "aylik_maas" 
-                      ? "Aylık Maaşlı" 
-                      : personnel.calisma_sistemi === "haftalik_maas" 
-                        ? "Haftalık Maaşlı"
-                        : "Günlük Maaşlı"}
-                </DialogDescription>
               </div>
             </div>
           </div>
@@ -196,7 +210,10 @@ export function PersonnelDetailsDialog({
           </TabsContent>
 
           <TabsContent value="calisma" className="space-y-4 mt-4">
-            <WorkInfoTab personnel={personnel} />
+            <WorkInfoTab 
+              personnel={{...personnel, operations}} 
+              onUpdate={handleRefreshData}
+            />
           </TabsContent>
           
           <TabsContent value="performans" className="space-y-4 mt-4">
