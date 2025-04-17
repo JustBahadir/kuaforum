@@ -1,169 +1,111 @@
 
-import React, { useState, useEffect } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { useState } from "react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PersonnelInfoTab } from "./personnel-detail-tabs/PersonnelInfoTab";
-import { PersonnelImageTab } from "./personnel-detail-tabs/PersonnelImageTab";
 import { WorkInfoTab } from "./personnel-detail-tabs/WorkInfoTab";
-import { personelServisi, personelIslemleriServisi } from "@/lib/supabase";
-import { Loader2 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-import { formatDistanceToNow } from "date-fns";
-import { tr } from "date-fns/locale";
-import { PerformanceTab } from "./personnel-detail-tabs/PerformanceTab";
+import { PersonnelImageTab } from "./personnel-detail-tabs/PersonnelImageTab";
 import { OperationsHistoryTab } from "./personnel-detail-tabs/OperationsHistoryTab";
+import { PerformanceTab } from "./personnel-detail-tabs/PerformanceTab";
+import { useQuery } from "@tanstack/react-query";
+import { personelIslemleriServisi } from "@/lib/supabase";
 
 interface PersonnelDetailsDialogProps {
-  personId?: number | null;
   isOpen: boolean;
-  onClose: () => void;
-  onOpenChange?: (open: boolean) => void;
-  onRefreshList?: () => void;
-  personnel?: any;
+  onOpenChange: (open: boolean) => void;
+  personnel: any;
+  onUpdate?: () => void;
 }
 
 export function PersonnelDetailsDialog({
-  personId,
   isOpen,
-  onClose,
   onOpenChange,
-  onRefreshList,
-  personnel: externalPersonnel,
+  personnel,
+  onUpdate
 }: PersonnelDetailsDialogProps) {
   const [activeTab, setActiveTab] = useState("info");
-  const [selectedPersonId, setSelectedPersonId] = useState<number | null>(null);
 
-  const { data: personnel, isLoading: isPersonnelLoading, refetch: refetchPersonnel } = useQuery({
-    queryKey: ["personnel-detail", personId],
-    queryFn: () => personId ? personelServisi.getirById(personId) : null,
-    enabled: !!personId && isOpen,
-    initialData: externalPersonnel || null,
+  // Fetch personnel operations
+  const {
+    data: operations = [],
+    isLoading
+  } = useQuery({
+    queryKey: ["personnelOperations", personnel?.id],
+    queryFn: () => personelIslemleriServisi.personelIslemleriGetir(personnel.id),
+    enabled: !!personnel?.id && isOpen,
   });
 
-  const { data: operations = [], isLoading: isOperationsLoading, refetch: refetchOperations } = useQuery({
-    queryKey: ["personnel-operations", personId],
-    queryFn: async () => {
-      if (!personId) return [];
-      
-      const operations = await personelIslemleriServisi.hepsiniGetir();
-      return operations.filter(op => op.personel_id === personId);
-    },
-    enabled: !!personId && isOpen,
-  });
-
-  useEffect(() => {
-    if (personId) {
-      setSelectedPersonId(personId);
-      // Reset to default tab when dialog opens with a new personnel
-      setActiveTab("info");
-    }
-  }, [personId]);
-
-  const handleRefreshData = async () => {
-    if (selectedPersonId) {
-      await refetchPersonnel();
-      await refetchOperations();
-      if (onRefreshList) {
-        onRefreshList();
-      }
-    }
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
   };
 
-  // Handle the onOpenChange callback
-  const handleOpenChange = (open: boolean) => {
-    if (!open) {
-      onClose();
-    }
-    
-    if (onOpenChange) {
-      onOpenChange(open);
-    }
-  };
+  // Ensure the dialog doesn't appear if no personnel is selected
+  if (!personnel) return null;
 
-  if (isPersonnelLoading) {
-    return (
-      <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-        <DialogContent className="max-w-3xl w-[95vw] max-h-[90vh] overflow-y-auto">
-          <DialogHeader className="mb-4">
-            <DialogTitle>Personel Detayları</DialogTitle>
-          </DialogHeader>
-          <div className="flex justify-center p-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
-  }
-
+  // Use a larger size for the dialog on desktop
   return (
-    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto">
-        <DialogHeader className="flex flex-row items-center justify-between">
-          <div>
-            <DialogTitle className="text-xl">
-              {personnel?.ad_soyad || "Personel Detayları"}
-            </DialogTitle>
-            {personnel?.created_at && (
-              <p className="text-sm text-muted-foreground mt-1">
-                {formatDistanceToNow(new Date(personnel.created_at), {
-                  addSuffix: true,
-                  locale: tr,
-                })}{" "}
-                eklendi
-              </p>
-            )}
-          </div>
-        </DialogHeader>
-
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
-          <TabsList className="grid grid-cols-4">
-            <TabsTrigger value="info">Genel Bilgiler</TabsTrigger>
-            <TabsTrigger value="work">Çalışma Bilgileri</TabsTrigger>
-            <TabsTrigger value="history">İşlem Geçmişi</TabsTrigger>
-            <TabsTrigger value="performance">Performans</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="info" className="mt-4">
-            {personnel && (
-              <PersonnelInfoTab
-                personnel={personnel}
-                onSave={handleRefreshData}
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent
+        className="sm:max-w-[90%] md:max-w-[80%] lg:max-w-[70%] xl:max-w-[60%] max-h-[90vh] overflow-y-auto"
+        onEscapeKeyDown={() => onOpenChange(false)}
+        onInteractOutside={(e) => {
+          // Prevent closing when interacting with date pickers or dropdowns
+          if ((e.target as HTMLElement).closest('[data-radix-popper-content-wrapper]')) {
+            e.preventDefault();
+          }
+        }}
+      >
+        <div className="w-full">
+          <h2 className="text-lg font-semibold mb-4">
+            {personnel?.ad_soyad || "Personel Detayları"}
+          </h2>
+          
+          <Tabs defaultValue="info" value={activeTab} onValueChange={handleTabChange}>
+            <TabsList className="grid grid-cols-2 md:grid-cols-5 mb-4">
+              <TabsTrigger value="info">Kişisel Bilgiler</TabsTrigger>
+              <TabsTrigger value="work">Çalışma Bilgileri</TabsTrigger>
+              <TabsTrigger value="photo">Fotoğraf</TabsTrigger>
+              <TabsTrigger value="operations">İşlem Geçmişi</TabsTrigger>
+              <TabsTrigger value="performance">Performans</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="info">
+              <PersonnelInfoTab 
+                personnel={personnel} 
+                onUpdate={onUpdate} 
               />
-            )}
-          </TabsContent>
-
-          <TabsContent value="work" className="mt-4">
-            {personnel && (
-              <WorkInfoTab
-                personnel={personnel}
-                onSave={handleRefreshData}
+            </TabsContent>
+            
+            <TabsContent value="work">
+              <WorkInfoTab 
+                personnel={personnel} 
+                onUpdate={onUpdate} 
               />
-            )}
-          </TabsContent>
-
-          <TabsContent value="history" className="mt-4">
-            {personnel && (
+            </TabsContent>
+            
+            <TabsContent value="photo">
+              <PersonnelImageTab 
+                personnel={personnel} 
+                onUpdate={onUpdate} 
+              />
+            </TabsContent>
+            
+            <TabsContent value="operations">
               <OperationsHistoryTab 
                 personnel={personnel}
-                operations={operations}
-                isLoading={isOperationsLoading}
+                isLoading={isLoading}
               />
-            )}
-          </TabsContent>
-
-          <TabsContent value="performance" className="mt-4">
-            <PerformanceTab 
-              personnel={personnel} 
-              operations={operations}
-              isLoading={isOperationsLoading} 
-            />
-          </TabsContent>
-        </Tabs>
+            </TabsContent>
+            
+            <TabsContent value="performance">
+              <PerformanceTab 
+                personnel={personnel} 
+                operations={operations}
+                isLoading={isLoading} 
+              />
+            </TabsContent>
+          </Tabs>
+        </div>
       </DialogContent>
     </Dialog>
   );

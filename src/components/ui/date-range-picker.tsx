@@ -20,6 +20,7 @@ interface DateRangePickerProps {
   to: Date
   onSelect: (range: { from: Date; to: Date }) => void
   singleDate?: boolean
+  align?: "start" | "center" | "end"
 }
 
 export function DateRangePicker({
@@ -28,6 +29,7 @@ export function DateRangePicker({
   to,
   onSelect,
   singleDate = false,
+  align = "start"
 }: DateRangePickerProps) {
   const [date, setDate] = React.useState<DateRange | undefined>({
     from,
@@ -67,7 +69,7 @@ export function DateRangePicker({
             )}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
+        <PopoverContent className="w-auto p-0" align={align}>
           {singleDate ? (
             <Calendar
               initialFocus

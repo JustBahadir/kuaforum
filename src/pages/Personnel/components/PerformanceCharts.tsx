@@ -14,11 +14,10 @@ import {
   Tooltip, 
   Legend, 
   ResponsiveContainer, 
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  Radar
+  ComposedChart,
+  Cell,
+  PieChart,
+  Pie
 } from "recharts";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CircleAlert, InfoIcon, BarChart3 } from "lucide-react";
@@ -62,6 +61,7 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
   });
   const [selectedPersonnelIds, setSelectedPersonnelIds] = useState<number[]>([]);
   const [filteredOperations, setFilteredOperations] = useState<Operation[]>([]);
+  const [activeMetric, setActiveMetric] = useState("ciro");
 
   // Initialize with all personnel selected
   useEffect(() => {
@@ -122,37 +122,35 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
     })
     .sort((a, b) => b.ciro - a.ciro);
 
-  // Generate radar chart data with normalized values
-  const generateRadarData = () => {
-    if (!personnelComparisonData.length) return [];
+  // Generate multi-metric bar chart data
+  const generateMetricChartData = () => {
+    const metrics = ["ciro", "islemSayisi", "prim", "net", "ortalamaCiro"];
+    const colors = ["#8884d8", "#82ca9d", "#ffc658", "#ff8042", "#0088fe"];
     
-    // Find max values for normalization
-    const maxRevenue = Math.max(...personnelComparisonData.map(p => p.ciro));
-    const maxOperations = Math.max(...personnelComparisonData.map(p => p.islemSayisi));
-    const maxCommission = Math.max(...personnelComparisonData.map(p => p.prim));
-    const maxNet = Math.max(...personnelComparisonData.map(p => p.net));
-    const maxAvgRevenue = Math.max(...personnelComparisonData.map(p => p.ortalamaCiro));
-    
-    // Scale everything to 0-100 range for the radar chart
-    return personnelComparisonData.map(p => ({
-      subject: p.name,
-      ciro: maxRevenue > 0 ? (p.ciro / maxRevenue) * 100 : 0,
-      islemSayisi: maxOperations > 0 ? (p.islemSayisi / maxOperations) * 100 : 0,
-      prim: maxCommission > 0 ? (p.prim / maxCommission) * 100 : 0,
-      net: maxNet > 0 ? (p.net / maxNet) * 100 : 0,
-      ortalamaCiro: maxAvgRevenue > 0 ? (p.ortalamaCiro / maxAvgRevenue) * 100 : 0,
+    return metrics.map((metric, index) => ({
+      name: metricToLabel(metric),
+      color: colors[index],
+      data: personnelComparisonData.map(p => ({
+        name: p.name,
+        value: p[metric as keyof typeof p] as number,
+        fill: colors[index]
+      }))
     }));
   };
   
-  const radarData = [
-    { name: "Ciro", fullMark: 100 },
-    { name: "İşlem Sayısı", fullMark: 100 },
-    { name: "Prim", fullMark: 100 },
-    { name: "Net", fullMark: 100 },
-    { name: "Ortalama Ciro", fullMark: 100 },
-  ];
-  
-  const radarChartData = generateRadarData();
+  const metricChartData = generateMetricChartData();
+
+  // Helper function to get readable metric names
+  const metricToLabel = (metric: string): string => {
+    switch (metric) {
+      case "ciro": return "Ciro";
+      case "islemSayisi": return "İşlem Sayısı";
+      case "prim": return "Prim";
+      case "net": return "Net Gelir";
+      case "ortalamaCiro": return "Ortalama İşlem";
+      default: return metric;
+    }
+  };
 
   // Smart analysis for personnel comparison
   const generateSmartAnalysis = () => {
@@ -193,6 +191,15 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
     if (commissionPersonnel.length > 0) {
       const highestCommission = commissionPersonnel.sort((a, b) => b.prim - a.prim)[0];
       insights.push(`En yüksek prim alan ${highestCommission.name} (${formatCurrency(highestCommission.prim)}).`);
+    }
+
+    // Revenue distribution insight
+    if (personnelComparisonData.length > 1 && bestRevenue) {
+      const totalRevenue = personnelComparisonData.reduce((sum, p) => sum + p.ciro, 0);
+      const percentage = totalRevenue > 0 ? Math.round((bestRevenue.ciro / totalRevenue) * 100) : 0;
+      if (percentage > 50) {
+        insights.push(`Toplam cironun %${percentage}'si ${bestRevenue.name} tarafından sağlandı.`);
+      }
     }
     
     return insights;
@@ -278,11 +285,79 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
     
     const highestAvg = serviceAvgs.sort((a, b) => b.avg - a.avg)[0];
     insights.push(`İşlem başına en yüksek gelir: ${highestAvg.name} (ortalama ${formatCurrency(highestAvg.avg)}).`);
+
+    // Distribution insight for top service
+    const topService = mostProfitable;
+    if (topService) {
+      const topServicePersonnel = Object.entries(topService.personnelBreakdown)
+        .sort((a, b) => b[1].revenue - a[1].revenue);
+        
+      if (topServicePersonnel.length > 0) {
+        const [topPersonName, topPersonStats] = topServicePersonnel[0];
+        const percentage = Math.round((topPersonStats.revenue / topService.revenue) * 100);
+        insights.push(`"${topService.name}" cirosunun %${percentage}'si ${topPersonName} tarafından sağlandı.`);
+      }
+    }
     
     return insights;
   };
   
   const serviceSmartAnalysis = generateServiceAnalysis();
+
+  // Prepare data for pie charts
+  const prepareServiceDistributionData = (metric: 'revenue' | 'count' | 'prim' | 'net') => {
+    if (!serviceAnalysisData.length) return [];
+    
+    const data = serviceAnalysisData.map(service => {
+      let value = 0;
+      
+      switch (metric) {
+        case 'revenue':
+          value = service.revenue;
+          break;
+        case 'count':
+          value = service.count;
+          break;
+        case 'prim':
+          value = Object.values(service.personnelBreakdown)
+            .reduce((sum, stats) => sum + stats.prim, 0);
+          break;
+        case 'net':
+          value = Object.values(service.personnelBreakdown)
+            .reduce((sum, stats) => sum + stats.net, 0);
+          break;
+      }
+      
+      return {
+        name: service.name,
+        value
+      };
+    }).filter(item => item.value > 0);
+    
+    return data;
+  };
+
+  const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088fe', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+  
+  const RADIAN = Math.PI / 180;
+  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index, name }: any) => {
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+    
+    return percent > 0.05 ? (
+      <text 
+        x={x} 
+        y={y} 
+        fill="white" 
+        textAnchor="middle" 
+        dominantBaseline="central"
+        fontSize={12}
+      >
+        {`${(percent * 100).toFixed(0)}%`}
+      </text>
+    ) : null;
+  };
 
   return (
     <div className="space-y-6">
@@ -392,51 +467,98 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
             <Card>
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                  <CardTitle>Performans Radar Grafiği</CardTitle>
+                  <CardTitle>Performans Metrikleri</CardTitle>
                   <TooltipProvider>
                     <UITooltip>
                       <TooltipTrigger>
                         <InfoIcon className="h-4 w-4 text-muted-foreground" />
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p className="max-w-xs">Bu grafik personellerin farklı performans metriklerini gösterir. Her metrik 100 üzerinden normalize edilmiştir.</p>
+                        <p className="max-w-xs">Her personelin seçilen metrikte performansını gösterir.</p>
                       </TooltipContent>
                     </UITooltip>
                   </TooltipProvider>
                 </div>
+                <div className="flex gap-2 flex-wrap mt-2">
+                  <Button 
+                    size="sm"
+                    variant={activeMetric === "ciro" ? "default" : "outline"}
+                    onClick={() => setActiveMetric("ciro")}
+                    className="h-7"
+                  >
+                    Ciro
+                  </Button>
+                  <Button 
+                    size="sm"
+                    variant={activeMetric === "islemSayisi" ? "default" : "outline"}
+                    onClick={() => setActiveMetric("islemSayisi")}
+                    className="h-7"
+                  >
+                    İşlem Sayısı
+                  </Button>
+                  <Button 
+                    size="sm"
+                    variant={activeMetric === "prim" ? "default" : "outline"}
+                    onClick={() => setActiveMetric("prim")}
+                    className="h-7"
+                  >
+                    Prim
+                  </Button>
+                  <Button 
+                    size="sm"
+                    variant={activeMetric === "net" ? "default" : "outline"}
+                    onClick={() => setActiveMetric("net")}
+                    className="h-7"
+                  >
+                    Net Gelir
+                  </Button>
+                  <Button 
+                    size="sm"
+                    variant={activeMetric === "ortalamaCiro" ? "default" : "outline"}
+                    onClick={() => setActiveMetric("ortalamaCiro")}
+                    className="h-7"
+                  >
+                    Ortalama İşlem
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="h-[400px]">
-                  {radarChartData.length === 0 ? (
+                <div className="h-[300px]">
+                  {personnelComparisonData.length === 0 ? (
                     <div className="h-full flex items-center justify-center">
                       <p className="text-muted-foreground">Bu tarih aralığında veri bulunmamaktadır.</p>
                     </div>
                   ) : (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <RadarChart outerRadius={90} data={radarData}>
-                        <PolarGrid />
-                        <PolarAngleAxis dataKey="name" />
-                        <PolarRadiusAxis domain={[0, 100]} />
-                        {radarChartData.map((entry, index) => (
-                          <Radar
-                            key={entry.subject}
-                            name={entry.subject}
-                            dataKey={entry.subject}
-                            stroke={`hsl(${index * 40}, 70%, 50%)`}
-                            fill={`hsl(${index * 40}, 70%, 50%)`}
-                            fillOpacity={0.6}
-                            data={[
-                              { name: "Ciro", [entry.subject]: entry.ciro },
-                              { name: "İşlem Sayısı", [entry.subject]: entry.islemSayisi },
-                              { name: "Prim", [entry.subject]: entry.prim },
-                              { name: "Net", [entry.subject]: entry.net },
-                              { name: "Ortalama Ciro", [entry.subject]: entry.ortalamaCiro }
-                            ]}
-                          />
-                        ))}
-                        <Legend />
-                      </RadarChart>
-                    </ResponsiveContainer>
+                    <div className="w-full h-full overflow-x-auto">
+                      <div className="min-w-[400px] h-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart
+                            data={personnelComparisonData}
+                            layout="vertical"
+                            margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                            <XAxis 
+                              type="number" 
+                              tickFormatter={(value) => activeMetric === "islemSayisi" ? value.toString() : formatCurrency(value).replace("₺", "")}
+                            />
+                            <YAxis dataKey="name" type="category" width={100} />
+                            <Tooltip 
+                              formatter={(value: number) => [
+                                activeMetric === "islemSayisi" ? value : formatCurrency(value),
+                                metricToLabel(activeMetric)
+                              ]}
+                              contentStyle={{ backgroundColor: 'white', borderRadius: '0.375rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)' }}
+                            />
+                            <Bar 
+                              dataKey={activeMetric} 
+                              name={metricToLabel(activeMetric)}
+                              fill="#8884d8"
+                            />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
                   )}
                 </div>
               </CardContent>
@@ -523,6 +645,116 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
               )}
             </CardContent>
           </Card>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+            <Card>
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle>Ciro Dağılımı</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px] flex items-center justify-center">
+                  {prepareServiceDistributionData('revenue').length === 0 ? (
+                    <p className="text-muted-foreground">Bu tarih aralığında veri bulunmamaktadır.</p>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={prepareServiceDistributionData('revenue')}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={renderCustomizedLabel}
+                          outerRadius={100}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {prepareServiceDistributionData('revenue').map((entry, index) => (
+                            <Cell 
+                              key={`cell-${index}`} 
+                              fill={COLORS[index % COLORS.length]} 
+                              className="hover:opacity-80 focus:opacity-80 transition-opacity cursor-pointer"
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          formatter={(value: number) => [formatCurrency(value), "Ciro"]}
+                          itemStyle={{ color: '#333' }}
+                          contentStyle={{ backgroundColor: 'white', borderRadius: '0.375rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)' }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  {prepareServiceDistributionData('revenue').map((entry, index) => (
+                    <div key={index} className="flex items-center gap-2 text-sm">
+                      <div 
+                        className="w-3 h-3 rounded-full flex-shrink-0" 
+                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                      ></div>
+                      <div className="truncate">{entry.name}</div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle>İşlem Dağılımı</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px] flex items-center justify-center">
+                  {prepareServiceDistributionData('count').length === 0 ? (
+                    <p className="text-muted-foreground">Bu tarih aralığında veri bulunmamaktadır.</p>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={prepareServiceDistributionData('count')}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={renderCustomizedLabel}
+                          outerRadius={100}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {prepareServiceDistributionData('count').map((entry, index) => (
+                            <Cell 
+                              key={`cell-${index}`} 
+                              fill={COLORS[index % COLORS.length]} 
+                              className="hover:opacity-80 focus:opacity-80 transition-opacity cursor-pointer"
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          formatter={(value: number) => [`${value} işlem`, "İşlem Sayısı"]}
+                          itemStyle={{ color: '#333' }}
+                          contentStyle={{ backgroundColor: 'white', borderRadius: '0.375rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)' }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  {prepareServiceDistributionData('count').map((entry, index) => (
+                    <div key={index} className="flex items-center gap-2 text-sm">
+                      <div 
+                        className="w-3 h-3 rounded-full flex-shrink-0" 
+                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                      ></div>
+                      <div className="truncate">{entry.name}</div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
           <Card className="mt-6">
             <CardHeader className="pb-2">

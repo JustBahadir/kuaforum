@@ -169,6 +169,7 @@ export function DateControlBar({
           onSelect={handleDateRangeChange}
           className="flex-grow sm:flex-grow-0"
           singleDate={false}
+          align="start"
         />
       )}
 
