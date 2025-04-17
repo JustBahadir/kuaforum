@@ -10,6 +10,7 @@ import { personelIslemleriServisi } from "@/lib/supabase";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 
 interface OperationsHistoryTabProps {
   personnel: any;
@@ -181,7 +182,7 @@ export function OperationsHistoryTab({
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
+                <CalendarComponent
                   mode="single"
                   selected={dateRange.from}
                   onSelect={handleSingleDateChange}
@@ -194,7 +195,6 @@ export function OperationsHistoryTab({
               from={dateRange.from}
               to={dateRange.to}
               onSelect={handleDateRangeChange}
-              align="start"
               className="flex-grow"
             />
           ) : (

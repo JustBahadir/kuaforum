@@ -101,14 +101,39 @@ export const personelIslemleriServisi = {
     if (error) throw error;
   },
 
-  // Admin level operations for better data management
-  async recoverOperationsFromAppointments(personnelId?: number): Promise<{count: number, operations: any[]}> {
+  // Add the missing updateShopStatistics method
+  async updateShopStatistics(): Promise<void> {
     try {
-      const response = await fetch(`${supabase.supabaseUrl}/functions/v1/recover_customer_operations`, {
+      // Call the Supabase function to update shop statistics
+      const response = await fetch(`${supabase.supabaseUrl}/functions/v1/update_shop_statistics`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${supabase.supabaseKey}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to update shop statistics: ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error("Error updating shop statistics:", error);
+      throw error;
+    }
+  },
+
+  // Admin level operations for better data management
+  async recoverOperationsFromAppointments(personnelId?: number): Promise<{count: number, operations: any[]}> {
+    try {
+      // Fix the way we access supabaseUrl and supabaseKey
+      const SUPABASE_URL = "https://xkbjjcizncwkrouvoujw.supabase.co";
+      const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhrYmpqY2l6bmN3a3JvdXZvdWp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzk5Njg0NzksImV4cCI6MjA1NTU0NDQ3OX0.RyaC2G1JPHUGQetAcvMgjsTp_nqBB2rZe3U-inU2osw";
+      
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/recover_customer_operations`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
         },
         body: JSON.stringify({ personnel_id: personnelId })
       });
