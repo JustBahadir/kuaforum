@@ -15,13 +15,15 @@ interface PersonnelDetailsDialogProps {
   onOpenChange: (open: boolean) => void;
   personnel: any;
   onUpdate?: () => void;
+  onClose?: () => void; // Add missing prop
 }
 
 export function PersonnelDetailsDialog({
   isOpen,
   onOpenChange,
   personnel,
-  onUpdate
+  onUpdate,
+  onClose
 }: PersonnelDetailsDialogProps) {
   const [activeTab, setActiveTab] = useState("info");
 
@@ -71,22 +73,19 @@ export function PersonnelDetailsDialog({
             
             <TabsContent value="info">
               <PersonnelInfoTab 
-                personnel={personnel} 
-                onUpdate={onUpdate} 
+                personnel={personnel}
               />
             </TabsContent>
             
             <TabsContent value="work">
               <WorkInfoTab 
-                personnel={personnel} 
-                onUpdate={onUpdate} 
+                personnel={personnel}
               />
             </TabsContent>
             
             <TabsContent value="photo">
               <PersonnelImageTab 
-                personnel={personnel} 
-                onUpdate={onUpdate} 
+                personnel={personnel}
               />
             </TabsContent>
             

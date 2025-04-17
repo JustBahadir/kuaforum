@@ -5,6 +5,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DateControlBar } from "@/components/ui/date-control-bar";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
+import { Button } from "@/components/ui/button"; // Add missing Button import
 import { 
   BarChart, 
   Bar, 
