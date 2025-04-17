@@ -1,5 +1,14 @@
+
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   ColumnDef,
   flexRender,
@@ -7,6 +16,7 @@ import {
   getPaginationRowModel,
   useReactTable,
   getSortedRowModel,
+  SortingState
 } from "@tanstack/react-table";
 import {
   AlertDialog,
@@ -43,6 +53,7 @@ import { toast } from "sonner";
 import { PersonnelDetailsDialog } from "./PersonnelDetailsDialog";
 import { PersonnelForm } from "./PersonnelForm";
 import { personelServisi } from "@/lib/supabase";
+import { useForm } from "react-hook-form";
 
 interface Personnel {
   id: number;
@@ -61,79 +72,24 @@ interface Personnel {
   avatar_url: string;
 }
 
-const handleAddPersonnel = async (values: any) => {
-  // Map any email field to eposta
-  if (values.email) {
-    values.eposta = values.email;
-    delete values.email;
-  }
-  
-  // Remove tc_kimlik_no if it exists but is not part of the schema
-  if (values.tc_kimlik_no) {
-    delete values.tc_kimlik_no;
-  }
-  
-  return await personelServisi.ekle(values);
-};
+interface PersonnelListProps {
+  onPersonnelSelect?: (id: number | null) => void;
+  personnel?: Personnel[];
+}
 
-const addPersonnelMutation = useMutation({
-  mutationFn: handleAddPersonnel,
-  onSuccess: () => {
-    queryClient.invalidateQueries({ queryKey: ["personeller"] });
-    toast.success("Personel başarıyla eklendi.");
-    setIsAddPersonnelDialogOpen(false);
-  },
-  onError: (error) => {
-    toast.error("Personel eklenirken bir hata oluştu.");
-    console.error("Error adding personnel:", error);
-  }
-});
-
-const handleUpdatePersonnel = async ({ id, ...values }: { id: number, [key: string]: any }) => {
-  // Map any email field to eposta
-  if (values.email) {
-    values.eposta = values.email;
-    delete values.email;
-  }
-  
-  return await personelServisi.guncelle(id, values);
-};
-
-const updatePersonnelMutation = useMutation({
-  mutationFn: handleUpdatePersonnel,
-  onSuccess: () => {
-    queryClient.invalidateQueries({ queryKey: ["personeller"] });
-    toast.success("Personel başarıyla güncellendi.");
-    setIsEditPersonnelDialogOpen(false);
-  },
-  onError: (error) => {
-    toast.error("Personel güncellenirken bir hata oluştu.");
-    console.error("Error updating personnel:", error);
-  }
-});
-
-// For the delete mutation
-const deletePersonnelMutation = useMutation({
-  mutationFn: async (id: number) => {
-    return await personelServisi.sil(id);
-  },
-  onSuccess: () => {
-    queryClient.invalidateQueries({ queryKey: ["personeller"] });
-    toast.success("Personel başarıyla silindi.");
-  },
-  onError: (error) => {
-    toast.error("Personel silinirken bir hata oluştu.");
-    console.error("Error deleting personnel:", error);
-  }
-});
-
-export function PersonnelList() {
+export function PersonnelList({ onPersonnelSelect, personnel }: PersonnelListProps) {
   const [isAddPersonnelDialogOpen, setIsAddPersonnelDialogOpen] = useState(false);
   const [isEditPersonnelDialogOpen, setIsEditPersonnelDialogOpen] = useState(false);
   const [isPersonnelDetailsDialogOpen, setIsPersonnelDetailsDialogOpen] = useState(false);
   const [selectedPersonnel, setSelectedPersonnel] = useState<Personnel | null>(null);
   const [search, setSearch] = useState("");
+  const [sortModel, setSortModel] = useState<SortingState>([
+    { id: "ad_soyad", desc: false }
+  ]);
+  
   const queryClient = useQueryClient();
+  
+  const { register, handleSubmit, formState: { isSubmitting } } = useForm();
 
   const {
     data: personeller = [],
@@ -142,6 +98,68 @@ export function PersonnelList() {
   } = useQuery({
     queryKey: ["personeller"],
     queryFn: () => personelServisi.hepsiniGetir(),
+  });
+
+  const addPersonnelMutation = useMutation({
+    mutationFn: async (values: any) => {
+      // Map any email field to eposta
+      if (values.email) {
+        values.eposta = values.email;
+        delete values.email;
+      }
+      
+      // Remove tc_kimlik_no if it exists but is not part of the schema
+      if (values.tc_kimlik_no) {
+        delete values.tc_kimlik_no;
+      }
+      
+      return await personelServisi.ekle(values);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["personeller"] });
+      toast.success("Personel başarıyla eklendi.");
+      setIsAddPersonnelDialogOpen(false);
+    },
+    onError: (error) => {
+      toast.error("Personel eklenirken bir hata oluştu.");
+      console.error("Error adding personnel:", error);
+    }
+  });
+
+  const updatePersonnelMutation = useMutation({
+    mutationFn: async ({ id, ...values }: { id: number, [key: string]: any }) => {
+      // Map any email field to eposta
+      if (values.email) {
+        values.eposta = values.email;
+        delete values.email;
+      }
+      
+      return await personelServisi.guncelle(id, values);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["personeller"] });
+      toast.success("Personel başarıyla güncellendi.");
+      setIsEditPersonnelDialogOpen(false);
+    },
+    onError: (error) => {
+      toast.error("Personel güncellenirken bir hata oluştu.");
+      console.error("Error updating personnel:", error);
+    }
+  });
+
+  // For the delete mutation
+  const deletePersonnelMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return await personelServisi.sil(id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["personeller"] });
+      toast.success("Personel başarıyla silindi.");
+    },
+    onError: (error) => {
+      toast.error("Personel silinirken bir hata oluştu.");
+      console.error("Error deleting personnel:", error);
+    }
   });
 
   const columns: ColumnDef<Personnel>[] = [
@@ -176,6 +194,9 @@ export function PersonnelList() {
                 onClick={() => {
                   setSelectedPersonnel(personnel);
                   setIsPersonnelDetailsDialogOpen(true);
+                  if (onPersonnelSelect) {
+                    onPersonnelSelect(personnel.id);
+                  }
                 }}
                 className="cursor-pointer"
               >
@@ -243,15 +264,6 @@ export function PersonnelList() {
     },
   });
 
-  const [sortModel, setSortModel] = useState([
-    { field: "ad_soyad", sort: "asc" as const }
-  ]);
-
-  const {
-    handleSubmit,
-    formState: { isSubmitting },
-  } = useForm();
-
   const onSubmit = async (values: any) => {
     if (selectedPersonnel) {
       updatePersonnelMutation.mutate({ id: selectedPersonnel.id, ...values });
@@ -303,11 +315,8 @@ export function PersonnelList() {
                                 ? null
                                 : (
                                   <div
-                                    {...{
-                                      className:
-                                        "cursor-pointer group flex items-center justify-between",
-                                      onClick: header.column.getToggleSortingHandler(),
-                                    }}
+                                    className="cursor-pointer group flex items-center justify-between"
+                                    onClick={header.column.getToggleSortingHandler()}
                                   >
                                     {flexRender(
                                       header.column.columnDef.header,
@@ -402,12 +411,12 @@ export function PersonnelList() {
             readOnly={false}
             showWorkInfo={true}
             showPersonalInfo={true}
-            onSubmit={handleSubmit((values) => onSubmit(values))}
+            onSubmit={handleSubmit(onSubmit)}
             isLoading={isSubmitting}
           />
           <AlertDialogFooter>
             <AlertDialogCancel>İptal</AlertDialogCancel>
-            <AlertDialogAction onClick={handleSubmit((values) => onSubmit(values))}>
+            <AlertDialogAction onClick={handleSubmit(onSubmit)}>
               {isSubmitting ? "Kaydediliyor..." : "Kaydet"}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -424,12 +433,12 @@ export function PersonnelList() {
             readOnly={false}
             showWorkInfo={true}
             showPersonalInfo={true}
-            onSubmit={handleSubmit((values) => onSubmit(values))}
+            onSubmit={handleSubmit(onSubmit)}
             isLoading={isSubmitting}
           />
           <AlertDialogFooter>
             <AlertDialogCancel>İptal</AlertDialogCancel>
-            <AlertDialogAction onClick={handleSubmit((values) => onSubmit(values))}>
+            <AlertDialogAction onClick={handleSubmit(onSubmit)}>
               {isSubmitting ? "Kaydediliyor..." : "Kaydet"}
             </AlertDialogAction>
           </AlertDialogFooter>

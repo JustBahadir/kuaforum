@@ -179,7 +179,7 @@ export default function Personnel() {
                                 {islem.musteri?.first_name} {islem.musteri?.last_name}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {islem.islem?.islem_adi || islem.aciklama.split(' hizmeti verildi')[0]}
+                                {islem.islem?.islem_adi || islem.aciklama?.split(' hizmeti verildi')[0]}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                 {formatCurrency(islem.tutar)}
@@ -213,7 +213,7 @@ export default function Personnel() {
                 <CardTitle>Personel Performans Çizelgeleri</CardTitle>
               </CardHeader>
               <CardContent>
-                <PersonnelPerformanceReports personnelId={selectedPersonnelId || personeller[0]?.id || 1} />
+                <PersonnelPerformanceReports personnelId={selectedPersonnelId} />
               </CardContent>
             </Card>
           </TabsContent>

@@ -1,141 +1,115 @@
 
 import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { formatDate, formatDateShort } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { personelIslemleriServisi } from "@/lib/supabase";
+import { formatDate, formatDateShort, formatCurrency } from "@/lib/utils";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 
-interface OperationsHistoryTabProps {
+export interface OperationsHistoryTabProps {
   personnel: any;
-  isLoading?: boolean;
 }
 
-export function OperationsHistoryTab({ personnel, isLoading = false }: OperationsHistoryTabProps) {
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState("");
-  const itemsPerPage = 10;
-
-  // Fetch personnel operations
-  const {
-    data: operations = [],
-    isLoading: operationsLoading
-  } = useQuery({
-    queryKey: ["personnelOperations", personnel?.id],
-    queryFn: () => personelIslemleriServisi.personelIslemleriGetir(personnel.id),
-    enabled: !!personnel?.id,
+export function OperationsHistoryTab({ personnel }: OperationsHistoryTabProps) {
+  const [dateRange, setDateRange] = useState({
+    from: new Date(new Date().setDate(new Date().getDate() - 30)), // Default to last 30 days
+    to: new Date()
   });
 
-  const filteredOperations = operations.filter((op: any) => {
-    if (!search) return true;
-    
-    const lowerCaseSearch = search.toLowerCase();
-    return (
-      op.islem?.islem_adi?.toLowerCase().includes(lowerCaseSearch) ||
-      op.aciklama?.toLowerCase().includes(lowerCaseSearch)
-    );
+  const { data: operations = [], isLoading } = useQuery({
+    queryKey: ['personnel-operations', personnel.id, dateRange.from, dateRange.to],
+    queryFn: async () => {
+      if (!personnel.id) return [];
+      const allOperations = await personelIslemleriServisi.personelIslemleriGetir(personnel.id);
+      return allOperations.filter(op => {
+        if (!op.created_at) return false;
+        const date = new Date(op.created_at);
+        return date >= dateRange.from && date <= dateRange.to;
+      });
+    }
   });
 
-  const paginatedOperations = filteredOperations.slice(
-    (page - 1) * itemsPerPage,
-    page * itemsPerPage
-  );
-
-  const totalPages = Math.ceil(filteredOperations.length / itemsPerPage);
+  const totalRevenue = operations.reduce((sum, op) => sum + (Number(op.tutar) || 0), 0);
+  const totalCommission = operations.reduce((sum, op) => sum + (Number(op.odenen) || 0), 0);
 
   return (
-    <div>
-      <Card className="mb-6">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>İşlem Geçmişi</CardTitle>
-            <div className="relative">
-              <Search className="h-4 w-4 absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-500" />
-              <Input
-                placeholder="İşlem ara..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-8 w-[200px]"
-              />
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {isLoading || operationsLoading ? (
-            <div className="flex justify-center p-12">
-              <div className="w-10 h-10 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
-            </div>
-          ) : paginatedOperations.length > 0 ? (
-            <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Tarih</TableHead>
-                    <TableHead>İşlem</TableHead>
-                    <TableHead>Açıklama</TableHead>
-                    <TableHead className="text-right">Tutar</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginatedOperations.map((op: any) => (
-                    <TableRow key={op.id}>
-                      <TableCell className="font-medium">
-                        {formatDateShort(op.created_at)}
-                      </TableCell>
-                      <TableCell>{op.islem?.islem_adi || "-"}</TableCell>
-                      <TableCell className="max-w-xs truncate">
-                        {op.aciklama || "-"}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        ₺{op.tutar?.toFixed(2) || "-"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+    <div className="space-y-4">
+      <div className="flex justify-between items-center flex-wrap gap-2">
+        <h3 className="text-base font-medium">İşlem Geçmişi</h3>
+        <DateRangePicker 
+          from={dateRange.from}
+          to={dateRange.to}
+          onSelect={(range) => setDateRange(range)}
+        />
+      </div>
 
-              {/* Pagination */}
-              <div className="flex items-center justify-end space-x-2 py-4">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                  disabled={page <= 1}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  <span className="sr-only">Önceki sayfa</span>
-                </Button>
-                <div className="text-sm text-muted-foreground">
-                  Sayfa {page} / {totalPages || 1}
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage((prev) => (prev < totalPages ? prev + 1 : prev))}
-                  disabled={page >= totalPages}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                  <span className="sr-only">Sonraki sayfa</span>
-                </Button>
-              </div>
-            </>
-          ) : (
-            <div className="text-center py-12 text-muted-foreground">
-              {search ? "Aramanıza uygun işlem bulunamadı." : "Bu personel için henüz işlem kaydı bulunmamaktadır."}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+        <Card>
+          <CardHeader className="py-2">
+            <CardTitle className="text-sm">İşlem Sayısı</CardTitle>
+          </CardHeader>
+          <CardContent className="py-1">
+            <div className="text-2xl font-bold">{operations.length}</div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="py-2">
+            <CardTitle className="text-sm">Toplam Ciro</CardTitle>
+          </CardHeader>
+          <CardContent className="py-1">
+            <div className="text-2xl font-bold text-green-600">{formatCurrency(totalRevenue)}</div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="py-2">
+            <CardTitle className="text-sm">Toplam Prim</CardTitle>
+          </CardHeader>
+          <CardContent className="py-1">
+            <div className="text-2xl font-bold text-blue-600">{formatCurrency(totalCommission)}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {isLoading ? (
+        <div className="flex justify-center p-6">
+          <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
+        </div>
+      ) : operations.length === 0 ? (
+        <div className="text-center py-10 text-gray-500">
+          Seçilen tarih aralığında işlem bulunamadı.
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-left">Tarih</th>
+                <th className="px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-left">İşlem</th>
+                <th className="px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-left">Müşteri</th>
+                <th className="px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-left">Tutar</th>
+                <th className="px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-left">Prim %</th>
+                <th className="px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-left">Prim</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {operations.map((op) => (
+                <tr key={op.id}>
+                  <td className="px-4 py-2 whitespace-nowrap text-sm">{formatDateShort(op.created_at)}</td>
+                  <td className="px-4 py-2 text-sm">{op.islem?.islem_adi || op.aciklama}</td>
+                  <td className="px-4 py-2 text-sm">
+                    {op.musteri ? `${op.musteri.first_name || ''} ${op.musteri.last_name || ''}` : '-'}
+                  </td>
+                  <td className="px-4 py-2 whitespace-nowrap text-sm">{formatCurrency(op.tutar)}</td>
+                  <td className="px-4 py-2 whitespace-nowrap text-sm">{op.prim_yuzdesi ? `%${op.prim_yuzdesi}` : '-'}</td>
+                  <td className="px-4 py-2 whitespace-nowrap text-sm">{formatCurrency(op.odenen)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
