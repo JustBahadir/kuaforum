@@ -27,8 +27,9 @@ export function AnalystBox({
       <CardHeader className="pb-2 flex flex-row justify-between items-center">
         <CardTitle className="text-lg">{title}</CardTitle>
         {onRefresh && (
-          <Button variant="ghost" size="sm" onClick={onRefresh} disabled={isLoading}>
+          <Button variant="ghost" size="sm" onClick={onRefresh} disabled={isLoading} className="h-8 w-8 p-0">
             <RefreshCcw className="h-4 w-4" />
+            <span className="sr-only">Yenile</span>
           </Button>
         )}
       </CardHeader>

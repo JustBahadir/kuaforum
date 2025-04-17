@@ -1,180 +1,127 @@
 
-import { supabase } from '../client';
-import { PersonelIslemi } from '../types';
-
-// Define the Supabase URL and key for edge function calls
-const SUPABASE_URL = "https://xkbjjcizncwkrouvoujw.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhrYmpqY2l6bmN3a3JvdXZvdWp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzk5Njg0NzksImV4cCI6MjA1NTU0NDQ3OX0.RyaC2G1JPHUGQetAcvMgjsTp_nqBB2rZe3U-inU2osw";
+import { supabase, supabaseAdmin } from "../client";
+import type { PersonelIslemi } from "../types";
 
 export const personelIslemleriServisi = {
+  async ekle(islem: Partial<PersonelIslemi>): Promise<PersonelIslemi> {
+    const { data, error } = await supabase
+      .from("personel_islemleri")
+      .insert(islem)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
   async hepsiniGetir(): Promise<PersonelIslemi[]> {
-    try {
-      const { data, error } = await supabase
-        .from('personel_islemleri')
-        .select(`
-          *,
-          personel:personel_id(*),
-          musteri:musteri_id(*),
-          islem:islem_id(*)
-        `)
-        .order('created_at', { ascending: false });
+    const { data, error } = await supabase
+      .from("personel_islemleri")
+      .select(`
+        *,
+        personel:personel_id(id, ad_soyad),
+        islem:islem_id(id, islem_adi, kategori:kategori_id(id, kategori_adi)),
+        musteri:musteri_id(id, first_name, last_name)
+      `)
+      .order("created_at", { ascending: false });
 
-      if (error) {
-        console.error("Personel işlemleri alınırken hata:", error);
-        throw error;
-      }
+    if (error) throw error;
+    return data || [];
+  },
 
-      return data || [];
-    } catch (error) {
-      console.error("Personel işlemleri alınırken hata:", error);
+  async personelIslemleriGetir(personelId: number): Promise<PersonelIslemi[]> {
+    const { data, error } = await supabase
+      .from("personel_islemleri")
+      .select(`
+        *,
+        personel:personel_id(id, ad_soyad),
+        islem:islem_id(id, islem_adi, kategori:kategori_id(id, kategori_adi)),
+        musteri:musteri_id(id, first_name, last_name)
+      `)
+      .eq("personel_id", personelId)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  async personelIslemleriGetirById(personelId: number): Promise<PersonelIslemi[]> {
+    const { data, error } = await supabase
+      .from("personel_islemleri")
+      .select(`
+        *,
+        personel:personel_id(id, ad_soyad),
+        islem:islem_id(id, islem_adi, kategori:kategori_id(id, kategori_adi)),
+        musteri:musteri_id(id, first_name, last_name)
+      `)
+      .eq("personel_id", personelId)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  async getirById(id: number): Promise<PersonelIslemi | null> {
+    const { data, error } = await supabase
+      .from("personel_islemleri")
+      .select(`
+        *,
+        personel:personel_id(id, ad_soyad),
+        islem:islem_id(id, islem_adi),
+        musteri:musteri_id(id, first_name, last_name)
+      `)
+      .eq("id", id)
+      .single();
+
+    if (error) {
+      if (error.code === "PGRST116") return null;
       throw error;
     }
+    return data;
   },
 
-  async personelIslemleriGetirById(personel_id: number): Promise<PersonelIslemi[]> {
+  async guncelle(id: number, islem: Partial<PersonelIslemi>): Promise<PersonelIslemi> {
+    const { data, error } = await supabase
+      .from("personel_islemleri")
+      .update(islem)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async sil(id: number): Promise<void> {
+    const { error } = await supabase
+      .from("personel_islemleri")
+      .delete()
+      .eq("id", id);
+
+    if (error) throw error;
+  },
+
+  // Admin level operations for better data management
+  async recoverOperationsFromAppointments(personnelId?: number): Promise<{count: number, operations: any[]}> {
     try {
-      console.info(`${personel_id} ID'li personel işlemleri alınıyor...`);
-      
-      const { data, error } = await supabase
-        .from('personel_islemleri')
-        .select(`
-          *,
-          musteri:musteri_id(*),
-          islem:islem_id(*)
-        `)
-        .eq('personel_id', personel_id)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error(`${personel_id} ID'li personel işlemleri alınırken hata:`, error);
-        throw error;
-      }
-
-      return data || [];
-    } catch (error) {
-      console.error(`${personel_id} ID'li personel işlemleri alınırken hata:`, error);
-      throw error;
-    }
-  },
-
-  // Method referenced in other files and needed for compatibility
-  async personelIslemleriGetir(personel_id: number): Promise<PersonelIslemi[]> {
-    // This is actually the same as personelIslemleriGetirById, just with a different name
-    return this.personelIslemleriGetirById(personel_id);
-  },
-
-  // Method for retrieving operations related to a customer
-  async musteriIslemleriGetir(musteri_id: number): Promise<PersonelIslemi[]> {
-    try {
-      console.info(`${musteri_id} ID'li müşteri işlemleri alınıyor...`);
-      
-      const { data, error } = await supabase
-        .from('personel_islemleri')
-        .select(`
-          *,
-          personel:personel_id(*),
-          musteri:musteri_id(*),
-          islem:islem_id(*)
-        `)
-        .eq('musteri_id', musteri_id)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error(`${musteri_id} ID'li müşteri işlemleri alınırken hata:`, error);
-        throw error;
-      }
-
-      return data || [];
-    } catch (error) {
-      console.error(`${musteri_id} ID'li müşteri işlemleri alınırken hata:`, error);
-      throw error;
-    }
-  },
-
-  // Method to recover operations from appointments using edge function
-  async recoverOperations(options: { customer_id?: number, personnel_id?: number, get_all?: boolean } = {}): Promise<PersonelIslemi[]> {
-    try {
-      console.info(`İşlemler kurtarılıyor:`, options);
-      
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/recover_customer_operations`, {
+      const response = await fetch(`${supabase.supabaseUrl}/functions/v1/recover_customer_operations`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+          'Authorization': `Bearer ${supabase.supabaseKey}`
         },
-        body: JSON.stringify({
-          customer_id: options.customer_id,
-          personnel_id: options.personnel_id,
-          get_all_shop_operations: options.get_all
-        })
+        body: JSON.stringify({ personnel_id: personnelId })
       });
       
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Kurtarma işlemi başarısız: ${response.status} ${response.statusText} - ${errorText}`);
+        throw new Error(`Edge function error: ${response.status}`);
       }
       
       const result = await response.json();
-      
-      if (result.error) {
-        throw new Error(`Kurtarma hatası: ${result.error}`);
-      }
-      
-      console.info(`${result.count} işlem kurtarıldı`);
-      return result.operations || [];
+      return result;
     } catch (error) {
-      console.error("İşlemler kurtarılırken hata:", error);
+      console.error("Error recovering operations:", error);
       throw error;
-    }
-  },
-
-  // Method to get shop statistics
-  async getShopStatistics(): Promise<any> {
-    try {
-      console.info('Dükkan istatistikleri alınıyor...');
-      
-      const { data, error } = await supabase
-        .rpc('get_shop_statistics');
-
-      if (error) {
-        console.error('Dükkan istatistikleri alınırken hata:', error);
-        throw error;
-      }
-
-      return data || {
-        totalRevenue: 0,
-        totalServices: 0,
-        uniqueCustomerCount: 0,
-        totalCompletedAppointments: 0
-      };
-    } catch (error) {
-      console.error('Dükkan istatistikleri alınırken hata:', error);
-      return {
-        totalRevenue: 0,
-        totalServices: 0,
-        uniqueCustomerCount: 0,
-        totalCompletedAppointments: 0
-      };
-    }
-  },
-
-  // Method to update shop statistics
-  async updateShopStatistics(): Promise<boolean> {
-    try {
-      console.info('Dükkan istatistikleri güncelleniyor...');
-      
-      const { data, error } = await supabase
-        .rpc('update_shop_statistics');
-
-      if (error) {
-        console.error('Dükkan istatistikleri güncellenirken hata:', error);
-        throw error;
-      }
-
-      return data || false;
-    } catch (error) {
-      console.error('Dükkan istatistikleri güncellenirken hata:', error);
-      return false;
     }
   }
 };

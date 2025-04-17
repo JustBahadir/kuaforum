@@ -16,14 +16,15 @@ import { useQuery } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
 import { PerformanceTab } from "./personnel-detail-tabs/PerformanceTab";
+import { OperationsHistoryTab } from "./personnel-detail-tabs/OperationsHistoryTab";
 
 interface PersonnelDetailsDialogProps {
   personId?: number | null;
   isOpen: boolean;
   onClose: () => void;
-  onOpenChange?: (open: boolean) => void; // Add this prop
+  onOpenChange?: (open: boolean) => void;
   onRefreshList?: () => void;
-  personnel?: any; // Add this prop
+  personnel?: any;
 }
 
 export function PersonnelDetailsDialog({
@@ -32,7 +33,7 @@ export function PersonnelDetailsDialog({
   onClose,
   onOpenChange,
   onRefreshList,
-  personnel: externalPersonnel, // Accept external personnel data
+  personnel: externalPersonnel,
 }: PersonnelDetailsDialogProps) {
   const [activeTab, setActiveTab] = useState("info");
   const [selectedPersonId, setSelectedPersonId] = useState<number | null>(null);
@@ -41,7 +42,7 @@ export function PersonnelDetailsDialog({
     queryKey: ["personnel-detail", personId],
     queryFn: () => personId ? personelServisi.getirById(personId) : null,
     enabled: !!personId && isOpen,
-    initialData: externalPersonnel || null, // Use external data if provided
+    initialData: externalPersonnel || null,
   });
 
   const { data: operations = [], isLoading: isOperationsLoading, refetch: refetchOperations } = useQuery({
@@ -87,7 +88,7 @@ export function PersonnelDetailsDialog({
   if (isPersonnelLoading) {
     return (
       <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl w-[95vw] max-h-[90vh] overflow-y-auto">
           <DialogHeader className="mb-4">
             <DialogTitle>Personel Detayları</DialogTitle>
           </DialogHeader>
@@ -101,7 +102,7 @@ export function PersonnelDetailsDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader className="flex flex-row items-center justify-between">
           <div>
             <DialogTitle className="text-xl">
@@ -120,9 +121,10 @@ export function PersonnelDetailsDialog({
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
-          <TabsList className="grid grid-cols-3">
+          <TabsList className="grid grid-cols-4">
             <TabsTrigger value="info">Genel Bilgiler</TabsTrigger>
             <TabsTrigger value="work">Çalışma Bilgileri</TabsTrigger>
+            <TabsTrigger value="history">İşlem Geçmişi</TabsTrigger>
             <TabsTrigger value="performance">Performans</TabsTrigger>
           </TabsList>
 
@@ -140,6 +142,16 @@ export function PersonnelDetailsDialog({
               <WorkInfoTab
                 personnel={personnel}
                 onSave={handleRefreshData}
+              />
+            )}
+          </TabsContent>
+
+          <TabsContent value="history" className="mt-4">
+            {personnel && (
+              <OperationsHistoryTab 
+                personnel={personnel}
+                operations={operations}
+                isLoading={isOperationsLoading}
               />
             )}
           </TabsContent>

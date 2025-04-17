@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/tooltip";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CategoryPerformanceView } from "./performance-tabs/CategoryPerformanceView";
 
 interface PerformanceTabProps {
   personnel: any;
@@ -35,6 +37,7 @@ export function PerformanceTab({
   const [useMonthCycle, setUseMonthCycle] = useState(false);
   const [useSingleDate, setUseSingleDate] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [analysisType, setAnalysisType] = useState("service"); // service or category
 
   // Extract all dates that have operations
   const availableDates = useMemo(() => {
@@ -168,30 +171,53 @@ export function PerformanceTab({
             onClear={() => setUseMonthCycle(false)}
           />
         </div>
-        
-        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-          <span>{dateRange.from.toLocaleDateString('tr-TR')}</span>
-          {!useSingleDate && (
-            <>
-              <span> - </span>
-              <span>{dateRange.to.toLocaleDateString('tr-TR')}</span>
-            </>
-          )}
-        </div>
       </div>
-
-      {isLoading ? (
-        <div className="flex justify-center p-12">
-          <div className="w-10 h-10 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
-        </div>
-      ) : (
-        <ServicePerformanceView
-          serviceData={serviceData}
-          insights={insights}
-          refreshAnalysis={() => setRefreshKey(prev => prev + 1)}
-          dateRange={dateRange}
-        />
-      )}
+      
+      <div className="flex items-center gap-1 text-sm text-muted-foreground">
+        <span>{dateRange.from.toLocaleDateString('tr-TR')}</span>
+        {!useSingleDate && (
+          <>
+            <span> - </span>
+            <span>{dateRange.to.toLocaleDateString('tr-TR')}</span>
+          </>
+        )}
+      </div>
+      
+      <Tabs value={analysisType} onValueChange={setAnalysisType} className="mt-2">
+        <TabsList className="grid w-full grid-cols-2 mb-4">
+          <TabsTrigger value="service">Hizmet Raporları</TabsTrigger>
+          <TabsTrigger value="category">Kategori Raporları</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="service">
+          {isLoading ? (
+            <div className="flex justify-center p-12">
+              <div className="w-10 h-10 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
+            </div>
+          ) : (
+            <ServicePerformanceView
+              serviceData={serviceData}
+              insights={insights}
+              refreshAnalysis={() => setRefreshKey(prev => prev + 1)}
+              dateRange={dateRange}
+            />
+          )}
+        </TabsContent>
+        
+        <TabsContent value="category">
+          {isLoading ? (
+            <div className="flex justify-center p-12">
+              <div className="w-10 h-10 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
+            </div>
+          ) : (
+            <CategoryPerformanceView
+              operations={filteredOperations}
+              refreshAnalysis={() => setRefreshKey(prev => prev + 1)}
+              dateRange={dateRange}
+            />
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

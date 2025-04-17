@@ -4,8 +4,12 @@ import { formatCurrency } from "@/lib/utils";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { CustomMonthCycleSelector } from "@/components/ui/custom-month-cycle-selector";
 import { Input } from "@/components/ui/input";
-import { Search, Calendar } from "lucide-react";
+import { Search, Calendar, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { personelIslemleriServisi } from "@/lib/supabase";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface OperationsHistoryTabProps {
   personnel: any;
@@ -26,6 +30,7 @@ export function OperationsHistoryTab({
   const [monthCycleDay, setMonthCycleDay] = useState(1);
   const [useMonthCycle, setUseMonthCycle] = useState(false);
   const [singleDateMode, setSingleDateMode] = useState(false);
+  const queryClient = useQueryClient();
   
   const handleDateRangeChange = ({from, to}: {from: Date, to: Date}) => {
     setDateRange({from, to});
@@ -71,12 +76,18 @@ export function OperationsHistoryTab({
         from: today,
         to: today
       });
+    } else {
+      // When switching back to range mode, set the "to" date to today
+      setDateRange(prev => ({
+        from: prev.from,
+        to: new Date()
+      }));
     }
     
     setUseMonthCycle(false);
   };
   
-  const handleSingleDateChange = (date: Date | null) => {
+  const handleSingleDateChange = (date: Date | undefined) => {
     if (!date) return;
     setDateRange({ from: date, to: date });
   };
@@ -112,57 +123,94 @@ export function OperationsHistoryTab({
 
   // Determine if this is a commission-based worker
   const isCommissionBased = personnel.calisma_sistemi === "prim_komisyon";
+  
+  // Function to recover operations from appointments
+  const handleRecoverOperations = async () => {
+    if (!personnel || !personnel.id) return;
+    
+    try {
+      toast.loading("İşlemler yükleniyor...");
+      
+      await personelIslemleriServisi.recoverOperationsFromAppointments(personnel.id);
+      
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({queryKey: ["personnel-operations"]});
+      
+      toast.success("İşlemler başarıyla güncellendi");
+    } catch (error) {
+      console.error("Error recovering operations:", error);
+      toast.error("İşlemler güncellenirken bir hata oluştu");
+    }
+  };
 
   return (
     <div className="space-y-4">
-      {/* Search Field - Full Width */}
-      <div className="relative w-full">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Müşteri veya işlem ara..."
-          className="pl-9 w-full"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </div>
-
-      {/* Date Selection Controls - Horizontal Layout */}
-      <div className="flex flex-wrap gap-3 items-center">
-        <Button
-          variant={singleDateMode ? "secondary" : "outline"}
-          size="sm"
-          className="h-9 gap-1 whitespace-nowrap"
-          onClick={handleSingleDateModeToggle}
-        >
-          <Calendar className="h-4 w-4" />
-          <span>{singleDateMode ? "Tek Gün" : "Tarih Aralığı"}</span>
-        </Button>
-
-        {singleDateMode ? (
-          <DateRangePicker
-            from={dateRange.from}
-            to={dateRange.from}
-            onSelect={({ from }) => handleSingleDateChange(from)}
-            singleDate={true}
+      {/* Search and Date Filter - Responsive Layout */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="relative w-full">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Müşteri veya işlem ara..."
+            className="pl-9 w-full"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
           />
-        ) : !useMonthCycle && (
-          <DateRangePicker
-            from={dateRange.from}
-            to={dateRange.to}
-            onSelect={handleDateRangeChange}
-            singleDate={false}
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <Button
+            variant={singleDateMode ? "secondary" : "outline"}
+            size="sm"
+            className="h-9 gap-1 whitespace-nowrap flex-shrink-0"
+            onClick={handleSingleDateModeToggle}
+          >
+            <Calendar className="h-4 w-4" />
+            <span className="hidden sm:inline">{singleDateMode ? "Tek Gün" : "Tarih Aralığı"}</span>
+          </Button>
+
+          {singleDateMode ? (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="justify-start text-left font-normal flex-grow">
+                  <Calendar className="mr-2 h-4 w-4" />
+                  {dateRange.from ? (
+                    dateRange.from.toLocaleDateString()
+                  ) : (
+                    <span>Tarih seçin</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={dateRange.from}
+                  onSelect={handleSingleDateChange}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+          ) : !useMonthCycle ? (
+            <DateRangePicker
+              from={dateRange.from}
+              to={dateRange.to}
+              onSelect={handleDateRangeChange}
+              align="start"
+              className="flex-grow"
+            />
+          ) : (
+            <div className="flex-grow" />
+          )}
+
+          <CustomMonthCycleSelector
+            selectedDay={monthCycleDay}
+            onChange={handleMonthCycleChange}
+            active={useMonthCycle}
+            onClear={() => setUseMonthCycle(false)}
           />
-        )}
-
-        <CustomMonthCycleSelector
-          selectedDay={monthCycleDay}
-          onChange={handleMonthCycleChange}
-          active={useMonthCycle}
-          onClear={() => setUseMonthCycle(false)}
-        />
+        </div>
       </div>
-
-      {/* Summary Cards */}
+      
+      {/* Summary Stats Cards - Flexbox for Responsive Layout */}
       <div className="flex flex-wrap gap-2 mt-2">
         <div className="bg-muted p-2 px-3 rounded-md text-sm">
           <span className="text-muted-foreground mr-1">İşlem:</span> 
@@ -181,6 +229,18 @@ export function OperationsHistoryTab({
         <div className="bg-muted p-2 px-3 rounded-md text-sm">
           <span className="text-muted-foreground mr-1">Puan:</span> 
           <span className="font-medium text-purple-600">{totalPoints}</span>
+        </div>
+        
+        <div className="ml-auto">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleRecoverOperations}
+            className="flex items-center gap-1"
+          >
+            <RefreshCcw className="h-4 w-4" />
+            <span className="hidden sm:inline">İşlemleri Yenile</span>
+          </Button>
         </div>
       </div>
 
