@@ -6,7 +6,7 @@ export interface PersonnelImageTabProps {
   onSave?: () => void;
 }
 
-export function PersonnelImageTab({ personnel }: PersonnelImageTabProps) {
+export function PersonnelImageTab({ personnel, onSave }: PersonnelImageTabProps) {
   return (
     <div className="space-y-6">
       <div className="flex justify-center">

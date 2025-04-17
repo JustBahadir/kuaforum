@@ -1,147 +1,137 @@
 
-import { useState } from "react";
+import React, { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  formatCurrency,
-  formatDate,
-  formatDateShort,
-} from "@/lib/utils";
-import { DateControlBar } from "@/components/ui/date-control-bar"; 
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { formatDate, formatDateShort } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import { personelIslemleriServisi } from "@/lib/supabase";
 
-interface PersonelIslemi {
-  id: number;
-  tutar: number;
-  created_at: string;
-  aciklama: string;
-  personel_id: number;
-  islem_id: number;
-  musteri_id: number;
-  personel?: { id: number; ad_soyad: string };
-  islem?: { id: number; islem_adi: string };
-  musteri?: { id: number; first_name: string; last_name: string };
-  prim_yuzdesi?: number;
-  odenen?: number;
-}
-
-export interface OperationsHistoryTabProps {
+interface OperationsHistoryTabProps {
   personnel: any;
   isLoading?: boolean;
 }
 
-export function OperationsHistoryTab({ 
-  personnel,
-  isLoading = false,
-}: OperationsHistoryTabProps) {
-  const [dateRange, setDateRange] = useState({
-    from: new Date(new Date().setDate(new Date().getDate() - 30)),
-    to: new Date()
+export function OperationsHistoryTab({ personnel, isLoading = false }: OperationsHistoryTabProps) {
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const itemsPerPage = 10;
+
+  // Fetch personnel operations
+  const {
+    data: operations = [],
+    isLoading: operationsLoading
+  } = useQuery({
+    queryKey: ["personnelOperations", personnel?.id],
+    queryFn: () => personelIslemleriServisi.personelIslemleriGetir(personnel.id),
+    enabled: !!personnel?.id,
   });
-  
-  // This is a placeholder for demonstration - in a real app, you'd fetch operations here
-  const [operations, setOperations] = useState<PersonelIslemi[]>([]);
-  const [useSingleDate, setUseSingleDate] = useState(false);
 
-  const handleDateRangeChange = (range: { from: Date; to: Date }) => {
-    setDateRange(range);
-    setUseSingleDate(false);
-    // Fetch operations based on new date range
-  };
+  const filteredOperations = operations.filter((op: any) => {
+    if (!search) return true;
+    
+    const lowerCaseSearch = search.toLowerCase();
+    return (
+      op.islem?.islem_adi?.toLowerCase().includes(lowerCaseSearch) ||
+      op.aciklama?.toLowerCase().includes(lowerCaseSearch)
+    );
+  });
 
-  const handleSingleDateChange = (date: Date) => {
-    setDateRange({ from: date, to: date });
-    setUseSingleDate(true);
-    // Fetch operations for single date
-  };
+  const paginatedOperations = filteredOperations.slice(
+    (page - 1) * itemsPerPage,
+    page * itemsPerPage
+  );
 
-  // This would be called to fetch operations when the component mounts or date range changes
-  const fetchOperations = () => {
-    // Implementation would go here
-  };
+  const totalPages = Math.ceil(filteredOperations.length / itemsPerPage);
 
-  // Calculate totals
-  const totalRevenue = operations.reduce((sum, op) => sum + (op.tutar || 0), 0);
-  const totalCommission = operations.reduce((sum, op) => sum + (op.odenen || 0), 0);
-  
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col md:flex-row gap-2 md:items-center md:justify-between">
-        <DateControlBar
-          dateRange={dateRange}
-          onDateRangeChange={handleDateRangeChange}
-          showMonthCycle={true}
-          initialMode={useSingleDate ? 'single' : 'range'}
-        />
-      </div>
-      
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle>İşlem Geçmişi</CardTitle>
+    <div>
+      <Card className="mb-6">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>İşlem Geçmişi</CardTitle>
+            <div className="relative">
+              <Search className="h-4 w-4 absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-500" />
+              <Input
+                placeholder="İşlem ara..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-8 w-[200px]"
+              />
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <div className="flex justify-center py-10">
-              <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
+          {isLoading || operationsLoading ? (
+            <div className="flex justify-center p-12">
+              <div className="w-10 h-10 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
             </div>
-          ) : operations.length === 0 ? (
-            <div className="py-10 text-center text-muted-foreground">
-              <p>Seçilen tarih aralığında işlem bulunamadı.</p>
-            </div>
+          ) : paginatedOperations.length > 0 ? (
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Tarih</TableHead>
+                    <TableHead>İşlem</TableHead>
+                    <TableHead>Açıklama</TableHead>
+                    <TableHead className="text-right">Tutar</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paginatedOperations.map((op: any) => (
+                    <TableRow key={op.id}>
+                      <TableCell className="font-medium">
+                        {formatDateShort(op.created_at)}
+                      </TableCell>
+                      <TableCell>{op.islem?.islem_adi || "-"}</TableCell>
+                      <TableCell className="max-w-xs truncate">
+                        {op.aciklama || "-"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        ₺{op.tutar?.toFixed(2) || "-"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              {/* Pagination */}
+              <div className="flex items-center justify-end space-x-2 py-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={page <= 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  <span className="sr-only">Önceki sayfa</span>
+                </Button>
+                <div className="text-sm text-muted-foreground">
+                  Sayfa {page} / {totalPages || 1}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((prev) => (prev < totalPages ? prev + 1 : prev))}
+                  disabled={page >= totalPages}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                  <span className="sr-only">Sonraki sayfa</span>
+                </Button>
+              </div>
+            </>
           ) : (
-            <div className="overflow-auto">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="border-b">
-                    <th className="px-3 py-2 text-left font-medium text-sm text-muted-foreground">Tarih</th>
-                    <th className="px-3 py-2 text-left font-medium text-sm text-muted-foreground">Müşteri</th>
-                    <th className="px-3 py-2 text-left font-medium text-sm text-muted-foreground">İşlem</th>
-                    <th className="px-3 py-2 text-right font-medium text-sm text-muted-foreground">Tutar</th>
-                    <th className="px-3 py-2 text-right font-medium text-sm text-muted-foreground">Komisyon</th>
-                    <th className="px-3 py-2 text-right font-medium text-sm text-muted-foreground">Net</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {operations.map((operation) => {
-                    const commission = (operation.tutar * (operation.prim_yuzdesi || 0)) / 100;
-                    const net = operation.tutar - commission;
-                    
-                    return (
-                      <tr key={operation.id} className="border-b hover:bg-muted/50">
-                        <td className="px-3 py-2 text-sm">
-                          {formatDateShort(operation.created_at)}
-                        </td>
-                        <td className="px-3 py-2 text-sm">
-                          {operation.musteri ? `${operation.musteri.first_name} ${operation.musteri.last_name}` : "-"}
-                        </td>
-                        <td className="px-3 py-2 text-sm">
-                          {operation.islem?.islem_adi || operation.aciklama}
-                        </td>
-                        <td className="px-3 py-2 text-sm text-right">
-                          {formatCurrency(operation.tutar)}
-                        </td>
-                        <td className="px-3 py-2 text-sm text-right">
-                          {formatCurrency(commission)}
-                        </td>
-                        <td className="px-3 py-2 text-sm text-right">
-                          {formatCurrency(net)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-                <tfoot>
-                  <tr className="border-t border-t-2">
-                    <td className="px-3 py-2 font-medium" colSpan={3}>Toplam</td>
-                    <td className="px-3 py-2 text-right font-medium">{formatCurrency(totalRevenue)}</td>
-                    <td className="px-3 py-2 text-right font-medium">{formatCurrency(totalCommission)}</td>
-                    <td className="px-3 py-2 text-right font-medium">{formatCurrency(totalRevenue - totalCommission)}</td>
-                  </tr>
-                </tfoot>
-              </table>
+            <div className="text-center py-12 text-muted-foreground">
+              {search ? "Aramanıza uygun işlem bulunamadı." : "Bu personel için henüz işlem kaydı bulunmamaktadır."}
             </div>
           )}
         </CardContent>

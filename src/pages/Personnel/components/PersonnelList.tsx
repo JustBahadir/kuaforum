@@ -1,402 +1,440 @@
-
-import { useState, useEffect, useCallback } from "react";
+import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  personelServisi,
-  Personel as PersonelType,
-} from "@/lib/supabase";
-import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
-import { Button } from "@/components/ui/button";
-import { Plus, Edit, Trash2, Eye, RefreshCcw } from "lucide-react";
+  ColumnDef,
+  flexRender,
+  getCoreRowModel,
+  getPaginationRowModel,
+  useReactTable,
+  getSortedRowModel,
+} from "@tanstack/react-table";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { toast } from "@/components/ui/use-toast";
-import { PersonnelForm } from "@/components/operations/PersonnelForm";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MoreHorizontal, Edit, Trash2 } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { toast } from "sonner";
 import { PersonnelDetailsDialog } from "./PersonnelDetailsDialog";
+import { PersonnelForm } from "./PersonnelForm";
+import { personelServisi } from "@/lib/supabase";
 
-const defaultPageSize = 10;
-
-const formSchema = z.object({
-  ad_soyad: z.string().min(2, {
-    message: "Ad Soyad en az 2 karakter olmalıdır.",
-  }),
-  telefon: z.string().optional(),
-  email: z.string().email({
-    message: "Geçerli bir email adresi giriniz.",
-  }),
-  adres: z.string().optional(),
-  ise_baslama_tarihi: z.date().optional(),
-  isten_ayrilma_tarihi: z.date().optional(),
-  unvan: z.string().optional(),
-  maas: z.number().optional(),
-  prim_yuzdesi: z.number().optional(),
-  cinsiyet: z.enum(["erkek", "kadin"]).optional(),
-  dogum_tarihi: z.date().optional(),
-  tc_kimlik_no: z.string().optional(),
-  sigorta_no: z.string().optional(),
-  pozisyon: z.string().optional(),
-  izin_gun_sayisi: z.number().optional(),
-  avatar_url: z.string().url().optional(),
-  aktif: z.boolean().default(true).optional(),
-  kullanici_adi: z.string().optional(),
-  sifre: z.string().optional(),
-  calisma_sistemi: z.enum(["komisyon", "maas"]).optional(),
-});
-
-interface PersonnelListProps {
-  personnel?: PersonelType[];
-  onPersonnelSelect: (personnelId: number | null) => void;
+interface Personnel {
+  id: number;
+  ad_soyad: string;
+  eposta: string;
+  telefon: string;
+  adres: string;
+  iban: string;
+  birth_date: string;
+  ise_baslama_tarihi: string;
+  isten_ayrilma_tarihi: string;
+  calisma_sistemi: string;
+  maas: number;
+  prim_yuzdesi: number;
+  personel_no: string;
+  avatar_url: string;
 }
 
-export function PersonnelList({ personnel, onPersonnelSelect }: PersonnelListProps) {
-  const [rowId, setRowId] = useState<number | null>(null);
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(defaultPageSize);
-  const [sortModel, setSortModel] = useState([{ field: 'ad_soyad', sort: 'asc' }]);
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [selectedPersonId, setSelectedPersonId] = useState<number | null>(null);
-  const [selectedPerson, setSelectedPerson] = useState<PersonelType | null>(null);
+const handleAddPersonnel = async (values: any) => {
+  // Map any email field to eposta
+  if (values.email) {
+    values.eposta = values.email;
+    delete values.email;
+  }
+  
+  // Remove tc_kimlik_no if it exists but is not part of the schema
+  if (values.tc_kimlik_no) {
+    delete values.tc_kimlik_no;
+  }
+  
+  return await personelServisi.ekle(values);
+};
 
+const addPersonnelMutation = useMutation({
+  mutationFn: handleAddPersonnel,
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ["personeller"] });
+    toast.success("Personel başarıyla eklendi.");
+    setIsAddPersonnelDialogOpen(false);
+  },
+  onError: (error) => {
+    toast.error("Personel eklenirken bir hata oluştu.");
+    console.error("Error adding personnel:", error);
+  }
+});
+
+const handleUpdatePersonnel = async ({ id, ...values }: { id: number, [key: string]: any }) => {
+  // Map any email field to eposta
+  if (values.email) {
+    values.eposta = values.email;
+    delete values.email;
+  }
+  
+  return await personelServisi.guncelle(id, values);
+};
+
+const updatePersonnelMutation = useMutation({
+  mutationFn: handleUpdatePersonnel,
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ["personeller"] });
+    toast.success("Personel başarıyla güncellendi.");
+    setIsEditPersonnelDialogOpen(false);
+  },
+  onError: (error) => {
+    toast.error("Personel güncellenirken bir hata oluştu.");
+    console.error("Error updating personnel:", error);
+  }
+});
+
+// For the delete mutation
+const deletePersonnelMutation = useMutation({
+  mutationFn: async (id: number) => {
+    return await personelServisi.sil(id);
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ["personeller"] });
+    toast.success("Personel başarıyla silindi.");
+  },
+  onError: (error) => {
+    toast.error("Personel silinirken bir hata oluştu.");
+    console.error("Error deleting personnel:", error);
+  }
+});
+
+export function PersonnelList() {
+  const [isAddPersonnelDialogOpen, setIsAddPersonnelDialogOpen] = useState(false);
+  const [isEditPersonnelDialogOpen, setIsEditPersonnelDialogOpen] = useState(false);
+  const [isPersonnelDetailsDialogOpen, setIsPersonnelDetailsDialogOpen] = useState(false);
+  const [selectedPersonnel, setSelectedPersonnel] = useState<Personnel | null>(null);
+  const [search, setSearch] = useState("");
   const queryClient = useQueryClient();
 
-  const { data: personeller = [], refetch: fetchPersonnel, isLoading } = useQuery({
-    queryKey: ['personel', page, pageSize, sortModel, search],
-    queryFn: () => personelServisi.hepsiniGetir(/* no arguments here */),
+  const {
+    data: personeller = [],
+    isLoading,
+    refetch: refreshList,
+  } = useQuery({
+    queryKey: ["personeller"],
+    queryFn: () => personelServisi.hepsiniGetir(),
   });
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      ad_soyad: "",
-      telefon: "",
-      email: "",
-      adres: "",
-      ise_baslama_tarihi: undefined,
-      isten_ayrilma_tarihi: undefined,
-      unvan: "",
-      maas: undefined,
-      prim_yuzdesi: undefined,
-      cinsiyet: undefined,
-      dogum_tarihi: undefined,
-      tc_kimlik_no: "",
-      sigorta_no: "",
-      pozisyon: "",
-      izin_gun_sayisi: undefined,
-      avatar_url: "",
-      aktif: true,
-      kullanici_adi: "",
-      sifre: "",
-      calisma_sistemi: undefined,
-    },
-  });
-
-  const createMutation = useMutation({
-    mutationFn: async (values: Partial<PersonelType>) => {
-      // Convert form data to match the expected Personel type
-      const personelData: Omit<PersonelType, "id" | "created_at"> = {
-        ad_soyad: values.ad_soyad || "",
-        telefon: values.telefon || "",
-        eposta: values.email || "",  // Map email to eposta
-        adres: values.adres || "",
-        personel_no: values.tc_kimlik_no || "",  // Map tc_kimlik_no to personel_no
-        maas: values.maas || 0,
-        prim_yuzdesi: values.prim_yuzdesi || 0,
-        calisma_sistemi: values.calisma_sistemi || "aylik_maas",
-        dukkan_id: undefined // Set appropriately based on your application
-      };
-      
-      return personelServisi.ekle(personelData);
-    },
-    onSuccess: () => {
-      form.reset();
-      fetchPersonnel();
-      setIsCreateOpen(false);
-      toast({
-        title: "Personel başarıyla oluşturuldu.",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        variant: "destructive",
-        title: "Bir şeyler ters gitti.",
-        description: error.message,
-      });
-    },
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: async ({ id, ...values }: { id: number } & Partial<PersonelType>) => {
-      // Convert form data to match the expected Personel type
-      const personelData: Partial<PersonelType> = {
-        ad_soyad: values.ad_soyad,
-        telefon: values.telefon,
-        eposta: values.email,  // Map email to eposta
-        adres: values.adres,
-        maas: values.maas,
-        prim_yuzdesi: values.prim_yuzdesi,
-        calisma_sistemi: values.calisma_sistemi
-      };
-      
-      return personelServisi.guncelle(id, personelData);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['personel'] });
-      fetchPersonnel();
-      toast({
-        title: "Personel başarıyla güncellendi.",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        variant: "destructive",
-        title: "Bir şeyler ters gitti.",
-        description: error.message,
-      });
-    },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: async (id: number) => {
-      return personelServisi.sil(id);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['personel'] });
-      fetchPersonnel();
-      toast({
-        title: "Personel başarıyla silindi.",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        variant: "destructive",
-        title: "Bir şeyler ters gitti.",
-        description: error.message,
-      });
-    },
-  });
-
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearch(e.target.value);
-  };
-
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
-    createMutation.mutate(values);
-  };
-
-  const handleOpenDetails = (id: number) => {
-    const person = personeller.find((p) => p.id === id);
-    setSelectedPerson(person || null);
-    setSelectedPersonId(id);
-    setIsDetailsOpen(true);
-    onPersonnelSelect(id);
-  };
-
-  const handleCloseDetails = () => {
-    setIsDetailsOpen(false);
-    setSelectedPersonId(null);
-    setSelectedPerson(null);
-    onPersonnelSelect(null);
-  };
-  
-  const handleRefreshList = async () => {
-    await fetchPersonnel();
-  };
-
-  const columns: GridColDef[] = [
-    { field: "id", headerName: "ID", width: 70 },
-    { field: "ad_soyad", headerName: "Ad Soyad", width: 200, sortable: true },
-    { field: "eposta", headerName: "Email", width: 250 },
+  const columns: ColumnDef<Personnel>[] = [
     {
-      field: "telefon",
-      headerName: "Telefon",
-      width: 150,
-      renderCell: (params: GridRenderCellParams) => (
-        <span>{params.value || "-"}</span>
-      ),
+      accessorKey: "ad_soyad",
+      header: "Ad Soyad",
     },
     {
-      field: "aktif",
-      headerName: "Aktif",
-      width: 100,
-      renderCell: (params: GridRenderCellParams) => (
-        <span>{params.value ? "Evet" : "Hayır"}</span>
-      ),
+      accessorKey: "eposta",
+      header: "E-posta",
     },
     {
-      field: "actions",
-      headerName: "İşlemler",
-      width: 250,
-      renderCell: (params: GridRenderCellParams) => (
-        <div className="flex gap-2">
-          <Button
-            size="sm"
-            onClick={() => handleOpenDetails(params.row.id)}
-          >
-            <Eye className="w-4 h-4 mr-2" />
-            Görüntüle
-          </Button>
-          <DialogTrigger asChild>
-            <Button size="sm" variant="secondary">
-              <Edit className="w-4 h-4 mr-2" />
-              Düzenle
-            </Button>
-          </DialogTrigger>
-          <DialogTrigger asChild>
-            <Button size="sm" variant="destructive">
-              <Trash2 className="w-4 h-4 mr-2" />
-              Sil
-            </Button>
-          </DialogTrigger>
-        </div>
-      ),
+      accessorKey: "telefon",
+      header: "Telefon",
+    },
+    {
+      id: "actions",
+      cell: ({ row }) => {
+        const personnel = row.original;
+
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0">
+                <span className="sr-only">Open menu</span>
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>İşlemler</DropdownMenuLabel>
+              <DropdownMenuItem
+                onClick={() => {
+                  setSelectedPersonnel(personnel);
+                  setIsPersonnelDetailsDialogOpen(true);
+                }}
+                className="cursor-pointer"
+              >
+                <Edit className="mr-2 h-4 w-4" />
+                Görüntüle
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  setSelectedPersonnel(personnel);
+                  setIsEditPersonnelDialogOpen(true);
+                }}
+                className="cursor-pointer"
+              >
+                <Edit className="mr-2 h-4 w-4" />
+                Düzenle
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="cursor-pointer">
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <DropdownMenuItem className="cursor-pointer">
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Sil
+                    </DropdownMenuItem>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Emin misiniz?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Bu işlem geri alınamaz. Devam etmek istediğinizden emin
+                        misiniz?
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>İptal</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => {
+                          deletePersonnelMutation.mutate(personnel.id);
+                        }}
+                      >
+                        Sil
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      },
     },
   ];
 
-  // Create separate dialog contents for edit and delete dialogs
-  const renderEditDialog = (personData: any) => (
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>Personel Düzenle</DialogTitle>
-        <DialogDescription>
-          Personel bilgilerini buradan düzenleyebilirsiniz.
-        </DialogDescription>
-      </DialogHeader>
-      {/* Use PersonnelForm directly without form wrapper */}
-      <PersonnelForm
-        personnel={personData}
-        readOnly={false}
-        showWorkInfo={true}
-        showPersonalInfo={true}
-        onSubmit={(values) => updateMutation.mutate({ id: personData.id, ...values })}
-        isLoading={updateMutation.isPending}
-      />
-    </DialogContent>
-  );
+  const table = useReactTable({
+    data: personeller.filter((personel) =>
+      personel.ad_soyad.toLowerCase().includes(search.toLowerCase())
+    ),
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    onSortingChange: setSortModel,
+    getSortedRowModel: getSortedRowModel(),
+    state: {
+      sorting: sortModel,
+    },
+  });
 
-  const renderDeleteDialog = (personId: number) => (
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>Personel Sil</DialogTitle>
-        <DialogDescription>
-          Bu personeli silmek istediğinize emin misiniz?
-        </DialogDescription>
-      </DialogHeader>
-      <div className="flex justify-end space-x-2">
-        <Button type="button" variant="outline" onClick={() => { }}>
-          İptal
-        </Button>
-        <Button
-          type="submit"
-          variant="destructive"
-          onClick={() => deleteMutation.mutate(personId)}
-          disabled={deleteMutation.isPending}
-        >
-          {deleteMutation.isPending ? "Siliniyor..." : "Sil"}
-        </Button>
-      </div>
-    </DialogContent>
-  );
+  const [sortModel, setSortModel] = useState([
+    { field: "ad_soyad", sort: "asc" as const }
+  ]);
+
+  const {
+    handleSubmit,
+    formState: { isSubmitting },
+  } = useForm();
+
+  const onSubmit = async (values: any) => {
+    if (selectedPersonnel) {
+      updatePersonnelMutation.mutate({ id: selectedPersonnel.id, ...values });
+    } else {
+      addPersonnelMutation.mutate(values);
+    }
+  };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Personel Yönetimi</h1>
-        <div className="flex items-center space-x-2">
-          <Input
-            placeholder="Personel ara..."
-            onChange={handleSearch}
-            className="w-64"
-          />
-          <Button variant="outline" size="icon" onClick={handleRefreshList}>
-            <RefreshCcw className="h-4 w-4" />
-          </Button>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
+    <div className="container mx-auto py-10">
+      <Card>
+        <CardHeader>
+          <CardTitle>Personel Listesi</CardTitle>
+          <CardDescription>
+            Sistemdeki tüm personelleri görüntüleyebilir, düzenleyebilir ve
+            silebilirsiniz.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center py-4">
+            <Input
+              type="search"
+              placeholder="Personel ara..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="max-w-sm"
+            />
+            <Button
+              onClick={() => {
+                setSelectedPersonnel(null);
+                setIsAddPersonnelDialogOpen(true);
+              }}
+              className="ml-auto"
+            >
               Personel Ekle
             </Button>
-          </DialogTrigger>
-        </div>
-      </div>
+          </div>
+          <div className="rounded-md border">
+            <ScrollArea>
+              <div className="relative min-w-[600px]">
+                <Table>
+                  <TableHeader>
+                    {table.getHeaderGroups().map((headerGroup) => (
+                      <TableRow key={headerGroup.id}>
+                        {headerGroup.headers.map((header) => {
+                          return (
+                            <TableHead key={header.id}>
+                              {header.isPlaceholder
+                                ? null
+                                : (
+                                  <div
+                                    {...{
+                                      className:
+                                        "cursor-pointer group flex items-center justify-between",
+                                      onClick: header.column.getToggleSortingHandler(),
+                                    }}
+                                  >
+                                    {flexRender(
+                                      header.column.columnDef.header,
+                                      header.getContext()
+                                    )}
+                                    {{
+                                      asc: "▲",
+                                      desc: "▼",
+                                    }[header.column.getIsSorted() as string] ?? null}
+                                  </div>
+                                )}
+                            </TableHead>
+                          );
+                        })}
+                      </TableRow>
+                    ))}
+                  </TableHeader>
+                  <TableBody>
+                    {isLoading ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={columns.length}
+                          className="h-24 text-center"
+                        >
+                          Yükleniyor...
+                        </TableCell>
+                      </TableRow>
+                    ) : personeller.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={columns.length}
+                          className="h-24 text-center"
+                        >
+                          Kayıt bulunamadı.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      table.getRowModel().rows.map((row) => (
+                        <TableRow key={row.id}>
+                          {row.getVisibleCells().map((cell) => (
+                            <TableCell key={cell.id}>
+                              {flexRender(
+                                cell.column.columnDef.cell,
+                                cell.getContext()
+                              )}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </ScrollArea>
+          </div>
+          <div className="flex items-center justify-end space-x-2 py-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+            >
+              Önceki
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+            >
+              Sonraki
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
-      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Personel Ekle</DialogTitle>
-            <DialogDescription>
-              Yeni personel bilgilerini buradan ekleyebilirsiniz.
-            </DialogDescription>
-          </DialogHeader>
-          {/* Use PersonnelForm directly */}
+      <PersonnelDetailsDialog
+        isOpen={isPersonnelDetailsDialogOpen}
+        onOpenChange={setIsPersonnelDetailsDialogOpen}
+        personnel={selectedPersonnel}
+        onUpdate={refreshList}
+        onClose={() => setSelectedPersonnel(null)}
+      />
+
+      <AlertDialog open={isAddPersonnelDialogOpen} onOpenChange={setIsAddPersonnelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Personel Ekle</AlertDialogTitle>
+          </AlertDialogHeader>
           <PersonnelForm
-            personnel={{}}
+            personnel={null}
             readOnly={false}
             showWorkInfo={true}
             showPersonalInfo={true}
-            onSubmit={createMutation.mutate}
-            isLoading={createMutation.isPending}
+            onSubmit={handleSubmit((values) => onSubmit(values))}
+            isLoading={isSubmitting}
           />
-        </DialogContent>
-      </Dialog>
+          <AlertDialogFooter>
+            <AlertDialogCancel>İptal</AlertDialogCancel>
+            <AlertDialogAction onClick={handleSubmit((values) => onSubmit(values))}>
+              {isSubmitting ? "Kaydediliyor..." : "Kaydet"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
-      <div style={{ height: 400, width: "100%" }}>
-        <DataGrid
-          rows={personeller}
-          columns={columns}
-          loading={isLoading}
-          disableColumnFilter
-          disableDensitySelector
-          disableColumnMenu
-          paginationMode="server"
-          sortingMode="server"
-          rowCount={personeller.length}
-          pageSizeOptions={[defaultPageSize, 25, 50, 100]}
-          pagination
-          page={page}
-          pageSize={pageSize}
-          sortModel={sortModel}
-          onPageChange={(newPage) => setPage(newPage)}
-          onPageSizeChange={(newPageSize) => setPageSize(newPageSize)}
-          onSortModelChange={(newSortModel) => setSortModel(newSortModel)}
-          getRowId={(row) => row.id}
-        />
-      </div>
-      <PersonnelDetailsDialog
-        isOpen={isDetailsOpen}
-        onOpenChange={setIsDetailsOpen}
-        personnel={selectedPerson}
-        onUpdate={handleRefreshList}
-        onClose={handleCloseDetails}
-      />
+      <AlertDialog open={isEditPersonnelDialogOpen} onOpenChange={setIsEditPersonnelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Personel Düzenle</AlertDialogTitle>
+          </AlertDialogHeader>
+          <PersonnelForm
+            personnel={selectedPersonnel}
+            readOnly={false}
+            showWorkInfo={true}
+            showPersonalInfo={true}
+            onSubmit={handleSubmit((values) => onSubmit(values))}
+            isLoading={isSubmitting}
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel>İptal</AlertDialogCancel>
+            <AlertDialogAction onClick={handleSubmit((values) => onSubmit(values))}>
+              {isSubmitting ? "Kaydediliyor..." : "Kaydet"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

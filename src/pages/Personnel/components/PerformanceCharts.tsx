@@ -5,7 +5,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DateControlBar } from "@/components/ui/date-control-bar";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
-import { Button } from "@/components/ui/button"; // Add missing Button import
+import { Button } from "@/components/ui/button";
 import { 
   BarChart, 
   Bar, 
@@ -15,13 +15,12 @@ import {
   Tooltip, 
   Legend, 
   ResponsiveContainer, 
-  ComposedChart,
   Cell,
   PieChart,
   Pie
 } from "recharts";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CircleAlert, InfoIcon, BarChart3 } from "lucide-react";
+import { CircleAlert, InfoIcon } from "lucide-react";
 import { 
   TooltipProvider, 
   TooltipContent, 
