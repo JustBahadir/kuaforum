@@ -1,9 +1,9 @@
+
 import { useState, useEffect } from "react";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { PersonelIslemi as PersonelIslemiType, islemServisi, personelIslemleriServisi, personelServisi } from "@/lib/supabase";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { PersonnelList } from "./Personnel/components/PersonnelList";
 import { PerformanceCharts } from "./Personnel/components/PerformanceCharts";
 import { PersonnelPerformanceReports } from "./Personnel/components/PersonnelPerformanceReports";
@@ -14,6 +14,7 @@ import { AlertCircle, FileBarChart } from "lucide-react";
 import { Navigate } from "react-router-dom";
 import { formatCurrency } from "@/lib/utils";
 import { PersonnelAnalyst } from "@/components/analyst/PersonnelAnalyst";
+import { DateControlBar } from "@/components/ui/date-control-bar";
 
 interface PersonelIslemi extends PersonelIslemiType {
   personel_id: number;
@@ -122,11 +123,9 @@ export default function Personnel() {
                 <CardTitle>İşlem Geçmişi</CardTitle>
                 <div className="flex justify-between items-center flex-wrap gap-4">
                   <div className="flex gap-4 items-center">
-                    <span className="text-sm text-muted-foreground">Tarih aralığı seçin:</span>
-                    <DateRangePicker 
-                      from={dateRange.from}
-                      to={dateRange.to}
-                      onSelect={({from, to}) => setDateRange({from, to})}
+                    <DateControlBar 
+                      dateRange={dateRange}
+                      onDateRangeChange={setDateRange}
                     />
                   </div>
                   
