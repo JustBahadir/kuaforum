@@ -54,6 +54,18 @@ interface PerformanceChartsProps {
   islemGecmisi: Operation[];
 }
 
+// Helper function to get readable metric names - moved to the top so it's defined before use
+const metricToLabel = (metric: string): string => {
+  switch (metric) {
+    case "ciro": return "Ciro";
+    case "islemSayisi": return "İşlem Sayısı";
+    case "prim": return "Prim";
+    case "net": return "Net Gelir";
+    case "ortalamaCiro": return "Ortalama İşlem";
+    default: return metric;
+  }
+};
+
 export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChartsProps) {
   const [dateRange, setDateRange] = useState({
     from: new Date(new Date().setDate(new Date().getDate() - 30)),
@@ -139,18 +151,6 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
   };
   
   const metricChartData = generateMetricChartData();
-
-  // Helper function to get readable metric names
-  const metricToLabel = (metric: string): string => {
-    switch (metric) {
-      case "ciro": return "Ciro";
-      case "islemSayisi": return "İşlem Sayısı";
-      case "prim": return "Prim";
-      case "net": return "Net Gelir";
-      case "ortalamaCiro": return "Ortalama İşlem";
-      default: return metric;
-    }
-  };
 
   // Smart analysis for personnel comparison
   const generateSmartAnalysis = () => {

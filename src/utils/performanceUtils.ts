@@ -8,8 +8,19 @@ interface ProcessedServiceData {
   personnelId: number;
 }
 
+interface Operation {
+  personel_id: number;
+  tutar?: number;
+  islem?: {
+    islem_adi?: string;
+  };
+  personel?: {
+    ad_soyad?: string;
+  };
+}
+
 // Process service data
-export const processServiceData = (operations: any[]) => {
+export const processServiceData = (operations: Operation[]) => {
   const serviceMap = new Map<string, ProcessedServiceData>();
 
   operations.forEach(op => {
@@ -36,7 +47,7 @@ export const processServiceData = (operations: any[]) => {
 };
 
 // Generate insights based on operations data
-export const generateSmartInsights = (operations: any[], serviceData: ProcessedServiceData[]) => {
+export const generateSmartInsights = (operations: Operation[], serviceData: ProcessedServiceData[]) => {
   const insights: string[] = [];
   
   if (operations.length === 0) {
@@ -44,13 +55,13 @@ export const generateSmartInsights = (operations: any[], serviceData: ProcessedS
   }
   
   // Group operations by personnel
-  const personnelOperations = operations.reduce((acc, op) => {
+  const personnelOperations: Record<number, Operation[]> = operations.reduce((acc, op) => {
     if (!acc[op.personel_id]) {
       acc[op.personel_id] = [];
     }
     acc[op.personel_id].push(op);
     return acc;
-  }, {} as Record<number, any[]>);
+  }, {} as Record<number, Operation[]>);
   
   // Calculate personnel performance metrics
   const personnelMetrics = Object.entries(personnelOperations).map(([personnelId, ops]) => {
