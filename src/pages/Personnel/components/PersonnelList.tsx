@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -75,7 +76,7 @@ interface PersonnelListProps {
 }
 
 export function PersonnelList({ personnel, onPersonnelSelect }: PersonnelListProps) {
-  const [rowId, setRowId] = useState(null);
+  const [rowId, setRowId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(defaultPageSize);
@@ -89,12 +90,7 @@ export function PersonnelList({ personnel, onPersonnelSelect }: PersonnelListPro
 
   const { data: personeller = [], refetch: fetchPersonnel, isLoading } = useQuery({
     queryKey: ['personel', page, pageSize, sortModel, search],
-    queryFn: () => personelServisi.hepsiniGetir({
-      page: page,
-      pageSize: pageSize,
-      sort: sortModel,
-      search: search
-    }),
+    queryFn: () => personelServisi.hepsiniGetir(/* no arguments here */),
   });
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -123,84 +119,102 @@ export function PersonnelList({ personnel, onPersonnelSelect }: PersonnelListPro
     },
   });
 
-  const { mutate: createPersonnel, isLoading: isCreating } = useMutation(
-    async (values: z.infer<typeof formSchema>) => {
-      return personelServisi.ekle(values);
+  const createMutation = useMutation({
+    mutationFn: async (values: Partial<PersonelType>) => {
+      // Convert form data to match the expected Personel type
+      const personelData: Omit<PersonelType, "id" | "created_at"> = {
+        ad_soyad: values.ad_soyad || "",
+        telefon: values.telefon || "",
+        eposta: values.email || "",  // Map email to eposta
+        adres: values.adres || "",
+        personel_no: values.tc_kimlik_no || "",  // Map tc_kimlik_no to personel_no
+        maas: values.maas || 0,
+        prim_yuzdesi: values.prim_yuzdesi || 0,
+        calisma_sistemi: values.calisma_sistemi || "aylik_maas",
+        dukkan_id: undefined // Set appropriately based on your application
+      };
+      
+      return personelServisi.ekle(personelData);
     },
-    {
-      onSuccess: () => {
-        form.reset();
-        fetchPersonnel();
-        setIsCreateOpen(false);
-        toast({
-          title: "Personel başarıyla oluşturuldu.",
-        });
-      },
-      onError: (error: any) => {
-        toast({
-          variant: "destructive",
-          title: "Bir şeyler ters gitti.",
-          description: error.message,
-        });
-      },
-    }
-  );
-
-  const { mutate: updatePersonnel, isLoading: isUpdating } = useMutation(
-    async ({ id, ...values }: { id: number } & z.infer<typeof formSchema>) => {
-      return personelServisi.guncelle(id, values);
+    onSuccess: () => {
+      form.reset();
+      fetchPersonnel();
+      setIsCreateOpen(false);
+      toast({
+        title: "Personel başarıyla oluşturuldu.",
+      });
     },
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['personel'] });
-        fetchPersonnel();
-        toast({
-          title: "Personel başarıyla güncellendi.",
-        });
-      },
-      onError: (error: any) => {
-        toast({
-          variant: "destructive",
-          title: "Bir şeyler ters gitti.",
-          description: error.message,
-        });
-      },
-    }
-  );
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Bir şeyler ters gitti.",
+        description: error.message,
+      });
+    },
+  });
 
-  const { mutate: deletePersonnel, isLoading: isDeleting } = useMutation(
-    async (id: number) => {
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, ...values }: { id: number } & Partial<PersonelType>) => {
+      // Convert form data to match the expected Personel type
+      const personelData: Partial<PersonelType> = {
+        ad_soyad: values.ad_soyad,
+        telefon: values.telefon,
+        eposta: values.email,  // Map email to eposta
+        adres: values.adres,
+        maas: values.maas,
+        prim_yuzdesi: values.prim_yuzdesi,
+        calisma_sistemi: values.calisma_sistemi
+      };
+      
+      return personelServisi.guncelle(id, personelData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['personel'] });
+      fetchPersonnel();
+      toast({
+        title: "Personel başarıyla güncellendi.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Bir şeyler ters gitti.",
+        description: error.message,
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
       return personelServisi.sil(id);
     },
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['personel'] });
-        fetchPersonnel();
-        toast({
-          title: "Personel başarıyla silindi.",
-        });
-      },
-      onError: (error: any) => {
-        toast({
-          variant: "destructive",
-          title: "Bir şeyler ters gitti.",
-          description: error.message,
-        });
-      },
-    }
-  );
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['personel'] });
+      fetchPersonnel();
+      toast({
+        title: "Personel başarıyla silindi.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Bir şeyler ters gitti.",
+        description: error.message,
+      });
+    },
+  });
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value);
   };
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    createPersonnel(values);
+    createMutation.mutate(values);
   };
 
   const handleOpenDetails = (id: number) => {
     const person = personeller.find((p) => p.id === id);
-    setSelectedPerson(person);
+    setSelectedPerson(person || null);
     setSelectedPersonId(id);
     setIsDetailsOpen(true);
     onPersonnelSelect(id);
@@ -212,11 +226,15 @@ export function PersonnelList({ personnel, onPersonnelSelect }: PersonnelListPro
     setSelectedPerson(null);
     onPersonnelSelect(null);
   };
+  
+  const handleRefreshList = async () => {
+    await fetchPersonnel();
+  };
 
   const columns: GridColDef[] = [
     { field: "id", headerName: "ID", width: 70 },
     { field: "ad_soyad", headerName: "Ad Soyad", width: 200, sortable: true },
-    { field: "email", headerName: "Email", width: 250 },
+    { field: "eposta", headerName: "Email", width: 250 },
     {
       field: "telefon",
       headerName: "Telefon",
@@ -258,54 +276,55 @@ export function PersonnelList({ personnel, onPersonnelSelect }: PersonnelListPro
               Sil
             </Button>
           </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Personel Düzenle</DialogTitle>
-              <DialogDescription>
-                Personel bilgilerini buradan düzenleyebilirsiniz.
-              </DialogDescription>
-            </DialogHeader>
-            <Form {...form}>
-              <form
-                onSubmit={form.handleSubmit((values) =>
-                  updatePersonnel({ id: params.row.id, ...values })
-                )}
-                className="space-y-8"
-              >
-                <PersonnelForm
-                  form={form}
-                  personnel={params.row}
-                  readOnly={false}
-                  showWorkInfo={true}
-                  showPersonalInfo={true}
-                />
-              </form>
-            </Form>
-          </DialogContent>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Personel Sil</DialogTitle>
-              <DialogDescription>
-                Bu personeli silmek istediğinize emin misiniz?
-              </DialogDescription>
-            </DialogHeader>
-            <div className="flex justify-end space-x-2">
-              <Button type="button" variant="outline" onClick={() => { }}>
-                İptal
-              </Button>
-              <Button
-                type="submit"
-                variant="destructive"
-                onClick={() => deletePersonnel(params.row.id)}
-              >
-                Sil
-              </Button>
-            </div>
-          </DialogContent>
         </div>
       ),
     },
   ];
+
+  // Create separate dialog contents for edit and delete dialogs
+  const renderEditDialog = (personData: any) => (
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>Personel Düzenle</DialogTitle>
+        <DialogDescription>
+          Personel bilgilerini buradan düzenleyebilirsiniz.
+        </DialogDescription>
+      </DialogHeader>
+      {/* Use PersonnelForm directly without form wrapper */}
+      <PersonnelForm
+        personnel={personData}
+        readOnly={false}
+        showWorkInfo={true}
+        showPersonalInfo={true}
+        onSubmit={(values) => updateMutation.mutate({ id: personData.id, ...values })}
+        isLoading={updateMutation.isPending}
+      />
+    </DialogContent>
+  );
+
+  const renderDeleteDialog = (personId: number) => (
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>Personel Sil</DialogTitle>
+        <DialogDescription>
+          Bu personeli silmek istediğinize emin misiniz?
+        </DialogDescription>
+      </DialogHeader>
+      <div className="flex justify-end space-x-2">
+        <Button type="button" variant="outline" onClick={() => { }}>
+          İptal
+        </Button>
+        <Button
+          type="submit"
+          variant="destructive"
+          onClick={() => deleteMutation.mutate(personId)}
+          disabled={deleteMutation.isPending}
+        >
+          {deleteMutation.isPending ? "Siliniyor..." : "Sil"}
+        </Button>
+      </div>
+    </DialogContent>
+  );
 
   return (
     <div className="space-y-4">
@@ -317,6 +336,9 @@ export function PersonnelList({ personnel, onPersonnelSelect }: PersonnelListPro
             onChange={handleSearch}
             className="w-64"
           />
+          <Button variant="outline" size="icon" onClick={handleRefreshList}>
+            <RefreshCcw className="h-4 w-4" />
+          </Button>
           <DialogTrigger asChild>
             <Button>
               <Plus className="w-4 h-4 mr-2" />
@@ -334,16 +356,15 @@ export function PersonnelList({ personnel, onPersonnelSelect }: PersonnelListPro
               Yeni personel bilgilerini buradan ekleyebilirsiniz.
             </DialogDescription>
           </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-              <PersonnelForm
-                form={form}
-                readOnly={false}
-                showWorkInfo={true}
-                showPersonalInfo={true}
-              />
-            </form>
-          </Form>
+          {/* Use PersonnelForm directly */}
+          <PersonnelForm
+            personnel={{}}
+            readOnly={false}
+            showWorkInfo={true}
+            showPersonalInfo={true}
+            onSubmit={createMutation.mutate}
+            isLoading={createMutation.isPending}
+          />
         </DialogContent>
       </Dialog>
 
@@ -373,7 +394,7 @@ export function PersonnelList({ personnel, onPersonnelSelect }: PersonnelListPro
         isOpen={isDetailsOpen}
         onOpenChange={setIsDetailsOpen}
         personnel={selectedPerson}
-        onUpdate={fetchPersonnel}
+        onUpdate={handleRefreshList}
         onClose={handleCloseDetails}
       />
     </div>

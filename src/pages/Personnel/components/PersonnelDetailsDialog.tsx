@@ -10,12 +10,12 @@ import { PerformanceTab } from "./personnel-detail-tabs/PerformanceTab";
 import { useQuery } from "@tanstack/react-query";
 import { personelIslemleriServisi } from "@/lib/supabase";
 
-interface PersonnelDetailsDialogProps {
+export interface PersonnelDetailsDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   personnel: any;
   onUpdate?: () => void;
-  onClose?: () => void; // Add missing prop
+  onClose?: () => void;
 }
 
 export function PersonnelDetailsDialog({
@@ -40,16 +40,28 @@ export function PersonnelDetailsDialog({
   const handleTabChange = (value: string) => {
     setActiveTab(value);
   };
+  
+  const handleUpdate = () => {
+    if (onUpdate) {
+      onUpdate();
+    }
+  };
 
   // Ensure the dialog doesn't appear if no personnel is selected
   if (!personnel) return null;
 
   // Use a larger size for the dialog on desktop
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      onOpenChange(open);
+      if (!open && onClose) onClose();
+    }}>
       <DialogContent
         className="sm:max-w-[90%] md:max-w-[80%] lg:max-w-[70%] xl:max-w-[60%] max-h-[90vh] overflow-y-auto"
-        onEscapeKeyDown={() => onOpenChange(false)}
+        onEscapeKeyDown={() => {
+          onOpenChange(false);
+          if (onClose) onClose();
+        }}
         onInteractOutside={(e) => {
           // Prevent closing when interacting with date pickers or dropdowns
           if ((e.target as HTMLElement).closest('[data-radix-popper-content-wrapper]')) {
@@ -74,18 +86,21 @@ export function PersonnelDetailsDialog({
             <TabsContent value="info">
               <PersonnelInfoTab 
                 personnel={personnel}
+                onSave={handleUpdate}
               />
             </TabsContent>
             
             <TabsContent value="work">
               <WorkInfoTab 
                 personnel={personnel}
+                onSave={handleUpdate}
               />
             </TabsContent>
             
             <TabsContent value="photo">
               <PersonnelImageTab 
                 personnel={personnel}
+                onSave={handleUpdate}
               />
             </TabsContent>
             

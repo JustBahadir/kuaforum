@@ -1,68 +1,50 @@
 
-import React, { useState } from "react";
-import { PersonnelForm } from "@/components/operations/PersonnelForm";
-import { Button } from "@/components/ui/button";
-import { X, Check, Edit, Save } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import React from "react";
+import { formatDate } from "@/lib/utils";
 
-interface PersonnelInfoTabProps {
+export interface PersonnelInfoTabProps {
   personnel: any;
   onSave?: () => void;
 }
 
-export function PersonnelInfoTab({ personnel, onSave }: PersonnelInfoTabProps) {
-  const [isEditing, setIsEditing] = useState(false);
-  
+export function PersonnelInfoTab({ personnel }: PersonnelInfoTabProps) {
   return (
     <div className="space-y-6">
-      <div className="flex justify-end mb-2">
-        {!isEditing ? (
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => setIsEditing(true)}
-            className="flex items-center gap-1"
-          >
-            <Edit className="h-4 w-4" />
-            <span className="hidden sm:inline">Düzenle</span>
-          </Button>
-        ) : (
-          <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => setIsEditing(false)}
-              className="flex items-center gap-1"
-            >
-              <X className="h-4 w-4" />
-              <span className="hidden sm:inline">İptal</span>
-            </Button>
-            <Button 
-              variant="default"
-              size="sm"
-              onClick={() => {
-                setIsEditing(false);
-                if (onSave) onSave();
-              }}
-              className="flex items-center gap-1"
-            >
-              <Save className="h-4 w-4" />
-              <span className="hidden sm:inline">Kaydet</span>
-            </Button>
-          </div>
-        )}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <h3 className="text-sm font-medium text-muted-foreground mb-1">Ad Soyad</h3>
+          <div className="text-base font-normal">{personnel.ad_soyad}</div>
+        </div>
+        
+        <div>
+          <h3 className="text-sm font-medium text-muted-foreground mb-1">Telefon</h3>
+          <div className="text-base font-normal">{personnel.telefon || "-"}</div>
+        </div>
       </div>
-      
-      <Card>
-        <CardContent className="p-4">
-          <PersonnelForm 
-            personnel={personnel} 
-            readOnly={!isEditing} 
-            showWorkInfo={false}
-            showPersonalInfo={true}
-          />
-        </CardContent>
-      </Card>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <h3 className="text-sm font-medium text-muted-foreground mb-1">E-posta</h3>
+          <div className="text-base font-normal">{personnel.eposta || "-"}</div>
+        </div>
+        
+        <div>
+          <h3 className="text-sm font-medium text-muted-foreground mb-1">Doğum Tarihi</h3>
+          <div className="text-base font-normal">
+            {personnel.birth_date ? formatDate(personnel.birth_date) : "-"}
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-sm font-medium text-muted-foreground mb-1">Adres</h3>
+        <div className="text-base font-normal">{personnel.adres || "-"}</div>
+      </div>
+
+      <div>
+        <h3 className="text-sm font-medium text-muted-foreground mb-1">IBAN</h3>
+        <div className="text-base font-normal">{personnel.iban || "-"}</div>
+      </div>
     </div>
   );
 }

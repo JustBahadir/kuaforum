@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -10,9 +9,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { personelServisi } from "@/lib/supabase";
 import { Check, X, Edit } from "lucide-react";
 
-interface WorkInfoTabProps {
+export interface WorkInfoTabProps {
   personnel: any;
-  onSave: () => void;
+  onSave?: () => void;
 }
 
 export function WorkInfoTab({ personnel, onSave }: WorkInfoTabProps) {
@@ -68,7 +67,6 @@ export function WorkInfoTab({ personnel, onSave }: WorkInfoTabProps) {
   };
 
   const handleSave = () => {
-    // Create a properly structured update data object
     const updateData: any = {};
     
     if (selectedTopOption === 'maaşlı') {
