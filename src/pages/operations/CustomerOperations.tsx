@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { islemServisi, islemKategoriServisi } from "@/lib/supabase";
+import { useQuery } from "@tanstack/react-query";
+import { kategoriServisi, islemServisi } from "@/lib/supabase";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -13,7 +13,7 @@ export default function CustomerOperations() {
 
   const { data: kategoriler = [], isLoading: kategorilerLoading } = useQuery({
     queryKey: ['kategoriler'],
-    queryFn: islemKategoriServisi.hepsiniGetir
+    queryFn: kategoriServisi.hepsiniGetir,
   });
 
   const { data: islemler = [], isLoading: islemlerLoading } = useQuery({

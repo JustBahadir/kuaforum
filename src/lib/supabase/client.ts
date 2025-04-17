@@ -1,17 +1,28 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// Use the values from the Integrations client file which has hardcoded values that work
-import { supabase as integrationsSupabase } from '@/integrations/supabase/client';
+// Supabase API anahtarları - bunlar environment variable'lar olarak saklanmalıdır
+const supabaseUrl = 'https://xkbjjcizncwkrouvoujw.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhrYmpqY2l6bmN3a3JvdXZvdWp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzk5Njg0NzksImV4cCI6MjA1NTU0NDQ3OX0.RyaC2G1JPHUGQetAcvMgjsTp_nqBB2rZe3U-inU2osw';
+const supabaseServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhrYmpqY2l6bmN3a3JvdXZvdWp3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczOTk2ODQ3OSwiZXhwIjoyMDU1NTQ0NDc5fQ.U5wm2YLG-9PyW41-vZaZ13-JCFGEltdYJDi5jgUvRo4';
 
-// Create a consistent Supabase client using the hardcoded values from the integrations client
-const supabaseUrl = "https://xkbjjcizncwkrouvoujw.supabase.co";
-const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhrYmpqY2l6bmN3a3JvdXZvdWp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzk5Njg0NzksImV4cCI6MjA1NTU0NDQ3OX0.RyaC2G1JPHUGQetAcvMgjsTp_nqBB2rZe3U-inU2osw";
-
-// Create a service role client with the same URL but use the service key when available
-const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_KEY || '';
-
+// Create standard client for authenticated/anonymous user operations
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
-export const supabaseAdmin = supabaseServiceKey 
-  ? createClient(supabaseUrl, supabaseServiceKey)
-  : supabase; // Fallback to regular client if service key is not available
+
+// Create admin client for operations requiring admin privileges
+export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
+// Simple session refresh function
+export async function refreshSupabaseSession() {
+  try {
+    const { data, error } = await supabase.auth.refreshSession();
+    if (error) {
+      console.error("Session yenileme hatası:", error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("Session yenileme sırasında hata:", err);
+    return false;
+  }
+}

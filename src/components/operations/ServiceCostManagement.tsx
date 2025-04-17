@@ -1,10 +1,11 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { islemServisi, islemKategoriServisi } from "@/lib/supabase";
+import { islemServisi, kategoriServisi } from "@/lib/supabase";
 import { toast } from "sonner";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -47,7 +48,7 @@ export function ServiceCostManagement() {
   // Fetch categories
   const { data: categories = [], isLoading: isLoadingCategories } = useQuery({
     queryKey: ["categories"],
-    queryFn: () => islemKategoriServisi.hepsiniGetir()
+    queryFn: () => kategoriServisi.hepsiniGetir()
   });
   
   // Update service cost mutation

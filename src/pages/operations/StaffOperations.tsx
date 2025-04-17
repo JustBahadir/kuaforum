@@ -1,6 +1,7 @@
+
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { islemKategoriServisi, islemServisi, siralamaServisi } from "@/lib/supabase";
+import { kategoriServisi, islemServisi, siralamaServisi } from "@/lib/supabase";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ServicesContent } from "@/components/operations/ServicesContent";
 import { WorkingHours } from "@/components/operations/WorkingHours";
@@ -28,7 +29,7 @@ export default function StaffOperations() {
 
   const { data: kategoriler = [] } = useQuery({
     queryKey: ['kategoriler'],
-    queryFn: islemKategoriServisi.hepsiniGetir
+    queryFn: kategoriServisi.hepsiniGetir
   });
 
   const { data: islemler = [] } = useQuery({
@@ -76,8 +77,8 @@ export default function StaffOperations() {
   });
 
   const { mutate: kategoriEkle } = useMutation({
-    mutationFn: (kategoriAdi: string) => {
-      return islemKategoriServisi.ekle({ kategori_adi: kategoriAdi });
+    mutationFn: async (kategoriAdi: string) => {
+      return kategoriServisi.ekle({ kategori_adi: kategoriAdi });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['kategoriler'] });
@@ -93,7 +94,7 @@ export default function StaffOperations() {
 
   const { mutate: kategoriGuncelle } = useMutation({
     mutationFn: ({ id, kategori }: { id: number; kategori: Partial<any> }) => 
-      islemKategoriServisi.guncelle(id, kategori),
+      kategoriServisi.guncelle(id, kategori),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['kategoriler'] });
       toast.success("Kategori başarıyla güncellendi");
@@ -108,7 +109,7 @@ export default function StaffOperations() {
   });
 
   const { mutate: kategoriSil } = useMutation({
-    mutationFn: (id: number) => islemKategoriServisi.sil(id),
+    mutationFn: kategoriServisi.sil,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['kategoriler'] });
       toast.success("Kategori başarıyla silindi");
@@ -208,10 +209,6 @@ export default function StaffOperations() {
     setKategoriDuzenleDialogAcik(true);
   };
 
-  const handleKategoriDelete = (kategoriId: number) => {
-    kategoriSil(kategoriId);
-  };
-
   return (
     <StaffLayout>
       <div className="container mx-auto py-6">
@@ -261,7 +258,7 @@ export default function StaffOperations() {
                 setDialogAcik(true);
               }}
               onServiceDelete={islemSil}
-              onCategoryDelete={handleKategoriDelete}
+              onCategoryDelete={kategoriSil}
               onCategoryEdit={handleKategoriDuzenle}
               onSiralamaChange={handleSiralamaChange}
               onCategoryOrderChange={handleCategoryOrderChange}

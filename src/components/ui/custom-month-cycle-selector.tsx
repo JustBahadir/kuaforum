@@ -38,13 +38,6 @@ export function CustomMonthCycleSelector({
     const date = new Date();
     // Set the selected day
     date.setDate(day);
-    
-    // If current day is past the selected day, use previous month's day
-    const currentDay = new Date().getDate();
-    if (currentDay < day) {
-      date.setMonth(date.getMonth() - 1);
-    }
-    
     onChange(day, date);
     setOpen(false);
   };

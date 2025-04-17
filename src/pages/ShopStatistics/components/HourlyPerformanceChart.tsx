@@ -3,13 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Line, ComposedChart } from "recharts";
 import { formatCurrency } from "@/lib/utils";
 
-// Updated interface to accept both property name formats
 interface ChartDataItem {
-  name?: string;
-  saat?: string; // Allow saat as an alternative to name
+  name: string;
   ciro: number;
-  islemSayisi?: number;
-  musteri?: number; // Allow musteri as an alternative to islemSayisi
+  islemSayisi: number;
 }
 
 interface HourlyPerformanceChartProps {
@@ -31,13 +28,6 @@ export function HourlyPerformanceChart({ data, isLoading = false }: HourlyPerfor
     );
   }
 
-  // Transform data to ensure it has the correct property names
-  const formattedData = data.map(item => ({
-    name: item.name || item.saat,
-    ciro: item.ciro,
-    islemSayisi: item.islemSayisi || item.musteri
-  }));
-
   return (
     <Card>
       <CardHeader>
@@ -46,7 +36,7 @@ export function HourlyPerformanceChart({ data, isLoading = false }: HourlyPerfor
       <CardContent className="h-[300px]">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart
-            data={formattedData}
+            data={data}
             margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
           >
             <CartesianGrid strokeDasharray="3 3" />

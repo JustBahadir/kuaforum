@@ -1,126 +1,155 @@
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase/client';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuthState } from './auth/useAuthState';
-import { useProfileManagement } from './auth/useProfileManagement';
-import { useSessionManagement } from './auth/useSessionManagement';
+import { toast } from 'sonner';
 
-export const useCustomerAuth = () => {
-  const {
-    userName,
-    setUserName,
-    userRole, 
-    setUserRole,
-    loading,
-    setLoading,
-    isAuthenticated,
-    setIsAuthenticated,
-    initialLoadDone,
-    setInitialLoadDone,
-    authCheckInProgress,
-    setAuthCheckInProgress,
-    activeTab,
-    resetAuthState,
-  } = useAuthState();
+export function useCustomerAuth() {
+  const [userName, setUserName] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(true);
+  const [activeTab, setActiveTab] = useState<string>('dashboard');
+  const [userRole, setUserRole] = useState<string>('');
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [dukkanId, setDukkanId] = useState<number>(0);
+  const [dukkanAdi, setDukkanAdi] = useState<string>('');
+  const [userId, setUserId] = useState<string>('');
 
-  const [userId, setUserId] = useState<string | null>(null);
-  const [dukkanId, setDukkanId] = useState<number | null>(null);
-  
-  const {
-    dukkanId: profileDukkanId,
-    dukkanAdi,
-    refreshProfile: refreshProfileData,
-    resetProfile,
-  } = useProfileManagement(userRole, isAuthenticated, setUserName);
-
-  const { handleLogout, resetSession } = useSessionManagement(
-    resetAuthState,
-    resetProfile,
-    setInitialLoadDone
-  );
-  
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (!session) {
-          setIsAuthenticated(false);
-          setUserRole(null);
-          setUserId(null);
-          setLoading(false);
-          return;
-        }
-        
-        setIsAuthenticated(true);
-        setUserId(session.user.id);
-
-        // Get user profile with role
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role, dukkan_id')
-          .eq('id', session.user.id)
-          .single();
-          
-        if (profile) {
-          setUserRole(profile.role);
-          setDukkanId(profile.dukkan_id);
-        }
-      } catch (error) {
-        console.error('Auth check error:', error);
-      } finally {
+  const fetchUserSession = async () => {
+    try {
+      setLoading(true);
+      
+      // Get session
+      const { data, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.error('Auth session error:', error);
+        setIsAuthenticated(false);
         setLoading(false);
+        return;
       }
-    };
 
-    checkAuth();
-    
+      if (data?.session) {
+        // User is authenticated
+        setIsAuthenticated(true);
+        setUserId(data.session.user.id);
+        
+        // Get user metadata from session
+        const metadata = data.session.user.user_metadata;
+        if (metadata) {
+          setUserName(`${metadata.first_name || ''} ${metadata.last_name || ''}`.trim());
+          setUserRole(metadata.role || 'customer');
+          
+          // Get dukkan info if needed
+          if (metadata.role === 'staff' || metadata.role === 'admin') {
+            if (metadata.role === 'admin') {
+              const { data: dukkanData } = await supabase
+                .from('dukkanlar')
+                .select('id, ad')
+                .eq('sahibi_id', data.session.user.id)
+                .single();
+                
+              if (dukkanData) {
+                setDukkanId(dukkanData.id);
+                setDukkanAdi(dukkanData.ad || '');
+              }
+            } else if (metadata.role === 'staff') {
+              const { data: staffData } = await supabase
+                .from('personel')
+                .select('dukkan_id')
+                .eq('auth_id', data.session.user.id)
+                .single();
+                
+              if (staffData?.dukkan_id) {
+                setDukkanId(staffData.dukkan_id);
+                
+                const { data: dukkanData } = await supabase
+                  .from('dukkanlar')
+                  .select('ad')
+                  .eq('id', staffData.dukkan_id)
+                  .single();
+                  
+                if (dukkanData) {
+                  setDukkanAdi(dukkanData.ad || '');
+                }
+              }
+            }
+          }
+        }
+      } else {
+        setIsAuthenticated(false);
+      }
+    } catch (error) {
+      console.error('Auth check error:', error);
+      setIsAuthenticated(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUserSession();
+
+    // Set up auth state change listener
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (event === 'SIGNED_IN' && session) {
-          setIsAuthenticated(true);
-          setUserId(session.user.id);
+      async (event, session) => {
+        console.log('Auth state changed:', event);
+        
+        if (event === 'SIGNED_IN') {
+          await fetchUserSession();
         } else if (event === 'SIGNED_OUT') {
           setIsAuthenticated(false);
-          setUserRole(null);
-          setUserId(null);
+          setUserName('');
+          setUserRole('');
+          setDukkanId(0);
+          setDukkanAdi('');
+          setUserId('');
         }
       }
     );
-    
+
+    // Clean up on unmount
     return () => {
-      authListener?.subscription.unsubscribe();
+      authListener?.subscription?.unsubscribe();
     };
-  }, [setIsAuthenticated, setUserRole, setLoading]);
+  }, []);
 
-  // Sync dukkanId from profile management
-  useEffect(() => {
-    if (profileDukkanId !== null) {
-      setDukkanId(profileDukkanId);
-    }
-  }, [profileDukkanId]);
-
-  // Create a wrapper for refreshProfile to handle errors
-  const refreshProfile = async () => {
+  const handleLogout = async () => {
     try {
-      await refreshProfileData();
+      setLoading(true);
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      
+      setIsAuthenticated(false);
+      setUserName('');
+      setUserRole('');
+      setDukkanId(0);
+      setDukkanAdi('');
+      setUserId('');
+      
+      window.location.href = '/login';
     } catch (error) {
-      console.error("Error refreshing profile:", error);
+      console.error('Logout error:', error);
+      toast.error('Çıkış yapılırken bir hata oluştu');
+    } finally {
+      setLoading(false);
     }
+  };
+
+  // Function to refresh user profile
+  const refreshProfile = async () => {
+    return await fetchUserSession();
   };
 
   return {
-    isAuthenticated,
+    userName,
+    loading,
+    activeTab,
+    setActiveTab,
+    handleLogout,
     userRole,
-    userId,
+    isAuthenticated,
     dukkanId,
     dukkanAdi,
-    loading,
-    userName,
-    activeTab,
-    handleLogout,
-    refreshProfile,
-    resetSession
+    userId,
+    refreshProfile
   };
-};
+}

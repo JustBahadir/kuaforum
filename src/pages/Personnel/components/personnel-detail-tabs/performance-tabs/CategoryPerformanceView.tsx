@@ -1,307 +1,384 @@
 
-import React, { useState, useEffect, useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { islemKategoriServisi } from "@/lib/supabase";
-import { useQuery } from "@tanstack/react-query";
+import React, { useMemo, useState } from "react";
+import { Card } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
-import { 
-  PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip,
-  ComposedChart, CartesianGrid, XAxis, YAxis, Bar, Line 
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { RefreshCw, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useQuery } from "@tanstack/react-query";
+import { islemServisi, kategoriServisi, personelIslemleriServisi } from "@/lib/supabase";
+import {
+  Bar,
+  BarChart,
+  Line,
+  ResponsiveContainer,
+  Tooltip as RechartsTooltip,
+  XAxis,
+  YAxis,
+  Cell,
+  Pie,
+  PieChart,
+  Legend,
+  CartesianGrid,
 } from "recharts";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Clipboard, TrendingDown, TrendingUp } from "lucide-react";
 
-// Define colors array for charts
+interface CategoryPerformanceViewProps {
+  dateRange: { from: Date; to: Date };
+  refreshKey: number;
+}
+
 const COLORS = [
   '#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088FE', '#00C49F', '#FFBB28', 
   '#FF8042', '#AF19FF', '#FF6B6B', '#10B981', '#2463EB', '#F59E0B', '#EC4899'
 ];
 
-interface CategoryPerformanceViewProps {
-  operations: any[];
-  dateRange: {
-    from: Date;
-    to: Date;
-  };
-  refreshKey?: number; // Add refreshKey as optional prop
-}
-
-export function CategoryPerformanceView({ operations, dateRange, refreshKey = 0 }: CategoryPerformanceViewProps) {
+export function CategoryPerformanceView({
+  dateRange,
+  refreshKey
+}: CategoryPerformanceViewProps) {
+  const [insights, setInsights] = useState<string[]>([]);
+  
   // Fetch categories
   const { data: categories = [], isLoading: isCategoriesLoading } = useQuery({
-    queryKey: ['islem-kategorileri'],
-    queryFn: () => islemKategoriServisi.hepsiniGetir(),
+    queryKey: ['categories'],
+    queryFn: () => kategoriServisi.hepsiniGetir(),
+  });
+  
+  // Fetch operations
+  const { data: operations = [], isLoading: isOperationsLoading } = useQuery({
+    queryKey: ['category-operations', dateRange.from, dateRange.to, refreshKey],
+    queryFn: async () => {
+      const data = await personelIslemleriServisi.hepsiniGetir();
+      return data.filter(op => {
+        if (!op.created_at) return false;
+        const date = new Date(op.created_at);
+        return date >= dateRange.from && date <= dateRange.to;
+      });
+    },
   });
 
-  // Process operations by category
+  // Fetch services for mapping
+  const { data: services = [], isLoading: isServicesLoading } = useQuery({
+    queryKey: ['services'],
+    queryFn: () => islemServisi.hepsiniGetir(),
+  });
+  
+  const isLoading = isCategoriesLoading || isOperationsLoading || isServicesLoading;
+
+  // Process category data
   const categoryData = useMemo(() => {
-    // Group operations by category
+    if (isLoading || categories.length === 0 || operations.length === 0) return [];
+    
     const categoryMap = new Map();
     
+    // Initialize with all categories (so we show zero counts too)
+    categories.forEach(category => {
+      categoryMap.set(category.id, {
+        id: category.id,
+        name: category.kategori_adi,
+        count: 0,
+        revenue: 0,
+        percentage: 0
+      });
+    });
+    
+    // Process each operation
     operations.forEach(op => {
-      if (!op.islem || !op.islem.kategori_id) return;
+      // Find the service to get its category
+      const service = services.find(s => s.id === op.islem_id);
+      if (!service || !service.kategori_id) return;
       
-      const categoryId = op.islem.kategori_id;
-      const tutar = Number(op.tutar) || 0;
+      const categoryId = service.kategori_id;
       
-      if (categoryMap.has(categoryId)) {
-        const existing = categoryMap.get(categoryId);
-        existing.tutar += tutar;
-        existing.islemSayisi += 1;
-      } else {
+      // If this category wasn't initialized (shouldn't happen with our setup)
+      if (!categoryMap.has(categoryId)) {
+        const category = categories.find(c => c.id === categoryId);
         categoryMap.set(categoryId, {
-          categoryId,
-          tutar,
-          islemSayisi: 1
+          id: categoryId,
+          name: category ? category.kategori_adi : 'Bilinmeyen Kategori',
+          count: 0,
+          revenue: 0,
+          percentage: 0
         });
       }
+      
+      // Update the category data
+      const categoryData = categoryMap.get(categoryId);
+      categoryData.count += 1;
+      categoryData.revenue += Number(op.tutar) || 0;
     });
     
-    // Convert map to array and add category names
-    return Array.from(categoryMap.values()).map(item => {
-      const category = categories.find(c => c.id === item.categoryId);
-      return {
-        ...item,
-        name: category?.kategori_adi || 'Bilinmeyen Kategori',
-        ciro: item.tutar // For chart compatibility
-      };
+    // Convert to array
+    const result = Array.from(categoryMap.values());
+    
+    // Calculate percentages
+    const totalRevenue = result.reduce((sum, item) => sum + item.revenue, 0);
+    result.forEach(item => {
+      item.percentage = totalRevenue > 0 ? (item.revenue / totalRevenue) * 100 : 0;
     });
-  }, [operations, categories]);
+    
+    // Sort by revenue
+    return result.sort((a, b) => b.revenue - a.revenue);
+  }, [categories, operations, services, isLoading]);
   
-  // Create pie chart data
-  const pieChartData = useMemo(() => {
-    return categoryData.map((item, index) => ({
-      name: item.name,
-      value: item.tutar,
-      fill: COLORS[index % COLORS.length]
-    }));
-  }, [categoryData]);
-
-  // Smart analysis
-  const analysis = useMemo(() => {
-    if (categoryData.length === 0) return [];
+  const generateInsights = () => {
+    const newInsights = [];
     
-    const insights = [];
-    
-    // Sort categories by revenue
-    const sortedByRevenue = [...categoryData].sort((a, b) => b.tutar - a.tutar);
-    const topCategory = sortedByRevenue[0];
-    const totalRevenue = sortedByRevenue.reduce((sum, cat) => sum + cat.tutar, 0);
-    const topCategoryPercentage = (topCategory.tutar / totalRevenue) * 100;
-    
-    insights.push({
-      key: 'top-category',
-      title: 'En Çok Kazanç Sağlayan Kategori',
-      description: `"${topCategory.name}" kategorisi toplam cironun %${topCategoryPercentage.toFixed(1)}'ını oluşturuyor.`
-    });
-    
-    // Sort by service count
-    const sortedByCount = [...categoryData].sort((a, b) => b.islemSayisi - a.islemSayisi);
-    const topCountCategory = sortedByCount[0];
-    const totalCount = sortedByCount.reduce((sum, cat) => sum + cat.islemSayisi, 0);
-    const topCountPercentage = (topCountCategory.islemSayisi / totalCount) * 100;
-    
-    if (topCountCategory.categoryId !== topCategory.categoryId) {
-      insights.push({
-        key: 'most-performed',
-        title: 'En Çok Yapılan Kategori',
-        description: `"${topCountCategory.name}" kategorisi en çok yapılan işlem kategorisidir (%${topCountPercentage.toFixed(1)}).`
-      });
+    if (categoryData.length === 0) {
+      setInsights(['Henüz yeterli veri bulunmamaktadır.']);
+      return;
     }
     
-    // Category with highest average revenue
-    const withAverage = categoryData.map(cat => ({
-      ...cat,
-      average: cat.tutar / cat.islemSayisi
-    }));
-    const sortedByAverage = [...withAverage].sort((a, b) => b.average - a.average);
-    const topAverageCategory = sortedByAverage[0];
+    // Top revenue category
+    const topCategory = categoryData[0];
+    if (topCategory) {
+      newInsights.push(`En yüksek ciro "${topCategory.name}" kategorisinden geldi (${formatCurrency(topCategory.revenue)}).`);
+    }
     
-    insights.push({
-      key: 'highest-average',
-      title: 'En Yüksek Ortalama Değere Sahip Kategori',
-      description: `"${topAverageCategory.name}" kategorisi ortalama ${formatCurrency(topAverageCategory.average)} değerinde.`
-    });
+    // Most popular category by count
+    const sortedByCount = [...categoryData].sort((a, b) => b.count - a.count);
+    if (sortedByCount.length > 0) {
+      const popularCategory = sortedByCount[0];
+      newInsights.push(`En çok işlem yapılan kategori "${popularCategory.name}" oldu (${popularCategory.count} işlem).`);
+    }
     
-    return insights;
-  }, [categoryData]);
+    // Category distribution
+    if (categoryData.length > 1) {
+      const totalRevenueFromTop3 = categoryData
+        .slice(0, Math.min(3, categoryData.length))
+        .reduce((sum, cat) => sum + cat.revenue, 0);
+        
+      const totalRevenue = categoryData.reduce((sum, cat) => sum + cat.revenue, 0);
+      
+      if (totalRevenue > 0) {
+        const percentage = (totalRevenueFromTop3 / totalRevenue) * 100;
+        newInsights.push(`İlk 3 kategori toplam cironun %${percentage.toFixed(1)}'ını oluşturuyor.`);
+      }
+    }
+    
+    // Low performing categories
+    const lowCategories = categoryData.filter(cat => cat.count === 0);
+    if (lowCategories.length > 0) {
+      newInsights.push(`${lowCategories.length} kategoride hiç işlem yapılmamış.`);
+    }
+    
+    // Selected period summary
+    newInsights.push(`Seçili dönemde toplam ${formatCurrency(categoryData.reduce((sum, cat) => sum + cat.revenue, 0))} ciro elde edildi.`);
+    
+    setInsights(newInsights);
+  };
+  
+  // Generate insights when data changes
+  React.useEffect(() => {
+    if (!isLoading) {
+      generateInsights();
+    }
+  }, [categoryData, isLoading, refreshKey, dateRange]);
 
-  const RADIAN = Math.PI / 180;
-  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
-    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-    const x = cx + radius * Math.cos(-midAngle * RADIAN);
-    const y = cy + radius * Math.sin(-midAngle * RADIAN);
-    
-    return percent > 0.05 ? (
-      <text 
-        x={x} 
-        y={y} 
-        fill="white" 
-        textAnchor={x > cx ? 'start' : 'end'} 
-        dominantBaseline="central"
-        fontSize={12}
-      >
-        {`${(percent * 100).toFixed(0)}%`}
-      </text>
-    ) : null;
+  const renderCustomBarTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div className="bg-white p-2 border rounded shadow-sm text-xs">
+          <p className="font-medium">{data.name || 'Bilinmeyen'}</p>
+          <p>Ciro: {formatCurrency(data.revenue || 0)}</p>
+          <p>İşlem Sayısı: {data.count || 0}</p>
+        </div>
+      );
+    }
+    return null;
   };
 
-  if (isCategoriesLoading) {
-    return (
-      <div className="flex justify-center p-12">
-        <div className="w-10 h-10 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
-      </div>
-    );
-  }
+  const renderCustomPieTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div className="bg-white p-2 border rounded shadow-sm text-xs">
+          <p className="font-medium">{data.name || 'Bilinmeyen'}</p>
+          <p>İşlem Sayısı: {data.count || 0}</p>
+          <p>Ciro: {formatCurrency(data.revenue || 0)}</p>
+          <p>Oran: %{(data.percentage || 0).toFixed(1)}</p>
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
     <div className="space-y-6">
-      {/* Smart Analysis */}
-      <Card className="border-purple-100">
-        <CardHeader>
-          <CardTitle className="text-lg">Akıllı Analiz</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {analysis.length > 0 ? (
-            <div className="space-y-4">
-              {analysis.map((insight) => (
-                <div key={insight.key} className="p-3 bg-purple-50 rounded-lg">
-                  <h4 className="font-medium">{insight.title}</h4>
-                  <p className="text-sm text-muted-foreground mt-1">{insight.description}</p>
-                </div>
-              ))}
+      {/* Akıllı Analiz */}
+      <Card className="p-4">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="font-medium">Akıllı Analiz</h3>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={generateInsights}
+            className="h-8 w-8 p-0"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+        </div>
+        <ul className="space-y-2">
+          {isLoading ? (
+            <div className="flex justify-center p-4">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
             </div>
+          ) : insights.length > 0 ? (
+            insights.map((insight, i) => (
+              <li key={i} className="flex items-baseline gap-2">
+                <span className="text-purple-600 text-lg">•</span>
+                <span className="text-sm">{insight}</span>
+              </li>
+            ))
           ) : (
-            <p className="text-muted-foreground">Yeterli veri bulunamadı. Analiz için daha fazla işlem gerekiyor.</p>
+            <li className="text-sm text-muted-foreground">Henüz yeterli veri bulunmamaktadır.</li>
           )}
-        </CardContent>
+        </ul>
       </Card>
 
-      {/* Bar Chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Kategori Bazlı Ciro ve İşlem Sayısı</CardTitle>
-        </CardHeader>
-        <CardContent className="h-[350px] relative overflow-x-auto">
-          <div className="min-w-[600px] h-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart
-                data={categoryData}
-                margin={{ top: 20, right: 30, left: 20, bottom: 70 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="name" 
-                  height={60}
-                  angle={45}
-                  textAnchor="start"
-                />
-                <YAxis 
-                  yAxisId="left"
-                  orientation="left" 
-                  label={{ value: 'Ciro (₺)', angle: -90, position: 'insideLeft' }}
-                />
-                <YAxis 
-                  yAxisId="right"
-                  orientation="right"
-                  label={{ value: 'İşlem Sayısı', angle: 90, position: 'insideRight' }}
-                />
-                <Tooltip 
-                  formatter={(value: any, name: string) => {
-                    if (name === 'ciro') return [formatCurrency(value), 'Ciro'];
-                    if (name === 'islemSayisi') return [value, 'İşlem Sayısı'];
-                    return [value, name];
-                  }}
-                />
-                <Legend />
-                <Bar 
-                  yAxisId="left"
-                  dataKey="ciro" 
-                  fill="#8884d8" 
-                  name="Ciro" 
-                  barSize={40}
-                />
-                <Line 
-                  yAxisId="right"
-                  type="monotone" 
-                  dataKey="islemSayisi" 
-                  stroke="#ff7300" 
-                  name="İşlem Sayısı"
-                  strokeWidth={2}
-                  dot={{ r: 4 }}
-                />
-              </ComposedChart>
-            </ResponsiveContainer>
+      {/* Karma Grafik: Sütunlar için Ciro, Çizgi için İşlem Sayısı */}
+      <Card className="p-4">
+        <h3 className="font-medium mb-4">Kategori Bazlı Performans</h3>
+        {isLoading ? (
+          <div className="flex justify-center items-center h-[300px]">
+            <Loader2 className="h-8 w-8 text-primary animate-spin" />
           </div>
-        </CardContent>
+        ) : categoryData.length > 0 ? (
+          <div className="overflow-hidden">
+            <ScrollArea className="h-[300px] w-full">
+              <div style={{ width: Math.max(categoryData.length * 120, 600) + 'px', height: '280px' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={categoryData}
+                    margin={{ top: 5, right: 60, left: 20, bottom: 70 }}
+                    barSize={40}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis 
+                      dataKey="name"
+                      angle={-45} 
+                      textAnchor="end"
+                      height={70}
+                      interval={0}
+                      tick={{ fontSize: 11 }}
+                    />
+                    <YAxis 
+                      yAxisId="left"
+                      tickFormatter={(value) => `₺${value}`}
+                      label={{ value: 'Ciro (₺)', angle: -90, position: 'insideLeft', offset: -5 }}
+                    />
+                    <YAxis 
+                      yAxisId="right" 
+                      orientation="right" 
+                      label={{ value: 'İşlem Sayısı', angle: 90, position: 'insideRight', offset: 5 }}
+                    />
+                    <RechartsTooltip content={renderCustomBarTooltip} />
+                    <Legend wrapperStyle={{ bottom: -10 }} />
+                    <Bar 
+                      yAxisId="left"
+                      dataKey="revenue" 
+                      fill="#3b82f6" 
+                      name="Ciro"
+                    />
+                    <Line
+                      yAxisId="right"
+                      type="monotone"
+                      dataKey="count"
+                      stroke="#ef4444"
+                      strokeWidth={2}
+                      name="İşlem Sayısı"
+                      dot={{ r: 4 }}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
+          </div>
+        ) : (
+          <div className="h-[280px] flex items-center justify-center">
+            <p className="text-muted-foreground">Gösterilecek veri bulunmuyor</p>
+          </div>
+        )}
       </Card>
 
       {/* Pie Chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Kategori Dağılımı</CardTitle>
-        </CardHeader>
-        <CardContent className="h-[400px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={pieChartData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={renderCustomizedLabel}
-                outerRadius={140}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {pieChartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.fill} />
-                ))}
-              </Pie>
-              <Legend formatter={(value, entry) => `${value}: ${formatCurrency(entry.payload.value)}`} />
-              <Tooltip formatter={(value) => formatCurrency(value as number)} />
-            </PieChart>
-          </ResponsiveContainer>
-        </CardContent>
+      <Card className="p-4 mt-6">
+        <h3 className="font-medium mb-4">Kategori Dağılımı</h3>
+        {isLoading ? (
+          <div className="flex justify-center items-center h-[300px]">
+            <Loader2 className="h-8 w-8 text-primary animate-spin" />
+          </div>
+        ) : categoryData.length > 0 ? (
+          <div className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={categoryData}
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={100}
+                  fill="#8884d8"
+                  dataKey="revenue"
+                >
+                  {categoryData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <RechartsTooltip content={renderCustomPieTooltip} />
+                <Legend layout="horizontal" verticalAlign="bottom" align="center" />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <div className="h-[300px] flex items-center justify-center">
+            <p className="text-muted-foreground">Gösterilecek veri bulunmuyor</p>
+          </div>
+        )}
       </Card>
-      
-      {/* Category Details Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Kategori Detayları</CardTitle>
-        </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b">
-                <th className="text-left py-2 px-2 w-1/2">Kategori</th>
-                <th className="text-center py-2 px-2">İşlem Sayısı</th>
-                <th className="text-right py-2 px-4">Ciro</th>
-                <th className="text-right py-2 px-4">Ort. Tutar</th>
-              </tr>
-            </thead>
-            <tbody>
-              {categoryData.length > 0 ? (
-                categoryData.map((category, index) => (
-                  <tr key={index} className="border-b hover:bg-muted/50">
-                    <td className="py-2 px-2 font-medium">{category.name}</td>
-                    <td className="py-2 px-2 text-center">{category.islemSayisi}</td>
-                    <td className="py-2 px-4 text-right">{formatCurrency(category.tutar)}</td>
-                    <td className="py-2 px-4 text-right">{formatCurrency(category.tutar / category.islemSayisi)}</td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={4} className="py-4 text-center text-muted-foreground">
-                    Bu tarih aralığında kategori verisi bulunmamaktadır.
-                  </td>
+
+      {/* Table */}
+      <Card className="p-4 mt-6">
+        <h3 className="font-medium mb-4">Kategori Detayları</h3>
+        {isLoading ? (
+          <div className="flex justify-center items-center h-[200px]">
+            <Loader2 className="h-6 w-6 text-primary animate-spin" />
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left p-2">Kategori</th>
+                  <th className="text-right p-2 w-24">İşlem Sayısı</th>
+                  <th className="text-right p-2 w-24">Ciro</th>
+                  <th className="text-right p-2 w-16">Oran</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </CardContent>
+              </thead>
+              <tbody>
+                {categoryData.map((category, index) => (
+                  <tr key={index} className="border-b">
+                    <td className="p-2">{category.name}</td>
+                    <td className="text-right p-2">{category.count}</td>
+                    <td className="text-right p-2">{formatCurrency(category.revenue)}</td>
+                    <td className="text-right p-2">%{category.percentage?.toFixed(1) || 0}</td>
+                  </tr>
+                ))}
+                <tr className="border-t font-medium">
+                  <td className="p-2">Toplam</td>
+                  <td className="text-right p-2">
+                    {categoryData.reduce((sum, item) => sum + item.count, 0)}
+                  </td>
+                  <td className="text-right p-2">
+                    {formatCurrency(categoryData.reduce((sum, item) => sum + item.revenue, 0))}
+                  </td>
+                  <td className="text-right p-2">%100</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
       </Card>
     </div>
   );

@@ -62,7 +62,7 @@ export const personelServisi = {
               
               if (profileData.address && profileData.address !== personel.adres) {
                 personel.adres = profileData.address;
-                updatedFields.adres = profileData.address;
+                updatedFields.adres = profileData.adres;
               }
               
               if (profileData.avatar_url) {

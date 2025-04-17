@@ -1,38 +1,21 @@
 
 // Export types
 export * from './types';
-
-// Import and export supabase client
-import { supabase } from './client';
-export { supabase };
+export * from './services/customerOperationsService';
+export * from './services/customerPersonalDataService';
 
 // Export services
-import { personelServisi } from './services/personelServisi';
-import { personelIslemleriServisi } from './services/personelIslemleriServisi';
-import { islemServisi } from './services/islemServisi';
-import { islemKategoriServisi } from './services/islemKategoriServisi';
-import { randevuServisi } from './services/randevuServisi';
-import { musteriServisi } from './services/musteriServisi';
-import { dukkanServisi } from './services/dukkanServisi';
-import { siralamaServisi } from './services/siralamaServisi';
-
-// Import from local files if they exist, otherwise export empty objects for compatibility
-let notificationServisi;
-try {
-  notificationServisi = require('./services/notificationServisi').notificationServisi;
-} catch (e) {
-  notificationServisi = {};
-  console.warn('notificationServisi not found, using empty object');
-}
-
-export {
-  personelServisi,
-  personelIslemleriServisi,
-  islemServisi,
-  islemKategoriServisi,
-  randevuServisi,
-  musteriServisi,
-  notificationServisi,
-  dukkanServisi,
-  siralamaServisi,
-};
+export { dukkanServisi } from './services/dukkanServisi';
+export { personelServisi } from './services/personelServisi';
+export { profilServisi } from './services/profilServisi';
+export { randevuServisi } from './services/randevuServisi';
+export { islemServisi } from './services/islemServisi';
+export { personelIslemleriServisi } from './services/personelIslemleriServisi';
+export { kategoriServisi } from './services/kategoriServisi';
+export { musteriServisi } from './services/musteriServisi';
+export { calismaSaatleriServisi } from './services/calismaSaatleriServisi';
+export { bildirimServisi as notificationServisi } from './services/bildirimServisi';
+export { customerPersonalDataService } from './services/customerPersonalDataService';
+export { customerOperationsService } from './services/customerOperationsService';
+export { supabase } from './client';
+export { siralamaServisi } from './services/siralamaServisi';
