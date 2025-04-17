@@ -34,6 +34,7 @@ export function PersonnelCard({ personnel, onClick, onEdit, onDelete }: Personne
         return "Haftalık";
       case "gunluk_maas":
         return "Günlük";
+      case "komisyon":
       case "prim_komisyon":
         return "Yüzdelik";
       default:
@@ -50,7 +51,7 @@ export function PersonnelCard({ personnel, onClick, onEdit, onDelete }: Personne
       .substring(0, 2);
   };
 
-  const isCommissionBased = personnel.calisma_sistemi === "prim_komisyon";
+  const isCommissionBased = personnel.calisma_sistemi === "komisyon" || personnel.calisma_sistemi === "prim_komisyon";
 
   return (
     <Card className="h-full flex flex-col">

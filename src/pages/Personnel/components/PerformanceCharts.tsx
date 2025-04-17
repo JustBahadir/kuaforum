@@ -74,6 +74,9 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
   const [selectedPersonnelIds, setSelectedPersonnelIds] = useState<number[]>([]);
   const [filteredOperations, setFilteredOperations] = useState<Operation[]>([]);
   const [activeMetric, setActiveMetric] = useState("ciro");
+  const [activeTab, setActiveTab] = useState("comparison");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedService, setSelectedService] = useState<string | null>(null);
 
   // Initialize with all personnel selected
   useEffect(() => {
@@ -96,6 +99,33 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
     setFilteredOperations(filtered);
   }, [islemGecmisi, dateRange, selectedPersonnelIds]);
 
+  // Extract all categories from operations
+  const categories = Array.from(
+    new Set(
+      filteredOperations
+        .filter(op => op.islem?.kategori?.kategori_adi)
+        .map(op => op.islem?.kategori?.kategori_adi)
+    )
+  );
+  
+  // Extract services based on selected category
+  const services = Array.from(
+    new Set(
+      filteredOperations
+        .filter(op => 
+          !selectedCategory || 
+          op.islem?.kategori?.kategori_adi === selectedCategory
+        )
+        .map(op => op.islem?.islem_adi)
+    )
+  );
+  
+  // Further filter operations based on selected category/service
+  const categoryFilteredOperations = filteredOperations.filter(op => 
+    (!selectedCategory || op.islem?.kategori?.kategori_adi === selectedCategory) &&
+    (!selectedService || op.islem?.islem_adi === selectedService)
+  );
+
   const togglePersonnel = (personnelId: number) => {
     setSelectedPersonnelIds(prev => {
       if (prev.includes(personnelId)) {
@@ -117,9 +147,8 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
       
       // Calculate commission based on personnel's commission rate
       const commissionRate = p.prim_yuzdesi / 100;
-      const commission = p.calisma_sistemi === "komisyon" 
-        ? totalRevenue * commissionRate 
-        : 0;
+      const isCommissionBased = p.calisma_sistemi === "komisyon" || p.calisma_sistemi === "prim_komisyon";
+      const commission = isCommissionBased ? totalRevenue * commissionRate : 0;
         
       const netRevenue = totalRevenue - commission;
       
@@ -130,6 +159,7 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
         net: netRevenue,
         islemSayisi: operationCount,
         ortalamaCiro: operationCount > 0 ? totalRevenue / operationCount : 0,
+        isCommissionBased
       };
     })
     .sort((a, b) => b.ciro - a.ciro);
@@ -208,7 +238,7 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
   const smartAnalysis = generateSmartAnalysis();
 
   // Calculate service distribution
-  const serviceData = filteredOperations.reduce((acc, op) => {
+  const serviceData = categoryFilteredOperations.reduce((acc, op) => {
     const serviceId = op.islem?.islem_adi || 'Diğer';
     
     if (!acc[serviceId]) {
@@ -236,7 +266,7 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
     
     const personnel = personeller.find(p => p.id === op.personel_id);
     const commissionRate = personnel ? personnel.prim_yuzdesi / 100 : 0;
-    const isCommissionBased = personnel?.calisma_sistemi === "komisyon";
+    const isCommissionBased = personnel?.calisma_sistemi === "komisyon" || personnel?.calisma_sistemi === "prim_komisyon";
     
     acc[serviceId].personnelBreakdown[personnelName].count += 1;
     acc[serviceId].personnelBreakdown[personnelName].revenue += op.tutar || 0;
@@ -337,6 +367,21 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
     return data;
   };
 
+  // Prepare service-personnel percentage data for the specific service
+  const prepareServicePersonnelData = () => {
+    if (!selectedService || !serviceData[selectedService]) return [];
+    
+    const service = serviceData[selectedService];
+    return Object.entries(service.personnelBreakdown)
+      .map(([personnelName, stats]) => ({
+        name: personnelName,
+        value: stats.revenue,
+        count: stats.count,
+        percentage: (stats.revenue / service.revenue) * 100
+      }))
+      .sort((a, b) => b.value - a.value);
+  };
+
   const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088fe', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
   
   const RADIAN = Math.PI / 180;
@@ -381,7 +426,7 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
         </div>
       </div>
 
-      <Tabs defaultValue="comparison">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="comparison">Personel Karşılaştırma</TabsTrigger>
           <TabsTrigger value="services">Hizmet Analizi</TabsTrigger>
@@ -588,7 +633,9 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
                         <td className="p-2">{p.name}</td>
                         <td className="text-right p-2">{p.islemSayisi}</td>
                         <td className="text-right p-2">{formatCurrency(p.ciro)}</td>
-                        <td className="text-right p-2">{formatCurrency(p.prim)}</td>
+                        <td className="text-right p-2">
+                          {p.isCommissionBased ? formatCurrency(p.prim) : "-"}
+                        </td>
                         <td className="text-right p-2">{formatCurrency(p.net)}</td>
                         <td className="text-right p-2">
                           {p.islemSayisi > 0 ? formatCurrency(p.ciro / p.islemSayisi) : "-"}
@@ -623,7 +670,40 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
         <TabsContent value="services">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle>Akıllı Analiz</CardTitle>
+              <CardTitle>Hizmet Analizi</CardTitle>
+              <div className="flex flex-wrap gap-4 mt-4">
+                <div>
+                  <label htmlFor="category" className="block text-sm mb-1">Kategori</label>
+                  <select
+                    id="category"
+                    className="border rounded-md p-2 bg-white"
+                    value={selectedCategory || ''}
+                    onChange={(e) => {
+                      setSelectedCategory(e.target.value || null);
+                      setSelectedService(null);
+                    }}
+                  >
+                    <option value="">Tüm Kategoriler</option>
+                    {categories.map((category) => (
+                      <option key={category} value={category}>{category}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="service" className="block text-sm mb-1">Hizmet</label>
+                  <select
+                    id="service"
+                    className="border rounded-md p-2 bg-white"
+                    value={selectedService || ''}
+                    onChange={(e) => setSelectedService(e.target.value || null)}
+                  >
+                    <option value="">Tüm Hizmetler</option>
+                    {services.map((service) => (
+                      <option key={service} value={service}>{service}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               {serviceAnalysisData.length === 0 ? (
@@ -756,98 +836,92 @@ export function PerformanceCharts({ personeller, islemGecmisi }: PerformanceChar
             </Card>
           </div>
 
-          <Card className="mt-6">
-            <CardHeader className="pb-2">
-              <CardTitle>Hizmet Analizi</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-muted/50">
-                      <th className="text-left p-2">Hizmet</th>
+          {/* Personel bazlı hizmet dağılımı */}
+          {selectedService && (
+            <Card className="mt-6">
+              <CardHeader className="pb-2">
+                <CardTitle>{selectedService} - Personel Dağılımı</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        layout="vertical"
+                        data={prepareServicePersonnelData()}
+                        margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis type="number" tickFormatter={(value) => `₺${value}`} />
+                        <YAxis dataKey="name" type="category" width={120} />
+                        <Tooltip 
+                          formatter={(value: number) => [formatCurrency(value), "Ciro"]}
+                          contentStyle={{ backgroundColor: 'white', borderRadius: '0.375rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)' }}
+                        />
+                        <Legend />
+                        <Bar dataKey="value" name="Ciro" fill="#8884d8" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={prepareServicePersonnelData()}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={renderCustomizedLabel}
+                          outerRadius={100}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {prepareServicePersonnelData().map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          formatter={(value: number, name: string, props: any) => {
+                            const entry = props.payload;
+                            return [
+                              `${formatCurrency(value)} (${entry.percentage.toFixed(1)}%)`,
+                              entry.name
+                            ];
+                          }}
+                          contentStyle={{ backgroundColor: 'white', borderRadius: '0.375rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)' }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                <table className="w-full mt-6">
+                  <thead className="bg-muted/50">
+                    <tr>
+                      <th className="text-left p-2">Personel</th>
                       <th className="text-right p-2">İşlem Sayısı</th>
-                      <th className="text-right p-2">Toplam Tutar</th>
-                      <th className="text-right p-2">Prim</th>
-                      <th className="text-right p-2">Net</th>
+                      <th className="text-right p-2">Ciro</th>
+                      <th className="text-right p-2">Oran</th>
+                      <th className="text-right p-2">Ortalama</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {serviceAnalysisData.map((service, index) => {
-                      // Calculate total prim and net across all personnel for this service
-                      const totalPrim = Object.values(service.personnelBreakdown)
-                        .reduce((sum, p) => sum + p.prim, 0);
-                      
-                      const totalNet = Object.values(service.personnelBreakdown)
-                        .reduce((sum, p) => sum + p.net, 0);
-
-                      return (
-                        <tr key={index} className="border-t">
-                          <td className="p-2">{service.name}</td>
-                          <td className="text-right p-2">{service.count}</td>
-                          <td className="text-right p-2">{formatCurrency(service.revenue)}</td>
-                          <td className="text-right p-2">{formatCurrency(totalPrim)}</td>
-                          <td className="text-right p-2">{formatCurrency(totalNet)}</td>
-                        </tr>
-                      );
-                    })}
-                    {serviceAnalysisData.length > 0 && (
-                      <tr className="border-t font-medium">
-                        <td className="p-2">Toplam</td>
+                    {prepareServicePersonnelData().map((personnel, index) => (
+                      <tr key={index} className="border-t">
+                        <td className="p-2">{personnel.name}</td>
+                        <td className="text-right p-2">{personnel.count}</td>
+                        <td className="text-right p-2">{formatCurrency(personnel.value)}</td>
+                        <td className="text-right p-2">{personnel.percentage.toFixed(1)}%</td>
                         <td className="text-right p-2">
-                          {serviceAnalysisData.reduce((sum, s) => sum + s.count, 0)}
-                        </td>
-                        <td className="text-right p-2">
-                          {formatCurrency(serviceAnalysisData.reduce((sum, s) => sum + s.revenue, 0))}
-                        </td>
-                        <td className="text-right p-2">
-                          {formatCurrency(serviceAnalysisData.reduce((sum, s) => 
-                            sum + Object.values(s.personnelBreakdown).reduce((prim, p) => prim + p.prim, 0), 0))}
-                        </td>
-                        <td className="text-right p-2">
-                          {formatCurrency(serviceAnalysisData.reduce((sum, s) => 
-                            sum + Object.values(s.personnelBreakdown).reduce((net, p) => net + p.net, 0), 0))}
+                          {personnel.count > 0 ? formatCurrency(personnel.value / personnel.count) : "-"}
                         </td>
                       </tr>
-                    )}
+                    ))}
                   </tbody>
                 </table>
-              </div>
-
-              <div className="mt-6">
-                <h3 className="font-medium mb-3">Hizmet Dağılımı (Personel Bazlı)</h3>
-                {serviceAnalysisData.map((service, index) => (
-                  <div key={index} className="mb-6">
-                    <h4 className="font-medium text-sm mb-2">{service.name}</h4>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="bg-muted/50">
-                            <th className="text-left p-2">Personel</th>
-                            <th className="text-right p-2">İşlem Sayısı</th>
-                            <th className="text-right p-2">Tutar</th>
-                            <th className="text-right p-2">Prim</th>
-                            <th className="text-right p-2">Net</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {Object.entries(service.personnelBreakdown).map(([name, stats], i) => (
-                            <tr key={i} className="border-t">
-                              <td className="p-2">{name}</td>
-                              <td className="text-right p-2">{stats.count}</td>
-                              <td className="text-right p-2">{formatCurrency(stats.revenue)}</td>
-                              <td className="text-right p-2">{formatCurrency(stats.prim)}</td>
-                              <td className="text-right p-2">{formatCurrency(stats.net)}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
     </div>
