@@ -21,7 +21,7 @@ export function GoogleAuthButton({
     try {
       setLoading(true);
       
-      // Get the current origin for proper redirect
+      // Dynamically set the redirect URL using window.location.origin
       const redirectUrl = `${window.location.origin}/auth/callback`;
       
       console.log("Google OAuth işlemi başlatılıyor...");
