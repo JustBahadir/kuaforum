@@ -45,7 +45,7 @@ export default function AuthCallback() {
             
             try {
               // Direct SQL query to profiles using RPC to avoid RLS issues
-              const { data: functionData, error: functionError } = await supabase.rpc(
+              const { data: functionData, error: functionError } = await supabase.functions.invoke(
                 'get_current_user_role'
               );
               
