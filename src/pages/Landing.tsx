@@ -1,101 +1,51 @@
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useNavigate } from "react-router-dom";
-import { Scissors, Search, User, Users } from "lucide-react";
-import { supabase } from "@/lib/supabase";
-import { useEffect } from "react";
+import React from 'react';
+import { HeroSection } from '@/components/home/HeroSection';
+import { LoginSection } from '@/components/home/LoginSection';
+import { Calendar, Heart, Search, Star } from 'lucide-react';
 
 export default function Landing() {
-  const navigate = useNavigate();
-
-  // Eğer kullanıcı oturum açmışsa dashboard'a yönlendir
-  useEffect(() => {
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        navigate('/dashboard');
-      }
-    };
-    checkSession();
-  }, [navigate]);
-
   return (
-    <div className="min-h-screen">
-      <div className="container mx-auto px-4 py-8">
-        <div className="grid md:grid-cols-2 gap-8 items-center min-h-[calc(100vh-4rem)]">
-          {/* Sol Bölüm - Hizmet Açıklaması */}
-          <div className="space-y-8">
-            <h1 className="text-4xl font-bold">Güzellik Hizmetleriniz için Tek Adres</h1>
-            <p className="text-lg text-muted-foreground">
-              Online randevu sistemi ile güzellik hizmetlerinizi kolayca yönetin
-            </p>
-            
-            <div className="space-y-4">
-              <h2 className="text-xl font-semibold">Sunduğumuz Hizmetler:</h2>
-              <ul className="space-y-3">
-                <li className="flex items-center gap-2">
-                  <Scissors className="h-5 w-5 text-primary" />
-                  Online randevu yönetimi
-                </li>
-                <li className="flex items-center gap-2">
-                  <Scissors className="h-5 w-5 text-primary" />
-                  Personel ve müşteri takibi
-                </li>
-                <li className="flex items-center gap-2">
-                  <Scissors className="h-5 w-5 text-primary" />
-                  Gelir-gider raporlaması
-                </li>
-                <li className="flex items-center gap-2">
-                  <Scissors className="h-5 w-5 text-primary" />
-                  SMS ile bilgilendirme
-                </li>
-                <li className="flex items-center gap-2">
-                  <Scissors className="h-5 w-5 text-primary" />
-                  Müşteri memnuniyeti takibi
-                </li>
-              </ul>
+    <div className="min-h-screen bg-gradient-to-b from-purple-50 to-white">
+      <HeroSection />
+      
+      <div className="container mx-auto px-4 py-16">
+        <div className="grid lg:grid-cols-2 gap-8 items-start">
+          {/* Sol Bölüm - Login Section */}
+          <LoginSection />
+          
+          {/* Sağ Bölüm - Avantajlar */}
+          <div className="grid sm:grid-cols-2 gap-6">
+            <div className="p-6 bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg border border-purple-100">
+              <div className="bg-white p-3 rounded-full w-12 h-12 flex items-center justify-center mb-4">
+                <Calendar className="h-6 w-6 text-purple-600" />
+              </div>
+              <h3 className="font-semibold text-purple-900 mb-2">Kolay Randevu</h3>
+              <p className="text-gray-600">İstediğiniz tarih ve saatte kolayca randevunuzu alın.</p>
             </div>
-          </div>
-
-          {/* Sağ Bölüm - Giriş ve Arama */}
-          <div className="space-y-8">
-            <div className="space-y-4">
-              <div className="flex gap-4">
-                <Button 
-                  className="flex-1 h-12" 
-                  variant="outline"
-                  onClick={() => navigate("/auth")}
-                >
-                  <User className="mr-2" />
-                  Müşteri Girişi
-                </Button>
-                <Button 
-                  className="flex-1 h-12"
-                  onClick={() => navigate("/auth")}
-                >
-                  <Users className="mr-2" />
-                  Kuaför Girişi
-                </Button>
+            
+            <div className="p-6 bg-gradient-to-br from-pink-50 to-purple-50 rounded-lg border border-pink-100">
+              <div className="bg-white p-3 rounded-full w-12 h-12 flex items-center justify-center mb-4">
+                <Star className="h-6 w-6 text-pink-600" />
               </div>
-
-              <div className="p-6 bg-card rounded-lg shadow-lg">
-                <h3 className="text-lg font-semibold mb-4">Hizmet Ara</h3>
-                <div className="space-y-4">
-                  <div className="flex gap-2">
-                    <div className="flex-1">
-                      <Input placeholder="Hizmet veya salon adı" />
-                    </div>
-                    <div className="flex-1">
-                      <Input placeholder="Şehir seçin" />
-                    </div>
-                  </div>
-                  <Button className="w-full">
-                    <Search className="mr-2" />
-                    Ara
-                  </Button>
-                </div>
+              <h3 className="font-semibold text-pink-900 mb-2">Hizmet Değerlendirmeleri</h3>
+              <p className="text-gray-600">Diğer müşterilerin yorumlarını okuyun, kaliteli hizmet alın.</p>
+            </div>
+            
+            <div className="p-6 bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg border border-purple-100">
+              <div className="bg-white p-3 rounded-full w-12 h-12 flex items-center justify-center mb-4">
+                <Heart className="h-6 w-6 text-purple-600" />
               </div>
+              <h3 className="font-semibold text-purple-900 mb-2">Özel Teklifler</h3>
+              <p className="text-gray-600">Size özel kampanyalardan ve indirimlerden faydalanın.</p>
+            </div>
+            
+            <div className="p-6 bg-gradient-to-br from-pink-50 to-purple-50 rounded-lg border border-pink-100">
+              <div className="bg-white p-3 rounded-full w-12 h-12 flex items-center justify-center mb-4">
+                <Search className="h-6 w-6 text-pink-600" />
+              </div>
+              <h3 className="font-semibold text-pink-900 mb-2">Salon Bul</h3>
+              <p className="text-gray-600">Bölgenizdeki en iyi salonları kolayca keşfedin.</p>
             </div>
           </div>
         </div>
