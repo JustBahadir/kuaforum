@@ -1,4 +1,3 @@
-
 import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
@@ -32,7 +31,6 @@ import HomePage from "./pages/HomePage";
 import AuthCallback from "./pages/AuthCallback";
 import RegisterProfile from "./pages/RegisterProfile";
 
-// Create the query client
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -57,10 +55,7 @@ function App() {
               
               {/* Auth Routes */}
               <Route path="/login" element={<Login />} />
-              <Route path="/auth" element={<CustomerAuth />} />
-              <Route path="/staff-login" element={<StaffLogin />} />
-              <Route path="/admin" element={<StaffLogin />} />
-              <Route path="/admin/register" element={<StaffRegister />} />
+              <Route path="/register" element={<Register />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/register-profile" element={<RegisterProfile />} />
               
