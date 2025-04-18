@@ -30,6 +30,7 @@ import Login from "./pages/Login";
 import HomePage from "./pages/HomePage";
 import AuthCallback from "./pages/AuthCallback";
 import RegisterProfile from "./pages/RegisterProfile";
+import Register from "./pages/Register";
 
 const queryClient = new QueryClient({
   defaultOptions: {
