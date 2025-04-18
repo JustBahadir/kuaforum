@@ -77,10 +77,24 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-gradient-to-r from-blue-50 to-indigo-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-md shadow-xl border-0">
-        <StaffCardHeader onBack={handleBackClick} />
-        <CardContent className="p-6">
-          <div className="space-y-6">
-            <div className="space-y-2">
+        <CardContent className="p-0">
+          <div className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-t-lg p-6">
+            <div className="relative">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={handleBackClick}
+                className="text-white hover:text-white/80 hover:bg-white/10 absolute top-0 left-0 p-2"
+              >
+                <Home className="h-5 w-5" />
+              </Button>
+              <h1 className="text-2xl font-semibold text-center mb-1">Müşteri Girişi</h1>
+              <p className="text-sm text-center text-white/80">Hesabınıza giriş yapın</p>
+            </div>
+          </div>
+          
+          <div className="p-6 space-y-6">
+            <div className="space-y-4">
               <div className="relative">
                 <TooltipProvider>
                   <Tooltip>
@@ -144,25 +158,25 @@ export default function Login() {
                 </form>
               </Form>
             </div>
-          </div>
 
-          <div className="flex flex-col items-center mt-4 space-y-2">
-            <Button 
-              variant="outline"
-              onClick={() => navigate("/register")}
-              className="w-full flex items-center justify-center gap-2"
-            >
-              <span>Yeni Hesap Oluştur</span>
-            </Button>
-            
-            <Button 
-              variant="secondary" 
-              onClick={handleBackClick}
-              className="w-full flex items-center justify-center gap-2"
-            >
-              <Home size={16} />
-              <span>Ana Sayfaya Dön</span>
-            </Button>
+            <div className="flex flex-col items-center mt-4 space-y-3">
+              <Button 
+                variant="outline"
+                onClick={() => navigate("/register")}
+                className="w-full flex items-center justify-center gap-2"
+              >
+                <span>Yeni Hesap Oluştur</span>
+              </Button>
+              
+              <Button 
+                variant="secondary" 
+                onClick={handleBackClick}
+                className="w-full flex items-center justify-center gap-2"
+              >
+                <Home size={16} />
+                <span>Ana Sayfaya Dön</span>
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

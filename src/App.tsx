@@ -1,3 +1,4 @@
+
 import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
@@ -59,6 +60,10 @@ function App() {
               <Route path="/register" element={<Register />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/register-profile" element={<RegisterProfile />} />
+              
+              {/* Staff specific routes */}
+              <Route path="/staff-login" element={<StaffLogin />} />
+              <Route path="/staff-register" element={<StaffRegister />} />
               
               {/* Customer Routes */}
               <Route path="/customer-dashboard/*" element={<CustomerDashboard />} />

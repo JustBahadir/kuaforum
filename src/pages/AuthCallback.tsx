@@ -1,118 +1,94 @@
-import { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { supabase } from '@/lib/supabase/client';
-import { toast } from 'sonner';
+
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/lib/supabase/client";
+import { toast } from "sonner";
 
 export default function AuthCallback() {
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const handleCallback = async () => {
+    // Handle the OAuth callback
+    const handleOAuthCallback = async () => {
       try {
-        setIsLoading(true);
-        
-        // Get the session to see if user is authenticated
+        // Get the session to see if we're authenticated
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
           throw sessionError;
         }
         
-        if (!session) {
-          // Try to exchange the code for a session
-          const code = searchParams.get('code');
-          if (!code) {
-            throw new Error('No code provided in redirect');
+        // Check if we have a valid session after callback
+        if (session) {
+          // Check if the user has a complete profile
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('phone, gender, role')
+            .eq('id', session.user.id)
+            .single();
+            
+          if (profileError && profileError.code !== 'PGRST116') {
+            console.error("Profile check error:", profileError);
           }
           
-          // Exchange the code for a session
-          const { error: signInError } = await supabase.auth.exchangeCodeForSession(code);
-          
-          if (signInError) {
-            throw signInError;
+          // If the profile is incomplete or doesn't exist, redirect to complete profile
+          if (!profile || !profile.phone || !profile.gender || !profile.role) {
+            toast.info("Lütfen profilinizi tamamlayın");
+            navigate("/register-profile");
+            return;
           }
-        }
-        
-        // User is authenticated at this point
-        // Check if the user is new (needs to complete profile) or existing
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (!user) {
-          throw new Error('User not found after authentication');
-        }
-        
-        // Check if the user has a profile (existing user)
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
           
-        if (profileError && profileError.code !== 'PGRST116') { // PGRST116 = not found
-          throw new Error('Failed to fetch user profile');
-        }
-        
-        if (!profile) {
-          // New user - needs to complete registration
-          navigate('/register-profile', { replace: true });
-        } else {
-          // Existing user - redirect based on role
-          const role = profile.role || user.user_metadata?.role;
-          
-          if (role === 'staff' || role === 'admin') {
-            navigate('/shop-home', { replace: true });
-          } else if (role === 'customer') {
-            navigate('/customer-dashboard', { replace: true });
+          // If the profile is complete, redirect based on role
+          if (profile.role === 'admin' || profile.role === 'staff') {
+            navigate("/shop-home");
           } else {
-            // Default case
-            navigate('/', { replace: true });
+            navigate("/customer-dashboard");
           }
+        } else {
+          // No session, redirect to login
+          navigate("/login");
         }
-        
-        toast.success('Giriş başarılı!');
       } catch (err: any) {
-        console.error('Auth callback error:', err);
-        setError(err.message || 'Kimlik doğrulama sırasında bir hata oluştu');
-        toast.error('Kimlik doğrulama sırasında bir hata oluştu');
-        // Navigate to login after short delay
+        console.error("Auth callback error:", err);
+        setError(err.message);
+        toast.error("Giriş sırasında bir hata oluştu.");
+        // Redirect to login after error
         setTimeout(() => {
-          navigate('/login', { replace: true });
-        }, 3000);
+          navigate("/login");
+        }, 2000);
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
-    
-    handleCallback();
-  }, [navigate, searchParams]);
 
-  if (isLoading) {
+    handleOAuthCallback();
+  }, [navigate]);
+
+  if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-r from-purple-50 to-pink-50">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-purple-600 mb-4"></div>
-        <p className="text-purple-800 text-lg">Giriş yapılıyor...</p>
+      <div className="min-h-screen flex flex-col items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mb-4"></div>
+        <p className="text-lg">Giriş yapılıyor...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-r from-purple-50 to-pink-50">
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded max-w-md">
-          <p className="text-center">{error}</p>
-          <p className="text-center mt-2">Giriş sayfasına yönlendiriliyorsunuz...</p>
+      <div className="min-h-screen flex flex-col items-center justify-center">
+        <div className="bg-red-100 p-4 rounded-md mb-4">
+          <p className="text-red-700">Bir hata oluştu: {error}</p>
         </div>
+        <p>Ana sayfaya yönlendiriliyorsunuz...</p>
       </div>
     );
   }
 
-  // This is a fallback that shouldn't be seen, since we navigate away in the useEffect
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-purple-50 to-pink-50">
-      <p className="text-purple-800">Yönlendiriliyor...</p>
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
     </div>
   );
 }

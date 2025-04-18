@@ -3,11 +3,10 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { StaffCardHeader } from "@/components/staff/StaffCardHeader";
 import { LoginTabs } from "@/components/staff/LoginTabs";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
-import { Home, Info } from "lucide-react";
+import { Home, ArrowLeft, Info } from "lucide-react";
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
 import {
   Tooltip,
@@ -75,7 +74,21 @@ export default function StaffLogin() {
   return (
     <div className="min-h-screen bg-gradient-to-r from-purple-50 to-pink-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-md shadow-xl border-0">
-        <StaffCardHeader onBack={handleBackClick} />
+        <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-t-lg p-6">
+          <div className="relative">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={handleBackClick}
+              className="text-white hover:text-white/80 hover:bg-white/10 absolute top-0 left-0"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <h1 className="text-2xl font-semibold text-center mb-1">Kuaför Girişi</h1>
+            <p className="text-sm text-center text-white/80">Hesabınıza giriş yapın</p>
+          </div>
+        </div>
+        
         <CardContent className="p-6">
           <div className="space-y-6">
             <div className="space-y-2">

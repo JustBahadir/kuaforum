@@ -34,7 +34,11 @@ export function GoogleAuthButton({
       
       if (error) {
         console.error("Google auth error:", error);
-        toast.error("Google ile giriş yapılırken bir hata oluştu");
+        if (error.message.includes("provider is not enabled")) {
+          toast.error("Google ile giriş henüz etkinleştirilmemiştir. Lütfen Supabase panelinden Google provider'ı aktifleştirin.");
+        } else {
+          toast.error("Google ile giriş yapılırken bir hata oluştu");
+        }
         return;
       }
 
@@ -56,9 +60,7 @@ export function GoogleAuthButton({
       disabled={loading}
     >
       {loading ? (
-        <span className="animate
-
--spin h-4 w-4 border-2 border-current border-t-transparent rounded-full mr-2" />
+        <span className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full mr-2" />
       ) : (
         <svg className="h-5 w-5" viewBox="0 0 24 24">
           <path
