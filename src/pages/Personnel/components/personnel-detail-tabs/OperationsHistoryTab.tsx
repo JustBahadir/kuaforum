@@ -1,21 +1,36 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { personelIslemleriServisi } from "@/lib/supabase";
 import { formatCurrency } from "@/lib/utils";
 import { CalendarDays, Clock } from "lucide-react";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { addDays } from "date-fns";
 
 interface OperationsHistoryTabProps {
   personnelId: number;
+  showPoints?: boolean;
 }
 
-export function OperationsHistoryTab({ personnelId }: OperationsHistoryTabProps) {
+export function OperationsHistoryTab({ personnelId, showPoints = false }: OperationsHistoryTabProps) {
+  const [dateRange, setDateRange] = useState({
+    from: addDays(new Date(), -30),
+    to: new Date()
+  });
+
   const { data: operations = [], isLoading } = useQuery({
-    queryKey: ['personel-islemleri', personnelId],
+    queryKey: ['personel-islemleri', personnelId, dateRange],
     queryFn: () => personelIslemleriServisi.personelIslemleriGetir(personnelId),
     refetchOnWindowFocus: false,
+  });
+
+  // Filter operations by date range
+  const filteredOperations = operations.filter((op: any) => {
+    if (!op.created_at) return false;
+    const date = new Date(op.created_at);
+    return date >= dateRange.from && date <= dateRange.to;
   });
 
   const formatDate = (dateString: string | null) => {
@@ -31,24 +46,30 @@ export function OperationsHistoryTab({ personnelId }: OperationsHistoryTabProps)
     });
   };
 
-  // Limit to last 5 operations
-  const recentOperations = [...operations].sort((a, b) => {
-    return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
-  }).slice(0, 5);
-
   return (
     <div className="space-y-6">
       <Card>
         <CardContent className="p-6">
-          <h3 className="text-lg font-semibold mb-4">Son 5 İşlem</h3>
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold mb-2">İşlem Geçmişi</h3>
+            <div className="flex justify-between items-center">
+              <DateRangePicker
+                date={dateRange}
+                onDateChange={setDateRange}
+              />
+              <div className="text-sm text-muted-foreground">
+                Toplam: {filteredOperations.length} işlem
+              </div>
+            </div>
+          </div>
           
           {isLoading ? (
             <div className="flex justify-center py-4">
               <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
             </div>
-          ) : recentOperations.length === 0 ? (
+          ) : filteredOperations.length === 0 ? (
             <div className="text-center py-6 text-muted-foreground">
-              Henüz işlem geçmişi bulunmuyor.
+              Bu tarih aralığında işlem geçmişi bulunmuyor.
             </div>
           ) : (
             <div className="border rounded-md overflow-hidden">
@@ -60,10 +81,11 @@ export function OperationsHistoryTab({ personnelId }: OperationsHistoryTabProps)
                     <TableHead>Hizmet</TableHead>
                     <TableHead className="text-right">Tutar</TableHead>
                     <TableHead className="text-right">Komisyon</TableHead>
+                    {showPoints && <TableHead className="text-right">Puan</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {recentOperations.map((operation) => (
+                  {filteredOperations.map((operation: any) => (
                     <TableRow key={operation.id}>
                       <TableCell>
                         <div className="flex flex-col">
@@ -91,6 +113,11 @@ export function OperationsHistoryTab({ personnelId }: OperationsHistoryTabProps)
                       <TableCell className="text-right">
                         {formatCurrency(operation.odenen || 0)}
                       </TableCell>
+                      {showPoints && (
+                        <TableCell className="text-right">
+                          {operation.puan || 0}
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>

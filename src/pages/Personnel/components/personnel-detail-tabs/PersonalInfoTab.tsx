@@ -2,7 +2,8 @@
 import React from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
-import { Mail, Phone, MapPin, CalendarDays } from "lucide-react";
+import { Mail, Phone, MapPin, CalendarDays, Copy } from "lucide-react";
+import { toast } from "sonner";
 
 interface PersonalInfoTabProps {
   personnel: any;
@@ -21,6 +22,17 @@ export function PersonalInfoTab({ personnel }: PersonalInfoTabProps) {
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "-";
     return new Date(dateString).toLocaleDateString('tr-TR');
+  };
+
+  const handleCopy = (text: string, label: string) => {
+    if (!text || text === "-") return;
+    
+    navigator.clipboard.writeText(text).then(() => {
+      toast.success(`${label} kopyalandı`);
+    }).catch(err => {
+      console.error('Kopyalama hatası:', err);
+      toast.error('Kopyalama başarısız');
+    });
   };
 
   return (
@@ -56,6 +68,14 @@ export function PersonalInfoTab({ personnel }: PersonalInfoTabProps) {
                   <div className="flex items-center">
                     <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
                     <p className="text-base">{personnel.eposta || "-"}</p>
+                    {personnel.eposta && (
+                      <button 
+                        onClick={() => handleCopy(personnel.eposta, "E-posta")}
+                        className="ml-2 text-muted-foreground hover:text-primary"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
                 <div>
@@ -63,6 +83,14 @@ export function PersonalInfoTab({ personnel }: PersonalInfoTabProps) {
                   <div className="flex items-center">
                     <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
                     <p className="text-base">{personnel.telefon || "-"}</p>
+                    {personnel.telefon && (
+                      <button 
+                        onClick={() => handleCopy(personnel.telefon, "Telefon")}
+                        className="ml-2 text-muted-foreground hover:text-primary"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
                 
@@ -71,6 +99,21 @@ export function PersonalInfoTab({ personnel }: PersonalInfoTabProps) {
                   <div className="flex items-center">
                     <MapPin className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
                     <p className="text-base">{personnel.adres || "-"}</p>
+                  </div>
+                </div>
+
+                <div className="col-span-1 md:col-span-2">
+                  <p className="text-sm font-medium text-muted-foreground">IBAN</p>
+                  <div className="flex items-center">
+                    <p className="text-base">{personnel.iban || "-"}</p>
+                    {personnel.iban && (
+                      <button 
+                        onClick={() => handleCopy(personnel.iban, "IBAN")}
+                        className="ml-2 text-muted-foreground hover:text-primary"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

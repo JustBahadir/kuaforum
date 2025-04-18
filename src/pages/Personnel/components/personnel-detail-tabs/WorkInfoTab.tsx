@@ -3,12 +3,15 @@ import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { BriefcaseIcon, PercentIcon, CreditCard, Banknote, BadgeCheck } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 interface WorkInfoTabProps {
   personnel: any;
+  onEdit?: () => void;
+  canEdit?: boolean;
 }
 
-export function WorkInfoTab({ personnel }: WorkInfoTabProps) {
+export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabProps) {
   const getWorkingSystemLabel = (system: string) => {
     switch (system) {
       case "aylik_maas":
@@ -73,6 +76,18 @@ export function WorkInfoTab({ personnel }: WorkInfoTabProps) {
                   <p className="text-base">{personnel.iban || "-"}</p>
                 </div>
               </div>
+              
+              {canEdit && (
+                <div className="flex justify-end mt-4">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={onEdit}
+                  >
+                    Düzenle
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         </CardContent>

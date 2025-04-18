@@ -26,6 +26,7 @@ interface PersonnelDetailsDialogProps {
   personnel: any;
   onUpdate: () => void;
   onClose?: () => void;
+  showPoints?: boolean;
 }
 
 export function PersonnelDetailsDialog({
@@ -34,6 +35,7 @@ export function PersonnelDetailsDialog({
   personnel,
   onUpdate,
   onClose,
+  showPoints = false,
 }: PersonnelDetailsDialogProps) {
   const [activeTab, setActiveTab] = useState("personal-info");
 
@@ -57,6 +59,9 @@ export function PersonnelDetailsDialog({
       .substring(0, 2);
   };
 
+  // Determine if the Edit button should be shown based on active tab
+  const showEditButton = activeTab === "work-info";
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto sm:max-h-[90vh]">
@@ -77,13 +82,15 @@ export function PersonnelDetailsDialog({
               </DialogDescription>
             </div>
           </div>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => onUpdate()}
-          >
-            Düzenle
-          </Button>
+          {showEditButton && (
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => onUpdate()}
+            >
+              Düzenle
+            </Button>
+          )}
         </DialogHeader>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
@@ -99,11 +106,18 @@ export function PersonnelDetailsDialog({
           </TabsContent>
           
           <TabsContent value="work-info">
-            <WorkInfoTab personnel={personnel} />
+            <WorkInfoTab 
+              personnel={personnel}
+              onEdit={onUpdate} 
+              canEdit={true}
+            />
           </TabsContent>
           
           <TabsContent value="operations-history">
-            <OperationsHistoryTab personnelId={personnel.id} />
+            <OperationsHistoryTab 
+              personnelId={personnel.id}
+              showPoints={showPoints} 
+            />
           </TabsContent>
           
           <TabsContent value="performance">
