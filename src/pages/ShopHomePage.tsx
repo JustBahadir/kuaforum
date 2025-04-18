@@ -1,11 +1,10 @@
-
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
-import { Button } from "@/components/ui/button"; // Added Button import
+import { Button } from "@/components/ui/button";
 import { ShopProfileHeader } from "@/components/shop/ShopProfileHeader";
 import { ShopContactCard } from "@/components/shop/ShopContactCard";
 import { ShopWorkingHoursCard } from "@/components/shop/ShopWorkingHoursCard";
@@ -149,15 +148,14 @@ export default function ShopHomePage() {
 
   return (
     <StaffLayout>
-      <div className="container mx-auto px-4 py-6">
+      <div className="container mx-auto px-4 py-6 space-y-6">
         <ShopProfileHeader 
           dukkanData={shopData} 
           userRole={userRole} 
           queryClient={queryClient} 
         />
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
-          {/* Contact and Gallery Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-4">
             <ShopContactCard dukkanData={shopData} />
           </div>
@@ -170,7 +168,6 @@ export default function ShopHomePage() {
             />
           </div>
 
-          {/* Working Hours, Personnel and Services Section */}
           <div className="lg:col-span-4">
             <ShopWorkingHoursCard 
               calisma_saatleri={workingHours}
@@ -179,15 +176,11 @@ export default function ShopHomePage() {
             />
           </div>
 
-          <div className="lg:col-span-4">
+          <div className="lg:col-span-8">
             <ShopPersonnelCard 
               personelListesi={personnel}
               userRole={userRole}
             />
-          </div>
-
-          <div className="lg:col-span-4">
-            <ShopServicesCard />
           </div>
         </div>
       </div>

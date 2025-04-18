@@ -1,8 +1,8 @@
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ShopProfilePhotoUpload } from "@/components/shop/ShopProfilePhotoUpload";
-import { Camera, Edit } from "lucide-react";
+import { Edit } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { QueryClient } from "@tanstack/react-query";
 
 interface ShopProfileHeaderProps {
@@ -11,49 +11,34 @@ interface ShopProfileHeaderProps {
   queryClient: QueryClient;
 }
 
-export function ShopProfileHeader({ dukkanData, userRole, queryClient }: ShopProfileHeaderProps) {
+export function ShopProfileHeader({ dukkanData, userRole }: ShopProfileHeaderProps) {
+  const navigate = useNavigate();
+
   return (
-    <div className="bg-gradient-to-r from-purple-100 to-pink-100 rounded-xl p-6 mb-8">
-      <div className="flex flex-col md:flex-row items-center gap-6">
-        <div className="relative group">
-          <Avatar className="h-32 w-32 rounded-lg border-2 border-purple-200">
-            <AvatarImage src={dukkanData.logo_url || ''} alt={dukkanData.ad} />
-            <AvatarFallback className="text-2xl bg-purple-100 text-purple-600">
-              {dukkanData.ad?.substring(0, 2).toUpperCase() || "KU"}
-            </AvatarFallback>
-          </Avatar>
-          
-          {userRole === 'admin' && (
-            <ShopProfilePhotoUpload 
-              dukkanId={dukkanData.id}
-              currentImageUrl={dukkanData.logo_url}
-              onSuccess={(url) => {
-                queryClient.invalidateQueries({ queryKey: ['dukkan'] });
-              }}
-              className="flex flex-col items-center"
-            >
-              <div className="absolute bottom-2 right-2 p-1 bg-white rounded-full shadow cursor-pointer">
-                <Camera className="h-5 w-5 text-purple-600" />
-              </div>
-            </ShopProfilePhotoUpload>
-          )}
+    <div className="bg-gradient-to-r from-pink-50 to-purple-50 p-6 rounded-lg shadow-sm">
+      <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">{dukkanData?.isletme_adi || "İsimsiz İşletme"}</h1>
+          <p className="text-muted-foreground">{dukkanData?.aciklama}</p>
         </div>
         
-        <div className="flex-1 text-center md:text-left">
-          <h1 className="text-3xl font-bold text-gray-800">{dukkanData.ad}</h1>
-          <p className="text-gray-600 mt-2">{dukkanData.adres}</p>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Button 
+            size="lg"
+            className="bg-purple-600 hover:bg-purple-700 text-white px-8"
+            onClick={() => navigate("/appointments")}
+          >
+            Hemen Randevu Al
+          </Button>
           
           {userRole === 'admin' && (
-            <div className="mt-4">
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => window.location.href = "/shop-settings"}
-              >
-                <Edit className="h-4 w-4 mr-2" />
-                Dükkan Bilgilerini Düzenle
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              onClick={() => navigate("/shop-settings")}
+            >
+              <Edit className="mr-2 h-4 w-4" />
+              Düzenle
+            </Button>
           )}
         </div>
       </div>

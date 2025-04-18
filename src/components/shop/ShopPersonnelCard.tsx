@@ -44,26 +44,31 @@ export function ShopPersonnelCard({ personelListesi, userRole }: ShopPersonnelCa
             Henüz personel bulunmuyor.
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {personelListesi.map((personel: any) => (
-              <div key={personel.id} className="flex items-center gap-4 bg-gray-50 p-4 rounded-lg">
+              <div 
+                key={personel.id} 
+                className="group flex items-center gap-4 bg-gray-50 p-4 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                onClick={() => window.location.href = `/personnel/${personel.id}`}
+              >
                 <Avatar 
-                  className="h-12 w-12 cursor-pointer" 
+                  className="h-16 w-16 transition-transform group-hover:scale-105" 
                   onClick={(e) => personel.avatar_url && handleShowImagePreview(personel.avatar_url, e)}
                 >
                   {personel.avatar_url ? (
                     <AvatarImage 
                       src={personel.avatar_url} 
                       alt={personel.ad_soyad} 
+                      className="object-cover"
                     />
                   ) : (
-                    <AvatarFallback className="bg-purple-100 text-purple-600">
+                    <AvatarFallback className="bg-purple-100 text-purple-600 text-xl">
                       {personel.ad_soyad.split(' ').map((name: string) => name[0]).join('').substring(0, 2).toUpperCase()}
                     </AvatarFallback>
                   )}
                 </Avatar>
                 <div>
-                  <h3 className="font-medium">{personel.ad_soyad}</h3>
+                  <h3 className="font-medium group-hover:text-purple-600 transition-colors">{personel.ad_soyad}</h3>
                   <p className="text-sm text-gray-500">{personel.unvan || "Personel"}</p>
                 </div>
               </div>
@@ -71,17 +76,13 @@ export function ShopPersonnelCard({ personelListesi, userRole }: ShopPersonnelCa
           </div>
         )}
 
-        {/* Image Preview Dialog */}
         <Dialog open={!!previewImage} onOpenChange={handleCloseImagePreview}>
-          <DialogContent className="sm:max-w-md flex items-center justify-center" aria-describedby="dialog-description">
-            <div id="dialog-description" className="sr-only">Personel fotoğrafı önizleme</div>
-            <div className="relative">
-              <img 
-                src={previewImage || ""} 
-                alt="Personel fotoğrafı" 
-                className="max-h-[80vh] max-w-full object-contain"
-              />
-            </div>
+          <DialogContent className="sm:max-w-md flex items-center justify-center">
+            <img 
+              src={previewImage || ""} 
+              alt="Personel fotoğrafı" 
+              className="max-h-[80vh] max-w-full object-contain rounded-lg"
+            />
           </DialogContent>
         </Dialog>
       </CardContent>
