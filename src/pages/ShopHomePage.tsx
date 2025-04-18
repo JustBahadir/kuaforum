@@ -1,8 +1,7 @@
+
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { StaffLayout } from "@/components/ui/staff-layout";
-import { Button } from "@/components/ui/button";
-import { MapPin, Phone, ExternalLink, Copy } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
@@ -149,16 +148,29 @@ export default function ShopHomePage() {
 
   return (
     <StaffLayout>
-      <div className="container mx-auto p-6">
+      <div className="container mx-auto px-4 py-6">
         <ShopProfileHeader 
           dukkanData={shopData} 
           userRole={userRole} 
           queryClient={queryClient} 
         />
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
-          <div className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
+          {/* Contact and Gallery Section */}
+          <div className="lg:col-span-4">
             <ShopContactCard dukkanData={shopData} />
+          </div>
+          
+          <div className="lg:col-span-8">
+            <ShopGalleryCard 
+              dukkanId={shopData.id}
+              userRole={userRole}
+              queryClient={queryClient}
+            />
+          </div>
+
+          {/* Working Hours, Personnel and Services Section */}
+          <div className="lg:col-span-4">
             <ShopWorkingHoursCard 
               calisma_saatleri={workingHours}
               userRole={userRole}
@@ -166,22 +178,16 @@ export default function ShopHomePage() {
             />
           </div>
 
-          <div className="lg:col-span-2">
-            <ShopGalleryCard 
-              dukkanId={shopData.id}
+          <div className="lg:col-span-4">
+            <ShopPersonnelCard 
+              personelListesi={personnel}
               userRole={userRole}
-              queryClient={queryClient}
             />
           </div>
-        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-          <ShopPersonnelCard 
-            personelListesi={personnel}
-            userRole={userRole}
-          />
-
-          <ShopServicesCard />
+          <div className="lg:col-span-4">
+            <ShopServicesCard />
+          </div>
         </div>
       </div>
     </StaffLayout>

@@ -1,8 +1,7 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Edit } from "lucide-react";
-import { TableHeader, TableRow, TableHead, TableBody, TableCell, Table } from '@/components/ui/table';
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { gunSiralama, gunIsimleri } from "@/components/operations/constants/workingDays";
 import { useQuery } from "@tanstack/react-query";
 import { calismaSaatleriServisi } from "@/lib/supabase/services/calismaSaatleriServisi";
@@ -17,7 +16,6 @@ interface ShopWorkingHoursCardProps {
 }
 
 export function ShopWorkingHoursCard({ calisma_saatleri = [], userRole, dukkanId }: ShopWorkingHoursCardProps) {
-  // Fetch working hours directly if not provided or empty
   const { data: fetchedSaatler = [], isLoading, error } = useQuery({
     queryKey: ['dukkan_saatleri', dukkanId],
     queryFn: async () => {
@@ -42,7 +40,6 @@ export function ShopWorkingHoursCard({ calisma_saatleri = [], userRole, dukkanId
     }
   }, [error]);
 
-  // Use provided hours if available, otherwise use fetched hours
   const saatler = calisma_saatleri.length > 0 ? calisma_saatleri : fetchedSaatler;
 
   const formatTime = (time: string | null) => {
@@ -50,7 +47,6 @@ export function ShopWorkingHoursCard({ calisma_saatleri = [], userRole, dukkanId
     return time.substring(0, 5);
   };
 
-  // Always sort days based on our predefined array order
   const sortedSaatler = [...saatler].sort((a, b) => {
     const aIndex = gunSiralama.indexOf(a.gun);
     const bIndex = gunSiralama.indexOf(b.gun);
@@ -99,39 +95,25 @@ export function ShopWorkingHoursCard({ calisma_saatleri = [], userRole, dukkanId
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[150px]">Gün</TableHead>
-                <TableHead>Açılış</TableHead>
-                <TableHead>Kapanış</TableHead>
+                <TableHead>Gün</TableHead>
+                <TableHead>Durum</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedSaatler.length === 0 ? (
-                gunSiralama.map((gun) => (
-                  <TableRow key={gun} className="hover:bg-gray-50">
-                    <TableCell className="font-medium">{gunIsimleri[gun]}</TableCell>
-                    <TableCell>09:00</TableCell>
-                    <TableCell>19:00</TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                sortedSaatler.map((saat: any) => (
-                  <TableRow key={saat.gun} className="hover:bg-gray-50">
-                    <TableCell className="font-medium">
-                      {gunIsimleri[saat.gun] || saat.gun}
-                    </TableCell>
+              {sortedSaatler.map((saat: any) => (
+                <TableRow key={saat.gun}>
+                  <TableCell className="font-medium">
+                    {gunIsimleri[saat.gun] || saat.gun}
+                  </TableCell>
+                  <TableCell>
                     {saat.kapali ? (
-                      <TableCell colSpan={2} className="text-center font-medium text-red-600">
-                        KAPALI
-                      </TableCell>
+                      <span className="text-red-600 font-medium">KAPALI</span>
                     ) : (
-                      <>
-                        <TableCell>{formatTime(saat.acilis)}</TableCell>
-                        <TableCell>{formatTime(saat.kapanis)}</TableCell>
-                      </>
+                      <span>{formatTime(saat.acilis)} - {formatTime(saat.kapanis)}</span>
                     )}
-                  </TableRow>
-                ))
-              )}
+                  </TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
         </div>
