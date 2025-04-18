@@ -54,8 +54,9 @@ export function OperationsHistoryTab({ personnelId, showPoints = false }: Operat
             <h3 className="text-lg font-semibold mb-2">İşlem Geçmişi</h3>
             <div className="flex justify-between items-center">
               <DateRangePicker
-                date={dateRange}
-                onDateChange={setDateRange}
+                from={dateRange.from}
+                to={dateRange.to}
+                onSelect={(range) => setDateRange(range)}
               />
               <div className="text-sm text-muted-foreground">
                 Toplam: {filteredOperations.length} işlem
