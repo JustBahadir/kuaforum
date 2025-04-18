@@ -1,3 +1,4 @@
+
 import { formatPhoneNumber } from "@/utils/phoneFormatter";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -32,7 +33,7 @@ const profileSchema = z.object({
   firstName: z.string().min(2, { message: "Ad en az 2 karakter olmalıdır" }),
   lastName: z.string().min(2, { message: "Soyad en az 2 karakter olmalıdır" }),
   phone: z.string().min(10, { message: "Geçerli bir telefon numarası girin" }),
-  gender: z.enum(["male", "female"]).optional(),
+  gender: z.enum(["male", "female"]).optional(), // Make gender optional
   role: z.enum(["staff", "business_owner"], { 
     required_error: "Kayıt türü seçimi zorunludur" 
   }),
@@ -94,6 +95,7 @@ export default function RegisterProfile() {
   
   // Handle form submission
   const onSubmit = async (values: z.infer<typeof profileSchema>) => {
+    // Validate based on role
     if (values.role === "business_owner" && !values.businessName) {
       toast.error("İşletme sahibi iseniz işletme adı girmelisiniz");
       return;
@@ -112,12 +114,15 @@ export default function RegisterProfile() {
       
       if (updateError) throw updateError;
       
+      // Remove non-digit characters from phone before saving
+      const cleanPhone = values.phone.replace(/\D/g, '');
+      
       // Update or create profile record
       const { error: profileError } = await supabase.from('profiles').upsert({
         id: user.id,
         first_name: values.firstName,
         last_name: values.lastName,
-        phone: values.phone,
+        phone: cleanPhone,
         gender: values.gender,
         role: values.role,
         updated_at: new Date().toISOString()
@@ -134,7 +139,7 @@ export default function RegisterProfile() {
           .insert([{
             ad: values.businessName,
             adres: '',
-            telefon: values.phone,
+            telefon: cleanPhone,
             sahibi_id: user.id,
             kod: shopCode,
             active: true
@@ -149,7 +154,7 @@ export default function RegisterProfile() {
             .from('personel')
             .insert([{
               ad_soyad: `${values.firstName} ${values.lastName}`,
-              telefon: values.phone,
+              telefon: cleanPhone,
               personel_no: generatePersonnelCode(`${values.firstName}${values.lastName}`),
               eposta: user.email,
               adres: '',
@@ -186,7 +191,7 @@ export default function RegisterProfile() {
             .from('personel')
             .insert([{
               ad_soyad: `${values.firstName} ${values.lastName}`,
-              telefon: values.phone,
+              telefon: cleanPhone,
               personel_no: generatePersonnelCode(`${values.firstName}${values.lastName}`),
               eposta: user.email,
               adres: '',

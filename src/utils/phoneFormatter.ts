@@ -1,20 +1,21 @@
 
 /**
- * Formats a phone number as 05XX XXX XX XX
- * For Turkish mobile numbers
+ * Format phone number input to display as 05XX XXX XX XX
+ * @param phoneNumber - The phone number to format
+ * @returns Formatted phone number
  */
-export const formatPhoneNumber = (value: string): string => {
-  // Sadece rakamları al
-  const numbers = value.replace(/\D/g, '');
+export const formatPhoneNumber = (phoneNumber: string): string => {
+  // Remove all non-digits
+  const cleaned = phoneNumber.replace(/\D/g, '');
   
-  // Format: 05XX XXX XX XX
-  if (numbers.length <= 4) {
-    return numbers;
-  } else if (numbers.length <= 7) {
-    return `${numbers.slice(0, 4)} ${numbers.slice(4)}`;
-  } else if (numbers.length <= 9) {
-    return `${numbers.slice(0, 4)} ${numbers.slice(4, 7)} ${numbers.slice(7)}`;
+  // Format as 05XX XXX XX XX
+  if (cleaned.length <= 4) {
+    return cleaned;
+  } else if (cleaned.length <= 7) {
+    return `${cleaned.slice(0, 4)} ${cleaned.slice(4)}`;
+  } else if (cleaned.length <= 9) {
+    return `${cleaned.slice(0, 4)} ${cleaned.slice(4, 7)} ${cleaned.slice(7)}`;
   } else {
-    return `${numbers.slice(0, 4)} ${numbers.slice(4, 7)} ${numbers.slice(7, 9)} ${numbers.slice(9, 11)}`;
+    return `${cleaned.slice(0, 4)} ${cleaned.slice(4, 7)} ${cleaned.slice(7, 9)} ${cleaned.slice(9, 11)}`;
   }
 };

@@ -9,18 +9,53 @@ import { PersonalInfo } from "@/components/staff/profile/PersonalInfo";
 import { EducationInfo } from "@/components/staff/profile/EducationInfo";
 import { PastOperations } from "@/components/staff/profile/PastOperations";
 import { toast } from "sonner";
+import { supabase } from "@/lib/supabase/client";
 
 export default function StaffProfilePage() {
   const navigate = useNavigate();
   const { userRole, handleLogout } = useCustomerAuth();
   const [activeTab, setActiveTab] = useState("personal");
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (userRole && userRole !== 'staff') {
-      toast.error("Bu sayfaya erişim yetkiniz yok");
-      navigate("/");
-    }
-  }, [userRole, navigate]);
+    const checkUserRole = async () => {
+      setIsLoading(true);
+      
+      try {
+        // Get user role from edge function
+        const { data, error } = await supabase.functions.invoke('get_current_user_role');
+        
+        if (error) {
+          console.error("Error checking user role:", error);
+          toast.error("Kullanıcı rolü kontrol edilirken bir hata oluştu");
+          return;
+        }
+        
+        const role = data?.role;
+        
+        if (role && role !== 'staff') {
+          toast.error("Bu sayfaya erişim yetkiniz yok");
+          navigate("/");
+          return;
+        }
+      } catch (error) {
+        console.error("Unexpected error:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    checkUserRole();
+  }, [navigate]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-r from-pink-50 to-purple-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500 mb-4"></div>
+        <p className="text-lg">Yükleniyor...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-r from-pink-50 to-purple-50 p-4">

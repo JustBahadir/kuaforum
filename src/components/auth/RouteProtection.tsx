@@ -54,45 +54,18 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
           return;
         }
         
-        const userRole = data.session.user.user_metadata?.role;
-        console.log("Current user role:", userRole, "at pathname:", location.pathname);
+        // Get user role from the edge function to avoid RLS issues
+        const { data: roleData, error: roleError } = await supabase.functions.invoke('get_current_user_role');
         
-        // Check admin/staff/business_owner routes access
-        if (location.pathname.startsWith('/shop-') || 
-            location.pathname === '/shop-home' || 
-            location.pathname.startsWith('/admin') ||
-            location.pathname === '/admin/operations') {
-          if (userRole !== 'admin' && userRole !== 'staff' && userRole !== 'business_owner') {
-            if (isMounted) {
-              console.log("User is not staff/admin/business_owner, redirecting to staff-login");
-              toast.error("Bu sayfaya erişim yetkiniz yok");
-              navigate('/staff-login');
-            }
-            return;
-          }
-        }
-        
-        // Check for incomplete profile
-        if (data.session && location.pathname !== '/register-profile') {
-          // Check if user has completed their profile
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select('phone, gender, role')
-            .eq('id', data.session.user.id)
-            .single();
-            
-          if ((profileError && profileError.code !== 'PGRST116') || 
-              !profileData || 
-              !profileData.phone || 
-              !profileData.gender ||
-              !profileData.role) {
-            if (isMounted) {
-              console.log("Incomplete profile, redirecting to profile completion");
-              toast.info("Lütfen önce profilinizi tamamlayın");
-              navigate('/register-profile');
-              return;
-            }
-          }
+        if (roleError) {
+          console.error("Error getting user role:", roleError);
+          // Fallback to metadata role
+          const userRole = data.session.user.user_metadata?.role;
+          handleRoleBasedRouting(userRole, location.pathname, navigate, isMounted);
+        } else {
+          // Use role from edge function
+          const userRole = roleData?.role;
+          handleRoleBasedRouting(userRole, location.pathname, navigate, isMounted);
         }
         
         if (isMounted) setChecking(false);
@@ -130,3 +103,79 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
 
   return <>{children}</>;
 };
+
+// Helper function to handle role-based routing
+function handleRoleBasedRouting(
+  userRole: string | undefined | null,
+  pathname: string,
+  navigate: (path: string) => void,
+  isMounted: boolean
+) {
+  console.log("Current user role:", userRole, "at pathname:", pathname);
+  
+  // Handle staff routes
+  if (userRole === 'staff') {
+    // Staff can only access staff-profile page
+    if (
+      pathname !== '/staff-profile' && 
+      !pathname.startsWith('/staff-profile/')
+    ) {
+      if (isMounted) {
+        console.log("Staff user redirected to staff profile page");
+        navigate('/staff-profile');
+      }
+      return;
+    }
+  }
+  
+  // Handle business_owner routes
+  if (userRole === 'business_owner') {
+    // Business owner can only access shop-home and related routes
+    if (
+      pathname !== '/register-profile' &&
+      pathname !== '/shop-home' && 
+      !pathname.startsWith('/shop-') && 
+      !pathname.startsWith('/personnel') && 
+      !pathname.startsWith('/operations-history') && 
+      !pathname.startsWith('/customers')
+    ) {
+      if (isMounted) {
+        console.log("Business owner redirected to shop home page");
+        navigate('/shop-home');
+      }
+      return;
+    }
+  }
+  
+  // Handle admin routes
+  if (userRole === 'admin') {
+    // Admin can access all routes
+    return;
+  }
+  
+  // Handle customer routes
+  if (userRole === 'customer') {
+    // Restrict access to staff, business and admin routes
+    if (
+      pathname.startsWith('/shop-') || 
+      pathname === '/staff-profile' || 
+      pathname.startsWith('/admin')
+    ) {
+      if (isMounted) {
+        console.log("Customer restricted from admin area");
+        toast.error("Bu sayfaya erişim yetkiniz yok");
+        navigate('/customer-dashboard');
+      }
+    }
+  }
+  
+  // Check for incomplete profile
+  if (!userRole && pathname !== '/register-profile') {
+    if (isMounted) {
+      console.log("User role not found, redirecting to profile completion");
+      toast.info("Lütfen önce profilinizi tamamlayın");
+      navigate('/register-profile');
+    }
+    return;
+  }
+}
