@@ -7,7 +7,14 @@ import { StaffCardHeader } from "@/components/staff/StaffCardHeader";
 import { LoginTabs } from "@/components/staff/LoginTabs";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
-import { Home } from "lucide-react";
+import { Home, Info } from "lucide-react";
+import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export default function StaffLogin() {
   const navigate = useNavigate();
@@ -70,7 +77,39 @@ export default function StaffLogin() {
       <Card className="w-full max-w-md shadow-xl border-0">
         <StaffCardHeader onBack={handleBackClick} />
         <CardContent className="p-6">
-          <LoginTabs onSuccess={handleLoginSuccess} />
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <div className="relative">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="absolute right-0 top-0 z-10"
+                      >
+                        <Info className="h-4 w-4 text-gray-500" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p>Geliştirici hesabı için e-posta ile giriş aktif. Yeni kayıtlar yalnızca Google hesabıyla yapılabilir.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                
+                <GoogleAuthButton mode="signin" className="mb-4" />
+                
+                <div className="relative flex items-center my-4">
+                  <div className="flex-grow border-t border-gray-300"></div>
+                  <div className="px-3 text-sm text-gray-500">veya</div>
+                  <div className="flex-grow border-t border-gray-300"></div>
+                </div>
+              </div>
+            </div>
+            
+            <LoginTabs onSuccess={handleLoginSuccess} />
+          </div>
+          
           <div className="flex flex-col items-center mt-4 space-y-2">
             <Button 
               variant="outline"

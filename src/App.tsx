@@ -29,6 +29,8 @@ import CustomerOperations from "./pages/operations/CustomerOperations";
 import StaffOperations from "./pages/operations/StaffOperations";
 import Login from "./pages/Login";
 import HomePage from "./pages/HomePage";
+import AuthCallback from "./pages/AuthCallback";
+import RegisterProfile from "./pages/RegisterProfile";
 
 // Create the query client
 const queryClient = new QueryClient({
@@ -59,6 +61,8 @@ function App() {
               <Route path="/staff-login" element={<StaffLogin />} />
               <Route path="/admin" element={<StaffLogin />} />
               <Route path="/admin/register" element={<StaffRegister />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
+              <Route path="/register-profile" element={<RegisterProfile />} />
               
               {/* Customer Routes */}
               <Route path="/customer-dashboard/*" element={<CustomerDashboard />} />

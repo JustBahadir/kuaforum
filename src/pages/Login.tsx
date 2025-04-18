@@ -6,7 +6,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { StaffCardHeader } from "@/components/staff/StaffCardHeader";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
-import { authenticationService } from "@/lib/auth/services/authenticationService";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -20,7 +19,14 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Home } from "lucide-react";
+import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
+import { Home, Info } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // Form schema for login
 const loginSchema = z.object({
@@ -158,123 +164,80 @@ export default function Login() {
             </TabsList>
             
             <TabsContent value="login">
-              <Form {...loginForm}>
-                <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
-                  <FormField
-                    control={loginForm.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>E-posta</FormLabel>
-                        <FormControl>
-                          <Input placeholder="ornek@email.com" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <GoogleAuthButton mode="signin" className="mt-2" />
+                </div>
+                
+                <div className="relative flex items-center">
+                  <div className="flex-grow border-t border-gray-300"></div>
+                  <div className="px-3 text-sm text-gray-500">veya</div>
+                  <div className="flex-grow border-t border-gray-300"></div>
+                </div>
+                
+                <div className="relative">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="absolute right-0 top-0"
+                        >
+                          <Info className="h-4 w-4 text-gray-500" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p>Geliştirici hesabı için e-posta ile giriş aktif. Yeni kayıtlar yalnızca Google hesabıyla yapılabilir.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                   
-                  <FormField
-                    control={loginForm.control}
-                    name="password"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Şifre</FormLabel>
-                        <FormControl>
-                          <Input type="password" placeholder="******" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? "Giriş Yapılıyor..." : "Giriş Yap"}
-                  </Button>
-                </form>
-              </Form>
+                  <Form {...loginForm}>
+                    <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
+                      <FormField
+                        control={loginForm.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>E-posta</FormLabel>
+                            <FormControl>
+                              <Input placeholder="ornek@email.com" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={loginForm.control}
+                        name="password"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Şifre</FormLabel>
+                            <FormControl>
+                              <Input type="password" placeholder="******" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <Button type="submit" className="w-full" disabled={loading}>
+                        {loading ? "Giriş Yapılıyor..." : "E-posta ile Giriş Yap"}
+                      </Button>
+                    </form>
+                  </Form>
+                </div>
+              </div>
             </TabsContent>
             
             <TabsContent value="register">
-              <Form {...registerForm}>
-                <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={registerForm.control}
-                      name="firstName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Ad</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Ad" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={registerForm.control}
-                      name="lastName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Soyad</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Soyad" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  <FormField
-                    control={registerForm.control}
-                    name="phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Telefon</FormLabel>
-                        <FormControl>
-                          <Input placeholder="0555 555 55 55" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={registerForm.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>E-posta</FormLabel>
-                        <FormControl>
-                          <Input placeholder="ornek@email.com" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={registerForm.control}
-                    name="password"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Şifre</FormLabel>
-                        <FormControl>
-                          <Input type="password" placeholder="******" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? "Kayıt Yapılıyor..." : "Kayıt Ol"}
-                  </Button>
-                </form>
-              </Form>
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <GoogleAuthButton mode="signup" className="mt-2" />
+                </div>
+              </div>
             </TabsContent>
           </Tabs>
 
