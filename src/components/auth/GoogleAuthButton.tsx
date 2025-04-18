@@ -21,6 +21,9 @@ export function GoogleAuthButton({
     try {
       setLoading(true);
       
+      console.log("Google OAuth işlemi başlatılıyor...");
+      console.log("Redirect URL:", `${window.location.origin}/auth/callback`);
+      
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
@@ -37,15 +40,16 @@ export function GoogleAuthButton({
         if (error.message.includes("provider is not enabled")) {
           toast.error("Google ile giriş henüz etkinleştirilmemiştir. Lütfen Supabase panelinden Google provider'ı aktifleştirin.");
         } else {
-          toast.error("Google ile giriş yapılırken bir hata oluştu");
+          toast.error("Google ile giriş yapılırken bir hata oluştu: " + error.message);
         }
         return;
       }
 
+      console.log("Google OAuth yanıtı:", data);
       // Success will be handled by the auth state change event or the redirect
     } catch (error: any) {
       console.error("Google auth error:", error);
-      toast.error(`Google ile ${mode === "signin" ? "giriş" : "kayıt"} sırasında bir hata oluştu`);
+      toast.error(`Google ile ${mode === "signin" ? "giriş" : "kayıt"} sırasında bir hata oluştu: ${error.message}`);
     } finally {
       setLoading(false);
     }

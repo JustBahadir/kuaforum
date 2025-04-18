@@ -13,15 +13,22 @@ export default function AuthCallback() {
     // Handle the OAuth callback
     const handleOAuthCallback = async () => {
       try {
+        console.log("AuthCallback: OAuth callback işlemi başlatılıyor...");
+        
         // Get the session to see if we're authenticated
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
+          console.error("Session error:", sessionError);
           throw sessionError;
         }
         
+        console.log("Session bilgisi:", session ? "Oturum var" : "Oturum yok");
+        
         // Check if we have a valid session after callback
         if (session) {
+          console.log("Kullanıcı bilgisi:", session.user.id);
+          
           // Check if the user has a complete profile
           const { data: profile, error: profileError } = await supabase
             .from('profiles')
@@ -33,12 +40,17 @@ export default function AuthCallback() {
             console.error("Profile check error:", profileError);
           }
           
+          console.log("Profil bilgisi:", profile);
+          
           // If the profile is incomplete or doesn't exist, redirect to complete profile
           if (!profile || !profile.phone || !profile.gender || !profile.role) {
+            console.log("Profil eksik, register-profile sayfasına yönlendiriliyor");
             toast.info("Lütfen profilinizi tamamlayın");
             navigate("/register-profile");
             return;
           }
+          
+          console.log("Rol bazlı yönlendirme yapılıyor, rol:", profile.role);
           
           // If the profile is complete, redirect based on role
           if (profile.role === 'admin' || profile.role === 'business_owner') {
@@ -61,6 +73,7 @@ export default function AuthCallback() {
           }
         } else {
           // No session, redirect to login
+          console.log("Oturum bulunamadı, giriş sayfasına yönlendiriliyor");
           navigate("/staff-login");
         }
       } catch (err: any) {
