@@ -2,12 +2,10 @@
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { PhoneInput } from "@/components/ui/phone-input";
 
 export default function StaffProfile() {
   const navigate = useNavigate();
@@ -17,6 +15,7 @@ export default function StaffProfile() {
   const [activeTab, setActiveTab] = useState("profile");
   const [shopCode, setShopCode] = useState("");
   const [validatingCode, setValidatingCode] = useState(false);
+  const [userRole, setUserRole] = useState("");
 
   useEffect(() => {
     const checkSession = async () => {
@@ -32,6 +31,17 @@ export default function StaffProfile() {
         
         setUser(data.session.user);
         
+        // Get user role
+        const userMetadata = data.session.user.user_metadata;
+        const role = userMetadata?.role;
+        setUserRole(role);
+        
+        // If user is admin, redirect to admin profile
+        if (role === 'admin') {
+          navigate('/shop-home');
+          return;
+        }
+        
         // Get profile data
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
@@ -46,15 +56,21 @@ export default function StaffProfile() {
         setProfile(profileData || {});
         
         // Check if user is a staff and attached to any shop
-        const { data: personelData } = await supabase
-          .from('personel')
-          .select('dukkan_id, id')
-          .eq('auth_id', data.session.user.id)
-          .maybeSingle();
-          
-        if (personelData?.dukkan_id) {
-          // If staff is assigned to a shop, redirect to shop home
-          navigate('/shop-home');
+        if (role === 'staff') {
+          const { data: personelData } = await supabase
+            .from('personel')
+            .select('dukkan_id, id')
+            .eq('auth_id', data.session.user.id)
+            .maybeSingle();
+            
+          if (personelData?.dukkan_id) {
+            // If staff is assigned to a shop, redirect to shop home
+            navigate('/shop-home');
+            return;
+          }
+        } else {
+          // If not staff or admin, redirect to appropriate dashboard
+          navigate('/customer-dashboard');
           return;
         }
       } catch (error) {
