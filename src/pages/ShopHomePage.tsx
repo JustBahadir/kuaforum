@@ -23,6 +23,7 @@ export default function ShopHomePage() {
     error, 
     personelListesi, 
     calisma_saatleri,
+    services,
     isLoadingSaatler
   } = useShopData(dukkanId);
 
@@ -108,7 +109,10 @@ export default function ShopHomePage() {
               userRole={userRole}
               canEdit={canEdit}
             />
-            <ShopServicesCard canEdit={canEdit} />
+            <ShopServicesCard 
+              services={services} 
+              canEdit={canEdit} 
+            />
           </div>
         </div>
       </div>
