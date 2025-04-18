@@ -41,8 +41,21 @@ export default function AuthCallback() {
           }
           
           // If the profile is complete, redirect based on role
-          if (profile.role === 'admin' || profile.role === 'staff') {
+          if (profile.role === 'admin' || profile.role === 'business_owner') {
             navigate("/shop-home");
+          } else if (profile.role === 'staff') {
+            // Check if staff is assigned to a shop
+            const { data: personelData } = await supabase
+              .from('personel')
+              .select('dukkan_id')
+              .eq('auth_id', session.user.id)
+              .single();
+              
+            if (personelData && personelData.dukkan_id) {
+              navigate("/shop-home");
+            } else {
+              navigate("/customer-dashboard"); // This should be changed to profile page later
+            }
           } else {
             navigate("/customer-dashboard");
           }

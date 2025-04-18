@@ -122,24 +122,96 @@ export default function RegisterProfile() {
         phone: values.phone,
         gender: values.gender,
         role: values.role,
-        business_name: values.role === "business_owner" ? values.businessName : null,
-        business_code: values.role === "staff" ? values.businessCode : null,
         updated_at: new Date().toISOString()
       });
       
       if (profileError) throw profileError;
+      
+      // If business owner, create business record
+      if (values.role === "business_owner" && values.businessName) {
+        const shopCode = generateShopCode(values.businessName);
+        
+        const { data: shopData, error: shopError } = await supabase
+          .from('dukkanlar')
+          .insert([{
+            ad: values.businessName,
+            adres: '',
+            telefon: values.phone,
+            sahibi_id: user.id,
+            kod: shopCode,
+            active: true
+          }])
+          .select();
+        
+        if (shopError) throw shopError;
+        
+        if (shopData && shopData[0]) {
+          // Also add business owner as staff
+          const { error: personelError } = await supabase
+            .from('personel')
+            .insert([{
+              ad_soyad: `${values.firstName} ${values.lastName}`,
+              telefon: values.phone,
+              personel_no: generatePersonnelCode(`${values.firstName}${values.lastName}`),
+              eposta: user.email,
+              adres: '',
+              maas: 0,
+              prim_yuzdesi: 100,
+              calisma_sistemi: 'sahip',
+              auth_id: user.id,
+              dukkan_id: shopData[0].id
+            }]);
+          
+          if (personelError) {
+            console.error("Failed to create personnel record:", personelError);
+          }
+        }
+      }
+      
+      // If staff with business code, create application
+      if (values.role === "staff" && values.businessCode) {
+        const { data: shopData, error: shopError } = await supabase
+          .from('dukkanlar')
+          .select('id')
+          .eq('kod', values.businessCode)
+          .single();
+        
+        if (shopError) {
+          if (shopError.code === 'PGRST116') {
+            toast.error("Girdiğiniz işletme kodu geçerli değil. Lütfen işletme sahibinden doğru kodu alınız.");
+          } else {
+            throw shopError;
+          }
+        } else if (shopData) {
+          // Create staff record linked to business
+          const { error: personelError } = await supabase
+            .from('personel')
+            .insert([{
+              ad_soyad: `${values.firstName} ${values.lastName}`,
+              telefon: values.phone,
+              personel_no: generatePersonnelCode(`${values.firstName}${values.lastName}`),
+              eposta: user.email,
+              adres: '',
+              maas: 0,
+              prim_yuzdesi: 50,
+              calisma_sistemi: 'haftalik',
+              auth_id: user.id,
+              dukkan_id: shopData.id
+            }]);
+            
+          if (personelError) throw personelError;
+        }
+      }
       
       toast.success("Profil bilgileriniz başarıyla kaydedildi");
       
       // Redirect based on role
       if (values.role === "business_owner") {
         navigate("/shop-home");
-      } else if (values.role === "staff") {
-        // If staff has business code, verify it (This would be expanded in a real implementation)
-        // For now, just redirect to staff page
+      } else if (values.role === "staff" && values.businessCode) {
         navigate("/shop-home");
       } else {
-        navigate("/");
+        navigate("/customer-dashboard"); // This should be the profile page
       }
       
     } catch (error: any) {
@@ -148,6 +220,36 @@ export default function RegisterProfile() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Generate a shop code from business name
+  const generateShopCode = (businessName: string): string => {
+    // Remove non-alphanumeric characters, take first 3 chars, add 4 random digits
+    const prefix = businessName
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9]/g, '')
+      .substring(0, 3)
+      .toUpperCase();
+    
+    const randomDigits = Math.floor(1000 + Math.random() * 9000).toString();
+    
+    return `${prefix}${randomDigits}`;
+  };
+  
+  // Generate a personnel code
+  const generatePersonnelCode = (nameSurname: string): string => {
+    // Remove non-alphanumeric characters, take first 4 chars, add 3 random digits
+    const prefix = nameSurname
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9]/g, '')
+      .substring(0, 4)
+      .toUpperCase();
+    
+    const randomDigits = Math.floor(100 + Math.random() * 900).toString();
+    
+    return `P${prefix}${randomDigits}`;
   };
 
   return (

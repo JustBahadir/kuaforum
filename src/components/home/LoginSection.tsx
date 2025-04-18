@@ -31,10 +31,10 @@ export const LoginSection = () => {
                 <TooltipTrigger asChild>
                   <Button 
                     className="flex-1 h-12 bg-purple-600 hover:bg-purple-700" 
-                    onClick={() => navigate("/login")}
+                    onClick={() => navigate("/register")}
                   >
                     <User className="mr-2" />
-                    Müşteri Girişi
+                    Müşteri Kaydı
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -69,4 +69,4 @@ export const LoginSection = () => {
       </CardContent>
     </Card>
   );
-};
+}

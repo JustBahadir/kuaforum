@@ -36,7 +36,7 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
         if (error || !data.session) {
           if (isMounted) {
             console.log("No session, redirecting to login");
-            navigate('/login');
+            navigate('/staff-login');
           }
           return;
         }
