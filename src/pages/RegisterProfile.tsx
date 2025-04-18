@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -32,9 +31,7 @@ const profileSchema = z.object({
   firstName: z.string().min(2, { message: "Ad en az 2 karakter olmalıdır" }),
   lastName: z.string().min(2, { message: "Soyad en az 2 karakter olmalıdır" }),
   phone: z.string().min(10, { message: "Geçerli bir telefon numarası girin" }),
-  gender: z.enum(["male", "female"], { 
-    required_error: "Cinsiyet seçimi zorunludur" 
-  }),
+  gender: z.enum(["male", "female"]).optional(),
   role: z.enum(["staff", "business_owner"], { 
     required_error: "Kayıt türü seçimi zorunludur" 
   }),
@@ -299,7 +296,15 @@ export default function RegisterProfile() {
                   <FormItem>
                     <FormLabel>Telefon*</FormLabel>
                     <FormControl>
-                      <Input placeholder="05XX XXX XX XX" {...field} />
+                      <Input
+                        placeholder="05XX XXX XX XX"
+                        value={formatPhoneNumber(field.value)}
+                        onChange={(e) => {
+                          const digitsOnly = e.target.value.replace(/\D/g, '');
+                          const limitedDigits = digitsOnly.substring(0, 11);
+                          field.onChange(limitedDigits);
+                        }}
+                      />
                     </FormControl>
                     <FormDescription>
                       Size ulaşabileceğimiz geçerli bir telefon numarası girin
@@ -314,7 +319,7 @@ export default function RegisterProfile() {
                 name="gender"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Cinsiyet*</FormLabel>
+                    <FormLabel>Cinsiyet</FormLabel>
                     <FormControl>
                       <RadioGroup 
                         onValueChange={field.onChange} 
