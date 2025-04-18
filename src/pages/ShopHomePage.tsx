@@ -12,112 +12,21 @@ import { ShopWorkingHoursCard } from "@/components/shop/ShopWorkingHoursCard";
 import { ShopGalleryCard } from "@/components/shop/ShopGalleryCard";
 import { ShopPersonnelCard } from "@/components/shop/ShopPersonnelCard";
 import { QueryClient } from "@tanstack/react-query";
+import { useShopData } from "@/hooks/useShopData";
 
 export default function ShopHomePage() {
   const navigate = useNavigate();
-  const { refreshProfile, userRole, dukkanId } = useCustomerAuth();
-  const [shopData, setShopData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [workingHours, setWorkingHours] = useState<any[]>([]);
-  const [personnel, setPersonnel] = useState<any[]>([]);
+  const { userRole, dukkanId } = useCustomerAuth();
   const queryClient = new QueryClient();
   
-  useEffect(() => {
-    const loadShopData = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (!session) {
-          navigate('/login');
-          return;
-        }
-
-        const userId = session.user.id;
-        const userMetadata = session.user.user_metadata;
-        const role = userMetadata?.role;
-
-        if (role === 'admin') {
-          const { data: shops, error } = await supabase
-            .from('dukkanlar')
-            .select('*')
-            .eq('sahibi_id', userId)
-            .limit(1);
-
-          if (error) throw error;
-          
-          if (shops && shops.length > 0) {
-            setShopData(shops[0]);
-            
-            const { data: hours } = await supabase
-              .from('calisma_saatleri')
-              .select('*')
-              .eq('dukkan_id', shops[0].id)
-              .order('gun_sira', { ascending: true });
-              
-            setWorkingHours(hours || []);
-            
-            const { data: staff } = await supabase
-              .from('personel')
-              .select('*')
-              .eq('dukkan_id', shops[0].id);
-              
-            setPersonnel(staff || []);
-          } else {
-            navigate('/create-shop');
-          }
-        } else if (role === 'staff') {
-          const { data: personel, error } = await supabase
-            .from('personel')
-            .select('dukkan_id')
-            .eq('auth_id', userId)
-            .maybeSingle();
-
-          if (error) throw error;
-          
-          if (personel?.dukkan_id) {
-            const { data: shop } = await supabase
-              .from('dukkanlar')
-              .select('*')
-              .eq('id', personel.dukkan_id)
-              .single();
-              
-            setShopData(shop);
-            
-            const { data: hours } = await supabase
-              .from('calisma_saatleri')
-              .select('*')
-              .eq('dukkan_id', personel.dukkan_id)
-              .order('gun_sira', { ascending: true });
-              
-            setWorkingHours(hours || []);
-            
-            const { data: staff } = await supabase
-              .from('personel')
-              .select('*')
-              .eq('dukkan_id', personel.dukkan_id);
-              
-            setPersonnel(staff || []);
-          } else {
-            navigate('/staff-profile');
-          }
-        } else {
-          navigate('/login');
-        }
-      } catch (error) {
-        console.error("Error loading shop data:", error);
-        toast.error("Dükkan bilgileri yüklenirken hata oluştu");
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    loadShopData();
-  }, [navigate]);
+  const { 
+    dukkanData, 
+    loading, 
+    error, 
+    personelListesi, 
+    calisma_saatleri 
+  } = useShopData(dukkanId);
   
-  const refreshUserProfile = () => {
-    refreshProfile();
-  };
-
   if (loading) {
     return (
       <StaffLayout>
@@ -128,7 +37,26 @@ export default function ShopHomePage() {
     );
   }
 
-  if (!shopData) {
+  if (error) {
+    return (
+      <StaffLayout>
+        <div className="container mx-auto p-6">
+          <div className="text-center">
+            <h2 className="text-2xl font-semibold mb-4">Bir hata oluştu</h2>
+            <p className="text-red-500 mb-4">{error}</p>
+            <Button 
+              onClick={() => window.location.reload()}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              Tekrar Dene
+            </Button>
+          </div>
+        </div>
+      </StaffLayout>
+    );
+  }
+
+  if (!dukkanData) {
     return (
       <StaffLayout>
         <div className="container mx-auto p-6">
@@ -150,35 +78,30 @@ export default function ShopHomePage() {
     <StaffLayout>
       <div className="container mx-auto px-4 py-6 space-y-6">
         <ShopProfileHeader 
-          dukkanData={shopData} 
+          dukkanData={dukkanData} 
           userRole={userRole} 
           queryClient={queryClient} 
         />
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-4">
-            <ShopContactCard dukkanData={shopData} />
-          </div>
-          
-          <div className="lg:col-span-8">
-            <ShopGalleryCard 
-              dukkanId={shopData.id}
-              userRole={userRole}
-              queryClient={queryClient}
-            />
-          </div>
-
-          <div className="lg:col-span-4">
+          <div className="lg:col-span-4 space-y-6">
+            <ShopContactCard dukkanData={dukkanData} />
             <ShopWorkingHoursCard 
-              calisma_saatleri={workingHours}
+              calisma_saatleri={calisma_saatleri}
               userRole={userRole}
               dukkanId={dukkanId}
             />
           </div>
-
-          <div className="lg:col-span-8">
+          
+          <div className="lg:col-span-8 space-y-6">
+            <ShopGalleryCard 
+              dukkanId={dukkanData.id}
+              userRole={userRole}
+              queryClient={queryClient}
+            />
+            
             <ShopPersonnelCard 
-              personelListesi={personnel}
+              personelListesi={personelListesi}
               userRole={userRole}
             />
           </div>

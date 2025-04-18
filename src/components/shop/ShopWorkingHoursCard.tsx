@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Edit } from "lucide-react";
@@ -96,7 +97,7 @@ export function ShopWorkingHoursCard({ calisma_saatleri = [], userRole, dukkanId
             <TableHeader>
               <TableRow>
                 <TableHead>Gün</TableHead>
-                <TableHead>Durum</TableHead>
+                <TableHead className="text-right">Durum</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -105,11 +106,13 @@ export function ShopWorkingHoursCard({ calisma_saatleri = [], userRole, dukkanId
                   <TableCell className="font-medium">
                     {gunIsimleri[saat.gun] || saat.gun}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-right">
                     {saat.kapali ? (
                       <span className="text-red-600 font-medium">KAPALI</span>
                     ) : (
-                      <span>{formatTime(saat.acilis)} - {formatTime(saat.kapanis)}</span>
+                      <span>
+                        {formatTime(saat.acilis)} - {formatTime(saat.kapanis)}
+                      </span>
                     )}
                   </TableCell>
                 </TableRow>
