@@ -26,13 +26,23 @@ export const LoginSection = () => {
       <CardContent className="p-0 space-y-6">
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row gap-4">
-            <Button 
-              className="flex-1 h-12 bg-purple-600 hover:bg-purple-700" 
-              onClick={() => navigate("/login")}
-            >
-              <User className="mr-2" />
-              Müşteri Girişi
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    className="flex-1 h-12 bg-purple-600 hover:bg-purple-700" 
+                    onClick={() => navigate("/login")}
+                  >
+                    <User className="mr-2" />
+                    Müşteri Girişi
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Müşteri girişi yakında aktif olacaktır.</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            
             <Button 
               className="flex-1 h-12 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700"
               onClick={() => navigate("/staff-login")}

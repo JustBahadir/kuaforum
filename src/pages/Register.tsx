@@ -20,10 +20,10 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-r from-blue-50 to-indigo-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-r from-pink-50 to-purple-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-md shadow-xl border-0">
         <CardContent className="p-0">
-          <div className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-t-lg p-6">
+          <div className="bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-t-lg p-6">
             <div className="relative">
               <Button 
                 variant="ghost" 
@@ -69,18 +69,10 @@ export default function Register() {
             <div className="flex flex-col items-center mt-4 space-y-3">
               <Button 
                 variant="outline"
-                onClick={() => navigate("/login")}
-                className="w-full flex items-center justify-center gap-2"
-              >
-                <span>Zaten hesabınız var mı? Giriş Yap</span>
-              </Button>
-              
-              <Button 
-                variant="outline"
                 onClick={() => navigate("/staff-login")}
                 className="w-full flex items-center justify-center gap-2"
               >
-                <span>Kuaför olarak kayıt olmak istiyorum</span>
+                <span>Zaten hesabınız var mı? Giriş Yap</span>
               </Button>
               
               <Button 

@@ -27,7 +27,7 @@ export default function StaffLogin() {
         
         if (data?.session) {
           const role = data.session.user.user_metadata?.role;
-          if (role === 'staff' || role === 'admin') {
+          if (role === 'staff' || role === 'admin' || role === 'business_owner') {
             // Doğrudan navigasyon - bekleme olmadan
             console.log("Oturum açık, hemen yönlendiriliyor...");
             navigate("/shop-home", { replace: true });
@@ -65,16 +65,16 @@ export default function StaffLogin() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-r from-purple-50 to-pink-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-r from-pink-50 to-purple-50 flex items-center justify-center p-4">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-r from-purple-50 to-pink-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-r from-pink-50 to-purple-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-md shadow-xl border-0">
-        <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-t-lg p-6">
+        <div className="bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-t-lg p-6">
           <div className="relative">
             <Button 
               variant="ghost" 
@@ -126,10 +126,10 @@ export default function StaffLogin() {
           <div className="flex flex-col items-center mt-4 space-y-2">
             <Button 
               variant="outline"
-              onClick={() => navigate("/login")}
+              onClick={() => navigate("/register")}
               className="w-full flex items-center justify-center gap-2"
             >
-              <span>Müşteri Girişi</span>
+              <span>Yeni Hesap Oluştur</span>
             </Button>
             
             <Button 

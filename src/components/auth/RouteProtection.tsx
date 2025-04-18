@@ -13,7 +13,7 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
   const [checking, setChecking] = useState(true);
 
   // Public pages that don't require authentication
-  const publicPages = ["/", "/login", "/admin", "/staff-login"];
+  const publicPages = ["/", "/login", "/register", "/staff-login", "/auth/callback"];
 
   useEffect(() => {
     let isMounted = true;
@@ -41,20 +41,48 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
           return;
         }
         
+        // Special case for profile completion
+        if (location.pathname === '/register-profile') {
+          if (isMounted) setChecking(false);
+          return;
+        }
+        
         const userRole = data.session.user.user_metadata?.role;
         console.log("Current user role:", userRole, "at pathname:", location.pathname);
         
-        // Check admin/staff routes access
+        // Check admin/staff/business_owner routes access
         if (location.pathname.startsWith('/shop-') || 
             location.pathname === '/shop-home' || 
             location.pathname.startsWith('/admin') ||
             location.pathname === '/admin/operations') {
-          if (userRole !== 'admin' && userRole !== 'staff') {
+          if (userRole !== 'admin' && userRole !== 'staff' && userRole !== 'business_owner') {
             if (isMounted) {
-              console.log("User is not staff/admin, redirecting to staff-login");
+              console.log("User is not staff/admin/business_owner, redirecting to staff-login");
               navigate('/staff-login');
             }
             return;
+          }
+        }
+        
+        // Check for incomplete profile
+        if (data.session && location.pathname !== '/register-profile') {
+          // Check if user has completed their profile
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('phone, gender, role')
+            .eq('id', data.session.user.id)
+            .single();
+            
+          if ((profileError && profileError.code !== 'PGRST116') || 
+              !profileData || 
+              !profileData.phone || 
+              !profileData.gender ||
+              !profileData.role) {
+            if (isMounted) {
+              console.log("Incomplete profile, redirecting to profile completion");
+              navigate('/register-profile');
+              return;
+            }
           }
         }
         

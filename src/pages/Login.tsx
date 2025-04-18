@@ -3,7 +3,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { StaffCardHeader } from "@/components/staff/StaffCardHeader";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
 import { z } from "zod";
@@ -19,7 +18,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
-import { Home, Info } from "lucide-react";
+import { Home, Info, ArrowLeft } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -61,7 +60,7 @@ export default function Login() {
       }
 
       toast.success("Giriş başarılı!");
-      navigate("/customer-dashboard");
+      navigate("/shop-home");
     } catch (error) {
       console.error("Login error:", error);
       toast.error("Giriş sırasında bir hata oluştu.");
@@ -75,10 +74,10 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-r from-blue-50 to-indigo-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-r from-pink-50 to-purple-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-md shadow-xl border-0">
         <CardContent className="p-0">
-          <div className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-t-lg p-6">
+          <div className="bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-t-lg p-6">
             <div className="relative">
               <Button 
                 variant="ghost" 
@@ -86,9 +85,9 @@ export default function Login() {
                 onClick={handleBackClick}
                 className="text-white hover:text-white/80 hover:bg-white/10 absolute top-0 left-0 p-2"
               >
-                <Home className="h-5 w-5" />
+                <ArrowLeft className="h-5 w-5" />
               </Button>
-              <h1 className="text-2xl font-semibold text-center mb-1">Müşteri Girişi</h1>
+              <h1 className="text-2xl font-semibold text-center mb-1">Kuaför Girişi</h1>
               <p className="text-sm text-center text-white/80">Hesabınıza giriş yapın</p>
             </div>
           </div>

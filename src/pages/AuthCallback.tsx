@@ -48,7 +48,7 @@ export default function AuthCallback() {
           }
         } else {
           // No session, redirect to login
-          navigate("/login");
+          navigate("/staff-login");
         }
       } catch (err: any) {
         console.error("Auth callback error:", err);
@@ -56,7 +56,7 @@ export default function AuthCallback() {
         toast.error("Giriş sırasında bir hata oluştu.");
         // Redirect to login after error
         setTimeout(() => {
-          navigate("/login");
+          navigate("/staff-login");
         }, 2000);
       } finally {
         setLoading(false);
