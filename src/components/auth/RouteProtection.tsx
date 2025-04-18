@@ -2,6 +2,7 @@
 import React, { ReactNode, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase/client';
+import { toast } from 'sonner';
 
 interface RouteProtectionProps {
   children: ReactNode;
@@ -33,9 +34,15 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
         
         const { data, error } = await supabase.auth.getSession();
         
-        if (error || !data.session) {
+        if (error) {
+          console.error("Session check error:", error);
+          throw error;
+        }
+        
+        if (!data.session) {
           if (isMounted) {
             console.log("No session, redirecting to login");
+            toast.error("Lütfen önce giriş yapın");
             navigate('/staff-login');
           }
           return;
@@ -58,6 +65,7 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
           if (userRole !== 'admin' && userRole !== 'staff' && userRole !== 'business_owner') {
             if (isMounted) {
               console.log("User is not staff/admin/business_owner, redirecting to staff-login");
+              toast.error("Bu sayfaya erişim yetkiniz yok");
               navigate('/staff-login');
             }
             return;
@@ -80,6 +88,7 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
               !profileData.role) {
             if (isMounted) {
               console.log("Incomplete profile, redirecting to profile completion");
+              toast.info("Lütfen önce profilinizi tamamlayın");
               navigate('/register-profile');
               return;
             }
@@ -89,7 +98,10 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
         if (isMounted) setChecking(false);
       } catch (error) {
         console.error("RouteProtection: Unexpected error", error);
-        if (isMounted) setChecking(false);
+        if (isMounted) {
+          setChecking(false);
+          toast.error("Oturum kontrolü sırasında bir hata oluştu");
+        }
       }
     };
     
@@ -98,7 +110,7 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
     // Set a maximum timeout to avoid infinite loading
     timeout = setTimeout(() => {
       if (isMounted) setChecking(false);
-    }, 1500);
+    }, 3000);
     
     return () => {
       isMounted = false;
@@ -108,8 +120,10 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
 
   if (checking && !publicPages.includes(location.pathname)) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+      <div className="min-h-screen flex flex-col items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500 mb-4"></div>
+        <p className="text-lg">Yükleniyor...</p>
+        <p className="text-sm text-gray-500 mt-2">Oturum kontrolü yapılıyor</p>
       </div>
     );
   }

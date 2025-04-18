@@ -21,13 +21,16 @@ export function GoogleAuthButton({
     try {
       setLoading(true);
       
+      // Get the current origin for proper redirect
+      const redirectUrl = `${window.location.origin}/auth/callback`;
+      
       console.log("Google OAuth işlemi başlatılıyor...");
-      console.log("Redirect URL:", `${window.location.origin}/auth/callback`);
+      console.log("Redirect URL:", redirectUrl);
       
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: redirectUrl,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
@@ -39,6 +42,8 @@ export function GoogleAuthButton({
         console.error("Google auth error:", error);
         if (error.message.includes("provider is not enabled")) {
           toast.error("Google ile giriş henüz etkinleştirilmemiştir. Lütfen Supabase panelinden Google provider'ı aktifleştirin.");
+        } else if (error.message.includes("popup") || error.message.includes("blocked")) {
+          toast.error("Tarayıcı popup'ı engelledi. Lütfen popup izinlerinizi kontrol edin veya tarayıcı ayarlarınızı değiştirin.");
         } else {
           toast.error("Google ile giriş yapılırken bir hata oluştu: " + error.message);
         }
@@ -46,10 +51,15 @@ export function GoogleAuthButton({
       }
 
       console.log("Google OAuth yanıtı:", data);
+      toast.success("Google yönlendirmesi başlatılıyor...");
       // Success will be handled by the auth state change event or the redirect
     } catch (error: any) {
       console.error("Google auth error:", error);
-      toast.error(`Google ile ${mode === "signin" ? "giriş" : "kayıt"} sırasında bir hata oluştu: ${error.message}`);
+      if (error.message.includes("popup") || error.message.includes("blocked")) {
+        toast.error("Tarayıcı popup'ı engelledi. Lütfen popup izinlerinizi kontrol edin veya farklı bir tarayıcı deneyin.");
+      } else {
+        toast.error(`Google ile ${mode === "signin" ? "giriş" : "kayıt"} sırasında bir hata oluştu: ${error.message}`);
+      }
     } finally {
       setLoading(false);
     }

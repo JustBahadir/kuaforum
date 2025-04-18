@@ -11,6 +11,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
 
 export const LoginSection = () => {
   const navigate = useNavigate();
@@ -65,6 +66,16 @@ export const LoginSection = () => {
               </Button>
             </div>
           </Card>
+          
+          <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-100">
+            <h3 className="text-sm font-medium text-blue-800 flex items-center">
+              <Info className="h-4 w-4 mr-1" />
+              Kuaför girişi için
+            </h3>
+            <p className="text-xs text-blue-700 mt-1">
+              Şu an için sadece Google ile giriş desteklenmektedir. Kuaför girişi butonuna tıklayarak giriş sayfasına ulaşabilirsiniz.
+            </p>
+          </div>
         </div>
       </CardContent>
     </Card>
