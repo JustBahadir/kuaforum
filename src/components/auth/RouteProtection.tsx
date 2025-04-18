@@ -73,10 +73,16 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
                 toast.info("Henüz bir işletmeye atanmadığınız için sadece profil sayfasına erişebilirsiniz.");
               }
             }
-          } else if (userRole === 'business_owner' || userRole === 'admin') {
-            // İşletme sahibi, staff profile sayfasında ise shop-home'a yönlendir
-            if (location.pathname === '/staff-profile') {
-              if (isMounted) navigate('/shop-home');
+          } else if (userRole === 'business_owner') {
+            // İşletme sahibi, özel sayfalara erişim kontrolü
+            // İşletme sahibi kullanıcılar shop-home ve ilgili sayfalara erişebilir
+            const forbiddenPaths = ['/staff-profile'];
+            
+            if (forbiddenPaths.includes(location.pathname)) {
+              if (isMounted) {
+                navigate('/shop-home');
+                toast.info("Bu sayfaya erişim yetkiniz yok.");
+              }
             }
           }
         } catch (error) {

@@ -58,12 +58,40 @@ export async function updateProfile(data: ProfileUpdateData): Promise<any> {
     
     // ADIM 2: Edge function ile profile güncelleyin (RLS'yi bypass eder)
     try {
-      const { data: fnResult, error: fnError } = await supabase.functions.invoke('get_current_user_role');
+      const { data: fnResult, error: fnError } = await supabase.functions.invoke('get_current_user_role', {
+        body: {
+          action: 'update_profile',
+          profile_data: {
+            first_name: data.first_name,
+            last_name: data.last_name,
+            phone: data.phone,
+            gender: data.gender, 
+            birthdate: data.birthdate,
+            role: data.role,
+            avatar_url: data.avatar_url,
+            address: data.address,
+            iban: data.iban
+          }
+        }
+      });
       
       if (fnError) {
         console.warn("Edge function hatası:", fnError);
       } else {
         console.log("Edge function başarıyla çalıştı, profil güncellendi");
+        // Edge function başarılı ise, burada dönüş yapabiliriz
+        return {
+          id: user.id,
+          first_name: data.first_name,
+          last_name: data.last_name,
+          phone: data.phone,
+          gender: data.gender,
+          birthdate: data.birthdate,
+          role: data.role,
+          avatar_url: data.avatar_url,
+          address: data.address,
+          iban: data.iban
+        };
       }
     } catch (fnErr) {
       console.warn("Edge function çağrı hatası:", fnErr);

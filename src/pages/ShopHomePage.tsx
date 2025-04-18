@@ -26,6 +26,9 @@ export default function ShopHomePage() {
     isLoadingSaatler
   } = useShopData(dukkanId);
 
+  // İşletme sahibi veya admin ise düzenleme yapabilir
+  const canEdit = userRole === 'business_owner' || userRole === 'admin';
+
   if (loading) {
     return (
       <StaffLayout>
@@ -43,7 +46,7 @@ export default function ShopHomePage() {
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>
         </Alert>
-        {userRole === 'admin' && (
+        {canEdit && (
           <div className="text-center mt-6">
             <Button onClick={() => window.location.href = "/create-shop"}>
               Dükkan Oluştur
@@ -61,7 +64,7 @@ export default function ShopHomePage() {
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>Dükkan bilgileri bulunamadı.</AlertDescription>
         </Alert>
-        {userRole === 'admin' && (
+        {canEdit && (
           <div className="text-center mt-6">
             <Button onClick={() => window.location.href = "/create-shop"}>
               Dükkan Oluştur
@@ -78,15 +81,17 @@ export default function ShopHomePage() {
         <ShopProfileHeader 
           dukkanData={dukkanData} 
           userRole={userRole} 
+          canEdit={canEdit}
           queryClient={queryClient} 
         />
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="md:col-span-1 space-y-6">
-            <ShopContactCard dukkanData={dukkanData} />
+            <ShopContactCard dukkanData={dukkanData} canEdit={canEdit} />
             <ShopWorkingHoursCard 
               calisma_saatleri={calisma_saatleri} 
               userRole={userRole}
+              canEdit={canEdit}
               dukkanId={dukkanData.id}
             />
           </div>
@@ -94,14 +99,16 @@ export default function ShopHomePage() {
           <div className="md:col-span-2 space-y-6">
             <ShopGalleryCard 
               dukkanId={dukkanData.id} 
-              userRole={userRole} 
+              userRole={userRole}
+              canEdit={canEdit}
               queryClient={queryClient} 
             />
             <ShopPersonnelCard 
               personelListesi={personelListesi} 
-              userRole={userRole} 
+              userRole={userRole}
+              canEdit={canEdit}
             />
-            <ShopServicesCard />
+            <ShopServicesCard canEdit={canEdit} />
           </div>
         </div>
       </div>

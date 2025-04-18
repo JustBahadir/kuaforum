@@ -67,7 +67,7 @@ serve(async (req) => {
       // Personel bilgisini al (staff ve işletme sahibi için)
       const { data: personnelData, error: personnelError } = await supabaseClient
         .from("personel")
-        .select("*")
+        .select("*, dukkanlar(*)")
         .eq("auth_id", user.id)
         .maybeSingle();
         
@@ -144,7 +144,8 @@ serve(async (req) => {
             phone: userMetadata.phone || "",
             gender: userMetadata.gender || null
           },
-          personnel: personnelData || null
+          personnel: personnelData || null,
+          dukkan: personnelData?.dukkanlar || null
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
