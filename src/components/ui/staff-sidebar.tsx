@@ -48,7 +48,7 @@ const NavItem = ({ href, title, icon, active, onClick }: NavItemProps) => {
 
 export function StaffSidebar() {
   const location = useLocation();
-  const { userRole, userName, handleLogout } = useCustomerAuth();
+  const { userName, userRole, handleLogout } = useCustomerAuth();
   const path = location.pathname;
   const [isOpen, setIsOpen] = useState(false);
 
@@ -67,7 +67,9 @@ export function StaffSidebar() {
     { href: "/settings", title: "Ayarlar", icon: <Settings size={18} />, roles: ["admin", "staff"] },
   ];
 
-  const filteredNavItems = navItems.filter(item => item.roles.includes(userRole || ""));
+  const filteredNavItems = navItems.filter(item => 
+    item.roles.includes(userRole)
+  );
 
   // Close mobile sidebar when route changes
   useEffect(() => {
@@ -97,7 +99,7 @@ export function StaffSidebar() {
               <div className="text-center py-3 border-b">
                 <p className="text-sm text-muted-foreground">Hoşgeldiniz</p>
                 <p className="font-medium">{userName || "Kullanıcı"}</p>
-                <p className="text-xs text-muted-foreground mt-1">{userRole === 'admin' ? 'Dükkan Sahibi' : 'Personel'}</p>
+                <p className="text-xs text-muted-foreground mt-1">{isAdmin ? 'Dükkan Sahibi' : 'Personel'}</p>
               </div>
 
               <div className="flex-1 overflow-auto py-2 px-2">
@@ -140,7 +142,7 @@ export function StaffSidebar() {
           <div className="text-center py-2 mb-2">
             <p className="text-sm text-muted-foreground">Hoşgeldiniz</p>
             <p className="font-medium">{userName || "Kullanıcı"}</p>
-            <p className="text-xs text-muted-foreground mt-1">{userRole === 'admin' ? 'Dükkan Sahibi' : 'Personel'}</p>
+            <p className="text-xs text-muted-foreground mt-1">{isAdmin ? 'Dükkan Sahibi' : 'Personel'}</p>
           </div>
           
           <nav className="flex flex-col gap-1 overflow-y-auto">

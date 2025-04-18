@@ -3,3 +3,6 @@ project_id = "xkbjjcizncwkrouvoujw"
 
 [functions.recover_customer_operations]
 verify_jwt = false
+
+[functions.google-auth]
+verify_jwt = false

@@ -1,295 +1,153 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { StaffCardHeader } from "@/components/staff/StaffCardHeader";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
-import { authenticationService } from "@/lib/auth/services/authenticationService";
-import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
 import { Home } from "lucide-react";
-
-// Form schema for login
-const loginSchema = z.object({
-  email: z.string().email({ message: "Geçerli bir e-posta adresi giriniz" }),
-  password: z.string().min(6, { message: "Şifre en az 6 karakter olmalıdır" }),
-});
-
-// Form schema for registration
-const registerSchema = z.object({
-  email: z.string().email({ message: "Geçerli bir e-posta adresi giriniz" }),
-  password: z.string().min(6, { message: "Şifre en az 6 karakter olmalıdır" }),
-  firstName: z.string().min(2, { message: "Ad en az 2 karakter olmalıdır" }),
-  lastName: z.string().min(2, { message: "Soyad en az 2 karakter olmalıdır" }),
-  phone: z.string().min(10, { message: "Geçerli bir telefon numarası giriniz" }),
-});
 
 export default function Login() {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState("login");
+  const [loading, setLoading] = useState(true);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loginLoading, setLoginLoading] = useState(false);
 
-  // Define login form
-  const loginForm = useForm<z.infer<typeof loginSchema>>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-    },
-  });
-
-  // Define register form
-  const registerForm = useForm<z.infer<typeof registerSchema>>({
-    resolver: zodResolver(registerSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-      firstName: "",
-      lastName: "",
-      phone: "",
-    },
-  });
-
-  // Handle login submission
-  const onLoginSubmit = async (values: z.infer<typeof loginSchema>) => {
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: values.email,
-        password: values.password,
-      });
-
-      if (error) {
-        toast.error("Giriş yapılamadı: " + error.message);
-        return;
+  // Check if user is already logged in
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        
+        if (error) throw error;
+        
+        if (data.session) {
+          // User is logged in, check role and redirect
+          const userRole = data.session.user.user_metadata?.role;
+          
+          if (userRole === "admin") {
+            navigate("/shop-home", { replace: true });
+          } else if (userRole === "staff") {
+            navigate("/staff-profile", { replace: true });
+          } else {
+            // If no role or customer role
+            navigate("/profile-setup", { replace: true });
+          }
+        }
+      } catch (err) {
+        console.error("Login: Beklenmeyen hata:", err);
+      } finally {
+        setLoading(false);
       }
+    };
+    
+    checkSession();
+  }, [navigate]);
 
-      toast.success("Giriş başarılı!");
-      navigate("/customer-dashboard");
-    } catch (error) {
-      console.error("Login error:", error);
-      toast.error("Giriş sırasında bir hata oluştu.");
-    } finally {
-      setLoading(false);
+  const handleAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!email || !password) {
+      toast.error("E-posta ve şifre gerekli");
+      return;
     }
-  };
-
-  // Handle register submission
-  const onRegisterSubmit = async (values: z.infer<typeof registerSchema>) => {
-    setLoading(true);
+    
+    setLoginLoading(true);
+    
     try {
-      // Register the user
-      const { data, error } = await supabase.auth.signUp({
-        email: values.email,
-        password: values.password,
-        options: {
-          data: {
-            first_name: values.firstName,
-            last_name: values.lastName,
-            phone: values.phone,
-            role: "customer",
-          },
-        },
-      });
-
-      if (error) {
-        toast.error("Kayıt yapılamadı: " + error.message);
-        return;
-      }
-
-      // Create profile in the profiles table
-      if (data.user) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert([
-            {
-              id: data.user.id,
-              first_name: values.firstName,
-              last_name: values.lastName,
-              phone: values.phone,
-              role: 'customer',
-            },
-          ]);
-
-        if (profileError) {
-          console.error("Profile creation error:", profileError);
-          toast.error("Profil oluşturulurken bir hata oluştu.");
+      // Check if the email is a developer email
+      if (email === "ergun@gmail.com" || email === "nimet@gmail.com") {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+        
+        if (error) {
+          toast.error("Giriş yapılamadı: " + error.message);
           return;
         }
+        
+        toast.success("Giriş başarılı!");
+        
+        // Redirect based on known roles
+        if (email === "ergun@gmail.com") {
+          navigate("/shop-home");
+        } else if (email === "nimet@gmail.com") {
+          navigate("/staff-profile");
+        }
+      } else {
+        toast.error("Bu e-posta adresi ile giriş yapamazsınız. Lütfen Google ile giriş yapın.");
       }
-
-      toast.success("Kayıt başarılı! E-posta adresinizi doğrulayın.");
-      setActiveTab("login");
-      registerForm.reset();
-    } catch (error) {
-      console.error("Registration error:", error);
-      toast.error("Kayıt sırasında bir hata oluştu.");
+    } catch (error: any) {
+      toast.error("Giriş yapılırken hata oluştu: " + error.message);
     } finally {
-      setLoading(false);
+      setLoginLoading(false);
     }
   };
 
-  const handleBackClick = () => {
-    navigate("/");
-  };
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-blue-50 to-indigo-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-r from-blue-50 to-indigo-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-md shadow-xl border-0">
-        <StaffCardHeader onBack={handleBackClick} />
-        <CardContent className="p-6">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Giriş</TabsTrigger>
-              <TabsTrigger value="register">Kayıt</TabsTrigger>
-            </TabsList>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-xl text-center">Kuaför Randevu Sistemi</CardTitle>
+          <CardDescription className="text-center">Giriş yapın veya hesap oluşturun</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-4">
+            <GoogleAuthButton />
             
-            <TabsContent value="login">
-              <Form {...loginForm}>
-                <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
-                  <FormField
-                    control={loginForm.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>E-posta</FormLabel>
-                        <FormControl>
-                          <Input placeholder="ornek@email.com" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={loginForm.control}
-                    name="password"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Şifre</FormLabel>
-                        <FormControl>
-                          <Input type="password" placeholder="******" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? "Giriş Yapılıyor..." : "Giriş Yap"}
-                  </Button>
-                </form>
-              </Form>
-            </TabsContent>
+            <div className="flex items-center">
+              <div className="h-px flex-1 bg-gray-200"></div>
+              <span className="px-4 text-sm text-gray-500">veya</span>
+              <div className="h-px flex-1 bg-gray-200"></div>
+            </div>
             
-            <TabsContent value="register">
-              <Form {...registerForm}>
-                <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={registerForm.control}
-                      name="firstName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Ad</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Ad" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={registerForm.control}
-                      name="lastName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Soyad</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Soyad" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  <FormField
-                    control={registerForm.control}
-                    name="phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Telefon</FormLabel>
-                        <FormControl>
-                          <Input placeholder="0555 555 55 55" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+            <div className="space-y-2">
+              <p className="text-sm text-center text-gray-600">Sadece yönetici girişi</p>
+              <form onSubmit={handleAdminLogin} className="space-y-3">
+                <div>
+                  <Label htmlFor="email">E-posta</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="name@example.com"
                   />
-                  
-                  <FormField
-                    control={registerForm.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>E-posta</FormLabel>
-                        <FormControl>
-                          <Input placeholder="ornek@email.com" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                </div>
+                <div>
+                  <Label htmlFor="password">Şifre</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="********"
                   />
-                  
-                  <FormField
-                    control={registerForm.control}
-                    name="password"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Şifre</FormLabel>
-                        <FormControl>
-                          <Input type="password" placeholder="******" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? "Kayıt Yapılıyor..." : "Kayıt Ol"}
-                  </Button>
-                </form>
-              </Form>
-            </TabsContent>
-          </Tabs>
-
-          <div className="flex flex-col items-center mt-4 space-y-2">
+                </div>
+                <Button type="submit" variant="outline" className="w-full" disabled={loginLoading}>
+                  {loginLoading ? "Giriş yapılıyor..." : "Yönetici Girişi"}
+                </Button>
+              </form>
+            </div>
+          </div>
+          
+          <div className="flex justify-center">
             <Button 
-              variant="outline"
-              onClick={() => navigate("/staff-login")}
-              className="w-full flex items-center justify-center gap-2"
-            >
-              <span>Personel Girişi</span>
-            </Button>
-            
-            <Button 
-              variant="secondary" 
-              onClick={handleBackClick}
+              variant="ghost" 
+              onClick={() => navigate("/")}
               className="w-full flex items-center justify-center gap-2"
             >
               <Home size={16} />

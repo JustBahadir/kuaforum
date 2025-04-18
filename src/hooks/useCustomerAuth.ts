@@ -36,40 +36,38 @@ export function useCustomerAuth() {
         const metadata = data.session.user.user_metadata;
         if (metadata) {
           setUserName(`${metadata.first_name || ''} ${metadata.last_name || ''}`.trim());
-          setUserRole(metadata.role || 'customer');
+          setUserRole(metadata.role || '');
           
           // Get dukkan info if needed
-          if (metadata.role === 'staff' || metadata.role === 'admin') {
-            if (metadata.role === 'admin') {
+          if (metadata.role === 'admin') {
+            const { data: dukkanData } = await supabase
+              .from('dukkanlar')
+              .select('id, ad')
+              .eq('sahibi_id', data.session.user.id)
+              .single();
+              
+            if (dukkanData) {
+              setDukkanId(dukkanData.id);
+              setDukkanAdi(dukkanData.ad || '');
+            }
+          } else if (metadata.role === 'staff') {
+            const { data: staffData } = await supabase
+              .from('personel')
+              .select('dukkan_id')
+              .eq('auth_id', data.session.user.id)
+              .maybeSingle();
+              
+            if (staffData?.dukkan_id) {
+              setDukkanId(staffData.dukkan_id);
+              
               const { data: dukkanData } = await supabase
                 .from('dukkanlar')
-                .select('id, ad')
-                .eq('sahibi_id', data.session.user.id)
+                .select('ad')
+                .eq('id', staffData.dukkan_id)
                 .single();
                 
               if (dukkanData) {
-                setDukkanId(dukkanData.id);
                 setDukkanAdi(dukkanData.ad || '');
-              }
-            } else if (metadata.role === 'staff') {
-              const { data: staffData } = await supabase
-                .from('personel')
-                .select('dukkan_id')
-                .eq('auth_id', data.session.user.id)
-                .single();
-                
-              if (staffData?.dukkan_id) {
-                setDukkanId(staffData.dukkan_id);
-                
-                const { data: dukkanData } = await supabase
-                  .from('dukkanlar')
-                  .select('ad')
-                  .eq('id', staffData.dukkan_id)
-                  .single();
-                  
-                if (dukkanData) {
-                  setDukkanAdi(dukkanData.ad || '');
-                }
               }
             }
           }

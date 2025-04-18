@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
@@ -7,8 +7,9 @@ import { Toaster } from "@/components/ui/sonner";
 import { RouteProtection } from "@/components/auth/RouteProtection";
 import { ThemeProvider } from "@/components/ui/theme-provider";
 import HomePage from "./pages/HomePage";
-import StaffLogin from "./pages/StaffLogin";
-import StaffRegister from "./pages/StaffRegister";
+import Login from "./pages/Login";
+import ProfileSetup from "./pages/ProfileSetup";
+import StaffProfile from "./pages/StaffProfile";
 import CustomerAuth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import CreateShop from "./pages/CreateShop";
@@ -19,7 +20,6 @@ import CustomerDashboard from "./pages/CustomerDashboard";
 import Customers from "./pages/Customers";
 import CustomerProfile from "./pages/CustomerProfile";
 import ShopHomePage from "./pages/ShopHomePage";
-import StaffProfile from "./pages/StaffProfile";
 import NotFound from "./pages/NotFound";
 import ShopStatistics from "./pages/ShopStatistics";
 import Settings from "./pages/Settings";
@@ -27,7 +27,6 @@ import ShopSettings from "./pages/ShopSettings";
 import OperationsHistory from "./pages/OperationsHistory";
 import CustomerOperations from "./pages/operations/CustomerOperations";
 import StaffOperations from "./pages/operations/StaffOperations";
-import Login from "./pages/Login";
 
 // Create the query client
 const queryClient = new QueryClient({
@@ -40,6 +39,10 @@ const queryClient = new QueryClient({
 });
 
 function App() {
+  useEffect(() => {
+    // Set up any global listeners or config here
+  }, []);
+
   return (
     <ThemeProvider defaultTheme="light">
       <QueryClientProvider client={queryClient}>
@@ -52,9 +55,7 @@ function App() {
               {/* Auth Routes */}
               <Route path="/login" element={<Login />} />
               <Route path="/auth" element={<CustomerAuth />} />
-              <Route path="/staff-login" element={<StaffLogin />} />
-              <Route path="/admin" element={<StaffLogin />} />
-              <Route path="/admin/register" element={<StaffRegister />} />
+              <Route path="/profile-setup" element={<ProfileSetup />} />
               
               {/* Customer Routes */}
               <Route path="/customer-dashboard/*" element={<CustomerDashboard />} />

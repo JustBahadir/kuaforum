@@ -28,6 +28,21 @@ export const getUserNameWithTitle = async (): Promise<string> => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return "Değerli Müşterimiz";
 
+    // Use user metadata first (more reliable and faster)
+    const metadata = user.user_metadata;
+    if (metadata?.first_name || metadata?.last_name) {
+      const title = metadata.gender === 'erkek' ? 'Bay' : 
+                   metadata.gender === 'kadın' ? 'Bayan' : '';
+      
+      const firstName = metadata.first_name || '';
+      const lastName = metadata.last_name || '';
+      
+      if (firstName || lastName) {
+        return `${title} ${firstName} ${lastName}`.trim();
+      }
+    }
+
+    // As a fallback, try to get from profiles table
     const profile = await getProfileData(user.id);
     if (!profile) return "Değerli Müşterimiz";
 
@@ -46,14 +61,31 @@ export const getUserNameWithTitle = async (): Promise<string> => {
   }
 };
 
-// Add getUserRole function to fix the missing method error
+// Use the security definer function to get user role
 export const getUserRole = async (): Promise<string | null> => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
 
-    const profile = await getProfileData(user.id);
-    return profile?.role || null;
+    // Try to get role from user metadata first (faster and doesn't trigger RLS)
+    if (user.user_metadata?.role) {
+      return user.user_metadata.role;
+    }
+
+    // Call the edge function as a fallback (avoid RLS issues)
+    const { data, error } = await supabase.functions.invoke('google-auth', {
+      body: {
+        action: 'getUserRole',
+        email: user.email
+      }
+    });
+
+    if (error) {
+      console.error("Error getting user role:", error);
+      return null;
+    }
+
+    return data?.role || null;
   } catch (error) {
     console.error("Error getting user role:", error);
     return null;

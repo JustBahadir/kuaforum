@@ -13,7 +13,7 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
   const [checking, setChecking] = useState(true);
 
   // Public pages that don't require authentication
-  const publicPages = ["/", "/login", "/admin", "/staff-login"];
+  const publicPages = ["/", "/login", "/services", "/appointments"];
 
   useEffect(() => {
     let isMounted = true;
@@ -30,6 +30,17 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
           if (isMounted) setChecking(false);
           return;
         }
+
+        // Special case for profile setup
+        if (location.pathname === "/profile-setup") {
+          const { data } = await supabase.auth.getSession();
+          if (!data.session) {
+            navigate('/login');
+          } else {
+            setChecking(false);
+          }
+          return;
+        }
         
         const { data, error } = await supabase.auth.getSession();
         
@@ -44,18 +55,48 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
         const userRole = data.session.user.user_metadata?.role;
         console.log("Current user role:", userRole, "at pathname:", location.pathname);
         
-        // Check admin/staff routes access
-        if (location.pathname.startsWith('/shop-') || 
-            location.pathname === '/shop-home' || 
-            location.pathname.startsWith('/admin') ||
-            location.pathname === '/admin/operations') {
-          if (userRole !== 'admin' && userRole !== 'staff') {
-            if (isMounted) {
-              console.log("User is not staff/admin, redirecting to staff-login");
-              navigate('/staff-login');
+        // Check admin routes access
+        if (location.pathname === '/shop-home' || 
+            location.pathname.startsWith('/shop-') || 
+            location.pathname.startsWith('/admin')) {
+            
+          // If user is not admin, check if they are connected to a shop as staff
+          if (userRole !== 'admin') {
+            if (userRole === 'staff') {
+              // For staff, check if they are connected to a shop
+              const { data: personelData } = await supabase
+                .from('personel')
+                .select('dukkan_id')
+                .eq('auth_id', data.session.user.id)
+                .maybeSingle();
+                
+              if (!personelData?.dukkan_id) {
+                // Staff not connected to any shop, redirect to staff profile
+                navigate('/staff-profile');
+                return;
+              }
+            } else {
+              // Not admin or staff, redirect to login
+              navigate('/login');
+              return;
             }
-            return;
           }
+        }
+        
+        // Staff profile is only accessible by staff or admin
+        if (location.pathname === '/staff-profile' && 
+            userRole !== 'staff' && 
+            userRole !== 'admin') {
+          navigate('/login');
+          return;
+        }
+        
+        // Customer routes are only for customers
+        if ((location.pathname.startsWith('/customer-') || 
+             location.pathname === '/customer-dashboard') && 
+            userRole !== 'customer') {
+          navigate('/login');
+          return;
         }
         
         if (isMounted) setChecking(false);
