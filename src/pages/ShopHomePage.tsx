@@ -1,21 +1,27 @@
-
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { StaffLayout } from "@/components/ui/staff-layout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Store, Calendar, Users, Scissors, FileText } from "lucide-react";
+import { MapPin, Phone, ExternalLink, Copy } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
+import { ShopProfileHeader } from "@/components/shop/ShopProfileHeader";
+import { ShopContactCard } from "@/components/shop/ShopContactCard";
+import { ShopWorkingHoursCard } from "@/components/shop/ShopWorkingHoursCard";
+import { ShopGalleryCard } from "@/components/shop/ShopGalleryCard";
+import { ShopPersonnelCard } from "@/components/shop/ShopPersonnelCard";
+import { ShopServicesCard } from "@/components/shop/ShopServicesCard";
+import { QueryClient } from "@tanstack/react-query";
 
 export default function ShopHomePage() {
   const navigate = useNavigate();
-  const { refreshProfile, userRole, dukkanId, dukkanAdi } = useCustomerAuth();
+  const { refreshProfile, userRole, dukkanId } = useCustomerAuth();
   const [shopData, setShopData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [workingHours, setWorkingHours] = useState<any[]>([]);
   const [personnel, setPersonnel] = useState<any[]>([]);
+  const queryClient = new QueryClient();
   
   useEffect(() => {
     const loadShopData = async () => {
@@ -127,29 +133,15 @@ export default function ShopHomePage() {
     return (
       <StaffLayout>
         <div className="container mx-auto p-6">
-          <Card className="border rounded-lg p-6 shadow-md">
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <h2 className="text-xl font-semibold mb-4">Henüz bir dükkan bulunamadı</h2>
-              {userRole === 'admin' ? (
-                <>
-                  <p className="text-gray-600 mb-6">Dükkanınızı oluşturmak için aşağıdaki butona tıklayın.</p>
-                  <Button 
-                    onClick={() => navigate('/create-shop')}
-                    className="bg-purple-600 hover:bg-purple-700"
-                  >
-                    Dükkan Oluştur
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <p className="text-gray-600 mb-6">Bir dükkana bağlanmak için profil sayfanızı ziyaret edin.</p>
-                  <Button onClick={() => navigate('/staff-profile')}>
-                    Profilime Git
-                  </Button>
-                </>
-              )}
-            </CardContent>
-          </Card>
+          <div className="text-center">
+            <h2 className="text-2xl font-semibold mb-4">Henüz bir dükkan bulunamadı</h2>
+            <Button 
+              onClick={() => navigate('/create-shop')}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              Dükkan Oluştur
+            </Button>
+          </div>
         </div>
       </StaffLayout>
     );
@@ -158,217 +150,38 @@ export default function ShopHomePage() {
   return (
     <StaffLayout>
       <div className="container mx-auto p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">Salon Yönetim Sayfası</h1>
+        <ShopProfileHeader 
+          dukkanData={shopData} 
+          userRole={userRole} 
+          queryClient={queryClient} 
+        />
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+          <div className="space-y-6">
+            <ShopContactCard dukkanData={shopData} />
+            <ShopWorkingHoursCard 
+              calisma_saatleri={workingHours}
+              userRole={userRole}
+              dukkanId={dukkanId}
+            />
+          </div>
+
+          <div className="lg:col-span-2">
+            <ShopGalleryCard 
+              dukkanId={shopData.id}
+              userRole={userRole}
+              queryClient={queryClient}
+            />
+          </div>
         </div>
 
-        {/* Shop Profile Card */}
-        <Card className="bg-purple-50 mb-6">
-          <CardContent className="p-6">
-            <div className="flex items-start gap-6">
-              <div className="w-1/4">
-                <div className="w-full aspect-square rounded-lg bg-white flex items-center justify-center overflow-hidden border">
-                  {shopData?.logo_url ? (
-                    <img 
-                      src={shopData.logo_url} 
-                      alt={shopData.ad} 
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <Store className="h-16 w-16 text-gray-400" />
-                  )}
-                </div>
-              </div>
-              
-              <div className="flex-1">
-                <h2 className="text-2xl font-bold mb-2">{shopData?.ad || "Crazy Kuaför"}</h2>
-                <p className="text-gray-600 mb-4">{shopData?.adres || "Bornova, İzmir"}</p>
-                
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    className="w-full md:w-auto"
-                    onClick={() => navigate('/shop-settings')}
-                  >
-                    Dükkan Bilgilerini Düzenle
-                  </Button>
-                  
-                  {userRole === 'admin' && (
-                    <Button 
-                      variant="outline"
-                      className="w-full md:w-auto"
-                      onClick={() => navigate('/personnel')}
-                    >
-                      Personel Yönetimi
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+          <ShopPersonnelCard 
+            personelListesi={personnel}
+            userRole={userRole}
+          />
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Quick Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Hızlı İşlemler</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <Button
-                    variant="outline"
-                    className="h-auto aspect-square flex flex-col items-center justify-center p-4 gap-2"
-                    onClick={() => navigate('/appointments')}
-                  >
-                    <Calendar className="h-6 w-6" />
-                    <span>Randevular</span>
-                  </Button>
-                  
-                  <Button
-                    variant="outline"
-                    className="h-auto aspect-square flex flex-col items-center justify-center p-4 gap-2"
-                    onClick={() => navigate('/customers')}
-                  >
-                    <Users className="h-6 w-6" />
-                    <span>Müşteriler</span>
-                  </Button>
-                  
-                  <Button
-                    variant="outline"
-                    className="h-auto aspect-square flex flex-col items-center justify-center p-4 gap-2"
-                    onClick={() => navigate('/admin/operations')}
-                  >
-                    <Scissors className="h-6 w-6" />
-                    <span>Hizmetler</span>
-                  </Button>
-                  
-                  <Button
-                    variant="outline"
-                    className="h-auto aspect-square flex flex-col items-center justify-center p-4 gap-2"
-                    onClick={() => navigate('/operations-history')}
-                  >
-                    <FileText className="h-6 w-6" />
-                    <span>İşlem Geçmişi</span>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Shop Gallery */}
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Dükkan Galerisi</CardTitle>
-                <Button variant="outline" size="sm" onClick={() => navigate('/shop-settings')}>
-                  Medya Ekle
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {Array.from({ length: 6 }).map((_, index) => (
-                    <div 
-                      key={index}
-                      className="aspect-square rounded-md border border-dashed flex items-center justify-center bg-gray-50"
-                    >
-                      <div className="text-gray-400 text-center">
-                        <span className="block text-3xl">+</span>
-                        <span className="text-xs">Fotoğraf Ekle</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Right Column */}
-          <div className="space-y-6">
-            {/* Working Hours */}
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Çalışma Saatleri</CardTitle>
-                {userRole === 'admin' && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => navigate('/shop-settings')}
-                  >
-                    Düzenle
-                  </Button>
-                )}
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {workingHours && workingHours.length > 0 ? (
-                    workingHours.map((day) => (
-                      <div key={day.id} className="flex justify-between items-center">
-                        <span className="font-medium">{day.gun}</span>
-                        <span>
-                          {day.kapali 
-                            ? <span className="text-red-500">KAPALI</span>
-                            : `${day.acilis || '--:--'} - ${day.kapanis || '--:--'}`
-                          }
-                        </span>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-gray-500 text-center py-2">
-                      Çalışma saatleri henüz ayarlanmamış
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Staff Members */}
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Uzman Personeller</CardTitle>
-                {userRole === 'admin' && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => navigate('/personnel')}
-                  >
-                    Personel Yönetimi
-                  </Button>
-                )}
-              </CardHeader>
-              <CardContent>
-                {personnel && personnel.length > 0 ? (
-                  <div className="space-y-3">
-                    {personnel.map((person) => (
-                      <div key={person.id} className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-                          {person.avatar_url ? (
-                            <img 
-                              src={person.avatar_url} 
-                              alt={person.ad_soyad} 
-                              className="w-full h-full object-cover rounded-full"
-                            />
-                          ) : (
-                            <span className="text-sm font-medium">
-                              {person.ad_soyad.split(' ').map((part: string) => part[0]).join('').toUpperCase()}
-                            </span>
-                          )}
-                        </div>
-                        <div>
-                          <p className="font-medium">{person.ad_soyad}</p>
-                          <p className="text-sm text-gray-500">Personel</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-gray-500 text-center py-2">
-                    Henüz personel eklenmemiş
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+          <ShopServicesCard />
         </div>
       </div>
     </StaffLayout>
