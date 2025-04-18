@@ -32,41 +32,15 @@ export function useCustomerAuth() {
         setIsAuthenticated(true);
         setUserId(data.session.user.id);
         
-        // Get role and user profile using edge function
-        try {
-          const { data: userData, error: userDataError } = await supabase.functions.invoke('get_current_user_role');
+        // Get user metadata from session
+        const metadata = data.session.user.user_metadata;
+        if (metadata) {
+          setUserName(`${metadata.first_name || ''} ${metadata.last_name || ''}`.trim());
+          setUserRole(metadata.role || 'customer');
           
-          if (userDataError) {
-            console.error('Error fetching user data:', userDataError);
-          } else {
-            console.log("User data from edge function:", userData);
-            
-            // Set role and user data from edge function response
-            // Make sure to check for business_owner role too
-            const role = userData?.role || 'customer';
-            setUserRole(role);
-            
-            // For backward compatibility, treat 'admin' and 'business_owner' the same
-            if (role === 'admin' || role === 'business_owner') {
-              console.log("User is admin or business owner");
-            }
-            
-            // Set user name from profile data
-            if (userData?.profile) {
-              const profile = userData.profile;
-              setUserName(`${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Kullanıcı');
-            }
-            
-            // Set dukkan data if available
-            if (userData?.personnel?.dukkan_id) {
-              setDukkanId(userData.personnel.dukkan_id);
-              
-              // Get dukkan name if available
-              if (userData.dukkan) {
-                setDukkanAdi(userData.dukkan.ad || '');
-              }
-            } else if (userData?.role === 'business_owner' || userData?.role === 'admin') {
-              // For business owner, fetch dukkan data directly
+          // Get dukkan info if needed
+          if (metadata.role === 'staff' || metadata.role === 'admin') {
+            if (metadata.role === 'admin') {
               const { data: dukkanData } = await supabase
                 .from('dukkanlar')
                 .select('id, ad')
@@ -74,22 +48,30 @@ export function useCustomerAuth() {
                 .single();
                 
               if (dukkanData) {
-                console.log("Found dukkan data for business owner:", dukkanData);
                 setDukkanId(dukkanData.id);
                 setDukkanAdi(dukkanData.ad || '');
-              } else {
-                console.log("No dukkan found for business owner");
+              }
+            } else if (metadata.role === 'staff') {
+              const { data: staffData } = await supabase
+                .from('personel')
+                .select('dukkan_id')
+                .eq('auth_id', data.session.user.id)
+                .single();
+                
+              if (staffData?.dukkan_id) {
+                setDukkanId(staffData.dukkan_id);
+                
+                const { data: dukkanData } = await supabase
+                  .from('dukkanlar')
+                  .select('ad')
+                  .eq('id', staffData.dukkan_id)
+                  .single();
+                  
+                if (dukkanData) {
+                  setDukkanAdi(dukkanData.ad || '');
+                }
               }
             }
-          }
-        } catch (fetchError) {
-          console.error('Error fetching user data:', fetchError);
-          
-          // Fallback to user metadata if edge function fails
-          const metadata = data.session.user.user_metadata;
-          if (metadata) {
-            setUserName(`${metadata.first_name || ''} ${metadata.last_name || ''}`.trim() || 'Kullanıcı');
-            setUserRole(metadata.role || 'customer');
           }
         }
       } else {

@@ -3,17 +3,11 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { StaffCardHeader } from "@/components/staff/StaffCardHeader";
 import { LoginTabs } from "@/components/staff/LoginTabs";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
-import { Home, ArrowLeft, Info } from "lucide-react";
-import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Home } from "lucide-react";
 
 export default function StaffLogin() {
   const navigate = useNavigate();
@@ -27,7 +21,7 @@ export default function StaffLogin() {
         
         if (data?.session) {
           const role = data.session.user.user_metadata?.role;
-          if (role === 'staff' || role === 'admin' || role === 'business_owner') {
+          if (role === 'staff' || role === 'admin') {
             // Doğrudan navigasyon - bekleme olmadan
             console.log("Oturum açık, hemen yönlendiriliyor...");
             navigate("/shop-home", { replace: true });
@@ -65,71 +59,25 @@ export default function StaffLogin() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-r from-pink-50 to-purple-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-r from-purple-50 to-pink-50 flex items-center justify-center p-4">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-r from-pink-50 to-purple-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-r from-purple-50 to-pink-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-md shadow-xl border-0">
-        <div className="bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-t-lg p-6">
-          <div className="relative">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={handleBackClick}
-              className="text-white hover:text-white/80 hover:bg-white/10 absolute top-0 left-0"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <h1 className="text-2xl font-semibold text-center mb-1">Kuaför Girişi</h1>
-            <p className="text-sm text-center text-white/80">Hesabınıza giriş yapın</p>
-          </div>
-        </div>
-        
+        <StaffCardHeader onBack={handleBackClick} />
         <CardContent className="p-6">
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <div className="relative">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="absolute right-0 top-0 z-10"
-                      >
-                        <Info className="h-4 w-4 text-gray-500" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-xs">
-                      <p>Geliştirici hesabı için e-posta ile giriş aktif. Yeni kayıtlar yalnızca Google hesabıyla yapılabilir.</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-                
-                <GoogleAuthButton mode="signin" className="mb-4" />
-                
-                <div className="relative flex items-center my-4">
-                  <div className="flex-grow border-t border-gray-300"></div>
-                  <div className="px-3 text-sm text-gray-500">veya</div>
-                  <div className="flex-grow border-t border-gray-300"></div>
-                </div>
-              </div>
-            </div>
-            
-            <LoginTabs onSuccess={handleLoginSuccess} />
-          </div>
-          
+          <LoginTabs onSuccess={handleLoginSuccess} />
           <div className="flex flex-col items-center mt-4 space-y-2">
             <Button 
               variant="outline"
-              onClick={() => navigate("/register")}
+              onClick={() => navigate("/login")}
               className="w-full flex items-center justify-center gap-2"
             >
-              <span>Yeni Hesap Oluştur</span>
+              <span>Müşteri Girişi</span>
             </Button>
             
             <Button 

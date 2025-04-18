@@ -2,113 +2,65 @@
 import { supabase } from "../supabase/client";
 import { Profil } from "@/lib/supabase/types";
 
-// Profil verilerini güvenli şekilde alma
+// Function to get the user profile
 export const getProfileData = async (userId: string): Promise<Profil | null> => {
   try {
-    // Önce edge function ile almayı dene
-    try {
-      const { data: userData, error: edgeFnError } = await supabase.functions.invoke('get_current_user_role');
-      
-      if (!edgeFnError && userData?.profile) {
-        console.log("Profil edge function ile alındı");
-        return userData.profile as Profil;
-      }
-    } catch (edgeError) {
-      console.error("Edge function profil alma hatası:", edgeError);
-      // Edge function başarısız olursa devam et ve direkt sorgu dene
-    }
-    
-    // Normal sorgu ile profil al
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', userId)
-      .maybeSingle();
+      .single();
 
     if (error) {
-      console.error("Profil alma hatası:", error);
+      console.error("Error fetching profile:", error);
       return null;
     }
-    
     return data;
   } catch (error) {
-    console.error("Beklenmeyen profil alma hatası:", error);
+    console.error("Unexpected error fetching profile:", error);
     return null;
   }
 };
 
-// Adı unvan ile getir
+// Add getUserNameWithTitle function
 export const getUserNameWithTitle = async (): Promise<string> => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return "Değerli Müşterimiz";
-    
-    // Önce user metadata'dan bilgi almaya çalış
-    const userMetadata = user.user_metadata || {};
-    const firstName = userMetadata.first_name || '';
-    const lastName = userMetadata.last_name || '';
-    const gender = userMetadata.gender || '';
-    
-    if (firstName || lastName) {
-      const title = gender === 'male' ? 'Bay' : 
-                   gender === 'female' ? 'Bayan' : '';
-      
-      return `${title} ${firstName} ${lastName}`.trim();
-    }
 
-    // Metadata'da yoksa veritabanından al
     const profile = await getProfileData(user.id);
     if (!profile) return "Değerli Müşterimiz";
 
-    const title = profile.gender === 'male' ? 'Bay' : 
-                 profile.gender === 'female' ? 'Bayan' : '';
+    const title = profile.gender === 'erkek' ? 'Bay' : 
+                 profile.gender === 'kadın' ? 'Bayan' : '';
     
-    if (!profile.first_name && !profile.last_name) {
-      return "Değerli Müşterimiz";
-    }
+    const firstName = profile.first_name || '';
+    const lastName = profile.last_name || '';
     
-    return `${title} ${profile.first_name || ''} ${profile.last_name || ''}`.trim();
+    if (!firstName && !lastName) return "Değerli Müşterimiz";
+    
+    return `${title} ${firstName} ${lastName}`.trim();
   } catch (error) {
-    console.error("İsim getirme hatası:", error);
+    console.error("Error getting user name with title:", error);
     return "Değerli Müşterimiz";
   }
 };
 
-// Kullanıcı rolünü getir
+// Add getUserRole function to fix the missing method error
 export const getUserRole = async (): Promise<string | null> => {
   try {
-    // Önce edge function ile almayı dene
-    try {
-      const { data: userData, error: edgeFnError } = await supabase.functions.invoke('get_current_user_role');
-      
-      if (!edgeFnError && userData?.role) {
-        console.log("Rol edge function ile alındı");
-        return userData.role as string;
-      }
-    } catch (edgeError) {
-      console.error("Edge function rol alma hatası:", edgeError);
-      // Edge function başarısız olursa devam et ve direkt sorgu dene
-    }
-    
-    // Eğer edge function başarısız olursa user metadatasından kontrol et
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
-    
-    // Metadata kontrolü
-    if (user.user_metadata?.role) {
-      return user.user_metadata.role;
-    }
-    
-    // Son çare olarak veritabanından al
+
     const profile = await getProfileData(user.id);
     return profile?.role || null;
   } catch (error) {
-    console.error("Rol getirme hatası:", error);
+    console.error("Error getting user role:", error);
     return null;
   }
 };
 
-// Geriye dönük uyumluluk için nesne olarak dışa aktar
+// Export as profileService object for backward compatibility
 export const profileService = {
   getProfileData,
   getUserNameWithTitle,

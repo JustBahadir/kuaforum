@@ -486,7 +486,6 @@ export type Database = {
           last_name: string | null
           phone: string | null
           role: Database["public"]["Enums"]["user_role"] | null
-          updated_at: string
         }
         Insert: {
           address?: string | null
@@ -501,7 +500,6 @@ export type Database = {
           last_name?: string | null
           phone?: string | null
           role?: Database["public"]["Enums"]["user_role"] | null
-          updated_at?: string
         }
         Update: {
           address?: string | null
@@ -516,7 +514,6 @@ export type Database = {
           last_name?: string | null
           phone?: string | null
           role?: Database["public"]["Enums"]["user_role"] | null
-          updated_at?: string
         }
         Relationships: [
           {
@@ -650,10 +647,6 @@ export type Database = {
       get_auth_user_role: {
         Args: Record<PropertyKey, never>
         Returns: string
-      }
-      get_current_user_role: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
       }
       get_customer_appointments: {
         Args: { p_customer_id: string }

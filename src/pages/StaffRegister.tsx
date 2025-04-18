@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,8 +9,6 @@ import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
-import { Phone } from 'lucide-react';
-import { formatPhoneNumber } from '@/utils/phoneFormatter';
 
 export default function StaffRegister() {
   const navigate = useNavigate();
@@ -18,7 +17,6 @@ export default function StaffRegister() {
   const [shopValidated, setShopValidated] = useState(false);
   const [shopName, setShopName] = useState('');
   const [shopId, setShopId] = useState<number | null>(null);
-  const [phoneError, setPhoneError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -39,6 +37,7 @@ export default function StaffRegister() {
     setError(null);
     
     try {
+      // Check if shop code exists
       const { data, error: shopError } = await supabase
         .from('dukkanlar')
         .select('id, ad')
@@ -65,11 +64,6 @@ export default function StaffRegister() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (formData.phone.replace(/\D/g, '').length !== 11) {
-      setPhoneError("Lütfen geçerli bir telefon numarası girin");
-      return;
-    }
-    
     if (!shopValidated) {
       setError("Lütfen önce dükkan kodunu doğrulayın");
       return;
@@ -79,6 +73,7 @@ export default function StaffRegister() {
     setError(null);
     
     try {
+      // Create auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -99,6 +94,7 @@ export default function StaffRegister() {
       }
 
       if (authData.user) {
+        // Create personnel record
         const { error: staffError } = await supabase
           .from('personel')
           .insert([
@@ -131,18 +127,6 @@ export default function StaffRegister() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, '').substring(0, 11);
-    
-    if (value.length < 11) {
-      setPhoneError("Lütfen tam bir telefon numarası girin");
-    } else {
-      setPhoneError(null);
-    }
-
-    setFormData({ ...formData, phone: formatPhoneNumber(value) });
   };
 
   return (
@@ -230,22 +214,13 @@ export default function StaffRegister() {
                 </div>
                 <div>
                   <Label htmlFor="phone">Telefon</Label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                    <Input
-                      id="phone"
-                      type="tel"
-                      value={formData.phone}
-                      onChange={handlePhoneChange}
-                      className="pl-10"
-                      placeholder="05XX XXX XX XX"
-                      inputMode="numeric"
-                      required
-                    />
-                  </div>
-                  {phoneError && (
-                    <p className="text-xs text-red-500">{phoneError}</p>
-                  )}
+                  <Input
+                    id="phone"
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    required
+                  />
                 </div>
                 <div>
                   <Label htmlFor="address">Adres</Label>

@@ -1,23 +1,20 @@
 
-import { ReactNode } from "react";
-import { StaffSidebar } from "@/components/ui/staff-sidebar";
+import React from "react";
+import { StaffSidebar } from "./staff-sidebar";
 
 interface StaffLayoutProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 export function StaffLayout({ children }: StaffLayoutProps) {
   return (
-    <div className="min-h-screen flex">
-      {/* Staff sidebar navigation */}
+    <div className="flex min-h-screen bg-background">
       <StaffSidebar />
       
-      {/* Main content area */}
-      <div className="flex-1 ml-0 md:ml-64 pt-16 md:pt-0">
-        <main className="p-4 md:p-6">
-          {children}
-        </main>
-      </div>
+      {/* Main content with padding and mobile spacing */}
+      <main className="w-full md:ml-64 p-3 md:p-4 pt-16 md:pt-4">
+        {children}
+      </main>
     </div>
   );
 }

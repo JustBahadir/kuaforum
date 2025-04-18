@@ -6,7 +6,7 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { Toaster } from "@/components/ui/sonner";
 import { RouteProtection } from "@/components/auth/RouteProtection";
 import { ThemeProvider } from "@/components/ui/theme-provider";
-import Landing from "./pages/Landing";
+import HomePage from "./pages/HomePage";
 import StaffLogin from "./pages/StaffLogin";
 import StaffRegister from "./pages/StaffRegister";
 import CustomerAuth from "./pages/Auth";
@@ -28,12 +28,8 @@ import OperationsHistory from "./pages/OperationsHistory";
 import CustomerOperations from "./pages/operations/CustomerOperations";
 import StaffOperations from "./pages/operations/StaffOperations";
 import Login from "./pages/Login";
-import HomePage from "./pages/HomePage";
-import AuthCallback from "./pages/AuthCallback";
-import RegisterProfile from "./pages/RegisterProfile";
-import Register from "./pages/Register";
-import StaffProfilePage from "./pages/StaffProfilePage";
 
+// Create the query client
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -51,20 +47,14 @@ function App() {
           <RouteProtection>
             <Routes>
               {/* Landing Page */}
-              <Route path="/" element={<Landing />} />
-              
-              {/* Previous HomePage now accessible at /home */}
-              <Route path="/home" element={<HomePage />} />
+              <Route path="/" element={<HomePage />} />
               
               {/* Auth Routes */}
               <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/auth/callback" element={<AuthCallback />} />
-              <Route path="/register-profile" element={<RegisterProfile />} />
-              
-              {/* Staff specific routes */}
+              <Route path="/auth" element={<CustomerAuth />} />
               <Route path="/staff-login" element={<StaffLogin />} />
-              <Route path="/staff-register" element={<StaffRegister />} />
+              <Route path="/admin" element={<StaffLogin />} />
+              <Route path="/admin/register" element={<StaffRegister />} />
               
               {/* Customer Routes */}
               <Route path="/customer-dashboard/*" element={<CustomerDashboard />} />
@@ -78,7 +68,7 @@ function App() {
               <Route path="/shop-settings" element={<ShopSettings />} />
               <Route path="/shop-statistics" element={<ShopStatistics />} />
               <Route path="/operations-history" element={<OperationsHistory />} />
-              <Route path="/staff-profile" element={<StaffProfilePage />} />
+              <Route path="/staff-profile" element={<StaffProfile />} />
               <Route path="/customers" element={<Customers />} />
               <Route path="/settings" element={<Settings />} />
               

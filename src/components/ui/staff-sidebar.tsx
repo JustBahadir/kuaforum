@@ -52,31 +52,22 @@ export function StaffSidebar() {
   const path = location.pathname;
   const [isOpen, setIsOpen] = useState(false);
 
-  console.log("StaffSidebar rendering with userRole:", userRole);
-
-  // admin = işletme sahibi veya business_owner
-  const isAdmin = userRole === 'admin' || userRole === 'business_owner';
+  const isAdmin = userRole === 'admin';
 
   const navItems = [
-    { href: "/shop-home", title: "Ana Sayfa", icon: <Home size={18} />, roles: ["admin", "business_owner", "staff"] },
-    { href: "/personnel", title: "Personel İşlemleri", icon: <Users size={18} />, roles: ["admin", "business_owner"] },
-    { href: "/appointments", title: "Randevular", icon: <Calendar size={18} />, roles: ["admin", "business_owner", "staff"] },
-    { href: "/admin/operations", title: "Hizmet Yönetimi", icon: <Scissors size={18} />, roles: ["admin", "business_owner"] },
-    { href: "/customers", title: "Müşteriler", icon: <UserCircle size={18} />, roles: ["admin", "business_owner", "staff"] },
-    { href: "/shop-settings", title: "Dükkan Ayarları", icon: <Store size={18} />, roles: ["admin", "business_owner"] },
-    { href: "/shop-statistics", title: "Dükkan İstatistikleri", icon: <BarChart2 size={18} />, roles: ["admin", "business_owner"] },
-    { href: "/operations-history", title: "İşlem Geçmişi", icon: <FileText size={18} />, roles: ["admin", "business_owner", "staff"] },
-    { href: "/staff-profile", title: "Profilim", icon: <User size={18} />, roles: ["admin", "business_owner", "staff"] },
-    { href: "/settings", title: "Ayarlar", icon: <Settings size={18} />, roles: ["admin", "business_owner", "staff"] },
+    { href: "/shop-home", title: "Ana Sayfa", icon: <Home size={18} />, roles: ["admin", "staff"] },
+    { href: "/personnel", title: "Personel İşlemleri", icon: <Users size={18} />, roles: ["admin"] },
+    { href: "/appointments", title: "Randevular", icon: <Calendar size={18} />, roles: ["admin", "staff"] },
+    { href: "/admin/operations", title: "Hizmet Yönetimi", icon: <Scissors size={18} />, roles: ["admin"] },
+    { href: "/customers", title: "Müşteriler", icon: <UserCircle size={18} />, roles: ["admin", "staff"] },
+    { href: "/shop-settings", title: "Dükkan Ayarları", icon: <Store size={18} />, roles: ["admin"] },
+    { href: "/shop-statistics", title: "Dükkan İstatistikleri", icon: <BarChart2 size={18} />, roles: ["admin"] },
+    { href: "/operations-history", title: "İşlem Geçmişi", icon: <FileText size={18} />, roles: ["admin", "staff"] },
+    { href: "/staff-profile", title: "Profilim", icon: <User size={18} />, roles: ["admin", "staff"] },
+    { href: "/settings", title: "Ayarlar", icon: <Settings size={18} />, roles: ["admin", "staff"] },
   ];
 
-  const filteredNavItems = navItems.filter(item => {
-    // Consider both 'admin' and 'business_owner' as admin roles
-    if (userRole === 'admin' || userRole === 'business_owner') {
-      return item.roles.includes('admin') || item.roles.includes('business_owner');
-    }
-    return item.roles.includes(userRole || "");
-  });
+  const filteredNavItems = navItems.filter(item => item.roles.includes(userRole || ""));
 
   // Close mobile sidebar when route changes
   useEffect(() => {
@@ -106,9 +97,7 @@ export function StaffSidebar() {
               <div className="text-center py-3 border-b">
                 <p className="text-sm text-muted-foreground">Hoşgeldiniz</p>
                 <p className="font-medium">{userName || "Kullanıcı"}</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {userRole === 'admin' || userRole === 'business_owner' ? 'Dükkan Sahibi' : 'Personel'}
-                </p>
+                <p className="text-xs text-muted-foreground mt-1">{userRole === 'admin' ? 'Dükkan Sahibi' : 'Personel'}</p>
               </div>
 
               <div className="flex-1 overflow-auto py-2 px-2">
@@ -151,9 +140,7 @@ export function StaffSidebar() {
           <div className="text-center py-2 mb-2">
             <p className="text-sm text-muted-foreground">Hoşgeldiniz</p>
             <p className="font-medium">{userName || "Kullanıcı"}</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              {userRole === 'admin' || userRole === 'business_owner' ? 'Dükkan Sahibi' : 'Personel'}
-            </p>
+            <p className="text-xs text-muted-foreground mt-1">{userRole === 'admin' ? 'Dükkan Sahibi' : 'Personel'}</p>
           </div>
           
           <nav className="flex flex-col gap-1 overflow-y-auto">

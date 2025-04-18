@@ -38,14 +38,11 @@ export function PhoneInputField({
       <Label htmlFor={id}>{label}</Label>
       <Input
         id={id}
-        type="tel"
         value={formatPhoneNumber(value)}
         onChange={handlePhoneChange}
         placeholder={placeholder}
         className={error ? "border-red-500" : ""}
         disabled={disabled}
-        // Remove pattern attribute to avoid browser validation conflicts
-        inputMode="numeric"
       />
       {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
     </div>
