@@ -1,115 +1,104 @@
 
-import React, { useState } from "react";
+import React from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Card, CardContent } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { personelIslemleriServisi } from "@/lib/supabase";
-import { formatDate, formatDateShort, formatCurrency } from "@/lib/utils";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { formatCurrency } from "@/lib/utils";
+import { CalendarDays, Clock } from "lucide-react";
 
-export interface OperationsHistoryTabProps {
-  personnel: any;
+interface OperationsHistoryTabProps {
+  personnelId: number;
 }
 
-export function OperationsHistoryTab({ personnel }: OperationsHistoryTabProps) {
-  const [dateRange, setDateRange] = useState({
-    from: new Date(new Date().setDate(new Date().getDate() - 30)), // Default to last 30 days
-    to: new Date()
-  });
-
+export function OperationsHistoryTab({ personnelId }: OperationsHistoryTabProps) {
   const { data: operations = [], isLoading } = useQuery({
-    queryKey: ['personnel-operations', personnel.id, dateRange.from, dateRange.to],
-    queryFn: async () => {
-      if (!personnel.id) return [];
-      const allOperations = await personelIslemleriServisi.personelIslemleriGetir(personnel.id);
-      return allOperations.filter(op => {
-        if (!op.created_at) return false;
-        const date = new Date(op.created_at);
-        return date >= dateRange.from && date <= dateRange.to;
-      });
-    }
+    queryKey: ['personel-islemleri', personnelId],
+    queryFn: () => personelIslemleriServisi.personelIslemleriGetir(personnelId),
+    refetchOnWindowFocus: false,
   });
 
-  const totalRevenue = operations.reduce((sum, op) => sum + (Number(op.tutar) || 0), 0);
-  const totalCommission = operations.reduce((sum, op) => sum + (Number(op.odenen) || 0), 0);
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return "-";
+    return new Date(dateString).toLocaleDateString('tr-TR');
+  };
+
+  const formatTime = (dateString: string | null) => {
+    if (!dateString) return "-";
+    return new Date(dateString).toLocaleTimeString('tr-TR', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+  };
+
+  // Limit to last 5 operations
+  const recentOperations = [...operations].sort((a, b) => {
+    return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+  }).slice(0, 5);
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center flex-wrap gap-2">
-        <h3 className="text-base font-medium">İşlem Geçmişi</h3>
-        <DateRangePicker 
-          from={dateRange.from}
-          to={dateRange.to}
-          onSelect={(range) => setDateRange(range)}
-        />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-        <Card>
-          <CardHeader className="py-2">
-            <CardTitle className="text-sm">İşlem Sayısı</CardTitle>
-          </CardHeader>
-          <CardContent className="py-1">
-            <div className="text-2xl font-bold">{operations.length}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="py-2">
-            <CardTitle className="text-sm">Toplam Ciro</CardTitle>
-          </CardHeader>
-          <CardContent className="py-1">
-            <div className="text-2xl font-bold text-green-600">{formatCurrency(totalRevenue)}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="py-2">
-            <CardTitle className="text-sm">Toplam Prim</CardTitle>
-          </CardHeader>
-          <CardContent className="py-1">
-            <div className="text-2xl font-bold text-blue-600">{formatCurrency(totalCommission)}</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {isLoading ? (
-        <div className="flex justify-center p-6">
-          <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
-        </div>
-      ) : operations.length === 0 ? (
-        <div className="text-center py-10 text-gray-500">
-          Seçilen tarih aralığında işlem bulunamadı.
-        </div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-left">Tarih</th>
-                <th className="px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-left">İşlem</th>
-                <th className="px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-left">Müşteri</th>
-                <th className="px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-left">Tutar</th>
-                <th className="px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-left">Prim %</th>
-                <th className="px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-left">Prim</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {operations.map((op) => (
-                <tr key={op.id}>
-                  <td className="px-4 py-2 whitespace-nowrap text-sm">{formatDateShort(op.created_at)}</td>
-                  <td className="px-4 py-2 text-sm">{op.islem?.islem_adi || op.aciklama}</td>
-                  <td className="px-4 py-2 text-sm">
-                    {op.musteri ? `${op.musteri.first_name || ''} ${op.musteri.last_name || ''}` : '-'}
-                  </td>
-                  <td className="px-4 py-2 whitespace-nowrap text-sm">{formatCurrency(op.tutar)}</td>
-                  <td className="px-4 py-2 whitespace-nowrap text-sm">{op.prim_yuzdesi ? `%${op.prim_yuzdesi}` : '-'}</td>
-                  <td className="px-4 py-2 whitespace-nowrap text-sm">{formatCurrency(op.odenen)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+    <div className="space-y-6">
+      <Card>
+        <CardContent className="p-6">
+          <h3 className="text-lg font-semibold mb-4">Son 5 İşlem</h3>
+          
+          {isLoading ? (
+            <div className="flex justify-center py-4">
+              <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
+            </div>
+          ) : recentOperations.length === 0 ? (
+            <div className="text-center py-6 text-muted-foreground">
+              Henüz işlem geçmişi bulunmuyor.
+            </div>
+          ) : (
+            <div className="border rounded-md overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Tarih</TableHead>
+                    <TableHead>Müşteri</TableHead>
+                    <TableHead>Hizmet</TableHead>
+                    <TableHead className="text-right">Tutar</TableHead>
+                    <TableHead className="text-right">Komisyon</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {recentOperations.map((operation) => (
+                    <TableRow key={operation.id}>
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <div className="flex items-center">
+                            <CalendarDays className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+                            <span>{formatDate(operation.created_at)}</span>
+                          </div>
+                          <div className="flex items-center text-xs text-muted-foreground">
+                            <Clock className="h-3 w-3 mr-1" />
+                            <span>{formatTime(operation.created_at)}</span>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {operation.musteri ? 
+                          `${operation.musteri.first_name} ${operation.musteri.last_name || ''}` : 
+                          'Belirtilmemiş'}
+                      </TableCell>
+                      <TableCell>
+                        {operation.islem?.islem_adi || operation.aciklama || 'Belirtilmemiş'}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(operation.tutar || 0)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(operation.odenen || 0)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

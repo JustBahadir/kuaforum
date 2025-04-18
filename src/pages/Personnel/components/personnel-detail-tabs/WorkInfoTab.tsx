@@ -1,60 +1,82 @@
 
 import React from "react";
-import { formatDate, formatCurrency } from "@/lib/utils";
+import { Card, CardContent } from "@/components/ui/card";
+import { BriefcaseIcon, PercentIcon, CreditCard, Banknote, BadgeCheck } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
 
-export interface WorkInfoTabProps {
+interface WorkInfoTabProps {
   personnel: any;
-  onSave?: () => void;
 }
 
-export function WorkInfoTab({ personnel, onSave }: WorkInfoTabProps) {
+export function WorkInfoTab({ personnel }: WorkInfoTabProps) {
+  const getWorkingSystemLabel = (system: string) => {
+    switch (system) {
+      case "aylik_maas":
+        return "Aylık Maaş";
+      case "haftalik_maas":
+        return "Haftalık Maaş";
+      case "gunluk_maas":
+        return "Günlük Maaş";
+      case "komisyon":
+        return "Komisyon";
+      case "prim_komisyon":
+        return "Prim ve Komisyon";
+      default:
+        return system;
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <h3 className="text-sm font-medium text-muted-foreground mb-1">İşe Başlama Tarihi</h3>
-          <div className="text-base font-normal">
-            {personnel.ise_baslama_tarihi ? formatDate(personnel.ise_baslama_tarihi) : "-"}
+      <Card>
+        <CardContent className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Personel Numarası</p>
+                <div className="flex items-center mt-1">
+                  <BadgeCheck className="h-4 w-4 mr-2 text-muted-foreground" />
+                  <p className="text-base">{personnel.personel_no || "-"}</p>
+                </div>
+              </div>
+              
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Çalışma Sistemi</p>
+                <div className="flex items-center mt-1">
+                  <BriefcaseIcon className="h-4 w-4 mr-2 text-muted-foreground" />
+                  <p className="text-base">{getWorkingSystemLabel(personnel.calisma_sistemi)}</p>
+                </div>
+              </div>
+              
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Maaş</p>
+                <div className="flex items-center mt-1">
+                  <Banknote className="h-4 w-4 mr-2 text-muted-foreground" />
+                  <p className="text-base">{formatCurrency(personnel.maas)}</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Prim Yüzdesi</p>
+                <div className="flex items-center mt-1">
+                  <PercentIcon className="h-4 w-4 mr-2 text-muted-foreground" />
+                  <p className="text-base">%{personnel.prim_yuzdesi || 0}</p>
+                </div>
+              </div>
+              
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">IBAN</p>
+                <div className="flex items-center mt-1">
+                  <CreditCard className="h-4 w-4 mr-2 text-muted-foreground" />
+                  <p className="text-base">{personnel.iban || "-"}</p>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-        
-        <div>
-          <h3 className="text-sm font-medium text-muted-foreground mb-1">İşten Ayrılma Tarihi</h3>
-          <div className="text-base font-normal">
-            {personnel.isten_ayrilma_tarihi ? formatDate(personnel.isten_ayrilma_tarihi) : "-"}
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <h3 className="text-sm font-medium text-muted-foreground mb-1">Çalışma Sistemi</h3>
-          <div className="text-base font-normal capitalize">
-            {personnel.calisma_sistemi === "maas" ? "Maaşlı" : personnel.calisma_sistemi === "komisyon" ? "Komisyonlu" : "-"}
-          </div>
-        </div>
-        
-        <div>
-          <h3 className="text-sm font-medium text-muted-foreground mb-1">Prim Yüzdesi</h3>
-          <div className="text-base font-normal">
-            {personnel.prim_yuzdesi ? `%${personnel.prim_yuzdesi}` : "-"}
-          </div>
-        </div>
-      </div>
-
-      <div>
-        <h3 className="text-sm font-medium text-muted-foreground mb-1">Maaş</h3>
-        <div className="text-base font-normal">
-          {personnel.maas ? formatCurrency(personnel.maas) : "-"}
-        </div>
-      </div>
-
-      <div>
-        <h3 className="text-sm font-medium text-muted-foreground mb-1">Personel No</h3>
-        <div className="text-base font-normal">
-          {personnel.personel_no || "-"}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

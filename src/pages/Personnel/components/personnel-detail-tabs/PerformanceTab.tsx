@@ -1,223 +1,214 @@
 
-import React, { useState, useCallback, useMemo } from "react";
-import { ServicePerformanceView } from "./performance-tabs/ServicePerformanceView";
-import { DateRangePicker } from "@/components/ui/date-range-picker";
-import { CustomMonthCycleSelector } from "@/components/ui/custom-month-cycle-selector";
-import { Button } from "@/components/ui/button";
-import { CalendarIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { processServiceData, generateSmartInsights } from "@/utils/performanceUtils";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CategoryPerformanceView } from "./performance-tabs/CategoryPerformanceView";
+import React, { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Card, CardContent } from "@/components/ui/card";
+import { 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  Cell, Legend
+} from "recharts";
+import { personelIslemleriServisi } from "@/lib/supabase";
+import { formatCurrency } from "@/lib/utils";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { CalendarClock, LineChart, TrendingUp, Wallet } from "lucide-react";
 
 interface PerformanceTabProps {
-  personnel: any;
-  operations: any[];
-  isLoading?: boolean;
+  personnelId: number;
 }
 
-export function PerformanceTab({ 
-  personnel, 
-  operations = [],
-  isLoading = false 
-}: PerformanceTabProps) {
-  const [dateRange, setDateRange] = useState({
-    from: new Date(new Date().setDate(new Date().getDate() - 30)),
-    to: new Date()
+export function PerformanceTab({ personnelId }: PerformanceTabProps) {
+  const [timeRange, setTimeRange] = useState<"weekly" | "monthly">("weekly");
+  const { data: operations = [], isLoading } = useQuery({
+    queryKey: ['personel-islemleri', personnelId],
+    queryFn: () => personelIslemleriServisi.personelIslemleriGetir(personnelId),
   });
-  const [monthCycleDay, setMonthCycleDay] = useState(1);
-  const [useMonthCycle, setUseMonthCycle] = useState(false);
-  const [useSingleDate, setUseSingleDate] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
-  const [analysisType, setAnalysisType] = useState("service"); // service or category
 
-  // Extract all dates that have operations
-  const availableDates = useMemo(() => {
-    if (!operations || operations.length === 0) return [];
-    return operations
-      .filter(op => op && op.created_at)
-      .map(op => new Date(op.created_at))
-      .sort((a, b) => a.getTime() - b.getTime());
-  }, [operations]);
-
-  const handleDateRangeChange = ({from, to}: {from: Date, to: Date}) => {
-    setDateRange({from, to});
-    setUseMonthCycle(false);
-    setUseSingleDate(false);
-  };
-
-  const handleSingleDateChange = (date: Date | undefined) => {
-    if (date) {
-      setDateRange({from: date, to: date});
-      setUseMonthCycle(false);
-      setUseSingleDate(true);
-    }
-  };
-
-  const handleMonthCycleChange = (day: number, date: Date) => {
-    setMonthCycleDay(day);
-    
-    const currentDate = new Date();
-    const selectedDay = day;
-    
-    let fromDate = new Date();
-    fromDate.setDate(selectedDay);
-    if (currentDate.getDate() < selectedDay) {
-      fromDate.setMonth(fromDate.getMonth() - 1);
-    }
-    
-    const toDate = new Date(fromDate);
-    toDate.setMonth(toDate.getMonth() + 1);
-    
-    setDateRange({from: fromDate, to: toDate});
-    setUseMonthCycle(true);
-    setUseSingleDate(false);
-  };
-
-  const filteredOperations = useMemo(() => {
-    return operations.filter(op => {
-      if (!op || !op.created_at) return false;
-      const date = new Date(op.created_at);
-      return date >= dateRange.from && date <= dateRange.to;
-    });
-  }, [operations, dateRange.from, dateRange.to]);
-
-  const serviceData = useMemo(() => {
-    return processServiceData(filteredOperations);
-  }, [filteredOperations]);
-  
-  const insights = useMemo(() => {
-    return generateSmartInsights(filteredOperations, serviceData);
-  }, [filteredOperations, serviceData]);
-
-  const toggleDateSelector = () => {
-    setUseSingleDate(!useSingleDate);
-    if (!useSingleDate) {
-      // When switching to single date mode, set both dates to the "from" date
-      setDateRange(prev => ({from: prev.from, to: prev.from}));
+  // Process data for charts
+  const getStartDate = () => {
+    const now = new Date();
+    if (timeRange === "weekly") {
+      // Last 7 days
+      const startDate = new Date();
+      startDate.setDate(now.getDate() - 7);
+      return startDate;
     } else {
-      // When switching back to range mode, set the "to" date to today
-      setDateRange(prev => ({from: prev.from, to: new Date()}));
+      // Last 30 days
+      const startDate = new Date();
+      startDate.setDate(now.getDate() - 30);
+      return startDate;
     }
   };
+
+  const startDate = getStartDate();
+  const filteredOperations = operations.filter(op => {
+    if (!op.created_at) return false;
+    const date = new Date(op.created_at);
+    return date >= startDate;
+  });
+
+  // Calculate performance metrics
+  const totalRevenue = filteredOperations.reduce((sum, op) => sum + (op.tutar || 0), 0);
+  const totalCommission = filteredOperations.reduce((sum, op) => sum + (op.odenen || 0), 0);
+  const operationCount = filteredOperations.length;
+  
+  // Calculate daily data for chart
+  const dailyData = filteredOperations.reduce((acc: any, op) => {
+    if (!op.created_at) return acc;
+    
+    const date = new Date(op.created_at);
+    const dateStr = date.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit' });
+    
+    if (!acc[dateStr]) {
+      acc[dateStr] = {
+        date: dateStr,
+        revenue: 0,
+        commission: 0,
+        count: 0
+      };
+    }
+    
+    acc[dateStr].revenue += op.tutar || 0;
+    acc[dateStr].commission += op.odenen || 0;
+    acc[dateStr].count += 1;
+    
+    return acc;
+  }, {});
+  
+  // Convert to array and sort by date
+  const chartData = Object.values(dailyData).sort((a: any, b: any) => {
+    const [dayA, monthA] = a.date.split('.');
+    const [dayB, monthB] = b.date.split('.');
+    const dateA = new Date(2023, parseInt(monthA) - 1, parseInt(dayA));
+    const dateB = new Date(2023, parseInt(monthB) - 1, parseInt(dayB));
+    return dateA.getTime() - dateB.getTime();
+  });
+
+  const barColors = ['#8b5cf6', '#a78bfa'];
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap justify-between items-center gap-2 pb-2">
-        <div className="flex items-center gap-2 flex-wrap">
-          {!useMonthCycle && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    variant={useSingleDate ? "default" : "outline"}
-                    size="sm"
-                    onClick={toggleDateSelector}
-                    className={cn(useSingleDate && "bg-purple-600 hover:bg-purple-700")}
-                  >
-                    <CalendarIcon className="h-4 w-4 mr-1" />
-                    <span>{useSingleDate ? "Tarih Aralığı" : "Tek Gün"}</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{useSingleDate ? "Tarih aralığı seç" : "Tek gün seç"}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-          
-          {useSingleDate ? (
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="justify-start text-left font-normal">
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dateRange.from ? (
-                    dateRange.from.toLocaleDateString()
-                  ) : (
-                    <span>Tarih seçin</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={dateRange.from}
-                  onSelect={handleSingleDateChange}
-                  initialFocus
-                  className="pointer-events-auto"
-                />
-              </PopoverContent>
-            </Popover>
-          ) : !useMonthCycle && (
-            <DateRangePicker
-              from={dateRange.from}
-              to={dateRange.to}
-              onSelect={handleDateRangeChange}
-            />
-          )}
-          
-          <CustomMonthCycleSelector 
-            selectedDay={monthCycleDay}
-            onChange={handleMonthCycleChange}
-            active={useMonthCycle}
-            onClear={() => setUseMonthCycle(false)}
-          />
-        </div>
-      </div>
-      
-      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-        <span>{dateRange.from.toLocaleDateString('tr-TR')}</span>
-        {!useSingleDate && (
-          <>
-            <span> - </span>
-            <span>{dateRange.to.toLocaleDateString('tr-TR')}</span>
-          </>
-        )}
-      </div>
-      
-      <Tabs value={analysisType} onValueChange={setAnalysisType} className="mt-2">
+      <Tabs value={timeRange} onValueChange={(v) => setTimeRange(v as "weekly" | "monthly")}>
         <TabsList className="grid w-full grid-cols-2 mb-4">
-          <TabsTrigger value="service">Hizmet Raporları</TabsTrigger>
-          <TabsTrigger value="category">Kategori Raporları</TabsTrigger>
+          <TabsTrigger value="weekly">Haftalık</TabsTrigger>
+          <TabsTrigger value="monthly">Aylık</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="service">
-          {isLoading ? (
-            <div className="flex justify-center p-12">
-              <div className="w-10 h-10 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
-            </div>
-          ) : (
-            <ServicePerformanceView
-              serviceData={serviceData}
-              insights={insights}
-              refreshAnalysis={() => setRefreshKey(prev => prev + 1)}
-              dateRange={dateRange}
-            />
-          )}
+        <TabsContent value="weekly" className="mt-0">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex flex-col items-center">
+                  <CalendarClock className="h-8 w-8 text-purple-600 mb-2" />
+                  <h4 className="text-lg font-medium">İşlem Sayısı</h4>
+                  <p className="text-2xl font-semibold">{operationCount}</p>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex flex-col items-center">
+                  <TrendingUp className="h-8 w-8 text-green-600 mb-2" />
+                  <h4 className="text-lg font-medium">Toplam Ciro</h4>
+                  <p className="text-2xl font-semibold text-green-600">{formatCurrency(totalRevenue)}</p>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex flex-col items-center">
+                  <Wallet className="h-8 w-8 text-blue-600 mb-2" />
+                  <h4 className="text-lg font-medium">Kazanç</h4>
+                  <p className="text-2xl font-semibold text-blue-600">{formatCurrency(totalCommission)}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
         
-        <TabsContent value="category">
-          {isLoading ? (
-            <div className="flex justify-center p-12">
-              <div className="w-10 h-10 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
-            </div>
-          ) : (
-            <CategoryPerformanceView
-              operations={filteredOperations}
-              refreshAnalysis={() => setRefreshKey(prev => prev + 1)}
-              dateRange={dateRange}
-            />
-          )}
+        <TabsContent value="monthly" className="mt-0">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex flex-col items-center">
+                  <CalendarClock className="h-8 w-8 text-purple-600 mb-2" />
+                  <h4 className="text-lg font-medium">İşlem Sayısı</h4>
+                  <p className="text-2xl font-semibold">{operationCount}</p>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex flex-col items-center">
+                  <TrendingUp className="h-8 w-8 text-green-600 mb-2" />
+                  <h4 className="text-lg font-medium">Toplam Ciro</h4>
+                  <p className="text-2xl font-semibold text-green-600">{formatCurrency(totalRevenue)}</p>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex flex-col items-center">
+                  <Wallet className="h-8 w-8 text-blue-600 mb-2" />
+                  <h4 className="text-lg font-medium">Kazanç</h4>
+                  <p className="text-2xl font-semibold text-blue-600">{formatCurrency(totalCommission)}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
+      
+      <Card>
+        <CardContent className="p-6">
+          <h3 className="text-lg font-semibold mb-2">Ciro ve Kazanç Grafiği</h3>
+          <p className="text-sm text-muted-foreground mb-6">
+            {timeRange === "weekly" ? "Son 7 gün" : "Son 30 gün"} içerisindeki performans verileri
+          </p>
+          
+          {isLoading ? (
+            <div className="flex justify-center py-4">
+              <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
+            </div>
+          ) : chartData.length === 0 ? (
+            <div className="text-center py-10 text-muted-foreground">
+              Bu dönem için veri bulunmuyor.
+            </div>
+          ) : (
+            <div className="h-72 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={chartData}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 40 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis 
+                    dataKey="date" 
+                    angle={-45}
+                    textAnchor="end"
+                    height={50}
+                  />
+                  <YAxis />
+                  <Tooltip formatter={(value: any) => formatCurrency(value)} />
+                  <Legend />
+                  <Bar dataKey="revenue" name="Ciro" radius={[4, 4, 0, 0]}>
+                    {chartData.map((_, index) => (
+                      <Cell key={`cell-${index}`} fill={barColors[0]} />
+                    ))}
+                  </Bar>
+                  <Bar dataKey="commission" name="Kazanç" radius={[4, 4, 0, 0]}>
+                    {chartData.map((_, index) => (
+                      <Cell key={`cell-${index}`} fill={barColors[1]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

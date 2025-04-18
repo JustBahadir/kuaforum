@@ -1,0 +1,83 @@
+
+import React from "react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Card, CardContent } from "@/components/ui/card";
+import { Mail, Phone, MapPin, CalendarDays } from "lucide-react";
+
+interface PersonalInfoTabProps {
+  personnel: any;
+}
+
+export function PersonalInfoTab({ personnel }: PersonalInfoTabProps) {
+  const getInitials = (fullName: string) => {
+    return fullName
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .substring(0, 2);
+  };
+  
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return "-";
+    return new Date(dateString).toLocaleDateString('tr-TR');
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex flex-col md:flex-row gap-6">
+            <div className="flex flex-col items-center space-y-4">
+              <Avatar className="h-32 w-32">
+                <AvatarImage src={personnel.avatar_url} alt={personnel.ad_soyad} />
+                <AvatarFallback className="text-3xl bg-purple-100 text-purple-600">
+                  {getInitials(personnel.ad_soyad)}
+                </AvatarFallback>
+              </Avatar>
+            </div>
+            
+            <div className="flex-1 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Ad Soyad</p>
+                  <p className="text-base">{personnel.ad_soyad || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Doğum Tarihi</p>
+                  <div className="flex items-center">
+                    <CalendarDays className="h-4 w-4 mr-2 text-muted-foreground" />
+                    <p className="text-base">{formatDate(personnel.birth_date) || "-"}</p>
+                  </div>
+                </div>
+                
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">E-posta</p>
+                  <div className="flex items-center">
+                    <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
+                    <p className="text-base">{personnel.eposta || "-"}</p>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Telefon</p>
+                  <div className="flex items-center">
+                    <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
+                    <p className="text-base">{personnel.telefon || "-"}</p>
+                  </div>
+                </div>
+                
+                <div className="col-span-1 md:col-span-2">
+                  <p className="text-sm font-medium text-muted-foreground">Adres</p>
+                  <div className="flex items-center">
+                    <MapPin className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
+                    <p className="text-base">{personnel.adres || "-"}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

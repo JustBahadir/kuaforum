@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { personelServisi } from "@/lib/supabase";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +11,6 @@ import { PersonnelForm } from "./PersonnelForm";
 import { PersonnelCard } from "./PersonnelCard";
 import { toast } from "sonner";
 import { Search, RefreshCcw } from "lucide-react";
-import { useForm } from "react-hook-form";
 
 interface PersonnelListProps {
   personnel?: any[];
@@ -35,13 +34,6 @@ export function PersonnelList({ personnel: externalPersonnel, onPersonnelSelect 
 
   const personnelData = externalPersonnel || personeller;
 
-  // Notify parent component when personnel is selected
-  useEffect(() => {
-    if (onPersonnelSelect && selectedPersonnel) {
-      onPersonnelSelect(selectedPersonnel.id);
-    }
-  }, [selectedPersonnel, onPersonnelSelect]);
-
   const handlePersonnelSelect = (personnel: any) => {
     setSelectedPersonnel(personnel);
     setIsPersonnelDetailsDialogOpen(true);
@@ -50,19 +42,27 @@ export function PersonnelList({ personnel: externalPersonnel, onPersonnelSelect 
     }
   };
 
-  const handleDeleteConfirm = (personnel: any) => {
-    deletePersonnelMutation.mutate(personnel.id);
-  };
+  const deletePersonnelMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return await personelServisi.sil(id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['personeller']
+      });
+      toast.success("Personel başarıyla silindi.");
+    },
+    onError: (error) => {
+      toast.error("Personel silinirken bir hata oluştu.");
+      console.error("Error deleting personnel:", error);
+    }
+  });
 
   const handleAddPersonnelSubmit = async (values: any) => {
     // Map any email field to eposta
     if (values.email) {
       values.eposta = values.email;
       delete values.email;
-    }
-    // Remove tc_kimlik_no if it exists but is not part of the schema
-    if (values.tc_kimlik_no) {
-      delete values.tc_kimlik_no;
     }
     
     try {
@@ -95,24 +95,6 @@ export function PersonnelList({ personnel: externalPersonnel, onPersonnelSelect 
       toast.error("Personel güncellenirken bir hata oluştu.");
     }
   };
-
-  const deletePersonnelMutation = useMutation({
-    mutationFn: async (id: number) => {
-      return await personelServisi.sil(id);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['personeller']
-      });
-      toast.success("Personel başarıyla silindi.");
-    },
-    onError: (error) => {
-      toast.error("Personel silinirken bir hata oluştu.");
-      console.error("Error deleting personnel:", error);
-    }
-  });
-
-  const { handleSubmit, formState: { isSubmitting } } = useForm();
 
   // Calculate operation count and total revenue for each personnel
   const enrichedPersonnel = personnelData.map(p => {
@@ -184,11 +166,6 @@ export function PersonnelList({ personnel: externalPersonnel, onPersonnelSelect 
                   key={personnel.id}
                   personnel={personnel}
                   onClick={() => handlePersonnelSelect(personnel)}
-                  onEdit={() => {
-                    setSelectedPersonnel(personnel);
-                    setIsEditPersonnelDialogOpen(true);
-                  }}
-                  onDelete={() => handleDeleteConfirm(personnel)}
                 />
               ))}
             </div>
@@ -200,8 +177,10 @@ export function PersonnelList({ personnel: externalPersonnel, onPersonnelSelect 
         isOpen={isPersonnelDetailsDialogOpen}
         onOpenChange={setIsPersonnelDetailsDialogOpen}
         personnel={selectedPersonnel}
-        onUpdate={refreshList}
-        onClose={() => setSelectedPersonnel(null)}
+        onUpdate={() => {
+          setIsEditPersonnelDialogOpen(true);
+          setIsPersonnelDetailsDialogOpen(false);
+        }}
       />
 
       <AlertDialog
@@ -217,15 +196,14 @@ export function PersonnelList({ personnel: externalPersonnel, onPersonnelSelect 
             readOnly={false}
             showWorkInfo={true}
             showPersonalInfo={true}
-            onSubmit={handleSubmit(handleAddPersonnelSubmit)}
-            isLoading={isSubmitting}
+            onSubmit={handleAddPersonnelSubmit}
           />
           <AlertDialogFooter>
             <AlertDialogCancel>İptal</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleSubmit(handleAddPersonnelSubmit)}
+              onClick={() => handleAddPersonnelSubmit((document.querySelector('form') as HTMLFormElement)?.elements)}
             >
-              {isSubmitting ? "Kaydediliyor..." : "Kaydet"}
+              Kaydet
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -238,21 +216,23 @@ export function PersonnelList({ personnel: externalPersonnel, onPersonnelSelect 
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Personel Düzenle</AlertDialogTitle>
+            <AlertDialogDescription>
+              Personel bilgilerini güncelleyebilirsiniz.
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <PersonnelForm
             personnel={selectedPersonnel}
             readOnly={false}
             showWorkInfo={true}
             showPersonalInfo={true}
-            onSubmit={handleSubmit(handleEditPersonnelSubmit)}
-            isLoading={isSubmitting}
+            onSubmit={handleEditPersonnelSubmit}
           />
           <AlertDialogFooter>
-            <AlertDialogCancel>İptal</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setIsEditPersonnelDialogOpen(false)}>İptal</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleSubmit(handleEditPersonnelSubmit)}
+              onClick={() => handleEditPersonnelSubmit({ ...selectedPersonnel, ...(document.querySelector('form') as HTMLFormElement)?.elements })}
             >
-              {isSubmitting ? "Kaydediliyor..." : "Kaydet"}
+              Kaydet
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

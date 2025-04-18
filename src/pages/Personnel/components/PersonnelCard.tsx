@@ -1,10 +1,9 @@
 
 import React from "react";
-import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Phone, Mail, Edit, Trash2, ArrowUpRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Phone, Mail } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 
 interface PersonnelCardProps {
@@ -21,22 +20,20 @@ interface PersonnelCardProps {
     toplam_ciro?: number;
   };
   onClick?: () => void;
-  onEdit?: () => void;
-  onDelete?: () => void;
 }
 
-export function PersonnelCard({ personnel, onClick, onEdit, onDelete }: PersonnelCardProps) {
+export function PersonnelCard({ personnel, onClick }: PersonnelCardProps) {
   const getWorkingSystemLabel = (system: string) => {
     switch (system) {
       case "aylik_maas":
-        return "Aylık";
+        return "aylık";
       case "haftalik_maas":
-        return "Haftalık";
+        return "haftalık";
       case "gunluk_maas":
-        return "Günlük";
+        return "günlük";
       case "komisyon":
       case "prim_komisyon":
-        return "Yüzdelik";
+        return "yüzdelik";
       default:
         return system;
     }
@@ -51,33 +48,38 @@ export function PersonnelCard({ personnel, onClick, onEdit, onDelete }: Personne
       .substring(0, 2);
   };
 
-  const isCommissionBased = personnel.calisma_sistemi === "komisyon" || personnel.calisma_sistemi === "prim_komisyon";
-
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader className="relative pb-2">
-        <div className="absolute top-2 right-2">
-          <Badge variant={isCommissionBased ? "secondary" : "default"} className="text-xs">
-            {getWorkingSystemLabel(personnel.calisma_sistemi)}
-          </Badge>
-        </div>
-        <div className="flex flex-col items-center">
-          <Avatar className="h-20 w-20 mb-2">
-            <AvatarImage src={personnel.avatar_url} alt={personnel.ad_soyad} />
-            <AvatarFallback className="text-lg">{getInitials(personnel.ad_soyad)}</AvatarFallback>
-          </Avatar>
-          <div className="text-center">
-            <h3 className="font-semibold text-base">{personnel.ad_soyad}</h3>
-            {isCommissionBased ? (
-              <p className="text-sm text-muted-foreground">%{personnel.prim_yuzdesi} Komisyon</p>
-            ) : (
-              <p className="text-sm text-muted-foreground">{formatCurrency(personnel.maas)}</p>
-            )}
-          </div>
-        </div>
-      </CardHeader>
+    <Card 
+      className="h-full flex flex-col transition-all hover:shadow-md cursor-pointer"
+      onClick={onClick}
+    >
+      <div className="p-4 flex flex-col items-center space-y-3">
+        <Badge 
+          className="absolute top-3 right-3"
+          variant={personnel.calisma_sistemi.includes("komisyon") ? "secondary" : "default"}
+        >
+          {getWorkingSystemLabel(personnel.calisma_sistemi)}
+        </Badge>
 
-      <CardContent className="py-2 flex-1">
+        <Avatar className="h-20 w-20">
+          <AvatarImage src={personnel.avatar_url} alt={personnel.ad_soyad} />
+          <AvatarFallback className="bg-purple-100 text-purple-600 text-lg">
+            {getInitials(personnel.ad_soyad)}
+          </AvatarFallback>
+        </Avatar>
+        
+        <div className="text-center">
+          <h3 className="font-semibold text-base">{personnel.ad_soyad}</h3>
+          <p className="text-sm text-muted-foreground">
+            {personnel.calisma_sistemi.includes("komisyon") 
+              ? `%${personnel.prim_yuzdesi} Komisyon`
+              : formatCurrency(personnel.maas)
+            }
+          </p>
+        </div>
+      </div>
+
+      <div className="px-4 pb-2 flex-1">
         <div className="space-y-2">
           <div className="flex items-center text-sm">
             <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
@@ -98,21 +100,7 @@ export function PersonnelCard({ personnel, onClick, onEdit, onDelete }: Personne
             </div>
           </div>
         </div>
-      </CardContent>
-
-      <CardFooter className="pt-2">
-        <div className="w-full grid grid-cols-3 gap-2">
-          <Button size="sm" variant="outline" onClick={onEdit} className="w-full">
-            <Edit className="h-4 w-4" />
-          </Button>
-          <Button size="sm" variant="outline" onClick={onDelete} className="w-full text-red-500 hover:text-red-600">
-            <Trash2 className="h-4 w-4" />
-          </Button>
-          <Button size="sm" variant="outline" onClick={onClick} className="w-full text-blue-500 hover:text-blue-600">
-            <ArrowUpRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </CardFooter>
+      </div>
     </Card>
   );
 }

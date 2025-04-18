@@ -5,12 +5,20 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PersonnelInfoTab } from "./personnel-detail-tabs/PersonnelInfoTab";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useQuery } from "@tanstack/react-query";
+import { personelIslemleriServisi } from "@/lib/supabase";
+import { formatCurrency } from "@/lib/utils";
+
+// Import tabs
+import { PersonalInfoTab } from "./personnel-detail-tabs/PersonalInfoTab";
 import { WorkInfoTab } from "./personnel-detail-tabs/WorkInfoTab"; 
-import { PersonnelImageTab } from "./personnel-detail-tabs/PersonnelImageTab";
 import { OperationsHistoryTab } from "./personnel-detail-tabs/OperationsHistoryTab";
+import { PerformanceTab } from "./personnel-detail-tabs/PerformanceTab";
 
 interface PersonnelDetailsDialogProps {
   isOpen: boolean;
@@ -27,7 +35,7 @@ export function PersonnelDetailsDialog({
   onUpdate,
   onClose,
 }: PersonnelDetailsDialogProps) {
-  const [activeTab, setActiveTab] = useState("info");
+  const [activeTab, setActiveTab] = useState("personal-info");
 
   const handleClose = () => {
     if (onClose) {
@@ -39,38 +47,67 @@ export function PersonnelDetailsDialog({
   if (!personnel) {
     return null;
   }
+  
+  const getInitials = (fullName: string) => {
+    return fullName
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .substring(0, 2);
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            {personnel.ad_soyad} - Personel Bilgileri
-          </DialogTitle>
+      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto sm:max-h-[90vh]">
+        <DialogHeader className="flex flex-row items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Avatar className="h-12 w-12">
+              <AvatarImage src={personnel.avatar_url} alt={personnel.ad_soyad} />
+              <AvatarFallback className="bg-purple-100 text-purple-600">
+                {getInitials(personnel.ad_soyad)}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <DialogTitle className="text-xl">
+                {personnel.ad_soyad}
+              </DialogTitle>
+              <DialogDescription>
+                Personel Bilgileri
+              </DialogDescription>
+            </div>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => onUpdate()}
+          >
+            Düzenle
+          </Button>
         </DialogHeader>
         
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
           <TabsList className="grid grid-cols-4 mb-4">
-            <TabsTrigger value="info">Kişisel Bilgiler</TabsTrigger>
-            <TabsTrigger value="work">İş Bilgileri</TabsTrigger>
-            <TabsTrigger value="photo">Fotoğraf</TabsTrigger>
-            <TabsTrigger value="history">İşlem Geçmişi</TabsTrigger>
+            <TabsTrigger value="personal-info">Kişisel Bilgiler</TabsTrigger>
+            <TabsTrigger value="work-info">Çalışma Bilgileri</TabsTrigger>
+            <TabsTrigger value="operations-history">İşlem Geçmişi</TabsTrigger>
+            <TabsTrigger value="performance">Performans</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="info">
-            <PersonnelInfoTab personnel={personnel} onSave={onUpdate} />
+          <TabsContent value="personal-info">
+            <PersonalInfoTab personnel={personnel} />
           </TabsContent>
           
-          <TabsContent value="work">
-            <WorkInfoTab personnel={personnel} onSave={onUpdate} />
+          <TabsContent value="work-info">
+            <WorkInfoTab personnel={personnel} />
           </TabsContent>
           
-          <TabsContent value="photo">
-            <PersonnelImageTab personnel={personnel} onSave={onUpdate} />
+          <TabsContent value="operations-history">
+            <OperationsHistoryTab personnelId={personnel.id} />
           </TabsContent>
           
-          <TabsContent value="history">
-            <OperationsHistoryTab personnel={personnel} />
+          <TabsContent value="performance">
+            <PerformanceTab personnelId={personnel.id} />
           </TabsContent>
         </Tabs>
       </DialogContent>
