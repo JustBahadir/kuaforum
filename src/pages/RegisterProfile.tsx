@@ -206,8 +206,8 @@ export default function RegisterProfile() {
       // Redirect based on role
       if (values.role === "business_owner") {
         navigate("/shop-home");
-      } else if (values.role === "staff" && values.businessCode) {
-        navigate("/shop-home");
+      } else if (values.role === "staff") {
+        navigate("/staff-profile");
       } else {
         navigate("/customer-dashboard"); // This should be the profile page
       }

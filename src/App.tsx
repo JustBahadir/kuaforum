@@ -1,4 +1,3 @@
-
 import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
@@ -32,6 +31,7 @@ import HomePage from "./pages/HomePage";
 import AuthCallback from "./pages/AuthCallback";
 import RegisterProfile from "./pages/RegisterProfile";
 import Register from "./pages/Register";
+import StaffProfilePage from "./pages/StaffProfilePage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -77,7 +77,7 @@ function App() {
               <Route path="/shop-settings" element={<ShopSettings />} />
               <Route path="/shop-statistics" element={<ShopStatistics />} />
               <Route path="/operations-history" element={<OperationsHistory />} />
-              <Route path="/staff-profile" element={<StaffProfile />} />
+              <Route path="/staff-profile" element={<StaffProfilePage />} />
               <Route path="/customers" element={<Customers />} />
               <Route path="/settings" element={<Settings />} />
               
