@@ -292,7 +292,6 @@ export default function RegisterProfile() {
                         value={field.value}
                         onChange={handlePhoneChange}
                         inputMode="numeric"
-                        pattern="[0-9]*"
                       />
                     </FormControl>
                     <FormDescription>
