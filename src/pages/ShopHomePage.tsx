@@ -5,6 +5,7 @@ import { StaffLayout } from "@/components/ui/staff-layout";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
+import { Button } from "@/components/ui/button"; // Added Button import
 import { ShopProfileHeader } from "@/components/shop/ShopProfileHeader";
 import { ShopContactCard } from "@/components/shop/ShopContactCard";
 import { ShopWorkingHoursCard } from "@/components/shop/ShopWorkingHoursCard";
