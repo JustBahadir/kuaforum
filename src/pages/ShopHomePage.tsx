@@ -3,11 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ShopServicesCard } from "@/components/shop/ShopServicesCard";
+import { Store, Calendar, Users, Scissors, FileText } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
-import { Store, Calendar, Users, Scissors, FileText } from "lucide-react";
 
 export default function ShopHomePage() {
   const navigate = useNavigate();
@@ -158,43 +157,36 @@ export default function ShopHomePage() {
   return (
     <StaffLayout>
       <div className="container mx-auto p-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+        <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Salon Yönetim Sayfası</h1>
-          
-          <Button
-            onClick={refreshUserProfile}
-            variant="outline"
-            size="sm"
-          >
-            Bilgileri Yenile
-          </Button>
         </div>
 
+        {/* Shop Profile Card */}
         <Card className="bg-purple-50 mb-6">
           <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row items-start gap-6">
-              <div className="w-full md:w-1/4">
+            <div className="flex items-start gap-6">
+              <div className="w-1/4">
                 <div className="w-full aspect-square rounded-lg bg-white flex items-center justify-center overflow-hidden border">
-                  {shopData.logo_url ? (
+                  {shopData?.logo_url ? (
                     <img 
                       src={shopData.logo_url} 
                       alt={shopData.ad} 
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <Store size={64} className="text-gray-400" />
+                    <Store className="h-16 w-16 text-gray-400" />
                   )}
                 </div>
               </div>
               
               <div className="flex-1">
-                <h2 className="text-2xl font-bold mb-2">{shopData.ad}</h2>
-                <p className="text-gray-600 mb-4">{shopData.adres || shopData.acik_adres}</p>
+                <h2 className="text-2xl font-bold mb-2">{shopData?.ad || "Crazy Kuaför"}</h2>
+                <p className="text-gray-600 mb-4">{shopData?.adres || "Bornova, İzmir"}</p>
                 
-                <div className="flex flex-wrap gap-2">
+                <div className="flex gap-2">
                   <Button 
                     variant="outline" 
-                    size="sm"
+                    className="w-full md:w-auto"
                     onClick={() => navigate('/shop-settings')}
                   >
                     Dükkan Bilgilerini Düzenle
@@ -202,8 +194,8 @@ export default function ShopHomePage() {
                   
                   {userRole === 'admin' && (
                     <Button 
-                      variant="outline" 
-                      size="sm"
+                      variant="outline"
+                      className="w-full md:w-auto"
                       onClick={() => navigate('/personnel')}
                     >
                       Personel Yönetimi
@@ -216,7 +208,9 @@ export default function ShopHomePage() {
         </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column */}
           <div className="lg:col-span-2 space-y-6">
+            {/* Quick Actions */}
             <Card>
               <CardHeader>
                 <CardTitle>Hızlı İşlemler</CardTitle>
@@ -225,7 +219,7 @@ export default function ShopHomePage() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <Button
                     variant="outline"
-                    className="h-auto flex flex-col items-center justify-center p-4 gap-2"
+                    className="h-auto aspect-square flex flex-col items-center justify-center p-4 gap-2"
                     onClick={() => navigate('/appointments')}
                   >
                     <Calendar className="h-6 w-6" />
@@ -234,7 +228,7 @@ export default function ShopHomePage() {
                   
                   <Button
                     variant="outline"
-                    className="h-auto flex flex-col items-center justify-center p-4 gap-2"
+                    className="h-auto aspect-square flex flex-col items-center justify-center p-4 gap-2"
                     onClick={() => navigate('/customers')}
                   >
                     <Users className="h-6 w-6" />
@@ -243,7 +237,7 @@ export default function ShopHomePage() {
                   
                   <Button
                     variant="outline"
-                    className="h-auto flex flex-col items-center justify-center p-4 gap-2"
+                    className="h-auto aspect-square flex flex-col items-center justify-center p-4 gap-2"
                     onClick={() => navigate('/admin/operations')}
                   >
                     <Scissors className="h-6 w-6" />
@@ -252,7 +246,7 @@ export default function ShopHomePage() {
                   
                   <Button
                     variant="outline"
-                    className="h-auto flex flex-col items-center justify-center p-4 gap-2"
+                    className="h-auto aspect-square flex flex-col items-center justify-center p-4 gap-2"
                     onClick={() => navigate('/operations-history')}
                   >
                     <FileText className="h-6 w-6" />
@@ -262,6 +256,7 @@ export default function ShopHomePage() {
               </CardContent>
             </Card>
 
+            {/* Shop Gallery */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Dükkan Galerisi</CardTitle>
@@ -271,18 +266,7 @@ export default function ShopHomePage() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  <div className="aspect-square rounded-md overflow-hidden border">
-                    <img 
-                      src="/placeholder-salon.jpg" 
-                      alt="Salon" 
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = 'https://placehold.co/300x300/e9ecef/6c757d?text=G%C3%B6rsel';
-                      }}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  
-                  {Array.from({ length: 5 }).map((_, index) => (
+                  {Array.from({ length: 6 }).map((_, index) => (
                     <div 
                       key={index}
                       className="aspect-square rounded-md border border-dashed flex items-center justify-center bg-gray-50"
@@ -298,7 +282,9 @@ export default function ShopHomePage() {
             </Card>
           </div>
 
+          {/* Right Column */}
           <div className="space-y-6">
+            {/* Working Hours */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Çalışma Saatleri</CardTitle>
@@ -335,6 +321,7 @@ export default function ShopHomePage() {
               </CardContent>
             </Card>
 
+            {/* Staff Members */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Uzman Personeller</CardTitle>
@@ -353,16 +340,16 @@ export default function ShopHomePage() {
                   <div className="space-y-3">
                     {personnel.map((person) => (
                       <div key={person.id} className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+                        <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
                           {person.avatar_url ? (
                             <img 
                               src={person.avatar_url} 
                               alt={person.ad_soyad} 
-                              className="w-full h-full object-cover"
+                              className="w-full h-full object-cover rounded-full"
                             />
                           ) : (
                             <span className="text-sm font-medium">
-                              {person.ad_soyad.split(' ').map((part: string) => part[0]).join('').toUpperCase().substring(0, 2)}
+                              {person.ad_soyad.split(' ').map((part: string) => part[0]).join('').toUpperCase()}
                             </span>
                           )}
                         </div>
@@ -380,8 +367,6 @@ export default function ShopHomePage() {
                 )}
               </CardContent>
             </Card>
-
-            <ShopServicesCard />
           </div>
         </div>
       </div>

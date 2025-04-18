@@ -42,9 +42,9 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
           return;
         }
         
-        const { data, error } = await supabase.auth.getSession();
+        const { data: { session }, error } = await supabase.auth.getSession();
         
-        if (error || !data.session) {
+        if (error || !session) {
           if (isMounted) {
             console.log("No session, redirecting to login");
             navigate('/login');
@@ -52,7 +52,7 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
           return;
         }
         
-        const userRole = data.session.user.user_metadata?.role;
+        const userRole = session.user.user_metadata?.role;
         console.log("Current user role:", userRole, "at pathname:", location.pathname);
         
         // Check admin routes access
@@ -67,7 +67,7 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
               const { data: personelData } = await supabase
                 .from('personel')
                 .select('dukkan_id')
-                .eq('auth_id', data.session.user.id)
+                .eq('auth_id', session.user.id)
                 .maybeSingle();
                 
               if (!personelData?.dukkan_id) {
