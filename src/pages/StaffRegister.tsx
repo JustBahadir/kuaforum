@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +8,8 @@ import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
+import { Phone } from 'lucide-react';
+import { formatPhoneNumber } from '@/utils/phoneFormatter';
 
 export default function StaffRegister() {
   const navigate = useNavigate();
@@ -129,6 +130,12 @@ export default function StaffRegister() {
     }
   };
 
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Allow only digits and limit to 11 characters
+    const value = e.target.value.replace(/\D/g, '').substring(0, 11);
+    setFormData({ ...formData, phone: formatPhoneNumber(value) });
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <Card className="w-full max-w-md">
@@ -214,13 +221,22 @@ export default function StaffRegister() {
                 </div>
                 <div>
                   <Label htmlFor="phone">Telefon</Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    required
-                  />
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="phone"
+                      type="tel"
+                      value={formData.phone}
+                      onChange={handlePhoneChange}
+                      className="pl-10"
+                      placeholder="05XX XXX XX XX"
+                      inputMode="numeric"
+                      required
+                    />
+                  </div>
+                  {errors.phone && (
+                    <p className="text-xs text-red-500">{errors.phone}</p>
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="address">Adres</Label>

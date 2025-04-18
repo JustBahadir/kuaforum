@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { profilServisi } from "@/lib/supabase/services/profilServisi";
+import { formatPhoneNumber } from "@/utils/phoneFormatter";
 
 export function PersonalInfo() {
   const [loading, setLoading] = useState(true);
@@ -43,6 +44,9 @@ export function PersonalInfo() {
     );
   }
 
+  // Format the phone number for display
+  const displayPhone = profile?.phone ? formatPhoneNumber(profile.phone) : "-";
+
   return (
     <Card>
       <CardContent className="p-6 space-y-4">
@@ -59,12 +63,12 @@ export function PersonalInfo() {
           
           <div>
             <Label className="text-sm font-medium text-gray-500">Telefon</Label>
-            <p className="mt-1">{profile?.phone || "-"}</p>
+            <p className="mt-1">{displayPhone}</p>
           </div>
           
           <div>
             <Label className="text-sm font-medium text-gray-500">Cinsiyet</Label>
-            <p className="mt-1">{profile?.gender === 'erkek' ? 'Erkek' : profile?.gender === 'kadın' ? 'Kadın' : '-'}</p>
+            <p className="mt-1">{profile?.gender === 'male' ? 'Erkek' : profile?.gender === 'female' ? 'Kadın' : '-'}</p>
           </div>
           
           <div className="col-span-2">

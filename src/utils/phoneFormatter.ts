@@ -19,3 +19,12 @@ export const formatPhoneNumber = (phoneNumber: string): string => {
     return `${cleaned.slice(0, 4)} ${cleaned.slice(4, 7)} ${cleaned.slice(7, 9)} ${cleaned.slice(9, 11)}`;
   }
 };
+
+/**
+ * Remove all non-digit characters from a phone number string
+ * @param phoneNumber - The phone number to clean
+ * @returns Cleaned phone number (digits only)
+ */
+export const cleanPhoneNumber = (phoneNumber: string): string => {
+  return phoneNumber.replace(/\D/g, '');
+};

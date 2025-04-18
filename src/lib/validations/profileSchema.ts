@@ -5,8 +5,12 @@ export const profileSchema = z.object({
   firstName: z.string().min(2, { message: "Ad en az 2 karakter olmalıdır" }),
   lastName: z.string().min(2, { message: "Soyad en az 2 karakter olmalıdır" }),
   phone: z.string().min(10, { message: "Geçerli bir telefon numarası girin" })
-    .refine(val => /^0[0-9]{10}$/.test(val.replace(/\D/g, '')), {
-      message: "Geçerli bir telefon numarası girin"
+    .refine(val => {
+      // Remove all non-digits and check if the result is a valid Turkish mobile number
+      const digitsOnly = val.replace(/\D/g, '');
+      return digitsOnly.length === 11 && digitsOnly.startsWith('0');
+    }, {
+      message: "Geçerli bir telefon numarası girin (05XX XXX XX XX)"
     }),
   gender: z.enum(["male", "female"]).optional(),
   role: z.enum(["staff", "business_owner"], { 

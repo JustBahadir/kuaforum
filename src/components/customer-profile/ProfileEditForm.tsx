@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { 
   Card, 
@@ -20,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import { FileUpload } from "@/components/ui/file-upload";
 import { toast } from "sonner";
+import { formatPhoneNumber } from "@/utils/phoneFormatter";
 
 export interface ProfileEditFormProps {
   profile: {
@@ -130,6 +130,21 @@ export function ProfileEditForm({
     handleChange(syntheticEvent);
   };
 
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Allow only digits and limit to 11 characters (Turkish mobile format)
+    const value = e.target.value.replace(/\D/g, '').substring(0, 11);
+    
+    // Create a synthetic event to pass to the parent's handleChange
+    const syntheticEvent = {
+      target: {
+        name: 'phone',
+        value
+      }
+    } as React.ChangeEvent<HTMLInputElement>;
+    
+    handleChange(syntheticEvent);
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -203,10 +218,11 @@ export function ProfileEditForm({
           <Input
             id="phone"
             name="phone"
-            value={profile.phone}
-            onChange={handleChange}
+            type="tel"
+            value={formatPhoneNumber(profile.phone)}
+            onChange={handlePhoneChange}
             placeholder="05XX XXX XX XX"
-            maxLength={14}
+            inputMode="numeric"
           />
         </div>
 
