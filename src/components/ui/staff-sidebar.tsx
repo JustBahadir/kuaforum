@@ -52,6 +52,8 @@ export function StaffSidebar() {
   const path = location.pathname;
   const [isOpen, setIsOpen] = useState(false);
 
+  console.log("StaffSidebar rendering with userRole:", userRole);
+
   // admin = işletme sahibi veya business_owner
   const isAdmin = userRole === 'admin' || userRole === 'business_owner';
 
@@ -68,7 +70,13 @@ export function StaffSidebar() {
     { href: "/settings", title: "Ayarlar", icon: <Settings size={18} />, roles: ["admin", "business_owner", "staff"] },
   ];
 
-  const filteredNavItems = navItems.filter(item => item.roles.includes(userRole || ""));
+  const filteredNavItems = navItems.filter(item => {
+    // Consider both 'admin' and 'business_owner' as admin roles
+    if (userRole === 'admin' || userRole === 'business_owner') {
+      return item.roles.includes('admin') || item.roles.includes('business_owner');
+    }
+    return item.roles.includes(userRole || "");
+  });
 
   // Close mobile sidebar when route changes
   useEffect(() => {

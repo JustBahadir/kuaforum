@@ -39,13 +39,22 @@ export function useCustomerAuth() {
           if (userDataError) {
             console.error('Error fetching user data:', userDataError);
           } else {
+            console.log("User data from edge function:", userData);
+            
             // Set role and user data from edge function response
-            setUserRole(userData?.role || 'customer');
+            // Make sure to check for business_owner role too
+            const role = userData?.role || 'customer';
+            setUserRole(role);
+            
+            // For backward compatibility, treat 'admin' and 'business_owner' the same
+            if (role === 'admin' || role === 'business_owner') {
+              console.log("User is admin or business owner");
+            }
             
             // Set user name from profile data
             if (userData?.profile) {
               const profile = userData.profile;
-              setUserName(`${profile.first_name || ''} ${profile.last_name || ''}`.trim());
+              setUserName(`${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Kullanıcı');
             }
             
             // Set dukkan data if available
@@ -65,8 +74,11 @@ export function useCustomerAuth() {
                 .single();
                 
               if (dukkanData) {
+                console.log("Found dukkan data for business owner:", dukkanData);
                 setDukkanId(dukkanData.id);
                 setDukkanAdi(dukkanData.ad || '');
+              } else {
+                console.log("No dukkan found for business owner");
               }
             }
           }
@@ -76,7 +88,7 @@ export function useCustomerAuth() {
           // Fallback to user metadata if edge function fails
           const metadata = data.session.user.user_metadata;
           if (metadata) {
-            setUserName(`${metadata.first_name || ''} ${metadata.last_name || ''}`.trim());
+            setUserName(`${metadata.first_name || ''} ${metadata.last_name || ''}`.trim() || 'Kullanıcı');
             setUserRole(metadata.role || 'customer');
           }
         }

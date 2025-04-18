@@ -59,6 +59,7 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
           }
 
           const userRole = roleData?.role;
+          console.log("RouteProtection: User role from edge function:", userRole);
           
           // Role göre yönlendirme
           if (userRole === 'staff') {
@@ -73,7 +74,7 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
                 toast.info("Henüz bir işletmeye atanmadığınız için sadece profil sayfasına erişebilirsiniz.");
               }
             }
-          } else if (userRole === 'business_owner') {
+          } else if (userRole === 'business_owner' || userRole === 'admin') {
             // İşletme sahibi, özel sayfalara erişim kontrolü
             // İşletme sahibi kullanıcılar shop-home ve ilgili sayfalara erişebilir
             const forbiddenPaths = ['/staff-profile'];
@@ -109,7 +110,7 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
   // Yükleme durumu göster
   if (checking && !publicPages.includes(location.pathname)) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-r from-pink-50 to-purple-50">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500 mb-4"></div>
         <p className="text-lg">Yükleniyor...</p>
       </div>
