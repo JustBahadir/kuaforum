@@ -1,8 +1,7 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase/client";
-import { FcGoogle } from "react-icons/fc";
+import { BsGoogle } from "react-icons/bs";
 
 interface GoogleAuthButtonProps {
   redirectTo?: string;
@@ -50,7 +49,7 @@ export function GoogleAuthButton({
       onClick={handleGoogleLogin}
       disabled={loading}
     >
-      <FcGoogle className="h-5 w-5" />
+      <BsGoogle className="h-5 w-5" />
       <span>{loading ? "Yükleniyor..." : text}</span>
     </Button>
   );

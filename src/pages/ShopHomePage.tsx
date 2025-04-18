@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { StaffLayout } from "@/components/ui/staff-layout";
@@ -8,6 +7,7 @@ import { ShopServicesCard } from "@/components/shop/ShopServicesCard";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
+import { Store, Calendar, Users, Scissors, FileText } from "lucide-react";
 
 export default function ShopHomePage() {
   const navigate = useNavigate();
@@ -20,7 +20,6 @@ export default function ShopHomePage() {
   useEffect(() => {
     const loadShopData = async () => {
       try {
-        // Get user session
         const { data: { session } } = await supabase.auth.getSession();
         
         if (!session) {
@@ -32,9 +31,7 @@ export default function ShopHomePage() {
         const userMetadata = session.user.user_metadata;
         const role = userMetadata?.role;
 
-        // Load shop data based on role
         if (role === 'admin') {
-          // Admin: fetch shop owned by user
           const { data: shops, error } = await supabase
             .from('dukkanlar')
             .select('*')
@@ -46,7 +43,6 @@ export default function ShopHomePage() {
           if (shops && shops.length > 0) {
             setShopData(shops[0]);
             
-            // Load working hours
             const { data: hours } = await supabase
               .from('calisma_saatleri')
               .select('*')
@@ -55,7 +51,6 @@ export default function ShopHomePage() {
               
             setWorkingHours(hours || []);
             
-            // Load personnel
             const { data: staff } = await supabase
               .from('personel')
               .select('*')
@@ -63,11 +58,9 @@ export default function ShopHomePage() {
               
             setPersonnel(staff || []);
           } else {
-            // No shop found, show creation screen
             navigate('/create-shop');
           }
         } else if (role === 'staff') {
-          // Staff: fetch shop they work for
           const { data: personel, error } = await supabase
             .from('personel')
             .select('dukkan_id')
@@ -85,7 +78,6 @@ export default function ShopHomePage() {
               
             setShopData(shop);
             
-            // Load working hours
             const { data: hours } = await supabase
               .from('calisma_saatleri')
               .select('*')
@@ -94,7 +86,6 @@ export default function ShopHomePage() {
               
             setWorkingHours(hours || []);
             
-            // Load personnel
             const { data: staff } = await supabase
               .from('personel')
               .select('*')
@@ -102,11 +93,9 @@ export default function ShopHomePage() {
               
             setPersonnel(staff || []);
           } else {
-            // No shop found, redirect to profile
             navigate('/staff-profile');
           }
         } else {
-          // Not admin or staff
           navigate('/login');
         }
       } catch (error) {
@@ -120,7 +109,6 @@ export default function ShopHomePage() {
     loadShopData();
   }, [navigate]);
   
-  // Function to refresh user profile
   const refreshUserProfile = () => {
     refreshProfile();
   };
@@ -182,7 +170,6 @@ export default function ShopHomePage() {
           </Button>
         </div>
 
-        {/* Shop Profile Section */}
         <Card className="bg-purple-50 mb-6">
           <CardContent className="p-6">
             <div className="flex flex-col md:flex-row items-start gap-6">
@@ -229,9 +216,7 @@ export default function ShopHomePage() {
         </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Content - 2/3 width on large screens */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Quick Actions */}
             <Card>
               <CardHeader>
                 <CardTitle>Hızlı İşlemler</CardTitle>
@@ -277,7 +262,6 @@ export default function ShopHomePage() {
               </CardContent>
             </Card>
 
-            {/* Gallery Section */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Dükkan Galerisi</CardTitle>
@@ -287,20 +271,17 @@ export default function ShopHomePage() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {/* Sample gallery item */}
                   <div className="aspect-square rounded-md overflow-hidden border">
                     <img 
                       src="/placeholder-salon.jpg" 
                       alt="Salon" 
                       onError={(e) => {
-                        // Set a fallback when image fails to load
                         (e.target as HTMLImageElement).src = 'https://placehold.co/300x300/e9ecef/6c757d?text=G%C3%B6rsel';
                       }}
                       className="w-full h-full object-cover"
                     />
                   </div>
                   
-                  {/* Empty upload spots */}
                   {Array.from({ length: 5 }).map((_, index) => (
                     <div 
                       key={index}
@@ -317,9 +298,7 @@ export default function ShopHomePage() {
             </Card>
           </div>
 
-          {/* Sidebar Content - 1/3 width on large screens */}
           <div className="space-y-6">
-            {/* Working Hours */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Çalışma Saatleri</CardTitle>
@@ -356,7 +335,6 @@ export default function ShopHomePage() {
               </CardContent>
             </Card>
 
-            {/* Personnel List */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Uzman Personeller</CardTitle>
@@ -403,7 +381,6 @@ export default function ShopHomePage() {
               </CardContent>
             </Card>
 
-            {/* Services Summary */}
             <ShopServicesCard />
           </div>
         </div>
