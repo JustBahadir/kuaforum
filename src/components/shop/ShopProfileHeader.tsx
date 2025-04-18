@@ -58,15 +58,15 @@ export function ShopProfileHeader({ dukkanData, userRole }: ShopProfileHeaderPro
   };
 
   return (
-    <div className="bg-gradient-to-r from-pink-50 to-purple-50 p-6 rounded-lg shadow-sm">
-      <div className="flex flex-col md:flex-row items-start gap-6">
-        {/* Logo section */}
-        <div className="relative">
-          <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center border-2 border-purple-200">
+    <div className="bg-gradient-to-r from-pink-50 to-purple-50 p-8 rounded-lg shadow-sm">
+      <div className="flex flex-col md:flex-row items-start gap-8">
+        {/* Logo section with larger size and better button placement */}
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-28 h-28 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center border-2 border-purple-200">
             {dukkanData?.logo_url ? (
               <img 
                 src={dukkanData.logo_url} 
-                alt={dukkanData.isletme_adi} 
+                alt={dukkanData.isletme_adi || "İşletme Adı Girilmemiş"} 
                 className="w-full h-full object-cover"
               />
             ) : (
@@ -77,7 +77,7 @@ export function ShopProfileHeader({ dukkanData, userRole }: ShopProfileHeaderPro
           </div>
           
           {userRole === 'admin' && (
-            <div className="absolute -bottom-2 transform translate-x-1/2 right-1/2 flex gap-2">
+            <div className="flex gap-2">
               <ShopProfilePhotoUpload 
                 dukkanId={dukkanData?.id} 
                 onSuccess={() => window.location.reload()}
@@ -89,13 +89,24 @@ export function ShopProfileHeader({ dukkanData, userRole }: ShopProfileHeaderPro
                   {dukkanData?.logo_url ? 'Logoyu Değiştir' : 'Logo Ekle'}
                 </Button>
               </ShopProfilePhotoUpload>
+
+              {dukkanData?.logo_url && (
+                <Button 
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleRemovePhoto}
+                  disabled={removing}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
             </div>
           )}
         </div>
         
         {/* Info section */}
         <div className="flex-1">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <h1 className="text-2xl font-bold text-gray-800">
                 {dukkanData?.isletme_adi || "İşletme Adı Girilmemiş"}
@@ -121,17 +132,6 @@ export function ShopProfileHeader({ dukkanData, userRole }: ShopProfileHeaderPro
                 >
                   <Edit className="mr-2 h-4 w-4" />
                   Dükkan Bilgilerini Düzenle
-                </Button>
-              )}
-
-              {userRole === 'admin' && dukkanData?.logo_url && (
-                <Button 
-                  variant="destructive"
-                  size="icon"
-                  onClick={handleRemovePhoto}
-                  disabled={removing}
-                >
-                  <Trash2 className="h-4 w-4" />
                 </Button>
               )}
             </div>
