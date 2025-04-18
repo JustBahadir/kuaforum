@@ -1,11 +1,12 @@
 
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2 } from "lucide-react";
+import { Edit, Trash2, ImagePlus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { QueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useState } from "react";
+import { ShopProfilePhotoUpload } from "@/components/shop/ShopProfilePhotoUpload";
 
 interface ShopProfileHeaderProps {
   dukkanData: any;
@@ -61,31 +62,34 @@ export function ShopProfileHeader({ dukkanData, userRole }: ShopProfileHeaderPro
       <div className="flex flex-col md:flex-row items-start gap-6">
         {/* Logo section */}
         <div className="relative">
-          <div className="w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center border-2 border-purple-200">
+          <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center border-2 border-purple-200">
             {dukkanData?.logo_url ? (
               <img 
                 src={dukkanData.logo_url} 
-                alt={dukkanData.isletme_adi || "Dükkan Logosu"} 
+                alt={dukkanData.isletme_adi} 
                 className="w-full h-full object-cover"
               />
             ) : (
               <div className="text-3xl font-bold text-purple-500">
-                {(dukkanData?.isletme_adi || "?")[0]?.toUpperCase()}
+                {dukkanData?.isletme_adi ? dukkanData.isletme_adi[0].toUpperCase() : '?'}
               </div>
             )}
           </div>
           
-          {userRole === 'admin' && dukkanData?.logo_url && (
-            <Button 
-              variant="destructive"
-              size="sm"
-              className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 text-xs py-1 px-2 h-auto"
-              onClick={handleRemovePhoto}
-              disabled={removing}
-            >
-              <Trash2 className="h-3 w-3 mr-1" />
-              Fotoğrafı Kaldır
-            </Button>
+          {userRole === 'admin' && (
+            <div className="absolute -bottom-2 transform translate-x-1/2 right-1/2 flex gap-2">
+              <ShopProfilePhotoUpload 
+                dukkanId={dukkanData?.id} 
+                onSuccess={() => window.location.reload()}
+                acceptVideoFiles={false}
+                galleryMode={false}
+              >
+                <Button size="sm" variant="secondary" className="whitespace-nowrap">
+                  <ImagePlus className="h-4 w-4 mr-1" />
+                  {dukkanData?.logo_url ? 'Logoyu Değiştir' : 'Logo Ekle'}
+                </Button>
+              </ShopProfilePhotoUpload>
+            </div>
           )}
         </div>
         
@@ -94,7 +98,7 @@ export function ShopProfileHeader({ dukkanData, userRole }: ShopProfileHeaderPro
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             <div>
               <h1 className="text-2xl font-bold text-gray-800">
-                {dukkanData?.isletme_adi || "İsimsiz İşletme"}
+                {dukkanData?.isletme_adi || "İşletme Adı Girilmemiş"}
               </h1>
               {dukkanData?.adres && (
                 <p className="text-muted-foreground">{dukkanData.adres}</p>
@@ -117,6 +121,17 @@ export function ShopProfileHeader({ dukkanData, userRole }: ShopProfileHeaderPro
                 >
                   <Edit className="mr-2 h-4 w-4" />
                   Dükkan Bilgilerini Düzenle
+                </Button>
+              )}
+
+              {userRole === 'admin' && dukkanData?.logo_url && (
+                <Button 
+                  variant="destructive"
+                  size="icon"
+                  onClick={handleRemovePhoto}
+                  disabled={removing}
+                >
+                  <Trash2 className="h-4 w-4" />
                 </Button>
               )}
             </div>

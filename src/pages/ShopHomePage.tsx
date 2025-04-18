@@ -1,21 +1,16 @@
 
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
-import { supabase } from "@/lib/supabase/client";
-import { toast } from "sonner";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
-import { Button } from "@/components/ui/button";
+import { QueryClient } from "@tanstack/react-query";
+import { useShopData } from "@/hooks/useShopData";
 import { ShopProfileHeader } from "@/components/shop/ShopProfileHeader";
 import { ShopContactCard } from "@/components/shop/ShopContactCard";
 import { ShopWorkingHoursCard } from "@/components/shop/ShopWorkingHoursCard";
 import { ShopGalleryCard } from "@/components/shop/ShopGalleryCard";
 import { ShopPersonnelCard } from "@/components/shop/ShopPersonnelCard";
-import { QueryClient } from "@tanstack/react-query";
-import { useShopData } from "@/hooks/useShopData";
 
 export default function ShopHomePage() {
-  const navigate = useNavigate();
   const { userRole, dukkanId } = useCustomerAuth();
   const queryClient = new QueryClient();
   
@@ -44,12 +39,6 @@ export default function ShopHomePage() {
           <div className="text-center">
             <h2 className="text-2xl font-semibold mb-4">Bir hata oluştu</h2>
             <p className="text-red-500 mb-4">{error}</p>
-            <Button 
-              onClick={() => window.location.reload()}
-              className="bg-purple-600 hover:bg-purple-700"
-            >
-              Tekrar Dene
-            </Button>
           </div>
         </div>
       </StaffLayout>
@@ -62,12 +51,6 @@ export default function ShopHomePage() {
         <div className="container mx-auto p-6">
           <div className="text-center">
             <h2 className="text-2xl font-semibold mb-4">Henüz bir dükkan bulunamadı</h2>
-            <Button 
-              onClick={() => navigate('/create-shop')}
-              className="bg-purple-600 hover:bg-purple-700"
-            >
-              Dükkan Oluştur
-            </Button>
           </div>
         </div>
       </StaffLayout>

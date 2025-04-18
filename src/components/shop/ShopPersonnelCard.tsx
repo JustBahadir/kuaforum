@@ -50,15 +50,15 @@ export function ShopPersonnelCard({ personelListesi, userRole }: ShopPersonnelCa
             Henüz personel bulunmuyor.
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {personelListesi.map((personel: any) => (
               <div 
                 key={personel.id} 
                 className="group flex flex-col items-center bg-gray-50 p-6 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
-                onClick={() => handlePersonnelClick(personel.id)}
+                onClick={() => navigate(`/personnel/${personel.id}`)}
               >
                 <Avatar 
-                  className="h-20 w-20 mb-4 transition-transform group-hover:scale-105" 
+                  className="h-24 w-24 mb-4 transition-transform group-hover:scale-105" 
                   onClick={(e) => personel.avatar_url && handleShowImagePreview(personel.avatar_url, e)}
                 >
                   {personel.avatar_url ? (
@@ -68,13 +68,15 @@ export function ShopPersonnelCard({ personelListesi, userRole }: ShopPersonnelCa
                       className="object-cover"
                     />
                   ) : (
-                    <AvatarFallback className="bg-purple-100 text-purple-600 text-2xl">
+                    <AvatarFallback className="bg-purple-100 text-purple-600 text-3xl">
                       {personel.ad_soyad.split(' ').map((name: string) => name[0]).join('').substring(0, 2).toUpperCase()}
                     </AvatarFallback>
                   )}
                 </Avatar>
                 <div className="text-center">
-                  <h3 className="font-medium text-base group-hover:text-purple-600 transition-colors">{personel.ad_soyad}</h3>
+                  <h3 className="font-medium text-lg group-hover:text-purple-600 transition-colors">
+                    {personel.ad_soyad}
+                  </h3>
                   <p className="text-sm text-gray-500 mt-1">{personel.unvan || "Personel"}</p>
                 </div>
               </div>
