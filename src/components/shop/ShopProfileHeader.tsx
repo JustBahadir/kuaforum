@@ -83,15 +83,15 @@ export function ShopProfileHeader({
               <h1 className="font-bold text-gray-800 text-3xl text-center">
                 {dukkanData?.isletme_adi || "İşletme Adı Girilmemiş"}
               </h1>
-              {dukkanData?.adres && <p className="text-muted-foreground">{dukkanData.adres}</p>}
+              {dukkanData?.adres && <p className="text-muted-foreground text-center text-xl">{dukkanData.adres}</p>}
             </div>
             
             <div className="flex flex-col sm:flex-row gap-2">
-              <Button size="lg" className="bg-purple-600 hover:bg-purple-700 text-white px-8" onClick={() => navigate("/appointments")}>
+              <Button size="lg" onClick={() => navigate("/appointments")} className="bg-purple-600 hover:bg-purple-700 text-white px-[4px] py-[12px]">
                 Hemen Randevu Al
               </Button>
               
-              {userRole === 'admin' && <Button variant="outline" onClick={() => navigate("/shop-settings")}>
+              {userRole === 'admin' && <Button variant="outline" onClick={() => navigate("/shop-settings")} className="px-0 py-[14px]">
                   <Edit className="mr-2 h-4 w-4" />
                   Dükkan Bilgilerini Düzenle
                 </Button>}
