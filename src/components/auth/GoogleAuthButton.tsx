@@ -27,6 +27,7 @@ export function GoogleAuthButton({
       console.log("Google OAuth işlemi başlatılıyor...");
       console.log("Redirect URL:", redirectUrl);
       
+      // Try with flowType: 'implicit' to avoid popup issues
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
@@ -34,7 +35,8 @@ export function GoogleAuthButton({
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
-          }
+          },
+          skipBrowserRedirect: false, // Ensure browser redirects automatically
         }
       });
       
@@ -44,6 +46,13 @@ export function GoogleAuthButton({
           toast.error("Google ile giriş henüz etkinleştirilmemiştir. Lütfen Supabase panelinden Google provider'ı aktifleştirin.");
         } else if (error.message.includes("popup") || error.message.includes("blocked")) {
           toast.error("Tarayıcı popup'ı engelledi. Lütfen popup izinlerinizi kontrol edin veya tarayıcı ayarlarınızı değiştirin.");
+          // Alternative manual redirection if popup is blocked
+          if (data?.url) {
+            toast.info("Yönlendirme deneniyor...", { duration: 2000 });
+            setTimeout(() => {
+              window.location.href = data.url;
+            }, 2500);
+          }
         } else {
           toast.error("Google ile giriş yapılırken bir hata oluştu: " + error.message);
         }
@@ -51,7 +60,14 @@ export function GoogleAuthButton({
       }
 
       console.log("Google OAuth yanıtı:", data);
-      toast.success("Google yönlendirmesi başlatılıyor...");
+      
+      // If we have a URL but no redirect happened automatically, try manual redirect
+      if (data?.url) {
+        toast.success("Google yönlendirmesi başlatılıyor...");
+        setTimeout(() => {
+          window.location.href = data.url;
+        }, 1000);
+      }
       // Success will be handled by the auth state change event or the redirect
     } catch (error: any) {
       console.error("Google auth error:", error);

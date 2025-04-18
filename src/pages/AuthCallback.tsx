@@ -29,6 +29,7 @@ export default function AuthCallback() {
         // Check if we have a valid session after callback
         if (session) {
           console.log("Kullanıcı bilgisi:", session.user.id);
+          toast.success("Giriş başarılı!");
           
           // Check if the user has a complete profile
           const { data: profile, error: profileError } = await supabase
@@ -65,7 +66,7 @@ export default function AuthCallback() {
               .eq('auth_id', session.user.id)
               .single();
               
-            if (personelError) {
+            if (personelError && personelError.code !== 'PGRST116') {
               console.error("Personel data error:", personelError);
               toast.error("Personel bilgileri alınamadı. Lütfen tekrar giriş yapın.");
               navigate("/staff-login");
@@ -118,6 +119,7 @@ export default function AuthCallback() {
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-r from-pink-50 to-purple-50">
         <div className="bg-red-100 p-4 rounded-md mb-4 max-w-md">
           <p className="text-red-700">Bir hata oluştu: {error}</p>
+          <p className="text-red-600 mt-2">Lütfen tarayıcı izinlerini kontrol edin ve tekrar deneyin.</p>
         </div>
         <p>Giriş sayfasına yönlendiriliyorsunuz...</p>
       </div>
