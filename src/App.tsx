@@ -6,7 +6,7 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { Toaster } from "@/components/ui/sonner";
 import { RouteProtection } from "@/components/auth/RouteProtection";
 import { ThemeProvider } from "@/components/ui/theme-provider";
-import HomePage from "./pages/HomePage";
+import Landing from "./pages/Landing";
 import StaffLogin from "./pages/StaffLogin";
 import StaffRegister from "./pages/StaffRegister";
 import CustomerAuth from "./pages/Auth";
@@ -28,6 +28,7 @@ import OperationsHistory from "./pages/OperationsHistory";
 import CustomerOperations from "./pages/operations/CustomerOperations";
 import StaffOperations from "./pages/operations/StaffOperations";
 import Login from "./pages/Login";
+import HomePage from "./pages/HomePage";
 
 // Create the query client
 const queryClient = new QueryClient({
@@ -47,7 +48,10 @@ function App() {
           <RouteProtection>
             <Routes>
               {/* Landing Page */}
-              <Route path="/" element={<HomePage />} />
+              <Route path="/" element={<Landing />} />
+              
+              {/* Previous HomePage now accessible at /home */}
+              <Route path="/home" element={<HomePage />} />
               
               {/* Auth Routes */}
               <Route path="/login" element={<Login />} />
