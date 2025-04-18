@@ -18,6 +18,7 @@ export default function StaffRegister() {
   const [shopValidated, setShopValidated] = useState(false);
   const [shopName, setShopName] = useState('');
   const [shopId, setShopId] = useState<number | null>(null);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -38,7 +39,6 @@ export default function StaffRegister() {
     setError(null);
     
     try {
-      // Check if shop code exists
       const { data, error: shopError } = await supabase
         .from('dukkanlar')
         .select('id, ad')
@@ -65,6 +65,11 @@ export default function StaffRegister() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (formData.phone.replace(/\D/g, '').length !== 11) {
+      setPhoneError("Lütfen geçerli bir telefon numarası girin");
+      return;
+    }
+    
     if (!shopValidated) {
       setError("Lütfen önce dükkan kodunu doğrulayın");
       return;
@@ -74,7 +79,6 @@ export default function StaffRegister() {
     setError(null);
     
     try {
-      // Create auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -95,7 +99,6 @@ export default function StaffRegister() {
       }
 
       if (authData.user) {
-        // Create personnel record
         const { error: staffError } = await supabase
           .from('personel')
           .insert([
@@ -131,8 +134,14 @@ export default function StaffRegister() {
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Allow only digits and limit to 11 characters
     const value = e.target.value.replace(/\D/g, '').substring(0, 11);
+    
+    if (value.length < 11) {
+      setPhoneError("Lütfen tam bir telefon numarası girin");
+    } else {
+      setPhoneError(null);
+    }
+
     setFormData({ ...formData, phone: formatPhoneNumber(value) });
   };
 
@@ -234,8 +243,8 @@ export default function StaffRegister() {
                       required
                     />
                   </div>
-                  {errors.phone && (
-                    <p className="text-xs text-red-500">{errors.phone}</p>
+                  {phoneError && (
+                    <p className="text-xs text-red-500">{phoneError}</p>
                   )}
                 </div>
                 <div>
