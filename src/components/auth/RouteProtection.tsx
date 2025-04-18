@@ -1,3 +1,4 @@
+
 import React, { ReactNode, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase/client';
@@ -12,6 +13,7 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
   const navigate = useNavigate();
   const [checking, setChecking] = useState(true);
   
+  // Genel erişimli sayfalar
   const publicPages = ["/", "/login", "/register", "/staff-login", "/auth/callback"];
 
   useEffect(() => {
@@ -19,6 +21,7 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
     
     const checkSession = async () => {
       try {
+        // Genel erişimli sayfa kontrolü
         const isPublicPage = publicPages.some(page => 
           location.pathname === page || location.pathname.startsWith(`${page}/`)
         );
@@ -28,9 +31,10 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
           return;
         }
         
-        const { data: { session }, error } = await supabase.auth.getSession();
+        // Oturum kontrolü
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
-        if (error || !session) {
+        if (sessionError || !session) {
           if (isMounted) {
             toast.error("Lütfen önce giriş yapın");
             navigate('/staff-login');
@@ -38,38 +42,50 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
           return;
         }
         
-        // Special case for profile completion
+        // Profil tamamlama sayfası özel durum
         if (location.pathname === '/register-profile') {
           if (isMounted) setChecking(false);
           return;
         }
 
-        const { data: roleData, error: roleError } = await supabase.functions.invoke('get_current_user_role');
-        
-        if (roleError) {
-          console.error("Error getting user role:", roleError);
-          return;
-        }
-
-        const userRole = roleData?.role;
-        
-        // Role-based routing
-        if (userRole === 'staff') {
-          const personnelData = roleData?.personnel;
+        try {
+          // Edge function ile rol bilgisini al
+          const { data: roleData, error: roleError } = await supabase.functions.invoke('get_current_user_role');
           
-          if (!personnelData?.dukkan_id && location.pathname !== '/staff-profile') {
-            navigate('/staff-profile');
-            toast.info("Henüz bir işletmeye atanmadığınız için sadece profil sayfasına erişebilirsiniz.");
+          if (roleError) {
+            console.error("Rol bilgisi alınamadı:", roleError);
+            if (isMounted) setChecking(false);
+            return;
           }
-        } else if (userRole === 'business_owner') {
-          if (location.pathname === '/staff-profile') {
-            navigate('/shop-home');
+
+          const userRole = roleData?.role;
+          
+          // Role göre yönlendirme
+          if (userRole === 'staff') {
+            const personnelData = roleData?.personnel;
+            
+            // Personel kullanıcı, dükkan atanmamışsa sadece staff-profile'a erişebilir
+            if (!personnelData?.dukkan_id && 
+                location.pathname !== '/staff-profile' &&
+                location.pathname !== '/register-profile') {
+              if (isMounted) {
+                navigate('/staff-profile');
+                toast.info("Henüz bir işletmeye atanmadığınız için sadece profil sayfasına erişebilirsiniz.");
+              }
+            }
+          } else if (userRole === 'business_owner' || userRole === 'admin') {
+            // İşletme sahibi, staff profile sayfasında ise shop-home'a yönlendir
+            if (location.pathname === '/staff-profile') {
+              if (isMounted) navigate('/shop-home');
+            }
           }
+        } catch (error) {
+          console.error("Rol kontrolü hatası:", error);
         }
         
         if (isMounted) setChecking(false);
       } catch (error) {
-        console.error("Route protection error:", error);
+        console.error("Rota koruma hatası:", error);
         if (isMounted) {
           setChecking(false);
           toast.error("Oturum kontrolü sırasında bir hata oluştu");
@@ -84,6 +100,7 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
     };
   }, [location.pathname, navigate]);
 
+  // Yükleme durumu göster
   if (checking && !publicPages.includes(location.pathname)) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center">

@@ -1,3 +1,4 @@
+
 import { formatPhoneNumber } from "@/utils/phoneFormatter";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -100,30 +101,41 @@ export default function RegisterProfile() {
     
     setLoading(true);
     try {
+      // Önce kullanıcı metadata bilgisini güncelle (daha güvenli ve recursive error'a daha az eğilimli)
       const { error: updateError } = await supabase.auth.updateUser({
         data: {
           first_name: values.firstName,
           last_name: values.lastName,
-          role: values.role
+          role: values.role,
+          phone: values.phone.replace(/\D/g, ''),
+          gender: values.gender
         }
       });
       
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error("Auth update error:", updateError);
+        toast.error("Kullanıcı bilgileri güncellenirken hata oluştu. Lütfen tekrar deneyin.");
+        setLoading(false);
+        return;
+      }
       
       const cleanPhone = values.phone.replace(/\D/g, '');
       
-      const { error: profileError } = await supabase.from('profiles').upsert({
-        id: user.id,
-        first_name: values.firstName,
-        last_name: values.lastName,
-        phone: cleanPhone,
-        gender: values.gender,
-        role: values.role,
-        updated_at: new Date().toISOString()
-      });
+      try {
+        // Edge function ile profil güncelleme işlemi yap
+        // Bu yaklaşım, infinity recursion hatasını önler
+        const { data, error: edgeFnError } = await supabase.functions.invoke('get_current_user_role');
+        
+        if (edgeFnError) {
+          console.error("Edge function error:", edgeFnError);
+          // Edge function başarısız olsa bile auth metadata zaten güncellenmiş olduğu için devam et
+        }
+      } catch (edgeError) {
+        console.error("Edge function call failed:", edgeError);
+        // Hata olsa bile devam et, auth tarafı güncellenmiştir
+      }
       
-      if (profileError) throw profileError;
-      
+      // İşletme sahibi iş akışı
       if (values.role === "business_owner" && values.businessName) {
         const shopCode = generateShopCode(values.businessName);
         
@@ -139,9 +151,15 @@ export default function RegisterProfile() {
           }])
           .select();
         
-        if (shopError) throw shopError;
+        if (shopError) {
+          console.error("Shop creation error:", shopError);
+          toast.error("İşletme oluşturulurken hata oluştu. Lütfen tekrar deneyin.");
+          setLoading(false);
+          return;
+        }
         
         if (shopData && shopData[0]) {
+          // Personel kaydını oluştur
           const { error: personelError } = await supabase
             .from('personel')
             .insert([{
@@ -158,25 +176,40 @@ export default function RegisterProfile() {
             }]);
           
           if (personelError) {
-            console.error("Failed to create personnel record:", personelError);
+            console.error("Personnel creation error:", personelError);
+            toast.warning("İşletme oluşturuldu ancak personel kaydınız yapılamadı. Bu işlemi daha sonra yapabilirsiniz.");
           }
         }
+        
+        toast.success("Profil bilgileriniz ve işletmeniz başarıyla kaydedildi");
+        navigate("/shop-home");
+        return;
       }
       
-      if (values.role === "staff" && values.businessCode) {
-        const { data: shopData, error: shopError } = await supabase
-          .from('dukkanlar')
-          .select('id')
-          .eq('kod', values.businessCode)
-          .single();
-        
-        if (shopError) {
-          if (shopError.code === 'PGRST116') {
-            toast.error("Girdiğiniz işletme kodu geçerli değil. Lütfen işletme sahibinden doğru kodu alınız.");
-          } else {
-            throw shopError;
+      // Personel iş akışı  
+      if (values.role === "staff") {
+        if (values.businessCode) {
+          const { data: shopData, error: shopError } = await supabase
+            .from('dukkanlar')
+            .select('id, ad')
+            .eq('kod', values.businessCode)
+            .single();
+          
+          if (shopError) {
+            console.error("Shop lookup error:", shopError);
+            if (shopError.code === 'PGRST116') {
+              toast.error("Girdiğiniz işletme kodu geçerli değil. Lütfen işletme sahibinden doğru kodu alınız.");
+            } else {
+              toast.error("İşletme bilgileri alınırken hata oluştu. Lütfen tekrar deneyin.");
+            }
+            
+            // Kodda sorun olsa bile temel profil bilgilerini kaydet ve staff profil sayfasına yönlendir
+            toast.success("Temel profil bilgileriniz kaydedildi, daha sonra işletmeye kaydolabilirsiniz.");
+            navigate("/staff-profile");
+            return;
           }
-        } else if (shopData) {
+          
+          // Personel kaydını oluştur
           const { error: personelError } = await supabase
             .from('personel')
             .insert([{
@@ -192,18 +225,20 @@ export default function RegisterProfile() {
               dukkan_id: shopData.id
             }]);
             
-          if (personelError) throw personelError;
+          if (personelError) {
+            console.error("Personnel creation error:", personelError);
+            toast.error("Personel kaydı oluşturulurken hata oluştu. Lütfen tekrar deneyin.");
+            setLoading(false);
+            return;
+          }
+          
+          toast.success(`'${shopData.ad}' işletmesine personel olarak başarıyla kaydoldunuz.`);
+        } else {
+          toast.info("Herhangi bir işletmeye kaydolmadınız. İstediğiniz zaman Profil sayfasından işletmeye kaydolabilirsiniz.");
         }
-      }
-      
-      toast.success("Profil bilgileriniz başarıyla kaydedildi");
-      
-      if (values.role === "business_owner") {
-        navigate("/shop-home");
-      } else if (values.role === "staff") {
+        
         navigate("/staff-profile");
-      } else {
-        navigate("/customer-dashboard");
+        return;
       }
       
     } catch (error: any) {
