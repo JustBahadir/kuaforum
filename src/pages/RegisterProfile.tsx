@@ -1,4 +1,3 @@
-
 import { formatPhoneNumber } from "@/utils/phoneFormatter";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -28,12 +27,11 @@ import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-// Profile form validation schema
 const profileSchema = z.object({
   firstName: z.string().min(2, { message: "Ad en az 2 karakter olmalıdır" }),
   lastName: z.string().min(2, { message: "Soyad en az 2 karakter olmalıdır" }),
   phone: z.string().min(10, { message: "Geçerli bir telefon numarası girin" }),
-  gender: z.enum(["male", "female"]).optional(), // Make gender optional
+  gender: z.enum(["male", "female"]).optional(),
   role: z.enum(["staff", "business_owner"], { 
     required_error: "Kayıt türü seçimi zorunludur" 
   }),
@@ -45,8 +43,7 @@ export default function RegisterProfile() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<any>(null);
-  
-  // Initialize form with default values
+
   const form = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
@@ -59,11 +56,14 @@ export default function RegisterProfile() {
       businessCode: "",
     }
   });
-  
-  // Watch the role field to conditionally show businessName or businessCode
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, '').substring(0, 11);
+    form.setValue('phone', formatPhoneNumber(value));
+  };
+
   const selectedRole = form.watch("role");
-  
-  // Get current user and prefill form if possible
+
   useEffect(() => {
     const getUser = async () => {
       const { data: { user }, error } = await supabase.auth.getUser();
@@ -83,7 +83,6 @@ export default function RegisterProfile() {
       
       setUser(user);
       
-      // Pre-fill form with user data if available
       if (user.user_metadata) {
         form.setValue("firstName", user.user_metadata.first_name || "");
         form.setValue("lastName", user.user_metadata.last_name || "");
@@ -92,10 +91,8 @@ export default function RegisterProfile() {
     
     getUser();
   }, [navigate, form]);
-  
-  // Handle form submission
+
   const onSubmit = async (values: z.infer<typeof profileSchema>) => {
-    // Validate based on role
     if (values.role === "business_owner" && !values.businessName) {
       toast.error("İşletme sahibi iseniz işletme adı girmelisiniz");
       return;
@@ -103,7 +100,6 @@ export default function RegisterProfile() {
     
     setLoading(true);
     try {
-      // Update user metadata
       const { error: updateError } = await supabase.auth.updateUser({
         data: {
           first_name: values.firstName,
@@ -114,10 +110,8 @@ export default function RegisterProfile() {
       
       if (updateError) throw updateError;
       
-      // Remove non-digit characters from phone before saving
       const cleanPhone = values.phone.replace(/\D/g, '');
       
-      // Update or create profile record
       const { error: profileError } = await supabase.from('profiles').upsert({
         id: user.id,
         first_name: values.firstName,
@@ -130,7 +124,6 @@ export default function RegisterProfile() {
       
       if (profileError) throw profileError;
       
-      // If business owner, create business record
       if (values.role === "business_owner" && values.businessName) {
         const shopCode = generateShopCode(values.businessName);
         
@@ -149,7 +142,6 @@ export default function RegisterProfile() {
         if (shopError) throw shopError;
         
         if (shopData && shopData[0]) {
-          // Also add business owner as staff
           const { error: personelError } = await supabase
             .from('personel')
             .insert([{
@@ -171,7 +163,6 @@ export default function RegisterProfile() {
         }
       }
       
-      // If staff with business code, create application
       if (values.role === "staff" && values.businessCode) {
         const { data: shopData, error: shopError } = await supabase
           .from('dukkanlar')
@@ -186,7 +177,6 @@ export default function RegisterProfile() {
             throw shopError;
           }
         } else if (shopData) {
-          // Create staff record linked to business
           const { error: personelError } = await supabase
             .from('personel')
             .insert([{
@@ -208,13 +198,12 @@ export default function RegisterProfile() {
       
       toast.success("Profil bilgileriniz başarıyla kaydedildi");
       
-      // Redirect based on role
       if (values.role === "business_owner") {
         navigate("/shop-home");
       } else if (values.role === "staff") {
         navigate("/staff-profile");
       } else {
-        navigate("/customer-dashboard"); // This should be the profile page
+        navigate("/customer-dashboard");
       }
       
     } catch (error: any) {
@@ -225,9 +214,7 @@ export default function RegisterProfile() {
     }
   };
 
-  // Generate a shop code from business name
   const generateShopCode = (businessName: string): string => {
-    // Remove non-alphanumeric characters, take first 3 chars, add 4 random digits
     const prefix = businessName
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
@@ -239,10 +226,8 @@ export default function RegisterProfile() {
     
     return `${prefix}${randomDigits}`;
   };
-  
-  // Generate a personnel code
+
   const generatePersonnelCode = (nameSurname: string): string => {
-    // Remove non-alphanumeric characters, take first 4 chars, add 3 random digits
     const prefix = nameSurname
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
@@ -304,12 +289,10 @@ export default function RegisterProfile() {
                     <FormControl>
                       <Input
                         placeholder="05XX XXX XX XX"
-                        value={formatPhoneNumber(field.value)}
-                        onChange={(e) => {
-                          const digitsOnly = e.target.value.replace(/\D/g, '');
-                          const limitedDigits = digitsOnly.substring(0, 11);
-                          field.onChange(limitedDigits);
-                        }}
+                        value={field.value}
+                        onChange={handlePhoneChange}
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                       />
                     </FormControl>
                     <FormDescription>
@@ -329,7 +312,7 @@ export default function RegisterProfile() {
                     <FormControl>
                       <RadioGroup 
                         onValueChange={field.onChange} 
-                        value={field.value} 
+                        value={field.value || ""}
                         className="flex space-x-4"
                       >
                         <FormItem className="flex items-center space-x-2">
