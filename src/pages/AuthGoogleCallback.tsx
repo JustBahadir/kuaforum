@@ -67,7 +67,7 @@ export default function AuthGoogleCallback() {
               .from("profiles")
               .select("id")
               .eq("email", user.email)
-              .single();
+              .maybeSingle();
 
             if (existingUserError && existingUserError.code !== "PGRST116") {
               console.error("Kullanıcı kontrolü sırasında hata:", existingUserError);
@@ -130,4 +130,3 @@ export default function AuthGoogleCallback() {
     </div>
   );
 }
-
