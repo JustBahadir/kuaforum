@@ -16,10 +16,10 @@ export default function AuthGoogleCallback() {
       try {
         // Supabase automatically processes the OAuth callback and sets session
 
-        const {
-          data: { session, user },
-          error: sessionError,
-        } = await supabase.auth.getSession();
+        const { data, error: sessionError } = await supabase.auth.getSession();
+
+        const session = data?.session ?? null;
+        const user = session?.user ?? null;
 
         if (sessionError || !session || !user) {
           toast.error("Oturum alınamadı, lütfen tekrar deneyin.");
@@ -62,7 +62,7 @@ export default function AuthGoogleCallback() {
         if (mode === "register") {
           // Check if user already exists by email in profiles
           // Note: user.email can be null in some cases; fallback logic
-          if (user.email) {
+          if (user.email && typeof user.email === "string") {
             const { data: existingUser, error: existingUserError } = await supabase
               .from("profiles")
               .select("id")
@@ -130,3 +130,4 @@ export default function AuthGoogleCallback() {
     </div>
   );
 }
+
