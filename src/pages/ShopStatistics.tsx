@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -46,6 +45,8 @@ const CHART_COLORS = [
   "#8884d8", "#82ca9d", "#ffc658", "#ff8042", "#0088FE", 
   "#00C49F", "#FFBB28", "#FF8042", "#a4de6c", "#d0ed57"
 ];
+
+import { DateControlBar } from "@/components/ui/date-control-bar";
 
 export default function ShopStatistics() {
   const { dukkanId } = useCustomerAuth();
@@ -403,38 +404,11 @@ export default function ShopStatistics() {
           className="mb-6"
         />
 
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-          <div>
-            <Select value={timeRange} onValueChange={handleTimeRangeChange}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Zaman aralığı" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="day">Günlük</SelectItem>
-                <SelectItem value="week">Haftalık</SelectItem>
-                <SelectItem value="month">Aylık</SelectItem>
-                <SelectItem value="year">Yıllık</SelectItem>
-                <SelectItem value="custom">Özel</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex gap-2">
-            {!useMonthCycle && (
-              <DateRangePicker
-                from={dateRange.from}
-                to={dateRange.to}
-                onSelect={handleDateRangeChange}
-              />
-            )}
-            
-            <CustomMonthCycleSelector
-              selectedDay={monthCycleDay}
-              onChange={handleMonthCycleChange}
-              active={useMonthCycle}
-              onClear={() => setUseMonthCycle(false)}
-            />
-          </div>
+        <div className="flex justify-between items-center mb-6">
+          <DateControlBar 
+            dateRange={dateRange}
+            onDateRangeChange={setDateRange}
+          />
         </div>
 
         {/* Summary statistics */}

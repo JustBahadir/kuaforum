@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +10,7 @@ import { Search, FileBarChart, RefreshCcw, Download, FileText } from "lucide-rea
 import { personelIslemleriServisi } from "@/lib/supabase/services/personelIslemleriServisi";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
+import { DateControlBar } from "@/components/ui/date-control-bar";
 
 export default function OperationsHistory() {
   const [dateRange, setDateRange] = useState({
@@ -253,31 +253,11 @@ export default function OperationsHistory() {
             <CardTitle>Filtreler</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <label className="text-sm font-medium mb-1 block">Tarih Aralığı</label>
-                <DateRangePicker 
-                  from={dateRange.from}
-                  to={dateRange.to}
-                  onSelect={({from, to}) => {
-                    if (from && to) setDateRange({from, to});
-                  }}
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-1 block">Arama</label>
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    type="search"
-                    placeholder="Personel, işlem veya müşteri ara..." 
-                    className="pl-8" 
-                    value={searchText}
-                    onChange={(e) => setSearchText(e.target.value)}
-                  />
-                </div>
-              </div>
-            </div>
+            <DateControlBar 
+              dateRange={dateRange}
+              onDateRangeChange={setDateRange}
+              className="w-full"
+            />
           </CardContent>
         </Card>
 

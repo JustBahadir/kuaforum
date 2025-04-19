@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
@@ -6,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { personelIslemleriServisi } from "@/lib/supabase";
 import { formatCurrency } from "@/lib/utils";
 import { CalendarDays, Clock } from "lucide-react";
-import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { DateControlBar } from "@/components/ui/date-control-bar";
 import { addDays } from "date-fns";
 
 interface OperationsHistoryTabProps {
@@ -26,7 +25,6 @@ export function OperationsHistoryTab({ personnelId, showPoints = false }: Operat
     refetchOnWindowFocus: false,
   });
 
-  // Filter operations by date range
   const filteredOperations = operations.filter((op: any) => {
     if (!op.created_at) return false;
     const date = new Date(op.created_at);
@@ -53,10 +51,9 @@ export function OperationsHistoryTab({ personnelId, showPoints = false }: Operat
           <div className="mb-6">
             <h3 className="text-lg font-semibold mb-2">İşlem Geçmişi</h3>
             <div className="flex justify-between items-center">
-              <DateRangePicker
-                from={dateRange.from}
-                to={dateRange.to}
-                onSelect={(range) => setDateRange(range)}
+              <DateControlBar
+                dateRange={dateRange}
+                onDateRangeChange={setDateRange}
               />
               <div className="text-sm text-muted-foreground">
                 Toplam: {filteredOperations.length} işlem
