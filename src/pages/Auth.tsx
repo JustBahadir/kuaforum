@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
@@ -32,7 +33,7 @@ export default function Auth() {
 
   // Active tab state
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login')
-  const [googleAuthLoading, setGoogleAuthLoading] = useState(false)
+  // Removed googleAuthLoading because GoogleAuthButton manages its loading internally
 
   // Info messages for each tab
   const [loginInfoMsg, setLoginInfoMsg] = useState<string | null>(null)
