@@ -4,7 +4,13 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
 import { PhoneInputField } from "./Customers/components/FormFields/PhoneInputField";
@@ -49,18 +55,18 @@ export default function ProfileSetup() {
         setUserData(user);
 
         const metadata = user.user_metadata || {};
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
           firstName: metadata.first_name || user.user_metadata?.given_name || "",
           lastName: metadata.last_name || user.user_metadata?.family_name || "",
           phone: metadata.phone || "",
           gender: metadata.gender || "",
-          shopName: metadata.shopName || "",
+          shopName: metadata.shopname || "", // fixed key to shopname lowercase as in DB
         }));
 
         const { data: profileData } = await supabase
           .from("profiles")
-          .select("id, role, first_name, last_name, phone, gender, shopName")
+          .select("id, role, first_name, last_name, phone, gender, shopname")
           .eq("id", user.id)
           .maybeSingle();
 
@@ -70,7 +76,8 @@ export default function ProfileSetup() {
           profileData.last_name &&
           profileData.phone &&
           profileData.role &&
-          profileData.gender
+          profileData.gender &&
+          profileData.shopname // check shopname presence
         ) {
           if (profileData.role === "admin") {
             navigate("/shop-home");
@@ -83,7 +90,9 @@ export default function ProfileSetup() {
         }
       } catch (error) {
         console.error("Oturum kontrolü sırasında hata:", error);
-        toast.error("Oturum bilgileriniz alınamadı. Lütfen tekrar giriş yapın.");
+        toast.error(
+          "Oturum bilgileriniz alınamadı. Lütfen tekrar giriş yapın."
+        );
         navigate("/login");
       } finally {
         setLoading(false);
@@ -95,22 +104,22 @@ export default function ProfileSetup() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
 
     if (errors[name as keyof typeof errors]) {
-      setErrors(prev => ({ ...prev, [name]: undefined }));
+      setErrors((prev) => ({ ...prev, [name]: undefined }));
     }
   };
 
   const handleRoleChange = (value: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       role: value,
-      shopCode: value !== "staff" ? "" : prev.shopCode
+      shopCode: value !== "staff" ? "" : prev.shopCode,
     }));
 
     if (errors.role) {
-      setErrors(prev => ({ ...prev, role: undefined }));
+      setErrors((prev) => ({ ...prev, role: undefined }));
     }
   };
 
@@ -132,7 +141,9 @@ export default function ProfileSetup() {
     if (!formData.role.trim()) {
       newErrors.role = "Bu alan zorunludur";
     }
-    // Remove shopName validation since it is no longer mandatory or requested
+    if (formData.role === "admin" && !formData.shopName.trim()) {
+      newErrors.shopName = "Bu alan zorunludur";
+    }
 
     setErrors(newErrors);
 
@@ -165,10 +176,10 @@ export default function ProfileSetup() {
       if (formData.role === "staff" && formData.shopCode.trim().length > 0) {
         updateData.shopCode = formData.shopCode.trim();
       }
-      // Do not send shopName now, since it's not requested anymore
-      // if (formData.role === "admin") {
-      //   updateData.shopName = formData.shopName.trim();
-      // }
+
+      if (formData.role === "admin") {
+        updateData.shopname = formData.shopName.trim();
+      }
 
       console.log("Profil güncelleme için gönderilen veri:", updateData);
 
@@ -178,7 +189,11 @@ export default function ProfileSetup() {
 
       if (error) {
         console.error("Profil güncellenirken detaylı hata: ", error);
-        toast.error(`Profil bilgileri kaydedilirken bir sorun oluştu: ${error.message || "Bilinmeyen hata"}`);
+        toast.error(
+          `Profil bilgileri kaydedilirken bir sorun oluştu: ${
+            error.message || "Bilinmeyen hata"
+          }`
+        );
         setSubmitting(false);
         return;
       }
@@ -212,13 +227,18 @@ export default function ProfileSetup() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-purple-50 to-pink-50 p-4">
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="bg-gradient-to-r from-pink-500 to-purple-500 text-white py-6 px-8 rounded-t-lg">
-          <h2 className="text-2xl font-bold text-center">Profil Bilgilerinizi Tamamlayın</h2>
+          <h2 className="text-2xl font-bold text-center">
+            Profil Bilgilerinizi Tamamlayın
+          </h2>
         </CardHeader>
         <CardContent className="p-6">
           <form onSubmit={handleSubmit} className="space-y-4" noValidate>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="firstName" className={`block ${errors.firstName ? "text-red-600" : ""}`}>
+                <Label
+                  htmlFor="firstName"
+                  className={`block ${errors.firstName ? "text-red-600" : ""}`}
+                >
                   Ad*
                 </Label>
                 <input
@@ -226,15 +246,29 @@ export default function ProfileSetup() {
                   name="firstName"
                   value={formData.firstName}
                   onChange={handleInputChange}
-                  className={`w-full rounded border px-3 py-2 focus:outline-none focus:ring-2 ${errors.firstName ? "border-red-600 ring-red-600" : "border-gray-300 ring-pink-500"}`}
+                  className={`w-full rounded border px-3 py-2 focus:outline-none focus:ring-2 ${
+                    errors.firstName
+                      ? "border-red-600 ring-red-600"
+                      : "border-gray-300 ring-pink-500"
+                  }`}
                   required
                   aria-invalid={!!errors.firstName}
                   aria-describedby="firstName-error"
                 />
-                {errors.firstName && <p id="firstName-error" className="text-xs text-red-600 mt-1">{errors.firstName}</p>}
+                {errors.firstName && (
+                  <p
+                    id="firstName-error"
+                    className="text-xs text-red-600 mt-1"
+                  >
+                    {errors.firstName}
+                  </p>
+                )}
               </div>
               <div>
-                <Label htmlFor="lastName" className={`block ${errors.lastName ? "text-red-600" : ""}`}>
+                <Label
+                  htmlFor="lastName"
+                  className={`block ${errors.lastName ? "text-red-600" : ""}`}
+                >
                   Soyad*
                 </Label>
                 <input
@@ -242,43 +276,61 @@ export default function ProfileSetup() {
                   name="lastName"
                   value={formData.lastName}
                   onChange={handleInputChange}
-                  className={`w-full rounded border px-3 py-2 focus:outline-none focus:ring-2 ${errors.lastName ? "border-red-600 ring-red-600" : "border-gray-300 ring-pink-500"}`}
+                  className={`w-full rounded border px-3 py-2 focus:outline-none focus:ring-2 ${
+                    errors.lastName
+                      ? "border-red-600 ring-red-600"
+                      : "border-gray-300 ring-pink-500"
+                  }`}
                   required
                   aria-invalid={!!errors.lastName}
                   aria-describedby="lastName-error"
                 />
-                {errors.lastName && <p id="lastName-error" className="text-xs text-red-600 mt-1">{errors.lastName}</p>}
+                {errors.lastName && (
+                  <p id="lastName-error" className="text-xs text-red-600 mt-1">
+                    {errors.lastName}
+                  </p>
+                )}
               </div>
             </div>
 
             <div>
-              <Label htmlFor="phone" className={`block ${errors.phone ? "text-red-600" : ""}`}>
+              <Label
+                htmlFor="phone"
+                className={`block ${errors.phone ? "text-red-600" : ""}`}
+              >
                 Telefon Numarası*
               </Label>
               <PhoneInputField
                 id="phone"
                 value={formData.phone}
                 onChange={(val) => {
-                  setFormData(prev => ({ ...prev, phone: val }));
-                  if (errors.phone) setErrors(prev => ({ ...prev, phone: undefined }));
+                  setFormData((prev) => ({ ...prev, phone: val }));
+                  if (errors.phone)
+                    setErrors((prev) => ({ ...prev, phone: undefined }));
                 }}
                 placeholder="05XX XXX XX XX"
                 error={errors.phone}
                 disabled={false}
               />
-              {errors.phone && <p className="text-xs text-red-600 mt-1">{errors.phone}</p>}
+              {errors.phone && (
+                <p className="text-xs text-red-600 mt-1">{errors.phone}</p>
+              )}
             </div>
 
             <div>
-              <Label htmlFor="gender" className={`block ${errors.gender ? "text-red-600" : ""}`}>
+              <Label
+                htmlFor="gender"
+                className={`block ${errors.gender ? "text-red-600" : ""}`}
+              >
                 Cinsiyet*
               </Label>
-              <Select 
-                value={formData.gender} 
+              <Select
+                value={formData.gender}
                 onValueChange={(value) => {
-                  setFormData(prev => ({...prev, gender: value}));
-                  if (errors.gender) setErrors(prev => ({...prev, gender: undefined}));
-                }} 
+                  setFormData((prev) => ({ ...prev, gender: value }));
+                  if (errors.gender)
+                    setErrors((prev) => ({ ...prev, gender: undefined }));
+                }}
                 aria-invalid={!!errors.gender}
                 aria-describedby="gender-error"
                 aria-required="true"
@@ -291,17 +343,24 @@ export default function ProfileSetup() {
                   <SelectItem value="kadın">Kadın</SelectItem>
                 </SelectContent>
               </Select>
-              {errors.gender && <p id="gender-error" className="text-xs text-red-600 mt-1">{errors.gender}</p>}
+              {errors.gender && (
+                <p id="gender-error" className="text-xs text-red-600 mt-1">
+                  {errors.gender}
+                </p>
+              )}
             </div>
 
             <div>
-              <Label htmlFor="role" className={`block ${errors.role ? "text-red-600" : ""}`}>
+              <Label
+                htmlFor="role"
+                className={`block ${errors.role ? "text-red-600" : ""}`}
+              >
                 Kayıt Türü*
               </Label>
-              <Select 
-                value={formData.role} 
-                onValueChange={handleRoleChange} 
-                required 
+              <Select
+                value={formData.role}
+                onValueChange={handleRoleChange}
+                required
                 aria-invalid={!!errors.role}
                 aria-describedby="role-error"
                 aria-required="true"
@@ -314,14 +373,19 @@ export default function ProfileSetup() {
                   <SelectItem value="admin">İşletme Sahibi</SelectItem>
                 </SelectContent>
               </Select>
-              {errors.role && <p id="role-error" className="text-xs text-red-600 mt-1">{errors.role}</p>}
+              {errors.role && (
+                <p id="role-error" className="text-xs text-red-600 mt-1">
+                  {errors.role}
+                </p>
+              )}
             </div>
-            
-            {/*
-            Removed the business/shop name field since it's not wanted anymore
+
             {formData.role === "admin" && (
               <div>
-                <Label htmlFor="shopName" className={`block ${errors.shopName ? "text-red-600" : ""}`}>
+                <Label
+                  htmlFor="shopName"
+                  className={`block ${errors.shopName ? "text-red-600" : ""}`}
+                >
                   İşletme Adı*
                 </Label>
                 <input
@@ -330,16 +394,23 @@ export default function ProfileSetup() {
                   value={formData.shopName}
                   onChange={handleInputChange}
                   placeholder="Salonunuzun/işletmenizin ismini girin"
-                  className={`w-full rounded border px-3 py-2 focus:outline-none focus:ring-2 ${errors.shopName ? "border-red-600 ring-red-600" : "border-gray-300 ring-pink-500"}`}
-                  required
+                  className={`w-full rounded border px-3 py-2 focus:outline-none focus:ring-2 ${
+                    errors.shopName
+                      ? "border-red-600 ring-red-600"
+                      : "border-gray-300 ring-pink-500"
+                  }`}
+                  required={formData.role === "admin"}
                   aria-invalid={!!errors.shopName}
                   aria-describedby="shopName-error"
                   aria-required="true"
                 />
-                {errors.shopName && <p id="shopName-error" className="text-xs text-red-600 mt-1">{errors.shopName}</p>}
+                {errors.shopName && (
+                  <p id="shopName-error" className="text-xs text-red-600 mt-1">
+                    {errors.shopName}
+                  </p>
+                )}
               </div>
             )}
-            */}
 
             {formData.role === "staff" && (
               <div className="space-y-2">
@@ -370,3 +441,4 @@ export default function ProfileSetup() {
     </div>
   );
 }
+
