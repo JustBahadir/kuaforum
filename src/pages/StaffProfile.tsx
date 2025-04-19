@@ -90,14 +90,14 @@ export default function StaffProfile() {
 
     setLoading(true);
 
-    // The field children_names is string[] in DB, but Supabase typings expect string, so convert to comma string or null
+    // The field children_names is string[] in DB, so pass array as is
     const personalData = {
       customer_id: user.id,
-      children_names: childrenNames.length > 0 ? childrenNames.join(", ") : null,
+      children_names: childrenNames.length > 0 ? childrenNames : null,
       updated_at: new Date().toISOString(),
     };
 
-    // Pass as single object, not array
+    // Pass single object (not array)
     const { error } = await supabase
       .from("customer_personal_data")
       .upsert(personalData, { onConflict: ["customer_id"] });
@@ -115,7 +115,7 @@ export default function StaffProfile() {
     if (!user || !user.id) return;
     setLoading(true);
 
-    // The DB expects strings, so convert arrays (if any) to strings - currently all strings
+    // The DB expects strings, so fields are strings directly (no arrays)
     const dataToUpsert = {
       personel_id: Number(user.id),
       ortaokuldurumu: educationData.ortaokuldurumu,
@@ -127,7 +127,7 @@ export default function StaffProfile() {
       updated_at: new Date().toISOString(),
     };
 
-    // Pass as single object
+    // Pass single object
     const { error } = await supabase
       .from("staff_education")
       .upsert(dataToUpsert, { onConflict: ["personel_id"] });
@@ -145,6 +145,7 @@ export default function StaffProfile() {
     if (!user || !user.id) return;
     setLoading(true);
 
+    // Convert arrays to strings for the DB TEXT columns
     const dataToUpsert = {
       personel_id: Number(user.id),
       isyerleri: arrayToString(historyData.isyerleri),
@@ -155,6 +156,7 @@ export default function StaffProfile() {
       updated_at: new Date().toISOString(),
     };
 
+    // Pass single object
     const { error } = await supabase
       .from("staff_history")
       .upsert(dataToUpsert, { onConflict: ["personel_id"] });
@@ -188,6 +190,7 @@ export default function StaffProfile() {
       updated_at: new Date().toISOString(),
     };
 
+    // Pass single object
     const { error } = await supabase
       .from("staff_history")
       .upsert(dataToUpsert, { onConflict: ["personel_id"] });
@@ -216,6 +219,7 @@ export default function StaffProfile() {
       updated_at: new Date().toISOString(),
     };
 
+    // Pass single object
     const { error } = await supabase
       .from("staff_education")
       .upsert(dataToUpsert, { onConflict: ["personel_id"] });
