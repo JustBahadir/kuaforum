@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -69,12 +70,13 @@ export default function StaffProfile() {
 
   const [userRole, setUserRole] = useState("");
 
-  // Helper function to save education data to Supabase
+  // Remove autosave effects to prevent autosave on every keystroke
+
+  // Explicit save for education data
   const saveEducationData = useCallback(async () => {
     if (!user) return;
     setLoading(true);
 
-    // Prepare single object (not array), with snake_case keys
     const dataToUpsert = {
       personel_id: user.id,
       ortaokuldurumu: educationData.ortaokuldurumu,
@@ -91,25 +93,24 @@ export default function StaffProfile() {
 
     setLoading(false);
     if (error) {
+      console.error("Eğitim bilgileri kaydedilirken hata:", error);
       toast.error("Eğitim bilgileri kaydedilemedi.");
     } else {
       toast.success("Eğitim bilgileri kaydedildi.");
     }
   }, [educationData, user]);
 
-  // Helper function to save history data to Supabase
+  // Explicit save for history data
   const saveHistoryData = useCallback(async () => {
     if (!user) return;
     setLoading(true);
 
-    // Prepare single object (not array), keys snake_case,
-    // and convert arrays to comma separated strings
     const dataToUpsert = {
       personel_id: user.id,
-      isyerleri: historyData.isyerleri.join(", "),
-      gorevpozisyon: historyData.gorevpozisyon.join(", "),
-      belgeler: historyData.belgeler.join(", "),
-      yarismalar: historyData.yarismalar.join(", "),
+      isyerleri: arrayToString(historyData.isyerleri),
+      gorevpozisyon: arrayToString(historyData.gorevpozisyon),
+      belgeler: arrayToString(historyData.belgeler),
+      yarismalar: arrayToString(historyData.yarismalar),
       cv: historyData.cv || "",
     };
 
@@ -119,11 +120,14 @@ export default function StaffProfile() {
 
     setLoading(false);
     if (error) {
+      console.error("Geçmiş bilgileri kaydedilirken hata:", error);
       toast.error("Geçmiş bilgileri kaydedilemedi.");
     } else {
       toast.success("Geçmiş bilgileri kaydedildi.");
     }
   }, [historyData, user]);
+
+  // Remove useEffect autosave on field changes
 
   const addWorkplaceWithPosition = () => {
     if (!historyData._newIsYeri || !historyData._newGorev) {
@@ -187,18 +191,6 @@ export default function StaffProfile() {
     });
   };
 
-  // Autosave history data on changes
-  useEffect(() => {
-    if (user) {
-      const delayDebounceFn = setTimeout(() => {
-        saveHistoryData();
-      }, 500);
-
-      return () => clearTimeout(delayDebounceFn);
-    }
-  }, [historyData.isyerleri, historyData.gorevpozisyon, historyData.belgeler, historyData.yarismalar, historyData.cv, saveHistoryData, user]);
-
-  // Handle education input change with logic to show/hide fields progressively
   const handleEducationChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
 
@@ -235,17 +227,6 @@ export default function StaffProfile() {
       return newData;
     });
   };
-
-  // Autosave education data on changes
-  useEffect(() => {
-    if (user) {
-      const delayDebounce = setTimeout(() => {
-        saveEducationData();
-      }, 500);
-
-      return () => clearTimeout(delayDebounce);
-    }
-  }, [educationData, saveEducationData, user]);
 
   const handleCvChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const { value } = e.target;
@@ -287,7 +268,6 @@ export default function StaffProfile() {
         return;
       }
 
-      // Upsert education uses snake_case keys and single object
       const dataToUpsert = {
         personel_id: user.id,
         ortaokuldurumu: educationData.ortaokuldurumu,
@@ -308,14 +288,12 @@ export default function StaffProfile() {
         return;
       }
 
-      // Upsert history uses snake_case keys and single object,
-      // with arrays converted to strings
       const historyToUpsert = {
         personel_id: user.id,
-        isyerleri: historyData.isyerleri.join(", "),
-        gorevpozisyon: historyData.gorevpozisyon.join(", "),
-        belgeler: historyData.belgeler.join(", "),
-        yarismalar: historyData.yarismalar.join(", "),
+        isyerleri: arrayToString(historyData.isyerleri),
+        gorevpozisyon: arrayToString(historyData.gorevpozisyon),
+        belgeler: arrayToString(historyData.belgeler),
+        yarismalar: arrayToString(historyData.yarismalar),
         cv: historyData.cv || "",
       };
 
@@ -744,6 +722,9 @@ export default function StaffProfile() {
                         </div>
                       )}
                     </div>
+                    <div className="mt-4 flex gap-2">
+                      <Button onClick={saveEducationData}>Kaydet</Button>
+                    </div>
                   </form>
                 )}
 
@@ -860,6 +841,9 @@ export default function StaffProfile() {
                         rows={5}
                         placeholder="Serbest metin"
                       />
+                    </div>
+                    <div className="mt-4">
+                      <Button onClick={saveHistoryData}>Kaydet</Button>
                     </div>
                   </>
                 )}
