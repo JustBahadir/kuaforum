@@ -4,6 +4,10 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+interface ProfileIdOnly {
+  id: string;
+}
+
 export default function AuthGoogleCallback() {
   const [loading, setLoading] = useState(true);
   const [searchParams] = useSearchParams();
@@ -63,11 +67,15 @@ export default function AuthGoogleCallback() {
           // Check if user already exists by email in profiles
           // Note: user.email can be null in some cases; fallback logic
           if (user.email && typeof user.email === "string") {
-            const { data: existingUser, error: existingUserError } = await supabase
-              .from("profiles")
+            // Explicitly type the query result to ProfileIdOnly | null
+            const queryResult = await supabase
+              .from<ProfileIdOnly>("profiles")
               .select("id")
               .eq("email", user.email)
               .maybeSingle();
+
+            const existingUser = queryResult.data;
+            const existingUserError = queryResult.error;
 
             if (existingUserError && existingUserError.code !== "PGRST116") {
               console.error("Kullanıcı kontrolü sırasında hata:", existingUserError);
@@ -130,3 +138,4 @@ export default function AuthGoogleCallback() {
     </div>
   );
 }
+
