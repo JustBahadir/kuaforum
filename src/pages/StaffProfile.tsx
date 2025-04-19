@@ -29,6 +29,7 @@ interface HistoryData {
   _newYarisma?: string;
 }
 
+// Helper: convert array to comma-separated string and vice versa
 const arrayToString = (value: string[] | string): string => {
   if (Array.isArray(value)) {
     return value.join(", ");
@@ -79,6 +80,7 @@ export default function StaffProfile() {
 
   const [userRole, setUserRole] = useState("");
 
+  // Save Education data - single object inside array for upsert
   const saveEducationData = useCallback(async () => {
     if (!user || !user.id) return;
     setLoading(true);
@@ -107,6 +109,7 @@ export default function StaffProfile() {
     }
   }, [educationData, user]);
 
+  // Save History data - convert arrays to comma-separated string, single object for upsert
   const saveHistoryData = useCallback(async () => {
     if (!user || !user.id) return;
     setLoading(true);
@@ -134,6 +137,7 @@ export default function StaffProfile() {
     }
   }, [historyData, user]);
 
+  // Helper to save history with parameters (used on add/remove item)
   const saveHistoryDataWithParams = async (
     isyerleri: string[],
     gorevpozisyon: string[],
@@ -167,6 +171,7 @@ export default function StaffProfile() {
     }
   };
 
+  // Add workplace and position
   const addWorkplaceWithPosition = async () => {
     if (!historyData._newIsYeri || !historyData._newGorev) {
       toast.error("İş yeri ve görev giriniz.");
@@ -191,6 +196,7 @@ export default function StaffProfile() {
     );
   };
 
+  // Remove workplace+position pair by index
   const removeWorkplaceAtIndex = async (index: number) => {
     const newIsyerleri = [...historyData.isyerleri];
     const newGorevPozisyon = [...historyData.gorevpozisyon];
@@ -205,6 +211,7 @@ export default function StaffProfile() {
     await saveHistoryDataWithParams(newIsyerleri, newGorevPozisyon, historyData.belgeler, historyData.yarismalar, historyData.cv);
   };
 
+  // Add document
   const addBelge = async () => {
     if (!historyData._newBelge) {
       toast.error("Belge adı giriniz.");
@@ -220,6 +227,7 @@ export default function StaffProfile() {
     await saveHistoryDataWithParams(historyData.isyerleri, historyData.gorevpozisyon, newBelgeler, historyData.yarismalar, historyData.cv);
   };
 
+  // Remove document by index
   const removeBelgeAtIndex = async (index: number) => {
     const newBelgeler = [...historyData.belgeler];
     newBelgeler.splice(index, 1);
@@ -228,6 +236,7 @@ export default function StaffProfile() {
     await saveHistoryDataWithParams(historyData.isyerleri, historyData.gorevpozisyon, newBelgeler, historyData.yarismalar, historyData.cv);
   };
 
+  // Add competition
   const addYarismalar = async () => {
     if (!historyData._newYarisma) {
       toast.error("Yarışma adı giriniz.");
@@ -243,6 +252,7 @@ export default function StaffProfile() {
     await saveHistoryDataWithParams(historyData.isyerleri, historyData.gorevpozisyon, historyData.belgeler, newYarismalar, historyData.cv);
   };
 
+  // Remove competition by index
   const removeYarismalarAtIndex = async (index: number) => {
     const newYarismalar = [...historyData.yarismalar];
     newYarismalar.splice(index, 1);
@@ -251,12 +261,14 @@ export default function StaffProfile() {
     await saveHistoryDataWithParams(historyData.isyerleri, historyData.gorevpozisyon, historyData.belgeler, newYarismalar, historyData.cv);
   };
 
+  // Handle CV change with saving
   const handleCvChange = async (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const { value } = e.target;
     setHistoryData((prev) => ({ ...prev, cv: value }));
     await saveHistoryDataWithParams(historyData.isyerleri, historyData.gorevpozisyon, historyData.belgeler, historyData.yarismalar, value);
   };
 
+  // Handle education change with conditional reset of fields
   const handleEducationChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
 
@@ -294,9 +306,22 @@ export default function StaffProfile() {
     });
   };
 
+  // Join Shop with notification logic stub (detailed notification with Accept/Reject buttons should be handled server-side or in a dedicated component)
   const handleJoinShop = async () => {
     if (!shopCode.trim()) {
       toast.error("Lütfen bir işletme kodu girin.");
+      return;
+    }
+
+    // Validate and format code automatically to lowercase and add dashes every 5 chars (like crazy-kuafr-533)
+    const cleanedCode = shopCode.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+    // Auto-formatting to xxx-xxxx-xxx style (this can be adjusted as needed)
+    const formattedCode = cleanedCode.replace(/^(.{5})(.{4})(.{3})$/, '$1-$2-$3');
+
+    if (formattedCode !== shopCode) {
+      setShopCode(formattedCode);
+      toast("İşletme kodu otomatik düzenlendi. Lütfen tekrar klikleyin.");
       return;
     }
 
@@ -304,8 +329,8 @@ export default function StaffProfile() {
     try {
       const { data: shopData, error: shopError } = await supabase
         .from("dukkanlar")
-        .select("id, ad")
-        .eq("kod", shopCode.trim())
+        .select("id, ad, sahibi_id")
+        .eq("kod", shopCode)
         .maybeSingle();
 
       if (shopError) throw shopError;
@@ -315,30 +340,14 @@ export default function StaffProfile() {
         return;
       }
 
-      const { error: personelError } = await supabase
-        .from("personel")
-        .upsert({
-          auth_id: user.id,
-          dukkan_id: shopData.id,
-          ad_soyad: `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim(),
-          telefon: profile?.phone || '',
-          eposta: user.email,
-          adres: profile?.address || '',
-          personel_no: `P${Date.now().toString().substring(7)}`,
-          maas: 0,
-          prim_yuzdesi: 0,
-          calisma_sistemi: 'aylik',
-          aktif: true,
-          baslama_tarihi: new Date().toISOString().split('T')[0]
-        });
+      // Send notification logic here - this part requires a backend function or similar to handle the accept/reject process
+      // For now just console log
+      console.log(`Join request sent to shop owner (${shopData.sahibi_id}) from person ${profile?.first_name} ${profile?.last_name} (${user.email})`);
 
-      if (personelError) throw personelError;
+      toast.success(`${shopData.ad} işletmesine katılma talebiniz gönderildi.`);
 
-      toast.success(`${shopData.ad} işletmesine başarıyla katıldınız.`);
-      setTimeout(() => {
-        navigate("/shop-home");
-      }, 1500);
-
+      // You can navigate or await owner approval later
+      setShopCode("");
     } catch (error) {
       console.error("İşletmeye katılma hatası:", error);
       toast.error("İşletmeye katılırken bir hata oluştu.");
@@ -406,7 +415,7 @@ export default function StaffProfile() {
 
         setUser(data.session.user);
 
-        const role = data.session.user.user_metadata?.role;
+        const role = data.session.user.user_metadata?.role ?? "customer";
         setUserRole(role);
 
         if (role === "admin") {
@@ -424,12 +433,20 @@ export default function StaffProfile() {
           throw profileError;
         }
 
-        setProfile(profileData || {});
+        // Automatically fill profile data with fallback placeholders
+        setProfile({
+          first_name: profileData?.first_name || "",
+          last_name: profileData?.last_name || "",
+          phone: profileData?.phone || "",
+          address: profileData?.address || "",
+          gender: profileData?.gender || "",
+          avatar_url: profileData?.avatar_url || null
+        });
 
         const { data: educationRes } = await supabase
           .from("staff_education")
           .select("*")
-          .eq("personel_id", data.session.user.id)
+          .eq("personel_id", Number(data.session.user.id))
           .maybeSingle();
 
         setEducationData({
@@ -460,7 +477,7 @@ export default function StaffProfile() {
         const { data: historyRes } = await supabase
           .from("staff_history")
           .select("*")
-          .eq("personel_id", data.session.user.id)
+          .eq("personel_id", Number(data.session.user.id))
           .maybeSingle();
 
         setHistoryData({
@@ -472,7 +489,7 @@ export default function StaffProfile() {
           _newIsYeri: "",
           _newGorev: "",
           _newBelge: "",
-          _newYarisma: "",
+          _newYarisma: ""
         });
 
         if (role === "staff") {
@@ -503,9 +520,19 @@ export default function StaffProfile() {
 
   const initials = `${profile?.first_name?.[0] || ""}${profile?.last_name?.[0] || ""}`;
 
+  // Conditional visibility helpers for education
+  const showLisedurumu = educationData.ortaokuldurumu.toLowerCase() === "bitirdi";
+  const showLiseturu = showLisedurumu && 
+    (educationData.lisedurumu.toLowerCase() === "bitirdi" || educationData.lisedurumu.toLowerCase() === "okuyor");
+  const showMeslekibrans = showLiseturu &&
+    ["cok_programli_anadolu", "meslek_ve_teknik_anadolu"].includes(educationData.liseturu);
+  const showUniversitedurumu = educationData.lisedurumu.toLowerCase() === "bitirdi";
+  const showUniversitebolum = showUniversitedurumu &&
+    (educationData.universitedurumu.toLowerCase() === "bitirdi" || educationData.universitedurumu.toLowerCase() === "okuyor");
+  
   return (
     <div className="container mx-auto py-8">
-      <Card className="w-full max-w-4xl mx-auto">
+      <Card className="w-full max-w-5xl mx-auto">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-2xl font-bold">Personel Profil</CardTitle>
           <div className="flex items-center space-x-4">
@@ -513,19 +540,20 @@ export default function StaffProfile() {
               Çıkış Yap
             </Button>
             {/* Düzenleme modunu aç/kapa butonu */}
-            <Button
-              variant="default"
-              onClick={() => setEditMode(!editMode)}
-            >
-              {editMode ? "İptal" : "Düzenle"}
-            </Button>
-            {editMode && (
-              <Button
-                variant="default"
-                onClick={saveProfileEdits}
-              >
-                Kaydet
+            {!editMode && (
+              <Button variant="default" onClick={() => setEditMode(true)}>
+                Düzenle
               </Button>
+            )}
+            {editMode && (
+              <>
+                <Button variant="default" onClick={saveProfileEdits}>
+                  Kaydet
+                </Button>
+                <Button variant="outline" onClick={() => setEditMode(false)}>
+                  İptal
+                </Button>
+              </>
             )}
           </div>
         </CardHeader>
@@ -537,381 +565,416 @@ export default function StaffProfile() {
               <AvatarFallback>{initials}</AvatarFallback>
             </Avatar>
 
-            <div>
-              <h3 className="text-xl font-semibold">
-                {profile?.first_name} {profile?.last_name}
-              </h3>
-              <p className="text-gray-500">
-                {user?.email} | {userRole}
-              </p>
+            <div className="flex-grow">
+              <p className="text-gray-500 mb-3">{user?.email} | {userRole}</p>
+              <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "profile" | "education" | "history" | "join")} className="w-full">
+                <TabsList className="w-full flex space-x-4">
+                  <TabsTrigger value="profile">Profil</TabsTrigger>
+                  <TabsTrigger value="education">Eğitim</TabsTrigger>
+                  <TabsTrigger value="history">Geçmiş</TabsTrigger>
+                  {userRole === "staff" && (
+                    <TabsTrigger value="join">İşletmeye Katıl</TabsTrigger>
+                  )}
+                </TabsList>
+
+                <TabsContent value="profile">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Ad</label>
+                      <input
+                        type="text"
+                        value={profile?.first_name || ""}
+                        onChange={(e) =>
+                          setProfile({ ...profile, first_name: e.target.value })
+                        }
+                        disabled={!editMode}
+                        className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
+                          editMode
+                            ? "focus:border-indigo-500"
+                            : "bg-gray-100 cursor-not-allowed"
+                        }`}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Soyad</label>
+                      <input
+                        type="text"
+                        value={profile?.last_name || ""}
+                        onChange={(e) =>
+                          setProfile({ ...profile, last_name: e.target.value })
+                        }
+                        disabled={!editMode}
+                        className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
+                          editMode
+                            ? "focus:border-indigo-500"
+                            : "bg-gray-100 cursor-not-allowed"
+                        }`}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Telefon</label>
+                      <input
+                        type="text"
+                        value={profile?.phone || ""}
+                        onChange={(e) =>
+                          setProfile({ ...profile, phone: e.target.value })
+                        }
+                        disabled={!editMode}
+                        className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
+                          editMode
+                            ? "focus:border-indigo-500"
+                            : "bg-gray-100 cursor-not-allowed"
+                        }`}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Adres</label>
+                      <input
+                        type="text"
+                        value={profile?.address || ""}
+                        onChange={(e) =>
+                          setProfile({ ...profile, address: e.target.value })
+                        }
+                        disabled={!editMode}
+                        className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
+                          editMode
+                            ? "focus:border-indigo-500"
+                            : "bg-gray-100 cursor-not-allowed"
+                        }`}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Cinsiyet</label>
+                      <select
+                        value={profile?.gender || ""}
+                        onChange={(e) =>
+                          setProfile({ ...profile, gender: e.target.value })
+                        }
+                        disabled={!editMode}
+                        className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
+                          editMode
+                            ? "focus:border-indigo-500"
+                            : "bg-gray-100 cursor-not-allowed"
+                        }`}
+                      >
+                        <option value="">Seçiniz</option>
+                        <option value="erkek">Erkek</option>
+                        <option value="kadın">Kadın</option>
+                      </select>
+                    </div>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="education">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Ortaokul Durumu</label>
+                      <select
+                        name="ortaokuldurumu"
+                        value={educationData.ortaokuldurumu}
+                        onChange={handleEducationChange}
+                        disabled={!editMode}
+                        className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
+                          editMode
+                            ? "focus:border-indigo-500"
+                            : "bg-gray-100 cursor-not-allowed"
+                        }`}
+                      >
+                        <option value="">Seçiniz</option>
+                        <option value="okuyor">Okuyor</option>
+                        <option value="bitirdi">Bitirdi</option>
+                        <option value="ayrildi">Ayrıldı</option>
+                      </select>
+                    </div>
+
+                    {showLisedurumu && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Lise Durumu</label>
+                        <select
+                          name="lisedurumu"
+                          value={educationData.lisedurumu}
+                          onChange={handleEducationChange}
+                          disabled={!editMode}
+                          className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
+                            editMode
+                              ? "focus:border-indigo-500"
+                              : "bg-gray-100 cursor-not-allowed"
+                          }`}
+                        >
+                          <option value="">Seçiniz</option>
+                          <option value="okuyor">Okuyor</option>
+                          <option value="bitirdi">Bitirdi</option>
+                          <option value="ayrildi">Ayrıldı</option>
+                        </select>
+                      </div>
+                    )}
+
+                    {showLiseturu && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Lise Türü</label>
+                        <select
+                          name="liseturu"
+                          value={educationData.liseturu}
+                          onChange={handleEducationChange}
+                          disabled={!editMode}
+                          className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
+                            editMode
+                              ? "focus:border-indigo-500"
+                              : "bg-gray-100 cursor-not-allowed"
+                          }`}
+                        >
+                          <option value="">Seçiniz</option>
+                          <option value="fen">Fen Lisesi</option>
+                          <option value="sosyal_bilimler">Sosyal Bilimler Lisesi</option>
+                          <option value="anatoli">Anadolu Lisesi</option>
+                          <option value="guzel_sanatlar">Güzel Sanatlar Lisesi</option>
+                          <option value="spor">Spor Lisesi</option>
+                          <option value="imam_hatip">Anadolu İmam Hatip Lisesi</option>
+                          <option value="cok_programli_anadolu">Çok Programlı Anadolu Lisesi</option>
+                          <option value="meslek_ve_teknik_anadolu">Mesleki ve Teknik Anadolu Lisesi</option>
+                          <option value="aksam">Akşam Lisesi</option>
+                          <option value="acik_ogretim">Açık Öğretim Lisesi</option>
+                        </select>
+                      </div>
+                    )}
+
+                    {showMeslekibrans && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Meslek / Branş</label>
+                        <input
+                          type="text"
+                          name="meslekibrans"
+                          value={educationData.meslekibrans}
+                          onChange={(e) => {
+                            const { name, value } = e.target;
+                            setEducationData((prev) => ({ ...prev, [name]: value }));
+                          }}
+                          disabled={!editMode}
+                          className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
+                            editMode
+                              ? "focus:border-indigo-500"
+                              : "bg-gray-100 cursor-not-allowed"
+                          }`}
+                        />
+                      </div>
+                    )}
+
+                    {showUniversitedurumu && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Üniversite Durumu</label>
+                        <select
+                          name="universitedurumu"
+                          value={educationData.universitedurumu}
+                          onChange={handleEducationChange}
+                          disabled={!editMode}
+                          className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
+                            editMode
+                              ? "focus:border-indigo-500"
+                              : "bg-gray-100 cursor-not-allowed"
+                          }`}
+                        >
+                          <option value="">Seçiniz</option>
+                          <option value="okuyor">Okuyor</option>
+                          <option value="bitirdi">Bitirdi</option>
+                          <option value="ayrildi">Ayrıldı</option>
+                        </select>
+                      </div>
+                    )}
+
+                    {showUniversitebolum && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Üniversite Bölümü</label>
+                        <input
+                          type="text"
+                          name="universitebolum"
+                          value={educationData.universitebolum}
+                          onChange={(e) => {
+                            const { name, value } = e.target;
+                            setEducationData((prev) => ({ ...prev, [name]: value }));
+                          }}
+                          disabled={!editMode}
+                          className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
+                            editMode
+                              ? "focus:border-indigo-500"
+                              : "bg-gray-100 cursor-not-allowed"
+                          }`}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="history">
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block font-semibold mb-2">İş Yerleri ve Görev/Pozisyonlar</label>
+                      {historyData.isyerleri.map((isyeri, idx) => (
+                        <div key={idx} className="flex items-center space-x-2 mb-1">
+                          <span className="flex-grow border rounded-md px-3 py-2 bg-gray-50">
+                            {isyeri} – {historyData.gorevpozisyon[idx] || ""}
+                          </span>
+                          {editMode && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => removeWorkplaceAtIndex(idx)}
+                            >
+                              Sil
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                      {editMode && (
+                        <div className="flex space-x-2 mt-2">
+                          <input
+                            type="text"
+                            placeholder="İş yeri"
+                            value={historyData._newIsYeri || ""}
+                            onChange={(e) =>
+                              setHistoryData((prev) => ({
+                                ...prev,
+                                _newIsYeri: e.target.value,
+                              }))
+                            }
+                            className="flex-grow rounded-md border border-gray-300 px-3 py-2"
+                          />
+                          <input
+                            type="text"
+                            placeholder="Görev / Pozisyon"
+                            value={historyData._newGorev || ""}
+                            onChange={(e) =>
+                              setHistoryData((prev) => ({
+                                ...prev,
+                                _newGorev: e.target.value,
+                              }))
+                            }
+                            className="flex-grow rounded-md border border-gray-300 px-3 py-2"
+                          />
+                          <Button variant="default" onClick={addWorkplaceWithPosition}>
+                            Ekle
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block font-semibold mb-2">Belgeler</label>
+                      <ul className="mb-2 list-disc list-inside">
+                        {historyData.belgeler.map((belge, idx) => (
+                          <li key={idx} className="flex items-center justify-between">
+                            <span>{belge}</span>
+                            {editMode && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => removeBelgeAtIndex(idx)}
+                              >
+                                Sil
+                              </Button>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                      {editMode && (
+                        <div className="flex space-x-2">
+                          <input
+                            type="text"
+                            placeholder="Belge adı"
+                            value={historyData._newBelge || ""}
+                            onChange={(e) =>
+                              setHistoryData((prev) => ({
+                                ...prev,
+                                _newBelge: e.target.value,
+                              }))
+                            }
+                            className="flex-grow rounded-md border border-gray-300 px-3 py-2"
+                          />
+                          <Button variant="default" onClick={addBelge}>
+                            Ekle
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block font-semibold mb-2">Yarışmalar</label>
+                      <ul className="mb-2 list-disc list-inside">
+                        {historyData.yarismalar.map((yarisma, idx) => (
+                          <li key={idx} className="flex items-center justify-between">
+                            <span>{yarisma}</span>
+                            {editMode && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => removeYarismalarAtIndex(idx)}
+                              >
+                                Sil
+                              </Button>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                      {editMode && (
+                        <div className="flex space-x-2">
+                          <input
+                            type="text"
+                            placeholder="Yarışma adı"
+                            value={historyData._newYarisma || ""}
+                            onChange={(e) =>
+                              setHistoryData((prev) => ({
+                                ...prev,
+                                _newYarisma: e.target.value,
+                              }))
+                            }
+                            className="flex-grow rounded-md border border-gray-300 px-3 py-2"
+                          />
+                          <Button variant="default" onClick={addYarismalar}>
+                            Ekle
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block font-semibold mb-2">CV</label>
+                      <textarea
+                        value={historyData.cv}
+                        disabled={!editMode}
+                        onChange={handleCvChange}
+                        placeholder="Daha önceki iş deneyimlerinizi, çalışma tarzınızı, ilgi alanlarınızı ve kariyer hedeflerinizi burada paylaşabilirsiniz."
+                        className="w-full rounded-md border border-gray-300 px-3 py-2 resize-y"
+                      />
+                    </div>
+                  </div>
+                </TabsContent>
+
+                {/* Join Shop Tab */}
+                <TabsContent value="join">
+                  <div>
+                    <label className="block mb-2 font-semibold">İşletme Kodu</label>
+                    <input
+                      type="text"
+                      value={shopCode}
+                      onChange={(e) => setShopCode(e.target.value)}
+                      disabled={validatingCode}
+                      className="block w-full rounded-md border border-gray-300 px-3 py-2 disabled:cursor-not-allowed disabled:bg-gray-100"
+                      placeholder="crazy-kuafr-533"
+                    />
+                    <Button
+                      disabled={validatingCode}
+                      onClick={handleJoinShop}
+                      className="mt-2"
+                      variant="default"
+                    >
+                      Katıl
+                    </Button>
+                  </div>
+                </TabsContent>
+              </Tabs>
             </div>
-          </div>
-
-          <div className="mt-6">
-            <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "profile" | "education" | "history" | "join")} className="w-full">
-              <TabsList className="w-full flex space-x-4">
-                <TabsTrigger value="profile">Profil</TabsTrigger>
-                <TabsTrigger value="education">Eğitim</TabsTrigger>
-                <TabsTrigger value="history">Geçmiş</TabsTrigger>
-                {/* Çocuklar sekmesini kaldırdık */}
-                {userRole === "staff" && (
-                  <TabsTrigger value="join">İşletmeye Katıl</TabsTrigger>
-                )}
-              </TabsList>
-
-              <TabsContent value="profile">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Ad</label>
-                    <input
-                      type="text"
-                      value={profile?.first_name || ""}
-                      onChange={(e) =>
-                        setProfile({ ...profile, first_name: e.target.value })
-                      }
-                      disabled={!editMode}
-                      className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
-                        editMode
-                          ? "focus:border-indigo-500"
-                          : "bg-gray-100 cursor-not-allowed"
-                      }`}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Soyad</label>
-                    <input
-                      type="text"
-                      value={profile?.last_name || ""}
-                      onChange={(e) =>
-                        setProfile({ ...profile, last_name: e.target.value })
-                      }
-                      disabled={!editMode}
-                      className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
-                        editMode
-                          ? "focus:border-indigo-500"
-                          : "bg-gray-100 cursor-not-allowed"
-                      }`}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Telefon</label>
-                    <input
-                      type="text"
-                      value={profile?.phone || ""}
-                      onChange={(e) =>
-                        setProfile({ ...profile, phone: e.target.value })
-                      }
-                      disabled={!editMode}
-                      className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
-                        editMode
-                          ? "focus:border-indigo-500"
-                          : "bg-gray-100 cursor-not-allowed"
-                      }`}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Adres</label>
-                    <input
-                      type="text"
-                      value={profile?.address || ""}
-                      onChange={(e) =>
-                        setProfile({ ...profile, address: e.target.value })
-                      }
-                      disabled={!editMode}
-                      className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
-                        editMode
-                          ? "focus:border-indigo-500"
-                          : "bg-gray-100 cursor-not-allowed"
-                      }`}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Cinsiyet</label>
-                    <select
-                      value={profile?.gender || ""}
-                      onChange={(e) =>
-                        setProfile({ ...profile, gender: e.target.value })
-                      }
-                      disabled={!editMode}
-                      className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
-                        editMode
-                          ? "focus:border-indigo-500"
-                          : "bg-gray-100 cursor-not-allowed"
-                      }`}
-                    >
-                      <option value="">Seçiniz</option>
-                      <option value="erkek">Erkek</option>
-                      <option value="kadın">Kadın</option>
-                    </select>
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="education">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Ortaokul Durumu
-                    </label>
-                    <select
-                      name="ortaokuldurumu"
-                      value={educationData.ortaokuldurumu}
-                      onChange={handleEducationChange}
-                      disabled={!editMode}
-                      className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
-                        editMode
-                          ? "focus:border-indigo-500"
-                          : "bg-gray-100 cursor-not-allowed"
-                      }`}
-                    >
-                      <option value="">Seçiniz</option>
-                      <option value="okuyor">Okuyor</option>
-                      <option value="bitirdi">Bitirdi</option>
-                      <option value="ayrildi">Ayrıldı</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Lise Durumu
-                    </label>
-                    <select
-                      name="lisedurumu"
-                      value={educationData.lisedurumu}
-                      onChange={handleEducationChange}
-                      disabled={!editMode || educationData.ortaokuldurumu !== "bitirdi"}
-                      className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
-                        editMode
-                          ? "focus:border-indigo-500"
-                          : "bg-gray-100 cursor-not-allowed"
-                      }`}
-                    >
-                      <option value="">Seçiniz</option>
-                      <option value="okuyor">Okuyor</option>
-                      <option value="bitirdi">Bitirdi</option>
-                      <option value="ayrildi">Ayrıldı</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Lise Türü
-                    </label>
-                    <select
-                      name="liseturu"
-                      value={educationData.liseturu}
-                      onChange={handleEducationChange}
-                      disabled={
-                        !editMode ||
-                        (educationData.lisedurumu !== "okuyor" &&
-                          educationData.lisedurumu !== "bitirdi")
-                      }
-                      className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
-                        editMode
-                          ? "focus:border-indigo-500"
-                          : "bg-gray-100 cursor-not-allowed"
-                      }`}
-                    >
-                      <option value="">Seçiniz</option>
-                      <option value="fen">Fen Lisesi</option>
-                      <option value="sosyal_bilimler">Sosyal Bilimler Lisesi</option>
-                      <option value="anatoli">Anadolu Lisesi</option>
-                      <option value="guzel_sanatlar">Güzel Sanatlar Lisesi</option>
-                      <option value="spor">Spor Lisesi</option>
-                      <option value="imam_hatip">Anadolu İmam Hatip Lisesi</option>
-                      <option value="cok_programli_anadolu">Çok Programlı Anadolu Lisesi</option>
-                      <option value="meslek_ve_teknik_anadolu">Mesleki ve Teknik Anadolu Lisesi</option>
-                      <option value="aksam">Akşam Lisesi</option>
-                      <option value="acik_ogretim">Açık Öğretim Lisesi</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Meslek / Branş
-                    </label>
-                    <input
-                      type="text"
-                      name="meslekibrans"
-                      value={educationData.meslekibrans}
-                      onChange={(e) => {
-                        const { name, value } = e.target;
-                        setEducationData((prev) => ({ ...prev, [name]: value }));
-                      }}
-                      disabled={
-                        !editMode ||
-                        (educationData.lisedurumu !== "okuyor" &&
-                          educationData.lisedurumu !== "bitirdi" &&
-                          educationData.liseturu !== "cok_programli_anadolu" &&
-                          educationData.liseturu !== "meslek_ve_teknik_anadolu")
-                      }
-                      className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
-                        editMode
-                          ? "focus:border-indigo-500"
-                          : "bg-gray-100 cursor-not-allowed"
-                      }`}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Üniversite Durumu
-                    </label>
-                    <select
-                      name="universitedurumu"
-                      value={educationData.universitedurumu}
-                      onChange={handleEducationChange}
-                      disabled={!editMode}
-                      className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
-                        editMode
-                          ? "focus:border-indigo-500"
-                          : "bg-gray-100 cursor-not-allowed"
-                      }`}
-                    >
-                      <option value="">Seçiniz</option>
-                      <option value="okuyor">Okuyor</option>
-                      <option value="bitirdi">Bitirdi</option>
-                      <option value="ayrildi">Ayrıldı</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Üniversite Bölümü
-                    </label>
-                    <input
-                      type="text"
-                      name="universitebolum"
-                      value={educationData.universitebolum}
-                      onChange={(e) => {
-                        const { name, value } = e.target;
-                        setEducationData((prev) => ({ ...prev, [name]: value }));
-                      }}
-                      disabled={!editMode}
-                      className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
-                        editMode
-                          ? "focus:border-indigo-500"
-                          : "bg-gray-100 cursor-not-allowed"
-                      }`}
-                    />
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="history">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      İş Yerleri
-                    </label>
-                    <textarea
-                      value={historyData.isyerleri.join(", ")}
-                      disabled={!editMode}
-                      onChange={(e) =>
-                        setHistoryData((prev) => ({
-                          ...prev,
-                          isyerleri: e.target.value.split(",").map((s) => s.trim()),
-                        }))
-                      }
-                      className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
-                        editMode
-                          ? "focus:border-indigo-500"
-                          : "bg-gray-100 cursor-not-allowed"
-                      }`}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Görev / Pozisyon
-                    </label>
-                    <textarea
-                      value={historyData.gorevpozisyon.join(", ")}
-                      disabled={!editMode}
-                      onChange={(e) =>
-                        setHistoryData((prev) => ({
-                          ...prev,
-                          gorevpozisyon: e.target.value.split(",").map((s) => s.trim()),
-                        }))
-                      }
-                      className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
-                        editMode
-                          ? "focus:border-indigo-500"
-                          : "bg-gray-100 cursor-not-allowed"
-                      }`}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Belgeler</label>
-                    <textarea
-                      value={historyData.belgeler.join(", ")}
-                      disabled={!editMode}
-                      onChange={(e) =>
-                        setHistoryData((prev) => ({
-                          ...prev,
-                          belgeler: e.target.value.split(",").map((s) => s.trim()),
-                        }))
-                      }
-                      className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
-                        editMode
-                          ? "focus:border-indigo-500"
-                          : "bg-gray-100 cursor-not-allowed"
-                      }`}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Yarışmalar</label>
-                    <textarea
-                      value={historyData.yarismalar.join(", ")}
-                      disabled={!editMode}
-                      onChange={(e) =>
-                        setHistoryData((prev) => ({
-                          ...prev,
-                          yarismalar: e.target.value.split(",").map((s) => s.trim()),
-                        }))
-                      }
-                      className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
-                        editMode
-                          ? "focus:border-indigo-500"
-                          : "bg-gray-100 cursor-not-allowed"
-                      }`}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">CV</label>
-                    <textarea
-                      value={historyData.cv}
-                      disabled={!editMode}
-                      onChange={(e) => setHistoryData((prev) => ({ ...prev, cv: e.target.value }))}
-                      className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
-                        editMode
-                          ? "focus:border-indigo-500"
-                          : "bg-gray-100 cursor-not-allowed"
-                      }`}
-                    />
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="join">
-                <div>
-                  <label className="block mb-2 font-semibold">İşletme Kodu</label>
-                  <input
-                    type="text"
-                    value={shopCode}
-                    onChange={(e) => setShopCode(e.target.value)}
-                    disabled={validatingCode}
-                    className="block w-full rounded-md border border-gray-300 px-3 py-2 disabled:cursor-not-allowed disabled:bg-gray-100"
-                  />
-                  <Button
-                    disabled={validatingCode}
-                    onClick={handleJoinShop}
-                    className="mt-2"
-                    variant="default"
-                  >
-                    Katıl
-                  </Button>
-                </div>
-              </TabsContent>
-            </Tabs>
           </div>
         </CardContent>
       </Card>
     </div>
   );
 }
-
