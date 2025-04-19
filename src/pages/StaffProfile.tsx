@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -75,7 +74,8 @@ export default function StaffProfile() {
     if (!user) return;
     setLoading(true);
 
-    const dataToUpsert = [{
+    // Prepare single object (not array), with snake_case keys
+    const dataToUpsert = {
       personel_id: user.id,
       ortaokuldurumu: educationData.ortaokuldurumu,
       lisedurumu: educationData.lisedurumu,
@@ -83,7 +83,7 @@ export default function StaffProfile() {
       meslekibrans: educationData.meslekibrans,
       universitedurumu: educationData.universitedurumu,
       universitebolum: educationData.universitebolum,
-    }];
+    };
 
     const { error } = await supabase
       .from("staff_education")
@@ -102,14 +102,16 @@ export default function StaffProfile() {
     if (!user) return;
     setLoading(true);
 
-    const dataToUpsert = [{
+    // Prepare single object (not array), keys snake_case,
+    // and convert arrays to comma separated strings
+    const dataToUpsert = {
       personel_id: user.id,
       isyerleri: historyData.isyerleri.join(", "),
       gorevpozisyon: historyData.gorevpozisyon.join(", "),
       belgeler: historyData.belgeler.join(", "),
       yarismalar: historyData.yarismalar.join(", "),
       cv: historyData.cv || "",
-    }];
+    };
 
     const { error } = await supabase
       .from("staff_history")
@@ -285,7 +287,8 @@ export default function StaffProfile() {
         return;
       }
 
-      const dataToUpsert = [{
+      // Upsert education uses snake_case keys and single object
+      const dataToUpsert = {
         personel_id: user.id,
         ortaokuldurumu: educationData.ortaokuldurumu,
         lisedurumu: educationData.lisedurumu,
@@ -293,7 +296,7 @@ export default function StaffProfile() {
         meslekibrans: educationData.meslekibrans,
         universitedurumu: educationData.universitedurumu,
         universitebolum: educationData.universitebolum,
-      }];
+      };
 
       const { error: educationError } = await supabase
         .from("staff_education")
@@ -305,14 +308,16 @@ export default function StaffProfile() {
         return;
       }
 
-      const historyToUpsert = [{
+      // Upsert history uses snake_case keys and single object,
+      // with arrays converted to strings
+      const historyToUpsert = {
         personel_id: user.id,
         isyerleri: historyData.isyerleri.join(", "),
         gorevpozisyon: historyData.gorevpozisyon.join(", "),
         belgeler: historyData.belgeler.join(", "),
         yarismalar: historyData.yarismalar.join(", "),
         cv: historyData.cv || "",
-      }];
+      };
 
       const { error: historyError } = await supabase
         .from("staff_history")
@@ -888,4 +893,3 @@ export default function StaffProfile() {
     </div>
   );
 }
-
