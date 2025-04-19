@@ -512,16 +512,16 @@ export default function StaffProfile() {
             <Button variant="outline" onClick={handleLogout}>
               Çıkış Yap
             </Button>
-            {/* Toggle edit mode button */}
+            {/* Düzenleme modunu aç/kapa butonu */}
             <Button
-              variant="primary"
+              variant="default"
               onClick={() => setEditMode(!editMode)}
             >
               {editMode ? "İptal" : "Düzenle"}
             </Button>
             {editMode && (
               <Button
-                variant="success"
+                variant="default"
                 onClick={saveProfileEdits}
               >
                 Kaydet
@@ -548,12 +548,12 @@ export default function StaffProfile() {
           </div>
 
           <div className="mt-6">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "profile" | "education" | "history" | "join")} className="w-full">
               <TabsList className="w-full flex space-x-4">
                 <TabsTrigger value="profile">Profil</TabsTrigger>
                 <TabsTrigger value="education">Eğitim</TabsTrigger>
                 <TabsTrigger value="history">Geçmiş</TabsTrigger>
-                {/* Çocuklar tab removed as requested */}
+                {/* Çocuklar sekmesini kaldırdık */}
                 {userRole === "staff" && (
                   <TabsTrigger value="join">İşletmeye Katıl</TabsTrigger>
                 )}
@@ -656,45 +656,7 @@ export default function StaffProfile() {
                     <select
                       name="ortaokuldurumu"
                       value={educationData.ortaokuldurumu}
-                      onChange={(e) => {
-                        const ev = e as React.ChangeEvent<HTMLSelectElement>;
-                        const { name, value } = ev.target;
-                        setEducationData((prev) => {
-                          const newData = { ...prev, [name]: value };
-                          if (name === "ortaokuldurumu" && value !== "bitirdi") {
-                            newData.lisedurumu = "";
-                            newData.liseturu = "";
-                            newData.meslekibrans = "";
-                            newData.universitedurumu = "";
-                            newData.universitebolum = "";
-                          } else if (name === "lisedurumu") {
-                            if (value !== "okuyor" && value !== "bitirdi") {
-                              newData.liseturu = "";
-                              newData.meslekibrans = "";
-                              newData.universitedurumu = "";
-                              newData.universitebolum = "";
-                            }
-                            if (value !== "bitirdi") {
-                              newData.universitedurumu = "";
-                              newData.universitebolum = "";
-                            }
-                          } else if (name === "liseturu") {
-                            if (
-                              ![
-                                "cok_programli_anadolu",
-                                "meslek_ve_teknik_anadolu",
-                              ].includes(value)
-                            ) {
-                              newData.meslekibrans = "";
-                            }
-                          } else if (name === "universitedurumu") {
-                            if (value !== "okuyor" && value !== "bitirdi") {
-                              newData.universitebolum = "";
-                            }
-                          }
-                          return newData;
-                        });
-                      }}
+                      onChange={handleEducationChange}
                       disabled={!editMode}
                       className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
                         editMode
@@ -715,46 +677,8 @@ export default function StaffProfile() {
                     <select
                       name="lisedurumu"
                       value={educationData.lisedurumu}
-                      onChange={(e) => {
-                        const ev = e as React.ChangeEvent<HTMLSelectElement>;
-                        const { value, name } = ev.target;
-                        setEducationData((prev) => {
-                          const newData = { ...prev, [name]: value };
-                          if (name === "ortaokuldurumu" && value !== "bitirdi") {
-                            newData.lisedurumu = "";
-                            newData.liseturu = "";
-                            newData.meslekibrans = "";
-                            newData.universitedurumu = "";
-                            newData.universitebolum = "";
-                          } else if (name === "lisedurumu") {
-                            if (value !== "okuyor" && value !== "bitirdi") {
-                              newData.liseturu = "";
-                              newData.meslekibrans = "";
-                              newData.universitedurumu = "";
-                              newData.universitebolum = "";
-                            }
-                            if (value !== "bitirdi") {
-                              newData.universitedurumu = "";
-                              newData.universitebolum = "";
-                            }
-                          } else if (name === "liseturu") {
-                            if (
-                              ![
-                                "cok_programli_anadolu",
-                                "meslek_ve_teknik_anadolu",
-                              ].includes(value)
-                            ) {
-                              newData.meslekibrans = "";
-                            }
-                          } else if (name === "universitedurumu") {
-                            if (value !== "okuyor" && value !== "bitirdi") {
-                              newData.universitebolum = "";
-                            }
-                          }
-                          return newData;
-                        });
-                      }}
-                      disabled={!editMode}
+                      onChange={handleEducationChange}
+                      disabled={!editMode || educationData.ortaokuldurumu !== "bitirdi"}
                       className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
                         editMode
                           ? "focus:border-indigo-500"
@@ -774,24 +698,12 @@ export default function StaffProfile() {
                     <select
                       name="liseturu"
                       value={educationData.liseturu}
-                      onChange={(e) => {
-                        const ev = e as React.ChangeEvent<HTMLSelectElement>;
-                        const { name, value } = ev.target;
-                        setEducationData((prev) => {
-                          const newData = { ...prev, [name]: value };
-                          if (name === "ortaokuldurumu" && value !== "bitirdi") {
-                            newData.liseturu = "";
-                            newData.meslekibrans = "";
-                          } else if (name === "lisedurumu") {
-                            if (value !== "okuyor" && value !== "bitirdi") {
-                              newData.liseturu = "";
-                              newData.meslekibrans = "";
-                            }
-                          }
-                          return newData;
-                        });
-                      }}
-                      disabled={!editMode}
+                      onChange={handleEducationChange}
+                      disabled={
+                        !editMode ||
+                        (educationData.lisedurumu !== "okuyor" &&
+                          educationData.lisedurumu !== "bitirdi")
+                      }
                       className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
                         editMode
                           ? "focus:border-indigo-500"
@@ -820,11 +732,16 @@ export default function StaffProfile() {
                       name="meslekibrans"
                       value={educationData.meslekibrans}
                       onChange={(e) => {
-                        const ev = e as React.ChangeEvent<HTMLInputElement>;
-                        const { name, value } = ev.target;
+                        const { name, value } = e.target;
                         setEducationData((prev) => ({ ...prev, [name]: value }));
                       }}
-                      disabled={!editMode}
+                      disabled={
+                        !editMode ||
+                        (educationData.lisedurumu !== "okuyor" &&
+                          educationData.lisedurumu !== "bitirdi" &&
+                          educationData.liseturu !== "cok_programli_anadolu" &&
+                          educationData.liseturu !== "meslek_ve_teknik_anadolu")
+                      }
                       className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
                         editMode
                           ? "focus:border-indigo-500"
@@ -839,11 +756,7 @@ export default function StaffProfile() {
                     <select
                       name="universitedurumu"
                       value={educationData.universitedurumu}
-                      onChange={(e) => {
-                        const ev = e as React.ChangeEvent<HTMLSelectElement>;
-                        const { name, value } = ev.target;
-                        setEducationData((prev) => ({ ...prev, [name]: value }));
-                      }}
+                      onChange={handleEducationChange}
                       disabled={!editMode}
                       className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
                         editMode
@@ -866,8 +779,7 @@ export default function StaffProfile() {
                       name="universitebolum"
                       value={educationData.universitebolum}
                       onChange={(e) => {
-                        const ev = e as React.ChangeEvent<HTMLInputElement>;
-                        const { name, value } = ev.target;
+                        const { name, value } = e.target;
                         setEducationData((prev) => ({ ...prev, [name]: value }));
                       }}
                       disabled={!editMode}
@@ -989,6 +901,7 @@ export default function StaffProfile() {
                     disabled={validatingCode}
                     onClick={handleJoinShop}
                     className="mt-2"
+                    variant="default"
                   >
                     Katıl
                   </Button>
@@ -1001,3 +914,4 @@ export default function StaffProfile() {
     </div>
   );
 }
+
