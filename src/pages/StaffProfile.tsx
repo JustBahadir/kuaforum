@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,7 +39,6 @@ const arrayToString = (value: string[] | string): string => {
   return value || "";
 };
 
-// New helper to convert comma separated string to array, removing empty entries
 const stringToArray = (str: string | null | undefined): string[] => {
   if (!str) return [];
   return str.split(",").map(s => s.trim()).filter(s => s.length > 0);
@@ -80,20 +78,11 @@ export default function StaffProfile() {
 
   const [userRole, setUserRole] = useState("");
 
-  // Save education data explicitly
   const saveEducationData = useCallback(async () => {
     if (!user) return;
     setLoading(true);
 
-    const dataToUpsert: {
-      personel_id: number;
-      ortaokuldurumu: string;
-      lisedurumu: string;
-      liseturu: string;
-      meslekibrans: string;
-      universitedurumu: string;
-      universitebolum: string;
-    }[] = [{
+    const dataToUpsert = {
       personel_id: Number(user.id),
       ortaokuldurumu: educationData.ortaokuldurumu,
       lisedurumu: educationData.lisedurumu,
@@ -101,7 +90,7 @@ export default function StaffProfile() {
       meslekibrans: educationData.meslekibrans,
       universitedurumu: educationData.universitedurumu,
       universitebolum: educationData.universitebolum,
-    }];
+    };
 
     const { error } = await supabase
       .from("staff_education")
@@ -116,26 +105,18 @@ export default function StaffProfile() {
     }
   }, [educationData, user]);
 
-  // Save history data explicitly
   const saveHistoryData = useCallback(async () => {
     if (!user) return;
     setLoading(true);
 
-    const dataToUpsert: {
-      personel_id: number;
-      isyerleri: string;
-      gorevpozisyon: string;
-      belgeler: string;
-      yarismalar: string;
-      cv: string;
-    }[] = [{
+    const dataToUpsert = {
       personel_id: Number(user.id),
       isyerleri: historyData.isyerleri.join(","),
       gorevpozisyon: historyData.gorevpozisyon.join(","),
       belgeler: historyData.belgeler.join(","),
       yarismalar: historyData.yarismalar.join(","),
       cv: historyData.cv || "",
-    }];
+    };
 
     const { error } = await supabase
       .from("staff_history")
@@ -150,22 +131,65 @@ export default function StaffProfile() {
     }
   }, [historyData, user]);
 
-  // Save children data explicitly
-  const saveChildrenData = useCallback(async () => {
+  const saveHistoryDataWithParams = async (
+    isyerleri: string[],
+    gorevpozisyon: string[],
+    belgeler: string[],
+    yarismalar: string[],
+    cv: string
+  ) => {
+    if (!user) return;
+
+    setLoading(true);
+    const dataToUpsert = {
+      personel_id: Number(user.id),
+      isyerleri: isyerleri.join(","),
+      gorevpozisyon: gorevpozisyon.join(","),
+      belgeler: belgeler.join(","),
+      yarismalar: yarismalar.join(","),
+      cv: cv || "",
+    };
+
+    const { error } = await supabase
+      .from("staff_history")
+      .upsert(dataToUpsert, { onConflict: ["personel_id"] });
+
+    setLoading(false);
+    if (error) {
+      console.error("Geçmiş bilgileri kaydedilirken hata:", error);
+      toast.error("Geçmiş bilgileri kaydedilemedi.");
+    } else {
+      toast.success("Geçmiş bilgileri güncellendi.");
+    }
+  };
+
+  const saveEducationDataOnClick = async () => {
     if (!user) return;
     setLoading(true);
 
-    // Assuming there's a table staff_children with personel_id and children_names (string[] in DB)
-    // Since no details in the user message about DB, we'll save as comma string in custom_notes in profiles or similar.
-    // For now, just demonstrate with toast success, actual save logic will change when DB details given.
-    // If staff_children exists, upsert should be called here.
+    const dataToUpsert = {
+      personel_id: Number(user.id),
+      ortaokuldurumu: educationData.ortaokuldurumu,
+      lisedurumu: educationData.lisedurumu,
+      liseturu: educationData.liseturu,
+      meslekibrans: educationData.meslekibrans,
+      universitedurumu: educationData.universitedurumu,
+      universitebolum: educationData.universitebolum,
+    };
 
-    // For demo: ignore save, just toast success without error
+    const { error } = await supabase
+      .from("staff_education")
+      .upsert(dataToUpsert, { onConflict: ["personel_id"] });
+
     setLoading(false);
-    toast.success("Çocuk verileri kaydedildi.");
-  }, [childrenData, user]);
+    if (error) {
+      console.error("Eğitim bilgileri kaydedilirken hata:", error);
+      toast.error("Eğitim bilgileri kaydedilemedi.");
+    } else {
+      toast.success("Eğitim bilgileri kaydedildi.");
+    }
+  };
 
-  // Add workplace with position and immediately save
   const addWorkplaceWithPosition = async () => {
     if (!historyData._newIsYeri || !historyData._newGorev) {
       toast.error("İş yeri ve görev giriniz.");
@@ -181,11 +205,9 @@ export default function StaffProfile() {
       _newGorev: ""
     }));
 
-    // Save immediately
     await saveHistoryDataWithParams(newIsyerleri, newGorevPozisyon, historyData.belgeler, historyData.yarismalar, historyData.cv);
   };
 
-  // Remove workplace and save
   const removeWorkplaceAtIndex = async (index: number) => {
     const newIsyerleri = [...historyData.isyerleri];
     const newGorevPozisyon = [...historyData.gorevpozisyon];
@@ -200,7 +222,6 @@ export default function StaffProfile() {
     await saveHistoryDataWithParams(newIsyerleri, newGorevPozisyon, historyData.belgeler, historyData.yarismalar, historyData.cv);
   };
 
-  // Add document and immediately save
   const addBelge = async () => {
     if (!historyData._newBelge) {
       toast.error("Belge adı giriniz.");
@@ -216,7 +237,6 @@ export default function StaffProfile() {
     await saveHistoryDataWithParams(historyData.isyerleri, historyData.gorevpozisyon, newBelgeler, historyData.yarismalar, historyData.cv);
   };
 
-  // Remove document and save
   const removeBelgeAtIndex = async (index: number) => {
     const newBelgeler = [...historyData.belgeler];
     newBelgeler.splice(index, 1);
@@ -225,7 +245,6 @@ export default function StaffProfile() {
     await saveHistoryDataWithParams(historyData.isyerleri, historyData.gorevpozisyon, newBelgeler, historyData.yarismalar, historyData.cv);
   };
 
-  // Add competition and immediately save
   const addYarismalar = async () => {
     if (!historyData._newYarisma) {
       toast.error("Yarışma adı giriniz.");
@@ -241,7 +260,6 @@ export default function StaffProfile() {
     await saveHistoryDataWithParams(historyData.isyerleri, historyData.gorevpozisyon, historyData.belgeler, newYarismalar, historyData.cv);
   };
 
-  // Remove competition and save
   const removeYarismalarAtIndex = async (index: number) => {
     const newYarismalar = [...historyData.yarismalar];
     newYarismalar.splice(index, 1);
@@ -250,47 +268,12 @@ export default function StaffProfile() {
     await saveHistoryDataWithParams(historyData.isyerleri, historyData.gorevpozisyon, historyData.belgeler, newYarismalar, historyData.cv);
   };
 
-  // Save history helper with params, for immediate saves on add/remove
-  const saveHistoryDataWithParams = async (
-    isyerleri: string[],
-    gorevpozisyon: string[],
-    belgeler: string[],
-    yarismalar: string[],
-    cv: string
-  ) => {
-    if (!user) return;
-
-    setLoading(true);
-    const dataToUpsert = [{
-      personel_id: Number(user.id),
-      isyerleri: isyerleri.join(","),
-      gorevpozisyon: gorevpozisyon.join(","),
-      belgeler: belgeler.join(","),
-      yarismalar: yarismalar.join(","),
-      cv: cv || "",
-    }];
-
-    const { error } = await supabase
-      .from("staff_history")
-      .upsert(dataToUpsert, { onConflict: ["personel_id"] });
-
-    setLoading(false);
-    if (error) {
-      console.error("Geçmiş bilgileri kaydedilirken hata:", error);
-      toast.error("Geçmiş bilgileri kaydedilemedi.");
-    } else {
-      toast.success("Geçmiş bilgileri güncellendi.");
-    }
-  };
-
-  // Handle CV text area change with auto-save debounce
   const handleCvChange = async (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const { value } = e.target;
     setHistoryData(prev => ({ ...prev, cv: value }));
     await saveHistoryDataWithParams(historyData.isyerleri, historyData.gorevpozisyon, historyData.belgeler, historyData.yarismalar, value);
   };
 
-  // Handle education form change with cascade clears
   const handleEducationChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
 
@@ -328,7 +311,6 @@ export default function StaffProfile() {
     });
   };
 
-  // Add a child
   const addChild = async () => {
     if (!childrenData._newChildName || childrenData._newChildName.trim() === "") {
       toast.error("Çocuk adı giriniz.");
@@ -345,7 +327,6 @@ export default function StaffProfile() {
     await saveChildrenDataWithParams(newChildren);
   };
 
-  // Remove child
   const removeChildAtIndex = async (index: number) => {
     const newChildren = [...childrenData.children_names];
     newChildren.splice(index, 1);
@@ -354,7 +335,6 @@ export default function StaffProfile() {
     await saveChildrenDataWithParams(newChildren);
   };
 
-  // Save children with passed array helper
   const saveChildrenDataWithParams = async (childrenNames: string[]) => {
     if (!user) return;
 
@@ -400,7 +380,6 @@ export default function StaffProfile() {
         return;
       }
 
-      // Save education data explicitly
       const dataToUpsert: {
         personel_id: number;
         ortaokuldurumu: string;
@@ -429,7 +408,6 @@ export default function StaffProfile() {
         return;
       }
 
-      // Save history data explicitly
       const historyToUpsert: {
         personel_id: number;
         isyerleri: string;
@@ -456,7 +434,6 @@ export default function StaffProfile() {
         return;
       }
 
-      // Save children data explicitly - since no DB info, just success toast
       await saveChildrenData();
 
       setEditMode(false);
@@ -564,7 +541,6 @@ export default function StaffProfile() {
     checkSession();
   }, [navigate]);
 
-  // New Lise türü options as requested
   const liseTuruOptions = [
     { label: "Fen Lisesi", value: "fen" },
     { label: "Sosyal Bilimler Lisesi", value: "sosyal_bilimler" },
@@ -783,7 +759,6 @@ export default function StaffProfile() {
                 {activeTab === "education" && (
                   <form className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Only show fields depending on ortaokuldurumu */}
                       <div>
                         <label htmlFor="ortaokuldurumu" className="block text-sm font-medium">Ortaokul Durumu</label>
                         <select
@@ -800,7 +775,6 @@ export default function StaffProfile() {
                         </select>
                       </div>
 
-                      {/* Show Lise Durumu only if ortaokuldurumu === "bitirdi" */}
                       {educationData.ortaokuldurumu === "bitirdi" && (
                         <div>
                           <label htmlFor="lisedurumu" className="block text-sm font-medium">Lise Durumu</label>
@@ -819,7 +793,6 @@ export default function StaffProfile() {
                         </div>
                       )}
 
-                      {/* Show Lise Türü if lisedurumu is bitirdi or okuyor */}
                       {(educationData.lisedurumu === "bitirdi" || educationData.lisedurumu === "okuyor") && (
                         <div>
                           <label htmlFor="liseturu" className="block text-sm font-medium">Lise Türü</label>
@@ -838,7 +811,6 @@ export default function StaffProfile() {
                         </div>
                       )}
 
-                      {/* Show Mesleki Branş if liseturu is one of specific types */}
                       {["cok_programli_anadolu", "meslek_ve_teknik_anadolu"].includes(educationData.liseturu) && (
                         <div>
                           <label htmlFor="meslekibrans" className="block text-sm font-medium">Mesleki Branş</label>
@@ -854,7 +826,6 @@ export default function StaffProfile() {
                         </div>
                       )}
 
-                      {/* Show Üniversite Durumu if lisedurumu is bitirdi */}
                       {educationData.lisedurumu === "bitirdi" && (
                         <div>
                           <label htmlFor="universitedurumu" className="block text-sm font-medium">Üniversite Durumu</label>
@@ -873,7 +844,6 @@ export default function StaffProfile() {
                         </div>
                       )}
 
-                      {/* Show Bölüm if universitedurumu is okuyor or bitirdi */}
                       {(educationData.universitedurumu === "okuyor" || educationData.universitedurumu === "bitirdi") && (
                         <div>
                           <label htmlFor="universitebolum" className="block text-sm font-medium">Bölüm</label>
@@ -893,7 +863,7 @@ export default function StaffProfile() {
                       )}
                     </div>
                     <div className="mt-4 flex gap-2">
-                      <Button onClick={saveEducationData}>Kaydet</Button>
+                      <Button onClick={saveEducationDataOnClick}>Kaydet</Button>
                     </div>
                   </form>
                 )}
@@ -1027,7 +997,6 @@ export default function StaffProfile() {
                         placeholder="Serbest metin"
                       />
                     </div>
-                    {/* Removed explicit 'Kaydet' button because autosave implemented */}
                   </>
                 )}
 
