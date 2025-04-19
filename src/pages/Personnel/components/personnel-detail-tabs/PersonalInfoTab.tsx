@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
@@ -7,9 +6,10 @@ import { toast } from "sonner";
 
 interface PersonalInfoTabProps {
   personnel: any;
+  onEdit?: () => void;
 }
 
-export function PersonalInfoTab({ personnel = {} }: PersonalInfoTabProps) {
+export function PersonalInfoTab({ personnel = {}, onEdit }: PersonalInfoTabProps) {
   const getInitials = (fullName: string) => {
     if (!fullName) return "??";
     
