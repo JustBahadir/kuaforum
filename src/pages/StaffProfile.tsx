@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -275,7 +274,6 @@ export default function StaffProfile() {
         return;
       }
 
-      // Use arrayToString to convert arrays to comma-separated strings for education
       const dataToUpsert = [{
         personel_id: user.id,
         ortaokulDurumu: arrayToString(educationData.ortaokulDurumu),
@@ -293,7 +291,6 @@ export default function StaffProfile() {
         return;
       }
 
-      // Use arrayToString to convert arrays to strings for history fields
       const historyToUpsert = [{
         personel_id: user.id,
         isYerleri: arrayToString(historyData.isYerleri),
@@ -784,4 +781,3 @@ export default function StaffProfile() {
     </div>
   );
 }
-
