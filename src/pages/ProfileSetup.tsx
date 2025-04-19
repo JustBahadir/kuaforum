@@ -171,14 +171,12 @@ export default function ProfileSetup() {
         phone: formData.phone,
         gender: formData.gender || null,
         role: formData.role === "admin" ? "admin" : "staff",
+        // Explicitly set shopname to null if role is not admin (optional)
+        shopname: formData.role === "admin" ? formData.shopName.trim() : null,
       };
 
       if (formData.role === "staff" && formData.shopCode.trim().length > 0) {
         updateData.shopCode = formData.shopCode.trim();
-      }
-
-      if (formData.role === "admin") {
-        updateData.shopname = formData.shopName.trim();
       }
 
       console.log("Profil güncelleme için gönderilen veri:", updateData);
