@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -348,46 +347,11 @@ export default function Login() {
               <div className="text-center mb-4 font-semibold text-gray-700">
                 GOOGLE İLE KAYIT OL
               </div>
-              {/* For register Google button, we use a wrapper handler that checks for existing user */}
-              <Button
-                variant="outline"
-                className="w-full flex items-center justify-center gap-2 bg-white text-gray-800 hover:bg-gray-100 border border-gray-300"
-                onClick={async () => {
-                  // We cannot know the Google user's email beforehand due to OAuth redirect,
-                  // so this check cannot be done here reliably.
-                  // The check for existing user must happen after login in callback or onAuthStateChange.
-                  // Thus this button simply triggers Google OAuth sign in with redirect with mode=register.
-                  window.location.href = window.location.origin + "/auth-google-callback?mode=register";
-                }}
-                disabled={loading}
-                type="button"
-              >
-                {/* Use Google Icon */}
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  viewBox="0 0 48 48"
-                  fill="none"
-                >
-                  <path
-                    fill="#FFC107"
-                    d="M43.6 20.9H42V20H24v8h11.3c-1.1 3-3.9 5-7.3 5a8 8 0 110-16c2.2 0 4.1.8 5.5 2.2l6-6A13.5 13.5 0 0024 8a16 16 0 000 32c8.8 0 16-7.2 16-16 0-1.1-.1-2.1-.4-3z"
-                  />
-                  <path
-                    fill="#FF3D00"
-                    d="M6.3 14.4l6.6 4.8a9.4 9.4 0 016-2.1c2.2 0 4.1.8 5.5 2.2l6-6A13.5 13.5 0 0024 8a16 16 0 00-17.7 6.4z"
-                  />
-                  <path
-                    fill="#4CAF50"
-                    d="M24 44a16 16 0 0011.3-4.5l-5.3-4.4a9.7 9.7 0 01-6 2.1 9.7 9.7 0 01-8.7-5.5l-6.6 5A16 16 0 0024 44z"
-                  />
-                  <path
-                    fill="#1976D2"
-                    d="M43.6 20.9H42V20H24v8h11.3a9.9 9.9 0 01-4.5 7.3l.1.1 5.2 4.4c3-2.7 4.7-7 4.7-11.8 0-1.1-.1-2.1-.4-3z"
-                  />
-                </svg>
-                {loading ? "Yükleniyor..." : "Google ile Kayıt Ol"}
-              </Button>
+              <GoogleAuthButton
+                text="Google ile Kayıt Ol"
+                className="bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 w-full"
+                redirectTo={window.location.origin + "/auth-google-callback?mode=register"}
+              />
               <div className="relative my-5">
                 <div className="absolute inset-0 flex items-center">
                   <span className="w-full border-t border-gray-300"></span>
