@@ -1,6 +1,6 @@
 
 import * as React from "react";
-import { format } from "date-fns";
+import { format, startOfDay, endOfDay } from "date-fns";
 import { tr } from "date-fns/locale";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -39,27 +39,51 @@ export function DateControlBar({
       if (onSingleDateChange) {
         onSingleDateChange(date);
       }
-      // Also update date range for consistency
-      onDateRangeChange({ from: date, to: date });
+      
+      // For single day mode, we set the range to start at beginning of day and end at end of day
+      // This ensures we capture all events for the entire day
+      onDateRangeChange({ 
+        from: startOfDay(date), 
+        to: endOfDay(date) 
+      });
     }
   };
 
   const handleModeToggle = () => {
     setIsRangeMode(!isRangeMode);
-    if (!isRangeMode) {
-      // When switching to range mode, set the end date to current date
-      onDateRangeChange({ from: dateRange.from, to: new Date() });
-    } else {
-      // When switching to single date mode, set both dates to the start date
-      onDateRangeChange({ from: dateRange.from, to: dateRange.from });
+    setUseMonthCycle(false);
+    
+    if (isRangeMode) {
+      // Switching to single day mode - use startOfDay and endOfDay for the current from date
+      const singleDate = dateRange.from;
+      onDateRangeChange({ 
+        from: startOfDay(singleDate),
+        to: endOfDay(singleDate) 
+      });
     }
+  };
+  
+  const handleMonthCycleSelect = (day: number, date: Date) => {
+    setUseMonthCycle(true);
+    if (onMonthCycleChange) {
+      onMonthCycleChange(day, date);
+    }
+  };
+  
+  const handleClearMonthCycle = () => {
+    setUseMonthCycle(false);
+    setIsRangeMode(true);
+    onDateRangeChange({
+      from: new Date(new Date().setDate(new Date().getDate() - 30)),
+      to: new Date()
+    });
   };
 
   return (
     <div className={cn("flex flex-wrap gap-2 items-center", className)}>
       <Toggle
         pressed={!isRangeMode}
-        onPressedChange={() => handleModeToggle()}
+        onPressedChange={handleModeToggle}
         className="flex gap-2 data-[state=on]:bg-purple-100"
       >
         <CalendarIcon className="h-4 w-4" />
@@ -94,21 +118,10 @@ export function DateControlBar({
       )}
 
       <CustomMonthCycleSelector 
-        onChange={(day, date) => {
-          setUseMonthCycle(true);
-          if (onMonthCycleChange) {
-            onMonthCycleChange(day, date);
-          }
-        }}
+        onChange={handleMonthCycleSelect}
         selectedDay={useMonthCycle ? new Date(dateRange.from).getDate() : 1}
         active={useMonthCycle}
-        onClear={() => {
-          setUseMonthCycle(false);
-          onDateRangeChange({
-            from: new Date(new Date().setDate(new Date().getDate() - 30)),
-            to: new Date()
-          });
-        }}
+        onClear={handleClearMonthCycle}
       />
     </div>
   );

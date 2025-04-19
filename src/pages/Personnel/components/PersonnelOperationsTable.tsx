@@ -2,26 +2,12 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { personelIslemleriServisi, personelServisi } from "@/lib/supabase";
-import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { formatCurrency } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
-import { Search, CalendarIcon } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { format, addMonths, setDate } from "date-fns";
-import { CustomMonthCycleSelector } from "@/components/ui/custom-month-cycle-selector";
+import { Search } from "lucide-react";
+import { DateControlBar } from "@/components/ui/date-control-bar";
+import { createMonthCycleDateRange } from "@/utils/dateUtils";
+import { startOfDay, endOfDay } from "date-fns";
 
 interface PersonnelOperationsTableProps {
   personnelId?: number;
@@ -36,38 +22,26 @@ export function PersonnelOperationsTable({
   });
   
   const [searchTerm, setSearchTerm] = useState("");
-  const [monthCycleDay, setMonthCycleDay] = useState(1);
-  const [useMonthCycle, setUseMonthCycle] = useState(false);
+  const [isMonthCycleActive, setIsMonthCycleActive] = useState(false);
 
-  const handleDateRangeChange = ({from, to}: {from: Date, to: Date}) => {
-    setDateRange({from, to});
-    setUseMonthCycle(false);
+  const handleDateRangeChange = (newRange: {from: Date, to: Date}) => {
+    setDateRange(newRange);
+    setIsMonthCycleActive(false);
   };
 
-  const handleMonthCycleChange = (day: number, date: Date) => {
-    setMonthCycleDay(day);
-    
-    const currentDate = new Date();
-    const selectedDay = day;
-    
-    let fromDate = new Date();
-    
-    // Set to previous month's cycle day
-    fromDate.setDate(selectedDay);
-    if (currentDate.getDate() < selectedDay) {
-      fromDate.setMonth(fromDate.getMonth() - 1);
-    }
-    
-    // Create the end date (same day, current month)
-    const toDate = new Date(fromDate);
-    toDate.setMonth(toDate.getMonth() + 1);
-    
+  const handleSingleDateSelect = (date: Date) => {
+    // For single day selection, set from to start of day and to to end of day
     setDateRange({
-      from: fromDate,
-      to: toDate
+      from: startOfDay(date),
+      to: endOfDay(date)
     });
-    
-    setUseMonthCycle(true);
+    setIsMonthCycleActive(false);
+  };
+
+  const handleMonthCycleChange = (day: number, cycleDate: Date) => {
+    setIsMonthCycleActive(true);
+    const { from, to } = createMonthCycleDateRange(day);
+    setDateRange({ from, to });
   };
 
   const { data: operations = [], isLoading } = useQuery({
@@ -129,22 +103,12 @@ export function PersonnelOperationsTable({
             />
           </div>
           
-          <div className="flex gap-2">
-            {!useMonthCycle && (
-              <DateRangePicker 
-                from={dateRange.from}
-                to={dateRange.to}
-                onSelect={handleDateRangeChange}
-              />
-            )}
-            
-            <CustomMonthCycleSelector 
-              selectedDay={monthCycleDay}
-              onChange={handleMonthCycleChange}
-              active={useMonthCycle}
-              onClear={() => setUseMonthCycle(false)}
-            />
-          </div>
+          <DateControlBar 
+            dateRange={dateRange}
+            onDateRangeChange={handleDateRangeChange}
+            onSingleDateChange={handleSingleDateSelect}
+            onMonthCycleChange={handleMonthCycleChange}
+          />
         </div>
         
         <div className="flex flex-wrap gap-2 text-xs sm:text-sm">
@@ -198,7 +162,7 @@ export function PersonnelOperationsTable({
                     {op.musteri ? `${op.musteri.first_name || ''} ${op.musteri.last_name || ''}` : '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {op.islem?.islem_adi || op.aciklama || '-'}
+                    {op.islem?.islem_adi || (op.aciklama ? op.aciklama.split(' hizmeti verildi')[0] : '-')}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {op.prim_yuzdesi > 0 ? `%${op.prim_yuzdesi}` : "-"}

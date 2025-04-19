@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
@@ -6,7 +7,8 @@ import { personelIslemleriServisi } from "@/lib/supabase";
 import { formatCurrency } from "@/lib/utils";
 import { CalendarDays, Clock } from "lucide-react";
 import { DateControlBar } from "@/components/ui/date-control-bar";
-import { addDays } from "date-fns";
+import { addDays, startOfDay, endOfDay } from "date-fns";
+import { createMonthCycleDateRange } from "@/utils/dateUtils";
 
 interface OperationsHistoryTabProps {
   personnelId: number;
@@ -18,6 +20,8 @@ export function OperationsHistoryTab({ personnelId, showPoints = false }: Operat
     from: addDays(new Date(), -30),
     to: new Date()
   });
+  
+  const [isMonthCycleActive, setIsMonthCycleActive] = useState(false);
 
   const { data: operations = [], isLoading } = useQuery({
     queryKey: ['personel-islemleri', personnelId, dateRange],
@@ -30,6 +34,17 @@ export function OperationsHistoryTab({ personnelId, showPoints = false }: Operat
     const date = new Date(op.created_at);
     return date >= dateRange.from && date <= dateRange.to;
   });
+  
+  const handleDateRangeChange = (newRange: {from: Date, to: Date}) => {
+    setDateRange(newRange);
+    setIsMonthCycleActive(false);
+  };
+  
+  const handleMonthCycleChange = (day: number, cycleDate: Date) => {
+    setIsMonthCycleActive(true);
+    const { from, to } = createMonthCycleDateRange(day);
+    setDateRange({ from, to });
+  };
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "-";
@@ -59,7 +74,8 @@ export function OperationsHistoryTab({ personnelId, showPoints = false }: Operat
             <div className="flex justify-between items-center">
               <DateControlBar
                 dateRange={dateRange}
-                onDateRangeChange={setDateRange}
+                onDateRangeChange={handleDateRangeChange}
+                onMonthCycleChange={handleMonthCycleChange}
               />
               <div className="text-sm text-muted-foreground">
                 Toplam: {filteredOperations.length} işlem

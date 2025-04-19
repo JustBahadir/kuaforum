@@ -1,7 +1,7 @@
+
 import { useState, useEffect } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
@@ -12,6 +12,8 @@ import { toast } from "sonner";
 import { DateControlBar } from "@/components/ui/date-control-bar";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
+import { createMonthCycleDateRange } from "@/utils/dateUtils";
+import { startOfDay, endOfDay } from "date-fns";
 
 export default function OperationsHistory() {
   const [dateRange, setDateRange] = useState({
@@ -21,6 +23,7 @@ export default function OperationsHistory() {
   const [searchText, setSearchText] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
   const [showPuntos, setShowPuntos] = useState(true);
+  const [isMonthCycleActive, setIsMonthCycleActive] = useState(false);
   
   const { data: operationsData = [], isLoading, refetch } = useQuery({
     queryKey: ['operationsHistory', dateRange.from, dateRange.to],
@@ -85,7 +88,7 @@ export default function OperationsHistory() {
     // Apply search filter
     const searchLower = searchText.toLowerCase();
     const personelName = operation.personel?.ad_soyad || '';
-    const islemAdi = operation.aciklama || (operation.islem?.islem_adi || '');
+    const islemAdi = cleanOperationName(operation);
     const musteriFullName = operation.musteri 
       ? `${operation.musteri.first_name || ''} ${operation.musteri.last_name || ''}`.trim()
       : '';
@@ -116,6 +119,29 @@ export default function OperationsHistory() {
       const islemDate = new Date(islem.created_at);
       return islemDate >= dateRange.from && islemDate <= dateRange.to;
     });
+  };
+  
+  const handleDateRangeChange = (newRange: {from: Date, to: Date}) => {
+    console.log("Date range changed:", newRange);
+    setDateRange(newRange);
+    setIsMonthCycleActive(false);
+  };
+  
+  const handleSingleDateSelect = (date: Date) => {
+    console.log("Single date selected:", date);
+    // For single date, we set from to start of day and to to end of day
+    setDateRange({
+      from: startOfDay(date),
+      to: endOfDay(date)
+    });
+    setIsMonthCycleActive(false);
+  };
+  
+  const handleMonthCycleChange = (day: number, cycleDate: Date) => {
+    console.log("Month cycle day selected:", day, cycleDate);
+    setIsMonthCycleActive(true);
+    const { from, to } = createMonthCycleDateRange(day);
+    setDateRange({ from, to });
   };
   
   // Function to force regenerate all operations from appointments
@@ -257,7 +283,9 @@ export default function OperationsHistory() {
           <CardContent>
             <DateControlBar 
               dateRange={dateRange}
-              onDateRangeChange={setDateRange}
+              onDateRangeChange={handleDateRangeChange}
+              onSingleDateChange={handleSingleDateSelect}
+              onMonthCycleChange={handleMonthCycleChange}
               className="w-full"
             />
           </CardContent>

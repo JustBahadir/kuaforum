@@ -1,4 +1,6 @@
 
+import { startOfDay, endOfDay, addMonths, setDate } from 'date-fns';
+
 /**
  * Format a date to a Turkish-style date string
  * @param date The date to format
@@ -82,4 +84,32 @@ export function getPreviousMonthSameDay(date: Date): Date {
   const prevMonth = new Date(date);
   prevMonth.setMonth(prevMonth.getMonth() - 1);
   return prevMonth;
+}
+
+/**
+ * Create a month cycle date range based on a specific day of month
+ * @param day Day of month to use as cycle point
+ * @returns Object with from and to dates spanning one month
+ */
+export function createMonthCycleDateRange(day: number): { from: Date; to: Date } {
+  const today = new Date();
+  const currentDate = today.getDate();
+  
+  // Base date is today
+  let fromDate = new Date();
+  
+  // If current date is before the cycle day, go back to previous month
+  if (currentDate < day) {
+    fromDate.setMonth(fromDate.getMonth() - 1);
+  }
+  
+  // Set the day to the cycle day
+  fromDate.setDate(day);
+  // Ensure we start at beginning of day
+  fromDate = startOfDay(fromDate);
+  
+  // Create to date as one month after from date
+  const toDate = endOfDay(addMonths(fromDate, 1));
+  
+  return { from: fromDate, to: toDate };
 }

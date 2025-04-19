@@ -15,6 +15,7 @@ import {
   TooltipProvider, 
   TooltipTrigger 
 } from "@/components/ui/tooltip";
+import { addMonths, startOfDay, endOfDay, setDate } from "date-fns";
 
 interface CustomMonthCycleSelectorProps {
   onChange: (day: number, date: Date) => void;
@@ -31,7 +32,7 @@ export function CustomMonthCycleSelector({
 }: CustomMonthCycleSelectorProps) {
   const [open, setOpen] = useState(false);
 
-  // Generate grid of days (6x5)
+  // Generate grid of days (6x5 = 30 days)
   const generateDaysGrid = () => {
     const days = Array.from({ length: 31 }, (_, i) => i + 1);
     const grid = [];
@@ -48,10 +49,27 @@ export function CustomMonthCycleSelector({
     const currentMonth = today.getMonth();
     const currentYear = today.getFullYear();
     
-    // Create date for selected day in current month
-    const selectedDate = new Date(currentYear, currentMonth, day);
+    // Get date for previous month with selected day
+    const prevMonthDate = new Date(currentYear, currentMonth - 1, day);
     
-    onChange(day, selectedDate);
+    // Get date for current month with selected day
+    const currentMonthDate = setDate(new Date(), day);
+    
+    // If selected day is in the future, use previous month's date instead
+    const cycleStartDate = currentMonthDate > today
+      ? prevMonthDate
+      : currentMonthDate;
+    
+    // Calculate cycle end date (same day next month)
+    const cycleEndDate = addMonths(cycleStartDate, 1);
+    
+    // Create date range from start of day to end of day
+    const dateRange = {
+      from: startOfDay(cycleStartDate),
+      to: endOfDay(cycleEndDate)
+    };
+    
+    onChange(day, cycleStartDate);
     setOpen(false);
   };
 
@@ -108,7 +126,7 @@ export function CustomMonthCycleSelector({
 
             <div className="grid grid-cols-7 gap-1">
               {generateDaysGrid().flat().map((day) => (
-                day && (
+                day && day <= 31 && (
                   <Button
                     key={day}
                     variant={day === selectedDay ? "default" : "outline"}
