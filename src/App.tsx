@@ -69,6 +69,7 @@ function App() {
               <Route path="/shop-settings" element={<ShopSettings />} />
               <Route path="/shop-statistics" element={<ShopStatistics />} />
               <Route path="/operations-history" element={<OperationsHistory />} />
+              <Route path="/profile" element={<Profile />} />
               <Route path="/staff-profile" element={<StaffProfile />} />
               <Route path="/customers" element={<Customers />} />
               <Route path="/settings" element={<Settings />} />

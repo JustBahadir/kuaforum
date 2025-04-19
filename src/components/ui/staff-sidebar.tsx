@@ -63,7 +63,7 @@ export function StaffSidebar() {
     { href: "/shop-settings", title: "Dükkan Ayarları", icon: <Store size={18} />, roles: ["admin"] },
     { href: "/shop-statistics", title: "Dükkan İstatistikleri", icon: <BarChart2 size={18} />, roles: ["admin"] },
     { href: "/operations-history", title: "İşlem Geçmişi", icon: <FileText size={18} />, roles: ["admin", "staff"] },
-    { href: "/staff-profile", title: "Profilim", icon: <User size={18} />, roles: ["admin", "staff"] },
+    { href: "/profile", title: "Profilim", icon: <User size={18} />, roles: ["admin", "staff"] },
     { href: "/settings", title: "Ayarlar", icon: <Settings size={18} />, roles: ["admin", "staff"] },
   ];
 
