@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { CalendarIcon, XCircle } from "lucide-react";
+import { CalendarRange, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -30,18 +30,31 @@ export function CustomMonthCycleSelector({
   onClear
 }: CustomMonthCycleSelectorProps) {
   const [open, setOpen] = useState(false);
-  
-  // Generate days for the month cycle selection (1-31)
-  const days = Array.from({ length: 31 }, (_, i) => i + 1);
-  
+
+  // Generate grid of days (6x5)
+  const generateDaysGrid = () => {
+    const days = Array.from({ length: 31 }, (_, i) => i + 1);
+    const grid = [];
+    
+    for (let i = 0; i < days.length; i += 7) {
+      grid.push(days.slice(i, i + 7));
+    }
+    
+    return grid;
+  };
+
   const handleDaySelect = (day: number) => {
-    const date = new Date();
-    // Set the selected day
-    date.setDate(day);
-    onChange(day, date);
+    const today = new Date();
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
+    
+    // Create date for selected day in current month
+    const selectedDate = new Date(currentYear, currentMonth, day);
+    
+    onChange(day, selectedDate);
     setOpen(false);
   };
-  
+
   return (
     <div className="relative">
       <TooltipProvider>
@@ -55,7 +68,7 @@ export function CustomMonthCycleSelector({
               )}
               onClick={() => setOpen(!open)}
             >
-              <CalendarIcon className="h-4 w-4" />
+              <CalendarRange className="h-4 w-4" />
               <span>Özel Ay Döngüsü</span>
               {active && (
                 <Badge 
@@ -68,59 +81,52 @@ export function CustomMonthCycleSelector({
             </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom">
-            <p>Bir aylık döngü için başlangıç günü seçin</p>
+            <p>Ay döngüsünü başlatmak için bir gün seçin</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
 
       <Popover open={open} onOpenChange={setOpen}>
-        <PopoverContent className="w-80 p-2" align="start">
-          <div className="space-y-3">
+        <PopoverContent className="w-auto p-4" align="start">
+          <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <h4 className="font-medium text-sm">Ay döngüsü başlangıç günü seçin</h4>
+              <h4 className="text-sm font-medium">Ay döngüsü başlangıç günü</h4>
               {active && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-7 w-7" 
-                        onClick={() => {
-                          if (onClear) onClear();
-                          setOpen(false);
-                        }}
-                      >
-                        <XCircle className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Ay döngüsünü kaldır</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => {
+                    if (onClear) onClear();
+                    setOpen(false);
+                  }}
+                >
+                  <XCircle className="h-4 w-4" />
+                </Button>
               )}
             </div>
 
             <div className="grid grid-cols-7 gap-1">
-              {days.map((day) => (
-                <Button
-                  key={day}
-                  variant={day === selectedDay ? "default" : "outline"}
-                  className={cn(
-                    "h-8 w-9 p-0",
-                    day === selectedDay && "bg-purple-600 hover:bg-purple-700 text-white"
-                  )}
-                  onClick={() => handleDaySelect(day)}
-                >
-                  {day}
-                </Button>
+              {generateDaysGrid().flat().map((day) => (
+                day && (
+                  <Button
+                    key={day}
+                    variant={day === selectedDay ? "default" : "outline"}
+                    className={cn(
+                      "h-8 w-8 p-0 text-sm",
+                      day === selectedDay && "bg-purple-600 hover:bg-purple-700 text-white"
+                    )}
+                    onClick={() => handleDaySelect(day)}
+                  >
+                    {day}
+                  </Button>
+                )
               ))}
             </div>
 
-            <div className="text-xs text-muted-foreground">
-              <p>Örnek: 15 seçerseniz, her ayın 15'inden sonraki ayın 15'ine kadar olan dönemi görüntülersiniz.</p>
-            </div>
+            <p className="text-xs text-muted-foreground">
+              Seçilen gün, her ay için döngü başlangıcı olarak kullanılacak
+            </p>
           </div>
         </PopoverContent>
       </Popover>
