@@ -1,3 +1,4 @@
+
 import { supabase } from '../client';
 import { Personel } from '../types';
 import { profilServisi } from './profilServisi';
@@ -317,13 +318,29 @@ export const personelServisi = {
         updateFields.calisma_sistemi = personel.calisma_sistemi;
       }
       
-      // Handle numeric fields
+      // Handle numeric fields with strict type checking
       if (personel.maas !== undefined) {
-        updateFields.maas = personel.maas;
+        // Ensure maas is a number
+        const maas = typeof personel.maas === 'string' ? parseInt(personel.maas, 10) : personel.maas;
+        if (isNaN(maas)) {
+          throw new Error("Maaş değeri geçerli bir sayı olmalıdır");
+        }
+        updateFields.maas = maas;
       }
       
       if (personel.prim_yuzdesi !== undefined) {
-        updateFields.prim_yuzdesi = personel.prim_yuzdesi;
+        // Ensure prim_yuzdesi is a number
+        const primYuzdesi = typeof personel.prim_yuzdesi === 'string' ? parseInt(personel.prim_yuzdesi, 10) : personel.prim_yuzdesi;
+        if (isNaN(primYuzdesi)) {
+          throw new Error("Prim yüzdesi geçerli bir sayı olmalıdır");
+        }
+        
+        // Validate prim_yuzdesi range
+        if (primYuzdesi < 0 || primYuzdesi > 100) {
+          throw new Error("Prim yüzdesi 0-100 arasında olmalıdır");
+        }
+        
+        updateFields.prim_yuzdesi = primYuzdesi;
       }
       
       // Add any other fields

@@ -22,8 +22,6 @@ export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabPr
   const [isEditing, setIsEditing] = useState(false);
   const [workSystem, setWorkSystem] = useState(personnel.calisma_sistemi === 'komisyon' ? 'komisyonlu' : 'maasli');
   const [paymentPeriod, setPaymentPeriod] = useState(personnel.calisma_sistemi || 'aylik');
-  
-  // Initialize with empty strings instead of converting to string
   const [salary, setSalary] = useState(personnel.maas && personnel.maas > 0 ? personnel.maas.toString() : '');
   const [commission, setCommission] = useState(personnel.prim_yuzdesi && personnel.prim_yuzdesi > 0 ? personnel.prim_yuzdesi.toString() : '');
 
@@ -41,83 +39,74 @@ export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabPr
       if (onEdit) onEdit();
     },
     onError: (error) => {
-      console.error(error);
+      console.error("Update error:", error);
       toast.error("Personel güncellenirken bir hata oluştu.");
     },
   });
 
   const handleSave = () => {
-    // Parse the string values to numbers, defaulting to 0 if empty
-    const parsedSalary = salary ? parseInt(salary, 10) : 0;
-    const parsedCommission = commission ? parseInt(commission, 10) : 0;
-    
-    // Validate input values before submission
-    if (workSystem === 'komisyonlu' && (parsedCommission < 0 || parsedCommission > 100)) {
-      toast.error("Prim yüzdesi 0-100 arasında olmalıdır.");
-      return;
+    try {
+      // Parse the string values to numbers, defaulting to 0 if empty
+      const parsedSalary = salary ? parseInt(salary, 10) : 0;
+      const parsedCommission = commission ? parseInt(commission, 10) : 0;
+      
+      // Validate input values before submission
+      if (workSystem === 'komisyonlu' && (parsedCommission < 0 || parsedCommission > 100)) {
+        toast.error("Prim yüzdesi 0-100 arasında olmalıdır.");
+        return;
+      }
+      
+      if (workSystem === 'maasli' && parsedSalary < 0) {
+        toast.error("Maaş tutarı sıfırdan büyük olmalıdır.");
+        return;
+      }
+      
+      // Prepare the data for submission
+      const updateData: Record<string, any> = {};
+      
+      if (workSystem === 'komisyonlu') {
+        updateData.calisma_sistemi = 'komisyon';
+        updateData.prim_yuzdesi = parsedCommission;
+        updateData.maas = 0; // Set salary to 0 for commission-based workers
+      } else {
+        updateData.calisma_sistemi = paymentPeriod; // aylik, haftalik, gunluk
+        updateData.maas = parsedSalary;
+        updateData.prim_yuzdesi = 0; // Set commission to 0 for salaried workers
+      }
+      
+      console.log("Submitting update data:", updateData);
+      updateMutation.mutate(updateData);
+    } catch (error) {
+      console.error("Save error:", error);
+      toast.error("İşlem sırasında bir hata oluştu. Lütfen tekrar deneyin.");
     }
-    
-    if (workSystem === 'maasli' && parsedSalary < 0) {
-      toast.error("Maaş tutarı sıfırdan büyük olmalıdır.");
-      return;
-    }
-    
-    // Prepare the data for submission
-    const updateData: Record<string, any> = {};
-    
-    // Map 'maasli' and 'komisyonlu' workSystem values to the actual database values
-    if (workSystem === 'komisyonlu') {
-      updateData.calisma_sistemi = 'komisyon';
-      updateData.prim_yuzdesi = parsedCommission;
-      updateData.maas = 0; // Set salary to 0 for commission-based workers
-    } else {
-      updateData.calisma_sistemi = paymentPeriod; // aylik, haftalik, gunluk
-      updateData.maas = parsedSalary;
-      updateData.prim_yuzdesi = 0; // Set commission to 0 for salaried workers
-    }
-    
-    console.log("Submitting update data:", updateData);
-    updateMutation.mutate(updateData);
   };
 
-  // Input handler for numeric inputs that preserves focus
-  const handleNumericInput = (
-    e: React.ChangeEvent<HTMLInputElement>,
-    setValue: React.Dispatch<React.SetStateAction<string>>,
-    minValue = 0,
-    maxValue?: number
-  ) => {
-    const inputValue = e.target.value;
+  // Improved input handler for numeric inputs without losing focus
+  const handleNumericInput = (event: React.ChangeEvent<HTMLInputElement>, setter: React.Dispatch<React.SetStateAction<string>>, minValue = 0, maxValue?: number) => {
+    const input = event.target.value;
     
-    // Allow empty input for UX reasons
-    if (inputValue === '') {
-      setValue('');
+    // Allow empty input (for backspace/delete)
+    if (input === '') {
+      setter('');
       return;
     }
     
-    // Only allow digits
-    if (!/^\d*$/.test(inputValue)) {
-      return;
-    }
-    
-    // Remove leading zeros except for a single zero
-    let formattedValue = inputValue;
-    if (formattedValue.length > 1 && formattedValue.startsWith('0')) {
-      formattedValue = formattedValue.replace(/^0+/, '');
-    }
-    
-    // Check against min/max values if specified
-    const numValue = parseInt(formattedValue, 10);
-    
-    if (formattedValue === '' || !isNaN(numValue)) {
+    // Only process if input contains only digits
+    if (/^\d+$/.test(input)) {
+      // Parse as number and apply constraints
+      let numValue = parseInt(input, 10);
+      
+      // Apply min/max constraints if provided
       if (maxValue !== undefined && numValue > maxValue) {
-        setValue(maxValue.toString());
+        numValue = maxValue;
       } else if (numValue < minValue) {
-        setValue(minValue.toString());
-      } else {
-        setValue(formattedValue);
+        numValue = minValue;
       }
+      
+      setter(numValue.toString());
     }
+    // If input has non-digits, don't update state (retain previous valid value)
   };
 
   const EditableContent = () => (
@@ -169,6 +158,7 @@ export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabPr
               onChange={(e) => handleNumericInput(e, setSalary, 0)}
               placeholder="Maaş tutarını girin (₺)"
               className="placeholder:text-muted-foreground"
+              type="text" 
               inputMode="numeric"
             />
           </div>
@@ -183,6 +173,7 @@ export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabPr
             onChange={(e) => handleNumericInput(e, setCommission, 0, 100)}
             placeholder="Prim yüzdesini girin (0-100)"
             className="placeholder:text-muted-foreground"
+            type="text"
             inputMode="numeric"
           />
         </div>
@@ -201,8 +192,8 @@ export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabPr
 
   const DisplayContent = () => {
     // For display purposes, don't show zero values
-    const displaySalary = salary !== '' ? parseInt(salary, 10) : null;
-    const displayCommission = commission !== '' ? parseInt(commission, 10) : null;
+    const displaySalary = salary !== '' && parseInt(salary, 10) > 0 ? parseInt(salary, 10) : null;
+    const displayCommission = commission !== '' && parseInt(commission, 10) > 0 ? parseInt(commission, 10) : null;
     
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
