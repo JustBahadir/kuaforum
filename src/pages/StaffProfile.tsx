@@ -123,12 +123,12 @@ export default function StaffProfile() {
 
     const { error } = await supabase
       .from("staff_history")
-      .upsert([dataToUpsert], { onConflict: ["personel_id"] });
+      .upsert(dataToUpsert, { onConflict: ["personel_id"] });
 
     setLoading(false);
     if (error) {
       console.error("Geçmiş bilgileri kaydedilirken hata:", error);
-      toast.error("Geçmiş bilgileri kaydedilemedi.");
+      toast.error("Geçmiş bilgileri güncellenemedi.");
     } else {
       toast.success("Geçmiş bilgileri kaydedildi.");
     }
@@ -156,7 +156,7 @@ export default function StaffProfile() {
 
     const { error } = await supabase
       .from("staff_history")
-      .upsert([dataToUpsert], { onConflict: ["personel_id"] });
+      .upsert(dataToUpsert, { onConflict: ["personel_id"] });
 
     setLoading(false);
     if (error) {
