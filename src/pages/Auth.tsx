@@ -22,10 +22,11 @@ export default function Auth() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
 
-  // Login form fields
+  // Form fields for login
   const [loginEmail, setLoginEmail] = useState('')
   const [loginPassword, setLoginPassword] = useState('')
-  // Register form fields
+
+  // Form fields for register
   const [registerEmail, setRegisterEmail] = useState('')
   const [registerPassword, setRegisterPassword] = useState('')
   const [firstName, setFirstName] = useState('')
@@ -33,13 +34,12 @@ export default function Auth() {
 
   // Active tab state
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login')
-  // Removed googleAuthLoading because GoogleAuthButton manages its loading internally
 
-  // Info messages for each tab
+  // Info messages per tab to show feedback or suggestions
   const [loginInfoMsg, setLoginInfoMsg] = useState<string | null>(null)
   const [registerInfoMsg, setRegisterInfoMsg] = useState<string | null>(null)
 
-  // Reset forms and messages on tab switch
+  // Reset all form fields and info messages
   const resetForms = () => {
     setLoginEmail('')
     setLoginPassword('')
@@ -52,11 +52,12 @@ export default function Auth() {
     toast.dismiss()
   }
 
+  // Reset forms/messages when tab changes
   useEffect(() => {
     resetForms()
   }, [activeTab])
 
-  // Check if user already logged in and redirect accordingly
+  // Check if already logged in - redirect accordingly
   useEffect(() => {
     const checkSession = async () => {
       try {
@@ -66,10 +67,11 @@ export default function Auth() {
           return
         }
         if (data.session) {
-          const metadata = data.session.user?.user_metadata
-          const userRole = metadata?.role || 'customer'
+          const userMetadata = data.session.user?.user_metadata
+          const userRole = userMetadata?.role || 'customer'
 
-          const { data: profileData, error: profileError } = await supabase
+          // Check if profile filled (first_name, last_name, phone)
+          const { data: profileData } = await supabase
             .from('profiles')
             .select('first_name, last_name, phone, role')
             .eq('id', data.session.user.id)
@@ -98,9 +100,10 @@ export default function Auth() {
     checkSession()
   }, [navigate])
 
-  // Login handler
+  // Login form submit handler
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
+    setLoginInfoMsg(null)
 
     if (!loginEmail) {
       toast.error('Lütfen e-posta adresinizi girin')
@@ -113,21 +116,23 @@ export default function Auth() {
 
     setLoading(true)
     try {
+      // Try signing in with email & password
       const { data, error } = await supabase.auth.signInWithPassword({
         email: loginEmail,
         password: loginPassword,
       })
 
       if (error) {
+        // User not found or invalid credentials
         if (
           error.message.includes('User not found') ||
           error.message.includes('Invalid login credentials')
         ) {
           setLoginInfoMsg(
-            "Bu e-posta ile eşleşen bir kayıt bulunamadı. Kayıt olmak için 'Kayıt Ol' sekmesini kullanın."
+            "Bu e-posta adresiyle kayıtlı kullanıcı bulunamadı. Lütfen kayıt olunuz."
           )
           toast.error(
-            "Bu e-posta ile eşleşen bir kayıt bulunamadı. Kayıt olmak için 'Kayıt Ol' sekmesini kullanın."
+            "Bu e-posta adresiyle kayıtlı kullanıcı bulunamadı. Lütfen kayıt olunuz."
           )
           setActiveTab('register')
           setLoading(false)
@@ -138,15 +143,17 @@ export default function Auth() {
         return
       }
 
-      const metadata = data.user?.user_metadata
-      if (metadata && metadata.role !== 'customer') {
+      const metadata = data.user?.user_metadata || {}
+      // Only customers can login here, others get blocked
+      if (metadata.role && metadata.role !== 'customer') {
         await supabase.auth.signOut()
-        toast.error('Bu giriş sayfası sadece müşteriler içindir.')
+        toast.error('Bu giriş sadece müşteriler içindir.')
         setLoading(false)
         return
       }
 
-      const { data: profileData, error: profileError } = await supabase
+      // Check if profile setup complete
+      const { data: profileData } = await supabase
         .from('profiles')
         .select('first_name, last_name, phone, role')
         .eq('id', data.user.id)
@@ -169,10 +176,11 @@ export default function Auth() {
       setLoading(false)
     }
   }
-
-  // Register handler
+  
+  // Register form submit handler
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
+    setRegisterInfoMsg(null)
 
     if (!registerEmail) {
       toast.error('Lütfen e-posta adresinizi girin')
@@ -193,6 +201,9 @@ export default function Auth() {
 
     setLoading(true)
     try {
+      // Before signup, check if user already exists using Supabase Admin client
+      // Supabase JS client does not give direct "user exists" easily, so we attempt signUp and check error message
+
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: registerEmail,
         password: registerPassword,
@@ -217,7 +228,9 @@ export default function Auth() {
           setLoading(false)
           return
         }
-        throw signUpError
+        toast.error(signUpError.message)
+        setLoading(false)
+        return
       }
 
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
@@ -229,7 +242,7 @@ export default function Auth() {
 
       if (sessionData.session?.user) {
         const userId = sessionData.session.user.id
-        const { data: profileData, error: profileError } = await supabase
+        const { data: profileData } = await supabase
           .from('profiles')
           .select('first_name, last_name, phone, role')
           .eq('id', userId)
@@ -240,7 +253,6 @@ export default function Auth() {
 
         if (!profileSetupComplete) {
           toast.success('Kayıt başarılı! Profil bilgilerinizi tamamlayınız.')
-          setActiveTab('register')
           navigate('/profile-setup')
           setLoading(false)
           return
@@ -266,6 +278,9 @@ export default function Auth() {
     }
   }
 
+  // Custom handlers for Google sign-in success to show proper toasts based on active tab
+  // Unfortunately GoogleAuthButton does not provide success callback, so we will handle with Supabase onAuthStateChange elsewhere
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <Card className="w-full max-w-md shadow-lg">
@@ -280,6 +295,7 @@ export default function Auth() {
               setActiveTab(v as 'login' | 'register')
             }}
             className="space-y-6"
+            defaultValue="login"
           >
             <TabsList className="grid w-full grid-cols-2 rounded-full bg-gray-200 p-1">
               <TabsTrigger
@@ -310,7 +326,7 @@ export default function Auth() {
               <GoogleAuthButton
                 text="Google ile Giriş Yap"
                 className="bg-white text-gray-800 hover:bg-gray-100 border border-gray-300"
-                redirectTo={window.location.origin + "/auth-google-callback"}
+                redirectTo={window.location.origin + '/auth-google-callback'}
               />
               <div className="relative my-5">
                 <div className="absolute inset-0 flex items-center">
@@ -371,12 +387,12 @@ export default function Auth() {
             {/* REGISTER TAB */}
             <TabsContent value="register" className="space-y-6">
               <div className="text-center mb-4 font-semibold text-gray-700">
-                GOOGLE İLE KAYDOL
+                GOOGLE İLE KAYIT OL
               </div>
               <GoogleAuthButton
                 text="Google ile Kayıt Ol"
                 className="bg-white text-gray-800 hover:bg-gray-100 border border-gray-300"
-                redirectTo={window.location.origin + "/auth-google-callback"}
+                redirectTo={window.location.origin + '/auth-google-callback'}
               />
               <div className="relative my-5">
                 <div className="absolute inset-0 flex items-center">
