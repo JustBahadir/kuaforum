@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
@@ -39,9 +40,7 @@ export function PersonnelDetailsDialog({
     };
   }, [isOpen, onOpenChange]);
 
-  // Handle overlay click to close the dialog
-  // Using Radix DialogPrimitive.Overlay default behavior
-  // But additionally making sure outside click closes
+  // Fix for pointer down outside handler: use the correct CustomEvent type
   const handlePointerDownOutside = useCallback(
     (event: CustomEvent<{ originalEvent: PointerEvent }>) => {
       onOpenChange(false);
@@ -109,3 +108,4 @@ export function PersonnelDetailsDialog({
     </DialogPrimitive.Root>
   );
 }
+
