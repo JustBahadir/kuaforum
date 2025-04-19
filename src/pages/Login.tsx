@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -31,28 +30,12 @@ export default function Login() {
   const [adminLoading, setAdminLoading] = useState(false);
   const [adminError, setAdminError] = useState<string | null>(null);
 
-  // Helper function to check if user exists by email (using supabase-admin or RPC)
+  // Helper function to check if user exists by email 
+  // We cannot do this client-side using supabase.auth.api in v2, so this is a stub for now
   async function checkUserExists(emailCheck: string) {
-    try {
-      // The supabase.auth.admin API is not available on client - workaround:
-      // We'll query profiles table to check for existence of profile
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', supabase.auth.api.getUserByEmail ? supabase.auth.api.getUserByEmail(emailCheck)?.id : null)
-        .single();
-
-      // This is non-functional client-side with supabase-js v2; alternative:
-      // Since we can't reliably check user existence client-side via supabase admin
-      // We'll rely on auth.signInWithPassword or signUp errors and handle accordingly.
-      // So this function will just be a placeholder returning null.
-      return null;
-    } catch (error) {
-      return null;
-    }
+    // This function is NOT used in the current client, as signIn / signUp processes handle user existence errors
+    return null;
   }
-
-  // Better alternative: check via signInWithPassword and signUp error messages instead
 
   // Handler for login submit (email + password method)
   const handleLogin = async (e: React.FormEvent) => {
@@ -73,7 +56,6 @@ export default function Login() {
         password,
       });
       if (error) {
-        // If user not found, suggest registering
         if (
           error.message.includes("User not found") ||
           error.message.includes("Invalid login credentials")
@@ -89,7 +71,6 @@ export default function Login() {
         return;
       }
 
-      // After login, check user role and redirect accordingly
       const metadata = data.user?.user_metadata || {};
       if (metadata.role === "admin") {
         toast.success("Yönetici olarak giriş başarılı!");
@@ -98,7 +79,6 @@ export default function Login() {
         toast.success("Personel olarak giriş başarılı!");
         navigate("/staff-profile");
       } else if (metadata.role === "customer") {
-        // Check profile setup completeness here
         const { data: profileData } = await supabase
           .from("profiles")
           .select("first_name, last_name, phone, role")
@@ -119,7 +99,6 @@ export default function Login() {
           navigate("/customer-dashboard");
         }
       } else {
-        // Default fallback
         toast.success("Giriş başarılı!");
         navigate("/profile-setup");
       }
@@ -144,14 +123,12 @@ export default function Login() {
     }
     setLoading(true);
     try {
-      // Try to sign up
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
       });
 
       if (error) {
-        // If user already registered, tell user to login
         if (error.message.includes("already registered")) {
           setInfoMessage(
             "Bu e-posta adresiyle daha önce kayıt olunmuş. Giriş yap sekmesine geçiniz."
@@ -168,7 +145,6 @@ export default function Login() {
         return;
       }
 
-      // Successful registration, user must check email (confirm email) or be redirected
       toast.success("Kayıt başarılı! Lütfen profil bilgilerinizi tamamlayın.");
       navigate("/profile-setup");
     } catch (error: any) {
