@@ -44,8 +44,7 @@ export function PersonnelDetailsDialog({
   // Using Radix DialogPrimitive.Overlay default behavior
   // But additionally making sure outside click closes
   const handlePointerDownOutside = useCallback(
-    (event: PointerEvent) => {
-      // If you want to restrict which click closes the dialog, check event target here
+    (event: DialogPrimitive.PointerDownOutsideEvent) => {
       onOpenChange(false);
     },
     [onOpenChange]
