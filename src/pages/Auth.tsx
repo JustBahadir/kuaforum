@@ -1,9 +1,9 @@
 
-import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { useState, useEffect } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Card,
   CardContent,
@@ -11,146 +11,155 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { supabase } from '@/lib/supabase';
-import { toast } from 'sonner';
-import { Home, User, UserPlus, LogIn } from 'lucide-react';
-import { GoogleAuthButton } from '@/components/auth/GoogleAuthButton';
+} from '@/components/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { supabase } from '@/lib/supabase'
+import { toast } from 'sonner'
+import { Home, UserPlus, LogIn } from 'lucide-react'
+import { GoogleAuthButton } from '@/components/auth/GoogleAuthButton'
 
 export default function Auth() {
-  const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate()
+  const [loading, setLoading] = useState(false)
 
   // Form fields for Login
-  const [loginEmail, setLoginEmail] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
+  const [loginEmail, setLoginEmail] = useState('')
+  const [loginPassword, setLoginPassword] = useState('')
 
   // Form fields for Register
-  const [registerEmail, setRegisterEmail] = useState('');
-  const [registerPassword, setRegisterPassword] = useState('');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
+  const [registerEmail, setRegisterEmail] = useState('')
+  const [registerPassword, setRegisterPassword] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
 
   // Active tab: login or register
-  const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
+  const [activeTab, setActiveTab] = useState<'login' | 'register'>('login')
 
-  // Reset all form inputs and error states on tab change
+  // Info messages to guide user on errors related to tab switching
+  const [loginInfoMsg, setLoginInfoMsg] = useState<string | null>(null)
+  const [registerInfoMsg, setRegisterInfoMsg] = useState<string | null>(null)
+
+  // Reset all form inputs and clear info messages on tab change
   const resetForms = () => {
-    setLoginEmail('');
-    setLoginPassword('');
-    setRegisterEmail('');
-    setRegisterPassword('');
-    setFirstName('');
-    setLastName('');
-    toast.dismiss();
-  };
+    setLoginEmail('')
+    setLoginPassword('')
+    setRegisterEmail('')
+    setRegisterPassword('')
+    setFirstName('')
+    setLastName('')
+    setLoginInfoMsg(null)
+    setRegisterInfoMsg(null)
+    toast.dismiss()
+  }
 
   useEffect(() => {
-    resetForms();
-  }, [activeTab]);
+    resetForms()
+  }, [activeTab])
 
   useEffect(() => {
     const checkSession = async () => {
       try {
-        const { data, error } = await supabase.auth.getSession();
+        const { data, error } = await supabase.auth.getSession()
         if (error) {
-          console.error('Session check error:', error);
-          return;
+          console.error('Session check error:', error)
+          return
         }
         if (data.session) {
-          const metadata = data.session.user?.user_metadata;
-          const userRole = metadata?.role || 'customer';
+          const metadata = data.session.user?.user_metadata
+          const userRole = metadata?.role || 'customer'
 
           if (userRole === 'customer') {
-            navigate('/customer-dashboard');
+            navigate('/customer-dashboard')
           } else if (userRole === 'admin' || userRole === 'staff') {
-            navigate('/admin/dashboard');
+            navigate('/admin/dashboard')
           }
         }
       } catch (err) {
-        console.error('Session check failed:', err);
+        console.error('Session check failed:', err)
       }
-    };
-    checkSession();
-  }, [navigate]);
+    }
+    checkSession()
+  }, [navigate])
 
   // Login handler
   const handleSignIn = async (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
 
     if (!loginEmail) {
-      toast.error('Lütfen e-posta adresinizi girin');
-      return;
+      toast.error('Lütfen e-posta adresinizi girin')
+      return
     }
     if (!loginPassword) {
-      toast.error('Lütfen şifrenizi girin');
-      return;
+      toast.error('Lütfen şifrenizi girin')
+      return
     }
 
-    setLoading(true);
+    setLoading(true)
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email: loginEmail,
         password: loginPassword,
-      });
+      })
 
       if (error) {
         if (
           error.message.includes('User not found') ||
           error.message.includes('Invalid login credentials')
         ) {
+          setLoginInfoMsg(
+            "Bu e-posta ile eşleşen bir kayıt bulunamadı. Kayıt olmak için 'Kayıt Ol' sekmesini kullanın."
+          )
           toast.error(
             "Bu e-posta ile eşleşen bir kayıt bulunamadı. Kayıt olmak için 'Kayıt Ol' sekmesini kullanın."
-          );
-          setActiveTab('register');
-          setLoading(false);
-          return;
+          )
+          setActiveTab('register')
+          setLoading(false)
+          return
         }
-        toast.error(error.message);
-        setLoading(false);
-        return;
+        toast.error(error.message)
+        setLoading(false)
+        return
       }
 
-      const metadata = data.user?.user_metadata;
+      const metadata = data.user?.user_metadata
       if (metadata && metadata.role !== 'customer') {
-        await supabase.auth.signOut();
-        toast.error('Bu giriş sayfası sadece müşteriler içindir.');
-        setLoading(false);
-        return;
+        await supabase.auth.signOut()
+        toast.error('Bu giriş sayfası sadece müşteriler içindir.')
+        setLoading(false)
+        return
       }
 
-      toast.success('Giriş başarılı!');
-      navigate('/customer-dashboard');
+      toast.success('Giriş başarılı!')
+      navigate('/customer-dashboard')
     } catch (error: any) {
-      toast.error(error.message || 'Giriş sırasında bir hata oluştu');
+      toast.error(error.message || 'Giriş sırasında bir hata oluştu')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   // Register handler
   const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
 
     if (!registerEmail) {
-      toast.error('Lütfen e-posta adresinizi girin');
-      return;
+      toast.error('Lütfen e-posta adresinizi girin')
+      return
     }
     if (!registerPassword) {
-      toast.error('Lütfen şifrenizi girin');
-      return;
+      toast.error('Lütfen şifrenizi girin')
+      return
     }
     if (!firstName.trim()) {
-      toast.error('Lütfen adınızı girin');
-      return;
+      toast.error('Lütfen adınızı girin')
+      return
     }
     if (!lastName.trim()) {
-      toast.error('Lütfen soyadınızı girin');
-      return;
+      toast.error('Lütfen soyadınızı girin')
+      return
     }
 
-    setLoading(true);
+    setLoading(true)
     try {
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: registerEmail,
@@ -162,41 +171,44 @@ export default function Auth() {
             role: 'customer',
           },
         },
-      });
+      })
 
       if (signUpError) {
         if (signUpError.message.includes('already registered')) {
-          toast.error('Bu e-posta ile zaten bir hesap var. Lütfen giriş yapın.');
-          setActiveTab('login');
-          setLoading(false);
-          return;
+          setRegisterInfoMsg(
+            'Bu e-posta zaten kayıtlı. Lütfen Giriş Yap sekmesini kullanarak devam edin.'
+          )
+          toast.error(
+            'Bu e-posta zaten kayıtlı. Lütfen Giriş Yap sekmesini kullanarak devam edin.'
+          )
+          setActiveTab('login')
+          setLoading(false)
+          return
         }
-        throw signUpError;
+        throw signUpError
       }
 
-      toast.success('Kayıt başarılı! Giriş yapabilirsiniz.');
-      setActiveTab('login');
+      toast.success('Kayıt başarılı! Giriş yapabilirsiniz.')
+      setActiveTab('login')
     } catch (error: any) {
-      toast.error(error.message || 'Kayıt sırasında bir hata oluştu.');
+      toast.error(error.message || 'Kayıt sırasında bir hata oluştu.')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="bg-gradient-to-r from-purple-600 to-pink-600 text-white py-6 px-8 rounded-t-md">
           <CardTitle className="text-center text-lg font-semibold">Kuaför Girişi</CardTitle>
-          <CardDescription className="text-center">
-            Giriş Yap veya Kayıt Ol sekmesini kullanın
-          </CardDescription>
+          <CardDescription className="text-center">Giriş Yap veya Kayıt Ol sekmesini kullanın</CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs
             value={activeTab}
             onValueChange={(v) => {
-              setActiveTab(v as 'login' | 'register');
+              setActiveTab(v as 'login' | 'register')
             }}
             className="space-y-4"
           >
@@ -239,7 +251,19 @@ export default function Auth() {
                 </div>
               </div>
 
-              <form onSubmit={handleSignIn} className="space-y-4">
+              <form onSubmit={handleSignIn} className="space-y-4" noValidate>
+                {loginInfoMsg && (
+                  <div className="p-3 mb-2 bg-yellow-200 border border-yellow-400 rounded text-yellow-900 text-sm">
+                    {loginInfoMsg}{' '}
+                    <button
+                      type="button"
+                      className="underline font-semibold"
+                      onClick={() => setActiveTab('register')}
+                    >
+                      Kayıt Ol sekmesine geç
+                    </button>
+                  </div>
+                )}
                 <div>
                   <Label htmlFor="loginEmail">E-posta</Label>
                   <Input
@@ -286,7 +310,19 @@ export default function Auth() {
                 </div>
               </div>
 
-              <form onSubmit={handleSignUp} className="space-y-4">
+              <form onSubmit={handleSignUp} className="space-y-4" noValidate>
+                {registerInfoMsg && (
+                  <div className="p-3 mb-2 bg-yellow-200 border border-yellow-400 rounded text-yellow-900 text-sm">
+                    {registerInfoMsg}{' '}
+                    <button
+                      type="button"
+                      className="underline font-semibold"
+                      onClick={() => setActiveTab('login')}
+                    >
+                      Giriş Yap sekmesine geç
+                    </button>
+                  </div>
+                )}
                 <div>
                   <Label htmlFor="registerEmail">E-posta</Label>
                   <Input
@@ -353,6 +389,6 @@ export default function Auth() {
         </CardFooter>
       </Card>
     </div>
-  );
+  )
 }
 
