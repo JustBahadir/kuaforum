@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -291,12 +290,12 @@ export default function ProfileSetup() {
             </div>
 
             <div>
-              <Label
-                htmlFor="phone"
-                className={`block ${errors.phone ? "text-red-600" : ""}`}
+              <label 
+                htmlFor="phone" 
+                className={`block font-semibold mb-1 ${errors.phone ? "text-red-600" : ""}`}
               >
                 Telefon Numarası*
-              </Label>
+              </label>
               <PhoneInputField
                 id="phone"
                 value={formData.phone}
@@ -309,9 +308,6 @@ export default function ProfileSetup() {
                 error={errors.phone}
                 disabled={false}
               />
-              {errors.phone && (
-                <p className="text-xs text-red-600 mt-1">{errors.phone}</p>
-              )}
             </div>
 
             <div>

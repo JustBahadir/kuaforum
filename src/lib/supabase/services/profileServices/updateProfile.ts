@@ -1,4 +1,3 @@
-
 import { supabase } from "../../client";
 import { Profil } from "../../types";
 
@@ -14,7 +13,6 @@ export interface ProfileUpdateData {
   role?: 'admin' | 'staff' | 'customer';
 }
 
-// ProfileCreationParams aynı kalabilir
 export interface ProfileCreationParams {
   first_name?: string;
   last_name?: string;
@@ -104,11 +102,15 @@ export async function updateProfile(data: ProfileUpdateData): Promise<Profil | n
     if (data.iban !== undefined) updateData.iban = data.iban;
 
     // Profil var mı diye kontrol et
-    const { data: existingProfile } = await supabase
+    const { data: existingProfile, error: fetchProfileError } = await supabase
       .from("profiles")
       .select("id")
       .eq("id", userId)
       .maybeSingle();
+
+    if (fetchProfileError) {
+      console.error("Profil kontrolü sırasında hata:", fetchProfileError);
+    }
 
     if (!existingProfile) {
       // Yoksa oluşturmayı dener
@@ -152,8 +154,7 @@ export async function updateProfile(data: ProfileUpdateData): Promise<Profil | n
     if (error) {
       console.error("Profil güncellenirken hata:", error);
       if (error.code === "42P17") {
-        // Infinite recursion hatasıysa fallback ver
-        console.warn("Profil güncellemede özyineleme hatası, basit mesaj gösteriliyor");
+        console.warn("Özyineleme hatası tespit edildi, fallback yapı dönülüyor");
         return {
           id: userId,
           first_name: data.first_name || "",
@@ -174,7 +175,7 @@ export async function updateProfile(data: ProfileUpdateData): Promise<Profil | n
     console.log("Profil başarıyla güncellendi:", profile);
     return profile;
   } catch (error) {
-    console.error("updateProfile fonksiyonunda hata:", error);
+    console.error("updateProfile fonksiyonunda hata detayları:", error);
     throw error;
   }
 }
