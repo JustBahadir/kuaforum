@@ -1,8 +1,9 @@
+
 import React, { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { supabase } from "@/lib/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
@@ -74,13 +75,20 @@ export default function StaffProfile() {
     if (!user) return;
     setLoading(true);
 
-    // Convert any array fields to string (should not be arrays but just to be safe)
-    const ortaokulDurumuStr = arrayToString(educationData.ortaokulDurumu);
-    const liseDurumuStr = arrayToString(educationData.liseDurumu);
-    const liseTuruStr = arrayToString(educationData.liseTuru);
-    const meslekiBransStr = arrayToString(educationData.meslekiBrans);
+    // Convert arrays to strings before upsert (some fields might be arrays)
+    const ortaokulDurumuStr = Array.isArray(educationData.ortaokulDurumu)
+      ? educationData.ortaokulDurumu.join(", ")
+      : educationData.ortaokulDurumu;
+    const liseDurumuStr = Array.isArray(educationData.liseDurumu)
+      ? educationData.liseDurumu.join(", ")
+      : educationData.liseDurumu;
+    const liseTuruStr = Array.isArray(educationData.liseTuru)
+      ? educationData.liseTuru.join(", ")
+      : educationData.liseTuru;
+    const meslekiBransStr = Array.isArray(educationData.meslekiBrans)
+      ? educationData.meslekiBrans.join(", ")
+      : educationData.meslekiBrans;
 
-    // Add university fields
     const universiteDurumuStr = educationData.universiteDurumu || "";
     const universiteBolumStr = educationData.universiteBolum || "";
 
@@ -107,7 +115,6 @@ export default function StaffProfile() {
   }, [educationData, user]);
 
   // Helper function to save history data to Supabase
-  // This will be called automatically when history changes
   const saveHistoryData = useCallback(async () => {
     if (!user) return;
     setLoading(true);
@@ -133,29 +140,17 @@ export default function StaffProfile() {
     }
   }, [historyData, user]);
 
-  // When editing history arrays (workplaces, docs, competitions), call saveHistoryData automatically after updating state
+  // Add and remove handlers for history data (workplaces, positions, documents, competitions) with instant list update and auto save
 
   const addWorkplaceWithPosition = () => {
+    if (!historyData._newIsYeri || !historyData._newGorev) {
+      toast.error("İş yeri ve görev giriniz.");
+      return;
+    }
     setHistoryData(prev => {
-      const newIsYerleri = [...prev.isYerleri, ""];
-      const newGorevPozisyon = [...prev.gorevPozisyon, ""];
-      return { ...prev, isYerleri: newIsYerleri, gorevPozisyon: newGorevPozisyon };
-    });
-  };
-
-  const updateWorkplaceAtIndex = (index: number, value: string) => {
-    setHistoryData(prev => {
-      const newIsYerleri = [...prev.isYerleri];
-      newIsYerleri[index] = value;
-      return { ...prev, isYerleri: newIsYerleri };
-    });
-  };
-
-  const updatePositionAtIndex = (index: number, value: string) => {
-    setHistoryData(prev => {
-      const newGorevPozisyon = [...prev.gorevPozisyon];
-      newGorevPozisyon[index] = value;
-      return { ...prev, gorevPozisyon: newGorevPozisyon };
+      const newIsYerleri = [...prev.isYerleri, prev._newIsYeri || ""];
+      const newGorevPozisyon = [...prev.gorevPozisyon, prev._newGorev || ""];
+      return { ...prev, isYerleri: newIsYerleri, gorevPozisyon: newGorevPozisyon, _newIsYeri: "", _newGorev: "" };
     });
   };
 
@@ -170,18 +165,15 @@ export default function StaffProfile() {
   };
 
   const addBelge = () => {
+    if (!historyData._newBelge) {
+      toast.error("Belge adı giriniz.");
+      return;
+    }
     setHistoryData(prev => ({
       ...prev,
-      belgeler: [...prev.belgeler, ""]
+      belgeler: [...prev.belgeler, prev._newBelge || ""],
+      _newBelge: ""
     }));
-  };
-
-  const updateBelgeAtIndex = (index: number, value: string) => {
-    setHistoryData(prev => {
-      const newBelgeler = [...prev.belgeler];
-      newBelgeler[index] = value;
-      return { ...prev, belgeler: newBelgeler };
-    });
   };
 
   const removeBelgeAtIndex = (index: number) => {
@@ -193,18 +185,15 @@ export default function StaffProfile() {
   };
 
   const addYarismalar = () => {
+    if (!historyData._newYarisma) {
+      toast.error("Yarışma adı giriniz.");
+      return;
+    }
     setHistoryData(prev => ({
       ...prev,
-      yarismalar: [...prev.yarismalar, ""]
+      yarismalar: [...prev.yarismalar, prev._newYarisma || ""],
+      _newYarisma: ""
     }));
-  };
-
-  const updateYarismalarAtIndex = (index: number, value: string) => {
-    setHistoryData(prev => {
-      const newYarismalar = [...prev.yarismalar];
-      newYarismalar[index] = value;
-      return { ...prev, yarismalar: newYarismalar };
-    });
   };
 
   const removeYarismalarAtIndex = (index: number) => {
@@ -215,10 +204,9 @@ export default function StaffProfile() {
     });
   };
 
-  // Use effects to autosave history data on changes to the arrays or cv
+  // Autosave history data on changes
   useEffect(() => {
     if (user) {
-      // Avoid spamming save requests during initial loading or rapid changes
       const delayDebounceFn = setTimeout(() => {
         saveHistoryData();
       }, 500);
@@ -227,14 +215,13 @@ export default function StaffProfile() {
     }
   }, [historyData.isYerleri, historyData.gorevPozisyon, historyData.belgeler, historyData.yarismalar, historyData.cv, saveHistoryData, user]);
 
-  // Handle education changes with progressive form logic and saving on changes
+  // Handle education input change with logic to show/hide fields progressively
   const handleEducationChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
 
     setEducationData(prev => {
       const newData = { ...prev, [name]: value };
 
-      // Reset dependent fields if necessary
       if (name === "ortaokulDurumu" && value !== "bitirdi") {
         newData.liseDurumu = "";
         newData.liseTuru = "";
@@ -266,7 +253,7 @@ export default function StaffProfile() {
     });
   };
 
-  // Use effect to save education data when educationData changes (debounced)
+  // Autosave education data on changes
   useEffect(() => {
     if (user) {
       const delayDebounce = setTimeout(() => {
@@ -277,7 +264,7 @@ export default function StaffProfile() {
     }
   }, [educationData, saveEducationData, user]);
 
-  // Handle CV change
+  // Handle CV change in history
   const handleCvChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const { value } = e.target;
     setHistoryData(prev => ({ ...prev, cv: value }));
@@ -318,6 +305,7 @@ export default function StaffProfile() {
         return;
       }
 
+      // Convert education arrays to strings before upsert
       const ortaokulDurumuStr: string = Array.isArray(educationData.ortaokulDurumu)
         ? educationData.ortaokulDurumu.join(", ")
         : (educationData.ortaokulDurumu ?? "");
@@ -353,6 +341,7 @@ export default function StaffProfile() {
         return;
       }
 
+      // Convert history arrays to strings before upsert
       const isYerleriStr: string = historyData.isYerleri.join(", ");
       const gorevPozisyonStr: string = historyData.gorevPozisyon.join(", ");
       const belgelerStr: string = historyData.belgeler.join(", ");
@@ -701,7 +690,7 @@ export default function StaffProfile() {
                       </div>
 
                       {/* Lise Durumu */}
-                      {(educationData.ortaokulDurumu === "bitirdi" || educationData.ortaokulDurumu === "") && (
+                      {educationData.ortaokulDurumu === "bitirdi" && (
                         <div>
                           <label htmlFor="liseDurumu" className="block text-sm font-medium">Lise Durumu</label>
                           <select
@@ -710,7 +699,6 @@ export default function StaffProfile() {
                             value={educationData.liseDurumu}
                             onChange={handleEducationChange}
                             className="w-full rounded border border-gray-300 px-3 py-2"
-                            disabled={!educationData.ortaokulDurumu || educationData.ortaokulDurumu !== "bitirdi"}
                           >
                             <option value="">Seçiniz</option>
                             <option value="bitirdi">Bitirdi</option>
@@ -793,149 +781,123 @@ export default function StaffProfile() {
                         </div>
                       )}
                     </div>
-                    {/* No Save button needed as saving is automatic on change */}
                   </form>
                 )}
 
                 {activeTab === "history" && (
                   <>
-                      <div>
-                        <strong>İş Yerleri ve Görevler</strong>
-                        {historyData.isYerleri.length === 0 && <p>Bilgi yok</p>}
-                        <ul className="list-disc pl-5 mb-3">
-                          {historyData.isYerleri.map((yeri, i) => (
-                            <li key={`workplace-${i}`} className="flex gap-2 items-center">
-                              <span className="flex-1">{yeri}</span>
-                              <span className="flex-1">{historyData.gorevPozisyon[i] || "-"}</span>
-                              <button type="button" className="text-destructive" onClick={() => removeWorkplaceAtIndex(i)} aria-label="İş yeri sil">
-                                Sil
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                        <div className="mb-4">
-                          <input
-                            type="text"
-                            placeholder="İş yeri"
-                            className="mr-2 rounded border border-gray-300 px-3 py-2"
-                            value={historyData._newIsYeri || ""}
-                            onChange={(e) => setHistoryData(prev => ({ ...prev, _newIsYeri: e.target.value }))}
-                          />
-                          <input
-                            type="text"
-                            placeholder="Görev / Pozisyon"
-                            className="mr-2 rounded border border-gray-300 px-3 py-2"
-                            value={historyData._newGorev || ""}
-                            onChange={(e) => setHistoryData(prev => ({ ...prev, _newGorev: e.target.value }))}
-                          />
-                          <Button
-                            type="button"
-                            onClick={() => {
-                              if (historyData._newIsYeri && historyData._newGorev) {
-                                setHistoryData(prev => ({
-                                  ...prev,
-                                  isYerleri: [...prev.isYerleri, prev._newIsYeri || ""],
-                                  gorevPozisyon: [...prev.gorevPozisyon, prev._newGorev || ""],
-                                  _newIsYeri: "",
-                                  _newGorev: ""
-                                }));
-                              }
-                            }}
-                            size="sm"
-                          >
-                            İş Yeri Ekle
-                          </Button>
-                        </div>
-                      </div>
-
-                      <div>
-                        <strong>Belgeler</strong>
-                        {historyData.belgeler.length === 0 && <p>Bilgi yok</p>}
-                        <ul className="list-disc pl-5 mb-3">
-                          {historyData.belgeler.map((item, i) => (
-                            <li key={`document-${i}`} className="flex items-center justify-between">
-                              <span>{item}</span>
-                              <button type="button" className="text-destructive" onClick={() => removeBelgeAtIndex(i)} aria-label="Belge sil">
-                                Sil
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                        <div className="mb-4 flex items-center gap-2">
-                          <input
-                            type="text"
-                            placeholder="Belge adı"
-                            className="flex-1 rounded border border-gray-300 px-3 py-2"
-                            value={historyData._newBelge || ""}
-                            onChange={(e) => setHistoryData(prev => ({ ...prev, _newBelge: e.target.value }))}
-                          />
-                          <Button
-                            type="button"
-                            onClick={() => {
-                              if (historyData._newBelge) {
-                                setHistoryData(prev => ({
-                                  ...prev,
-                                  belgeler: [...prev.belgeler, prev._newBelge || ""],
-                                  _newBelge: ""
-                                }));
-                              }
-                            }}
-                            size="sm"
-                          >
-                            Belge Ekle
-                          </Button>
-                        </div>
-                      </div>
-
-                      <div>
-                        <strong>Yarışmalar</strong>
-                        {historyData.yarismalar.length === 0 && <p>Bilgi yok</p>}
-                        <ul className="list-disc pl-5 mb-3">
-                          {historyData.yarismalar.map((item, i) => (
-                            <li key={`competition-${i}`} className="flex items-center justify-between">
-                              <span>{item}</span>
-                              <button type="button" className="text-destructive" onClick={() => removeYarismalarAtIndex(i)} aria-label="Yarışma sil">
-                                Sil
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                        <div className="mb-4 flex items-center gap-2">
-                          <input
-                            type="text"
-                            placeholder="Yarışma adı"
-                            className="flex-1 rounded border border-gray-300 px-3 py-2"
-                            value={historyData._newYarisma || ""}
-                            onChange={(e) => setHistoryData(prev => ({ ...prev, _newYarisma: e.target.value }))}
-                          />
-                          <Button
-                            type="button"
-                            onClick={() => {
-                              if (historyData._newYarisma) {
-                                setHistoryData(prev => ({
-                                  ...prev,
-                                  yarismalar: [...prev.yarismalar, prev._newYarisma || ""],
-                                  _newYarisma: ""
-                                }));
-                              }
-                            }}
-                            size="sm"
-                          >
-                            Yarışma Ekle
-                          </Button>
-                        </div>
-                      </div>
-                      <div>
-                        <label htmlFor="cv" className="block font-medium mb-1">CV</label>
-                        <textarea
-                          id="cv"
-                          value={historyData.cv}
-                          onChange={handleCvChange}
-                          className="w-full rounded border border-gray-300 px-3 py-2"
-                          rows={5}
-                          placeholder="Serbest metin"
+                    <div>
+                      <strong>İş Yerleri ve Görevler</strong>
+                      {historyData.isYerleri.length === 0 && <p>Bilgi yok</p>}
+                      <ul className="list-disc pl-5 mb-3">
+                        {historyData.isYerleri.map((yeri, i) => (
+                          <li key={`workplace-${i}`} className="flex gap-2 items-center">
+                            <span className="flex-1">{yeri}</span>
+                            <span className="flex-1">{historyData.gorevPozisyon[i] || "-"}</span>
+                            <button type="button" className="text-destructive" onClick={() => removeWorkplaceAtIndex(i)} aria-label="İş yeri sil">
+                              Sil
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                      <div className="mb-4 flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="İş yeri"
+                          className="flex-1 rounded border border-gray-300 px-3 py-2"
+                          value={historyData._newIsYeri || ""}
+                          onChange={(e) => setHistoryData(prev => ({ ...prev, _newIsYeri: e.target.value }))}
                         />
+                        <input
+                          type="text"
+                          placeholder="Görev / Pozisyon"
+                          className="flex-1 rounded border border-gray-300 px-3 py-2"
+                          value={historyData._newGorev || ""}
+                          onChange={(e) => setHistoryData(prev => ({ ...prev, _newGorev: e.target.value }))}
+                        />
+                        <Button
+                          type="button"
+                          onClick={addWorkplaceWithPosition}
+                          size="sm"
+                        >
+                          İş Yeri Ekle
+                        </Button>
                       </div>
+                    </div>
+
+                    <div>
+                      <strong>Belgeler</strong>
+                      {historyData.belgeler.length === 0 && <p>Bilgi yok</p>}
+                      <ul className="list-disc pl-5 mb-3">
+                        {historyData.belgeler.map((item, i) => (
+                          <li key={`document-${i}`} className="flex items-center justify-between">
+                            <span>{item}</span>
+                            <button type="button" className="text-destructive" onClick={() => removeBelgeAtIndex(i)} aria-label="Belge sil">
+                              Sil
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                      <div className="mb-4 flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Belge adı"
+                          className="flex-1 rounded border border-gray-300 px-3 py-2"
+                          value={historyData._newBelge || ""}
+                          onChange={(e) => setHistoryData(prev => ({ ...prev, _newBelge: e.target.value }))}
+                        />
+                        <Button
+                          type="button"
+                          onClick={addBelge}
+                          size="sm"
+                        >
+                          Belge Ekle
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <strong>Yarışmalar</strong>
+                      {historyData.yarismalar.length === 0 && <p>Bilgi yok</p>}
+                      <ul className="list-disc pl-5 mb-3">
+                        {historyData.yarismalar.map((item, i) => (
+                          <li key={`competition-${i}`} className="flex items-center justify-between">
+                            <span>{item}</span>
+                            <button type="button" className="text-destructive" onClick={() => removeYarismalarAtIndex(i)} aria-label="Yarışma sil">
+                              Sil
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                      <div className="mb-4 flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Yarışma adı"
+                          className="flex-1 rounded border border-gray-300 px-3 py-2"
+                          value={historyData._newYarisma || ""}
+                          onChange={(e) => setHistoryData(prev => ({ ...prev, _newYarisma: e.target.value }))}
+                        />
+                        <Button
+                          type="button"
+                          onClick={addYarismalar}
+                          size="sm"
+                        >
+                          Yarışma Ekle
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label htmlFor="cv" className="block font-medium mb-1">CV</label>
+                      <textarea
+                        id="cv"
+                        value={historyData.cv}
+                        onChange={handleCvChange}
+                        className="w-full rounded border border-gray-300 px-3 py-2"
+                        rows={5}
+                        placeholder="Serbest metin"
+                      />
+                    </div>
                   </>
                 )}
 
@@ -968,3 +930,4 @@ export default function StaffProfile() {
     </div>
   );
 }
+
