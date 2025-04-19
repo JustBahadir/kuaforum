@@ -9,7 +9,7 @@ interface PersonalInfoTabProps {
   personnel: any;
 }
 
-export function PersonalInfoTab({ personnel }: PersonalInfoTabProps) {
+export function PersonalInfoTab({ personnel = {} }: PersonalInfoTabProps) {
   const getInitials = (fullName: string) => {
     if (!fullName) return "??";
     
@@ -44,6 +44,17 @@ export function PersonalInfoTab({ personnel }: PersonalInfoTabProps) {
 
   console.log("Personnel data:", personnel);
 
+  // Safely access personnel data with fallbacks
+  const {
+    avatar_url = null,
+    ad_soyad = '',
+    birth_date = null,
+    eposta = null,
+    telefon = null,
+    adres = null,
+    iban = null
+  } = personnel || {};
+
   return (
     <div className="space-y-6">
       <Card>
@@ -51,10 +62,13 @@ export function PersonalInfoTab({ personnel }: PersonalInfoTabProps) {
           <div className="flex flex-col md:flex-row gap-6">
             <div className="flex flex-col items-center space-y-4">
               <Avatar className="h-32 w-32">
-                <AvatarImage src={personnel.avatar_url} alt={personnel.ad_soyad} />
-                <AvatarFallback className="text-3xl bg-purple-100 text-purple-600">
-                  {getInitials(personnel.ad_soyad)}
-                </AvatarFallback>
+                {avatar_url ? (
+                  <AvatarImage src={avatar_url} alt={ad_soyad} />
+                ) : (
+                  <AvatarFallback className="text-3xl bg-purple-100 text-purple-600">
+                    {getInitials(ad_soyad)}
+                  </AvatarFallback>
+                )}
               </Avatar>
             </div>
             
@@ -62,13 +76,13 @@ export function PersonalInfoTab({ personnel }: PersonalInfoTabProps) {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Ad Soyad</p>
-                  <p className="text-base">{personnel.ad_soyad || "-"}</p>
+                  <p className="text-base">{ad_soyad || "-"}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Doğum Tarihi</p>
                   <div className="flex items-center">
                     <CalendarDays className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <p className="text-base">{formatDate(personnel.birth_date)}</p>
+                    <p className="text-base">{formatDate(birth_date)}</p>
                   </div>
                 </div>
                 
@@ -76,10 +90,10 @@ export function PersonalInfoTab({ personnel }: PersonalInfoTabProps) {
                   <p className="text-sm font-medium text-muted-foreground">E-posta</p>
                   <div className="flex items-center">
                     <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <p className="text-base">{personnel.eposta || "-"}</p>
-                    {personnel.eposta && (
+                    <p className="text-base">{eposta || "-"}</p>
+                    {eposta && (
                       <button 
-                        onClick={() => handleCopy(personnel.eposta, "E-posta")}
+                        onClick={() => handleCopy(eposta, "E-posta")}
                         className="ml-2 text-muted-foreground hover:text-primary"
                       >
                         <Copy className="h-4 w-4" />
@@ -91,10 +105,10 @@ export function PersonalInfoTab({ personnel }: PersonalInfoTabProps) {
                   <p className="text-sm font-medium text-muted-foreground">Telefon</p>
                   <div className="flex items-center">
                     <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <p className="text-base">{personnel.telefon || "-"}</p>
-                    {personnel.telefon && (
+                    <p className="text-base">{telefon || "-"}</p>
+                    {telefon && (
                       <button 
-                        onClick={() => handleCopy(personnel.telefon, "Telefon")}
+                        onClick={() => handleCopy(telefon, "Telefon")}
                         className="ml-2 text-muted-foreground hover:text-primary"
                       >
                         <Copy className="h-4 w-4" />
@@ -107,7 +121,7 @@ export function PersonalInfoTab({ personnel }: PersonalInfoTabProps) {
                   <p className="text-sm font-medium text-muted-foreground">Adres</p>
                   <div className="flex items-center">
                     <MapPin className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
-                    <p className="text-base">{personnel.adres || "-"}</p>
+                    <p className="text-base">{adres || "-"}</p>
                   </div>
                 </div>
 
@@ -115,10 +129,10 @@ export function PersonalInfoTab({ personnel }: PersonalInfoTabProps) {
                   <p className="text-sm font-medium text-muted-foreground">IBAN</p>
                   <div className="flex items-center">
                     <CreditCard className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <p className="text-base">{personnel.iban || "-"}</p>
-                    {personnel.iban && (
+                    <p className="text-base">{iban || "-"}</p>
+                    {iban && (
                       <button 
-                        onClick={() => handleCopy(personnel.iban, "IBAN")}
+                        onClick={() => handleCopy(iban, "IBAN")}
                         className="ml-2 text-muted-foreground hover:text-primary"
                       >
                         <Copy className="h-4 w-4" />

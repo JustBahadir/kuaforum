@@ -65,7 +65,7 @@ export function PersonnelDetailsDialog({
   };
 
   // Use the updated personnel data if available, otherwise use the passed personnel
-  const displayPersonnel = fetchedPersonnel || personnelData;
+  const displayPersonnel = fetchedPersonnel || personnelData || {};
   
   console.log("Display personnel data:", displayPersonnel);
 
@@ -75,14 +75,17 @@ export function PersonnelDetailsDialog({
         <DialogHeader className="flex flex-row items-center justify-between">
           <div className="flex items-center gap-4">
             <Avatar className="h-12 w-12">
-              <AvatarImage src={displayPersonnel.avatar_url} alt={displayPersonnel.ad_soyad} />
-              <AvatarFallback className="bg-purple-100 text-purple-600">
-                {getInitials(displayPersonnel.ad_soyad)}
-              </AvatarFallback>
+              {displayPersonnel?.avatar_url ? (
+                <AvatarImage src={displayPersonnel.avatar_url} alt={displayPersonnel.ad_soyad || ''} />
+              ) : (
+                <AvatarFallback className="bg-purple-100 text-purple-600">
+                  {getInitials(displayPersonnel?.ad_soyad || '')}
+                </AvatarFallback>
+              )}
             </Avatar>
             <div>
               <DialogTitle className="text-xl">
-                {displayPersonnel.ad_soyad}
+                {displayPersonnel?.ad_soyad || 'Personel'}
               </DialogTitle>
               <DialogDescription>
                 Personel Bilgileri
@@ -112,11 +115,11 @@ export function PersonnelDetailsDialog({
           </TabsContent>
           
           <TabsContent value="operations-history">
-            <OperationsHistoryTab personnelId={displayPersonnel.id} showPoints={showPoints} />
+            <OperationsHistoryTab personnelId={displayPersonnel?.id} showPoints={showPoints} />
           </TabsContent>
           
           <TabsContent value="performance">
-            <PerformanceTab personnelId={displayPersonnel.id} />
+            <PerformanceTab personnelId={displayPersonnel?.id} />
           </TabsContent>
         </Tabs>
       </DialogContent>
