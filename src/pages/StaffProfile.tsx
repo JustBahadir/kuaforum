@@ -867,4 +867,4 @@ function WorkplacesPositionsSection({
   const startAdd = () => {
     setAdding(true);
     setNewIsyeri("");
-    setNew
+    setNewGorev
