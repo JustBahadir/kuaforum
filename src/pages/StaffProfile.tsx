@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,8 +6,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label"; // Import Label to fix "Cannot find name 'Label'"
 
 interface EducationData {
   ortaokuldurumu: string;
@@ -51,11 +48,9 @@ export default function StaffProfile() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
-  // Fix type of activeTab state setter to match Tabs onValueChange argument type (string)
-  // Use union for activeTab variable to enforce allowed values
-  const [activeTab, setActiveTab] = useState<"profile" | "education" | "history" | "join">(
-    "profile"
-  );
+  const [activeTab, setActiveTab] = useState<
+    "profile" | "education" | "history" | "join"
+  >("profile");
   const [shopCode, setShopCode] = useState("");
   const [validatingCode, setValidatingCode] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -83,808 +78,793 @@ export default function StaffProfile() {
   });
 
   const [userRole, setUserRole] = useState("");
-  const [saving, setSaving] = useState(false);
 
-  const fetchProfile = useCallback(async () => {
+  const saveEducationData = useCallback(async () => {
+    if (!user || !user.id) return;
     setLoading(true);
+
+    const dataToUpsert = {
+      personel_id: Number(user.id),
+      ortaokuldurumu: educationData.ortaokuldurumu,
+      lisedurumu: educationData.lisedurumu,
+      liseturu: educationData.liseturu,
+      meslekibrans: educationData.meslekibrans,
+      universitedurumu: educationData.universitedurumu,
+      universitebolum: educationData.universitebolum,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error } = await supabase
+      .from("staff_education")
+      .upsert([dataToUpsert], { onConflict: ["personel_id"] });
+
+    setLoading(false);
+    if (error) {
+      console.error("Eğitim bilgileri kaydedilirken hata:", error);
+      toast.error("Eğitim bilgileri güncellenemedi.");
+    } else {
+      toast.success("Eğitim bilgileri kaydedildi.");
+    }
+  }, [educationData, user]);
+
+  const saveHistoryData = useCallback(async () => {
+    if (!user || !user.id) return;
+    setLoading(true);
+
+    const dataToUpsert = {
+      personel_id: Number(user.id),
+      isyerleri: arrayToString(historyData.isyerleri),
+      gorevpozisyon: arrayToString(historyData.gorevpozisyon),
+      belgeler: arrayToString(historyData.belgeler),
+      yarismalar: arrayToString(historyData.yarismalar),
+      cv: historyData.cv || "",
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error } = await supabase
+      .from("staff_history")
+      .upsert([dataToUpsert], { onConflict: ["personel_id"] });
+
+    setLoading(false);
+    if (error) {
+      console.error("Geçmiş bilgileri kaydedilirken hata:", error);
+      toast.error("Geçmiş bilgileri güncellenemedi.");
+    } else {
+      toast.success("Geçmiş bilgileri kaydedildi.");
+    }
+  }, [historyData, user]);
+
+  const saveHistoryDataWithParams = async (
+    isyerleri: string[],
+    gorevpozisyon: string[],
+    belgeler: string[],
+    yarismalar: string[],
+    cv: string
+  ) => {
+    if (!user || !user.id) return;
+    setLoading(true);
+
+    const dataToUpsert = {
+      personel_id: Number(user.id),
+      isyerleri: arrayToString(isyerleri),
+      gorevpozisyon: arrayToString(gorevpozisyon),
+      belgeler: arrayToString(belgeler),
+      yarismalar: arrayToString(yarismalar),
+      cv: cv || "",
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error } = await supabase
+      .from("staff_history")
+      .upsert([dataToUpsert], { onConflict: ["personel_id"] });
+
+    setLoading(false);
+    if (error) {
+      console.error("Geçmiş bilgileri kaydedilirken hata:", error);
+      toast.error("Geçmiş bilgileri güncellenemedi.");
+    } else {
+      toast.success("Geçmiş bilgileri güncellendi.");
+    }
+  };
+
+  const addWorkplaceWithPosition = async () => {
+    if (!historyData._newIsYeri || !historyData._newGorev) {
+      toast.error("İş yeri ve görev giriniz.");
+      return;
+    }
+    const newIsyerleri = [...historyData.isyerleri, historyData._newIsYeri];
+    const newGorevPozisyon = [...historyData.gorevpozisyon, historyData._newGorev];
+    setHistoryData((prev) => ({
+      ...prev,
+      isyerleri: newIsyerleri,
+      gorevpozisyon: newGorevPozisyon,
+      _newIsYeri: "",
+      _newGorev: "",
+    }));
+
+    await saveHistoryDataWithParams(
+      newIsyerleri,
+      newGorevPozisyon,
+      historyData.belgeler,
+      historyData.yarismalar,
+      historyData.cv
+    );
+  };
+
+  const removeWorkplaceAtIndex = async (index: number) => {
+    const newIsyerleri = [...historyData.isyerleri];
+    const newGorevPozisyon = [...historyData.gorevpozisyon];
+    newIsyerleri.splice(index, 1);
+    newGorevPozisyon.splice(index, 1);
+    setHistoryData((prev) => ({
+      ...prev,
+      isyerleri: newIsyerleri,
+      gorevpozisyon: newGorevPozisyon,
+    }));
+
+    await saveHistoryDataWithParams(newIsyerleri, newGorevPozisyon, historyData.belgeler, historyData.yarismalar, historyData.cv);
+  };
+
+  const addBelge = async () => {
+    if (!historyData._newBelge) {
+      toast.error("Belge adı giriniz.");
+      return;
+    }
+    const newBelgeler = [...historyData.belgeler, historyData._newBelge];
+    setHistoryData((prev) => ({
+      ...prev,
+      belgeler: newBelgeler,
+      _newBelge: ""
+    }));
+
+    await saveHistoryDataWithParams(historyData.isyerleri, historyData.gorevpozisyon, newBelgeler, historyData.yarismalar, historyData.cv);
+  };
+
+  const removeBelgeAtIndex = async (index: number) => {
+    const newBelgeler = [...historyData.belgeler];
+    newBelgeler.splice(index, 1);
+    setHistoryData((prev) => ({ ...prev, belgeler: newBelgeler }));
+
+    await saveHistoryDataWithParams(historyData.isyerleri, historyData.gorevpozisyon, newBelgeler, historyData.yarismalar, historyData.cv);
+  };
+
+  const addYarismalar = async () => {
+    if (!historyData._newYarisma) {
+      toast.error("Yarışma adı giriniz.");
+      return;
+    }
+    const newYarismalar = [...historyData.yarismalar, historyData._newYarisma];
+    setHistoryData((prev) => ({
+      ...prev,
+      yarismalar: newYarismalar,
+      _newYarisma: ""
+    }));
+
+    await saveHistoryDataWithParams(historyData.isyerleri, historyData.gorevpozisyon, historyData.belgeler, newYarismalar, historyData.cv);
+  };
+
+  const removeYarismalarAtIndex = async (index: number) => {
+    const newYarismalar = [...historyData.yarismalar];
+    newYarismalar.splice(index, 1);
+    setHistoryData((prev) => ({ ...prev, yarismalar: newYarismalar }));
+
+    await saveHistoryDataWithParams(historyData.isyerleri, historyData.gorevpozisyon, historyData.belgeler, newYarismalar, historyData.cv);
+  };
+
+  const handleCvChange = async (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const { value } = e.target;
+    setHistoryData((prev) => ({ ...prev, cv: value }));
+    await saveHistoryDataWithParams(historyData.isyerleri, historyData.gorevpozisyon, historyData.belgeler, historyData.yarismalar, value);
+  };
+
+  const handleEducationChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+
+    setEducationData((prev) => {
+      const newData = { ...prev, [name]: value };
+
+      if (name === "ortaokuldurumu" && value !== "bitirdi") {
+        newData.lisedurumu = "";
+        newData.liseturu = "";
+        newData.meslekibrans = "";
+        newData.universitedurumu = "";
+        newData.universitebolum = "";
+      } else if (name === "lisedurumu") {
+        if (value !== "okuyor" && value !== "bitirdi") {
+          newData.liseturu = "";
+          newData.meslekibrans = "";
+          newData.universitedurumu = "";
+          newData.universitebolum = "";
+        }
+        if (value !== "bitirdi") {
+          newData.universitedurumu = "";
+          newData.universitebolum = "";
+        }
+      } else if (name === "liseturu") {
+        if (!["cok_programli_anadolu", "meslek_ve_teknik_anadolu"].includes(value)) {
+          newData.meslekibrans = "";
+        }
+      } else if (name === "universitedurumu") {
+        if (value !== "okuyor" && value !== "bitirdi") {
+          newData.universitebolum = "";
+        }
+      }
+
+      return newData;
+    });
+  };
+
+  const handleJoinShop = async () => {
+    if (!shopCode.trim()) {
+      toast.error("Lütfen bir işletme kodu girin.");
+      return;
+    }
+
+    const cleanedCode = shopCode.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+    const formattedCode = cleanedCode.replace(/^(.{5})(.{4})(.{3})$/, '$1-$2-$3');
+
+    if (formattedCode !== shopCode) {
+      setShopCode(formattedCode);
+      toast("İşletme kodu otomatik düzenlendi. Lütfen tekrar klikleyin.");
+      return;
+    }
+
+    setValidatingCode(true);
     try {
-      const { data: session } = await supabase.auth.getSession();
-      if (!session?.session?.user) {
-        navigate("/login");
+      const { data: shopData, error: shopError } = await supabase
+        .from("dukkanlar")
+        .select("id, ad, sahibi_id")
+        .eq("kod", shopCode)
+        .maybeSingle();
+
+      if (shopError) throw shopError;
+
+      if (!shopData) {
+        toast.error("Geçersiz işletme kodu.");
         return;
       }
 
-      const currentUser = session.session.user;
-      setUser(currentUser);
+      console.log(`Join request sent to shop owner (${shopData.sahibi_id}) from person ${profile?.first_name} ${profile?.last_name} (${user.email})`);
 
-      // Fetch profile from "profiles" table
-      const { data: profileData, error: profileError } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", currentUser.id)
-        .single();
+      toast.success(`${shopData.ad} işletmesine katılma talebiniz gönderildi.`);
 
-      if (profileError) {
-        throw profileError;
-      }
-
-      setProfile(profileData);
-      setUserRole(profileData?.role || "");
-
-      // Fetch education data from "staff_education"
-      const { data: education, error: educationError } = await supabase
-        .from("staff_education")
-        .select("*")
-        .eq("personel_id", Number(profileData.id))  // Convert id to number if needed
-        .single();
-
-      if (educationError && educationError.code !== "PGRST116") {
-        throw educationError;
-      }
-
-      if (education) {
-        setEducationData({
-          ortaokuldurumu: education.ortaokuldurumu || "",
-          lisedurumu: education.lisedurumu || "",
-          liseturu: education.liseturu || "",
-          meslekibrans: education.meslekibrans || "",
-          universitedurumu: education.universitedurumu || "",
-          universitebolum: education.universitebolum || "",
-        });
-      } else {
-        setEducationData({
-          ortaokuldurumu: "",
-          lisedurumu: "",
-          liseturu: "",
-          meslekibrans: "",
-          universitedurumu: "",
-          universitebolum: "",
-        });
-      }
-
-      // Fetch history data from "staff_history"
-      const { data: history, error: historyError } = await supabase
-        .from("staff_history")
-        .select("*")
-        .eq("personel_id", Number(profileData.id))  // Convert id to number if needed
-        .single();
-
-      if (historyError && historyError.code !== "PGRST116") {
-        throw historyError;
-      }
-
-      if (history) {
-        setHistoryData({
-          isyerleri: stringToArray(history.isyerleri),
-          gorevpozisyon: stringToArray(history.gorevpozisyon),
-          belgeler: stringToArray(history.belgeler),
-          yarismalar: stringToArray(history.yarismalar),
-          cv: history.cv || "",
-          _newIsYeri: "",
-          _newGorev: "",
-          _newBelge: "",
-          _newYarisma: "",
-        });
-      } else {
-        setHistoryData({
-          isyerleri: [],
-          gorevpozisyon: [],
-          belgeler: [],
-          yarismalar: [],
-          cv: "",
-          _newIsYeri: "",
-          _newGorev: "",
-          _newBelge: "",
-          _newYarisma: "",
-        });
-      }
-    } catch (error: any) {
-      console.error("Profil bilgileri alınırken hata:", error);
-      toast.error("Profil bilgileri alınırken bir hata oluştu.");
-    } finally {
-      setLoading(false);
-    }
-  }, [navigate]);
-
-  useEffect(() => {
-    fetchProfile();
-  }, [fetchProfile]);
-
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    setProfile((prev: any) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const saveProfileData = async () => {
-    setSaving(true);
-    try {
-      if (!user) {
-        throw new Error("Kullanıcı bilgileri alınamadı.");
-      }
-
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          first_name: profile.first_name,
-          last_name: profile.last_name,
-          phone: profile.phone,
-          gender: profile.gender,
-          address: profile.address,
-        })
-        .eq("id", user.id);
-
-      if (error) {
-        throw error;
-      }
-
-      toast.success("Profil bilgileriniz başarıyla güncellendi!");
-      setEditMode(false);
-      fetchProfile();
-    } catch (error: any) {
-      console.error("Profil güncelleme hatası:", error);
-      toast.error("Profil bilgileri güncellenirken bir hata oluştu.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleEducationInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    setEducationData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const saveEducationData = async () => {
-    setSaving(true);
-    try {
-      if (!user) {
-        throw new Error("Kullanıcı bilgileri alınamadı.");
-      }
-
-      const { error } = await supabase
-        .from("staff_education")
-        .upsert(
-          [
-            {
-              personel_id: profile.id,
-              ortaokuldurumu: educationData.ortaokuldurumu,
-              lisedurumu: educationData.lisedurumu,
-              liseturu: educationData.liseturu,
-              meslekibrans: educationData.meslekibrans,
-              universitedurumu: educationData.universitedurumu,
-              universitebolum: educationData.universitebolum,
-            },
-          ],
-          { onConflict: "personel_id" }
-        );
-
-      if (error) {
-        throw error;
-      }
-
-      toast.success("Eğitim bilgileriniz başarıyla kaydedildi!");
-    } catch (error: any) {
-      console.error("Eğitim bilgileri kaydetme hatası:", error);
-      toast.error("Eğitim bilgileri kaydedilirken bir hata oluştu.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleHistoryInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    setHistoryData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  // Fix handleAddToArray and handleRemoveFromArray keys to lowercase for keys of historyData
-  const handleAddToArray = (arrayName: string) => {
-    setHistoryData((prev) => {
-      const newValue = prev[`_new${arrayName}` as keyof HistoryData] as string;
-      if (!newValue) return prev;
-
-      return {
-        ...prev,
-        [arrayName.toLowerCase()]: [...(prev[arrayName.toLowerCase() as keyof HistoryData] as string[]), newValue],
-        [`_new${arrayName}` as keyof HistoryData]: "",
-      };
-    });
-  };
-
-  const handleRemoveFromArray = (arrayName: string, index: number) => {
-    setHistoryData((prev) => {
-      const newArray = [...(prev[arrayName.toLowerCase() as keyof HistoryData] as string[])];
-      newArray.splice(index, 1);
-      return {
-        ...prev,
-        [arrayName.toLowerCase()]: newArray,
-      };
-    });
-  };
-
-  const saveHistoryData = async () => {
-    setSaving(true);
-    try {
-      if (!user) {
-        throw new Error("Kullanıcı bilgileri alınamadı.");
-      }
-
-      const { error } = await supabase
-        .from("staff_history")
-        .upsert(
-          [
-            {
-              personel_id: profile.id,
-              isyerleri: historyData.isyerleri.join(", "),
-              gorevpozisyon: historyData.gorevpozisyon.join(", "),
-              belgeler: historyData.belgeler.join(", "),
-              yarismalar: historyData.yarismalar.join(", "),
-              cv: historyData.cv,
-            },
-          ],
-          { onConflict: "personel_id" }
-        );
-
-      if (error) {
-        throw error;
-      }
-
-      toast.success("İş geçmişi bilgileriniz başarıyla kaydedildi!");
-    } catch (error: any) {
-      console.error("İş geçmişi kaydetme hatası:", error);
-      toast.error("İş geçmişi bilgileri kaydedilirken bir hata oluştu.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleShopCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setShopCode(e.target.value);
-  };
-
-  const validateShopCode = async () => {
-    setValidatingCode(true);
-    try {
-      const { data, error } = await supabase
-        .from("dukkanlar")
-        .select("id")
-        .eq("kod", shopCode)
-        .single();
-
-      if (error || !data) {
-        throw new Error("Geçersiz dükkan kodu.");
-      }
-
-      // Update the user's profile with the shop ID
-      const { error: profileUpdateError } = await supabase
-        .from("profiles")
-        .update({ dukkan_id: data.id })
-        .eq("id", user.id);
-
-      if (profileUpdateError) {
-        throw profileUpdateError;
-      }
-
-      toast.success("Dükkan kodu doğrulandı ve profilinize eklendi!");
-      fetchProfile(); // Refresh profile data
-    } catch (err: any) {
-      toast.error(err.message || "Dükkan kodu doğrulanamadı.");
+      setShopCode("");
+    } catch (error) {
+      console.error("İşletmeye katılma hatası:", error);
+      toast.error("İşletmeye katılırken bir hata oluştu.");
     } finally {
       setValidatingCode(false);
     }
   };
 
-  const handleCvInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setCvEditMode(true);
-    setSaving(true);
-
+  const handleLogout = async () => {
     try {
-      const filePath = `cv/${user.id}/${file.name}`;
-      const { data, error } = await supabase.storage
-        .from("public")
-        .upload(filePath, file, {
-          cacheControl: "3600",
-          upsert: false,
-        });
+      await supabase.auth.signOut();
+      navigate("/login");
+    } catch (error) {
+      console.error("Çıkış yapılırken hata:", error);
+      toast.error("Çıkış yapılırken bir hata oluştu.");
+    }
+  };
 
-      if (error) {
-        throw error;
+  const saveProfileEdits = async () => {
+    try {
+      setLoading(true);
+
+      const { error: profileUpdateError } = await supabase
+        .from("profiles")
+        .update({
+          first_name: profile.first_name,
+          last_name: profile.last_name,
+          phone: profile.phone,
+          address: profile.address,
+          gender: profile.gender,
+        })
+        .eq("id", user.id);
+
+      if (profileUpdateError) {
+        toast.error("Profil bilgileri güncellenirken hata oluştu.");
+        setLoading(false);
+        return;
       }
 
-      const publicURL = supabase.storage.from("public").getPublicUrl(filePath);
+      await saveEducationData();
 
-      setHistoryData((prev) => ({
-        ...prev,
-        cv: publicURL.data.publicUrl,
-      }));
+      await saveHistoryData();
 
-      toast.success("CV başarıyla yüklendi!");
-    } catch (error: any) {
-      console.error("CV yükleme hatası:", error);
-      toast.error("CV yüklenirken bir hata oluştu.");
+      setEditMode(false);
+      toast.success("Bilgiler güncellendi.");
+    } catch (error) {
+      console.error("Profil kaydetme hatası:", error);
+      toast.error("Bilgiler kaydedilirken hata oluştu.");
     } finally {
-      setSaving(false);
-      setCvEditMode(false);
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+
+        if (error) throw error;
+
+        if (!data.session) {
+          navigate("/login");
+          return;
+        }
+
+        setUser(data.session.user);
+
+        const role = data.session.user.user_metadata?.role ?? "customer";
+        setUserRole(role);
+
+        if (role === "admin") {
+          navigate("/shop-home");
+          return;
+        }
+
+        const { data: profileData, error: profileError } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", data.session.user.id)
+          .maybeSingle();
+
+        if (profileError && profileError.code !== "PGRST116") {
+          throw profileError;
+        }
+
+        setProfile({
+          first_name: profileData?.first_name || "",
+          last_name: profileData?.last_name || "",
+          phone: profileData?.phone || "",
+          address: profileData?.address || "",
+          gender: profileData?.gender || "",
+          avatar_url: profileData?.avatar_url || null
+        });
+
+        const { data: educationRes } = await supabase
+          .from("staff_education")
+          .select("*")
+          .eq("personel_id", Number(data.session.user.id))
+          .maybeSingle();
+
+        setEducationData({
+          ortaokuldurumu:
+            typeof educationRes?.ortaokuldurumu === "string"
+              ? educationRes.ortaokuldurumu
+              : "",
+          lisedurumu:
+            typeof educationRes?.lisedurumu === "string"
+              ? educationRes.lisedurumu
+              : "",
+          liseturu:
+            typeof educationRes?.liseturu === "string" ? educationRes.liseturu : "",
+          meslekibrans:
+            typeof educationRes?.meslekibrans === "string"
+              ? educationRes.meslekibrans
+              : "",
+          universitedurumu:
+            typeof educationRes?.universitedurumu === "string"
+              ? educationRes.universitedurumu
+              : "",
+          universitebolum:
+            typeof educationRes?.universitebolum === "string"
+              ? educationRes.universitebolum
+              : "",
+        });
+
+        const { data: historyRes } = await supabase
+          .from("staff_history")
+          .select("*")
+          .eq("personel_id", Number(data.session.user.id))
+          .maybeSingle();
+
+        setHistoryData({
+          isyerleri: stringToArray(historyRes?.isyerleri),
+          gorevpozisyon: stringToArray(historyRes?.gorevpozisyon),
+          belgeler: stringToArray(historyRes?.belgeler),
+          yarismalar: stringToArray(historyRes?.yarismalar),
+          cv: typeof historyRes?.cv === "string" ? historyRes.cv : "",
+          _newIsYeri: "",
+          _newGorev: "",
+          _newBelge: "",
+          _newYarisma: ""
+        });
+
+        if (role === "staff") {
+          const { data: personelData } = await supabase
+            .from("personel")
+            .select("dukkan_id, id")
+            .eq("auth_id", data.session.user.id)
+            .maybeSingle();
+
+          if (personelData?.dukkan_id) {
+            navigate("/shop-home");
+            return;
+          }
+        } else {
+          navigate("/customer-dashboard");
+          return;
+        }
+      } catch (error) {
+        console.error("Profil bilgileri alınırken hata:", error);
+        toast.error("Profil bilgileri alınamadı.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkSession();
+  }, [navigate]);
+
+  const initials = `${profile?.first_name?.[0] || ""}${profile?.last_name?.[0] || ""}`;
+
+  const showLisedurumu = educationData.ortaokuldurumu.toLowerCase() === "bitirdi";
+  const showLiseturu =
+    showLisedurumu &&
+    (educationData.lisedurumu.toLowerCase() === "bitirdi" ||
+      educationData.lisedurumu.toLowerCase() === "okuyor");
+  const showMeslekibrans =
+    showLiseturu &&
+    ["cok_programli_anadolu", "meslek_ve_teknik_anadolu"].includes(
+      educationData.liseturu
+    );
+  const showUniversitedurumu = educationData.lisedurumu.toLowerCase() === "bitirdi";
+  const showUniversitebolum =
+    showUniversitedurumu &&
+    (educationData.universitedurumu.toLowerCase() === "bitirdi" ||
+      educationData.universitedurumu.toLowerCase() === "okuyor");
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value as "profile" | "education" | "history" | "join");
   };
 
   return (
     <div className="container mx-auto py-8">
-      {loading ? (
-        <div className="flex items-center justify-center h-48">
-          <p>Profil bilgileri yükleniyor...</p>
-        </div>
-      ) : (
-        <>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-2xl font-semibold">
-                Personel Profil Sayfası
-              </CardTitle>
-              <Button onClick={() => navigate("/")} variant="outline">
-                Çıkış Yap
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center space-x-4">
-                <Avatar className="h-12 w-12">
-                  <AvatarImage src={profile?.avatar_url} />
-                  <AvatarFallback>
-                    {profile?.first_name?.[0]}
-                    {profile?.last_name?.[0]}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <h2 className="text-lg font-semibold">
-                    {profile?.first_name} {profile?.last_name}
-                  </h2>
-                  <p className="text-sm text-gray-500">{user?.email}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+      <Card className="w-full max-w-5xl mx-auto">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-2xl font-bold">Personel Profil</CardTitle>
+          <div className="flex items-center space-x-4">
+            <Button variant="outline" onClick={handleLogout}>
+              Çıkış Yap
+            </Button>
+          </div>
+        </CardHeader>
 
-          <Tabs 
-            defaultValue="profile" 
-            className="mt-4" 
-            onValueChange={(value) => {
-              // Ensure value is one of allowed tab types
-              if (
-                value === "profile" || 
-                value === "education" || 
-                value === "history" || 
-                value === "join"
-              ) {
-                setActiveTab(value);
-              }
-            }}
-          >
-            <TabsList>
-              <TabsTrigger value="profile">Profil</TabsTrigger>
-              <TabsTrigger value="education">Eğitim</TabsTrigger>
-              <TabsTrigger value="history">İş Geçmişi</TabsTrigger>
-              {userRole !== "admin" && (
-                <TabsTrigger value="join">Dükkana Katıl</TabsTrigger>
-              )}
-            </TabsList>
-            <TabsContent value="profile">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Profil Bilgileri</CardTitle>
-                </CardHeader>
-                <CardContent className="grid gap-4">
+        <CardContent>
+          <div className="flex items-start space-x-8">
+            <Avatar className="h-24 w-24">
+              <AvatarImage src={profile?.avatar_url} alt="Profile Picture" />
+              <AvatarFallback>{initials}</AvatarFallback>
+            </Avatar>
+
+            <div className="flex-grow">
+              <p className="text-gray-500 mb-3">
+                {user?.email} | {userRole}
+              </p>
+              <Tabs
+                value={activeTab}
+                onValueChange={handleTabChange}
+                className="w-full"
+              >
+                <TabsList className="w-full flex space-x-4">
+                  <TabsTrigger value="profile">Profil</TabsTrigger>
+                  <TabsTrigger value="education">Eğitim</TabsTrigger>
+                  <TabsTrigger value="history">Geçmiş</TabsTrigger>
+                  {userRole === "staff" && (
+                    <TabsTrigger value="join">İşletmeye Katıl</TabsTrigger>
+                  )}
+                </TabsList>
+
+                {/* Profile Tab */}
+                <TabsContent value="profile">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="firstName">Ad</Label>
-                      <Input
+                      <label className="block text-sm font-medium text-gray-700">
+                        Ad
+                      </label>
+                      <input
                         type="text"
-                        id="firstName"
-                        name="first_name"
                         value={profile?.first_name || ""}
-                        onChange={handleInputChange}
-                        disabled={!editMode}
+                        onChange={(e) =>
+                          setProfile({ ...profile, first_name: e.target.value })
+                        }
+                        disabled={false}
+                        className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500`}
                       />
                     </div>
                     <div>
-                      <Label htmlFor="lastName">Soyad</Label>
-                      <Input
+                      <label className="block text-sm font-medium text-gray-700">
+                        Soyad
+                      </label>
+                      <input
                         type="text"
-                        id="lastName"
-                        name="last_name"
                         value={profile?.last_name || ""}
-                        onChange={handleInputChange}
-                        disabled={!editMode}
+                        onChange={(e) =>
+                          setProfile({ ...profile, last_name: e.target.value })
+                        }
+                        disabled={false}
+                        className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500`}
                       />
                     </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Telefon
+                      </label>
+                      <input
+                        type="text"
+                        value={profile?.phone || ""}
+                        onChange={(e) =>
+                          setProfile({ ...profile, phone: e.target.value })
+                        }
+                        disabled={false}
+                        className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500`}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Adres
+                      </label>
+                      <input
+                        type="text"
+                        value={profile?.address || ""}
+                        onChange={(e) =>
+                          setProfile({ ...profile, address: e.target.value })
+                        }
+                        disabled={false}
+                        className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500`}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Cinsiyet
+                      </label>
+                      <select
+                        value={profile?.gender || ""}
+                        onChange={(e) =>
+                          setProfile({ ...profile, gender: e.target.value })
+                        }
+                        disabled={false}
+                        className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500`}
+                      >
+                        <option value="">Seçiniz</option>
+                        <option value="erkek">Erkek</option>
+                        <option value="kadın">Kadın</option>
+                      </select>
+                    </div>
                   </div>
-                  <div>
-                    <Label htmlFor="phone">Telefon</Label>
-                    <Input
-                      type="tel"
-                      id="phone"
-                      name="phone"
-                      value={profile?.phone || ""}
-                      onChange={handleInputChange}
-                      disabled={!editMode}
-                    />
+                  <div className="mt-4 flex justify-end">
+                    <Button variant="default" onClick={saveProfileEdits} disabled={loading}>
+                      Kaydet
+                    </Button>
                   </div>
-                  <div>
-                    <Label htmlFor="gender">Cinsiyet</Label>
-                    <Input
-                      type="text"
-                      id="gender"
-                      name="gender"
-                      value={profile?.gender || ""}
-                      onChange={handleInputChange}
-                      disabled={!editMode}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="address">Adres</Label>
-                    <Input
-                      type="text"
-                      id="address"
-                      name="address"
-                      value={profile?.address || ""}
-                      onChange={handleInputChange}
-                      disabled={!editMode}
-                    />
-                  </div>
-                  <Button
-                    onClick={editMode ? saveProfileData : () => setEditMode(true)}
-                    disabled={saving}
-                  >
-                    {editMode
-                      ? saving
-                        ? "Kaydediliyor..."
-                        : "Kaydet"
-                      : "Profili Düzenle"}
-                  </Button>
-                </CardContent>
-              </Card>
-            </TabsContent>
+                </TabsContent>
 
-            <TabsContent value="education">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Eğitim Bilgileri</CardTitle>
-                </CardHeader>
-                <CardContent className="grid gap-4">
-                  <div>
-                    <Label htmlFor="ortaokuldurumu">Ortaokul Durumu</Label>
-                    <Input
-                      type="text"
-                      id="ortaokuldurumu"
-                      name="ortaokuldurumu"
-                      value={educationData.ortaokuldurumu}
-                      onChange={handleEducationInputChange}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="lisedurumu">Lise Durumu</Label>
-                    <Input
-                      type="text"
-                      id="lisedurumu"
-                      name="lisedurumu"
-                      value={educationData.lisedurumu}
-                      onChange={handleEducationInputChange}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="liseturu">Lise Türü</Label>
-                    <Input
-                      type="text"
-                      id="liseturu"
-                      name="liseturu"
-                      value={educationData.liseturu}
-                      onChange={handleEducationInputChange}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="meslekibrans">Meslek / Branş</Label>
-                    <Input
-                      type="text"
-                      id="meslekibrans"
-                      name="meslekibrans"
-                      value={educationData.meslekibrans}
-                      onChange={handleEducationInputChange}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="universitedurumu">Üniversite Durumu</Label>
-                    <Input
-                      type="text"
-                      id="universitedurumu"
-                      name="universitedurumu"
-                      value={educationData.universitedurumu}
-                      onChange={handleEducationInputChange}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="universitebolum">Üniversite Bölümü</Label>
-                    <Input
-                      type="text"
-                      id="universitebolum"
-                      name="universitebolum"
-                      value={educationData.universitebolum}
-                      onChange={handleEducationInputChange}
-                    />
-                  </div>
-                  <Button onClick={saveEducationData} disabled={saving}>
-                    {saving ? "Kaydediliyor..." : "Kaydet"}
-                  </Button>
-                </CardContent>
-              </Card>
-            </TabsContent>
+                {/* Education Tab */}
+                <TabsContent value="education">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Ortaokul Durumu
+                      </label>
+                      <select
+                        name="ortaokuldurumu"
+                        value={educationData.ortaokuldurumu}
+                        onChange={handleEducationChange}
+                        disabled={loading || editMode}
+                        className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500`}
+                      >
+                        <option value="">Seçiniz</option>
+                        <option value="okuyor">Okuyor</option>
+                        <option value="bitirdi">Bitirdi</option>
+                        <option value="ayrildi">Ayrıldı</option>
+                      </select>
+                    </div>
 
-            <TabsContent value="history">
-              <Card>
-                <CardHeader>
-                  <CardTitle>İş Geçmişi</CardTitle>
-                </CardHeader>
-                <CardContent className="grid gap-4">
-                  <WorkplacesPositionsSection
-                    historyData={historyData}
-                    handleHistoryInputChange={handleHistoryInputChange}
-                    handleAddToArray={handleAddToArray}
-                    handleRemoveFromArray={handleRemoveFromArray}
-                  />
-                  <DocumentsSection
-                    historyData={historyData}
-                    handleHistoryInputChange={handleHistoryInputChange}
-                    handleAddToArray={handleAddToArray}
-                    handleRemoveFromArray={handleRemoveFromArray}
-                  />
-                  <CompetitionsSection
-                    historyData={historyData}
-                    handleHistoryInputChange={handleHistoryInputChange}
-                    handleAddToArray={handleAddToArray}
-                    handleRemoveFromArray={handleRemoveFromArray}
-                  />
-                  <CvSection
-                    historyData={historyData}
-                    handleHistoryInputChange={handleHistoryInputChange}
-                    handleCvInputChange={handleCvInputChange}
-                    cvEditMode={cvEditMode}
-                  />
-                  <Button onClick={saveHistoryData} disabled={saving}>
-                    {saving ? "Kaydediliyor..." : "Kaydet"}
-                  </Button>
-                </CardContent>
-              </Card>
-            </TabsContent>
+                    {showLisedurumu && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Lise Durumu
+                        </label>
+                        <select
+                          name="lisedurumu"
+                          value={educationData.lisedurumu}
+                          onChange={handleEducationChange}
+                          disabled={loading || editMode}
+                          className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500`}
+                        >
+                          <option value="">Seçiniz</option>
+                          <option value="okuyor">Okuyor</option>
+                          <option value="bitirdi">Bitirdi</option>
+                          <option value="ayrildi">Ayrıldı</option>
+                        </select>
+                      </div>
+                    )}
 
-            <TabsContent value="join">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Dükkana Katıl</CardTitle>
-                </CardHeader>
-                <CardContent className="grid gap-4">
+                    {showLiseturu && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Lise Türü
+                        </label>
+                        <select
+                          name="liseturu"
+                          value={educationData.liseturu}
+                          onChange={handleEducationChange}
+                          disabled={loading || editMode}
+                          className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500`}
+                        >
+                          <option value="">Seçiniz</option>
+                          <option value="fen">Fen Lisesi</option>
+                          <option value="sosyal_bilimler">Sosyal Bilimler Lisesi</option>
+                          <option value="anatoli">Anadolu Lisesi</option>
+                          <option value="guzel_sanatlar">Güzel Sanatlar Lisesi</option>
+                          <option value="spor">Spor Lisesi</option>
+                          <option value="imam_hatip">Anadolu İmam Hatip Lisesi</option>
+                          <option value="cok_programli_anadolu">
+                            Çok Programlı Anadolu Lisesi
+                          </option>
+                          <option value="meslek_ve_teknik_anadolu">
+                            Mesleki ve Teknik Anadolu Lisesi
+                          </option>
+                          <option value="aksam">Akşam Lisesi</option>
+                          <option value="acik_ogretim">Açık Öğretim Lisesi</option>
+                        </select>
+                      </div>
+                    )}
+
+                    {showMeslekibrans && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Meslek / Branş
+                        </label>
+                        <input
+                          type="text"
+                          name="meslekibrans"
+                          value={educationData.meslekibrans}
+                          onChange={(e) => {
+                            const { name, value } = e.target;
+                            setEducationData((prev) => ({ ...prev, [name]: value }));
+                          }}
+                          disabled={loading || editMode}
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500"
+                        />
+                      </div>
+                    )}
+
+                    {showUniversitedurumu && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Üniversite Durumu
+                        </label>
+                        <select
+                          name="universitedurumu"
+                          value={educationData.universitedurumu}
+                          onChange={handleEducationChange}
+                          disabled={loading || editMode}
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500"
+                        >
+                          <option value="">Seçiniz</option>
+                          <option value="okuyor">Okuyor</option>
+                          <option value="bitirdi">Bitirdi</option>
+                          <option value="ayrildi">Ayrıldı</option>
+                        </select>
+                      </div>
+                    )}
+
+                    {showUniversitebolum && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Üniversite Bölümü
+                        </label>
+                        <input
+                          type="text"
+                          name="universitebolum"
+                          value={educationData.universitebolum}
+                          onChange={(e) => {
+                            const { name, value } = e.target;
+                            setEducationData((prev) => ({ ...prev, [name]: value }));
+                          }}
+                          disabled={loading || editMode}
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </TabsContent>
+
+                {/* History Tab */}
+                <TabsContent value="history">
+                  <div className="space-y-6">
+                    <WorkplacesPositionsSection
+                      historyData={historyData}
+                      setHistoryData={setHistoryData}
+                      user={user}
+                      saveHistoryDataWithParams={saveHistoryDataWithParams}
+                    />
+                    <DocumentsSection
+                      historyData={historyData}
+                      setHistoryData={setHistoryData}
+                      user={user}
+                      saveHistoryDataWithParams={saveHistoryDataWithParams}
+                    />
+                    <CompetitionsSection
+                      historyData={historyData}
+                      setHistoryData={setHistoryData}
+                      user={user}
+                      saveHistoryDataWithParams={saveHistoryDataWithParams}
+                    />
+                    <CvSection
+                      cv={historyData.cv}
+                      setCv={(cvValue) =>
+                        setHistoryData((prev) => ({ ...prev, cv: cvValue }))
+                      }
+                      user={user}
+                      saveHistoryDataWithParams={saveHistoryDataWithParams}
+                      cvEditMode={cvEditMode}
+                      setCvEditMode={setCvEditMode}
+                    />
+                  </div>
+                </TabsContent>
+
+                {/* Join Tab */}
+                <TabsContent value="join">
                   <div>
-                    <Label htmlFor="shopCode">Dükkan Kodu</Label>
-                    <Input
+                    <label className="block mb-2 font-semibold">İşletme Kodu</label>
+                    <input
                       type="text"
-                      id="shopCode"
                       value={shopCode}
-                      onChange={handleShopCodeChange}
+                      onChange={(e) => setShopCode(e.target.value)}
+                      disabled={validatingCode}
+                      className="block w-full rounded-md border border-gray-300 px-3 py-2 disabled:cursor-not-allowed disabled:bg-gray-100"
+                      placeholder="Almış olduğunuz işletme kodunu giriniz"
                     />
+                    <Button
+                      disabled={validatingCode}
+                      onClick={handleJoinShop}
+                      className="mt-2"
+                      variant="default"
+                    >
+                      Katıl
+                    </Button>
                   </div>
-                  <Button onClick={validateShopCode} disabled={validatingCode}>
-                    {validatingCode ? "Doğrulanıyor..." : "Dükkan Kodunu Doğrula"}
-                  </Button>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </>
-      )}
+                </TabsContent>
+              </Tabs>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
 
-interface SectionProps {
+function WorkplacesPositionsSection({
+  historyData,
+  setHistoryData,
+  user,
+  saveHistoryDataWithParams,
+}: {
   historyData: HistoryData;
-  handleHistoryInputChange: (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => void;
-  handleAddToArray: (arrayName: string) => void;
-  handleRemoveFromArray: (arrayName: string, index: number) => void;
-}
+  setHistoryData: React.Dispatch<React.SetStateAction<HistoryData>>;
+  user: any;
+  saveHistoryDataWithParams: (
+    isyerleri: string[],
+    gorevpozisyon: string[],
+    belgeler: string[],
+    yarismalar: string[],
+    cv: string
+  ) => Promise<void>;
+}) {
+  const [adding, setAdding] = useState(false);
+  const [newIsyeri, setNewIsyeri] = useState("");
+  const [newGorev, setNewGorev] = useState("");
+  const [editIndex, setEditIndex] = useState<number | null>(null);
+  const [editIsyeri, setEditIsyeri] = useState("");
+  const [editGorev, setEditGorev] = useState("");
+  const [saving, setSaving] = useState(false);
 
-const WorkplacesPositionsSection: React.FC<SectionProps> = ({
-  historyData,
-  handleHistoryInputChange,
-  handleAddToArray,
-  handleRemoveFromArray,
-}) => (
-  <>
-    <div>
-      <Label>İş Yerleri</Label>
-      {historyData.isyerleri.map((item, index) => (
-        <div key={index} className="flex items-center space-x-2 mb-1">
-          <Input type="text" value={item} readOnly />
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            onClick={() => handleRemoveFromArray("IsYeri", index)}
-          >
-            Sil
-          </Button>
-        </div>
-      ))}
-      <div className="flex space-x-2">
-        <Input
-          type="text"
-          placeholder="Yeni iş yeri ekle"
-          value={historyData._newIsYeri || ""}
-          name="_newIsYeri"
-          onChange={handleHistoryInputChange}
-        />
-        <Button type="button" onClick={() => handleAddToArray("IsYeri")}>
-          Ekle
-        </Button>
-      </div>
-    </div>
-
-    <div>
-      <Label>Görev Pozisyonları</Label>
-      {historyData.gorevpozisyon.map((item, index) => (
-        <div key={index} className="flex items-center space-x-2 mb-1">
-          <Input type="text" value={item} readOnly />
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            onClick={() => handleRemoveFromArray("Gorev", index)}
-          >
-            Sil
-          </Button>
-        </div>
-      ))}
-      <div className="flex space-x-2">
-        <Input
-          type="text"
-          placeholder="Yeni görev pozisyonu ekle"
-          value={historyData._newGorev || ""}
-          name="_newGorev"
-          onChange={handleHistoryInputChange}
-        />
-        <Button type="button" onClick={() => handleAddToArray("Gorev")}>
-          Ekle
-        </Button>
-      </div>
-    </div>
-  </>
-);
-
-const DocumentsSection: React.FC<SectionProps> = ({
-  historyData,
-  handleHistoryInputChange,
-  handleAddToArray,
-  handleRemoveFromArray,
-}) => (
-  <>
-    <div>
-      <Label>Belgeler</Label>
-      {historyData.belgeler.map((item, index) => (
-        <div key={index} className="flex items-center space-x-2 mb-1">
-          <Input type="text" value={item} readOnly />
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            onClick={() => handleRemoveFromArray("Belge", index)}
-          >
-            Sil
-          </Button>
-        </div>
-      ))}
-      <div className="flex space-x-2">
-        <Input
-          type="text"
-          placeholder="Yeni belge ekle"
-          value={historyData._newBelge || ""}
-          name="_newBelge"
-          onChange={handleHistoryInputChange}
-        />
-        <Button type="button" onClick={() => handleAddToArray("Belge")}>
-          Ekle
-        </Button>
-      </div>
-    </div>
-  </>
-);
-
-const CompetitionsSection: React.FC<SectionProps> = ({
-  historyData,
-  handleHistoryInputChange,
-  handleAddToArray,
-  handleRemoveFromArray,
-}) => (
-  <>
-    <div>
-      <Label>Yarışmalar</Label>
-      {historyData.yarismalar.map((item, index) => (
-        <div key={index} className="flex items-center space-x-2 mb-1">
-          <Input type="text" value={item} readOnly />
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            onClick={() => handleRemoveFromArray("Yarisma", index)}
-          >
-            Sil
-          </Button>
-        </div>
-      ))}
-      <div className="flex space-x-2">
-        <Input
-          type="text"
-          placeholder="Yeni yarışma ekle"
-          value={historyData._newYarisma || ""}
-          name="_newYarisma"
-          onChange={handleHistoryInputChange}
-        />
-        <Button type="button" onClick={() => handleAddToArray("Yarisma")}>
-          Ekle
-        </Button>
-      </div>
-    </div>
-  </>
-);
-
-interface CvSectionProps {
-  historyData: HistoryData;
-  handleHistoryInputChange: (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => void;
-  handleCvInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  cvEditMode: boolean;
-}
-
-const CvSection: React.FC<CvSectionProps> = ({
-  historyData,
-  handleHistoryInputChange,
-  handleCvInputChange,
-  cvEditMode,
-}) => (
-  <div>
-    <Label>CV</Label>
-    {historyData.cv ? (
-      <a
-        href={historyData.cv}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-blue-500 hover:underline"
-      >
-        Mevcut CV'yi Görüntüle
-      </a>
-    ) : (
-      <p>CV Yok</p>
-    )}
-    <Input
-      type="file"
-      accept=".pdf,.doc,.docx"
-      onChange={handleCvInputChange}
-      disabled={cvEditMode}
-    />
-  </div>
-);
-
+  const startAdd = () => {
+    setAdding(true);
+    setNewIsyeri("");
+    setNewGorev
