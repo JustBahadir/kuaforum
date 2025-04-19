@@ -279,10 +279,10 @@ export default function StaffProfile() {
         return;
       }
 
-      const ortaokulDurumuStr = educationData.ortaokulDurumu ?? "";
-      const liseDurumuStr = educationData.liseDurumu ?? "";
-      const liseTuruStr = educationData.liseTuru ?? "";
-      const meslekiBransStr = educationData.meslekiBrans ?? "";
+      const ortaokulDurumuStr: string = Array.isArray(educationData.ortaokulDurumu) ? educationData.ortaokulDurumu.join(", ") : (educationData.ortaokulDurumu ?? "");
+      const liseDurumuStr: string = Array.isArray(educationData.liseDurumu) ? educationData.liseDurumu.join(", ") : (educationData.liseDurumu ?? "");
+      const liseTuruStr: string = Array.isArray(educationData.liseTuru) ? educationData.liseTuru.join(", ") : (educationData.liseTuru ?? "");
+      const meslekiBransStr: string = Array.isArray(educationData.meslekiBrans) ? educationData.meslekiBrans.join(", ") : (educationData.meslekiBrans ?? "");
 
       const dataToUpsert = [{
         personel_id: user.id,
@@ -302,10 +302,10 @@ export default function StaffProfile() {
         return;
       }
 
-      const isYerleriStr = historyData.isYerleri.join(", ");
-      const gorevPozisyonStr = historyData.gorevPozisyon.join(", ");
-      const belgelerStr = historyData.belgeler.join(", ");
-      const yarismalarStr = historyData.yarismalar.join(", ");
+      const isYerleriStr: string = historyData.isYerleri.join(", ");
+      const gorevPozisyonStr: string = historyData.gorevPozisyon.join(", ");
+      const belgelerStr: string = historyData.belgeler.join(", ");
+      const yarismalarStr: string = historyData.yarismalar.join(", ");
 
       const historyToUpsert = [{
         personel_id: user.id,
