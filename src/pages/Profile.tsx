@@ -5,6 +5,7 @@ import { ProfileEditForm } from "@/components/customer-profile/ProfileEditForm";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
 import { formatPhoneNumber } from "@/utils/phoneFormatter";
+import { StaffLayout } from "@/components/ui/staff-layout";
 
 const Profile = () => {
   const [loading, setLoading] = useState(true);
@@ -96,32 +97,36 @@ const Profile = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <p>Profil bilgileri yükleniyor...</p>
-      </div>
+      <StaffLayout>
+        <div className="flex items-center justify-center h-64">
+          <p>Profil bilgileri yükleniyor...</p>
+        </div>
+      </StaffLayout>
     );
   }
 
   return (
-    <div className="container mx-auto py-6">
-      <div className="max-w-4xl mx-auto space-y-6">
-        <ProfileDisplay {...profile} />
-        <ProfileEditForm
-          profile={profile}
-          handleChange={(e) => {
-            const { name, value } = e.target;
-            setProfile(prev => ({ ...prev, [name]: value }));
-          }}
-          handleSelectChange={(name, value) => {
-            setProfile(prev => ({ ...prev, [name]: value }));
-          }}
-          handleAvatarUpload={handleAvatarUpload}
-          handleSave={handleSave}
-          isSaving={loading}
-          isUploading={false}
-        />
+    <StaffLayout>
+      <div className="container mx-auto py-6">
+        <div className="max-w-4xl mx-auto space-y-6">
+          <ProfileDisplay {...profile} />
+          <ProfileEditForm
+            profile={profile}
+            handleChange={(e) => {
+              const { name, value } = e.target;
+              setProfile(prev => ({ ...prev, [name]: value }));
+            }}
+            handleSelectChange={(name, value) => {
+              setProfile(prev => ({ ...prev, [name]: value }));
+            }}
+            handleAvatarUpload={handleAvatarUpload}
+            handleSave={handleSave}
+            isSaving={loading}
+            isUploading={false}
+          />
+        </div>
       </div>
-    </div>
+    </StaffLayout>
   );
 };
 
