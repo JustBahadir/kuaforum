@@ -14,12 +14,19 @@ interface EducationData {
 }
 
 interface HistoryData {
-  isYerleri: string;
-  gorevPozisyon: string;
-  belgeler: string;
-  yarismalar: string;
+  isYerleri: string[];
+  gorevPozisyon: string[];
+  belgeler: string[];
+  yarismalar: string[];
   cv: string;
 }
+
+const arrayToString = (value: string[] | string) => {
+  if (Array.isArray(value)) {
+    return value.join(", ");
+  }
+  return value || "";
+};
 
 export default function StaffProfile() {
   const navigate = useNavigate();
@@ -37,11 +44,12 @@ export default function StaffProfile() {
     liseTuru: "",
     meslekiBrans: ""
   });
+
   const [historyData, setHistoryData] = useState<HistoryData>({
-    isYerleri: "",
-    gorevPozisyon: "",
-    belgeler: "",
-    yarismalar: "",
+    isYerleri: [],
+    gorevPozisyon: [],
+    belgeler: [],
+    yarismalar: [],
     cv: ""
   });
 
@@ -100,11 +108,16 @@ export default function StaffProfile() {
           .eq("personel_id", data.session.user.id)
           .maybeSingle();
 
+        const toArray = (str: string | null | undefined): string[] => {
+          if (!str) return [];
+          return str.split(",").map(s => s.trim()).filter(s => s.length > 0);
+        };
+
         setHistoryData({
-          isYerleri: typeof historyRes?.isYerleri === "string" ? historyRes.isYerleri : "",
-          gorevPozisyon: typeof historyRes?.gorevPozisyon === "string" ? historyRes.gorevPozisyon : "",
-          belgeler: typeof historyRes?.belgeler === "string" ? historyRes.belgeler : "",
-          yarismalar: typeof historyRes?.yarismalar === "string" ? historyRes.yarismalar : "",
+          isYerleri: toArray(historyRes?.isYerleri),
+          gorevPozisyon: toArray(historyRes?.gorevPozisyon),
+          belgeler: toArray(historyRes?.belgeler),
+          yarismalar: toArray(historyRes?.yarismalar),
           cv: typeof historyRes?.cv === "string" ? historyRes.cv : "",
         });
 
@@ -144,65 +157,97 @@ export default function StaffProfile() {
     }
   };
 
-  const handleJoinShop = async () => {
-    if (!shopCode) {
-      toast.error("Lütfen işletme kodunu girin");
-      return;
-    }
-
-    setValidatingCode(true);
-
-    try {
-      const { data: shopData, error: shopError } = await supabase
-        .from("dukkanlar")
-        .select("id, ad")
-        .eq("kod", shopCode.trim())
-        .single();
-
-      if (shopError || !shopData) {
-        toast.error("Geçersiz işletme kodu. Lütfen doğru kodu girdiğinizden emin olun.");
-        return;
-      }
-
-      const { error: personelError } = await supabase.from("personel").insert({
-        auth_id: user.id,
-        ad_soyad: `${profile.first_name} ${profile.last_name}`,
-        telefon: profile.phone || "",
-        eposta: user.email,
-        adres: profile.address || "",
-        personel_no: `P${Math.floor(Math.random() * 10000)}`,
-        dukkan_id: shopData.id,
-        maas: 0,
-        prim_yuzdesi: 0,
-        calisma_sistemi: "aylik_maas",
-      });
-
-      if (personelError) {
-        throw personelError;
-      }
-
-      toast.success(`"${shopData.ad}" işletmesine başarıyla katıldınız!`);
-      navigate("/shop-home");
-    } catch (error) {
-      console.error("İşletmeye katılırken hata:", error);
-      toast.error("İşletmeye katılırken bir hata oluştu.");
-    } finally {
-      setValidatingCode(false);
-    }
+  const addWorkplaceWithPosition = () => {
+    setHistoryData(prev => ({
+      ...prev,
+      isYerleri: [...prev.isYerleri, ""],
+      gorevPozisyon: [...prev.gorevPozisyon, ""]
+    }));
   };
 
-  const handleEditToggle = () => {
-    setEditMode(!editMode);
+  const updateWorkplaceAtIndex = (index: number, value: string) => {
+    setHistoryData(prev => {
+      const newIsYerleri = [...prev.isYerleri];
+      newIsYerleri[index] = value;
+      return { ...prev, isYerleri: newIsYerleri };
+    });
+  };
+
+  const updatePositionAtIndex = (index: number, value: string) => {
+    setHistoryData(prev => {
+      const newPos = [...prev.gorevPozisyon];
+      newPos[index] = value;
+      return { ...prev, gorevPozisyon: newPos };
+    });
+  };
+
+  const removeWorkplaceAtIndex = (index: number) => {
+    setHistoryData(prev => {
+      const newIsYerleri = [...prev.isYerleri];
+      const newPos = [...prev.gorevPozisyon];
+      newIsYerleri.splice(index, 1);
+      newPos.splice(index, 1);
+      return { ...prev, isYerleri: newIsYerleri, gorevPozisyon: newPos };
+    });
+  };
+
+  const addBelge = () => {
+    setHistoryData(prev => ({
+      ...prev,
+      belgeler: [...prev.belgeler, ""]
+    }));
+  };
+
+  const updateBelgeAtIndex = (index: number, value: string) => {
+    setHistoryData(prev => {
+      const newBelgeler = [...prev.belgeler];
+      newBelgeler[index] = value;
+      return { ...prev, belgeler: newBelgeler };
+    });
+  };
+
+  const removeBelgeAtIndex = (index: number) => {
+    setHistoryData(prev => {
+      const newBelgeler = [...prev.belgeler];
+      newBelgeler.splice(index, 1);
+      return { ...prev, belgeler: newBelgeler };
+    });
+  };
+
+  const addYarismalar = () => {
+    setHistoryData(prev => ({
+      ...prev,
+      yarismalar: [...prev.yarismalar, ""]
+    }));
+  };
+
+  const updateYarismalarAtIndex = (index: number, value: string) => {
+    setHistoryData(prev => {
+      const newYarismalar = [...prev.yarismalar];
+      newYarismalar[index] = value;
+      return { ...prev, yarismalar: newYarismalar };
+    });
+  };
+
+  const removeYarismalarAtIndex = (index: number) => {
+    setHistoryData(prev => {
+      const newYarismalar = [...prev.yarismalar];
+      newYarismalar.splice(index, 1);
+      return { ...prev, yarismalar: newYarismalar };
+    });
   };
 
   const handleEducationChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setEducationData((prev) => ({ ...prev, [name]: value }));
+    setEducationData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleHistoryChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setHistoryData((prev) => ({ ...prev, [name]: value }));
+  const handleCvChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const { value } = e.target;
+    setHistoryData(prev => ({
+      ...prev,
+      cv: value
+    }));
   };
 
   const saveProfileEdits = async () => {
@@ -225,15 +270,12 @@ export default function StaffProfile() {
         return;
       }
 
-      const toStringOrJoined = (value: string | string[]) =>
-        Array.isArray(value) ? value.join(", ") : String(value);
-
       const dataToUpsert = [{
         personel_id: user.id,
-        ortaokulDurumu: toStringOrJoined(educationData.ortaokulDurumu),
-        liseDurumu: toStringOrJoined(educationData.liseDurumu),
-        liseTuru: toStringOrJoined(educationData.liseTuru),
-        meslekiBrans: toStringOrJoined(educationData.meslekiBrans),
+        ortaokulDurumu: educationData.ortaokulDurumu,
+        liseDurumu: educationData.liseDurumu,
+        liseTuru: educationData.liseTuru,
+        meslekiBrans: educationData.meslekiBrans,
       }];
 
       const { error: educationError } = await supabase
@@ -247,11 +289,11 @@ export default function StaffProfile() {
 
       const historyToUpsert = [{
         personel_id: user.id,
-        isYerleri: toStringOrJoined(historyData.isYerleri),
-        gorevPozisyon: toStringOrJoined(historyData.gorevPozisyon),
-        belgeler: toStringOrJoined(historyData.belgeler),
-        yarismalar: toStringOrJoined(historyData.yarismalar),
-        cv: toStringOrJoined(historyData.cv),
+        isYerleri: arrayToString(historyData.isYerleri),
+        gorevPozisyon: arrayToString(historyData.gorevPozisyon),
+        belgeler: arrayToString(historyData.belgeler),
+        yarismalar: arrayToString(historyData.yarismalar),
+        cv: historyData.cv,
       }];
 
       const { error: historyError } = await supabase
@@ -383,7 +425,7 @@ export default function StaffProfile() {
                             <p>{profile?.gender || "-"}</p>
                           </div>
                         </div>
-                        <Button onClick={handleEditToggle}>Bilgileri Düzenle</Button>
+                        <Button onClick={() => setEditMode(true)}>Bilgileri Düzenle</Button>
                       </div>
                     ) : (
                       <form
@@ -451,7 +493,7 @@ export default function StaffProfile() {
                           </div>
                         </div>
                         <Button type="submit">Kaydet</Button>
-                        <Button type="button" variant="outline" onClick={handleEditToggle}>İptal</Button>
+                        <Button type="button" variant="outline" onClick={() => setEditMode(false)}>İptal</Button>
                       </form>
                     )}
                   </>
@@ -465,15 +507,15 @@ export default function StaffProfile() {
                         <p><strong>Lise Durumu:</strong> {educationData.liseDurumu || "Bilgi yok"}</p>
                         <p><strong>Lise Türü:</strong> {educationData.liseTuru || "Bilgi yok"}</p>
                         <p><strong>Mesleki Branş:</strong> {educationData.meslekiBrans || "Bilgi yok"}</p>
-                        <Button onClick={handleEditToggle}>Eğitim Bilgilerini Düzenle</Button>
+                        <Button onClick={() => setEditMode(true)}>Eğitim Bilgilerini Düzenle</Button>
                       </div>
                     ) : (
                       <form
+                        className="space-y-4"
                         onSubmit={(e) => {
                           e.preventDefault();
                           saveProfileEdits();
                         }}
-                        className="space-y-4"
                       >
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
@@ -491,51 +533,60 @@ export default function StaffProfile() {
                               <option value="bitirmedi">Bitirmedi</option>
                             </select>
                           </div>
-                          <div>
-                            <label htmlFor="liseDurumu" className="block text-sm font-medium">Lise Durumu</label>
-                            <select
-                              id="liseDurumu"
-                              name="liseDurumu"
-                              value={educationData.liseDurumu}
-                              onChange={handleEducationChange}
-                              className="w-full rounded border border-gray-300 px-3 py-2"
-                            >
-                              <option value="">Seçiniz</option>
-                              <option value="bitirdi">Bitirdi</option>
-                              <option value="okuyor">Okuyor</option>
-                              <option value="bitirmedi">Bitirmedi</option>
-                            </select>
-                          </div>
-                          <div>
-                            <label htmlFor="liseTuru" className="block text-sm font-medium">Lise Türü</label>
-                            <select
-                              id="liseTuru"
-                              name="liseTuru"
-                              value={educationData.liseTuru}
-                              onChange={handleEducationChange}
-                              className="w-full rounded border border-gray-300 px-3 py-2"
-                            >
-                              <option value="">Seçiniz</option>
-                              <option value="meslek">Meslek Lisesi</option>
-                              <option value="genel">Genel Lise</option>
-                              <option value="anatomi">Anadolu Lisesi</option>
-                            </select>
-                          </div>
-                          <div>
-                            <label htmlFor="meslekiBrans" className="block text-sm font-medium">Mesleki Branş</label>
-                            <input
-                              type="text"
-                              id="meslekiBrans"
-                              name="meslekiBrans"
-                              value={educationData.meslekiBrans}
-                              onChange={handleEducationChange}
-                              className="w-full rounded border border-gray-300 px-3 py-2"
-                              placeholder="Örn: Kuaförlük, Güzellik Uzmanlığı"
-                            />
-                          </div>
+                          {educationData.ortaokulDurumu === "bitirdi" && (
+                            <div>
+                              <label htmlFor="liseDurumu" className="block text-sm font-medium">Lise Durumu</label>
+                              <select
+                                id="liseDurumu"
+                                name="liseDurumu"
+                                value={educationData.liseDurumu}
+                                onChange={handleEducationChange}
+                                className="w-full rounded border border-gray-300 px-3 py-2"
+                              >
+                                <option value="">Seçiniz</option>
+                                <option value="bitirdi">Bitirdi</option>
+                                <option value="okuyor">Okuyor</option>
+                                <option value="bitirmedi">Bitirmedi</option>
+                              </select>
+                            </div>
+                          )}
+                          {(educationData.liseDurumu === "bitirdi" || educationData.liseDurumu === "okuyor") && (
+                            <>
+                              <div>
+                                <label htmlFor="liseTuru" className="block text-sm font-medium">Lise Türü</label>
+                                <select
+                                  id="liseTuru"
+                                  name="liseTuru"
+                                  value={educationData.liseTuru}
+                                  onChange={handleEducationChange}
+                                  className="w-full rounded border border-gray-300 px-3 py-2"
+                                >
+                                  <option value="">Seçiniz</option>
+                                  <option value="meslek">Meslek Lisesi</option>
+                                  <option value="genel">Genel Lise</option>
+                                  <option value="anatomi">Anadolu Lisesi</option>
+                                </select>
+                              </div>
+                              {educationData.liseTuru === "meslek" && (
+                                <div>
+                                  <label htmlFor="meslekiBrans" className="block text-sm font-medium">Mesleki Branş</label>
+                                  <input
+                                    type="text"
+                                    id="meslekiBrans"
+                                    name="meslekiBrans"
+                                    value={educationData.meslekiBrans}
+                                    onChange={handleEducationChange}
+                                    className="w-full rounded border border-gray-300 px-3 py-2"
+                                    placeholder="Örn: Kuaförlük, Güzellik Uzmanlığı"
+                                  />
+                                </div>
+                              )}
+                            </>
+                          )}
                         </div>
+
                         <Button type="submit">Kaydet</Button>
-                        <Button type="button" variant="outline" onClick={handleEditToggle}>
+                        <Button type="button" variant="outline" onClick={() => setEditMode(false)}>
                           İptal
                         </Button>
                       </form>
@@ -547,85 +598,149 @@ export default function StaffProfile() {
                   <>
                     {!editMode ? (
                       <div className="space-y-4">
-                        <p><strong>İş Yerleri:</strong> {historyData.isYerleri || "Bilgi yok"}</p>
-                        <p><strong>Görev / Pozisyon:</strong> {historyData.gorevPozisyon || "Bilgi yok"}</p>
-                        <p><strong>Belgeler:</strong> {historyData.belgeler || "Bilgi yok"}</p>
-                        <p><strong>Yarışmalar:</strong> {historyData.yarismalar || "Bilgi yok"}</p>
-                        <p><strong>CV:</strong> {historyData.cv || "Bilgi yok"}</p>
-                        <Button onClick={handleEditToggle}>Geçmiş Bilgileri Düzenle</Button>
+                        <div>
+                          <strong>İş Yerleri ve Görevler</strong>
+                          {historyData.isYerleri.length === 0 && <p>Bilgi yok</p>}
+                          <ul className="list-disc pl-5">
+                            {historyData.isYerleri.map((yeri, i) => (
+                              <li key={`workplace-${i}`}>
+                                {yeri} - {historyData.gorevPozisyon[i] || "-"}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                        <div>
+                          <strong>Belgeler</strong>
+                          {historyData.belgeler.length === 0 && <p>Bilgi yok</p>}
+                          <ul className="list-disc pl-5">
+                            {historyData.belgeler.map((item, i) => (
+                              <li key={`document-${i}`}>{item}</li>
+                            ))}
+                          </ul>
+                        </div>
+                        <div>
+                          <strong>Yarışmalar</strong>
+                          {historyData.yarismalar.length === 0 && <p>Bilgi yok</p>}
+                          <ul className="list-disc pl-5">
+                            {historyData.yarismalar.map((item, i) => (
+                              <li key={`competition-${i}`}>{item}</li>
+                            ))}
+                          </ul>
+                        </div>
+                        <div>
+                          <strong>CV</strong>
+                          <p>{historyData.cv || "Bilgi yok"}</p>
+                        </div>
+                        <Button onClick={() => setEditMode(true)}>Geçmiş Bilgileri Düzenle</Button>
                       </div>
                     ) : (
-                      <form
-                        onSubmit={(e) => {
-                          e.preventDefault();
-                          saveProfileEdits();
-                        }}
-                        className="space-y-4"
-                      >
-                        <div className="space-y-4">
-                          <div>
-                            <label htmlFor="isYerleri" className="block text-sm font-medium">İş Yerleri</label>
-                            <input
-                              type="text"
-                              id="isYerleri"
-                              name="isYerleri"
-                              value={historyData.isYerleri}
-                              onChange={handleHistoryChange}
-                              className="w-full rounded border border-gray-300 px-3 py-2"
-                              placeholder="Nerelerde çalıştı"
-                            />
-                          </div>
-                          <div>
-                            <label htmlFor="gorevPozisyon" className="block text-sm font-medium">Görev / Pozisyon</label>
-                            <input
-                              type="text"
-                              id="gorevPozisyon"
-                              name="gorevPozisyon"
-                              value={historyData.gorevPozisyon}
-                              onChange={handleHistoryChange}
-                              className="w-full rounded border border-gray-300 px-3 py-2"
-                              placeholder="Hangi pozisyonda çalıştı"
-                            />
-                          </div>
-                          <div>
-                            <label htmlFor="belgeler" className="block text-sm font-medium">Belgeler</label>
-                            <input
-                              type="text"
-                              id="belgeler"
-                              name="belgeler"
-                              value={historyData.belgeler}
-                              onChange={handleHistoryChange}
-                              className="w-full rounded border border-gray-300 px-3 py-2"
-                              placeholder="Sahip olduğu belgeler"
-                            />
-                          </div>
-                          <div>
-                            <label htmlFor="yarismalar" className="block text-sm font-medium">Yarışmalar</label>
-                            <input
-                              type="text"
-                              id="yarismalar"
-                              name="yarismalar"
-                              value={historyData.yarismalar}
-                              onChange={handleHistoryChange}
-                              className="w-full rounded border border-gray-300 px-3 py-2"
-                              placeholder="Katıldığı yarışmalar"
-                            />
-                          </div>
-                          <div>
-                            <label htmlFor="cv" className="block text-sm font-medium">CV</label>
-                            <textarea
-                              id="cv"
-                              name="cv"
-                              value={historyData.cv}
-                              onChange={handleHistoryChange}
-                              className="w-full rounded border border-gray-300 px-3 py-2"
-                              placeholder="Serbest metin"
-                              rows={4}
-                            />
-                          </div>
+                      <form onSubmit={(e) => {
+                        e.preventDefault();
+                        saveProfileEdits();
+                      }} className="space-y-6">
+                        <div>
+                          <strong>İş Yerleri ve Görevler</strong>
+                          {historyData.isYerleri.map((yeri, i) => (
+                            <div key={`workplace-entry-${i}`} className="flex gap-2 items-center mb-2">
+                              <input
+                                type="text"
+                                placeholder="İş yeri"
+                                className="flex-1 rounded border border-gray-300 px-3 py-2"
+                                value={historyData.isYerleri[i] || ""}
+                                onChange={(e) => updateWorkplaceAtIndex(i, e.target.value)}
+                                required
+                              />
+                              <input
+                                type="text"
+                                placeholder="Görev / Pozisyon"
+                                className="flex-1 rounded border border-gray-300 px-3 py-2"
+                                value={historyData.gorevPozisyon[i] || ""}
+                                onChange={(e) => updatePositionAtIndex(i, e.target.value)}
+                                required
+                              />
+                              <button
+                                type="button"
+                                className="text-destructive"
+                                onClick={() => removeWorkplaceAtIndex(i)}
+                                aria-label="İş yeri sil"
+                              >
+                                Sil
+                              </button>
+                            </div>
+                          ))}
+                          <Button type="button" onClick={addWorkplaceWithPosition} size="sm">
+                            İş Yeri Ekle
+                          </Button>
                         </div>
+
+                        <div>
+                          <strong>Belgeler</strong>
+                          {historyData.belgeler.map((belge, i) => (
+                            <div key={`document-entry-${i}`} className="flex gap-2 items-center mb-2">
+                              <input
+                                type="text"
+                                placeholder="Belge adı"
+                                className="flex-1 rounded border border-gray-300 px-3 py-2"
+                                value={belge}
+                                onChange={(e) => updateBelgeAtIndex(i, e.target.value)}
+                                required
+                              />
+                              <button
+                                type="button"
+                                className="text-destructive"
+                                onClick={() => removeBelgeAtIndex(i)}
+                                aria-label="Belge sil"
+                              >
+                                Sil
+                              </button>
+                            </div>
+                          ))}
+                          <Button type="button" onClick={addBelge} size="sm">
+                            Belge Ekle
+                          </Button>
+                        </div>
+
+                        <div>
+                          <strong>Yarışmalar</strong>
+                          {historyData.yarismalar.map((yarisma, i) => (
+                            <div key={`competition-entry-${i}`} className="flex gap-2 items-center mb-2">
+                              <input
+                                type="text"
+                                placeholder="Yarışma adı"
+                                className="flex-1 rounded border border-gray-300 px-3 py-2"
+                                value={yarisma}
+                                onChange={(e) => updateYarismalarAtIndex(i, e.target.value)}
+                                required
+                              />
+                              <button
+                                type="button"
+                                className="text-destructive"
+                                onClick={() => removeYarismalarAtIndex(i)}
+                                aria-label="Yarışma sil"
+                              >
+                                Sil
+                              </button>
+                            </div>
+                          ))}
+                          <Button type="button" onClick={addYarismalar} size="sm">
+                            Yarışma Ekle
+                          </Button>
+                        </div>
+
+                        <div>
+                          <label htmlFor="cv" className="block font-medium mb-1">CV</label>
+                          <textarea
+                            id="cv"
+                            value={historyData.cv}
+                            onChange={handleCvChange}
+                            className="w-full rounded border border-gray-300 px-3 py-2"
+                            rows={5}
+                            placeholder="Serbest metin"
+                          />
+                        </div>
+
                         <Button type="submit">Kaydet</Button>
-                        <Button type="button" variant="outline" onClick={handleEditToggle}>
+                        <Button type="button" variant="outline" onClick={() => setEditMode(false)}>
                           İptal
                         </Button>
                       </form>
