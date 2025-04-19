@@ -90,19 +90,17 @@ export default function StaffProfile() {
 
     setLoading(true);
 
-    // The field children_names is string[] in DB, pass as array, wrap object in array for upsert batch
-    // Make sure customer_id is string (uuid)
+    // The field children_names is string[] in DB, but Supabase typings expect string, so convert to comma string or null
     const personalData = {
       customer_id: user.id,
-      children_names: childrenNames.length > 0 ? childrenNames : null,
+      children_names: childrenNames.length > 0 ? childrenNames.join(", ") : null,
       updated_at: new Date().toISOString(),
     };
 
-    const upsertData = [personalData];
-
+    // Pass as single object, not array
     const { error } = await supabase
       .from("customer_personal_data")
-      .upsert(upsertData, { onConflict: ["customer_id"] });
+      .upsert(personalData, { onConflict: ["customer_id"] });
 
     setLoading(false);
     if (error) {
@@ -117,8 +115,7 @@ export default function StaffProfile() {
     if (!user || !user.id) return;
     setLoading(true);
 
-    // The DB expects strings, so arrayToString if fields are arrays (currently all are strings)
-    // Pass single object, not array
+    // The DB expects strings, so convert arrays (if any) to strings - currently all strings
     const dataToUpsert = {
       personel_id: Number(user.id),
       ortaokuldurumu: educationData.ortaokuldurumu,
@@ -130,6 +127,7 @@ export default function StaffProfile() {
       updated_at: new Date().toISOString(),
     };
 
+    // Pass as single object
     const { error } = await supabase
       .from("staff_education")
       .upsert(dataToUpsert, { onConflict: ["personel_id"] });
@@ -662,7 +660,5 @@ export default function StaffProfile() {
 
   const initials = `${profile?.first_name?.[0] || ""}${profile?.last_name?.[0] || ""}`;
 
-  return (
-    <></>
-  );
+  return <></>;
 }
