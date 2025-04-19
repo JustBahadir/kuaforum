@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,6 +33,7 @@ interface ChildrenData {
   _newChildName?: string;
 }
 
+// Yardımcı: dizileri virgülle ayrılmış stringe çevirme
 const arrayToString = (value: string[] | string): string => {
   if (Array.isArray(value)) {
     return value.join(", ");
@@ -83,20 +85,22 @@ export default function StaffProfile() {
 
   const [userRole, setUserRole] = useState("");
 
+  // Yeni: Çocuk bilgilerini kaydetme fonksiyonu, Supabase'e doğru formatla çağıracak
   const saveChildrenDataWithParams = async (childrenNames: string[]) => {
-    if (!user) return;
+    if (!user || !user.id) return;
 
     setLoading(true);
+
+    // Supabase update için obje dizisi değil tek obje gerekiyor
+    const personalData = {
+      customer_id: user.id,
+      children_names: childrenNames.length > 0 ? childrenNames : null,
+      updated_at: new Date().toISOString(),
+    };
+
     const { error } = await supabase
       .from("customer_personal_data")
-      .upsert(
-        {
-          customer_id: user.id,
-          children_names: childrenNames.length > 0 ? childrenNames : null,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: ["customer_id"] }
-      );
+      .upsert(personalData, { onConflict: ["customer_id"] });
 
     setLoading(false);
     if (error) {
@@ -108,7 +112,7 @@ export default function StaffProfile() {
   };
 
   const saveEducationData = useCallback(async () => {
-    if (!user) return;
+    if (!user || !user.id) return;
     setLoading(true);
 
     const dataToUpsert = {
@@ -122,6 +126,7 @@ export default function StaffProfile() {
       updated_at: new Date().toISOString(),
     };
 
+    // burada Supabase, nesne değil de dizi bekliyor gibi tip hatası çıkıyor, onConflict kullanımına göre tek obje olarak verdik yukarı.
     const { error } = await supabase
       .from("staff_education")
       .upsert(dataToUpsert, { onConflict: ["personel_id"] });
@@ -136,15 +141,15 @@ export default function StaffProfile() {
   }, [educationData, user]);
 
   const saveHistoryData = useCallback(async () => {
-    if (!user) return;
+    if (!user || !user.id) return;
     setLoading(true);
 
     const dataToUpsert = {
       personel_id: Number(user.id),
-      isyerleri: historyData.isyerleri.join(","),
-      gorevpozisyon: historyData.gorevpozisyon.join(","),
-      belgeler: historyData.belgeler.join(","),
-      yarismalar: historyData.yarismalar.join(","),
+      isyerleri: arrayToString(historyData.isyerleri),
+      gorevpozisyon: arrayToString(historyData.gorevpozisyon),
+      belgeler: arrayToString(historyData.belgeler),
+      yarismalar: arrayToString(historyData.yarismalar),
       cv: historyData.cv || "",
       updated_at: new Date().toISOString(),
     };
@@ -169,15 +174,15 @@ export default function StaffProfile() {
     yarismalar: string[],
     cv: string
   ) => {
-    if (!user) return;
+    if (!user || !user.id) return;
 
     setLoading(true);
     const dataToUpsert = {
       personel_id: Number(user.id),
-      isyerleri: isyerleri.join(","),
-      gorevpozisyon: gorevpozisyon.join(","),
-      belgeler: belgeler.join(","),
-      yarismalar: yarismalar.join(","),
+      isyerleri: arrayToString(isyerleri),
+      gorevpozisyon: arrayToString(gorevpozisyon),
+      belgeler: arrayToString(belgeler),
+      yarismalar: arrayToString(yarismalar),
       cv: cv || "",
       updated_at: new Date().toISOString(),
     };
@@ -196,7 +201,7 @@ export default function StaffProfile() {
   };
 
   const saveEducationDataOnClick = async () => {
-    if (!user) return;
+    if (!user || !user.id) return;
     setLoading(true);
 
     const dataToUpsert = {
@@ -375,7 +380,7 @@ export default function StaffProfile() {
   };
 
   const saveChildrenData = async () => {
-    if (!user) return;
+    if (!user || !user.id) return;
     await saveChildrenDataWithParams(childrenData.children_names);
   };
 
@@ -486,10 +491,10 @@ export default function StaffProfile() {
 
       const historyToUpsert = {
         personel_id: Number(user.id),
-        isyerleri: historyData.isyerleri.join(","),
-        gorevpozisyon: historyData.gorevpozisyon.join(","),
-        belgeler: historyData.belgeler.join(","),
-        yarismalar: historyData.yarismalar.join(","),
+        isyerleri: arrayToString(historyData.isyerleri),
+        gorevpozisyon: arrayToString(historyData.gorevpozisyon),
+        belgeler: arrayToString(historyData.belgeler),
+        yarismalar: arrayToString(historyData.yarismalar),
         cv: historyData.cv || "",
         updated_at: new Date().toISOString(),
       };
@@ -1158,3 +1163,4 @@ export default function StaffProfile() {
     </div>
   );
 }
+
