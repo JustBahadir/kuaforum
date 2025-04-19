@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
@@ -22,12 +21,10 @@ export default function ProfileSetup() {
     lastName: "",
     phone: "",
     gender: "erkek",
-    role: "", // Başlangıçta boş bıraktık, zorunlu alan olduğu için
+    role: "",
     shopName: "",
-    shopCode: ""
   });
 
-  // Yeni eklenen state hatalar için (zorunlu alanlar)
   const [errors, setErrors] = useState<{
     role?: string;
     firstName?: string;
@@ -50,11 +47,9 @@ export default function ProfileSetup() {
           return;
         }
 
-        // Get user data from session
         const user = data.session.user;
         setUserData(user);
 
-        // Pre-fill form with available user data
         const metadata = user.user_metadata || {};
         setFormData(prev => ({
           ...prev,
@@ -63,21 +58,25 @@ export default function ProfileSetup() {
           phone: metadata.phone || "",
         }));
 
-        // Check if the user profile is already complete
         const { data: profileData } = await supabase
-          .from('profiles')
-          .select('id, role, first_name, last_name, phone')
-          .eq('id', user.id)
+          .from("profiles")
+          .select("id, role, first_name, last_name, phone")
+          .eq("id", user.id)
           .single();
 
-        if (profileData && profileData.first_name && profileData.last_name && profileData.phone && profileData.role) {
-          // Profile is already complete, redirect based on role
-          if (profileData.role === 'admin') {
-            navigate('/shop-home');
-          } else if (profileData.role === 'staff') {
-            navigate('/staff-profile');
+        if (
+          profileData &&
+          profileData.first_name &&
+          profileData.last_name &&
+          profileData.phone &&
+          profileData.role
+        ) {
+          if (profileData.role === "admin") {
+            navigate("/shop-home");
+          } else if (profileData.role === "staff") {
+            navigate("/staff-profile");
           } else {
-            navigate('/customer-dashboard');
+            navigate("/customer-dashboard");
           }
           return;
         }
@@ -97,7 +96,6 @@ export default function ProfileSetup() {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
 
-    // Hata varsa temizle
     if (errors[name as keyof typeof errors]) {
       setErrors(prev => ({ ...prev, [name]: undefined }));
     }
@@ -109,10 +107,6 @@ export default function ProfileSetup() {
     if (errors.role) {
       setErrors(prev => ({ ...prev, role: undefined }));
     }
-  };
-
-  const handleGenderChange = (value: string) => {
-    setFormData(prev => ({ ...prev, gender: value }));
   };
 
   const validateForm = () => {
@@ -129,7 +123,6 @@ export default function ProfileSetup() {
     if (!formData.role.trim()) {
       newErrors.role = "Bu alan zorunludur";
     }
-    // Sadece admin ise shopName zorunlu
     if (formData.role === "admin" && !formData.shopName.trim()) {
       newErrors.shopName = "Bu alan zorunludur";
     }
@@ -154,30 +147,23 @@ export default function ProfileSetup() {
     setSubmitting(true);
 
     try {
-      // Save profile updates to supabase safely
-  
-      // Burada gönderilen veri sade, nested profile objesi yok
       const updateData: Record<string, any> = {
         first_name: formData.firstName,
         last_name: formData.lastName,
         phone: formData.phone,
         gender: formData.gender,
-        role: formData.role === "admin" ? "admin" : "staff"
+        role: formData.role === "admin" ? "admin" : "staff",
       };
 
       if (formData.role === "admin") {
         updateData["shopName"] = formData.shopName;
       }
-      if (formData.role === "staff" && formData.shopCode) {
-        updateData["shopCode"] = formData.shopCode;
-      }
 
       const { error } = await supabase
-        .from('profiles')
+        .from("profiles")
         .upsert({ id: userData.id, ...updateData });
 
       if (error) {
-        // Log tut ama kullanıcıya gösterme detaylı teknik hatayı
         console.error("Profil güncellenirken hata (detay): ", error);
         toast.error("Profil bilgileri kaydedilirken bir sorun oluştu. Lütfen tekrar deneyin.");
         setSubmitting(false);
@@ -186,16 +172,14 @@ export default function ProfileSetup() {
 
       toast.success("Profil başarıyla kaydedildi!");
 
-      // Rol bazlı yönlendirme
-      if (formData.role === 'admin') {
-        navigate('/shop-home');
-      } else if (formData.role === 'staff') {
-        navigate('/staff-profile');
+      if (formData.role === "admin") {
+        navigate("/shop-home");
+      } else if (formData.role === "staff") {
+        navigate("/staff-profile");
       } else {
-        navigate('/customer-dashboard');
+        navigate("/customer-dashboard");
       }
     } catch (error) {
-      // Bu noktada bile hata olursa çok genel mesaj gösteriyoruz
       console.error("Profil güncelleme sırasında hata: ", error);
       toast.error("Profil bilgileri kaydedilirken bir sorun oluştu. Lütfen tekrar deneyin.");
     } finally {
@@ -232,9 +216,7 @@ export default function ProfileSetup() {
                   className={errors.firstName ? "border-red-600 focus:border-red-600 focus:ring-red-600" : ""}
                   required
                 />
-                {errors.firstName && (
-                  <p className="text-xs text-red-600 mt-1">{errors.firstName}</p>
-                )}
+                {errors.firstName && <p className="text-xs text-red-600 mt-1">{errors.firstName}</p>}
               </div>
               <div>
                 <Label htmlFor="lastName" className={`block ${errors.lastName ? "text-red-600" : ""}`}>
@@ -248,9 +230,7 @@ export default function ProfileSetup() {
                   className={errors.lastName ? "border-red-600 focus:border-red-600 focus:ring-red-600" : ""}
                   required
                 />
-                {errors.lastName && (
-                  <p className="text-xs text-red-600 mt-1">{errors.lastName}</p>
-                )}
+                {errors.lastName && <p className="text-xs text-red-600 mt-1">{errors.lastName}</p>}
               </div>
             </div>
 
@@ -267,9 +247,7 @@ export default function ProfileSetup() {
                 className={errors.phone ? "border-red-600 focus:border-red-600 focus:ring-red-600" : ""}
                 required
               />
-              {errors.phone && (
-                <p className="text-xs text-red-600 mt-1">{errors.phone}</p>
-              )}
+              {errors.phone && <p className="text-xs text-red-600 mt-1">{errors.phone}</p>}
             </div>
 
             <div>
@@ -285,9 +263,7 @@ export default function ProfileSetup() {
                   <SelectItem value="admin">İşletme Sahibi</SelectItem>
                 </SelectContent>
               </Select>
-              {errors.role && (
-                <p className="text-xs text-red-600 mt-1">{errors.role}</p>
-              )}
+              {errors.role && <p className="text-xs text-red-600 mt-1">{errors.role}</p>}
             </div>
 
             {formData.role === "admin" && (
@@ -304,9 +280,7 @@ export default function ProfileSetup() {
                   className={errors.shopName ? "border-red-600 focus:border-red-600 focus:ring-red-600" : ""}
                   required
                 />
-                {errors.shopName && (
-                  <p className="text-xs text-red-600 mt-1">{errors.shopName}</p>
-                )}
+                {errors.shopName && <p className="text-xs text-red-600 mt-1">{errors.shopName}</p>}
               </div>
             )}
 

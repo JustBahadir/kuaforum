@@ -56,22 +56,20 @@ export default function CustomerProfile({ isNewUser = false }: CustomerProfilePr
       const updatedProfile = await profilServisi.guncelle({
         first_name: firstName,
         last_name: lastName,
-        phone
+        phone,
       });
 
       console.log("Profil güncellendi:", updatedProfile);
       toast.success("Bilgileriniz başarıyla kaydedildi.");
-      
-      // Yeni kullanıcılar için randevu sayfasına yönlendir
+
       if (isNewUser) {
         navigate("/appointments");
       }
     } catch (error: any) {
       console.error("Profil güncelleme hatası:", error);
-      
+
       toast.error("Bilgileriniz kaydedilirken bir hata oluştu: " + (error.message || "Bilinmeyen hata"));
-      
-      // Yeni kullanıcılar için hatalarda bile randevu sayfasına yönlendir
+
       if (isNewUser) {
         setTimeout(() => {
           navigate("/appointments");
@@ -96,12 +94,12 @@ export default function CustomerProfile({ isNewUser = false }: CustomerProfilePr
         <h1 className="text-2xl font-bold mb-6">
           {isNewUser ? "Müşteri Bilgilerinizi Tamamlayın" : "Profil Bilgilerim"}
         </h1>
-        
+
         <Card>
           <CardHeader>
             <CardTitle>Kişisel Bilgiler</CardTitle>
           </CardHeader>
-          
+
           <CardContent>
             <form id="profileForm" onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
@@ -118,7 +116,7 @@ export default function CustomerProfile({ isNewUser = false }: CustomerProfilePr
                   required
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="lastName" className="flex items-center gap-2">
                   <UserRound size={16} />
@@ -133,7 +131,7 @@ export default function CustomerProfile({ isNewUser = false }: CustomerProfilePr
                   required
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="phone" className="flex items-center gap-2">
                   <Phone size={16} />
@@ -151,22 +149,14 @@ export default function CustomerProfile({ isNewUser = false }: CustomerProfilePr
               </div>
             </form>
           </CardContent>
-          
+
           <CardFooter className="flex flex-col sm:flex-row gap-2 sm:justify-end">
-            <Button 
-              type="submit" 
-              form="profileForm"
-              disabled={loading}
-            >
+            <Button type="submit" form="profileForm" disabled={loading}>
               {loading ? "Kaydediliyor..." : "Bilgilerimi Kaydet"}
             </Button>
-            
+
             {isNewUser && (
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => navigate("/appointments")}
-              >
+              <Button type="button" variant="outline" onClick={() => navigate("/appointments")}>
                 Şimdilik Atla
               </Button>
             )}
