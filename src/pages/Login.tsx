@@ -17,62 +17,87 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
 
-  // Check if user is already logged in
+  // Improved: Listen auth state changes to handle session updates
   useEffect(() => {
-    const checkSession = async () => {
-      try {
-        const { data, error } = await supabase.auth.getSession();
-        
-        if (error) throw error;
-        
-        if (data.session) {
-          // User is logged in, check role and redirect
-          const userRole = data.session.user.user_metadata?.role;
-          
+    let isMounted = true;
+
+    // Setup a listener for auth state changes
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        console.log("Auth state changed:", event);
+
+        if (event === "SIGNED_IN" && session?.user) {
+          const userRole = session.user.user_metadata?.role;
+
           if (userRole === "admin") {
-            navigate("/shop-home", { replace: true });
+            if (isMounted) navigate("/shop-home", { replace: true });
           } else if (userRole === "staff") {
-            navigate("/staff-profile", { replace: true });
+            if (isMounted) navigate("/staff-profile", { replace: true });
           } else {
-            // If no role or customer role
-            navigate("/profile-setup", { replace: true });
+            if (isMounted) navigate("/profile-setup", { replace: true });
           }
         }
-      } catch (err) {
-        console.error("Login: Beklenmeyen hata:", err);
-      } finally {
-        setLoading(false);
+        
+        if (event === "SIGNED_OUT") {
+          if (isMounted) {
+            setLoading(false);
+          }
+        }
       }
+    );
+
+    // Check existing session once on mount
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (error) {
+        console.error("Error getting session:", error);
+        toast.error("Oturum kontrolü sırasında hata oluştu");
+      }
+      if (data.session?.user) {
+        const userRole = data.session.user.user_metadata?.role;
+        if (userRole === "admin") {
+          navigate("/shop-home", { replace: true });
+        } else if (userRole === "staff") {
+          navigate("/staff-profile", { replace: true });
+        } else {
+          navigate("/profile-setup", { replace: true });
+        }
+      } else {
+        if (isMounted) setLoading(false);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      listener?.subscription.unsubscribe();
     };
-    
-    checkSession();
   }, [navigate]);
 
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!email || !password) {
       toast.error("E-posta ve şifre gerekli");
       return;
     }
-    
+
     setLoginLoading(true);
-    
+
     try {
       // Check if the email is a developer email
       if (email === "ergun@gmail.com" || email === "nimet@gmail.com") {
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
-          password
+          password,
         });
-        
+
         if (error) {
           toast.error("Giriş yapılamadı: " + error.message);
+          setLoginLoading(false);
           return;
         }
-        
+
         toast.success("Giriş başarılı!");
-        
+
         // Redirect based on known roles
         if (email === "ergun@gmail.com") {
           navigate("/shop-home");
@@ -81,10 +106,10 @@ export default function Login() {
         }
       } else {
         toast.error("Bu e-posta adresi ile giriş yapamazsınız. Lütfen Google ile giriş yapın.");
+        setLoginLoading(false);
       }
     } catch (error: any) {
       toast.error("Giriş yapılırken hata oluştu: " + error.message);
-    } finally {
       setLoginLoading(false);
     }
   };
@@ -107,13 +132,13 @@ export default function Login() {
         <CardContent className="space-y-6">
           <div className="space-y-4">
             <GoogleAuthButton />
-            
+
             <div className="flex items-center">
               <div className="h-px flex-1 bg-gray-200"></div>
               <span className="px-4 text-sm text-gray-500">veya</span>
               <div className="h-px flex-1 bg-gray-200"></div>
             </div>
-            
+
             <div className="space-y-2">
               <p className="text-sm text-center text-gray-600">Sadece yönetici girişi</p>
               <form onSubmit={handleAdminLogin} className="space-y-3">
@@ -143,10 +168,10 @@ export default function Login() {
               </form>
             </div>
           </div>
-          
+
           <div className="flex justify-center">
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               onClick={() => navigate("/")}
               className="w-full flex items-center justify-center gap-2"
             >
