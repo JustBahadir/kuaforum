@@ -308,7 +308,6 @@ export default function Auth() {
               </div>
               <GoogleAuthButton
                 text="Google ile Giriş Yap"
-                disabled={googleAuthLoading}
                 className="bg-white text-gray-800 hover:bg-gray-100 border border-gray-300"
                 redirectTo={window.location.origin + "/auth-google-callback"}
               />
@@ -375,7 +374,6 @@ export default function Auth() {
               </div>
               <GoogleAuthButton
                 text="Google ile Kayıt Ol"
-                disabled={googleAuthLoading}
                 className="bg-white text-gray-800 hover:bg-gray-100 border border-gray-300"
                 redirectTo={window.location.origin + "/auth-google-callback"}
               />
