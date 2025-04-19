@@ -90,20 +90,14 @@ export default function StaffProfile() {
 
     setLoading(true);
 
-    // Supabase update için obje dizisi değil tek obje gerekiyor
-    // The Supabase type expects children_names as string | null, convert array to comma-separated string or null
-    // If DB field is text[] we can also pass array, but TS complains, so we pass string
+    // The field children_names is string[] in DB, pass as array, wrap object in array for upsert batch
+    // Make sure customer_id is string (uuid)
     const personalData = {
       customer_id: user.id,
-      children_names:
-        childrenNames.length > 0 ? childrenNames : null, // keep as array but TS might complain, convert to comma string if errors
+      children_names: childrenNames.length > 0 ? childrenNames : null,
       updated_at: new Date().toISOString(),
     };
 
-    // If you get TS error on children_names: consider converting: childrenNames.length > 0 ? childrenNames.join(",") : null,
-    // But since DB column is array, let's keep array
-
-    // Wrap in array for upsert call to match Supabase types
     const upsertData = [personalData];
 
     const { error } = await supabase
@@ -123,6 +117,8 @@ export default function StaffProfile() {
     if (!user || !user.id) return;
     setLoading(true);
 
+    // The DB expects strings, so arrayToString if fields are arrays (currently all are strings)
+    // Pass single object, not array
     const dataToUpsert = {
       personel_id: Number(user.id),
       ortaokuldurumu: educationData.ortaokuldurumu,
@@ -134,12 +130,9 @@ export default function StaffProfile() {
       updated_at: new Date().toISOString(),
     };
 
-    // Supabase expects array of objects for upsert in some typings
-    const upsertData = [dataToUpsert];
-
     const { error } = await supabase
       .from("staff_education")
-      .upsert(upsertData, { onConflict: ["personel_id"] });
+      .upsert(dataToUpsert, { onConflict: ["personel_id"] });
 
     setLoading(false);
     if (error) {
@@ -164,11 +157,9 @@ export default function StaffProfile() {
       updated_at: new Date().toISOString(),
     };
 
-    const upsertData = [dataToUpsert];
-
     const { error } = await supabase
       .from("staff_history")
-      .upsert(upsertData, { onConflict: ["personel_id"] });
+      .upsert(dataToUpsert, { onConflict: ["personel_id"] });
 
     setLoading(false);
     if (error) {
@@ -199,11 +190,9 @@ export default function StaffProfile() {
       updated_at: new Date().toISOString(),
     };
 
-    const upsertData = [dataToUpsert];
-
     const { error } = await supabase
       .from("staff_history")
-      .upsert(upsertData, { onConflict: ["personel_id"] });
+      .upsert(dataToUpsert, { onConflict: ["personel_id"] });
 
     setLoading(false);
     if (error) {
@@ -229,11 +218,9 @@ export default function StaffProfile() {
       updated_at: new Date().toISOString(),
     };
 
-    const upsertData = [dataToUpsert];
-
     const { error } = await supabase
       .from("staff_education")
-      .upsert(upsertData, { onConflict: ["personel_id"] });
+      .upsert(dataToUpsert, { onConflict: ["personel_id"] });
 
     setLoading(false);
     if (error) {
