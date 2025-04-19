@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
@@ -11,6 +10,7 @@ import { personelIslemleriServisi } from "@/lib/supabase/services/personelIsleml
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import { DateControlBar } from "@/components/ui/date-control-bar";
+import { format } from "date-fns";
 
 export default function OperationsHistory() {
   const [dateRange, setDateRange] = useState({
@@ -164,7 +164,7 @@ export default function OperationsHistory() {
         <!DOCTYPE html>
         <html>
         <head>
-          <title>İşlem Raporu - ${format(dateRange.from)} - ${format(dateRange.to)}</title>
+          <title>İşlem Raporu - ${format(dateRange.from, 'dd.MM.yyyy')} - ${format(dateRange.to, 'dd.MM.yyyy')}</title>
           <style>
             body { font-family: Arial, sans-serif; }
             table { width: 100%; border-collapse: collapse; }
@@ -179,7 +179,7 @@ export default function OperationsHistory() {
         <body>
           <div class="header">
             <h2>İşlem Raporu</h2>
-            <p>Tarih Aralığı: ${format(dateRange.from)} - ${format(dateRange.to)}</p>
+            <p>Tarih Aralığı: ${format(dateRange.from, 'dd.MM.yyyy')} - ${format(dateRange.to, 'dd.MM.yyyy')}</p>
           </div>
           
           <div class="summary">
@@ -205,12 +205,12 @@ export default function OperationsHistory() {
             <tbody>
               ${filteredOperations.map(operation => `
                 <tr>
-                  <td>${format(new Date(operation.created_at || ''))}</td>
+                  <td>${format(new Date(operation.created_at || ''), 'dd.MM.yyyy')}</td>
                   <td>${operation.personel?.ad_soyad || 'Belirtilmemiş'}</td>
                   <td>${operation.musteri 
                     ? `${operation.musteri.first_name || ''} ${operation.musteri.last_name || ''}`.trim() || 'Belirtilmemiş'
                     : 'Belirtilmemiş'}</td>
-                  <td>${operation.aciklama || (operation.islem?.islem_adi || 'Belirtilmemiş')}</td>
+                  <td>${cleanOperationName(operation)}</td>
                   <td>${formatCurrency(operation.tutar || 0)}</td>
                   ${showPuntos ? `<td>${operation.puan || 0}</td>` : ''}
                 </tr>
@@ -225,7 +225,7 @@ export default function OperationsHistory() {
       printWindow.document.write(reportHTML);
       
       // Function to format the date
-      function format(date) {
+      function format(date: Date) {
         return date ? new Intl.DateTimeFormat('tr-TR').format(date) : '';
       }
       
@@ -241,6 +241,12 @@ export default function OperationsHistory() {
       console.error("Rapor oluşturulurken hata:", error);
       toast.error("Rapor indirilemedi");
     }
+  };
+
+  const cleanOperationName = (operation: any) => {
+    if (operation.islem?.islem_adi) return operation.islem.islem_adi;
+    if (!operation.aciklama) return '';
+    return operation.aciklama.split(' hizmeti verildi')[0];
   };
   
   return (
@@ -307,62 +313,56 @@ export default function OperationsHistory() {
               </div>
             ) : (
               <div className="rounded-md border">
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tarih</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Personel</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Müşteri</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">İşlem</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tutar</th>
-                        {showPuntos && (
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Puan</th>
-                        )}
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {filteredOperations.length > 0 ? (
-                        filteredOperations.map((operation) => (
-                          <tr key={operation.id} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm">
-                              {new Date(operation.created_at || '').toLocaleDateString('tr-TR', {
-                                day: '2-digit',
-                                month: '2-digit',
-                                year: 'numeric'
-                              })}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm">
-                              {operation.personel?.ad_soyad || 'Belirtilmemiş'}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm">
-                              {operation.musteri 
-                                ? `${operation.musteri.first_name || ''} ${operation.musteri.last_name || ''}`.trim() || 'Belirtilmemiş'
-                                : 'Belirtilmemiş'}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm">
-                              {operation.aciklama || (operation.islem?.islem_adi || 'Belirtilmemiş')}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm">
-                              {formatCurrency(operation.tutar || 0)}
-                            </td>
-                            {showPuntos && (
-                              <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                {operation.puan || 0}
-                              </td>
-                            )}
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan={showPuntos ? 6 : 5} className="px-6 py-4 text-center text-sm text-gray-500">
-                            Seçilen filtrelere uygun işlem bulunamadı
-                          </td>
-                        </tr>
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tarih</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Personel</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Müşteri</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">İşlem</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tutar</th>
+                      {showPuntos && (
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Puan</th>
                       )}
-                    </tbody>
-                  </table>
-                </div>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredOperations.length > 0 ? (
+                      filteredOperations.map((operation) => (
+                        <tr key={operation.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            {format(new Date(operation.created_at || ''), 'dd.MM.yyyy')}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            {operation.personel?.ad_soyad || 'Belirtilmemiş'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            {operation.musteri 
+                              ? `${operation.musteri.first_name || ''} ${operation.musteri.last_name || ''}`.trim() || 'Belirtilmemiş'
+                              : 'Belirtilmemiş'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            {cleanOperationName(operation)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            {formatCurrency(operation.tutar || 0)}
+                          </td>
+                          {showPuntos && (
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                              {operation.puan || 0}
+                            </td>
+                          )}
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={showPuntos ? 6 : 5} className="px-6 py-4 text-center text-sm text-gray-500">
+                          Seçilen filtrelere uygun işlem bulunamadı
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             )}
           </CardContent>

@@ -44,6 +44,12 @@ export function OperationsHistoryTab({ personnelId, showPoints = false }: Operat
     });
   };
 
+  const cleanOperationName = (operation: any) => {
+    if (operation.islem?.islem_adi) return operation.islem.islem_adi;
+    if (!operation.aciklama) return '';
+    return operation.aciklama.split(' hizmeti verildi')[0];
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -103,7 +109,7 @@ export function OperationsHistoryTab({ personnelId, showPoints = false }: Operat
                           'Belirtilmemiş'}
                       </TableCell>
                       <TableCell>
-                        {operation.islem?.islem_adi || operation.aciklama || 'Belirtilmemiş'}
+                        {cleanOperationName(operation)}
                       </TableCell>
                       <TableCell className="text-right">
                         {formatCurrency(operation.tutar || 0)}
