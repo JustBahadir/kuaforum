@@ -312,6 +312,7 @@ export const personelServisi = {
         const validSystems = ['aylik', 'haftalik', 'gunluk', 'komisyon'];
         
         if (!validSystems.includes(personel.calisma_sistemi)) {
+          console.error(`Geçersiz çalışma sistemi değeri: ${personel.calisma_sistemi}`);
           throw new Error(`Geçersiz çalışma sistemi: ${personel.calisma_sistemi}. Geçerli değerler: ${validSystems.join(', ')}`);
         }
         
@@ -345,10 +346,15 @@ export const personelServisi = {
       
       // Add any other fields
       Object.keys(personel).forEach(key => {
-        if (key !== 'iban' && key !== 'calisma_sistemi' && key !== 'maas' && key !== 'prim_yuzdesi' && personel[key as keyof typeof personel] !== undefined) {
+        if (key !== 'calisma_sistemi' && key !== 'maas' && key !== 'prim_yuzdesi' && key !== 'iban' && personel[key as keyof typeof personel] !== undefined) {
           updateFields[key] = personel[key as keyof typeof personel];
         }
       });
+
+      // Handle IBAN separately to ensure it's properly formatted
+      if (personel.iban !== undefined) {
+        updateFields.iban = profilServisi.cleanIBANForStorage(personel.iban);
+      }
       
       console.log("Güncellenecek alanlar:", updateFields);
       

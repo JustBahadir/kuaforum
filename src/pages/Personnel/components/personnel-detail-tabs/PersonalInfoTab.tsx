@@ -42,7 +42,6 @@ export function PersonalInfoTab({ personnel = {}, onEdit }: PersonalInfoTabProps
     });
   };
 
-  // Safely access personnel data with fallbacks
   const {
     avatar_url = null,
     ad_soyad = '',

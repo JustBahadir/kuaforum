@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { BriefcaseIcon, PercentIcon, Banknote } from "lucide-react";
@@ -26,9 +27,10 @@ export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabPr
 
   const updateMutation = useMutation({
     mutationFn: async (data: any) => {
-      if (workSystem === 'komisyonlu' && data.calisma_sistemi !== 'komisyon') {
+      if (workSystem === 'komisyonlu') {
         data.calisma_sistemi = 'komisyon'; // Ensure the correct value is sent to the server
       }
+      console.log("Sending update data:", data);
       return await personelServisi.guncelle(personnel.id, data);
     },
     onSuccess: () => {
@@ -83,28 +85,6 @@ export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabPr
     }
   };
 
-  // Handle numeric input without losing focus, allowing full value input
-  const handleNumericInput = (value: string, setter: React.Dispatch<React.SetStateAction<string>>, maxValue?: number) => {
-    // Allow empty value
-    if (value === '') {
-      setter('');
-      return;
-    }
-    
-    // Check if input is a valid number
-    if (/^\d+$/.test(value)) {
-      const numValue = parseInt(value, 10);
-      
-      // Apply max value constraint if provided
-      if (maxValue !== undefined && numValue > maxValue) {
-        setter(maxValue.toString());
-      } else {
-        setter(value);
-      }
-    }
-    // If input has non-digits, don't update (keep previous value)
-  };
-
   const EditableContent = () => (
     <div className="space-y-6">
       <div className="space-y-4">
@@ -151,11 +131,10 @@ export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabPr
             <Label>Maaş Tutarı</Label>
             <Input
               value={salary}
-              onChange={(e) => handleNumericInput(e.target.value, setSalary)}
+              onChange={(e) => setSalary(e.target.value.replace(/\D/g, ''))}
               placeholder="Maaş tutarını girin (₺)"
               className="placeholder:text-muted-foreground"
-              type="number"
-              min="0"
+              type="text"
               inputMode="numeric"
             />
           </div>
@@ -167,12 +146,18 @@ export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabPr
           <Label>Prim Yüzdesi (%)</Label>
           <Input
             value={commission}
-            onChange={(e) => handleNumericInput(e.target.value, setCommission, 100)}
+            onChange={(e) => {
+              const value = e.target.value.replace(/\D/g, '');
+              const num = parseInt(value, 10);
+              if (!value) {
+                setCommission('');
+              } else if (!isNaN(num) && num >= 0 && num <= 100) {
+                setCommission(num.toString());
+              }
+            }}
             placeholder="Prim yüzdesini girin (0-100)"
             className="placeholder:text-muted-foreground"
-            type="number"
-            min="0"
-            max="100"
+            type="text"
             inputMode="numeric"
           />
         </div>
