@@ -13,86 +13,125 @@ export function useCustomerAuth() {
   const [dukkanAdi, setDukkanAdi] = useState<string>('');
   const [userId, setUserId] = useState<string>('');
 
+  // Sağlam ve senkron auth kontrol fonksiyonu
   const fetchUserSession = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      
-      // Get session
       const { data, error } = await supabase.auth.getSession();
-      
       if (error) {
         console.error('Auth session error:', error);
         setIsAuthenticated(false);
-        setLoading(false);
+        setUserName('');
+        setUserRole('');
+        setDukkanId(0);
+        setDukkanAdi('');
+        setUserId('');
         return;
       }
 
-      if (data?.session) {
-        // User is authenticated
+      if (data?.session?.user) {
         setIsAuthenticated(true);
         setUserId(data.session.user.id);
-        
-        // Get user metadata from session
         const metadata = data.session.user.user_metadata;
         if (metadata) {
           setUserName(`${metadata.first_name || ''} ${metadata.last_name || ''}`.trim());
           setUserRole(metadata.role || '');
-          
-          // Get dukkan info if needed
+
           if (metadata.role === 'admin') {
-            const { data: dukkanData } = await supabase
+            const { data: dukkanData, error: dukkanError } = await supabase
               .from('dukkanlar')
               .select('id, ad')
               .eq('sahibi_id', data.session.user.id)
               .single();
-              
-            if (dukkanData) {
+            if (!dukkanError && dukkanData) {
               setDukkanId(dukkanData.id);
               setDukkanAdi(dukkanData.ad || '');
+            } else {
+              setDukkanId(0);
+              setDukkanAdi('');
             }
           } else if (metadata.role === 'staff') {
-            const { data: staffData } = await supabase
+            const { data: staffData, error: staffError } = await supabase
               .from('personel')
               .select('dukkan_id')
               .eq('auth_id', data.session.user.id)
               .maybeSingle();
-              
-            if (staffData?.dukkan_id) {
+            if (!staffError && staffData?.dukkan_id) {
               setDukkanId(staffData.dukkan_id);
-              
-              const { data: dukkanData } = await supabase
+              const { data: dukkanData, error: dukkanError } = await supabase
                 .from('dukkanlar')
                 .select('ad')
                 .eq('id', staffData.dukkan_id)
                 .single();
-                
-              if (dukkanData) {
+              if (!dukkanError && dukkanData) {
                 setDukkanAdi(dukkanData.ad || '');
+              } else {
+                setDukkanAdi('');
               }
+            } else {
+              setDukkanId(0);
+              setDukkanAdi('');
             }
+          } else {
+            setDukkanId(0);
+            setDukkanAdi('');
           }
+        } else {
+          setUserName('');
+          setUserRole('');
+          setDukkanId(0);
+          setDukkanAdi('');
         }
       } else {
         setIsAuthenticated(false);
+        setUserName('');
+        setUserRole('');
+        setDukkanId(0);
+        setDukkanAdi('');
+        setUserId('');
       }
     } catch (error) {
       console.error('Auth check error:', error);
       setIsAuthenticated(false);
+      setUserName('');
+      setUserRole('');
+      setDukkanId(0);
+      setDukkanAdi('');
+      setUserId('');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchUserSession();
+    let isMounted = true;
 
-    // Set up auth state change listener
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event);
-        
+    // Öncelikle async olmayan callback ile onAuthStateChange kurulumu
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (isMounted) {
         if (event === 'SIGNED_IN') {
-          await fetchUserSession();
+          if (session?.user) {
+            setIsAuthenticated(true);
+            setUserId(session.user.id);
+
+            // Metadata daha sonra async fetch ile güncellenecek
+            setUserName('');
+            setUserRole('');
+            setDukkanId(0);
+            setDukkanAdi('');
+
+            // Async bilgilendirme için bekleme
+            setTimeout(() => {
+              fetchUserSession();
+            }, 0);
+          } else {
+            setIsAuthenticated(false);
+            setUserName('');
+            setUserRole('');
+            setDukkanId(0);
+            setDukkanAdi('');
+            setUserId('');
+          }
         } else if (event === 'SIGNED_OUT') {
           setIsAuthenticated(false);
           setUserName('');
@@ -102,11 +141,14 @@ export function useCustomerAuth() {
           setUserId('');
         }
       }
-    );
+    });
 
-    // Clean up on unmount
+    // İlk mount'ta session kontrolü (authListener kurulumu sonrası)
+    fetchUserSession();
+
     return () => {
-      authListener?.subscription?.unsubscribe();
+      isMounted = false;
+      authListener?.subscription.unsubscribe();
     };
   }, []);
 
@@ -115,14 +157,12 @@ export function useCustomerAuth() {
       setLoading(true);
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      
       setIsAuthenticated(false);
       setUserName('');
       setUserRole('');
       setDukkanId(0);
       setDukkanAdi('');
       setUserId('');
-      
       window.location.href = '/login';
     } catch (error) {
       console.error('Logout error:', error);
@@ -132,7 +172,6 @@ export function useCustomerAuth() {
     }
   };
 
-  // Function to refresh user profile
   const refreshProfile = async () => {
     return await fetchUserSession();
   };
@@ -148,6 +187,6 @@ export function useCustomerAuth() {
     dukkanId,
     dukkanAdi,
     userId,
-    refreshProfile
+    refreshProfile,
   };
 }
