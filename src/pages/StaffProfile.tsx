@@ -96,12 +96,12 @@ export default function StaffProfile() {
 
     const { error } = await supabase
       .from("staff_education")
-      .upsert([dataToUpsert], { onConflict: ["personel_id"] });
+      .upsert(dataToUpsert, { onConflict: ["personel_id"] });
 
     setLoading(false);
     if (error) {
       console.error("Eğitim bilgileri kaydedilirken hata:", error);
-      toast.error("Eğitim bilgileri kaydedilemedi.");
+      toast.error("Eğitim bilgileri güncellenemedi.");
     } else {
       toast.success("Eğitim bilgileri kaydedildi.");
     }
