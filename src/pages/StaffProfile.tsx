@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -277,6 +278,7 @@ export default function StaffProfile() {
         return;
       }
 
+      // Use arrayToString for all array fields to convert to strings
       const dataToUpsert = [{
         personel_id: user.id,
         ortaokulDurumu: arrayToString(educationData.ortaokulDurumu),
@@ -296,10 +298,10 @@ export default function StaffProfile() {
 
       const historyToUpsert = [{
         personel_id: user.id,
-        isYerleri: arrayToString(historyData.isYerleri),
-        gorevPozisyon: arrayToString(historyData.gorevPozisyon),
-        belgeler: arrayToString(historyData.belgeler),
-        yarismalar: arrayToString(historyData.yarismalar),
+        isYerleri: arrayToString(historyData.isYerleri),        // Fix here: convert array to string
+        gorevPozisyon: arrayToString(historyData.gorevPozisyon),// Fix here: convert array to string
+        belgeler: arrayToString(historyData.belgeler),          // Fix here: convert array to string
+        yarismalar: arrayToString(historyData.yarismalar),      // Fix here: convert array to string
         cv: historyData.cv,
       }];
 
