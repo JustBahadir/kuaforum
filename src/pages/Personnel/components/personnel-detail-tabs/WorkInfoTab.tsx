@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { BriefcaseIcon, PercentIcon, Banknote } from "lucide-react";
@@ -27,7 +26,9 @@ export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabPr
 
   const updateMutation = useMutation({
     mutationFn: async (data: any) => {
-      console.log("Updating personnel with data:", data);
+      if (workSystem === 'komisyonlu' && data.calisma_sistemi !== 'komisyon') {
+        data.calisma_sistemi = 'komisyon'; // Ensure the correct value is sent to the server
+      }
       return await personelServisi.guncelle(personnel.id, data);
     },
     onSuccess: () => {
@@ -82,31 +83,26 @@ export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabPr
     }
   };
 
-  // Improved input handler for numeric inputs without losing focus
-  const handleNumericInput = (event: React.ChangeEvent<HTMLInputElement>, setter: React.Dispatch<React.SetStateAction<string>>, minValue = 0, maxValue?: number) => {
-    const input = event.target.value;
-    
-    // Allow empty input (for backspace/delete)
-    if (input === '') {
+  // Handle numeric input without losing focus, allowing full value input
+  const handleNumericInput = (value: string, setter: React.Dispatch<React.SetStateAction<string>>, maxValue?: number) => {
+    // Allow empty value
+    if (value === '') {
       setter('');
       return;
     }
     
-    // Only process if input contains only digits
-    if (/^\d+$/.test(input)) {
-      // Parse as number and apply constraints
-      let numValue = parseInt(input, 10);
+    // Check if input is a valid number
+    if (/^\d+$/.test(value)) {
+      const numValue = parseInt(value, 10);
       
-      // Apply min/max constraints if provided
+      // Apply max value constraint if provided
       if (maxValue !== undefined && numValue > maxValue) {
-        numValue = maxValue;
-      } else if (numValue < minValue) {
-        numValue = minValue;
+        setter(maxValue.toString());
+      } else {
+        setter(value);
       }
-      
-      setter(numValue.toString());
     }
-    // If input has non-digits, don't update state (retain previous valid value)
+    // If input has non-digits, don't update (keep previous value)
   };
 
   const EditableContent = () => (
@@ -155,10 +151,11 @@ export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabPr
             <Label>Maaş Tutarı</Label>
             <Input
               value={salary}
-              onChange={(e) => handleNumericInput(e, setSalary, 0)}
+              onChange={(e) => handleNumericInput(e.target.value, setSalary)}
               placeholder="Maaş tutarını girin (₺)"
               className="placeholder:text-muted-foreground"
-              type="text" 
+              type="number"
+              min="0"
               inputMode="numeric"
             />
           </div>
@@ -170,10 +167,12 @@ export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabPr
           <Label>Prim Yüzdesi (%)</Label>
           <Input
             value={commission}
-            onChange={(e) => handleNumericInput(e, setCommission, 0, 100)}
+            onChange={(e) => handleNumericInput(e.target.value, setCommission, 100)}
             placeholder="Prim yüzdesini girin (0-100)"
             className="placeholder:text-muted-foreground"
-            type="text"
+            type="number"
+            min="0"
+            max="100"
             inputMode="numeric"
           />
         </div>

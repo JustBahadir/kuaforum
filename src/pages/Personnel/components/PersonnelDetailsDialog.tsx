@@ -6,7 +6,6 @@ import { PersonalInfoTab } from "./personnel-detail-tabs/PersonalInfoTab";
 import { WorkInfoTab } from "./personnel-detail-tabs/WorkInfoTab";
 import { OperationsHistoryTab } from "./personnel-detail-tabs/OperationsHistoryTab";
 import { PerformanceTab } from "./personnel-detail-tabs/PerformanceTab";
-import { PersonnelImageTab } from "./personnel-detail-tabs/PersonnelImageTab";
 
 interface PersonnelDetailsDialogProps {
   isOpen: boolean;
@@ -45,7 +44,6 @@ export function PersonnelDetailsDialog({
             <TabsTrigger value="work-info">Çalışma Bilgileri</TabsTrigger>
             <TabsTrigger value="operations-history">İşlem Geçmişi</TabsTrigger>
             <TabsTrigger value="performance">Performans</TabsTrigger>
-            <TabsTrigger value="image">Fotoğraf</TabsTrigger>
           </TabsList>
 
           <TabsContent value="personal-info" className="mt-4">
@@ -62,10 +60,6 @@ export function PersonnelDetailsDialog({
 
           <TabsContent value="performance" className="mt-4">
             <PerformanceTab personnelId={personnel.id} />
-          </TabsContent>
-
-          <TabsContent value="image" className="mt-4">
-            <PersonnelImageTab personnel={personnel} />
           </TabsContent>
         </Tabs>
       </AlertDialogContent>
