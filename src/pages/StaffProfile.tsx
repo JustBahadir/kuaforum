@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -274,12 +275,13 @@ export default function StaffProfile() {
         return;
       }
 
+      // Use arrayToString to convert arrays to comma-separated strings for education
       const dataToUpsert = [{
         personel_id: user.id,
-        ortaokulDurumu: String(Array.isArray(educationData.ortaokulDurumu) ? educationData.ortaokulDurumu.join(", ") : educationData.ortaokulDurumu),
-        liseDurumu: String(Array.isArray(educationData.liseDurumu) ? educationData.liseDurumu.join(", ") : educationData.liseDurumu),
-        liseTuru: String(Array.isArray(educationData.liseTuru) ? educationData.liseTuru.join(", ") : educationData.liseTuru),
-        meslekiBrans: String(Array.isArray(educationData.meslekiBrans) ? educationData.meslekiBrans.join(", ") : educationData.meslekiBrans),
+        ortaokulDurumu: arrayToString(educationData.ortaokulDurumu),
+        liseDurumu: arrayToString(educationData.liseDurumu),
+        liseTuru: arrayToString(educationData.liseTuru),
+        meslekiBrans: arrayToString(educationData.meslekiBrans),
       }];
 
       const { error: educationError } = await supabase
@@ -291,12 +293,13 @@ export default function StaffProfile() {
         return;
       }
 
+      // Use arrayToString to convert arrays to strings for history fields
       const historyToUpsert = [{
         personel_id: user.id,
-        isYerleri: String(arrayToString(historyData.isYerleri)),
-        gorevPozisyon: String(arrayToString(historyData.gorevPozisyon)),
-        belgeler: String(arrayToString(historyData.belgeler)),
-        yarismalar: String(arrayToString(historyData.yarismalar)),
+        isYerleri: arrayToString(historyData.isYerleri),
+        gorevPozisyon: arrayToString(historyData.gorevPozisyon),
+        belgeler: arrayToString(historyData.belgeler),
+        yarismalar: arrayToString(historyData.yarismalar),
         cv: historyData.cv,
       }];
 
@@ -781,3 +784,4 @@ export default function StaffProfile() {
     </div>
   );
 }
+
