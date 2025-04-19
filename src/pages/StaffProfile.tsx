@@ -78,6 +78,30 @@ export default function StaffProfile() {
 
   const [userRole, setUserRole] = useState("");
 
+  // Yeni: Çocuk bilgilerini kaydetme fonksiyonu
+  // Eğer çocuk bilgilerini farklı tabloda saklıyorsanız bu fonksiyonu değiştirin.
+  const saveChildrenDataWithParams = async (childrenNames: string[]) => {
+    if (!user) return;
+
+    setLoading(true);
+    // Örnek: Eğer çocuk isimlerini DB'de text array olarak saklayabilen bir tablo varsa burada güncellenebilir.
+    // Mevcut veritabanı yapısına göre düzenleyin.
+
+    // Örnek güncelleme:
+    /*
+    const { error } = await supabase
+      .from("customer_personal_data")
+      .upsert({ 
+        customer_id: user.id,
+        children_names: childrenNames
+      }, { onConflict: ["customer_id"] });
+    */
+
+    // Şimdilik simüle edelim
+    setLoading(false);
+    toast.success("Çocuk bilgileri güncellendi.");
+  };
+
   const saveEducationData = useCallback(async () => {
     if (!user) return;
     setLoading(true);
@@ -335,18 +359,64 @@ export default function StaffProfile() {
     await saveChildrenDataWithParams(newChildren);
   };
 
-  const saveChildrenDataWithParams = async (childrenNames: string[]) => {
+  const saveChildrenData = async () => {
     if (!user) return;
-
-    setLoading(true);
-    // For example, saving as comma string to some field: extend per real DB
-    // Here we only simulate success
-    setLoading(false);
-    toast.success("Çocuk bilgileri güncellendi.");
+    await saveChildrenDataWithParams(childrenData.children_names);
   };
 
   const handleJoinShop = async () => {
-    toast.success("İşletmeye katılma işlevi henüz uygulanmadı.");
+    if (!shopCode.trim()) {
+      toast.error("Lütfen bir işletme kodu girin.");
+      return;
+    }
+    
+    setValidatingCode(true);
+    try {
+      // İşletme kodunu doğrula
+      const { data: shopData, error: shopError } = await supabase
+        .from("dukkan")
+        .select("id, ad")
+        .eq("kod", shopCode.trim())
+        .maybeSingle();
+      
+      if (shopError) throw shopError;
+      
+      if (!shopData) {
+        toast.error("Geçersiz işletme kodu.");
+        return;
+      }
+      
+      // Personel kaydı oluştur
+      const { error: personelError } = await supabase
+        .from("personel")
+        .upsert({
+          auth_id: user.id,
+          dukkan_id: shopData.id,
+          ad_soyad: `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim(),
+          telefon: profile?.phone || '',
+          eposta: user.email,
+          adres: profile?.address || '',
+          personel_no: `P${Date.now().toString().substring(7)}`,
+          maas: 0,
+          prim_yuzdesi: 0,
+          calisma_sistemi: 'aylik',
+          aktif: true,
+          baslama_tarihi: new Date().toISOString().split('T')[0]
+        });
+      
+      if (personelError) throw personelError;
+      
+      toast.success(`${shopData.ad} işletmesine başarıyla katıldınız.`);
+      setTimeout(() => {
+        navigate("/shop-home");
+      }, 1500);
+      
+    } catch (error) {
+      console.error("İşletmeye katılma hatası:", error);
+      toast.error("İşletmeye katılırken bir hata oluştu.");
+    } finally {
+      setValidatingCode(false);
+    }
   };
 
   const handleLogout = async () => {
@@ -380,15 +450,7 @@ export default function StaffProfile() {
         return;
       }
 
-      const dataToUpsert: {
-        personel_id: number;
-        ortaokuldurumu: string;
-        lisedurumu: string;
-        liseturu: string;
-        meslekibrans: string;
-        universitedurumu: string;
-        universitebolum: string;
-      }[] = [{
+      const dataToUpsert = {
         personel_id: Number(user.id),
         ortaokuldurumu: educationData.ortaokuldurumu,
         lisedurumu: educationData.lisedurumu,
@@ -396,7 +458,7 @@ export default function StaffProfile() {
         meslekibrans: educationData.meslekibrans,
         universitedurumu: educationData.universitedurumu,
         universitebolum: educationData.universitebolum,
-      }];
+      };
 
       const { error: educationError } = await supabase
         .from("staff_education")
@@ -408,21 +470,14 @@ export default function StaffProfile() {
         return;
       }
 
-      const historyToUpsert: {
-        personel_id: number;
-        isyerleri: string;
-        gorevpozisyon: string;
-        belgeler: string;
-        yarismalar: string;
-        cv: string;
-      }[] = [{
+      const historyToUpsert = {
         personel_id: Number(user.id),
         isyerleri: historyData.isyerleri.join(","),
         gorevpozisyon: historyData.gorevpozisyon.join(","),
         belgeler: historyData.belgeler.join(","),
         yarismalar: historyData.yarismalar.join(","),
         cv: historyData.cv || "",
-      }];
+      };
 
       const { error: historyError } = await supabase
         .from("staff_history")
