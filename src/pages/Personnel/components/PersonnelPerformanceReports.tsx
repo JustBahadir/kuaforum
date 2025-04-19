@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
@@ -7,8 +8,7 @@ import {
 } from "recharts";
 import { personelIslemleriServisi } from "@/lib/supabase";
 import { formatCurrency } from "@/lib/utils";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { CalendarClock, LineChart, TrendingUp, Wallet } from "lucide-react";
+import { CalendarClock, TrendingUp, Wallet } from "lucide-react";
 import { addDays } from "date-fns";
 import { DateControlBar } from "@/components/ui/date-control-bar";
 
@@ -17,30 +17,12 @@ export function PersonnelPerformanceReports({ personnelId = null }: { personnelI
     from: addDays(new Date(), -30),
     to: new Date()
   });
-  const [timeRange, setTimeRange] = useState<"weekly" | "monthly">("weekly");
 
   const { data: operations = [], isLoading } = useQuery({
     queryKey: ['personel-islemleri', personnelId, dateRange.from, dateRange.to],
     queryFn: () => personelIslemleriServisi.personelIslemleriGetir(personnelId),
   });
 
-  // Process data for charts
-  const getStartDate = () => {
-    const now = new Date();
-    if (timeRange === "weekly") {
-      // Last 7 days
-      const startDate = new Date();
-      startDate.setDate(now.getDate() - 7);
-      return startDate;
-    } else {
-      // Last 30 days
-      const startDate = new Date();
-      startDate.setDate(now.getDate() - 30);
-      return startDate;
-    }
-  };
-
-  const startDate = getStartDate();
   const filteredOperations = operations.filter(op => {
     if (!op.created_at) return false;
     const date = new Date(op.created_at);
@@ -95,86 +77,45 @@ export function PersonnelPerformanceReports({ personnelId = null }: { personnelI
         />
       </div>
       
-      <Tabs value={timeRange} onValueChange={(v) => setTimeRange(v as "weekly" | "monthly")}>
-        <TabsList className="grid w-full grid-cols-2 mb-4">
-          <TabsTrigger value="weekly">Haftalık</TabsTrigger>
-          <TabsTrigger value="monthly">Aylık</TabsTrigger>
-        </TabsList>
+      {/* Removed weekly/monthly tabs and content completely */}
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center">
+              <CalendarClock className="h-8 w-8 text-purple-600 mb-2" />
+              <h4 className="text-lg font-medium">İşlem Sayısı</h4>
+              <p className="text-2xl font-semibold">{operationCount}</p>
+            </div>
+          </CardContent>
+        </Card>
         
-        <TabsContent value="weekly" className="mt-0">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex flex-col items-center">
-                  <CalendarClock className="h-8 w-8 text-purple-600 mb-2" />
-                  <h4 className="text-lg font-medium">İşlem Sayısı</h4>
-                  <p className="text-2xl font-semibold">{operationCount}</p>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex flex-col items-center">
-                  <TrendingUp className="h-8 w-8 text-green-600 mb-2" />
-                  <h4 className="text-lg font-medium">Toplam Ciro</h4>
-                  <p className="text-2xl font-semibold text-green-600">{formatCurrency(totalRevenue)}</p>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex flex-col items-center">
-                  <Wallet className="h-8 w-8 text-blue-600 mb-2" />
-                  <h4 className="text-lg font-medium">Kazanç</h4>
-                  <p className="text-2xl font-semibold text-blue-600">{formatCurrency(totalCommission)}</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center">
+              <TrendingUp className="h-8 w-8 text-green-600 mb-2" />
+              <h4 className="text-lg font-medium">Toplam Ciro</h4>
+              <p className="text-2xl font-semibold text-green-600">{formatCurrency(totalRevenue)}</p>
+            </div>
+          </CardContent>
+        </Card>
         
-        <TabsContent value="monthly" className="mt-0">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex flex-col items-center">
-                  <CalendarClock className="h-8 w-8 text-purple-600 mb-2" />
-                  <h4 className="text-lg font-medium">İşlem Sayısı</h4>
-                  <p className="text-2xl font-semibold">{operationCount}</p>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex flex-col items-center">
-                  <TrendingUp className="h-8 w-8 text-green-600 mb-2" />
-                  <h4 className="text-lg font-medium">Toplam Ciro</h4>
-                  <p className="text-2xl font-semibold text-green-600">{formatCurrency(totalRevenue)}</p>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex flex-col items-center">
-                  <Wallet className="h-8 w-8 text-blue-600 mb-2" />
-                  <h4 className="text-lg font-medium">Kazanç</h4>
-                  <p className="text-2xl font-semibold text-blue-600">{formatCurrency(totalCommission)}</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-      </Tabs>
-      
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center">
+              <Wallet className="h-8 w-8 text-blue-600 mb-2" />
+              <h4 className="text-lg font-medium">Kazanç</h4>
+              <p className="text-2xl font-semibold text-blue-600">{formatCurrency(totalCommission)}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       <Card>
         <CardContent className="p-6">
           <h3 className="text-lg font-semibold mb-2">Ciro ve Kazanç Grafiği</h3>
           <p className="text-sm text-muted-foreground mb-6">
-            {timeRange === "weekly" ? "Son 7 gün" : "Son 30 gün"} içerisindeki performans verileri
+            Son 30 gün içerisindeki performans verileri
           </p>
           
           {isLoading ? (
@@ -221,3 +162,4 @@ export function PersonnelPerformanceReports({ personnelId = null }: { personnelI
     </div>
   );
 }
+
