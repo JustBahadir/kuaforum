@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -162,7 +161,6 @@ export default function StaffProfile() {
     }
   };
 
-  // ===== History form handlers =====
   const addWorkplaceWithPosition = () => {
     setHistoryData(prev => ({
       ...prev,
@@ -243,13 +241,11 @@ export default function StaffProfile() {
     });
   };
 
-  // ===== Education form handler =====
   const handleEducationChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setEducationData(prev => {
       const newData = { ...prev, [name]: value };
 
-      // Clear meslekiBrans if liseTuru is not a vocational type
       if (name === "liseTuru" && !["cok_programli_anadolu", "meslek_ve_teknik_anadolu"].includes(value)) {
         newData.meslekiBrans = "";
       }
@@ -257,18 +253,15 @@ export default function StaffProfile() {
     });
   };
 
-  // CV textarea change handler
   const handleCvChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const { value } = e.target;
     setHistoryData(prev => ({ ...prev, cv: value }));
   };
 
-  // The save function fixing the array-to-string issues
   const saveProfileEdits = async () => {
     try {
       setLoading(true);
 
-      // Update profile table
       const { error: profileUpdateError } = await supabase
         .from("profiles")
         .update({
@@ -286,11 +279,10 @@ export default function StaffProfile() {
         return;
       }
 
-      // Convert arrays to strings before upserting education
-      const ortaokulDurumuStr = arrayToString(educationData.ortaokulDurumu);
-      const liseDurumuStr = arrayToString(educationData.liseDurumu);
-      const liseTuruStr = arrayToString(educationData.liseTuru);
-      const meslekiBransStr = arrayToString(educationData.meslekiBrans);
+      const ortaokulDurumuStr = Array.isArray(educationData.ortaokulDurumu) ? educationData.ortaokulDurumu.join(", ") : educationData.ortaokulDurumu || "";
+      const liseDurumuStr = Array.isArray(educationData.liseDurumu) ? educationData.liseDurumu.join(", ") : educationData.liseDurumu || "";
+      const liseTuruStr = Array.isArray(educationData.liseTuru) ? educationData.liseTuru.join(", ") : educationData.liseTuru || "";
+      const meslekiBransStr = Array.isArray(educationData.meslekiBrans) ? educationData.meslekiBrans.join(", ") : educationData.meslekiBrans || "";
 
       const dataToUpsert = [{
         personel_id: user.id,
@@ -310,11 +302,10 @@ export default function StaffProfile() {
         return;
       }
 
-      // Convert arrays to strings before upserting history
-      const isYerleriStr = arrayToString(historyData.isYerleri);
-      const gorevPozisyonStr = arrayToString(historyData.gorevPozisyon);
-      const belgelerStr = arrayToString(historyData.belgeler);
-      const yarismalarStr = arrayToString(historyData.yarismalar);
+      const isYerleriStr = Array.isArray(historyData.isYerleri) ? historyData.isYerleri.join(", ") : historyData.isYerleri || "";
+      const gorevPozisyonStr = Array.isArray(historyData.gorevPozisyon) ? historyData.gorevPozisyon.join(", ") : historyData.gorevPozisyon || "";
+      const belgelerStr = Array.isArray(historyData.belgeler) ? historyData.belgeler.join(", ") : historyData.belgeler || "";
+      const yarismalarStr = Array.isArray(historyData.yarismalar) ? historyData.yarismalar.join(", ") : historyData.yarismalar || "";
 
       const historyToUpsert = [{
         personel_id: user.id,
@@ -356,7 +347,6 @@ export default function StaffProfile() {
 
   const initials = `${profile?.first_name?.[0] || ""}${profile?.last_name?.[0] || ""}`;
 
-  // Updated liseTuru options as requested
   const liseTuruOptions = [
     { label: "Fen Lisesi", value: "fen" },
     { label: "Sosyal Bilimler Lisesi", value: "sosyal_bilimler" },
