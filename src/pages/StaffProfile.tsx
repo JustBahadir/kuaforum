@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -5,6 +6,21 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+
+interface EducationData {
+  ortaokulDurumu: string;
+  liseDurumu: string;
+  liseTuru: string;
+  meslekiBrans: string;
+}
+
+interface HistoryData {
+  isYerleri: string;
+  gorevPozisyon: string;
+  belgeler: string;
+  yarismalar: string;
+  cv: string;
+}
 
 export default function StaffProfile() {
   const navigate = useNavigate();
@@ -15,13 +31,15 @@ export default function StaffProfile() {
   const [shopCode, setShopCode] = useState("");
   const [validatingCode, setValidatingCode] = useState(false);
   const [editMode, setEditMode] = useState(false);
-  const [educationData, setEducationData] = useState({
+
+  // Make states explicit types with strings only
+  const [educationData, setEducationData] = useState<EducationData>({
     ortaokulDurumu: "",
     liseDurumu: "",
     liseTuru: "",
     meslekiBrans: ""
   });
-  const [historyData, setHistoryData] = useState({
+  const [historyData, setHistoryData] = useState<HistoryData>({
     isYerleri: "",
     gorevPozisyon: "",
     belgeler: "",
@@ -68,21 +86,18 @@ export default function StaffProfile() {
 
         setProfile(profileData || {});
 
-        // Get education and history data from separate tables or profile extensions
-        // For demonstration, assuming education and history fields are in "staff_extended" table or similar.
-
-        // Example simple fetch logic:
         const { data: educationRes } = await supabase
           .from("staff_education")
           .select("*")
           .eq("personel_id", data.session.user.id)
           .maybeSingle();
 
-        setEducationData(educationRes || {
-          ortaokulDurumu: "",
-          liseDurumu: "",
-          liseTuru: "",
-          meslekiBrans: ""
+        // Ensure that the returned fields are strings, fallback if needed
+        setEducationData({
+          ortaokulDurumu: typeof educationRes?.ortaokulDurumu === "string" ? educationRes.ortaokulDurumu : "",
+          liseDurumu: typeof educationRes?.liseDurumu === "string" ? educationRes.liseDurumu : "",
+          liseTuru: typeof educationRes?.liseTuru === "string" ? educationRes.liseTuru : "",
+          meslekiBrans: typeof educationRes?.meslekiBrans === "string" ? educationRes.meslekiBrans : "",
         });
 
         const { data: historyRes } = await supabase
@@ -91,15 +106,14 @@ export default function StaffProfile() {
           .eq("personel_id", data.session.user.id)
           .maybeSingle();
 
-        setHistoryData(historyRes || {
-          isYerleri: "",
-          gorevPozisyon: "",
-          belgeler: "",
-          yarismalar: "",
-          cv: ""
+        setHistoryData({
+          isYerleri: typeof historyRes?.isYerleri === "string" ? historyRes.isYerleri : "",
+          gorevPozisyon: typeof historyRes?.gorevPozisyon === "string" ? historyRes.gorevPozisyon : "",
+          belgeler: typeof historyRes?.belgeler === "string" ? historyRes.belgeler : "",
+          yarismalar: typeof historyRes?.yarismalar === "string" ? historyRes.yarismalar : "",
+          cv: typeof historyRes?.cv === "string" ? historyRes.cv : "",
         });
 
-        // Check if user is a staff and attached to any shop
         if (role === "staff") {
           const { data: personelData } = await supabase
             .from("personel")
@@ -108,12 +122,10 @@ export default function StaffProfile() {
             .maybeSingle();
 
           if (personelData?.dukkan_id) {
-            // If staff is assigned to a shop, redirect to shop home
             navigate("/shop-home");
             return;
           }
         } else {
-          // If not staff or admin, redirect to appropriate dashboard
           navigate("/customer-dashboard");
           return;
         }
@@ -147,7 +159,6 @@ export default function StaffProfile() {
     setValidatingCode(true);
 
     try {
-      // Validate shop code
       const { data: shopData, error: shopError } = await supabase
         .from("dukkanlar")
         .select("id, ad")
@@ -159,7 +170,6 @@ export default function StaffProfile() {
         return;
       }
 
-      // Create personel record
       const { error: personelError } = await supabase.from("personel").insert({
         auth_id: user.id,
         ad_soyad: `${profile.first_name} ${profile.last_name}`,
@@ -205,7 +215,6 @@ export default function StaffProfile() {
     try {
       setLoading(true);
 
-      // Update profile table (Özlük Bilgileri tablosu gibi)
       const { error: profileUpdateError } = await supabase
         .from("profiles")
         .update({
@@ -214,7 +223,6 @@ export default function StaffProfile() {
           phone: profile.phone,
           address: profile.address,
           gender: profile.gender,
-          // Add other profile fields as needed
         })
         .eq("id", user.id);
 
@@ -223,13 +231,13 @@ export default function StaffProfile() {
         return;
       }
 
-      // Save education info into staff_education table
+      // Cast all fields to string to avoid type errors
       const dataToUpsert = [{
         personel_id: user.id,
-        ortaokulDurumu: educationData.ortaokulDurumu,
-        liseDurumu: educationData.liseDurumu,
-        liseTuru: educationData.liseTuru,
-        meslekiBrans: educationData.meslekiBrans,
+        ortaokulDurumu: String(educationData.ortaokulDurumu),
+        liseDurumu: String(educationData.liseDurumu),
+        liseTuru: String(educationData.liseTuru),
+        meslekiBrans: String(educationData.meslekiBrans),
       }];
 
       const { error: educationError } = await supabase
@@ -241,14 +249,13 @@ export default function StaffProfile() {
         return;
       }
 
-      // Save history info into staff_history table
       const historyToUpsert = [{
         personel_id: user.id,
-        isYerleri: historyData.isYerleri,
-        gorevPozisyon: historyData.gorevPozisyon,
-        belgeler: historyData.belgeler,
-        yarismalar: historyData.yarismalar,
-        cv: historyData.cv,
+        isYerleri: String(historyData.isYerleri),
+        gorevPozisyon: String(historyData.gorevPozisyon),
+        belgeler: String(historyData.belgeler),
+        yarismalar: String(historyData.yarismalar),
+        cv: String(historyData.cv),
       }];
 
       const { error: historyError } = await supabase
@@ -285,7 +292,6 @@ export default function StaffProfile() {
     <div className="container mx-auto py-8 px-4">
       <div className="max-w-4xl mx-auto">
         <div className="flex flex-col md:flex-row gap-6">
-          {/* Sidebar */}
           <div className="w-full md:w-64 space-y-4">
             <Card>
               <CardContent className="p-6 text-center">
@@ -344,7 +350,6 @@ export default function StaffProfile() {
             </div>
           </div>
 
-          {/* Main Content */}
           <div className="flex-1">
             <Card>
               <CardHeader>
@@ -661,3 +666,4 @@ export default function StaffProfile() {
     </div>
   );
 }
+
