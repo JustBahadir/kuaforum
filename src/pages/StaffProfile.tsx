@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,12 +29,6 @@ interface HistoryData {
   _newYarisma?: string;
 }
 
-interface ChildrenData {
-  children_names: string[];
-  _newChildName?: string;
-}
-
-// Yardımcı: dizileri virgülle ayrılmış stringe çevirme
 const arrayToString = (value: string[] | string): string => {
   if (Array.isArray(value)) {
     return value.join(", ");
@@ -55,7 +50,7 @@ export default function StaffProfile() {
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<
-    "profile" | "education" | "history" | "children" | "join"
+    "profile" | "education" | "history" | "join"
   >("profile");
   const [shopCode, setShopCode] = useState("");
   const [validatingCode, setValidatingCode] = useState(false);
@@ -82,56 +77,22 @@ export default function StaffProfile() {
     _newYarisma: "",
   });
 
-  const [childrenData, setChildrenData] = useState<ChildrenData>({
-    children_names: [],
-    _newChildName: "",
-  });
-
   const [userRole, setUserRole] = useState("");
-
-  // Çocuk bilgilerini kaydetme fonksiyonu, Supabase'e doğru formatta çağıracak
-  const saveChildrenDataWithParams = async (childrenNames: string[]) => {
-    if (!user || !user.id) return;
-
-    setLoading(true);
-
-    // children_names veritabanında string[] olduğu için doğrudan dizi olarak gönderiyoruz.
-    const personalData = {
-      customer_id: user.id,
-      children_names: childrenNames.length > 0 ? childrenNames : [],
-      updated_at: new Date().toISOString(),
-    };
-
-    // Tek nesne olarak (dizide değil)
-    const { error } = await supabase
-      .from("customer_personal_data")
-      .upsert([personalData], { onConflict: ["customer_id"] });
-
-    setLoading(false);
-    if (error) {
-      console.error("Çocuk bilgileri kaydedilirken hata:", error);
-      toast.error("Çocuk bilgileri kaydedilemedi.");
-    } else {
-      toast.success("Çocuk bilgileri güncellendi.");
-    }
-  };
 
   const saveEducationData = useCallback(async () => {
     if (!user || !user.id) return;
     setLoading(true);
 
-    const dataToUpsert = [
-      {
-        personel_id: Number(user.id),
-        ortaokuldurumu: educationData.ortaokuldurumu,
-        lisedurumu: educationData.lisedurumu,
-        liseturu: educationData.liseturu,
-        meslekibrans: educationData.meslekibrans,
-        universitedurumu: educationData.universitedurumu,
-        universitebolum: educationData.universitebolum,
-        updated_at: new Date().toISOString(),
-      },
-    ];
+    const dataToUpsert = {
+      personel_id: Number(user.id),
+      ortaokuldurumu: educationData.ortaokuldurumu,
+      lisedurumu: educationData.lisedurumu,
+      liseturu: educationData.liseturu,
+      meslekibrans: educationData.meslekibrans,
+      universitedurumu: educationData.universitedurumu,
+      universitebolum: educationData.universitebolum,
+      updated_at: new Date().toISOString(),
+    };
 
     const { error } = await supabase
       .from("staff_education")
@@ -150,17 +111,15 @@ export default function StaffProfile() {
     if (!user || !user.id) return;
     setLoading(true);
 
-    const dataToUpsert = [
-      {
-        personel_id: Number(user.id),
-        isyerleri: arrayToString(historyData.isyerleri),
-        gorevpozisyon: arrayToString(historyData.gorevpozisyon),
-        belgeler: arrayToString(historyData.belgeler),
-        yarismalar: arrayToString(historyData.yarismalar),
-        cv: historyData.cv || "",
-        updated_at: new Date().toISOString(),
-      },
-    ];
+    const dataToUpsert = {
+      personel_id: Number(user.id),
+      isyerleri: arrayToString(historyData.isyerleri),
+      gorevpozisyon: arrayToString(historyData.gorevpozisyon),
+      belgeler: arrayToString(historyData.belgeler),
+      yarismalar: arrayToString(historyData.yarismalar),
+      cv: historyData.cv || "",
+      updated_at: new Date().toISOString(),
+    };
 
     const { error } = await supabase
       .from("staff_history")
@@ -185,17 +144,15 @@ export default function StaffProfile() {
     if (!user || !user.id) return;
 
     setLoading(true);
-    const dataToUpsert = [
-      {
-        personel_id: Number(user.id),
-        isyerleri: arrayToString(isyerleri),
-        gorevpozisyon: arrayToString(gorevpozisyon),
-        belgeler: arrayToString(belgeler),
-        yarismalar: arrayToString(yarismalar),
-        cv: cv || "",
-        updated_at: new Date().toISOString(),
-      },
-    ];
+    const dataToUpsert = {
+      personel_id: Number(user.id),
+      isyerleri: arrayToString(isyerleri),
+      gorevpozisyon: arrayToString(gorevpozisyon),
+      belgeler: arrayToString(belgeler),
+      yarismalar: arrayToString(yarismalar),
+      cv: cv || "",
+      updated_at: new Date().toISOString(),
+    };
 
     const { error } = await supabase
       .from("staff_history")
@@ -207,34 +164,6 @@ export default function StaffProfile() {
       toast.error("Geçmiş bilgileri güncellendi.");
     } else {
       toast.success("Geçmiş bilgileri güncellendi.");
-    }
-  };
-
-  const saveEducationDataOnClick = async () => {
-    if (!user || !user.id) return;
-    setLoading(true);
-
-    const dataToUpsert = [{
-      personel_id: Number(user.id),
-      ortaokuldurumu: educationData.ortaokuldurumu,
-      lisedurumu: educationData.lisedurumu,
-      liseturu: educationData.liseturu,
-      meslekibrans: educationData.meslekibrans,
-      universitedurumu: educationData.universitedurumu,
-      universitebolum: educationData.universitebolum,
-      updated_at: new Date().toISOString(),
-    }];
-
-    const { error } = await supabase
-      .from("staff_education")
-      .upsert(dataToUpsert, { onConflict: ["personel_id"] });
-
-    setLoading(false);
-    if (error) {
-      console.error("Eğitim bilgileri kaydedilirken hata:", error);
-      toast.error("Eğitim bilgileri kaydedilemedi.");
-    } else {
-      toast.success("Eğitim bilgileri kaydedildi.");
     }
   };
 
@@ -270,7 +199,7 @@ export default function StaffProfile() {
     setHistoryData((prev) => ({
       ...prev,
       isyerleri: newIsyerleri,
-      gorevpozisyon: newGorevPozisyon
+      gorevpozisyon: newGorevPozisyon,
     }));
 
     await saveHistoryDataWithParams(newIsyerleri, newGorevPozisyon, historyData.belgeler, historyData.yarismalar, historyData.cv);
@@ -365,41 +294,12 @@ export default function StaffProfile() {
     });
   };
 
-  const addChild = async () => {
-    if (!childrenData._newChildName || childrenData._newChildName.trim() === "") {
-      toast.error("Çocuk adı giriniz.");
-      return;
-    }
-
-    const newChildren = [...childrenData.children_names, childrenData._newChildName.trim()];
-
-    setChildrenData({
-      children_names: newChildren,
-      _newChildName: ""
-    });
-
-    await saveChildrenDataWithParams(newChildren);
-  };
-
-  const removeChildAtIndex = async (index: number) => {
-    const newChildren = [...childrenData.children_names];
-    newChildren.splice(index, 1);
-    setChildrenData({ children_names: newChildren, _newChildName: "" });
-
-    await saveChildrenDataWithParams(newChildren);
-  };
-
-  const saveChildrenData = async () => {
-    if (!user || !user.id) return;
-    await saveChildrenDataWithParams(childrenData.children_names);
-  };
-
   const handleJoinShop = async () => {
     if (!shopCode.trim()) {
       toast.error("Lütfen bir işletme kodu girin.");
       return;
     }
-    
+
     setValidatingCode(true);
     try {
       const { data: shopData, error: shopError } = await supabase
@@ -407,14 +307,14 @@ export default function StaffProfile() {
         .select("id, ad")
         .eq("kod", shopCode.trim())
         .maybeSingle();
-      
+
       if (shopError) throw shopError;
-      
+
       if (!shopData) {
         toast.error("Geçersiz işletme kodu.");
         return;
       }
-      
+
       const { error: personelError } = await supabase
         .from("personel")
         .upsert({
@@ -431,14 +331,14 @@ export default function StaffProfile() {
           aktif: true,
           baslama_tarihi: new Date().toISOString().split('T')[0]
         });
-      
+
       if (personelError) throw personelError;
-      
+
       toast.success(`${shopData.ad} işletmesine başarıyla katıldınız.`);
       setTimeout(() => {
         navigate("/shop-home");
       }, 1500);
-      
+
     } catch (error) {
       console.error("İşletmeye katılma hatası:", error);
       toast.error("İşletmeye katılırken bir hata oluştu.");
@@ -478,48 +378,9 @@ export default function StaffProfile() {
         return;
       }
 
-      const dataToUpsert = [{
-        personel_id: Number(user.id),
-        ortaokuldurumu: educationData.ortaokuldurumu,
-        lisedurumu: educationData.lisedurumu,
-        liseturu: educationData.liseturu,
-        meslekibrans: educationData.meslekibrans,
-        universitedurumu: educationData.universitedurumu,
-        universitebolum: educationData.universitebolum,
-        updated_at: new Date().toISOString(),
-      }];
+      await saveEducationData();
 
-      const { error: educationError } = await supabase
-        .from("staff_education")
-        .upsert(dataToUpsert, { onConflict: ["personel_id"] });
-
-      if (educationError) {
-        toast.error("Eğitim bilgileri kaydedilemedi.");
-        setLoading(false);
-        return;
-      }
-
-      const historyToUpsert = [{
-        personel_id: Number(user.id),
-        isyerleri: arrayToString(historyData.isyerleri),
-        gorevpozisyon: arrayToString(historyData.gorevpozisyon),
-        belgeler: arrayToString(historyData.belgeler),
-        yarismalar: arrayToString(historyData.yarismalar),
-        cv: historyData.cv || "",
-        updated_at: new Date().toISOString(),
-      }];
-
-      const { error: historyError } = await supabase
-        .from("staff_history")
-        .upsert(historyToUpsert, { onConflict: ["personel_id"] });
-
-      if (historyError) {
-        toast.error("Geçmiş bilgileri kaydedilemedi.");
-        setLoading(false);
-        return;
-      }
-
-      await saveChildrenDataWithParams(childrenData.children_names);
+      await saveHistoryData();
 
       setEditMode(false);
       toast.success("Bilgiler güncellendi.");
@@ -611,7 +472,7 @@ export default function StaffProfile() {
           _newIsYeri: "",
           _newGorev: "",
           _newBelge: "",
-          _newYarisma: ""
+          _newYarisma: "",
         });
 
         if (role === "staff") {
@@ -640,33 +501,6 @@ export default function StaffProfile() {
     checkSession();
   }, [navigate]);
 
-  const liseTuruOptions = [
-    { label: "Fen Lisesi", value: "fen" },
-    { label: "Sosyal Bilimler Lisesi", value: "sosyal_bilimler" },
-    { label: "Anadolu Lisesi", value: "anatoli" },
-    { label: "Güzel Sanatlar Lisesi", value: "guzel_sanatlar" },
-    { label: "Spor Lisesi", value: "spor" },
-    { label: "Anadolu İmam Hatip Lisesi", value: "imam_hatip" },
-    { label: "Çok Programlı Anadolu Lisesi", value: "cok_programli_anadolu" },
-    { label: "Mesleki ve Teknik Anadolu Lisesi", value: "meslek_ve_teknik_anadolu" },
-    { label: "Akşam Lisesi", value: "aksam" },
-    { label: "Açık Öğretim Lisesi", value: "acik_ogretim" },
-  ];
-
-  const universiteOptions = [
-    { label: "Saç Bakımı ve Güzellik Hizmetleri", value: "sac_bakim" },
-    { label: "Diğer", value: "diger" },
-  ];
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-600"></div>
-        <p className="ml-2 text-sm text-gray-600">Yükleniyor...</p>
-      </div>
-    );
-  }
-
   const initials = `${profile?.first_name?.[0] || ""}${profile?.last_name?.[0] || ""}`;
 
   return (
@@ -678,6 +512,21 @@ export default function StaffProfile() {
             <Button variant="outline" onClick={handleLogout}>
               Çıkış Yap
             </Button>
+            {/* Toggle edit mode button */}
+            <Button
+              variant="primary"
+              onClick={() => setEditMode(!editMode)}
+            >
+              {editMode ? "İptal" : "Düzenle"}
+            </Button>
+            {editMode && (
+              <Button
+                variant="success"
+                onClick={saveProfileEdits}
+              >
+                Kaydet
+              </Button>
+            )}
           </div>
         </CardHeader>
 
@@ -704,7 +553,7 @@ export default function StaffProfile() {
                 <TabsTrigger value="profile">Profil</TabsTrigger>
                 <TabsTrigger value="education">Eğitim</TabsTrigger>
                 <TabsTrigger value="history">Geçmiş</TabsTrigger>
-                <TabsTrigger value="children">Çocuklar</TabsTrigger>
+                {/* Çocuklar tab removed as requested */}
                 {userRole === "staff" && (
                   <TabsTrigger value="join">İşletmeye Katıl</TabsTrigger>
                 )}
@@ -713,67 +562,82 @@ export default function StaffProfile() {
               <TabsContent value="profile">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Ad
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700">Ad</label>
                     <input
                       type="text"
                       value={profile?.first_name || ""}
                       onChange={(e) =>
                         setProfile({ ...profile, first_name: e.target.value })
                       }
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      disabled={!editMode}
+                      className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
+                        editMode
+                          ? "focus:border-indigo-500"
+                          : "bg-gray-100 cursor-not-allowed"
+                      }`}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Soyad
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700">Soyad</label>
                     <input
                       type="text"
                       value={profile?.last_name || ""}
                       onChange={(e) =>
                         setProfile({ ...profile, last_name: e.target.value })
                       }
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      disabled={!editMode}
+                      className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
+                        editMode
+                          ? "focus:border-indigo-500"
+                          : "bg-gray-100 cursor-not-allowed"
+                      }`}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Telefon
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700">Telefon</label>
                     <input
                       type="text"
                       value={profile?.phone || ""}
                       onChange={(e) =>
                         setProfile({ ...profile, phone: e.target.value })
                       }
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      disabled={!editMode}
+                      className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
+                        editMode
+                          ? "focus:border-indigo-500"
+                          : "bg-gray-100 cursor-not-allowed"
+                      }`}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Adres
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700">Adres</label>
                     <input
                       type="text"
                       value={profile?.address || ""}
                       onChange={(e) =>
                         setProfile({ ...profile, address: e.target.value })
                       }
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      disabled={!editMode}
+                      className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
+                        editMode
+                          ? "focus:border-indigo-500"
+                          : "bg-gray-100 cursor-not-allowed"
+                      }`}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Cinsiyet
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700">Cinsiyet</label>
                     <select
                       value={profile?.gender || ""}
                       onChange={(e) =>
                         setProfile({ ...profile, gender: e.target.value })
                       }
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      disabled={!editMode}
+                      className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
+                        editMode
+                          ? "focus:border-indigo-500"
+                          : "bg-gray-100 cursor-not-allowed"
+                      }`}
                     >
                       <option value="">Seçiniz</option>
                       <option value="erkek">Erkek</option>
@@ -831,7 +695,12 @@ export default function StaffProfile() {
                           return newData;
                         });
                       }}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      disabled={!editMode}
+                      className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
+                        editMode
+                          ? "focus:border-indigo-500"
+                          : "bg-gray-100 cursor-not-allowed"
+                      }`}
                     >
                       <option value="">Seçiniz</option>
                       <option value="okuyor">Okuyor</option>
@@ -885,8 +754,12 @@ export default function StaffProfile() {
                           return newData;
                         });
                       }}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                      disabled={educationData.ortaokuldurumu !== "bitirdi"}
+                      disabled={!editMode}
+                      className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
+                        editMode
+                          ? "focus:border-indigo-500"
+                          : "bg-gray-100 cursor-not-allowed"
+                      }`}
                     >
                       <option value="">Seçiniz</option>
                       <option value="okuyor">Okuyor</option>
@@ -903,32 +776,39 @@ export default function StaffProfile() {
                       value={educationData.liseturu}
                       onChange={(e) => {
                         const ev = e as React.ChangeEvent<HTMLSelectElement>;
-                        const { value, name } = ev.target;
+                        const { name, value } = ev.target;
                         setEducationData((prev) => {
                           const newData = { ...prev, [name]: value };
-                          if (
-                            ![
-                              "cok_programli_anadolu",
-                              "meslek_ve_teknik_anadolu",
-                            ].includes(value)
-                          ) {
+                          if (name === "ortaokuldurumu" && value !== "bitirdi") {
+                            newData.liseturu = "";
                             newData.meslekibrans = "";
+                          } else if (name === "lisedurumu") {
+                            if (value !== "okuyor" && value !== "bitirdi") {
+                              newData.liseturu = "";
+                              newData.meslekibrans = "";
+                            }
                           }
                           return newData;
                         });
                       }}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                      disabled={
-                        educationData.lisedurumu !== "okuyor" &&
-                        educationData.lisedurumu !== "bitirdi"
-                      }
+                      disabled={!editMode}
+                      className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
+                        editMode
+                          ? "focus:border-indigo-500"
+                          : "bg-gray-100 cursor-not-allowed"
+                      }`}
                     >
                       <option value="">Seçiniz</option>
-                      {liseTuruOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
+                      <option value="fen">Fen Lisesi</option>
+                      <option value="sosyal_bilimler">Sosyal Bilimler Lisesi</option>
+                      <option value="anatoli">Anadolu Lisesi</option>
+                      <option value="guzel_sanatlar">Güzel Sanatlar Lisesi</option>
+                      <option value="spor">Spor Lisesi</option>
+                      <option value="imam_hatip">Anadolu İmam Hatip Lisesi</option>
+                      <option value="cok_programli_anadolu">Çok Programlı Anadolu Lisesi</option>
+                      <option value="meslek_ve_teknik_anadolu">Mesleki ve Teknik Anadolu Lisesi</option>
+                      <option value="aksam">Akşam Lisesi</option>
+                      <option value="acik_ogretim">Açık Öğretim Lisesi</option>
                     </select>
                   </div>
                   <div>
@@ -941,16 +821,15 @@ export default function StaffProfile() {
                       value={educationData.meslekibrans}
                       onChange={(e) => {
                         const ev = e as React.ChangeEvent<HTMLInputElement>;
-                        const { value, name } = ev.target;
+                        const { name, value } = ev.target;
                         setEducationData((prev) => ({ ...prev, [name]: value }));
                       }}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                      disabled={
-                        educationData.lisedurumu !== "okuyor" &&
-                        educationData.lisedurumu !== "bitirdi" &&
-                        educationData.liseturu !== "cok_programli_anadolu" &&
-                        educationData.liseturu !== "meslek_ve_teknik_anadolu"
-                      }
+                      disabled={!editMode}
+                      className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
+                        editMode
+                          ? "focus:border-indigo-500"
+                          : "bg-gray-100 cursor-not-allowed"
+                      }`}
                     />
                   </div>
                   <div>
@@ -962,16 +841,15 @@ export default function StaffProfile() {
                       value={educationData.universitedurumu}
                       onChange={(e) => {
                         const ev = e as React.ChangeEvent<HTMLSelectElement>;
-                        const { value, name } = ev.target;
-                        setEducationData((prev) => {
-                          const newData = { ...prev, [name]: value };
-                          if (value !== "okuyor" && value !== "bitirdi") {
-                            newData.universitebolum = "";
-                          }
-                          return newData;
-                        });
+                        const { name, value } = ev.target;
+                        setEducationData((prev) => ({ ...prev, [name]: value }));
                       }}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      disabled={!editMode}
+                      className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
+                        editMode
+                          ? "focus:border-indigo-500"
+                          : "bg-gray-100 cursor-not-allowed"
+                      }`}
                     >
                       <option value="">Seçiniz</option>
                       <option value="okuyor">Okuyor</option>
@@ -989,37 +867,131 @@ export default function StaffProfile() {
                       value={educationData.universitebolum}
                       onChange={(e) => {
                         const ev = e as React.ChangeEvent<HTMLInputElement>;
-                        const { value, name } = ev.target;
+                        const { name, value } = ev.target;
                         setEducationData((prev) => ({ ...prev, [name]: value }));
                       }}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                      disabled={
-                        educationData.universitedurumu !== "okuyor" &&
-                        educationData.universitedurumu !== "bitirdi"
-                      }
+                      disabled={!editMode}
+                      className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
+                        editMode
+                          ? "focus:border-indigo-500"
+                          : "bg-gray-100 cursor-not-allowed"
+                      }`}
                     />
                   </div>
                 </div>
               </TabsContent>
 
               <TabsContent value="history">
-                <div>
-                  {/* Implementation of History tab content goes here */}
-                  {/* Since the full form is long, keep the user data bindings and handlers elsewhere */}
-                </div>
-              </TabsContent>
-
-              <TabsContent value="children">
-                <div>
-                  {/* Implementation of Children tab content goes here */}
-                  {/* For example listing children and add/remove functions */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      İş Yerleri
+                    </label>
+                    <textarea
+                      value={historyData.isyerleri.join(", ")}
+                      disabled={!editMode}
+                      onChange={(e) =>
+                        setHistoryData((prev) => ({
+                          ...prev,
+                          isyerleri: e.target.value.split(",").map((s) => s.trim()),
+                        }))
+                      }
+                      className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
+                        editMode
+                          ? "focus:border-indigo-500"
+                          : "bg-gray-100 cursor-not-allowed"
+                      }`}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Görev / Pozisyon
+                    </label>
+                    <textarea
+                      value={historyData.gorevpozisyon.join(", ")}
+                      disabled={!editMode}
+                      onChange={(e) =>
+                        setHistoryData((prev) => ({
+                          ...prev,
+                          gorevpozisyon: e.target.value.split(",").map((s) => s.trim()),
+                        }))
+                      }
+                      className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
+                        editMode
+                          ? "focus:border-indigo-500"
+                          : "bg-gray-100 cursor-not-allowed"
+                      }`}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Belgeler</label>
+                    <textarea
+                      value={historyData.belgeler.join(", ")}
+                      disabled={!editMode}
+                      onChange={(e) =>
+                        setHistoryData((prev) => ({
+                          ...prev,
+                          belgeler: e.target.value.split(",").map((s) => s.trim()),
+                        }))
+                      }
+                      className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
+                        editMode
+                          ? "focus:border-indigo-500"
+                          : "bg-gray-100 cursor-not-allowed"
+                      }`}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Yarışmalar</label>
+                    <textarea
+                      value={historyData.yarismalar.join(", ")}
+                      disabled={!editMode}
+                      onChange={(e) =>
+                        setHistoryData((prev) => ({
+                          ...prev,
+                          yarismalar: e.target.value.split(",").map((s) => s.trim()),
+                        }))
+                      }
+                      className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
+                        editMode
+                          ? "focus:border-indigo-500"
+                          : "bg-gray-100 cursor-not-allowed"
+                      }`}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">CV</label>
+                    <textarea
+                      value={historyData.cv}
+                      disabled={!editMode}
+                      onChange={(e) => setHistoryData((prev) => ({ ...prev, cv: e.target.value }))}
+                      className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
+                        editMode
+                          ? "focus:border-indigo-500"
+                          : "bg-gray-100 cursor-not-allowed"
+                      }`}
+                    />
+                  </div>
                 </div>
               </TabsContent>
 
               <TabsContent value="join">
                 <div>
-                  {/* Implementation of Join Shop tab content goes here */}
-                  {/* Includes input for shopCode and join button */}
+                  <label className="block mb-2 font-semibold">İşletme Kodu</label>
+                  <input
+                    type="text"
+                    value={shopCode}
+                    onChange={(e) => setShopCode(e.target.value)}
+                    disabled={validatingCode}
+                    className="block w-full rounded-md border border-gray-300 px-3 py-2 disabled:cursor-not-allowed disabled:bg-gray-100"
+                  />
+                  <Button
+                    disabled={validatingCode}
+                    onClick={handleJoinShop}
+                    className="mt-2"
+                  >
+                    Katıl
+                  </Button>
                 </div>
               </TabsContent>
             </Tabs>
