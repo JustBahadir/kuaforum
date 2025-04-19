@@ -16,22 +16,31 @@ export default function ProfileSetup() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [userData, setUserData] = useState<any>(null);
-  
+
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
     phone: "",
     gender: "erkek",
-    role: "personel",
+    role: "", // Başlangıçta boş bıraktık, zorunlu alan olduğu için
     shopName: "",
     shopCode: ""
   });
+
+  // Yeni eklenen state hatalar için (zorunlu alanlar)
+  const [errors, setErrors] = useState<{
+    role?: string;
+    firstName?: string;
+    lastName?: string;
+    phone?: string;
+    shopName?: string;
+  }>({});
 
   useEffect(() => {
     const checkSession = async () => {
       try {
         const { data, error } = await supabase.auth.getSession();
-        
+
         if (error) {
           throw error;
         }
@@ -61,7 +70,7 @@ export default function ProfileSetup() {
           .eq('id', user.id)
           .single();
 
-        if (profileData && profileData.first_name && profileData.last_name && profileData.phone) {
+        if (profileData && profileData.first_name && profileData.last_name && profileData.phone && profileData.role) {
           // Profile is already complete, redirect based on role
           if (profileData.role === 'admin') {
             navigate('/shop-home');
@@ -87,133 +96,108 @@ export default function ProfileSetup() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-  };
 
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Allow only numbers and limit to 11 digits (including the leading 0)
-    const digitsOnly = e.target.value.replace(/\D/g, '');
-    const limitedDigits = digitsOnly.substring(0, 11);
-    
-    setFormData(prev => ({ ...prev, phone: limitedDigits }));
+    // Hata varsa temizle
+    if (errors[name as keyof typeof errors]) {
+      setErrors(prev => ({ ...prev, [name]: undefined }));
+    }
   };
 
   const handleRoleChange = (value: string) => {
     setFormData(prev => ({ ...prev, role: value }));
+
+    if (errors.role) {
+      setErrors(prev => ({ ...prev, role: undefined }));
+    }
   };
 
   const handleGenderChange = (value: string) => {
     setFormData(prev => ({ ...prev, gender: value }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.firstName || !formData.lastName || !formData.phone) {
-      toast.error("Lütfen zorunlu alanları doldurun");
-      return;
+  const validateForm = () => {
+    const newErrors: typeof errors = {};
+    if (!formData.firstName.trim()) {
+      newErrors.firstName = "Bu alan zorunludur";
+    }
+    if (!formData.lastName.trim()) {
+      newErrors.lastName = "Bu alan zorunludur";
+    }
+    if (!formData.phone.trim()) {
+      newErrors.phone = "Bu alan zorunludur";
+    }
+    if (!formData.role.trim()) {
+      newErrors.role = "Bu alan zorunludur";
+    }
+    // Sadece admin ise shopName zorunlu
+    if (formData.role === "admin" && !formData.shopName.trim()) {
+      newErrors.shopName = "Bu alan zorunludur";
     }
 
-    if (formData.role === "admin" && !formData.shopName) {
-      toast.error("İşletme adı zorunludur");
+    setErrors(newErrors);
+
+    if (Object.keys(newErrors).length > 0) {
+      toast.error("Lütfen tüm zorunlu alanları doldurun");
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!validateForm()) {
       return;
     }
 
     setSubmitting(true);
 
     try {
-      // Update user metadata
-      await supabase.auth.updateUser({
-        data: {
-          first_name: formData.firstName,
-          last_name: formData.lastName,
-          phone: formData.phone,
-          gender: formData.gender,
-          role: formData.role === "admin" ? "admin" : "staff"
-        }
-      });
+      // Save profile updates to supabase safely
+  
+      // Burada gönderilen veri sade, nested profile objesi yok
+      const updateData: Record<string, any> = {
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        phone: formData.phone,
+        gender: formData.gender,
+        role: formData.role === "admin" ? "admin" : "staff"
+      };
 
-      // Update or create profile in profiles table
-      const { error: profileError } = await supabase
+      if (formData.role === "admin") {
+        updateData["shopName"] = formData.shopName;
+      }
+      if (formData.role === "staff" && formData.shopCode) {
+        updateData["shopCode"] = formData.shopCode;
+      }
+
+      const { error } = await supabase
         .from('profiles')
-        .upsert({
-          id: userData.id,
-          first_name: formData.firstName,
-          last_name: formData.lastName,
-          phone: formData.phone,
-          gender: formData.gender,
-          role: formData.role === "admin" ? "admin" : "staff"
-        });
+        .upsert({ id: userData.id, ...updateData });
 
-      if (profileError) {
-        throw new Error(`Profil güncellenirken hata: ${profileError.message}`);
+      if (error) {
+        // Log tut ama kullanıcıya gösterme detaylı teknik hatayı
+        console.error("Profil güncellenirken hata (detay): ", error);
+        toast.error("Profil bilgileri kaydedilirken bir sorun oluştu. Lütfen tekrar deneyin.");
+        setSubmitting(false);
+        return;
       }
 
-      // If user is admin, create shop
-      if (formData.role === "admin" && formData.shopName) {
-        // Generate a random shop code
-        const shopCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-        
-        const { error: shopError } = await supabase
-          .from('dukkanlar')
-          .insert({
-            ad: formData.shopName,
-            sahibi_id: userData.id,
-            kod: shopCode
-          });
+      toast.success("Profil başarıyla kaydedildi!");
 
-        if (shopError) {
-          throw new Error(`İşletme oluşturulurken hata: ${shopError.message}`);
-        }
-
-        toast.success("Profiliniz ve işletmeniz başarıyla oluşturuldu!");
+      // Rol bazlı yönlendirme
+      if (formData.role === 'admin') {
         navigate('/shop-home');
-      } 
-      // If user is staff and provided shop code, connect to shop
-      else if (formData.role === "staff" && formData.shopCode) {
-        // First check if shop code is valid
-        const { data: shopData, error: shopError } = await supabase
-          .from('dukkanlar')
-          .select('id')
-          .eq('kod', formData.shopCode)
-          .single();
-
-        if (shopError || !shopData) {
-          toast.error("Geçersiz işletme kodu. İşletmeye bağlanamadınız.");
-          navigate('/staff-profile');
-          return;
-        }
-
-        // Create personel record
-        const { error: personelError } = await supabase
-          .from('personel')
-          .insert({
-            auth_id: userData.id,
-            ad_soyad: `${formData.firstName} ${formData.lastName}`,
-            telefon: formData.phone,
-            eposta: userData.email,
-            adres: '',
-            personel_no: `P${Math.floor(Math.random() * 10000)}`,
-            dukkan_id: shopData.id,
-            maas: 0,
-            prim_yuzdesi: 0,
-            calisma_sistemi: 'aylik_maas'
-          });
-
-        if (personelError) {
-          throw new Error(`Personel kaydı oluşturulurken hata: ${personelError.message}`);
-        }
-
-        toast.success("Profiliniz başarıyla oluşturuldu ve işletmeye bağlandınız!");
+      } else if (formData.role === 'staff') {
         navigate('/staff-profile');
+      } else {
+        navigate('/customer-dashboard');
       }
-      // If user is staff but no shop code, just redirect to profile
-      else {
-        toast.success("Profiliniz başarıyla oluşturuldu!");
-        navigate('/staff-profile');
-      }
-    } catch (error: any) {
-      console.error("Profil güncellenirken hata:", error);
-      toast.error(`Profil güncellenirken hata oluştu: ${error.message}`);
+    } catch (error) {
+      // Bu noktada bile hata olursa çok genel mesaj gösteriyoruz
+      console.error("Profil güncelleme sırasında hata: ", error);
+      toast.error("Profil bilgileri kaydedilirken bir sorun oluştu. Lütfen tekrar deneyin.");
     } finally {
       setSubmitting(false);
     }
@@ -234,61 +218,66 @@ export default function ProfileSetup() {
           <h2 className="text-2xl font-bold text-center">Profil Bilgilerinizi Tamamlayın</h2>
         </CardHeader>
         <CardContent className="p-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="firstName">Ad*</Label>
+                <Label htmlFor="firstName" className={`block ${errors.firstName ? "text-red-600" : ""}`}>
+                  Ad*
+                </Label>
                 <Input
                   id="firstName"
                   name="firstName"
                   value={formData.firstName}
                   onChange={handleInputChange}
+                  className={errors.firstName ? "border-red-600 focus:border-red-600 focus:ring-red-600" : ""}
                   required
                 />
+                {errors.firstName && (
+                  <p className="text-xs text-red-600 mt-1">{errors.firstName}</p>
+                )}
               </div>
               <div>
-                <Label htmlFor="lastName">Soyad*</Label>
+                <Label htmlFor="lastName" className={`block ${errors.lastName ? "text-red-600" : ""}`}>
+                  Soyad*
+                </Label>
                 <Input
                   id="lastName"
                   name="lastName"
                   value={formData.lastName}
                   onChange={handleInputChange}
+                  className={errors.lastName ? "border-red-600 focus:border-red-600 focus:ring-red-600" : ""}
                   required
                 />
+                {errors.lastName && (
+                  <p className="text-xs text-red-600 mt-1">{errors.lastName}</p>
+                )}
               </div>
             </div>
-            
+
             <div>
-              <Label htmlFor="phone">Telefon*</Label>
+              <Label htmlFor="phone" className={`block ${errors.phone ? "text-red-600" : ""}`}>
+                Telefon*
+              </Label>
               <Input
                 id="phone"
                 name="phone"
                 value={formatPhoneNumber(formData.phone)}
-                onChange={handlePhoneChange}
+                onChange={handleInputChange}
                 placeholder="05XX XXX XX XX"
+                className={errors.phone ? "border-red-600 focus:border-red-600 focus:ring-red-600" : ""}
                 required
               />
-              <p className="text-xs text-gray-500 mt-1">Size ulaşabileceğimiz geçerli bir telefon numarası girin</p>
+              {errors.phone && (
+                <p className="text-xs text-red-600 mt-1">{errors.phone}</p>
+              )}
             </div>
-            
+
             <div>
-              <Label>Cinsiyet</Label>
-              <RadioGroup value={formData.gender} onValueChange={handleGenderChange} className="flex gap-4 mt-2">
-                <div className="flex items-center">
-                  <RadioGroupItem id="gender-female" value="kadın" />
-                  <Label htmlFor="gender-female" className="ml-2">Kadın</Label>
-                </div>
-                <div className="flex items-center">
-                  <RadioGroupItem id="gender-male" value="erkek" />
-                  <Label htmlFor="gender-male" className="ml-2">Erkek</Label>
-                </div>
-              </RadioGroup>
-            </div>
-            
-            <div>
-              <Label htmlFor="role">Kayıt Türü*</Label>
-              <Select defaultValue={formData.role} onValueChange={handleRoleChange}>
-                <SelectTrigger>
+              <Label htmlFor="role" className={`block ${errors.role ? "text-red-600" : ""}`}>
+                Kayıt Türü*
+              </Label>
+              <Select value={formData.role} onValueChange={handleRoleChange} required>
+                <SelectTrigger className={errors.role ? "border-red-600 focus:border-red-600 focus:ring-red-600" : ""}>
                   <SelectValue placeholder="Kayıt türü seçin" />
                 </SelectTrigger>
                 <SelectContent>
@@ -296,39 +285,33 @@ export default function ProfileSetup() {
                   <SelectItem value="admin">İşletme Sahibi</SelectItem>
                 </SelectContent>
               </Select>
+              {errors.role && (
+                <p className="text-xs text-red-600 mt-1">{errors.role}</p>
+              )}
             </div>
-            
-            {/* Conditional fields based on role */}
+
             {formData.role === "admin" && (
               <div>
-                <Label htmlFor="shopName">İşletme Adı*</Label>
+                <Label htmlFor="shopName" className={`block ${errors.shopName ? "text-red-600" : ""}`}>
+                  İşletme Adı*
+                </Label>
                 <Input
                   id="shopName"
                   name="shopName"
                   value={formData.shopName}
                   onChange={handleInputChange}
                   placeholder="Salonunuzun/işletmenizin ismini girin"
-                  required={formData.role === "admin"}
+                  className={errors.shopName ? "border-red-600 focus:border-red-600 focus:ring-red-600" : ""}
+                  required
                 />
+                {errors.shopName && (
+                  <p className="text-xs text-red-600 mt-1">{errors.shopName}</p>
+                )}
               </div>
             )}
-            
-            {formData.role === "staff" && (
-              <div>
-                <Label htmlFor="shopCode">İşletme Kodu (Opsiyonel)</Label>
-                <Input
-                  id="shopCode"
-                  name="shopCode"
-                  value={formData.shopCode}
-                  onChange={handleInputChange}
-                  placeholder="Varsa işletme kodunu girin"
-                />
-                <p className="text-xs text-gray-500 mt-1">Bağlı olduğunuz işletmenin size verdiği kodu girebilirsiniz</p>
-              </div>
-            )}
-            
-            <Button 
-              type="submit" 
+
+            <Button
+              type="submit"
               className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white"
               disabled={submitting}
             >
