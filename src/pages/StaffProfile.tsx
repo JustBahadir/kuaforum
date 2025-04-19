@@ -279,10 +279,10 @@ export default function StaffProfile() {
         return;
       }
 
-      const ortaokulDurumuStr = Array.isArray(educationData.ortaokulDurumu) ? educationData.ortaokulDurumu.join(", ") : educationData.ortaokulDurumu || "";
-      const liseDurumuStr = Array.isArray(educationData.liseDurumu) ? educationData.liseDurumu.join(", ") : educationData.liseDurumu || "";
-      const liseTuruStr = Array.isArray(educationData.liseTuru) ? educationData.liseTuru.join(", ") : educationData.liseTuru || "";
-      const meslekiBransStr = Array.isArray(educationData.meslekiBrans) ? educationData.meslekiBrans.join(", ") : educationData.meslekiBrans || "";
+      const ortaokulDurumuStr = educationData.ortaokulDurumu ?? "";
+      const liseDurumuStr = educationData.liseDurumu ?? "";
+      const liseTuruStr = educationData.liseTuru ?? "";
+      const meslekiBransStr = educationData.meslekiBrans ?? "";
 
       const dataToUpsert = [{
         personel_id: user.id,
@@ -302,10 +302,10 @@ export default function StaffProfile() {
         return;
       }
 
-      const isYerleriStr = Array.isArray(historyData.isYerleri) ? historyData.isYerleri.join(", ") : historyData.isYerleri || "";
-      const gorevPozisyonStr = Array.isArray(historyData.gorevPozisyon) ? historyData.gorevPozisyon.join(", ") : historyData.gorevPozisyon || "";
-      const belgelerStr = Array.isArray(historyData.belgeler) ? historyData.belgeler.join(", ") : historyData.belgeler || "";
-      const yarismalarStr = Array.isArray(historyData.yarismalar) ? historyData.yarismalar.join(", ") : historyData.yarismalar || "";
+      const isYerleriStr = historyData.isYerleri.join(", ");
+      const gorevPozisyonStr = historyData.gorevPozisyon.join(", ");
+      const belgelerStr = historyData.belgeler.join(", ");
+      const yarismalarStr = historyData.yarismalar.join(", ");
 
       const historyToUpsert = [{
         personel_id: user.id,
@@ -313,7 +313,7 @@ export default function StaffProfile() {
         gorevPozisyon: gorevPozisyonStr,
         belgeler: belgelerStr,
         yarismalar: yarismalarStr,
-        cv: historyData.cv,
+        cv: historyData.cv || "",
       }];
 
       const { error: historyError } = await supabase
