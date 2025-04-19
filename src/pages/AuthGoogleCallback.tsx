@@ -4,10 +4,6 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-interface ProfileIdOnly {
-  id: string;
-}
-
 export default function AuthGoogleCallback() {
   const [loading, setLoading] = useState(true);
   const [searchParams] = useSearchParams();
@@ -19,7 +15,6 @@ export default function AuthGoogleCallback() {
 
       try {
         // Supabase automatically processes the OAuth callback and sets session
-
         const { data, error: sessionError } = await supabase.auth.getSession();
 
         const session = data?.session ?? null;
@@ -36,7 +31,7 @@ export default function AuthGoogleCallback() {
           .from("profiles")
           .select("*")
           .eq("id", user.id)
-          .single();
+          .maybeSingle();
 
         if (profileError) {
           // If profile not found, create basic profile? 
@@ -64,28 +59,24 @@ export default function AuthGoogleCallback() {
 
         // Check for duplicate user on register mode (avoid duplicate OAuth signup)
         if (mode === "register") {
-          // Check if user already exists by email in profiles
-          // Note: user.email can be null in some cases; fallback logic
-          if (user.email && typeof user.email === "string") {
-            // Explicitly type the query result to ProfileIdOnly | null
-            const queryResult = await supabase
-              .from<ProfileIdOnly>("profiles")
-              .select("id")
-              .eq("email", user.email)
-              .maybeSingle();
+          // Check if user already exists by id in profiles (email not in profiles)
+          const queryResult = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("id", user.id)
+            .maybeSingle();
 
-            const existingUser = queryResult.data;
-            const existingUserError = queryResult.error;
+          const existingUser = queryResult.data;
+          const existingUserError = queryResult.error;
 
-            if (existingUserError && existingUserError.code !== "PGRST116") {
-              console.error("Kullanıcı kontrolü sırasında hata:", existingUserError);
-            }
+          if (existingUserError && existingUserError.code !== "PGRST116") {
+            console.error("Kullanıcı kontrolü sırasında hata:", existingUserError);
+          }
 
-            if (existingUser) {
-              toast.error("Bu mail zaten kayıtlı. Lütfen Giriş Yap sekmesini kullanınız.");
-              navigate("/login");
-              return;
-            }
+          if (existingUser) {
+            toast.error("Bu kullanıcı zaten kayıtlı. Lütfen Giriş Yap sekmesini kullanınız.");
+            navigate("/login");
+            return;
           }
         }
 
@@ -138,4 +129,3 @@ export default function AuthGoogleCallback() {
     </div>
   );
 }
-
