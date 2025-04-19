@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { PersonelIslemi as PersonelIslemiType, islemServisi, personelIslemleriServisi, personelServisi } from "@/lib/supabase";
@@ -15,6 +14,7 @@ import { Navigate } from "react-router-dom";
 import { formatCurrency } from "@/lib/utils";
 import { PersonnelAnalyst } from "@/components/analyst/PersonnelAnalyst";
 import { DateControlBar } from "@/components/ui/date-control-bar";
+import { createMonthCycleDateRange } from "@/utils/dateUtils";
 
 interface PersonelIslemi extends PersonelIslemiType {
   personel_id: number;
@@ -68,6 +68,22 @@ export default function Personnel() {
       personel_id: islem.personel_id as number,
       created_at: islem.created_at as string
     }));
+
+  const handleDateRangeChange = (newRange: {from: Date, to: Date}) => {
+    setDateRange(newRange);
+  };
+  
+  const handleSingleDateSelect = (date: Date) => {
+    setDateRange({
+      from: date,
+      to: date
+    });
+  };
+  
+  const handleMonthCycleChange = (day: number, cycleDate: Date) => {
+    const { from, to } = createMonthCycleDateRange(day);
+    setDateRange({ from, to });
+  };
 
   if (userRole === 'staff') {
     return <Navigate to="/shop-home" replace />;
@@ -125,7 +141,9 @@ export default function Personnel() {
                   <div className="flex gap-4 items-center">
                     <DateControlBar 
                       dateRange={dateRange}
-                      onDateRangeChange={setDateRange}
+                      onDateRangeChange={handleDateRangeChange}
+                      onSingleDateChange={handleSingleDateSelect}
+                      onMonthCycleChange={handleMonthCycleChange}
                     />
                   </div>
                   

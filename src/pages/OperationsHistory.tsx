@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,34 +31,7 @@ export default function OperationsHistory() {
         // First try to get from personel_islemleri
         const data = await personelIslemleriServisi.hepsiniGetir();
         
-        // If no data found or minimal data, try to recover operations
-        if (!data || data.length < 5) {
-          console.log("Few operations found, attempting to recover all shop operations...");
-          
-          // Call edge function to recover and retrieve all shop operations
-          const response = await fetch(`https://xkbjjcizncwkrouvoujw.supabase.co/functions/v1/recover_customer_operations`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhrYmpqY2l6bmN3a3JvdXZvdWp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzk5Njg0NzksImV4cCI6MjA1NTU0NDQ3OX0.RyaC2G1JPHUGQetAcvMgjsTp_nqBB2rZe3U-inU2osw`
-            },
-            body: JSON.stringify({ get_all_shop_operations: true })
-          });
-          
-          if (!response.ok) {
-            throw new Error(`Failed to recover operations: ${response.statusText}`);
-          }
-          
-          const result = await response.json();
-          
-          if (result.error) {
-            throw new Error(result.error);
-          }
-          
-          console.log(`Retrieved ${result.count} operations from recovery function`);
-          return result.operations || [];
-        }
-        
+        // Filter by date range
         return filterOperationsByDateRange(data);
       } catch (error) {
         console.error("Error fetching operations:", error);
@@ -117,7 +89,7 @@ export default function OperationsHistory() {
     return operations.filter(islem => {
       if (!islem.created_at) return true;
       const islemDate = new Date(islem.created_at);
-      return islemDate >= dateRange.from && islemDate <= dateRange.to;
+      return islemDate >= startOfDay(dateRange.from) && islemDate <= endOfDay(dateRange.to);
     });
   };
   
@@ -144,7 +116,6 @@ export default function OperationsHistory() {
     setDateRange({ from, to });
   };
   
-  // Function to force regenerate all operations from appointments
   const handleForceRecover = async () => {
     toast.info("İşlemler yenileniyor...");
     
@@ -176,7 +147,6 @@ export default function OperationsHistory() {
     }
   };
 
-  // Generate and download PDF report
   const downloadReport = () => {
     try {
       // Create a window object
