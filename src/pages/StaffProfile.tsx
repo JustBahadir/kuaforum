@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -11,6 +11,8 @@ interface EducationData {
   liseDurumu: string;
   liseTuru: string;
   meslekiBrans: string;
+  universiteDurumu: string;
+  universiteBolum: string;
 }
 
 interface HistoryData {
@@ -19,6 +21,10 @@ interface HistoryData {
   belgeler: string[];
   yarismalar: string[];
   cv: string;
+  _newIsYeri?: string;
+  _newGorev?: string;
+  _newBelge?: string;
+  _newYarisma?: string;
 }
 
 const arrayToString = (value: string[] | string): string => {
@@ -26,6 +32,12 @@ const arrayToString = (value: string[] | string): string => {
     return value.join(", ");
   }
   return value || "";
+};
+
+// New helper to convert comma separated string to array, removing empty entries
+const stringToArray = (str: string | null | undefined): string[] => {
+  if (!str) return [];
+  return str.split(",").map(s => s.trim()).filter(s => s.length > 0);
 };
 
 export default function StaffProfile() {
@@ -42,7 +54,9 @@ export default function StaffProfile() {
     ortaokulDurumu: "",
     liseDurumu: "",
     liseTuru: "",
-    meslekiBrans: ""
+    meslekiBrans: "",
+    universiteDurumu: "",
+    universiteBolum: "",
   });
 
   const [historyData, setHistoryData] = useState<HistoryData>({
@@ -55,118 +69,78 @@ export default function StaffProfile() {
 
   const [userRole, setUserRole] = useState("");
 
-  const handleJoinShop = async () => {
-    toast.success("İşletmeye katılma işlevi henüz uygulanmadı.");
-  };
+  // Helper function to save education data to Supabase
+  const saveEducationData = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
 
-  useEffect(() => {
-    const checkSession = async () => {
-      try {
-        const { data, error } = await supabase.auth.getSession();
+    // Convert any array fields to string (should not be arrays but just to be safe)
+    const ortaokulDurumuStr = arrayToString(educationData.ortaokulDurumu);
+    const liseDurumuStr = arrayToString(educationData.liseDurumu);
+    const liseTuruStr = arrayToString(educationData.liseTuru);
+    const meslekiBransStr = arrayToString(educationData.meslekiBrans);
 
-        if (error) throw error;
+    // Add university fields
+    const universiteDurumuStr = educationData.universiteDurumu || "";
+    const universiteBolumStr = educationData.universiteBolum || "";
 
-        if (!data.session) {
-          navigate("/login");
-          return;
-        }
+    const dataToUpsert = [{
+      personel_id: user.id,
+      ortaokulDurumu: ortaokulDurumuStr,
+      liseDurumu: liseDurumuStr,
+      liseTuru: liseTuruStr,
+      meslekiBrans: meslekiBransStr,
+      universiteDurumu: universiteDurumuStr,
+      universiteBolum: universiteBolumStr,
+    }];
 
-        setUser(data.session.user);
+    const { error } = await supabase
+      .from("staff_education")
+      .upsert(dataToUpsert, { onConflict: ["personel_id"] });
 
-        const role = data.session.user.user_metadata?.role;
-        setUserRole(role);
-
-        if (role === "admin") {
-          navigate("/shop-home");
-          return;
-        }
-
-        const { data: profileData, error: profileError } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", data.session.user.id)
-          .maybeSingle();
-
-        if (profileError && profileError.code !== "PGRST116") {
-          throw profileError;
-        }
-
-        setProfile(profileData || {});
-
-        const { data: educationRes } = await supabase
-          .from("staff_education")
-          .select("*")
-          .eq("personel_id", data.session.user.id)
-          .maybeSingle();
-
-        setEducationData({
-          ortaokulDurumu: typeof educationRes?.ortaokulDurumu === "string" ? educationRes.ortaokulDurumu : "",
-          liseDurumu: typeof educationRes?.liseDurumu === "string" ? educationRes.liseDurumu : "",
-          liseTuru: typeof educationRes?.liseTuru === "string" ? educationRes.liseTuru : "",
-          meslekiBrans: typeof educationRes?.meslekiBrans === "string" ? educationRes.meslekiBrans : "",
-        });
-
-        const { data: historyRes } = await supabase
-          .from("staff_history")
-          .select("*")
-          .eq("personel_id", data.session.user.id)
-          .maybeSingle();
-
-        const toArray = (str: string | null | undefined): string[] => {
-          if (!str) return [];
-          return str.split(",").map(s => s.trim()).filter(s => s.length > 0);
-        };
-
-        setHistoryData({
-          isYerleri: toArray(historyRes?.isYerleri),
-          gorevPozisyon: toArray(historyRes?.gorevPozisyon),
-          belgeler: toArray(historyRes?.belgeler),
-          yarismalar: toArray(historyRes?.yarismalar),
-          cv: typeof historyRes?.cv === "string" ? historyRes.cv : "",
-        });
-
-        if (role === "staff") {
-          const { data: personelData } = await supabase
-            .from("personel")
-            .select("dukkan_id, id")
-            .eq("auth_id", data.session.user.id)
-            .maybeSingle();
-
-          if (personelData?.dukkan_id) {
-            navigate("/shop-home");
-            return;
-          }
-        } else {
-          navigate("/customer-dashboard");
-          return;
-        }
-      } catch (error) {
-        console.error("Profil bilgileri alınırken hata:", error);
-        toast.error("Profil bilgileri alınamadı.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkSession();
-  }, [navigate]);
-
-  const handleLogout = async () => {
-    try {
-      await supabase.auth.signOut();
-      navigate("/login");
-    } catch (error) {
-      console.error("Çıkış yapılırken hata:", error);
-      toast.error("Çıkış yapılırken bir hata oluştu.");
+    setLoading(false);
+    if (error) {
+      toast.error("Eğitim bilgileri kaydedilemedi.");
+    } else {
+      toast.success("Eğitim bilgileri kaydedildi.");
     }
-  };
+  }, [educationData, user]);
+
+  // Helper function to save history data to Supabase
+  // This will be called automatically when history changes
+  const saveHistoryData = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
+
+    const dataToUpsert = [{
+      personel_id: user.id,
+      isYerleri: historyData.isYerleri.join(", "),
+      gorevPozisyon: historyData.gorevPozisyon.join(", "),
+      belgeler: historyData.belgeler.join(", "),
+      yarismalar: historyData.yarismalar.join(", "),
+      cv: historyData.cv || "",
+    }];
+
+    const { error } = await supabase
+      .from("staff_history")
+      .upsert(dataToUpsert, { onConflict: ["personel_id"] });
+
+    setLoading(false);
+    if (error) {
+      toast.error("Geçmiş bilgileri kaydedilemedi.");
+    } else {
+      toast.success("Geçmiş bilgileri kaydedildi.");
+    }
+  }, [historyData, user]);
+
+  // When editing history arrays (workplaces, docs, competitions), call saveHistoryData automatically after updating state
 
   const addWorkplaceWithPosition = () => {
-    setHistoryData(prev => ({
-      ...prev,
-      isYerleri: [...prev.isYerleri, ""],
-      gorevPozisyon: [...prev.gorevPozisyon, ""]
-    }));
+    setHistoryData(prev => {
+      const newIsYerleri = [...prev.isYerleri, ""];
+      const newGorevPozisyon = [...prev.gorevPozisyon, ""];
+      return { ...prev, isYerleri: newIsYerleri, gorevPozisyon: newGorevPozisyon };
+    });
   };
 
   const updateWorkplaceAtIndex = (index: number, value: string) => {
@@ -179,19 +153,19 @@ export default function StaffProfile() {
 
   const updatePositionAtIndex = (index: number, value: string) => {
     setHistoryData(prev => {
-      const newPos = [...prev.gorevPozisyon];
-      newPos[index] = value;
-      return { ...prev, gorevPozisyon: newPos };
+      const newGorevPozisyon = [...prev.gorevPozisyon];
+      newGorevPozisyon[index] = value;
+      return { ...prev, gorevPozisyon: newGorevPozisyon };
     });
   };
 
   const removeWorkplaceAtIndex = (index: number) => {
     setHistoryData(prev => {
       const newIsYerleri = [...prev.isYerleri];
-      const newPos = [...prev.gorevPozisyon];
+      const newGorevPozisyon = [...prev.gorevPozisyon];
       newIsYerleri.splice(index, 1);
-      newPos.splice(index, 1);
-      return { ...prev, isYerleri: newIsYerleri, gorevPozisyon: newPos };
+      newGorevPozisyon.splice(index, 1);
+      return { ...prev, isYerleri: newIsYerleri, gorevPozisyon: newGorevPozisyon };
     });
   };
 
@@ -241,21 +215,86 @@ export default function StaffProfile() {
     });
   };
 
+  // Use effects to autosave history data on changes to the arrays or cv
+  useEffect(() => {
+    if (user) {
+      // Avoid spamming save requests during initial loading or rapid changes
+      const delayDebounceFn = setTimeout(() => {
+        saveHistoryData();
+      }, 500);
+
+      return () => clearTimeout(delayDebounceFn);
+    }
+  }, [historyData.isYerleri, historyData.gorevPozisyon, historyData.belgeler, historyData.yarismalar, historyData.cv, saveHistoryData, user]);
+
+  // Handle education changes with progressive form logic and saving on changes
   const handleEducationChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+
     setEducationData(prev => {
       const newData = { ...prev, [name]: value };
 
-      if (name === "liseTuru" && !["cok_programli_anadolu", "meslek_ve_teknik_anadolu"].includes(value)) {
+      // Reset dependent fields if necessary
+      if (name === "ortaokulDurumu" && value !== "bitirdi") {
+        newData.liseDurumu = "";
+        newData.liseTuru = "";
         newData.meslekiBrans = "";
+        newData.universiteDurumu = "";
+        newData.universiteBolum = "";
+      } else if (name === "liseDurumu") {
+        if (value !== "okuyor" && value !== "bitirdi") {
+          newData.liseTuru = "";
+          newData.meslekiBrans = "";
+          newData.universiteDurumu = "";
+          newData.universiteBolum = "";
+        }
+        if (value !== "bitirdi") {
+          newData.universiteDurumu = "";
+          newData.universiteBolum = "";
+        }
+      } else if (name === "liseTuru") {
+        if (!["cok_programli_anadolu", "meslek_ve_teknik_anadolu"].includes(value)) {
+          newData.meslekiBrans = "";
+        }
+      } else if (name === "universiteDurumu") {
+        if (value !== "okuyor" && value !== "bitirdi") {
+          newData.universiteBolum = "";
+        }
       }
+
       return newData;
     });
   };
 
+  // Use effect to save education data when educationData changes (debounced)
+  useEffect(() => {
+    if (user) {
+      const delayDebounce = setTimeout(() => {
+        saveEducationData();
+      }, 500);
+
+      return () => clearTimeout(delayDebounce);
+    }
+  }, [educationData, saveEducationData, user]);
+
+  // Handle CV change
   const handleCvChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const { value } = e.target;
     setHistoryData(prev => ({ ...prev, cv: value }));
+  };
+
+  const handleJoinShop = async () => {
+    toast.success("İşletmeye katılma işlevi henüz uygulanmadı.");
+  };
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      navigate("/login");
+    } catch (error) {
+      console.error("Çıkış yapılırken hata:", error);
+      toast.error("Çıkış yapılırken bir hata oluştu.");
+    }
   };
 
   const saveProfileEdits = async () => {
@@ -291,6 +330,8 @@ export default function StaffProfile() {
       const meslekiBransStr: string = Array.isArray(educationData.meslekiBrans)
         ? educationData.meslekiBrans.join(", ")
         : (educationData.meslekiBrans ?? "");
+      const universiteDurumuStr: string = educationData.universiteDurumu || "";
+      const universiteBolumStr: string = educationData.universiteBolum || "";
 
       const dataToUpsert = [{
         personel_id: user.id,
@@ -298,6 +339,8 @@ export default function StaffProfile() {
         liseDurumu: liseDurumuStr,
         liseTuru: liseTuruStr,
         meslekiBrans: meslekiBransStr,
+        universiteDurumu: universiteDurumuStr,
+        universiteBolum: universiteBolumStr,
       }];
 
       const { error: educationError } = await supabase
@@ -344,6 +387,95 @@ export default function StaffProfile() {
     }
   };
 
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+
+        if (error) throw error;
+
+        if (!data.session) {
+          navigate("/login");
+          return;
+        }
+
+        setUser(data.session.user);
+
+        const role = data.session.user.user_metadata?.role;
+        setUserRole(role);
+
+        if (role === "admin") {
+          navigate("/shop-home");
+          return;
+        }
+
+        const { data: profileData, error: profileError } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", data.session.user.id)
+          .maybeSingle();
+
+        if (profileError && profileError.code !== "PGRST116") {
+          throw profileError;
+        }
+
+        setProfile(profileData || {});
+
+        const { data: educationRes } = await supabase
+          .from("staff_education")
+          .select("*")
+          .eq("personel_id", data.session.user.id)
+          .maybeSingle();
+
+        setEducationData({
+          ortaokulDurumu: typeof educationRes?.ortaokulDurumu === "string" ? educationRes.ortaokulDurumu : "",
+          liseDurumu: typeof educationRes?.liseDurumu === "string" ? educationRes.liseDurumu : "",
+          liseTuru: typeof educationRes?.liseTuru === "string" ? educationRes.liseTuru : "",
+          meslekiBrans: typeof educationRes?.meslekiBrans === "string" ? educationRes.meslekiBrans : "",
+          universiteDurumu: typeof educationRes?.universiteDurumu === "string" ? educationRes.universiteDurumu : "",
+          universiteBolum: typeof educationRes?.universiteBolum === "string" ? educationRes.universiteBolum : "",
+        });
+
+        const { data: historyRes } = await supabase
+          .from("staff_history")
+          .select("*")
+          .eq("personel_id", data.session.user.id)
+          .maybeSingle();
+
+        setHistoryData({
+          isYerleri: stringToArray(historyRes?.isYerleri),
+          gorevPozisyon: stringToArray(historyRes?.gorevPozisyon),
+          belgeler: stringToArray(historyRes?.belgeler),
+          yarismalar: stringToArray(historyRes?.yarismalar),
+          cv: typeof historyRes?.cv === "string" ? historyRes.cv : "",
+        });
+
+        if (role === "staff") {
+          const { data: personelData } = await supabase
+            .from("personel")
+            .select("dukkan_id, id")
+            .eq("auth_id", data.session.user.id)
+            .maybeSingle();
+
+          if (personelData?.dukkan_id) {
+            navigate("/shop-home");
+            return;
+          }
+        } else {
+          navigate("/customer-dashboard");
+          return;
+        }
+      } catch (error) {
+        console.error("Profil bilgileri alınırken hata:", error);
+        toast.error("Profil bilgileri alınamadı.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkSession();
+  }, [navigate]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -366,6 +498,11 @@ export default function StaffProfile() {
     { label: "Mesleki ve Teknik Anadolu Lisesi", value: "meslek_ve_teknik_anadolu" },
     { label: "Akşam Lisesi", value: "aksam" },
     { label: "Açık Öğretim Lisesi", value: "acik_ogretim" },
+  ];
+
+  const universiteOptions = [
+    { label: "Saç Bakımı ve Güzellik Hizmetleri", value: "sac_bakim" },
+    { label: "Diğer", value: "diger" },
   ];
 
   return (
@@ -534,243 +671,271 @@ export default function StaffProfile() {
                             </select>
                           </div>
                         </div>
-                        <Button type="submit">Kaydet</Button>
-                        <Button type="button" variant="outline" onClick={() => setEditMode(false)}>İptal</Button>
+                        <div className="flex space-x-3">
+                          <Button type="submit">Kaydet</Button>
+                          <Button type="button" variant="outline" onClick={() => setEditMode(false)}>İptal</Button>
+                        </div>
                       </form>
                     )}
                   </>
                 )}
 
                 {activeTab === "education" && (
-                  <>
-                    {!editMode ? (
-                      <div className="space-y-4">
-                        <p><strong>Ortaokul Durumu:</strong> {educationData.ortaokulDurumu || "Bilgi yok"}</p>
-                        <p><strong>Lise Durumu:</strong> {educationData.liseDurumu || "Bilgi yok"}</p>
-                        <p><strong>Lise Türü:</strong> {educationData.liseTuru || "Bilgi yok"}</p>
-                        {["cok_programli_anadolu", "meslek_ve_teknik_anadolu"].includes(educationData.liseTuru) && (
-                          <p><strong>Mesleki Branş:</strong> {educationData.meslekiBrans || "Bilgi yok"}</p>
-                        )}
-                        <Button onClick={() => setEditMode(true)}>Eğitim Bilgilerini Düzenle</Button>
+                  <form className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Ortaokul Durumu */}
+                      <div>
+                        <label htmlFor="ortaokulDurumu" className="block text-sm font-medium">Ortaokul Durumu</label>
+                        <select
+                          id="ortaokulDurumu"
+                          name="ortaokulDurumu"
+                          value={educationData.ortaokulDurumu}
+                          onChange={handleEducationChange}
+                          className="w-full rounded border border-gray-300 px-3 py-2"
+                        >
+                          <option value="">Seçiniz</option>
+                          <option value="bitirdi">Bitirdi</option>
+                          <option value="okuyor">Okuyor</option>
+                          <option value="bitirmedi">Bitirmedi</option>
+                        </select>
                       </div>
-                    ) : (
-                      <form
-                        className="space-y-4"
-                        onSubmit={(e) => {
-                          e.preventDefault();
-                          saveProfileEdits();
-                        }}
-                      >
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <label htmlFor="ortaokulDurumu" className="block text-sm font-medium">Ortaokul Durumu</label>
-                            <select
-                              id="ortaokulDurumu"
-                              name="ortaokulDurumu"
-                              value={educationData.ortaokulDurumu}
-                              onChange={handleEducationChange}
-                              className="w-full rounded border border-gray-300 px-3 py-2"
-                            >
-                              <option value="">Seçiniz</option>
-                              <option value="bitirdi">Bitirdi</option>
-                              <option value="okuyor">Okuyor</option>
-                              <option value="bitirmedi">Bitirmedi</option>
-                            </select>
-                          </div>
 
-                          <div>
-                            <label htmlFor="liseDurumu" className="block text-sm font-medium">Lise Durumu</label>
-                            <select
-                              id="liseDurumu"
-                              name="liseDurumu"
-                              value={educationData.liseDurumu}
-                              onChange={handleEducationChange}
-                              className="w-full rounded border border-gray-300 px-3 py-2"
-                            >
-                              <option value="">Seçiniz</option>
-                              <option value="bitirdi">Bitirdi</option>
-                              <option value="okuyor">Okuyor</option>
-                              <option value="bitirmedi">Bitirmedi</option>
-                            </select>
-                          </div>
-
-                          <div>
-                            <label htmlFor="liseTuru" className="block text-sm font-medium">Lise Türü</label>
-                            <select
-                              id="liseTuru"
-                              name="liseTuru"
-                              value={educationData.liseTuru}
-                              onChange={handleEducationChange}
-                              className="w-full rounded border border-gray-300 px-3 py-2"
-                            >
-                              <option value="">Seçiniz</option>
-                              {liseTuruOptions.map(opt => (
-                                <option key={opt.value} value={opt.value}>{opt.label}</option>
-                              ))}
-                            </select>
-                          </div>
-
-                          {["cok_programli_anadolu", "meslek_ve_teknik_anadolu"].includes(educationData.liseTuru) && (
-                            <div>
-                              <label htmlFor="meslekiBrans" className="block text-sm font-medium">Mesleki Branş</label>
-                              <input
-                                type="text"
-                                id="meslekiBrans"
-                                name="meslekiBrans"
-                                value={educationData.meslekiBrans}
-                                onChange={handleEducationChange}
-                                className="w-full rounded border border-gray-300 px-3 py-2"
-                                placeholder="Örn: Kuaförlük, Güzellik Uzmanlığı"
-                              />
-                            </div>
-                          )}
+                      {/* Lise Durumu */}
+                      {(educationData.ortaokulDurumu === "bitirdi" || educationData.ortaokulDurumu === "") && (
+                        <div>
+                          <label htmlFor="liseDurumu" className="block text-sm font-medium">Lise Durumu</label>
+                          <select
+                            id="liseDurumu"
+                            name="liseDurumu"
+                            value={educationData.liseDurumu}
+                            onChange={handleEducationChange}
+                            className="w-full rounded border border-gray-300 px-3 py-2"
+                            disabled={!educationData.ortaokulDurumu || educationData.ortaokulDurumu !== "bitirdi"}
+                          >
+                            <option value="">Seçiniz</option>
+                            <option value="bitirdi">Bitirdi</option>
+                            <option value="okuyor">Okuyor</option>
+                            <option value="bitirmedi">Bitirmedi</option>
+                          </select>
                         </div>
+                      )}
 
-                        <Button type="submit">Kaydet</Button>
-                        <Button type="button" variant="outline" onClick={() => setEditMode(false)}>
-                          İptal
-                        </Button>
-                      </form>
-                    )}
-                  </>
+                      {/* Lise Türü */}
+                      {(educationData.liseDurumu === "bitirdi" || educationData.liseDurumu === "okuyor") && (
+                        <div>
+                          <label htmlFor="liseTuru" className="block text-sm font-medium">Lise Türü</label>
+                          <select
+                            id="liseTuru"
+                            name="liseTuru"
+                            value={educationData.liseTuru}
+                            onChange={handleEducationChange}
+                            className="w-full rounded border border-gray-300 px-3 py-2"
+                          >
+                            <option value="">Seçiniz</option>
+                            {liseTuruOptions.map(opt => (
+                              <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+
+                      {/* Mesleki Branş */}
+                      {["cok_programli_anadolu", "meslek_ve_teknik_anadolu"].includes(educationData.liseTuru) && (
+                        <div>
+                          <label htmlFor="meslekiBrans" className="block text-sm font-medium">Mesleki Branş</label>
+                          <input
+                            type="text"
+                            id="meslekiBrans"
+                            name="meslekiBrans"
+                            value={educationData.meslekiBrans}
+                            onChange={handleEducationChange}
+                            className="w-full rounded border border-gray-300 px-3 py-2"
+                            placeholder="Örn: Kuaförlük, Güzellik Uzmanlığı"
+                          />
+                        </div>
+                      )}
+
+                      {/* Üniversite Durumu */}
+                      {educationData.liseDurumu === "bitirdi" && (
+                        <div>
+                          <label htmlFor="universiteDurumu" className="block text-sm font-medium">Üniversite Durumu</label>
+                          <select
+                            id="universiteDurumu"
+                            name="universiteDurumu"
+                            value={educationData.universiteDurumu}
+                            onChange={handleEducationChange}
+                            className="w-full rounded border border-gray-300 px-3 py-2"
+                          >
+                            <option value="">Seçiniz</option>
+                            <option value="okuyor">Okuyor</option>
+                            <option value="bitirdi">Bitirdi</option>
+                            <option value="bitirmedi">Bitirmedi</option>
+                          </select>
+                        </div>
+                      )}
+
+                      {/* Üniversite Bölüm */}
+                      {(educationData.universiteDurumu === "okuyor" || educationData.universiteDurumu === "bitirdi") && (
+                        <div>
+                          <label htmlFor="universiteBolum" className="block text-sm font-medium">Bölüm</label>
+                          <select
+                            id="universiteBolum"
+                            name="universiteBolum"
+                            value={educationData.universiteBolum}
+                            onChange={handleEducationChange}
+                            className="w-full rounded border border-gray-300 px-3 py-2"
+                          >
+                            <option value="">Seçiniz</option>
+                            {universiteOptions.map(opt => (
+                              <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                    </div>
+                    {/* No Save button needed as saving is automatic on change */}
+                  </form>
                 )}
 
                 {activeTab === "history" && (
                   <>
-                    {!editMode ? (
-                      <div className="space-y-6">
-                        <div>
-                          <strong>İş Yerleri ve Görevler</strong>
-                          {historyData.isYerleri.length === 0 && <p>Bilgi yok</p>}
-                          <ul className="list-disc pl-5">
-                            {historyData.isYerleri.map((yeri, i) => (
-                              <li key={`workplace-${i}`}>
-                                {yeri} - {historyData.gorevPozisyon[i] || "-"}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                        <div>
-                          <strong>Belgeler</strong>
-                          {historyData.belgeler.length === 0 && <p>Bilgi yok</p>}
-                          <ul className="list-disc pl-5">
-                            {historyData.belgeler.map((item, i) => (
-                              <li key={`document-${i}`}>{item}</li>
-                            ))}
-                          </ul>
-                        </div>
-                        <div>
-                          <strong>Yarışmalar</strong>
-                          {historyData.yarismalar.length === 0 && <p>Bilgi yok</p>}
-                          <ul className="list-disc pl-5">
-                            {historyData.yarismalar.map((item, i) => (
-                              <li key={`competition-${i}`}>{item}</li>
-                            ))}
-                          </ul>
-                        </div>
-                        <div>
-                          <strong>CV</strong>
-                          <p>{historyData.cv || "Bilgi yok"}</p>
-                        </div>
-                        <Button onClick={() => setEditMode(true)}>Geçmiş Bilgileri Düzenle</Button>
-                      </div>
-                    ) : (
-                      <form 
-                        onSubmit={(e) => { e.preventDefault(); saveProfileEdits(); }} 
-                        className="space-y-6"
-                      >
-                        <div>
-                          <strong>İş Yerleri ve Görevler</strong>
+                      <div>
+                        <strong>İş Yerleri ve Görevler</strong>
+                        {historyData.isYerleri.length === 0 && <p>Bilgi yok</p>}
+                        <ul className="list-disc pl-5 mb-3">
                           {historyData.isYerleri.map((yeri, i) => (
-                            <div key={`workplace-entry-${i}`} className="flex gap-2 items-center mb-2">
-                              <input
-                                type="text"
-                                placeholder="İş yeri"
-                                className="flex-1 rounded border border-gray-300 px-3 py-2"
-                                value={historyData.isYerleri[i] || ""}
-                                onChange={(e) => updateWorkplaceAtIndex(i, e.target.value)}
-                                required
-                              />
-                              <input
-                                type="text"
-                                placeholder="Görev / Pozisyon"
-                                className="flex-1 rounded border border-gray-300 px-3 py-2"
-                                value={historyData.gorevPozisyon[i] || ""}
-                                onChange={(e) => updatePositionAtIndex(i, e.target.value)}
-                                required
-                              />
+                            <li key={`workplace-${i}`} className="flex gap-2 items-center">
+                              <span className="flex-1">{yeri}</span>
+                              <span className="flex-1">{historyData.gorevPozisyon[i] || "-"}</span>
                               <button type="button" className="text-destructive" onClick={() => removeWorkplaceAtIndex(i)} aria-label="İş yeri sil">
                                 Sil
                               </button>
-                            </div>
+                            </li>
                           ))}
-                          <Button type="button" onClick={addWorkplaceWithPosition} size="sm">
+                        </ul>
+                        <div className="mb-4">
+                          <input
+                            type="text"
+                            placeholder="İş yeri"
+                            className="mr-2 rounded border border-gray-300 px-3 py-2"
+                            value={historyData._newIsYeri || ""}
+                            onChange={(e) => setHistoryData(prev => ({ ...prev, _newIsYeri: e.target.value }))}
+                          />
+                          <input
+                            type="text"
+                            placeholder="Görev / Pozisyon"
+                            className="mr-2 rounded border border-gray-300 px-3 py-2"
+                            value={historyData._newGorev || ""}
+                            onChange={(e) => setHistoryData(prev => ({ ...prev, _newGorev: e.target.value }))}
+                          />
+                          <Button
+                            type="button"
+                            onClick={() => {
+                              if (historyData._newIsYeri && historyData._newGorev) {
+                                setHistoryData(prev => ({
+                                  ...prev,
+                                  isYerleri: [...prev.isYerleri, prev._newIsYeri || ""],
+                                  gorevPozisyon: [...prev.gorevPozisyon, prev._newGorev || ""],
+                                  _newIsYeri: "",
+                                  _newGorev: ""
+                                }));
+                              }
+                            }}
+                            size="sm"
+                          >
                             İş Yeri Ekle
                           </Button>
                         </div>
+                      </div>
 
-                        <div>
-                          <strong>Belgeler</strong>
-                          {historyData.belgeler.map((belge, i) => (
-                            <div key={`document-entry-${i}`} className="flex gap-2 items-center mb-2">
-                              <input
-                                type="text"
-                                placeholder="Belge adı"
-                                className="flex-1 rounded border border-gray-300 px-3 py-2"
-                                value={belge}
-                                onChange={(e) => updateBelgeAtIndex(i, e.target.value)}
-                                required
-                              />
+                      <div>
+                        <strong>Belgeler</strong>
+                        {historyData.belgeler.length === 0 && <p>Bilgi yok</p>}
+                        <ul className="list-disc pl-5 mb-3">
+                          {historyData.belgeler.map((item, i) => (
+                            <li key={`document-${i}`} className="flex items-center justify-between">
+                              <span>{item}</span>
                               <button type="button" className="text-destructive" onClick={() => removeBelgeAtIndex(i)} aria-label="Belge sil">
                                 Sil
                               </button>
-                            </div>
+                            </li>
                           ))}
-                          <Button type="button" onClick={addBelge} size="sm">
+                        </ul>
+                        <div className="mb-4 flex items-center gap-2">
+                          <input
+                            type="text"
+                            placeholder="Belge adı"
+                            className="flex-1 rounded border border-gray-300 px-3 py-2"
+                            value={historyData._newBelge || ""}
+                            onChange={(e) => setHistoryData(prev => ({ ...prev, _newBelge: e.target.value }))}
+                          />
+                          <Button
+                            type="button"
+                            onClick={() => {
+                              if (historyData._newBelge) {
+                                setHistoryData(prev => ({
+                                  ...prev,
+                                  belgeler: [...prev.belgeler, prev._newBelge || ""],
+                                  _newBelge: ""
+                                }));
+                              }
+                            }}
+                            size="sm"
+                          >
                             Belge Ekle
                           </Button>
                         </div>
+                      </div>
 
-                        <div>
-                          <strong>Yarışmalar</strong>
-                          {historyData.yarismalar.map((yarisma, i) => (
-                            <div key={`competition-entry-${i}`} className="flex gap-2 items-center mb-2">
-                              <input
-                                type="text"
-                                placeholder="Yarışma adı"
-                                className="flex-1 rounded border border-gray-300 px-3 py-2"
-                                value={yarisma}
-                                onChange={(e) => updateYarismalarAtIndex(i, e.target.value)}
-                                required
-                              />
+                      <div>
+                        <strong>Yarışmalar</strong>
+                        {historyData.yarismalar.length === 0 && <p>Bilgi yok</p>}
+                        <ul className="list-disc pl-5 mb-3">
+                          {historyData.yarismalar.map((item, i) => (
+                            <li key={`competition-${i}`} className="flex items-center justify-between">
+                              <span>{item}</span>
                               <button type="button" className="text-destructive" onClick={() => removeYarismalarAtIndex(i)} aria-label="Yarışma sil">
                                 Sil
                               </button>
-                            </div>
+                            </li>
                           ))}
-                          <Button type="button" onClick={addYarismalar} size="sm">
+                        </ul>
+                        <div className="mb-4 flex items-center gap-2">
+                          <input
+                            type="text"
+                            placeholder="Yarışma adı"
+                            className="flex-1 rounded border border-gray-300 px-3 py-2"
+                            value={historyData._newYarisma || ""}
+                            onChange={(e) => setHistoryData(prev => ({ ...prev, _newYarisma: e.target.value }))}
+                          />
+                          <Button
+                            type="button"
+                            onClick={() => {
+                              if (historyData._newYarisma) {
+                                setHistoryData(prev => ({
+                                  ...prev,
+                                  yarismalar: [...prev.yarismalar, prev._newYarisma || ""],
+                                  _newYarisma: ""
+                                }));
+                              }
+                            }}
+                            size="sm"
+                          >
                             Yarışma Ekle
                           </Button>
                         </div>
-
-                        <div>
-                          <label htmlFor="cv" className="block font-medium mb-1">CV</label>
-                          <textarea
-                            id="cv"
-                            value={historyData.cv}
-                            onChange={handleCvChange}
-                            className="w-full rounded border border-gray-300 px-3 py-2"
-                            rows={5}
-                            placeholder="Serbest metin"
-                          />
-                        </div>
-
-                        <Button type="submit">Kaydet</Button>
-                        <Button type="button" variant="outline" onClick={() => setEditMode(false)}>
-                          İptal
-                        </Button>
-                      </form>
-                    )}
+                      </div>
+                      <div>
+                        <label htmlFor="cv" className="block font-medium mb-1">CV</label>
+                        <textarea
+                          id="cv"
+                          value={historyData.cv}
+                          onChange={handleCvChange}
+                          className="w-full rounded border border-gray-300 px-3 py-2"
+                          rows={5}
+                          placeholder="Serbest metin"
+                        />
+                      </div>
                   </>
                 )}
 
