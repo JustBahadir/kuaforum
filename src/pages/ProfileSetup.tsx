@@ -79,7 +79,7 @@ export default function ProfileSetup() {
           profileData.gender &&
           profileData.shopname // check shopname presence
         ) {
-          if (profileData.role === "admin") {
+          if (profileData.role === "isletmeci") {
             navigate("/shop-home");
           } else if (profileData.role === "staff") {
             navigate("/staff-profile");
@@ -170,8 +170,7 @@ export default function ProfileSetup() {
         last_name: formData.lastName,
         phone: formData.phone,
         gender: formData.gender || null,
-        role: formData.role === "admin" ? "admin" : "staff",
-        // Explicitly set shopname to null if role is not admin (optional)
+        role: formData.role === "admin" ? "isletmeci" : "staff",
         shopname: formData.role === "admin" ? formData.shopName.trim() : null,
       };
 
@@ -439,4 +438,3 @@ export default function ProfileSetup() {
     </div>
   );
 }
-
