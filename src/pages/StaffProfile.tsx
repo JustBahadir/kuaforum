@@ -866,4 +866,4 @@ function WorkplacesPositionsSection({
   const [saving, setSaving] = useState(false);
 
   const startAdd = () => {
-    setAdding(true);
+    setAdding(
