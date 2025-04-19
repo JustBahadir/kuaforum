@@ -599,6 +599,105 @@ export type Database = {
           },
         ]
       }
+      staff_education: {
+        Row: {
+          created_at: string | null
+          lisedurumu: string
+          liseturu: string
+          meslekibrans: string
+          ortaokuldurumu: string
+          personel_id: number
+          universitebolum: string
+          universitedurumu: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          lisedurumu?: string
+          liseturu?: string
+          meslekibrans?: string
+          ortaokuldurumu?: string
+          personel_id: number
+          universitebolum?: string
+          universitedurumu?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          lisedurumu?: string
+          liseturu?: string
+          meslekibrans?: string
+          ortaokuldurumu?: string
+          personel_id?: number
+          universitebolum?: string
+          universitedurumu?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_personel"
+            columns: ["personel_id"]
+            isOneToOne: true
+            referencedRelation: "personel"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_personel"
+            columns: ["personel_id"]
+            isOneToOne: true
+            referencedRelation: "personel_performans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_history: {
+        Row: {
+          belgeler: string
+          created_at: string | null
+          cv: string
+          gorevpozisyon: string
+          isyerleri: string
+          personel_id: number
+          updated_at: string | null
+          yarismalar: string
+        }
+        Insert: {
+          belgeler?: string
+          created_at?: string | null
+          cv?: string
+          gorevpozisyon?: string
+          isyerleri?: string
+          personel_id: number
+          updated_at?: string | null
+          yarismalar?: string
+        }
+        Update: {
+          belgeler?: string
+          created_at?: string | null
+          cv?: string
+          gorevpozisyon?: string
+          isyerleri?: string
+          personel_id?: number
+          updated_at?: string | null
+          yarismalar?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_personel_history"
+            columns: ["personel_id"]
+            isOneToOne: true
+            referencedRelation: "personel"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_personel_history"
+            columns: ["personel_id"]
+            isOneToOne: true
+            referencedRelation: "personel_performans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       personel_performans: {

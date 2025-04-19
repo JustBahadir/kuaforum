@@ -8,17 +8,17 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
 interface EducationData {
-  ortaokulDurumu: string;
-  liseDurumu: string;
-  liseTuru: string;
-  meslekiBrans: string;
-  universiteDurumu: string;
-  universiteBolum: string;
+  ortaokuldurumu: string;
+  lisedurumu: string;
+  liseturu: string;
+  meslekibrans: string;
+  universitedurumu: string;
+  universitebolum: string;
 }
 
 interface HistoryData {
-  isYerleri: string[];
-  gorevPozisyon: string[];
+  isyerleri: string[];
+  gorevpozisyon: string[];
   belgeler: string[];
   yarismalar: string[];
   cv: string;
@@ -52,17 +52,17 @@ export default function StaffProfile() {
   const [editMode, setEditMode] = useState(false);
 
   const [educationData, setEducationData] = useState<EducationData>({
-    ortaokulDurumu: "",
-    liseDurumu: "",
-    liseTuru: "",
-    meslekiBrans: "",
-    universiteDurumu: "",
-    universiteBolum: "",
+    ortaokuldurumu: "",
+    lisedurumu: "",
+    liseturu: "",
+    meslekibrans: "",
+    universitedurumu: "",
+    universitebolum: "",
   });
 
   const [historyData, setHistoryData] = useState<HistoryData>({
-    isYerleri: [],
-    gorevPozisyon: [],
+    isyerleri: [],
+    gorevpozisyon: [],
     belgeler: [],
     yarismalar: [],
     cv: ""
@@ -75,31 +75,14 @@ export default function StaffProfile() {
     if (!user) return;
     setLoading(true);
 
-    // Convert arrays to strings before upsert (some fields might be arrays)
-    const ortaokulDurumuStr = Array.isArray(educationData.ortaokulDurumu)
-      ? educationData.ortaokulDurumu.join(", ")
-      : educationData.ortaokulDurumu;
-    const liseDurumuStr = Array.isArray(educationData.liseDurumu)
-      ? educationData.liseDurumu.join(", ")
-      : educationData.liseDurumu;
-    const liseTuruStr = Array.isArray(educationData.liseTuru)
-      ? educationData.liseTuru.join(", ")
-      : educationData.liseTuru;
-    const meslekiBransStr = Array.isArray(educationData.meslekiBrans)
-      ? educationData.meslekiBrans.join(", ")
-      : educationData.meslekiBrans;
-
-    const universiteDurumuStr = educationData.universiteDurumu || "";
-    const universiteBolumStr = educationData.universiteBolum || "";
-
     const dataToUpsert = [{
       personel_id: user.id,
-      ortaokulDurumu: ortaokulDurumuStr,
-      liseDurumu: liseDurumuStr,
-      liseTuru: liseTuruStr,
-      meslekiBrans: meslekiBransStr,
-      universiteDurumu: universiteDurumuStr,
-      universiteBolum: universiteBolumStr,
+      ortaokuldurumu: educationData.ortaokuldurumu,
+      lisedurumu: educationData.lisedurumu,
+      liseturu: educationData.liseturu,
+      meslekibrans: educationData.meslekibrans,
+      universitedurumu: educationData.universitedurumu,
+      universitebolum: educationData.universitebolum,
     }];
 
     const { error } = await supabase
@@ -121,8 +104,8 @@ export default function StaffProfile() {
 
     const dataToUpsert = [{
       personel_id: user.id,
-      isYerleri: historyData.isYerleri.join(", "),
-      gorevPozisyon: historyData.gorevPozisyon.join(", "),
+      isyerleri: historyData.isyerleri.join(", "),
+      gorevpozisyon: historyData.gorevpozisyon.join(", "),
       belgeler: historyData.belgeler.join(", "),
       yarismalar: historyData.yarismalar.join(", "),
       cv: historyData.cv || "",
@@ -140,27 +123,25 @@ export default function StaffProfile() {
     }
   }, [historyData, user]);
 
-  // Add and remove handlers for history data (workplaces, positions, documents, competitions) with instant list update and auto save
-
   const addWorkplaceWithPosition = () => {
     if (!historyData._newIsYeri || !historyData._newGorev) {
       toast.error("İş yeri ve görev giriniz.");
       return;
     }
     setHistoryData(prev => {
-      const newIsYerleri = [...prev.isYerleri, prev._newIsYeri || ""];
-      const newGorevPozisyon = [...prev.gorevPozisyon, prev._newGorev || ""];
-      return { ...prev, isYerleri: newIsYerleri, gorevPozisyon: newGorevPozisyon, _newIsYeri: "", _newGorev: "" };
+      const newIsYerleri = [...prev.isyerleri, prev._newIsYeri || ""];
+      const newGorevPozisyon = [...prev.gorevpozisyon, prev._newGorev || ""];
+      return { ...prev, isyerleri: newIsYerleri, gorevpozisyon: newGorevPozisyon, _newIsYeri: "", _newGorev: "" };
     });
   };
 
   const removeWorkplaceAtIndex = (index: number) => {
     setHistoryData(prev => {
-      const newIsYerleri = [...prev.isYerleri];
-      const newGorevPozisyon = [...prev.gorevPozisyon];
+      const newIsYerleri = [...prev.isyerleri];
+      const newGorevPozisyon = [...prev.gorevpozisyon];
       newIsYerleri.splice(index, 1);
       newGorevPozisyon.splice(index, 1);
-      return { ...prev, isYerleri: newIsYerleri, gorevPozisyon: newGorevPozisyon };
+      return { ...prev, isyerleri: newIsYerleri, gorevpozisyon: newGorevPozisyon };
     });
   };
 
@@ -213,7 +194,7 @@ export default function StaffProfile() {
 
       return () => clearTimeout(delayDebounceFn);
     }
-  }, [historyData.isYerleri, historyData.gorevPozisyon, historyData.belgeler, historyData.yarismalar, historyData.cv, saveHistoryData, user]);
+  }, [historyData.isyerleri, historyData.gorevpozisyon, historyData.belgeler, historyData.yarismalar, historyData.cv, saveHistoryData, user]);
 
   // Handle education input change with logic to show/hide fields progressively
   const handleEducationChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -222,30 +203,30 @@ export default function StaffProfile() {
     setEducationData(prev => {
       const newData = { ...prev, [name]: value };
 
-      if (name === "ortaokulDurumu" && value !== "bitirdi") {
-        newData.liseDurumu = "";
-        newData.liseTuru = "";
-        newData.meslekiBrans = "";
-        newData.universiteDurumu = "";
-        newData.universiteBolum = "";
-      } else if (name === "liseDurumu") {
+      if (name === "ortaokuldurumu" && value !== "bitirdi") {
+        newData.lisedurumu = "";
+        newData.liseturu = "";
+        newData.meslekibrans = "";
+        newData.universitedurumu = "";
+        newData.universitebolum = "";
+      } else if (name === "lisedurumu") {
         if (value !== "okuyor" && value !== "bitirdi") {
-          newData.liseTuru = "";
-          newData.meslekiBrans = "";
-          newData.universiteDurumu = "";
-          newData.universiteBolum = "";
+          newData.liseturu = "";
+          newData.meslekibrans = "";
+          newData.universitedurumu = "";
+          newData.universitebolum = "";
         }
         if (value !== "bitirdi") {
-          newData.universiteDurumu = "";
-          newData.universiteBolum = "";
+          newData.universitedurumu = "";
+          newData.universitebolum = "";
         }
-      } else if (name === "liseTuru") {
+      } else if (name === "liseturu") {
         if (!["cok_programli_anadolu", "meslek_ve_teknik_anadolu"].includes(value)) {
-          newData.meslekiBrans = "";
+          newData.meslekibrans = "";
         }
-      } else if (name === "universiteDurumu") {
+      } else if (name === "universitedurumu") {
         if (value !== "okuyor" && value !== "bitirdi") {
-          newData.universiteBolum = "";
+          newData.universitebolum = "";
         }
       }
 
@@ -264,7 +245,6 @@ export default function StaffProfile() {
     }
   }, [educationData, saveEducationData, user]);
 
-  // Handle CV change in history
   const handleCvChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const { value } = e.target;
     setHistoryData(prev => ({ ...prev, cv: value }));
@@ -305,30 +285,14 @@ export default function StaffProfile() {
         return;
       }
 
-      // Convert education arrays to strings before upsert
-      const ortaokulDurumuStr: string = Array.isArray(educationData.ortaokulDurumu)
-        ? educationData.ortaokulDurumu.join(", ")
-        : (educationData.ortaokulDurumu ?? "");
-      const liseDurumuStr: string = Array.isArray(educationData.liseDurumu)
-        ? educationData.liseDurumu.join(", ")
-        : (educationData.liseDurumu ?? "");
-      const liseTuruStr: string = Array.isArray(educationData.liseTuru)
-        ? educationData.liseTuru.join(", ")
-        : (educationData.liseTuru ?? "");
-      const meslekiBransStr: string = Array.isArray(educationData.meslekiBrans)
-        ? educationData.meslekiBrans.join(", ")
-        : (educationData.meslekiBrans ?? "");
-      const universiteDurumuStr: string = educationData.universiteDurumu || "";
-      const universiteBolumStr: string = educationData.universiteBolum || "";
-
       const dataToUpsert = [{
         personel_id: user.id,
-        ortaokulDurumu: ortaokulDurumuStr,
-        liseDurumu: liseDurumuStr,
-        liseTuru: liseTuruStr,
-        meslekiBrans: meslekiBransStr,
-        universiteDurumu: universiteDurumuStr,
-        universiteBolum: universiteBolumStr,
+        ortaokuldurumu: educationData.ortaokuldurumu,
+        lisedurumu: educationData.lisedurumu,
+        liseturu: educationData.liseturu,
+        meslekibrans: educationData.meslekibrans,
+        universitedurumu: educationData.universitedurumu,
+        universitebolum: educationData.universitebolum,
       }];
 
       const { error: educationError } = await supabase
@@ -341,18 +305,12 @@ export default function StaffProfile() {
         return;
       }
 
-      // Convert history arrays to strings before upsert
-      const isYerleriStr: string = historyData.isYerleri.join(", ");
-      const gorevPozisyonStr: string = historyData.gorevPozisyon.join(", ");
-      const belgelerStr: string = historyData.belgeler.join(", ");
-      const yarismalarStr: string = historyData.yarismalar.join(", ");
-
       const historyToUpsert = [{
         personel_id: user.id,
-        isYerleri: isYerleriStr,
-        gorevPozisyon: gorevPozisyonStr,
-        belgeler: belgelerStr,
-        yarismalar: yarismalarStr,
+        isyerleri: historyData.isyerleri.join(", "),
+        gorevpozisyon: historyData.gorevpozisyon.join(", "),
+        belgeler: historyData.belgeler.join(", "),
+        yarismalar: historyData.yarismalar.join(", "),
         cv: historyData.cv || "",
       }];
 
@@ -417,12 +375,12 @@ export default function StaffProfile() {
           .maybeSingle();
 
         setEducationData({
-          ortaokulDurumu: typeof educationRes?.ortaokulDurumu === "string" ? educationRes.ortaokulDurumu : "",
-          liseDurumu: typeof educationRes?.liseDurumu === "string" ? educationRes.liseDurumu : "",
-          liseTuru: typeof educationRes?.liseTuru === "string" ? educationRes.liseTuru : "",
-          meslekiBrans: typeof educationRes?.meslekiBrans === "string" ? educationRes.meslekiBrans : "",
-          universiteDurumu: typeof educationRes?.universiteDurumu === "string" ? educationRes.universiteDurumu : "",
-          universiteBolum: typeof educationRes?.universiteBolum === "string" ? educationRes.universiteBolum : "",
+          ortaokuldurumu: typeof educationRes?.ortaokuldurumu === "string" ? educationRes.ortaokuldurumu : "",
+          lisedurumu: typeof educationRes?.lisedurumu === "string" ? educationRes.lisedurumu : "",
+          liseturu: typeof educationRes?.liseturu === "string" ? educationRes.liseturu : "",
+          meslekibrans: typeof educationRes?.meslekibrans === "string" ? educationRes.meslekibrans : "",
+          universitedurumu: typeof educationRes?.universitedurumu === "string" ? educationRes.universitedurumu : "",
+          universitebolum: typeof educationRes?.universitebolum === "string" ? educationRes.universitebolum : "",
         });
 
         const { data: historyRes } = await supabase
@@ -432,8 +390,8 @@ export default function StaffProfile() {
           .maybeSingle();
 
         setHistoryData({
-          isYerleri: stringToArray(historyRes?.isYerleri),
-          gorevPozisyon: stringToArray(historyRes?.gorevPozisyon),
+          isyerleri: stringToArray(historyRes?.isyerleri),
+          gorevpozisyon: stringToArray(historyRes?.gorevpozisyon),
           belgeler: stringToArray(historyRes?.belgeler),
           yarismalar: stringToArray(historyRes?.yarismalar),
           cv: typeof historyRes?.cv === "string" ? historyRes.cv : "",
@@ -674,11 +632,11 @@ export default function StaffProfile() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {/* Ortaokul Durumu */}
                       <div>
-                        <label htmlFor="ortaokulDurumu" className="block text-sm font-medium">Ortaokul Durumu</label>
+                        <label htmlFor="ortaokuldurumu" className="block text-sm font-medium">Ortaokul Durumu</label>
                         <select
-                          id="ortaokulDurumu"
-                          name="ortaokulDurumu"
-                          value={educationData.ortaokulDurumu}
+                          id="ortaokuldurumu"
+                          name="ortaokuldurumu"
+                          value={educationData.ortaokuldurumu}
                           onChange={handleEducationChange}
                           className="w-full rounded border border-gray-300 px-3 py-2"
                         >
@@ -690,13 +648,13 @@ export default function StaffProfile() {
                       </div>
 
                       {/* Lise Durumu */}
-                      {educationData.ortaokulDurumu === "bitirdi" && (
+                      {educationData.ortaokuldurumu === "bitirdi" && (
                         <div>
-                          <label htmlFor="liseDurumu" className="block text-sm font-medium">Lise Durumu</label>
+                          <label htmlFor="lisedurumu" className="block text-sm font-medium">Lise Durumu</label>
                           <select
-                            id="liseDurumu"
-                            name="liseDurumu"
-                            value={educationData.liseDurumu}
+                            id="lisedurumu"
+                            name="lisedurumu"
+                            value={educationData.lisedurumu}
                             onChange={handleEducationChange}
                             className="w-full rounded border border-gray-300 px-3 py-2"
                           >
@@ -709,13 +667,13 @@ export default function StaffProfile() {
                       )}
 
                       {/* Lise Türü */}
-                      {(educationData.liseDurumu === "bitirdi" || educationData.liseDurumu === "okuyor") && (
+                      {(educationData.lisedurumu === "bitirdi" || educationData.lisedurumu === "okuyor") && (
                         <div>
-                          <label htmlFor="liseTuru" className="block text-sm font-medium">Lise Türü</label>
+                          <label htmlFor="liseturu" className="block text-sm font-medium">Lise Türü</label>
                           <select
-                            id="liseTuru"
-                            name="liseTuru"
-                            value={educationData.liseTuru}
+                            id="liseturu"
+                            name="liseturu"
+                            value={educationData.liseturu}
                             onChange={handleEducationChange}
                             className="w-full rounded border border-gray-300 px-3 py-2"
                           >
@@ -728,14 +686,14 @@ export default function StaffProfile() {
                       )}
 
                       {/* Mesleki Branş */}
-                      {["cok_programli_anadolu", "meslek_ve_teknik_anadolu"].includes(educationData.liseTuru) && (
+                      {["cok_programli_anadolu", "meslek_ve_teknik_anadolu"].includes(educationData.liseturu) && (
                         <div>
-                          <label htmlFor="meslekiBrans" className="block text-sm font-medium">Mesleki Branş</label>
+                          <label htmlFor="meslekibrans" className="block text-sm font-medium">Mesleki Branş</label>
                           <input
                             type="text"
-                            id="meslekiBrans"
-                            name="meslekiBrans"
-                            value={educationData.meslekiBrans}
+                            id="meslekibrans"
+                            name="meslekibrans"
+                            value={educationData.meslekibrans}
                             onChange={handleEducationChange}
                             className="w-full rounded border border-gray-300 px-3 py-2"
                             placeholder="Örn: Kuaförlük, Güzellik Uzmanlığı"
@@ -744,13 +702,13 @@ export default function StaffProfile() {
                       )}
 
                       {/* Üniversite Durumu */}
-                      {educationData.liseDurumu === "bitirdi" && (
+                      {educationData.lisedurumu === "bitirdi" && (
                         <div>
-                          <label htmlFor="universiteDurumu" className="block text-sm font-medium">Üniversite Durumu</label>
+                          <label htmlFor="universitedurumu" className="block text-sm font-medium">Üniversite Durumu</label>
                           <select
-                            id="universiteDurumu"
-                            name="universiteDurumu"
-                            value={educationData.universiteDurumu}
+                            id="universitedurumu"
+                            name="universitedurumu"
+                            value={educationData.universitedurumu}
                             onChange={handleEducationChange}
                             className="w-full rounded border border-gray-300 px-3 py-2"
                           >
@@ -763,13 +721,13 @@ export default function StaffProfile() {
                       )}
 
                       {/* Üniversite Bölüm */}
-                      {(educationData.universiteDurumu === "okuyor" || educationData.universiteDurumu === "bitirdi") && (
+                      {(educationData.universitedurumu === "okuyor" || educationData.universitedurumu === "bitirdi") && (
                         <div>
-                          <label htmlFor="universiteBolum" className="block text-sm font-medium">Bölüm</label>
+                          <label htmlFor="universitebolum" className="block text-sm font-medium">Bölüm</label>
                           <select
-                            id="universiteBolum"
-                            name="universiteBolum"
-                            value={educationData.universiteBolum}
+                            id="universitebolum"
+                            name="universitebolum"
+                            value={educationData.universitebolum}
                             onChange={handleEducationChange}
                             className="w-full rounded border border-gray-300 px-3 py-2"
                           >
@@ -788,12 +746,12 @@ export default function StaffProfile() {
                   <>
                     <div>
                       <strong>İş Yerleri ve Görevler</strong>
-                      {historyData.isYerleri.length === 0 && <p>Bilgi yok</p>}
+                      {historyData.isyerleri.length === 0 && <p>Bilgi yok</p>}
                       <ul className="list-disc pl-5 mb-3">
-                        {historyData.isYerleri.map((yeri, i) => (
+                        {historyData.isyerleri.map((yeri, i) => (
                           <li key={`workplace-${i}`} className="flex gap-2 items-center">
                             <span className="flex-1">{yeri}</span>
-                            <span className="flex-1">{historyData.gorevPozisyon[i] || "-"}</span>
+                            <span className="flex-1">{historyData.gorevpozisyon[i] || "-"}</span>
                             <button type="button" className="text-destructive" onClick={() => removeWorkplaceAtIndex(i)} aria-label="İş yeri sil">
                               Sil
                             </button>
