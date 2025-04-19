@@ -1,4 +1,5 @@
 
+
 import React, { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -70,8 +71,6 @@ export default function StaffProfile() {
 
   const [userRole, setUserRole] = useState("");
 
-  // Remove autosave effects to prevent autosave on every keystroke
-
   // Explicit save for education data
   const saveEducationData = useCallback(async () => {
     if (!user) return;
@@ -127,7 +126,7 @@ export default function StaffProfile() {
     }
   }, [historyData, user]);
 
-  // Remove useEffect autosave on field changes
+  // Remove useEffect autosave on field changes (already removed in provided code)
 
   const addWorkplaceWithPosition = () => {
     if (!historyData._newIsYeri || !historyData._newGorev) {
@@ -268,6 +267,7 @@ export default function StaffProfile() {
         return;
       }
 
+      // Save education separately using the same pattern (no array wrapping)
       const dataToUpsert = {
         personel_id: user.id,
         ortaokuldurumu: educationData.ortaokuldurumu,
@@ -877,3 +877,4 @@ export default function StaffProfile() {
     </div>
   );
 }
+
