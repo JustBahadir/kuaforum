@@ -1,8 +1,8 @@
+
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
@@ -38,10 +38,7 @@ export default function ProfileSetup() {
     const checkSession = async () => {
       try {
         const { data, error } = await supabase.auth.getSession();
-
-        if (error) {
-          throw error;
-        }
+        if (error) throw error;
 
         if (!data.session) {
           navigate("/login");
@@ -134,9 +131,6 @@ export default function ProfileSetup() {
     if (!formData.role.trim()) {
       newErrors.role = "Bu alan zorunludur";
     }
-    if (formData.role === "admin" && !formData.shopName.trim()) {
-      newErrors.shopName = "Bu alan zorunludur";
-    }
 
     setErrors(newErrors);
 
@@ -221,12 +215,12 @@ export default function ProfileSetup() {
                 <Label htmlFor="firstName" className={`block ${errors.firstName ? "text-red-600" : ""}`}>
                   Ad*
                 </Label>
-                <Input
+                <input
                   id="firstName"
                   name="firstName"
                   value={formData.firstName}
                   onChange={handleInputChange}
-                  className={errors.firstName ? "border-red-600 focus:border-red-600 focus:ring-red-600" : ""}
+                  className={`w-full rounded border px-3 py-2 focus:outline-none focus:ring-2 ${errors.firstName ? "border-red-600 ring-red-600" : "border-gray-300 ring-pink-500"}`}
                   required
                   aria-invalid={!!errors.firstName}
                   aria-describedby="firstName-error"
@@ -237,12 +231,12 @@ export default function ProfileSetup() {
                 <Label htmlFor="lastName" className={`block ${errors.lastName ? "text-red-600" : ""}`}>
                   Soyad*
                 </Label>
-                <Input
+                <input
                   id="lastName"
                   name="lastName"
                   value={formData.lastName}
                   onChange={handleInputChange}
-                  className={errors.lastName ? "border-red-600 focus:border-red-600 focus:ring-red-600" : ""}
+                  className={`w-full rounded border px-3 py-2 focus:outline-none focus:ring-2 ${errors.lastName ? "border-red-600 ring-red-600" : "border-gray-300 ring-pink-500"}`}
                   required
                   aria-invalid={!!errors.lastName}
                   aria-describedby="lastName-error"
@@ -266,6 +260,7 @@ export default function ProfileSetup() {
                 error={errors.phone}
                 disabled={false}
               />
+              {errors.phone && <p className="text-xs text-red-600 mt-1">{errors.phone}</p>}
             </div>
 
             <div>
@@ -316,38 +311,18 @@ export default function ProfileSetup() {
               {errors.role && <p id="role-error" className="text-xs text-red-600 mt-1">{errors.role}</p>}
             </div>
             
-            {formData.role === "admin" && (
-              <div>
-                <Label htmlFor="shopName" className={`block ${errors.shopName ? "text-red-600" : ""}`}>
-                  İşletme Adı*
-                </Label>
-                <Input
-                  id="shopName"
-                  name="shopName"
-                  value={formData.shopName}
-                  onChange={handleInputChange}
-                  placeholder="Salonunuzun/işletmenizin ismini girin"
-                  className={errors.shopName ? "border-red-600 focus:border-red-600 focus:ring-red-600" : ""}
-                  required
-                  aria-invalid={!!errors.shopName}
-                  aria-describedby="shopName-error"
-                  aria-required="true"
-                />
-                {errors.shopName && <p id="shopName-error" className="text-xs text-red-600 mt-1">{errors.shopName}</p>}
-              </div>
-            )}
-
             {formData.role === "staff" && (
               <div className="space-y-2">
                 <Label htmlFor="shopCode" className="block">
                   İşletme Kodu (Opsiyonel)
                 </Label>
-                <Input
+                <input
                   id="shopCode"
                   name="shopCode"
                   value={formData.shopCode}
                   onChange={handleInputChange}
                   placeholder="Dükkan yöneticisinden alınan kod"
+                  className="w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 ring-pink-500"
                 />
               </div>
             )}
