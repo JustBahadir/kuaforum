@@ -96,7 +96,7 @@ export default function StaffProfile() {
 
     const { error } = await supabase
       .from("staff_education")
-      .upsert(dataToUpsert, { onConflict: ["personel_id"] });
+      .upsert([dataToUpsert], { onConflict: ["personel_id"] });
 
     setLoading(false);
     if (error) {
@@ -123,7 +123,7 @@ export default function StaffProfile() {
 
     const { error } = await supabase
       .from("staff_history")
-      .upsert(dataToUpsert, { onConflict: ["personel_id"] });
+      .upsert([dataToUpsert], { onConflict: ["personel_id"] });
 
     setLoading(false);
     if (error) {
@@ -156,7 +156,7 @@ export default function StaffProfile() {
 
     const { error } = await supabase
       .from("staff_history")
-      .upsert(dataToUpsert, { onConflict: ["personel_id"] });
+      .upsert([dataToUpsert], { onConflict: ["personel_id"] });
 
     setLoading(false);
     if (error) {
@@ -818,7 +818,7 @@ export default function StaffProfile() {
                       onChange={(e) => setShopCode(e.target.value)}
                       disabled={validatingCode}
                       className="block w-full rounded-md border border-gray-300 px-3 py-2 disabled:cursor-not-allowed disabled:bg-gray-100"
-                      placeholder="crazy-kuafr-533"
+                      placeholder="Almış olduğunuz işletme kodunu giriniz"
                     />
                     <Button
                       disabled={validatingCode}
