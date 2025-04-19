@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -7,7 +8,6 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
-import { formatPhoneNumber } from "@/utils/phoneFormatter";
 
 export default function ProfileSetup() {
   const navigate = useNavigate();
@@ -62,10 +62,11 @@ export default function ProfileSetup() {
 
         const { data: profileData } = await supabase
           .from("profiles")
-          .select("id, role, first_name, last_name, phone, gender")
+          .select("id, role, first_name, last_name, phone, gender, shopName, shopCode")
           .eq("id", user.id)
-          .single();
+          .maybeSingle();
 
+        // Eğer profil ve temel bilgiler tamamsa doğrudan ilgili panele yönlendirme yap
         if (
           profileData &&
           profileData.first_name &&
@@ -158,6 +159,7 @@ export default function ProfileSetup() {
     setSubmitting(true);
 
     try {
+      // Güncelleme için gönderilecek veriyi normalize et
       const updateData: Record<string, any> = {
         first_name: formData.firstName,
         last_name: formData.lastName,
@@ -167,15 +169,17 @@ export default function ProfileSetup() {
       };
 
       if (formData.role === "admin") {
-        updateData["shopName"] = formData.shopName;
+        updateData.shopName = formData.shopName;
       }
       
       if (formData.role === "staff" && formData.shopCode.trim().length > 0) {
-        updateData["shopCode"] = formData.shopCode.trim();
+        updateData.shopCode = formData.shopCode.trim();
       }
 
+      // Loglama: gönderilen veri
       console.log("Profil güncelleme için gönderilen veri:", updateData);
 
+      // Supabase upsert
       const { error } = await supabase
         .from("profiles")
         .upsert({ id: userData.id, ...updateData });
@@ -341,7 +345,7 @@ export default function ProfileSetup() {
                 {errors.shopName && <p id="shopName-error" className="text-xs text-red-600 mt-1">{errors.shopName}</p>}
               </div>
             )}
-            
+
             {formData.role === "staff" && (
               <div className="space-y-2">
                 <Label htmlFor="shopCode" className="block">

@@ -17,6 +17,7 @@ export default function Auth() {
   const [password, setPassword] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
 
   // Check if user is already logged in - with a short timeout
   useEffect(() => {
@@ -52,22 +53,31 @@ export default function Auth() {
     e.preventDefault();
     setLoading(true);
     try {
-      // Simple signup flow
-      const { error } = await supabase.auth.signUp({
+      // Sign up with metadata role customer
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
             first_name: firstName,
             last_name: lastName,
-            role: 'customer'
+            role: 'customer',
           }
         }
       });
-      
-      if (error) throw error;
+
+      if (signUpError) {
+        if (signUpError.message.includes('already registered')) {
+          toast.error('Bu e-posta ile zaten bir hesap var. Lütfen giriş yapın.');
+          setActiveTab('login');
+          setLoading(false);
+          return;
+        }
+        throw signUpError;
+      }
       
       toast.success('Kayıt başarılı! Giriş yapabilirsiniz.');
+      setActiveTab('login');
     } catch (error: any) {
       toast.error(error.message);
     } finally {
@@ -79,28 +89,33 @@ export default function Auth() {
     e.preventDefault();
     setLoading(true);
     try {
-      // Simple direct login with minimal error handling
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
-      
+
       if (error) {
+        // Eğer email kayıtlı değilse kullanıcı uyarısı
+        if (error.message.includes('User not found') || error.message.includes('Invalid login credentials')) {
+          toast.error("Böyle bir kullanıcı bulunamadı. Kayıt olmak için 'Kayıt Ol' bölümüne geçin.");
+          setActiveTab('register');
+          setLoading(false);
+          return;
+        }
+
         toast.error(error.message);
         setLoading(false);
         return;
       }
-      
-      // Check if user is a customer
+
       const metadata = data.user?.user_metadata;
       if (metadata && metadata.role !== 'customer') {
-        // Sign out if not a customer
         await supabase.auth.signOut();
         toast.error('Bu giriş sayfası sadece müşteriler içindir.');
         setLoading(false);
         return;
       }
-      
+
       toast.success('Giriş başarılı!');
       navigate('/customer-dashboard');
     } catch (error: any) {
@@ -120,13 +135,14 @@ export default function Auth() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="login" className="space-y-4">
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'login' | 'register')} className="space-y-4">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="login">Giriş</TabsTrigger>
               <TabsTrigger value="register">Kayıt</TabsTrigger>
             </TabsList>
 
             <TabsContent value="login">
+              <div className="text-center mb-3 font-semibold">GOOGLE İLE GİRİŞ YAP</div>
               <form onSubmit={handleSignIn} className="space-y-4">
                 <div>
                   <Label htmlFor="loginEmail">E-posta</Label>
@@ -155,6 +171,7 @@ export default function Auth() {
             </TabsContent>
 
             <TabsContent value="register">
+              <div className="text-center mb-3 font-semibold">GOOGLE İLE KAYDOL</div>
               <form onSubmit={handleSignUp} className="space-y-4">
                 <div>
                   <Label htmlFor="email">E-posta</Label>
