@@ -120,7 +120,8 @@ export default function StaffRegister() {
       }
 
       toast.success('Personel kaydınız başarıyla alındı. Yönetici onayı bekleniyor.');
-      navigate('/auth');
+      navigate('/staff-login'); // Kayıt sonrası yönlendirme login sayfasına
+      
     } catch (error: any) {
       toast.error(error.message || 'Kayıt işlemi sırasında bir hata oluştu');
       setError(error.message || 'Kayıt işlemi sırasında bir hata oluştu');
@@ -247,3 +248,4 @@ export default function StaffRegister() {
     </div>
   );
 }
+
