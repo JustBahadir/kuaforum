@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -56,7 +55,6 @@ export default function StaffProfile() {
 
   const [userRole, setUserRole] = useState("");
 
-  // Move handleJoinShop here to fix the error "Cannot find name 'handleJoinShop'."
   const handleJoinShop = async () => {
     toast.success("İşletmeye katılma işlevi henüz uygulanmadı.");
   };
@@ -276,13 +274,12 @@ export default function StaffProfile() {
         return;
       }
 
-      // Convert arrays to comma-separated strings before upsert for education
       const dataToUpsert = [{
         personel_id: user.id,
-        ortaokulDurumu: Array.isArray(educationData.ortaokulDurumu) ? educationData.ortaokulDurumu.join(", ") : educationData.ortaokulDurumu,
-        liseDurumu: Array.isArray(educationData.liseDurumu) ? educationData.liseDurumu.join(", ") : educationData.liseDurumu,
-        liseTuru: Array.isArray(educationData.liseTuru) ? educationData.liseTuru.join(", ") : educationData.liseTuru,
-        meslekiBrans: Array.isArray(educationData.meslekiBrans) ? educationData.meslekiBrans.join(", ") : educationData.meslekiBrans,
+        ortaokulDurumu: String(Array.isArray(educationData.ortaokulDurumu) ? educationData.ortaokulDurumu.join(", ") : educationData.ortaokulDurumu),
+        liseDurumu: String(Array.isArray(educationData.liseDurumu) ? educationData.liseDurumu.join(", ") : educationData.liseDurumu),
+        liseTuru: String(Array.isArray(educationData.liseTuru) ? educationData.liseTuru.join(", ") : educationData.liseTuru),
+        meslekiBrans: String(Array.isArray(educationData.meslekiBrans) ? educationData.meslekiBrans.join(", ") : educationData.meslekiBrans),
       }];
 
       const { error: educationError } = await supabase
@@ -294,13 +291,12 @@ export default function StaffProfile() {
         return;
       }
 
-      // Convert arrays to comma-separated strings before upsert for history
       const historyToUpsert = [{
         personel_id: user.id,
-        isYerleri: arrayToString(historyData.isYerleri),
-        gorevPozisyon: arrayToString(historyData.gorevPozisyon),
-        belgeler: arrayToString(historyData.belgeler),
-        yarismalar: arrayToString(historyData.yarismalar),
+        isYerleri: String(arrayToString(historyData.isYerleri)),
+        gorevPozisyon: String(arrayToString(historyData.gorevPozisyon)),
+        belgeler: String(arrayToString(historyData.belgeler)),
+        yarismalar: String(arrayToString(historyData.yarismalar)),
         cv: historyData.cv,
       }];
 
@@ -785,4 +781,3 @@ export default function StaffProfile() {
     </div>
   );
 }
-
