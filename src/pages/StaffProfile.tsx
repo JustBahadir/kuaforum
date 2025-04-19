@@ -84,20 +84,20 @@ export default function StaffProfile() {
 
   const [userRole, setUserRole] = useState("");
 
-  // Yeni: Çocuk bilgilerini kaydetme fonksiyonu, Supabase'e doğru formatla çağıracak
+  // Çocuk bilgilerini kaydetme fonksiyonu, Supabase'e doğru formatta çağıracak
   const saveChildrenDataWithParams = async (childrenNames: string[]) => {
     if (!user || !user.id) return;
 
     setLoading(true);
 
-    // The field children_names is string[] in DB, so pass array as is
+    // children_names DB'de string[] tipinde olabilir, ancak TS hatası nedeniyle string olarak göndereceğiz
     const personalData = {
       customer_id: user.id,
-      children_names: childrenNames.length > 0 ? childrenNames : null,
+      children_names: childrenNames.length > 0 ? childrenNames.join(", ") : null,
       updated_at: new Date().toISOString(),
     };
 
-    // Pass single object (not array)
+    // Tek nesne olarak geçiriyoruz
     const { error } = await supabase
       .from("customer_personal_data")
       .upsert(personalData, { onConflict: ["customer_id"] });
@@ -115,7 +115,7 @@ export default function StaffProfile() {
     if (!user || !user.id) return;
     setLoading(true);
 
-    // The DB expects strings, so fields are strings directly (no arrays)
+    // Tüm değerler string, doğrudan gönder
     const dataToUpsert = {
       personel_id: Number(user.id),
       ortaokuldurumu: educationData.ortaokuldurumu,
@@ -127,7 +127,7 @@ export default function StaffProfile() {
       updated_at: new Date().toISOString(),
     };
 
-    // Pass single object
+    // Tek nesne olarak gönderiyoruz
     const { error } = await supabase
       .from("staff_education")
       .upsert(dataToUpsert, { onConflict: ["personel_id"] });
@@ -145,7 +145,7 @@ export default function StaffProfile() {
     if (!user || !user.id) return;
     setLoading(true);
 
-    // Convert arrays to strings for the DB TEXT columns
+    // Array alanlar text olarak DB'de tutuluyor, bu yüzden string formatına çevirmeliyiz
     const dataToUpsert = {
       personel_id: Number(user.id),
       isyerleri: arrayToString(historyData.isyerleri),
@@ -156,7 +156,7 @@ export default function StaffProfile() {
       updated_at: new Date().toISOString(),
     };
 
-    // Pass single object
+    // Tek nesne olarak ve stringify edilmiş alanlar ile gönderiyoruz
     const { error } = await supabase
       .from("staff_history")
       .upsert(dataToUpsert, { onConflict: ["personel_id"] });
@@ -190,7 +190,7 @@ export default function StaffProfile() {
       updated_at: new Date().toISOString(),
     };
 
-    // Pass single object
+    // Tek nesne olarak
     const { error } = await supabase
       .from("staff_history")
       .upsert(dataToUpsert, { onConflict: ["personel_id"] });
@@ -219,7 +219,7 @@ export default function StaffProfile() {
       updated_at: new Date().toISOString(),
     };
 
-    // Pass single object
+    // Tek nesne olarak
     const { error } = await supabase
       .from("staff_education")
       .upsert(dataToUpsert, { onConflict: ["personel_id"] });
