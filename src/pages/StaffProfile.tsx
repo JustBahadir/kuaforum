@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,7 +31,6 @@ export default function StaffProfile() {
   const [validatingCode, setValidatingCode] = useState(false);
   const [editMode, setEditMode] = useState(false);
 
-  // Make states explicit types with strings only
   const [educationData, setEducationData] = useState<EducationData>({
     ortaokulDurumu: "",
     liseDurumu: "",
@@ -63,17 +61,14 @@ export default function StaffProfile() {
 
         setUser(data.session.user);
 
-        // Get user role
         const role = data.session.user.user_metadata?.role;
         setUserRole(role);
 
-        // If user is admin, redirect to admin profile
         if (role === "admin") {
           navigate("/shop-home");
           return;
         }
 
-        // Get profile data
         const { data: profileData, error: profileError } = await supabase
           .from("profiles")
           .select("*")
@@ -92,7 +87,6 @@ export default function StaffProfile() {
           .eq("personel_id", data.session.user.id)
           .maybeSingle();
 
-        // Ensure that the returned fields are strings, fallback if needed
         setEducationData({
           ortaokulDurumu: typeof educationRes?.ortaokulDurumu === "string" ? educationRes.ortaokulDurumu : "",
           liseDurumu: typeof educationRes?.liseDurumu === "string" ? educationRes.liseDurumu : "",
@@ -231,13 +225,15 @@ export default function StaffProfile() {
         return;
       }
 
-      // Cast all fields to string to avoid type errors
+      const toStringOrJoined = (value: string | string[]) =>
+        Array.isArray(value) ? value.join(", ") : String(value);
+
       const dataToUpsert = [{
         personel_id: user.id,
-        ortaokulDurumu: String(educationData.ortaokulDurumu),
-        liseDurumu: String(educationData.liseDurumu),
-        liseTuru: String(educationData.liseTuru),
-        meslekiBrans: String(educationData.meslekiBrans),
+        ortaokulDurumu: toStringOrJoined(educationData.ortaokulDurumu),
+        liseDurumu: toStringOrJoined(educationData.liseDurumu),
+        liseTuru: toStringOrJoined(educationData.liseTuru),
+        meslekiBrans: toStringOrJoined(educationData.meslekiBrans),
       }];
 
       const { error: educationError } = await supabase
@@ -251,11 +247,11 @@ export default function StaffProfile() {
 
       const historyToUpsert = [{
         personel_id: user.id,
-        isYerleri: String(historyData.isYerleri),
-        gorevPozisyon: String(historyData.gorevPozisyon),
-        belgeler: String(historyData.belgeler),
-        yarismalar: String(historyData.yarismalar),
-        cv: String(historyData.cv),
+        isYerleri: toStringOrJoined(historyData.isYerleri),
+        gorevPozisyon: toStringOrJoined(historyData.gorevPozisyon),
+        belgeler: toStringOrJoined(historyData.belgeler),
+        yarismalar: toStringOrJoined(historyData.yarismalar),
+        cv: toStringOrJoined(historyData.cv),
       }];
 
       const { error: historyError } = await supabase
@@ -666,4 +662,3 @@ export default function StaffProfile() {
     </div>
   );
 }
-
