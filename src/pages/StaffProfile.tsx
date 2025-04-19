@@ -55,6 +55,10 @@ export default function StaffProfile() {
 
   const [userRole, setUserRole] = useState("");
 
+  const handleJoinShop = async () => {
+    toast.success("İşletmeye katılma işlevi henüz uygulanmadı.");
+  };
+
   useEffect(() => {
     const checkSession = async () => {
       try {
@@ -272,10 +276,10 @@ export default function StaffProfile() {
 
       const dataToUpsert = [{
         personel_id: user.id,
-        ortaokulDurumu: educationData.ortaokulDurumu,
-        liseDurumu: educationData.liseDurumu,
-        liseTuru: educationData.liseTuru,
-        meslekiBrans: educationData.meslekiBrans,
+        ortaokulDurumu: Array.isArray(educationData.ortaokulDurumu) ? educationData.ortaokulDurumu.join(", ") : educationData.ortaokulDurumu,
+        liseDurumu: Array.isArray(educationData.liseDurumu) ? educationData.liseDurumu.join(", ") : educationData.liseDurumu,
+        liseTuru: Array.isArray(educationData.liseTuru) ? educationData.liseTuru.join(", ") : educationData.liseTuru,
+        meslekiBrans: Array.isArray(educationData.meslekiBrans) ? educationData.meslekiBrans.join(", ") : educationData.meslekiBrans,
       }];
 
       const { error: educationError } = await supabase
