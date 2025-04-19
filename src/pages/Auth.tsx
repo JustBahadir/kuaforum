@@ -22,24 +22,23 @@ export default function Auth() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
 
-  // Form fields for Login
+  // Login form fields
   const [loginEmail, setLoginEmail] = useState('')
   const [loginPassword, setLoginPassword] = useState('')
-
-  // Form fields for Register
+  // Register form fields
   const [registerEmail, setRegisterEmail] = useState('')
   const [registerPassword, setRegisterPassword] = useState('')
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
 
-  // Active tab: login or register
+  // Active tab state
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login')
 
-  // Info messages to guide user on errors related to tab switching
+  // Info messages for each tab
   const [loginInfoMsg, setLoginInfoMsg] = useState<string | null>(null)
   const [registerInfoMsg, setRegisterInfoMsg] = useState<string | null>(null)
 
-  // Reset all form inputs and clear info messages on tab change
+  // Reset forms and messages on tab switch
   const resetForms = () => {
     setLoginEmail('')
     setLoginPassword('')
@@ -56,6 +55,7 @@ export default function Auth() {
     resetForms()
   }, [activeTab])
 
+  // Check if user already logged in and redirect accordingly
   useEffect(() => {
     const checkSession = async () => {
       try {
@@ -187,7 +187,7 @@ export default function Auth() {
         }
         throw signUpError
       }
-
+      
       toast.success('Kayıt başarılı! Giriş yapabilirsiniz.')
       setActiveTab('login')
     } catch (error: any) {
@@ -210,7 +210,7 @@ export default function Auth() {
             onValueChange={(v) => {
               setActiveTab(v as 'login' | 'register')
             }}
-            className="space-y-4"
+            className="space-y-6"
           >
             <TabsList className="grid w-full grid-cols-2 rounded-full bg-gray-200 p-1">
               <TabsTrigger
@@ -233,15 +233,15 @@ export default function Auth() {
               </TabsTrigger>
             </TabsList>
 
+            {/* LOGIN TAB */}
             <TabsContent value="login" className="space-y-6">
-              <div className="text-center mb-2 font-semibold text-gray-700">
+              <div className="text-center mb-4 font-semibold text-gray-700">
                 GOOGLE İLE GİRİŞ YAP
               </div>
               <GoogleAuthButton
                 text="Google ile Giriş Yap"
                 className="bg-white text-gray-800 hover:bg-gray-100 border border-gray-300"
               />
-
               <div className="relative my-5">
                 <div className="absolute inset-0 flex items-center">
                   <span className="w-full border-t border-gray-300"></span>
@@ -250,7 +250,6 @@ export default function Auth() {
                   veya
                 </div>
               </div>
-
               <form onSubmit={handleSignIn} className="space-y-4" noValidate>
                 {loginInfoMsg && (
                   <div className="p-3 mb-2 bg-yellow-200 border border-yellow-400 rounded text-yellow-900 text-sm">
@@ -290,17 +289,25 @@ export default function Auth() {
                   {loading ? 'Giriş yapılıyor...' : 'Giriş Yap'}
                 </Button>
               </form>
+              <div className="mt-6 text-center">
+                <Button variant="link" asChild>
+                  <Link to="/admin" className="text-sm text-gray-600 hover:underline">
+                    Personel olarak giriş yapmak için tıklayın
+                  </Link>
+                </Button>
+              </div>
             </TabsContent>
 
+            {/* REGISTER TAB */}
             <TabsContent value="register" className="space-y-6">
-              <div className="text-center mb-2 font-semibold text-gray-700">
+              <div className="text-center mb-4 font-semibold text-gray-700">
                 GOOGLE İLE KAYDOL
               </div>
               <GoogleAuthButton
                 text="Google ile Kayıt Ol"
                 className="bg-white text-gray-800 hover:bg-gray-100 border border-gray-300"
+                redirectTo={window.location.origin + "/profile-setup"}
               />
-
               <div className="relative my-5">
                 <div className="absolute inset-0 flex items-center">
                   <span className="w-full border-t border-gray-300"></span>
@@ -309,7 +316,6 @@ export default function Auth() {
                   veya
                 </div>
               </div>
-
               <form onSubmit={handleSignUp} className="space-y-4" noValidate>
                 {registerInfoMsg && (
                   <div className="p-3 mb-2 bg-yellow-200 border border-yellow-400 rounded text-yellow-900 text-sm">
@@ -371,17 +377,12 @@ export default function Auth() {
           </Tabs>
 
           <div className="mt-6 text-center space-y-3">
-            <Button variant="link" asChild>
-              <Link to="/admin">Personel olarak giriş yapmak için tıklayın</Link>
+            <Button variant="secondary" asChild className="w-full">
+              <Link to="/" className="flex items-center justify-center gap-2">
+                <Home size={16} />
+                Ana Sayfaya Dön
+              </Link>
             </Button>
-            <div className="space-y-2">
-              <Button variant="secondary" asChild className="w-full">
-                <Link to="/" className="flex items-center justify-center gap-2">
-                  <Home size={16} />
-                  <span>Ana Sayfaya Dön</span>
-                </Link>
-              </Button>
-            </div>
           </div>
         </CardContent>
         <CardFooter className="flex justify-center text-sm text-gray-600">
