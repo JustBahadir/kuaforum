@@ -108,8 +108,9 @@ export function createMonthCycleDateRange(day: number): { from: Date; to: Date }
   // Ensure we start at beginning of day
   fromDate = startOfDay(fromDate);
   
-  // Create to date as one month after from date
-  const toDate = endOfDay(addMonths(fromDate, 1));
+  // Create to date as one month after from date, but one day before (to complete the cycle)
+  const toDate = addMonths(new Date(fromDate), 1);
+  toDate.setDate(day - 1);
   
-  return { from: fromDate, to: toDate };
+  return { from: fromDate, to: endOfDay(toDate) };
 }

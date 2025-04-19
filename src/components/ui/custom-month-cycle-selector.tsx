@@ -32,7 +32,7 @@ export function CustomMonthCycleSelector({
 }: CustomMonthCycleSelectorProps) {
   const [open, setOpen] = useState(false);
 
-  // Generate grid of days (6x5 = 30 days)
+  // Generate grid of days (6x5 = 30 days + 1 extra for 31)
   const generateDaysGrid = () => {
     const days = Array.from({ length: 31 }, (_, i) => i + 1);
     const grid = [];
@@ -84,7 +84,7 @@ export function CustomMonthCycleSelector({
                 "flex items-center gap-2",
                 active && "bg-purple-600 hover:bg-purple-700 text-white"
               )}
-              onClick={() => setOpen(!open)}
+              onClick={() => setOpen(true)}
             >
               <CalendarRange className="h-4 w-4" />
               <span>Özel Ay Döngüsü</span>

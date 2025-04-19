@@ -16,6 +16,13 @@ import { createMonthCycleDateRange } from "@/utils/dateUtils";
 import { startOfDay, endOfDay } from "date-fns";
 
 export default function OperationsHistory() {
+  // Define the cleanOperationName function early in the component
+  const cleanOperationName = (operation: any) => {
+    if (operation.islem?.islem_adi) return operation.islem.islem_adi;
+    if (!operation.aciklama) return '';
+    return operation.aciklama.split(' hizmeti verildi')[0];
+  };
+  
   const [dateRange, setDateRange] = useState({
     from: new Date(new Date().setDate(new Date().getDate() - 30)), // Default to last 30 days
     to: new Date()
@@ -24,13 +31,6 @@ export default function OperationsHistory() {
   const [filterType, setFilterType] = useState<string>("all");
   const [showPuntos, setShowPuntos] = useState(true);
   const [isMonthCycleActive, setIsMonthCycleActive] = useState(false);
-  
-  // Define the cleanOperationName function early in the component
-  const cleanOperationName = (operation: any) => {
-    if (operation.islem?.islem_adi) return operation.islem.islem_adi;
-    if (!operation.aciklama) return '';
-    return operation.aciklama.split(' hizmeti verildi')[0];
-  };
   
   const { data: operationsData = [], isLoading, refetch } = useQuery({
     queryKey: ['operationsHistory', dateRange.from, dateRange.to],

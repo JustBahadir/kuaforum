@@ -33,6 +33,7 @@ export function DateControlBar({
 }: DateControlBarProps) {
   const [isRangeMode, setIsRangeMode] = React.useState(true);
   const [useMonthCycle, setUseMonthCycle] = React.useState(false);
+  const [selectedDay, setSelectedDay] = React.useState(1);
 
   const handleSingleDateSelect = (date: Date | undefined) => {
     if (date) {
@@ -64,6 +65,7 @@ export function DateControlBar({
   };
   
   const handleMonthCycleSelect = (day: number, date: Date) => {
+    setSelectedDay(day);
     setUseMonthCycle(true);
     if (onMonthCycleChange) {
       onMonthCycleChange(day, date);
@@ -119,7 +121,7 @@ export function DateControlBar({
 
       <CustomMonthCycleSelector 
         onChange={handleMonthCycleSelect}
-        selectedDay={useMonthCycle ? new Date(dateRange.from).getDate() : 1}
+        selectedDay={selectedDay}
         active={useMonthCycle}
         onClear={handleClearMonthCycle}
       />
