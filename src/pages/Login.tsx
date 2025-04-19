@@ -51,31 +51,9 @@ export default function Login() {
   const handleGoogleRegisterClick = async () => {
     setLoading(true);
     try {
-      // Prompt the user for email before redirecting?
-      // But since Google OAuth redirects immediately, we need to check server side or handle after login callback
-      // Here, we attempt to fetch user by email first, but we do not have email before login
-      // Alternative is to intercept after login, but requirement is client side before triggering Google OAuth
-
-      // So workaround: Open popup and immediately check existence AFTER login in onAuthStateChange
-      // But requirement is to block signup before starting OAuth flow — this is impossible without pre-knowledge of email
-      // So the best we can do: use Supabase RPC or edge function to do this check and handle in callback
-      // Still, per request, implement a client-side check before redirecting if possible with popup method
-
-      // Since email is not available before OAuth login, we cannot check it beforehand here client side.
-      // Therefore, we simulate via a customized GoogleAuthButton that waits for OAuth response and after login, 
-      // checks profile existence and conditionally redirects with toast and avoids duplicate signup.
-
-      // But this is outside scope, so as a best approximation, we will handle the existing email detection AFTER OAuth login elsewhere.
-
-      // Therefore, in this component, for "register" tab GoogleAuthButton, we just call it normally.
-      // We can add a note here to implement server edge function to handle duplicate registration prevention post-login.
-
-      // For now, just call GoogleAuthButton normally.
-      // Since the system currently tries to recreate duplicates, the better approach is to check user existence on auth state change globally.
-
-      // Leaving code here for future server edge function integration
-
-      window.location.href = window.location.origin + "/auth-google-callback?mode=register";
+      // Redirect directly to OAuth with mode=register param on GoogleAuthCallback route
+      window.location.href =
+        window.location.origin + "/auth-google-callback?mode=register";
     } catch (error) {
       toast.error("Google kayıt işleminde hata oluştu.");
       console.error(error);

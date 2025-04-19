@@ -14,7 +14,7 @@ export default function AuthGoogleCallback() {
       setLoading(true);
 
       try {
-        // Supabase automatically processes the OAuth callback and sets session
+        // Get session (no type args passed, to fix TS issues)
         const { data, error: sessionError } = await supabase.auth.getSession();
 
         const session = data?.session ?? null;
@@ -26,16 +26,15 @@ export default function AuthGoogleCallback() {
           return;
         }
 
-        // Fetch user profile after login
+        // Fetch user profile after login (maybeSingle to allow no profile yet)
         const { data: profileData, error: profileError } = await supabase
           .from("profiles")
           .select("*")
           .eq("id", user.id)
           .maybeSingle();
 
-        if (profileError) {
-          // If profile not found, create basic profile? 
-          // But normally, handle redirect to profile setup
+        // If no profile exists, create one from user metadata
+        if (!profileData) {
           const newProfileRes = await supabase
             .from("profiles")
             .insert([
@@ -54,44 +53,56 @@ export default function AuthGoogleCallback() {
           }
         }
 
-        // Get query param "mode": login or register
+        // Get mode query param
         const mode = searchParams.get("mode");
 
-        // Check for duplicate user on register mode (avoid duplicate OAuth signup)
+        // Check duplicate user for register mode (by id)
         if (mode === "register") {
-          // Check if user already exists by id in profiles (email not in profiles)
-          const queryResult = await supabase
+          const checkUser = await supabase
             .from("profiles")
             .select("id")
             .eq("id", user.id)
             .maybeSingle();
 
-          const existingUser = queryResult.data;
-          const existingUserError = queryResult.error;
-
-          if (existingUserError && existingUserError.code !== "PGRST116") {
-            console.error("Kullanıcı kontrolü sırasında hata:", existingUserError);
+          if (checkUser.error && checkUser.error.code !== "PGRST116") {
+            console.error("Kullanıcı kontrolü sırasında hata:", checkUser.error);
           }
 
-          if (existingUser) {
+          if (checkUser.data) {
             toast.error("Bu kullanıcı zaten kayıtlı. Lütfen Giriş Yap sekmesini kullanınız.");
             navigate("/login");
             return;
           }
         }
 
-        // After login or register, redirect user based on role
+        // Redirect based on role and profile completeness
         const role = user.user_metadata?.role;
 
         if (role === "admin") {
           toast.success("Yönetici olarak giriş başarılı!");
           navigate("/shop-home");
         } else if (role === "staff") {
-          toast.success("Personel olarak giriş başarılı!");
-          navigate("/staff-profile");
+          // Staff 
+          if (
+            !profileData ||
+            !profileData.first_name ||
+            !profileData.last_name ||
+            !profileData.phone
+          ) {
+            toast.success("Profil bilgilerinizi tamamlayınız.");
+            navigate("/profile-setup");
+          } else {
+            toast.success("Giriş başarılı!");
+            navigate("/staff-profile");
+          }
         } else if (role === "customer") {
-          // If profile incomplete, redirect to profile-setup
-          if (!profileData || !profileData.first_name || !profileData.last_name || !profileData.phone) {
+          // Customer 
+          if (
+            !profileData ||
+            !profileData.first_name ||
+            !profileData.last_name ||
+            !profileData.phone
+          ) {
             toast.success("Profil bilgilerinizi tamamlayınız.");
             navigate("/profile-setup");
           } else {
@@ -99,6 +110,7 @@ export default function AuthGoogleCallback() {
             navigate("/customer-dashboard");
           }
         } else {
+          // Fallback
           toast.success("Giriş başarılı!");
           navigate("/profile-setup");
         }
