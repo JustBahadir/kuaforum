@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -23,7 +22,7 @@ export default function ProfileSetup() {
     gender: "",
     role: "",
     shopName: "",
-    shopCode: "", // Yeni işletme kodu opsiyonel alanı
+    shopCode: "",
   });
 
   const [errors, setErrors] = useState<{
@@ -58,7 +57,7 @@ export default function ProfileSetup() {
           firstName: metadata.first_name || user.user_metadata?.given_name || "",
           lastName: metadata.last_name || user.user_metadata?.family_name || "",
           phone: metadata.phone || "",
-          gender: metadata.gender || "", // Cinsiyet metadata varsa alındı
+          gender: metadata.gender || "",
         }));
 
         const { data: profileData } = await supabase
@@ -106,20 +105,20 @@ export default function ProfileSetup() {
   };
 
   const handleRoleChange = (value: string) => {
-    setFormData(prev => ({ ...prev, role: value }));
+    setFormData(prev => ({
+      ...prev,
+      role: value,
+      shopCode: value !== "staff" ? "" : prev.shopCode
+    }));
 
     if (errors.role) {
       setErrors(prev => ({ ...prev, role: undefined }));
-    }
-
-    // shopCode alanını temizle personel değilse
-    if (value !== "staff") {
-      setFormData(prev => ({ ...prev, shopCode: "" }));
     }
   };
 
   const validateForm = () => {
     const newErrors: typeof errors = {};
+
     if (!formData.firstName.trim()) {
       newErrors.firstName = "Bu alan zorunludur";
     }
@@ -129,11 +128,11 @@ export default function ProfileSetup() {
     if (!formData.phone.trim()) {
       newErrors.phone = "Bu alan zorunludur";
     }
-    if (!formData.role.trim()) {
-      newErrors.role = "Bu alan zorunludur";
-    }
     if (!formData.gender.trim()) {
       newErrors.gender = "Bu alan zorunludur";
+    }
+    if (!formData.role.trim()) {
+      newErrors.role = "Bu alan zorunludur";
     }
     if (formData.role === "admin" && !formData.shopName.trim()) {
       newErrors.shopName = "Bu alan zorunludur";
@@ -170,20 +169,19 @@ export default function ProfileSetup() {
       if (formData.role === "admin") {
         updateData["shopName"] = formData.shopName;
       }
-
-      if (
-        formData.role === "staff" &&
-        formData.shopCode.trim().length > 0
-      ) {
+      
+      if (formData.role === "staff" && formData.shopCode.trim().length > 0) {
         updateData["shopCode"] = formData.shopCode.trim();
       }
+
+      console.log("Profil güncelleme için gönderilen veri:", updateData);
 
       const { error } = await supabase
         .from("profiles")
         .upsert({ id: userData.id, ...updateData });
 
       if (error) {
-        console.error("Profil güncellenirken hata (detay): ", error);
+        console.error("Profil güncellenirken detaylı hata: ", error);
         toast.error(`Profil bilgileri kaydedilirken bir sorun oluştu: ${error.message || "Bilinmeyen hata"}`);
         setSubmitting(false);
         return;
@@ -199,7 +197,7 @@ export default function ProfileSetup() {
         navigate("/customer-dashboard");
       }
     } catch (error: any) {
-      console.error("Profil güncelleme sırasında hata: ", error);
+      console.error("Profil güncelleme sırasında istisna:", error);
       toast.error("Profil bilgileri kaydedilirken bir sorun oluştu. Lütfen tekrar deneyin.");
     } finally {
       setSubmitting(false);
@@ -264,7 +262,7 @@ export default function ProfileSetup() {
               <Input
                 id="phone"
                 name="phone"
-                value={formatPhoneNumber(formData.phone)}
+                value={formData.phone}
                 onChange={handleInputChange}
                 placeholder="05XX XXX XX XX"
                 className={errors.phone ? "border-red-600 focus:border-red-600 focus:ring-red-600" : ""}
