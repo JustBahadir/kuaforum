@@ -28,6 +28,7 @@ import CustomerOperations from "./pages/operations/CustomerOperations";
 import StaffOperations from "./pages/operations/StaffOperations";
 import Profile from "./pages/Profile";
 import StaffRegister from "./pages/StaffRegister";
+import AuthGoogleCallback from "./pages/AuthGoogleCallback";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -57,6 +58,7 @@ function App() {
               <Route path="/auth" element={<CustomerAuth />} />
               <Route path="/profile-setup" element={<ProfileSetup />} />
               <Route path="/staff-register" element={<StaffRegister />} />
+              <Route path="/auth-google-callback" element={<AuthGoogleCallback />} />
               
               {/* Customer Routes */}
               <Route path="/customer-dashboard/*" element={<CustomerDashboard />} />
