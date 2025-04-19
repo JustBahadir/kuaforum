@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
@@ -32,7 +31,6 @@ export default function Auth() {
   const [lastName, setLastName] = useState('')
 
   // Active tab state
-  // Yeni: Ayrı googleLoginTab ve googleRegisterTab kontrolü için enum
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login')
   const [googleAuthLoading, setGoogleAuthLoading] = useState(false)
 
@@ -69,7 +67,7 @@ export default function Auth() {
         if (data.session) {
           const metadata = data.session.user?.user_metadata
           const userRole = metadata?.role || 'customer'
-          // Profil setup tamamsa panel, değilse profili tamamlamaya yönlendir
+
           const { data: profileData, error: profileError } = await supabase
             .from('profiles')
             .select('first_name, last_name, phone, role')
@@ -80,7 +78,6 @@ export default function Auth() {
             profileData && profileData.first_name && profileData.last_name && profileData.phone
 
           if (!profileSetupComplete) {
-            // Profil tamamlanmamışsa profile-setup'a gönder
             navigate('/profile-setup')
             return
           }
@@ -90,7 +87,6 @@ export default function Auth() {
           } else if (userRole === 'admin' || userRole === 'staff') {
             navigate('/admin/dashboard')
           } else {
-            // Beklenmeyen rol varsa profil setup'a yönlendir
             navigate('/profile-setup')
           }
         }
@@ -149,7 +145,6 @@ export default function Auth() {
         return
       }
 
-      // Login sonrası profil kontrolü ve yönlendirme
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('first_name, last_name, phone, role')
@@ -224,14 +219,13 @@ export default function Auth() {
         throw signUpError
       }
 
-      // Kayıt sonrası otomatik login için oturum alınıyor
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
       if (sessionError) {
         toast.error('Kayıt sonrası oturum alınamadı')
         setLoading(false)
         return
       }
-      // Eğer kayıt sonrası session varsa profil hazır mı kontrolü
+
       if (sessionData.session?.user) {
         const userId = sessionData.session.user.id
         const { data: profileData, error: profileError } = await supabase
@@ -240,19 +234,17 @@ export default function Auth() {
           .eq('id', userId)
           .single()
 
-        // Profil tamamlanmadıysa profile-setup'a yönlendir
         const profileSetupComplete =
           profileData && profileData.first_name && profileData.last_name && profileData.phone
 
         if (!profileSetupComplete) {
           toast.success('Kayıt başarılı! Profil bilgilerinizi tamamlayınız.')
-          setActiveTab('register') // Sekmeyi getirme, kullanıcıya profil tamamlaması için ayrı mesaj vs verilebilir
+          setActiveTab('register')
           navigate('/profile-setup')
           setLoading(false)
           return
         }
 
-        // Hazırsa giriş paneline yönlendir
         if (profileData.role === 'customer') {
           toast.success('Kayıt başarılı! Giriş yapabilirsiniz.')
           navigate('/customer-dashboard')
@@ -260,11 +252,9 @@ export default function Auth() {
           toast.success('Kayıt başarılı! Giriş yapabilirsiniz.')
           navigate('/admin/dashboard')
         } else {
-          // Role mantıklı değilse profile setup'a gönder
           navigate('/profile-setup')
         }
       } else {
-        // Session yoksa
         toast.error('Kayıt sonrası oturum açma başarısız.')
         navigate('/auth')
       }
@@ -272,58 +262,6 @@ export default function Auth() {
       toast.error(error.message || 'Kayıt sırasında bir hata oluştu.')
     } finally {
       setLoading(false)
-    }
-  }
-
-  // Google ile Giriş ve Kayıt butonları için ayrı metotlar eklendi
-  const handleGoogleLogin = async () => {
-    setGoogleAuthLoading(true)
-    try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-          redirectTo: window.location.origin + '/auth-google-callback',
-        },
-      })
-      if (error) {
-        toast.error('Google ile giriş başarısız: ' + error.message)
-      } else {
-        // Google auth yönlendirmesi yapılacak, burada işlem yok
-      }
-    } catch (error: any) {
-      toast.error('Google girişinde hata oluştu: ' + error.message)
-    } finally {
-      setGoogleAuthLoading(false)
-    }
-  }
-
-  const handleGoogleRegister = async () => {
-    setGoogleAuthLoading(true)
-    try {
-      // Aynı işlemi yeniden yap
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-          redirectTo: window.location.origin + '/auth-google-callback',
-        },
-      })
-      if (error) {
-        toast.error('Google ile kayıt başarısız: ' + error.message)
-      } else {
-        // Google auth yönlendirmesi yapılacak, burada işlem yok
-      }
-    } catch (error: any) {
-      toast.error('Google kayıt işleminde hata oluştu: ' + error.message)
-    } finally {
-      setGoogleAuthLoading(false)
     }
   }
 
@@ -370,9 +308,9 @@ export default function Auth() {
               </div>
               <GoogleAuthButton
                 text="Google ile Giriş Yap"
-                onClick={handleGoogleLogin}
                 disabled={googleAuthLoading}
                 className="bg-white text-gray-800 hover:bg-gray-100 border border-gray-300"
+                redirectTo={window.location.origin + "/auth-google-callback"}
               />
               <div className="relative my-5">
                 <div className="absolute inset-0 flex items-center">
@@ -437,10 +375,9 @@ export default function Auth() {
               </div>
               <GoogleAuthButton
                 text="Google ile Kayıt Ol"
-                onClick={handleGoogleRegister}
                 disabled={googleAuthLoading}
                 className="bg-white text-gray-800 hover:bg-gray-100 border border-gray-300"
-                redirectTo={window.location.origin + "/profile-setup"}
+                redirectTo={window.location.origin + "/auth-google-callback"}
               />
               <div className="relative my-5">
                 <div className="absolute inset-0 flex items-center">
