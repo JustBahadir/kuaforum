@@ -55,11 +55,12 @@ export default function ProfileSetup() {
           lastName: metadata.last_name || user.user_metadata?.family_name || "",
           phone: metadata.phone || "",
           gender: metadata.gender || "",
+          shopName: metadata.shopName || "",
         }));
 
         const { data: profileData } = await supabase
           .from("profiles")
-          .select("id, role, first_name, last_name, phone, gender")
+          .select("id, role, first_name, last_name, phone, gender, shopName")
           .eq("id", user.id)
           .maybeSingle();
 
@@ -69,7 +70,8 @@ export default function ProfileSetup() {
           profileData.last_name &&
           profileData.phone &&
           profileData.role &&
-          profileData.gender
+          profileData.gender &&
+          profileData.shopName
         ) {
           if (profileData.role === "admin") {
             navigate("/shop-home");
@@ -131,6 +133,9 @@ export default function ProfileSetup() {
     if (!formData.role.trim()) {
       newErrors.role = "Bu alan zorunludur";
     }
+    if (formData.role === "admin" && !formData.shopName.trim()) {
+      newErrors.shopName = "Bu alan zorunludur";
+    }
 
     setErrors(newErrors);
 
@@ -162,6 +167,9 @@ export default function ProfileSetup() {
 
       if (formData.role === "staff" && formData.shopCode.trim().length > 0) {
         updateData.shopCode = formData.shopCode.trim();
+      }
+      if (formData.role === "admin") {
+        updateData.shopName = formData.shopName.trim();
       }
 
       console.log("Profil güncelleme için gönderilen veri:", updateData);
@@ -311,6 +319,27 @@ export default function ProfileSetup() {
               {errors.role && <p id="role-error" className="text-xs text-red-600 mt-1">{errors.role}</p>}
             </div>
             
+            {formData.role === "admin" && (
+              <div>
+                <Label htmlFor="shopName" className={`block ${errors.shopName ? "text-red-600" : ""}`}>
+                  İşletme Adı*
+                </Label>
+                <input
+                  id="shopName"
+                  name="shopName"
+                  value={formData.shopName}
+                  onChange={handleInputChange}
+                  placeholder="Salonunuzun/işletmenizin ismini girin"
+                  className={`w-full rounded border px-3 py-2 focus:outline-none focus:ring-2 ${errors.shopName ? "border-red-600 ring-red-600" : "border-gray-300 ring-pink-500"}`}
+                  required
+                  aria-invalid={!!errors.shopName}
+                  aria-describedby="shopName-error"
+                  aria-required="true"
+                />
+                {errors.shopName && <p id="shopName-error" className="text-xs text-red-600 mt-1">{errors.shopName}</p>}
+              </div>
+            )}
+
             {formData.role === "staff" && (
               <div className="space-y-2">
                 <Label htmlFor="shopCode" className="block">
@@ -340,3 +369,4 @@ export default function ProfileSetup() {
     </div>
   );
 }
+
