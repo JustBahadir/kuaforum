@@ -22,8 +22,8 @@ export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabPr
   const [isEditing, setIsEditing] = useState(false);
   const [workSystem, setWorkSystem] = useState(personnel.calisma_sistemi === 'komisyon' ? 'komisyonlu' : 'maasli');
   const [paymentPeriod, setPaymentPeriod] = useState(personnel.calisma_sistemi || 'aylik');
-  const [salary, setSalary] = useState(personnel.maas || 0);
-  const [commission, setCommission] = useState(personnel.prim_yuzdesi || 0);
+  const [salary, setSalary] = useState(personnel.maas?.toString() || '');
+  const [commission, setCommission] = useState(personnel.prim_yuzdesi?.toString() || '');
 
   const updateMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -44,6 +44,10 @@ export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabPr
   });
 
   const handleSave = () => {
+    // Parse the string values to numbers
+    const parsedSalary = salary ? parseInt(salary, 10) : 0;
+    const parsedCommission = commission ? parseInt(commission, 10) : 0;
+    
     // Prepare the data for submission
     const updateData = {
       calisma_sistemi: workSystem === 'maasli' ? paymentPeriod : 'komisyon',
@@ -51,12 +55,12 @@ export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabPr
     
     if (workSystem === 'komisyonlu') {
       Object.assign(updateData, {
-        prim_yuzdesi: commission,
+        prim_yuzdesi: parsedCommission,
         maas: 0 // Set salary to 0 for commission-based workers
       });
     } else {
       Object.assign(updateData, {
-        maas: salary,
+        maas: parsedSalary,
         prim_yuzdesi: 0 // Set commission to 0 for salaried workers
       });
     }
@@ -64,13 +68,13 @@ export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabPr
     updateMutation.mutate(updateData);
   };
 
-  // Handle salary input with validation
+  // Handle salary input with validation for digits only
   const handleSalaryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     
-    // Allow empty input or numeric values
+    // Allow empty input or digits only, up to 7 digits
     if (value === '' || /^\d{0,7}$/.test(value)) {
-      setSalary(value === '' ? 0 : parseInt(value, 10));
+      setSalary(value);
     }
   };
 
@@ -78,9 +82,9 @@ export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabPr
   const handleCommissionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     
-    // Allow empty input or valid commission values
+    // Allow empty input or valid commission values (0-100)
     if (value === '' || (/^\d{0,3}$/.test(value) && parseInt(value, 10) <= 100)) {
-      setCommission(value === '' ? 0 : parseInt(value, 10));
+      setCommission(value);
     }
   };
 
@@ -131,10 +135,9 @@ export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabPr
             <Input
               type="text"
               inputMode="numeric"
-              value={salary === 0 ? '' : salary.toString()}
+              value={salary}
               onChange={handleSalaryChange}
-              placeholder="Maaş tutarını girin"
-              min="0"
+              placeholder="₺ Maaş tutarını girin"
             />
           </div>
         </div>
@@ -146,11 +149,9 @@ export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabPr
           <Input
             type="text"
             inputMode="numeric"
-            value={commission === 0 ? '' : commission.toString()}
+            value={commission}
             onChange={handleCommissionChange}
-            placeholder="Prim yüzdesini girin (0-100)"
-            min="0"
-            max="100"
+            placeholder="% Prim yüzdesini girin (0-100)"
           />
         </div>
       )}
@@ -166,53 +167,59 @@ export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabPr
     </div>
   );
 
-  const DisplayContent = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div className="space-y-4">
-        <div>
-          <p className="text-sm font-medium text-muted-foreground">Çalışma Sistemi</p>
-          <div className="flex items-center mt-1">
-            <BriefcaseIcon className="h-4 w-4 mr-2 text-muted-foreground" />
-            <p className="text-base capitalize">
-              {workSystem === 'komisyonlu' ? 'Komisyonlu' : `${paymentPeriod === 'aylik' ? 'Aylık' : paymentPeriod === 'haftalik' ? 'Haftalık' : 'Günlük'} Maaş`}
-            </p>
+  const DisplayContent = () => {
+    // For display purposes, ensure we're showing valid numbers
+    const displaySalary = salary !== '' ? parseInt(salary, 10) : personnel.maas || 0;
+    const displayCommission = commission !== '' ? parseInt(commission, 10) : personnel.prim_yuzdesi || 0;
+    
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-4">
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">Çalışma Sistemi</p>
+            <div className="flex items-center mt-1">
+              <BriefcaseIcon className="h-4 w-4 mr-2 text-muted-foreground" />
+              <p className="text-base capitalize">
+                {workSystem === 'komisyonlu' ? 'Komisyonlu' : `${paymentPeriod === 'aylik' ? 'Aylık' : paymentPeriod === 'haftalik' ? 'Haftalık' : 'Günlük'} Maaş`}
+              </p>
+            </div>
           </div>
+          
+          {workSystem === 'maasli' && (
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Maaş</p>
+              <div className="flex items-center mt-1">
+                <Banknote className="h-4 w-4 mr-2 text-muted-foreground" />
+                <p className="text-base">{formatCurrency(displaySalary)}</p>
+              </div>
+            </div>
+          )}
+          
+          {workSystem === 'komisyonlu' && (
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Prim Yüzdesi</p>
+              <div className="flex items-center mt-1">
+                <PercentIcon className="h-4 w-4 mr-2 text-muted-foreground" />
+                <p className="text-base">%{displayCommission}</p>
+              </div>
+            </div>
+          )}
         </div>
-        
-        {workSystem === 'maasli' && (
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">Maaş</p>
-            <div className="flex items-center mt-1">
-              <Banknote className="h-4 w-4 mr-2 text-muted-foreground" />
-              <p className="text-base">{formatCurrency(salary)}</p>
-            </div>
-          </div>
-        )}
-        
-        {workSystem === 'komisyonlu' && (
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">Prim Yüzdesi</p>
-            <div className="flex items-center mt-1">
-              <PercentIcon className="h-4 w-4 mr-2 text-muted-foreground" />
-              <p className="text-base">%{commission}</p>
-            </div>
+
+        {canEdit && !isEditing && (
+          <div className="flex justify-end">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setIsEditing(true)}
+            >
+              Düzenle
+            </Button>
           </div>
         )}
       </div>
-
-      {canEdit && !isEditing && (
-        <div className="flex justify-end">
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => setIsEditing(true)}
-          >
-            Düzenle
-          </Button>
-        </div>
-      )}
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="space-y-6">
