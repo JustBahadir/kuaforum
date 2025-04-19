@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,13 +21,10 @@ interface HistoryData {
   cv: string;
 }
 
-// Helper function to ensure value is string for upsert
 const arrayToString = (value: string[] | string): string => {
   if (Array.isArray(value)) {
-    // Convert array to comma-separated string
     return value.join(", ");
   }
-  // If already string, just return as is
   return value || "";
 };
 
@@ -278,13 +274,17 @@ export default function StaffProfile() {
         return;
       }
 
-      // Use arrayToString for all array fields to convert to strings
+      const ortaokulDurumuStr: string = arrayToString(educationData.ortaokulDurumu);
+      const liseDurumuStr: string = arrayToString(educationData.liseDurumu);
+      const liseTuruStr: string = arrayToString(educationData.liseTuru);
+      const meslekiBransStr: string = arrayToString(educationData.meslekiBrans);
+
       const dataToUpsert = [{
         personel_id: user.id,
-        ortaokulDurumu: arrayToString(educationData.ortaokulDurumu),
-        liseDurumu: arrayToString(educationData.liseDurumu),
-        liseTuru: arrayToString(educationData.liseTuru),
-        meslekiBrans: arrayToString(educationData.meslekiBrans),
+        ortaokulDurumu: ortaokulDurumuStr,
+        liseDurumu: liseDurumuStr,
+        liseTuru: liseTuruStr,
+        meslekiBrans: meslekiBransStr,
       }];
 
       const { error: educationError } = await supabase
@@ -296,12 +296,17 @@ export default function StaffProfile() {
         return;
       }
 
+      const isYerleriStr: string = arrayToString(historyData.isYerleri);
+      const gorevPozisyonStr: string = arrayToString(historyData.gorevPozisyon);
+      const belgelerStr: string = arrayToString(historyData.belgeler);
+      const yarismalarStr: string = arrayToString(historyData.yarismalar);
+
       const historyToUpsert = [{
         personel_id: user.id,
-        isYerleri: arrayToString(historyData.isYerleri),        // Fix here: convert array to string
-        gorevPozisyon: arrayToString(historyData.gorevPozisyon),// Fix here: convert array to string
-        belgeler: arrayToString(historyData.belgeler),          // Fix here: convert array to string
-        yarismalar: arrayToString(historyData.yarismalar),      // Fix here: convert array to string
+        isYerleri: isYerleriStr,
+        gorevPozisyon: gorevPozisyonStr,
+        belgeler: belgelerStr,
+        yarismalar: yarismalarStr,
         cv: historyData.cv,
       }];
 
