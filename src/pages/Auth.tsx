@@ -8,33 +8,41 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
-import { Home } from 'lucide-react';
+import { Home, user, userPlus, logIn } from 'lucide-react';
+import { GoogleAuthButton } from '@/components/auth/GoogleAuthButton';
 
 export default function Auth() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+
+  // Form fields
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+
+  // Registration specific
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+
+  // Active tab: login or register
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
 
-  // Check if user is already logged in - with a short timeout
+  // Additional registration-specific fields to maintain UI consistency later if needed
+  // For now, not needed but can be added if user wants
+
+  // Check if user is already logged in and redirect accordingly
   useEffect(() => {
     const checkSession = async () => {
       try {
         const { data, error } = await supabase.auth.getSession();
-        
         if (error) {
-          console.error("Session check error:", error);
+          console.error('Session check error:', error);
           return;
         }
-        
         if (data.session) {
-          // Redirect to dashboard if already logged in
+          // Get user role from session metadata
           const metadata = data.session.user?.user_metadata;
           const userRole = metadata?.role || 'customer';
-          
+
           if (userRole === 'customer') {
             navigate('/customer-dashboard');
           } else if (userRole === 'admin' || userRole === 'staff') {
@@ -42,72 +50,49 @@ export default function Auth() {
           }
         }
       } catch (err) {
-        console.error("Session check failed:", err);
+        console.error('Session check failed:', err);
       }
     };
-    
     checkSession();
   }, [navigate]);
 
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      // Sign up with metadata role customer
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            first_name: firstName,
-            last_name: lastName,
-            role: 'customer',
-          }
-        }
-      });
-
-      if (signUpError) {
-        if (signUpError.message.includes('already registered')) {
-          toast.error('Bu e-posta ile zaten bir hesap var. Lütfen giriş yapın.');
-          setActiveTab('login');
-          setLoading(false);
-          return;
-        }
-        throw signUpError;
-      }
-      
-      toast.success('Kayıt başarılı! Giriş yapabilirsiniz.');
-      setActiveTab('login');
-    } catch (error: any) {
-      toast.error(error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Handle user sign-in
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!email) {
+      toast.error('Lütfen e-posta adresinizi girin');
+      return;
+    }
+    if (!password) {
+      toast.error('Lütfen şifrenizi girin');
+      return;
+    }
+
     setLoading(true);
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
-        password
+        password,
       });
 
       if (error) {
-        // Eğer email kayıtlı değilse kullanıcı uyarısı
-        if (error.message.includes('User not found') || error.message.includes('Invalid login credentials')) {
+        // Kullanıcı bulunamadığında veya login bilgisi yanlışsa
+        if (
+          error.message.includes('User not found') ||
+          error.message.includes('Invalid login credentials')
+        ) {
           toast.error("Böyle bir kullanıcı bulunamadı. Kayıt olmak için 'Kayıt Ol' bölümüne geçin.");
           setActiveTab('register');
           setLoading(false);
           return;
         }
-
         toast.error(error.message);
         setLoading(false);
         return;
       }
 
+      // sadece müşteri kullanıcılar için giriş sayfası
       const metadata = data.user?.user_metadata;
       if (metadata && metadata.role !== 'customer') {
         await supabase.auth.signOut();
@@ -119,7 +104,63 @@ export default function Auth() {
       toast.success('Giriş başarılı!');
       navigate('/customer-dashboard');
     } catch (error: any) {
-      toast.error(error.message);
+      toast.error(error.message || 'Giriş sırasında bir hata oluştu');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle user sign-up
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Basit alan kontrolü
+    if (!email) {
+      toast.error('Lütfen e-posta adresinizi girin');
+      return;
+    }
+    if (!password) {
+      toast.error('Lütfen şifrenizi girin');
+      return;
+    }
+    if (!firstName.trim()) {
+      toast.error('Lütfen adınızı girin');
+      return;
+    }
+    if (!lastName.trim()) {
+      toast.error('Lütfen soyadınızı girin');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            first_name: firstName,
+            last_name: lastName,
+            role: 'customer',
+          },
+        },
+      });
+
+      if (signUpError) {
+        if (signUpError.message.includes('already registered')) {
+          toast.error('Bu e-posta ile zaten bir hesap var. Lütfen giriş yapın.');
+          setActiveTab('login');
+          setLoading(false);
+          return;
+        }
+        throw signUpError;
+      }
+
+      toast.success('Kayıt başarılı! Giriş yapabilirsiniz.');
+      setActiveTab('login');
+    } catch (error: any) {
+      // Daha detaylı yönetim yapılabilir
+      toast.error(error.message || 'Kayıt sırasında bir hata oluştu.');
     } finally {
       setLoading(false);
     }
@@ -130,19 +171,35 @@ export default function Auth() {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Kuaför Randevu Sistemi</CardTitle>
-          <CardDescription>
-            Randevu almak için giriş yapın veya hesap oluşturun
-          </CardDescription>
+          <CardDescription>Randevu almak için giriş yapın veya hesap oluşturun</CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'login' | 'register')} className="space-y-4">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Giriş</TabsTrigger>
-              <TabsTrigger value="register">Kayıt</TabsTrigger>
+              <TabsTrigger value="login" className="flex items-center justify-center gap-1">
+                <logIn size={14} /> Giriş Yap
+              </TabsTrigger>
+              <TabsTrigger value="register" className="flex items-center justify-center gap-1">
+                <userPlus size={14} /> Kayıt Ol
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="login">
-              <div className="text-center mb-3 font-semibold">GOOGLE İLE GİRİŞ YAP</div>
+              <div className="text-center mb-3 font-semibold text-gray-700">
+                GOOGLE İLE GİRİŞ YAP
+              </div>
+              <GoogleAuthButton
+                text="Google ile Giriş Yap"
+                className="bg-white text-gray-800 hover:bg-gray-100 border border-gray-300"
+              />
+              <div className="relative my-5">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-gray-300"></span>
+                </div>
+                <div className="relative flex justify-center text-xs uppercase text-muted-foreground bg-gray-50">
+                  veya
+                </div>
+              </div>
               <form onSubmit={handleSignIn} className="space-y-4">
                 <div>
                   <Label htmlFor="loginEmail">E-posta</Label>
@@ -151,6 +208,7 @@ export default function Auth() {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="email"
                     required
                   />
                 </div>
@@ -161,6 +219,7 @@ export default function Auth() {
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="current-password"
                     required
                   />
                 </div>
@@ -171,41 +230,57 @@ export default function Auth() {
             </TabsContent>
 
             <TabsContent value="register">
-              <div className="text-center mb-3 font-semibold">GOOGLE İLE KAYDOL</div>
+              <div className="text-center mb-3 font-semibold text-gray-700">
+                GOOGLE İLE KAYDOL
+              </div>
+              <GoogleAuthButton
+                text="Google ile Kayıt Ol"
+                className="bg-white text-gray-800 hover:bg-gray-100 border border-gray-300"
+              />
+              <div className="relative my-5">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-gray-300"></span>
+                </div>
+                <div className="relative flex justify-center text-xs uppercase text-muted-foreground bg-gray-50">
+                  veya
+                </div>
+              </div>
               <form onSubmit={handleSignUp} className="space-y-4">
                 <div>
-                  <Label htmlFor="email">E-posta</Label>
+                  <Label htmlFor="registerEmail">E-posta</Label>
                   <Input
-                    id="email"
+                    id="registerEmail"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="email"
                     required
                   />
                 </div>
                 <div>
-                  <Label htmlFor="password">Şifre</Label>
+                  <Label htmlFor="registerPassword">Şifre</Label>
                   <Input
-                    id="password"
+                    id="registerPassword"
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="new-password"
                     required
                   />
                 </div>
                 <div>
-                  <Label htmlFor="firstName">Ad</Label>
+                  <Label htmlFor="registerFirstName">Ad</Label>
                   <Input
-                    id="firstName"
+                    id="registerFirstName"
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     required
                   />
                 </div>
                 <div>
-                  <Label htmlFor="lastName">Soyad</Label>
+                  <Label htmlFor="registerLastName">Soyad</Label>
                   <Input
-                    id="lastName"
+                    id="registerLastName"
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     required
@@ -220,9 +295,7 @@ export default function Auth() {
 
           <div className="mt-6 text-center space-y-3">
             <Button variant="link" asChild>
-              <Link to="/admin">
-                Personel olarak giriş yapmak için tıklayın
-              </Link>
+              <Link to="/admin">Personel olarak giriş yapmak için tıklayın</Link>
             </Button>
             <div className="space-y-2">
               <Button variant="secondary" asChild className="w-full">
