@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -225,13 +224,13 @@ export default function StaffProfile() {
       }
 
       // Save education info into staff_education table
-      const dataToUpsert = {
+      const dataToUpsert = [{
         personel_id: user.id,
         ortaokulDurumu: educationData.ortaokulDurumu,
         liseDurumu: educationData.liseDurumu,
         liseTuru: educationData.liseTuru,
         meslekiBrans: educationData.meslekiBrans,
-      };
+      }];
 
       const { error: educationError } = await supabase
         .from("staff_education")
@@ -243,14 +242,14 @@ export default function StaffProfile() {
       }
 
       // Save history info into staff_history table
-      const historyToUpsert = {
+      const historyToUpsert = [{
         personel_id: user.id,
         isYerleri: historyData.isYerleri,
         gorevPozisyon: historyData.gorevPozisyon,
         belgeler: historyData.belgeler,
         yarismalar: historyData.yarismalar,
         cv: historyData.cv,
-      };
+      }];
 
       const { error: historyError } = await supabase
         .from("staff_history")
