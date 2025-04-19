@@ -2,7 +2,7 @@
 import React from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
-import { Mail, Phone, MapPin, CalendarDays, Copy } from "lucide-react";
+import { Mail, Phone, MapPin, CalendarDays, Copy, CreditCard } from "lucide-react";
 import { toast } from "sonner";
 
 interface PersonalInfoTabProps {
@@ -59,7 +59,7 @@ export function PersonalInfoTab({ personnel }: PersonalInfoTabProps) {
                   <p className="text-sm font-medium text-muted-foreground">Doğum Tarihi</p>
                   <div className="flex items-center">
                     <CalendarDays className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <p className="text-base">{formatDate(personnel.birth_date) || "-"}</p>
+                    <p className="text-base">{formatDate(personnel.birth_date)}</p>
                   </div>
                 </div>
                 
@@ -105,6 +105,7 @@ export function PersonalInfoTab({ personnel }: PersonalInfoTabProps) {
                 <div className="col-span-1 md:col-span-2">
                   <p className="text-sm font-medium text-muted-foreground">IBAN</p>
                   <div className="flex items-center">
+                    <CreditCard className="h-4 w-4 mr-2 text-muted-foreground" />
                     <p className="text-base">{personnel.iban || "-"}</p>
                     {personnel.iban && (
                       <button 
