@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface EducationData {
   ortaokuldurumu: string;
@@ -75,6 +76,10 @@ export default function StaffProfile() {
     belgeler: [],
     yarismalar: [],
     cv: "",
+    _newIsYeri: "",
+    _newGorev: "",
+    _newBelge: "",
+    _newYarisma: "",
   });
 
   const [childrenData, setChildrenData] = useState<ChildrenData>({
@@ -100,7 +105,7 @@ export default function StaffProfile() {
     // Tek nesne olarak (dizide değil)
     const { error } = await supabase
       .from("customer_personal_data")
-      .upsert(personalData, { onConflict: ["customer_id"] });
+      .upsert([personalData], { onConflict: ["customer_id"] });
 
     setLoading(false);
     if (error) {
@@ -115,16 +120,18 @@ export default function StaffProfile() {
     if (!user || !user.id) return;
     setLoading(true);
 
-    const dataToUpsert = [{
-      personel_id: Number(user.id),
-      ortaokuldurumu: educationData.ortaokuldurumu,
-      lisedurumu: educationData.lisedurumu,
-      liseturu: educationData.liseturu,
-      meslekibrans: educationData.meslekibrans,
-      universitedurumu: educationData.universitedurumu,
-      universitebolum: educationData.universitebolum,
-      updated_at: new Date().toISOString(),
-    }];
+    const dataToUpsert = [
+      {
+        personel_id: Number(user.id),
+        ortaokuldurumu: educationData.ortaokuldurumu,
+        lisedurumu: educationData.lisedurumu,
+        liseturu: educationData.liseturu,
+        meslekibrans: educationData.meslekibrans,
+        universitedurumu: educationData.universitedurumu,
+        universitebolum: educationData.universitebolum,
+        updated_at: new Date().toISOString(),
+      },
+    ];
 
     const { error } = await supabase
       .from("staff_education")
@@ -143,15 +150,17 @@ export default function StaffProfile() {
     if (!user || !user.id) return;
     setLoading(true);
 
-    const dataToUpsert = [{
-      personel_id: Number(user.id),
-      isyerleri: arrayToString(historyData.isyerleri),
-      gorevpozisyon: arrayToString(historyData.gorevpozisyon),
-      belgeler: arrayToString(historyData.belgeler),
-      yarismalar: arrayToString(historyData.yarismalar),
-      cv: historyData.cv || "",
-      updated_at: new Date().toISOString(),
-    }];
+    const dataToUpsert = [
+      {
+        personel_id: Number(user.id),
+        isyerleri: arrayToString(historyData.isyerleri),
+        gorevpozisyon: arrayToString(historyData.gorevpozisyon),
+        belgeler: arrayToString(historyData.belgeler),
+        yarismalar: arrayToString(historyData.yarismalar),
+        cv: historyData.cv || "",
+        updated_at: new Date().toISOString(),
+      },
+    ];
 
     const { error } = await supabase
       .from("staff_history")
@@ -176,15 +185,17 @@ export default function StaffProfile() {
     if (!user || !user.id) return;
 
     setLoading(true);
-    const dataToUpsert = [{
-      personel_id: Number(user.id),
-      isyerleri: arrayToString(isyerleri),
-      gorevpozisyon: arrayToString(gorevpozisyon),
-      belgeler: arrayToString(belgeler),
-      yarismalar: arrayToString(yarismalar),
-      cv: cv || "",
-      updated_at: new Date().toISOString(),
-    }];
+    const dataToUpsert = [
+      {
+        personel_id: Number(user.id),
+        isyerleri: arrayToString(isyerleri),
+        gorevpozisyon: arrayToString(gorevpozisyon),
+        belgeler: arrayToString(belgeler),
+        yarismalar: arrayToString(yarismalar),
+        cv: cv || "",
+        updated_at: new Date().toISOString(),
+      },
+    ];
 
     const { error } = await supabase
       .from("staff_history")
@@ -698,157 +709,154 @@ export default function StaffProfile() {
                   <TabsTrigger value="join">İşletmeye Katıl</TabsTrigger>
                 )}
               </TabsList>
-              <div className="mt-4">
-                <TabsContent value="profile">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Ad
-                      </label>
-                      <input
-                        type="text"
-                        value={profile?.first_name || ""}
-                        onChange={(e) =>
-                          setProfile({ ...profile, first_name: e.target.value })
-                        }
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Soyad
-                      </label>
-                      <input
-                        type="text"
-                        value={profile?.last_name || ""}
-                        onChange={(e) =>
-                          setProfile({ ...profile, last_name: e.target.value })
-                        }
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Telefon
-                      </label>
-                      <input
-                        type="text"
-                        value={profile?.phone || ""}
-                        onChange={(e) =>
-                          setProfile({ ...profile, phone: e.target.value })
-                        }
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Adres
-                      </label>
-                      <input
-                        type="text"
-                        value={profile?.address || ""}
-                        onChange={(e) =>
-                          setProfile({ ...profile, address: e.target.value })
-                        }
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Cinsiyet
-                      </label>
-                      <select
-                        value={profile?.gender || ""}
-                        onChange={(e) =>
-                          setProfile({ ...profile, gender: e.target.value })
-                        }
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                      >
-                        <option value="">Seçiniz</option>
-                        <option value="erkek">Erkek</option>
-                        <option value="kadın">Kadın</option>
-                      </select>
-                    </div>
+              <TabsContent value="profile">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Ad
+                    </label>
+                    <input
+                      type="text"
+                      value={profile?.first_name || ""}
+                      onChange={(e) =>
+                        setProfile({ ...profile, first_name: e.target.value })
+                      }
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    />
                   </div>
-                </TabsContent>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Soyad
+                    </label>
+                    <input
+                      type="text"
+                      value={profile?.last_name || ""}
+                      onChange={(e) =>
+                        setProfile({ ...profile, last_name: e.target.value })
+                      }
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Telefon
+                    </label>
+                    <input
+                      type="text"
+                      value={profile?.phone || ""}
+                      onChange={(e) =>
+                        setProfile({ ...profile, phone: e.target.value })
+                      }
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Adres
+                    </label>
+                    <input
+                      type="text"
+                      value={profile?.address || ""}
+                      onChange={(e) =>
+                        setProfile({ ...profile, address: e.target.value })
+                      }
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Cinsiyet
+                    </label>
+                    <select
+                      value={profile?.gender || ""}
+                      onChange={(e) =>
+                        setProfile({ ...profile, gender: e.target.value })
+                      }
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    >
+                      <option value="">Seçiniz</option>
+                      <option value="erkek">Erkek</option>
+                      <option value="kadın">Kadın</option>
+                    </select>
+                  </div>
+                </div>
+              </TabsContent>
 
-                <TabsContent value="education">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Ortaokul Durumu
-                      </label>
-                      <select
-                        name="ortaokuldurumu"
-                        value={educationData.ortaokuldurumu}
-                        onChange={handleEducationChange}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                      >
-                        <option value="">Seçiniz</option>
-                        <option value="okuyor">Okuyor</option>
-                        <option value="bitirdi">Bitirdi</option>
-                        <option value="ayrildi">Ayrıldı</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Lise Durumu
-                      </label>
-                      <select
-                        name="lisedurumu"
-                        value={educationData.lisedurumu}
-                        onChange={handleEducationChange}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                        disabled={educationData.ortaokuldurumu !== "bitirdi"}
-                      >
-                        <option value="">Seçiniz</option>
-                        <option value="okuyor">Okuyor</option>
-                        <option value="bitirdi">Bitirdi</option>
-                        <option value="ayrildi">Ayrıldı</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Lise Türü
-                      </label>
-                      <select
-                        name="liseturu"
-                        value={educationData.liseturu}
-                        onChange={handleEducationChange}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                        disabled={
-                          educationData.lisedurumu !== "okuyor" &&
-                          educationData.lisedurumu !== "bitirdi"
-                        }
-                      >
-                        <option value="">Seçiniz</option>
-                        {liseTuruOptions.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Meslek / Branş
-                      </label>
-                      <input
-                        type="text"
-                        name="meslekibrans"
-                        value={educationData.meslekibrans}
-                        onChange={handleEducationChange}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                        disabled={
-                          educationData.lisedurumu !== "okuyor" &&
-                          educationData.lisedurumu !== "bitirdi" &&
-                          educationData.liseturu !== "cok_programli_anadolu" &&
-                          educationData.liseturu !== "meslek_ve_teknik_anadolu"
-                        }
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Üniversite Durumu
-                      </label>
-                      <select
+              <TabsContent value="education">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Ortaokul Durumu
+                    </label>
+                    <select
+                      name="ortaokuldurumu"
+                      value={educationData.ortaokuldurumu}
+                      onChange={(e) => {
+                        const ev = e as React.ChangeEvent<HTMLSelectElement>;
+                        const { name, value } = ev.target;
+                        setEducationData((prev) => {
+                          const newData = { ...prev, [name]: value };
+                          if (name === "ortaokuldurumu" && value !== "bitirdi") {
+                            newData.lisedurumu = "";
+                            newData.liseturu = "";
+                            newData.meslekibrans = "";
+                            newData.universitedurumu = "";
+                            newData.universitebolum = "";
+                          } else if (name === "lisedurumu") {
+                            if (value !== "okuyor" && value !== "bitirdi") {
+                              newData.liseturu = "";
+                              newData.meslekibrans = "";
+                              newData.universitedurumu = "";
+                              newData.universitebolum = "";
+                            }
+                            if (value !== "bitirdi") {
+                              newData.universitedurumu = "";
+                              newData.universitebolum = "";
+                            }
+                          } else if (name === "liseturu") {
+                            if (
+                              ![
+                                "cok_programli_anadolu",
+                                "meslek_ve_teknik_anadolu",
+                              ].includes(value)
+                            ) {
+                              newData.meslekibrans = "";
+                            }
+                          } else if (name === "universitedurumu") {
+                            if (value !== "okuyor" && value !== "bitirdi") {
+                              newData.universitebolum = "";
+                            }
+                          }
+                          return newData;
+                        });
+                      }}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    >
+                      <option value="">Seçiniz</option>
+                      <option value="okuyor">Okuyor</option>
+                      <option value="bitirdi">Bitirdi</option>
+                      <option value="ayrildi">Ayrıldı</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Lise Durumu
+                    </label>
+                    <select
+                      name="lisedurumu"
+                      value={educationData.lisedurumu}
+                      onChange={(e) => {
+                        const ev = e as React.ChangeEvent<HTMLSelectElement>;
+                        const { value, name } = ev.target;
+                        setEducationData((prev) => {
+                          const newData = { ...prev, [name]: value };
+                          if (name === "ortaokuldurumu" && value !== "bitirdi") {
+                            newData.lisedurumu = "";
+                            newData.liseturu = "";
+                            newData.meslekibrans = "";
+                            newData.universitedurumu = "";
+                            newData.universitebolum = "";
+                          } else if (name === "lisedurumu") {
+                            if (value !== "okuyor" && value !== "bitirdi") {
+                              newData.liseturu = "";
+                              newData.meslekibrans =
