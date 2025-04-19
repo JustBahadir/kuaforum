@@ -305,11 +305,19 @@ export const personelServisi = {
       // Create update fields object
       const updateFields: Record<string, any> = {};
       
-      // Handle each field individually
+      // Validate calisma_sistemi - make sure it's one of the allowed values
       if (personel.calisma_sistemi !== undefined) {
+        // Check if the value is valid
+        const validSystems = ['aylik', 'haftalik', 'gunluk', 'komisyon'];
+        
+        if (!validSystems.includes(personel.calisma_sistemi)) {
+          throw new Error(`Geçersiz çalışma sistemi: ${personel.calisma_sistemi}. Geçerli değerler: ${validSystems.join(', ')}`);
+        }
+        
         updateFields.calisma_sistemi = personel.calisma_sistemi;
       }
       
+      // Handle numeric fields
       if (personel.maas !== undefined) {
         updateFields.maas = personel.maas;
       }
@@ -318,7 +326,7 @@ export const personelServisi = {
         updateFields.prim_yuzdesi = personel.prim_yuzdesi;
       }
       
-      // Add any other fields except iban (which needs special handling)
+      // Add any other fields
       Object.keys(personel).forEach(key => {
         if (key !== 'iban' && key !== 'calisma_sistemi' && key !== 'maas' && key !== 'prim_yuzdesi' && personel[key as keyof typeof personel] !== undefined) {
           updateFields[key] = personel[key as keyof typeof personel];
@@ -336,6 +344,11 @@ export const personelServisi = {
 
       if (error) {
         console.error("Personel güncelleme hatası:", error);
+        
+        if (error.message.includes('personel_calisma_sistemi_check')) {
+          throw new Error("Geçersiz çalışma sistemi değeri. Lütfen geçerli bir değer seçin.");
+        }
+        
         throw error;
       }
       
@@ -343,7 +356,8 @@ export const personelServisi = {
       return data;
     } catch (error) {
       console.error("Personel güncelleme hatası:", error);
-      toast.error("Personel güncellenirken bir hata oluştu: " + (error instanceof Error ? error.message : "Bilinmeyen hata"));
+      const errorMessage = error instanceof Error ? error.message : "Bilinmeyen hata";
+      toast.error(`Personel güncellenirken bir hata oluştu: ${errorMessage}`);
       throw error;
     }
   },

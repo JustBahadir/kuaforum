@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { personelServisi, personelIslemleriServisi } from "@/lib/supabase";
@@ -19,7 +20,6 @@ export function PersonnelList({
   onPersonnelSelect
 }: PersonnelListProps) {
   const [isAddPersonnelDialogOpen, setIsAddPersonnelDialogOpen] = useState(false);
-  const [isEditPersonnelDialogOpen, setIsEditPersonnelDialogOpen] = useState(false);
   const [isPersonnelDetailsDialogOpen, setIsPersonnelDetailsDialogOpen] = useState(false);
   const [selectedPersonnel, setSelectedPersonnel] = useState<any>(null);
   const [search, setSearch] = useState("");
@@ -87,27 +87,7 @@ export function PersonnelList({
       toast.error("Personel eklenirken bir hata oluştu.");
     }
   };
-  const handleEditPersonnelSubmit = async (values: any) => {
-    const {
-      id,
-      ...data
-    } = values;
-    if (data.email) {
-      data.eposta = data.email;
-      delete data.email;
-    }
-    try {
-      await personelServisi.guncelle(id, data);
-      queryClient.invalidateQueries({
-        queryKey: ['personeller']
-      });
-      toast.success("Personel başarıyla güncellendi.");
-      setIsEditPersonnelDialogOpen(false);
-    } catch (error) {
-      console.error("Error updating personnel:", error);
-      toast.error("Personel güncellenirken bir hata oluştu.");
-    }
-  };
+  
   const enrichedPersonnel = personnelData.map(p => {
     const personnelOperations = personelIslemleri.filter(islem => islem.personel_id === p.id);
     return {
@@ -155,10 +135,7 @@ export function PersonnelList({
         </CardContent>
       </Card>
 
-      <PersonnelDetailsDialog isOpen={isPersonnelDetailsDialogOpen} onOpenChange={setIsPersonnelDetailsDialogOpen} personnel={selectedPersonnel} onUpdate={() => {
-      setIsEditPersonnelDialogOpen(true);
-      setIsPersonnelDetailsDialogOpen(false);
-    }} />
+      <PersonnelDetailsDialog isOpen={isPersonnelDetailsDialogOpen} onOpenChange={setIsPersonnelDetailsDialogOpen} personnel={selectedPersonnel} onUpdate={() => {}} />
 
       <AlertDialog open={isAddPersonnelDialogOpen} onOpenChange={setIsAddPersonnelDialogOpen}>
         <AlertDialogContent>
@@ -173,10 +150,6 @@ export function PersonnelList({
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={isEditPersonnelDialogOpen} onOpenChange={setIsEditPersonnelDialogOpen}>
-        
       </AlertDialog>
     </div>;
 }

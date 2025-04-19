@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { BriefcaseIcon, PercentIcon, Banknote } from "lucide-react";
@@ -28,6 +29,7 @@ export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabPr
 
   const updateMutation = useMutation({
     mutationFn: async (data: any) => {
+      console.log("Updating personnel with data:", data);
       return await personelServisi.guncelle(personnel.id, data);
     },
     onSuccess: () => {
@@ -49,67 +51,72 @@ export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabPr
     const parsedSalary = salary ? parseInt(salary, 10) : 0;
     const parsedCommission = commission ? parseInt(commission, 10) : 0;
     
-    // Prepare the data for submission
-    const updateData = {
-      calisma_sistemi: workSystem === 'maasli' ? paymentPeriod : 'komisyon',
-    };
-    
-    if (workSystem === 'komisyonlu') {
-      Object.assign(updateData, {
-        prim_yuzdesi: parsedCommission,
-        maas: 0 // Set salary to 0 for commission-based workers
-      });
-    } else {
-      Object.assign(updateData, {
-        maas: parsedSalary,
-        prim_yuzdesi: 0 // Set commission to 0 for salaried workers
-      });
+    // Validate input values before submission
+    if (workSystem === 'komisyonlu' && (parsedCommission < 0 || parsedCommission > 100)) {
+      toast.error("Prim yüzdesi 0-100 arasında olmalıdır.");
+      return;
     }
     
+    if (workSystem === 'maasli' && parsedSalary < 0) {
+      toast.error("Maaş tutarı sıfırdan büyük olmalıdır.");
+      return;
+    }
+    
+    // Prepare the data for submission
+    const updateData: Record<string, any> = {};
+    
+    // Map 'maasli' and 'komisyonlu' workSystem values to the actual database values
+    if (workSystem === 'komisyonlu') {
+      updateData.calisma_sistemi = 'komisyon';
+      updateData.prim_yuzdesi = parsedCommission;
+      updateData.maas = 0; // Set salary to 0 for commission-based workers
+    } else {
+      updateData.calisma_sistemi = paymentPeriod; // aylik, haftalik, gunluk
+      updateData.maas = parsedSalary;
+      updateData.prim_yuzdesi = 0; // Set commission to 0 for salaried workers
+    }
+    
+    console.log("Submitting update data:", updateData);
     updateMutation.mutate(updateData);
   };
 
-  // Similar approach to the PhoneInputField component for handling numeric inputs
-  const handleSalaryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
+  // Input handler for numeric inputs that preserves focus
+  const handleNumericInput = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    setValue: React.Dispatch<React.SetStateAction<string>>,
+    minValue = 0,
+    maxValue?: number
+  ) => {
+    const inputValue = e.target.value;
     
-    // Only allow digits (no dots, commas or other characters)
-    const digitsOnly = value.replace(/\D/g, '');
-    
-    // Remove leading zeros except for a single zero
-    let formattedValue = digitsOnly;
-    if (formattedValue.length > 1 && formattedValue.startsWith('0')) {
-      formattedValue = formattedValue.replace(/^0+/, '');
+    // Allow empty input for UX reasons
+    if (inputValue === '') {
+      setValue('');
+      return;
     }
-    
-    // Limit to a reasonable length
-    const limitedValue = formattedValue.substring(0, 7);
-    
-    // Update state with the clean value
-    setSalary(limitedValue);
-  };
-
-  // Similar approach for commission with added validation for 0-100 range
-  const handleCommissionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
     
     // Only allow digits
-    const digitsOnly = value.replace(/\D/g, '');
+    if (!/^\d*$/.test(inputValue)) {
+      return;
+    }
     
     // Remove leading zeros except for a single zero
-    let formattedValue = digitsOnly;
+    let formattedValue = inputValue;
     if (formattedValue.length > 1 && formattedValue.startsWith('0')) {
       formattedValue = formattedValue.replace(/^0+/, '');
     }
     
-    // Parse as number to check range
+    // Check against min/max values if specified
     const numValue = parseInt(formattedValue, 10);
     
-    // Only update if empty or within 0-100 range
-    if (formattedValue === '' || (numValue >= 0 && numValue <= 100)) {
-      // Limit to 3 digits (for values like 100)
-      const limitedValue = formattedValue.substring(0, 3);
-      setCommission(limitedValue);
+    if (formattedValue === '' || !isNaN(numValue)) {
+      if (maxValue !== undefined && numValue > maxValue) {
+        setValue(maxValue.toString());
+      } else if (numValue < minValue) {
+        setValue(minValue.toString());
+      } else {
+        setValue(formattedValue);
+      }
     }
   };
 
@@ -158,13 +165,11 @@ export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabPr
           <div className="space-y-2">
             <Label>Maaş Tutarı</Label>
             <Input
-              type="text"
               value={salary}
-              onChange={handleSalaryChange}
+              onChange={(e) => handleNumericInput(e, setSalary, 0)}
               placeholder="Maaş tutarını girin (₺)"
               className="placeholder:text-muted-foreground"
               inputMode="numeric"
-              pattern="[0-9]*"
             />
           </div>
         </div>
@@ -174,13 +179,11 @@ export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabPr
         <div className="space-y-2">
           <Label>Prim Yüzdesi (%)</Label>
           <Input
-            type="text"
             value={commission}
-            onChange={handleCommissionChange}
+            onChange={(e) => handleNumericInput(e, setCommission, 0, 100)}
             placeholder="Prim yüzdesini girin (0-100)"
             className="placeholder:text-muted-foreground"
             inputMode="numeric"
-            pattern="[0-9]*"
           />
         </div>
       )}
