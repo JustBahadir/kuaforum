@@ -22,6 +22,7 @@ export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabPr
   const [isEditing, setIsEditing] = useState(false);
   const [workSystem, setWorkSystem] = useState(personnel.calisma_sistemi === 'komisyon' ? 'komisyonlu' : 'maasli');
   const [paymentPeriod, setPaymentPeriod] = useState(personnel.calisma_sistemi || 'aylik');
+  
   // Initialize with empty strings instead of converting to string
   const [salary, setSalary] = useState(personnel.maas && personnel.maas > 0 ? personnel.maas.toString() : '');
   const [commission, setCommission] = useState(personnel.prim_yuzdesi && personnel.prim_yuzdesi > 0 ? personnel.prim_yuzdesi.toString() : '');
@@ -69,23 +70,36 @@ export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabPr
     updateMutation.mutate(updateData);
   };
 
-  // Handle salary input with validation for digits only - fixed to allow multi-character input
+  // Handlers for number inputs that prevent focus loss
   const handleSalaryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
+    const inputValue = e.target.value;
     
-    // Allow empty input or digits only, up to 7 digits
-    if (value === '' || /^\d{0,7}$/.test(value)) {
-      setSalary(value);
+    // Allow empty input or valid positive integers
+    if (inputValue === '' || /^\d+$/.test(inputValue)) {
+      // Prevent leading zeros and limit to reasonable number
+      const num = inputValue === '' ? '' : parseInt(inputValue, 10).toString();
+      if (num === '0') {
+        // Allow single zero
+        setSalary('0');
+      } else if (parseInt(num, 10) <= 9999999 || num === '') {
+        setSalary(num);
+      }
     }
   };
 
-  // Handle commission input with validation (0-100) - fixed to allow multi-character input
+  // Handler for commission with 0-100 validation
   const handleCommissionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
+    const inputValue = e.target.value;
     
-    // Allow empty input or valid commission values (0-100)
-    if (value === '' || (/^\d{0,3}$/.test(value) && parseInt(value, 10) <= 100)) {
-      setCommission(value);
+    // Allow empty input or valid digits
+    if (inputValue === '' || /^\d+$/.test(inputValue)) {
+      // Convert to number to validate range (0-100) and remove leading zeros
+      const num = inputValue === '' ? '' : parseInt(inputValue, 10).toString();
+      
+      // Only update state if within valid range or empty
+      if (num === '' || (parseInt(num, 10) >= 0 && parseInt(num, 10) <= 100)) {
+        setCommission(num);
+      }
     }
   };
 
@@ -240,3 +254,4 @@ export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabPr
     </div>
   );
 }
+
