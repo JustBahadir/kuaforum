@@ -1,7 +1,6 @@
-
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { personelServisi } from "@/lib/supabase";
+import { personelServisi, personelIslemleriServisi } from "@/lib/supabase";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +31,19 @@ export function PersonnelList({ personnel: externalPersonnel, onPersonnelSelect 
     enabled: !externalPersonnel
   });
 
+  const { data: personelIslemleri = [] } = useQuery({
+    queryKey: ['personel-islemleri', 'last-30-days'],
+    queryFn: async () => {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const data = await personelIslemleriServisi.hepsiniGetir();
+      return data.filter(islem => {
+        const islemDate = new Date(islem.created_at || '');
+        return islemDate >= thirtyDaysAgo;
+      });
+    }
+  });
+
   const personnelData = externalPersonnel || personeller;
 
   const handlePersonnelSelect = (personnel: any) => {
@@ -59,7 +71,6 @@ export function PersonnelList({ personnel: externalPersonnel, onPersonnelSelect 
   });
 
   const handleAddPersonnelSubmit = async (values: any) => {
-    // Map any email field to eposta
     if (values.email) {
       values.eposta = values.email;
       delete values.email;
@@ -79,7 +90,6 @@ export function PersonnelList({ personnel: externalPersonnel, onPersonnelSelect 
   const handleEditPersonnelSubmit = async (values: any) => {
     const { id, ...data } = values;
     
-    // Map any email field to eposta
     if (data.email) {
       data.eposta = data.email;
       delete data.email;
@@ -96,14 +106,14 @@ export function PersonnelList({ personnel: externalPersonnel, onPersonnelSelect 
     }
   };
 
-  // Calculate operation count and total revenue for each personnel
   const enrichedPersonnel = personnelData.map(p => {
-    // Here you would typically calculate these from operations data
-    // For now, we'll just stub them
+    const personnelOperations = personelIslemleri.filter(
+      islem => islem.personel_id === p.id
+    );
     return {
       ...p,
-      islem_sayisi: p.islem_sayisi || 0,
-      toplam_ciro: p.toplam_ciro || 0
+      islem_sayisi: personnelOperations.length,
+      toplam_ciro: personnelOperations.reduce((sum, islem) => sum + (islem.tutar || 0), 0)
     };
   });
 
