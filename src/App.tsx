@@ -1,4 +1,3 @@
-
 import React, { useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
@@ -28,8 +27,8 @@ import OperationsHistory from "./pages/OperationsHistory";
 import CustomerOperations from "./pages/operations/CustomerOperations";
 import StaffOperations from "./pages/operations/StaffOperations";
 import Profile from "./pages/Profile";
+import AuthGoogleCallback from "./pages/AuthGoogleCallback";
 
-// Create the query client
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -57,7 +56,8 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/auth" element={<CustomerAuth />} />
               <Route path="/profile-setup" element={<ProfileSetup />} />
-              
+              <Route path="/auth-google-callback" element={<AuthGoogleCallback />} />
+
               {/* Customer Routes */}
               <Route path="/customer-dashboard/*" element={<CustomerDashboard />} />
               <Route path="/customer-profile" element={<CustomerProfile />} />
