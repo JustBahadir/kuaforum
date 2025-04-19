@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -79,12 +80,7 @@ export default function StaffProfile() {
   });
 
   const [userRole, setUserRole] = useState("");
-  const [adding, setAdding] = useState(false); // define adding state as it's used below
   const [saving, setSaving] = useState(false);
-
-  const startAdd = () => {
-    setAdding(true);
-  };
 
   const fetchProfile = useCallback(async () => {
     setLoading(true);
@@ -95,13 +91,14 @@ export default function StaffProfile() {
         return;
       }
 
-      const user = session.session.user;
-      setUser(user);
+      const currentUser = session.session.user;
+      setUser(currentUser);
 
+      // Fetch profile from "profiles" table
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
         .select("*")
-        .eq("id", user.id)
+        .eq("id", currentUser.id)
         .single();
 
       if (profileError) {
@@ -111,10 +108,11 @@ export default function StaffProfile() {
       setProfile(profileData);
       setUserRole(profileData?.role || "");
 
+      // Fetch education data from "staff_education"
       const { data: education, error: educationError } = await supabase
-        .from("education")
+        .from("staff_education")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("personel_id", profileData.id)
         .single();
 
       if (educationError && educationError.code !== "PGRST116") {
@@ -130,12 +128,22 @@ export default function StaffProfile() {
           universitedurumu: education.universitedurumu || "",
           universitebolum: education.universitebolum || "",
         });
+      } else {
+        setEducationData({
+          ortaokuldurumu: "",
+          lisedurumu: "",
+          liseturu: "",
+          meslekibrans: "",
+          universitedurumu: "",
+          universitebolum: "",
+        });
       }
 
+      // Fetch history data from "staff_history"
       const { data: history, error: historyError } = await supabase
-        .from("history")
+        .from("staff_history")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("personel_id", profileData.id)
         .single();
 
       if (historyError && historyError.code !== "PGRST116") {
@@ -149,6 +157,18 @@ export default function StaffProfile() {
           belgeler: stringToArray(history.belgeler),
           yarismalar: stringToArray(history.yarismalar),
           cv: history.cv || "",
+          _newIsYeri: "",
+          _newGorev: "",
+          _newBelge: "",
+          _newYarisma: "",
+        });
+      } else {
+        setHistoryData({
+          isyerleri: [],
+          gorevpozisyon: [],
+          belgeler: [],
+          yarismalar: [],
+          cv: "",
           _newIsYeri: "",
           _newGorev: "",
           _newBelge: "",
@@ -227,12 +247,12 @@ export default function StaffProfile() {
         throw new Error("Kullanıcı bilgileri alınamadı.");
       }
 
-      const { data, error } = await supabase
-        .from("education")
+      const { error } = await supabase
+        .from("staff_education")
         .upsert(
           [
             {
-              user_id: user.id,
+              personel_id: profile.id,
               ortaokuldurumu: educationData.ortaokuldurumu,
               lisedurumu: educationData.lisedurumu,
               liseturu: educationData.liseturu,
@@ -241,9 +261,8 @@ export default function StaffProfile() {
               universitebolum: educationData.universitebolum,
             },
           ],
-          { onConflict: "user_id" }
-        )
-        .select();
+          { onConflict: "personel_id" }
+        );
 
       if (error) {
         throw error;
@@ -300,11 +319,11 @@ export default function StaffProfile() {
       }
 
       const { error } = await supabase
-        .from("history")
+        .from("staff_history")
         .upsert(
           [
             {
-              user_id: user.id,
+              personel_id: profile.id,
               isyerleri: historyData.isyerleri.join(", "),
               gorevpozisyon: historyData.gorevpozisyon.join(", "),
               belgeler: historyData.belgeler.join(", "),
@@ -312,9 +331,8 @@ export default function StaffProfile() {
               cv: historyData.cv,
             },
           ],
-          { onConflict: "user_id" }
-        )
-        .select();
+          { onConflict: "personel_id" }
+        );
 
       if (error) {
         throw error;
@@ -342,26 +360,22 @@ export default function StaffProfile() {
         .eq("kod", shopCode)
         .single();
 
-      if (error) {
+      if (error || !data) {
         throw new Error("Geçersiz dükkan kodu.");
       }
 
-      if (data) {
-        // Update the user's profile with the shop ID
-        const { error: profileUpdateError } = await supabase
-          .from("profiles")
-          .update({ dukkan_id: data.id })
-          .eq("id", user.id);
+      // Update the user's profile with the shop ID
+      const { error: profileUpdateError } = await supabase
+        .from("profiles")
+        .update({ dukkan_id: data.id })
+        .eq("id", user.id);
 
-        if (profileUpdateError) {
-          throw profileUpdateError;
-        }
-
-        toast.success("Dükkan kodu doğrulandı ve profilinize eklendi!");
-        fetchProfile(); // Refresh profile data
-      } else {
-        toast.error("Geçersiz dükkan kodu.");
+      if (profileUpdateError) {
+        throw profileUpdateError;
       }
+
+      toast.success("Dükkan kodu doğrulandı ve profilinize eklendi!");
+      fetchProfile(); // Refresh profile data
     } catch (err: any) {
       toast.error(err.message || "Dükkan kodu doğrulanamadı.");
     } finally {
