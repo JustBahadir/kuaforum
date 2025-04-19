@@ -5,34 +5,34 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { Scissors, Search, User, Users } from "lucide-react";
-import { toast } from "sonner";
 
 export default function HomePage() {
   const navigate = useNavigate();
   const { isAuthenticated, userRole, loading } = useCustomerAuth();
 
-  // Handle redirects based on authentication status
+  // Yönlendirme sadece loading tamamlandığında yapılır
   useEffect(() => {
-    if (!loading && isAuthenticated) {
-      if (userRole === 'admin') {
-        navigate('/shop-home');
-      } else if (userRole === 'staff') {
-        navigate('/shop-home');
-      } else if (userRole === 'customer') {
-        navigate('/customer-dashboard');
+    if (!loading) {
+      if (isAuthenticated) {
+        if (userRole === 'admin' || userRole === 'staff') {
+          navigate('/shop-home', { replace: true });
+        } else if (userRole === 'customer') {
+          navigate('/customer-dashboard', { replace: true });
+        } else {
+          // Belirsiz role durumunda (örneğin null) hiç bir şey yapma
+        }
+      } else {
+        // Oturum yoksa ana sayfada kal, veya gerekirse login sayfasına gönderin
+        // Navigate çağrısı yapma burada spinner yerine button gösteririz
       }
     }
   }, [isAuthenticated, userRole, loading, navigate]);
 
-  // Handle login button clicks
-  const handleCustomerAuthClick = () => navigate("/login");
-  const handleStaffAuthClick = () => navigate("/staff-login");
-
-  // If still loading, show a spinner
+  // loading durumunda spinner gösterilir
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+      <div className="min-h-screen flex items-center justify-center" aria-label="Yükleniyor">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500" />
       </div>
     );
   }
@@ -47,7 +47,7 @@ export default function HomePage() {
             <p className="text-lg text-muted-foreground">
               Online randevu sistemi ile güzellik hizmetlerinizi kolayca yönetin
             </p>
-            
+
             <div className="space-y-4">
               <h2 className="text-xl font-semibold">Sunduğumuz Hizmetler:</h2>
               <ul className="space-y-3">
@@ -82,14 +82,14 @@ export default function HomePage() {
                 <Button 
                   className="flex-1 h-12" 
                   variant="outline"
-                  onClick={handleCustomerAuthClick}
+                  onClick={() => navigate("/login")}
                 >
                   <User className="mr-2" />
                   Müşteri Girişi
                 </Button>
                 <Button 
                   className="flex-1 h-12"
-                  onClick={handleStaffAuthClick}
+                  onClick={() => navigate("/login")}
                 >
                   <Users className="mr-2" />
                   Kuaför Girişi
@@ -107,8 +107,7 @@ export default function HomePage() {
                       <Input placeholder="Şehir seçin" />
                     </div>
                   </div>
-                  <Button className="w-full">
-                    <Search className="mr-2" />
+                  <Button className="w-full" onClick={() => {}}>
                     Ara
                   </Button>
                 </div>
