@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -23,6 +23,7 @@ export function PersonnelDetailsDialog({
   onUpdate = () => {}
 }: PersonnelDetailsDialogProps) {
   const [activeTab, setActiveTab] = useState("personal-info");
+  const dialogContentRef = useRef<HTMLDivElement>(null);
 
   // Close on mobile back button press (popstate)
   useEffect(() => {
@@ -39,6 +40,17 @@ export function PersonnelDetailsDialog({
     };
   }, [isOpen, onOpenChange]);
 
+  // Handle overlay click to close the dialog
+  // Using Radix DialogPrimitive.Overlay default behavior
+  // But additionally making sure outside click closes
+  const handlePointerDownOutside = useCallback(
+    (event: PointerEvent) => {
+      // If you want to restrict which click closes the dialog, check event target here
+      onOpenChange(false);
+    },
+    [onOpenChange]
+  );
+
   if (!personnel) {
     return null;
   }
@@ -46,13 +58,23 @@ export function PersonnelDetailsDialog({
   return (
     <DialogPrimitive.Root open={isOpen} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 bg-black/50" />
-        <DialogPrimitive.Content className={cn(
-          "fixed left-[50%] top-[50%] z-50 max-w-4xl max-h-[90vh] w-full overflow-y-auto rounded-lg bg-background p-6 shadow-lg transform -translate-x-1/2 -translate-y-1/2 focus:outline-none"
-        )}>
+        <DialogPrimitive.Overlay 
+          className="fixed inset-0 bg-black/50" 
+          onPointerDown={() => onOpenChange(false)}
+        />
+        <DialogPrimitive.Content 
+          ref={dialogContentRef}
+          onPointerDownOutside={handlePointerDownOutside}
+          className={cn(
+            "fixed left-[50%] top-[50%] z-50 max-w-4xl max-h-[90vh] w-full overflow-y-auto rounded-lg bg-background p-6 shadow-lg transform -translate-x-1/2 -translate-y-1/2 focus:outline-none"
+          )}
+        >
           {/* Close button top right */}
-          <DialogPrimitive.Close className="absolute right-4 top-4 rounded-md p-1 text-gray-500 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:ring-offset-2">
-            <X className="h-5 w-5" aria-label="Kapat" />
+          <DialogPrimitive.Close 
+            aria-label="Kapat"
+            className="absolute right-4 top-4 rounded-md p-1 text-gray-500 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:ring-offset-2"
+          >
+            <X className="h-5 w-5" />
           </DialogPrimitive.Close>
 
           <div className="text-xl font-semibold flex items-center gap-2 mb-4">
