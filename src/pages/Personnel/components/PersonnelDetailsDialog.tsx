@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
@@ -44,7 +43,7 @@ export function PersonnelDetailsDialog({
   // Using Radix DialogPrimitive.Overlay default behavior
   // But additionally making sure outside click closes
   const handlePointerDownOutside = useCallback(
-    (event: DialogPrimitive.PointerDownOutsideEvent) => {
+    (event: CustomEvent<{ originalEvent: PointerEvent }>) => {
       onOpenChange(false);
     },
     [onOpenChange]
@@ -57,19 +56,17 @@ export function PersonnelDetailsDialog({
   return (
     <DialogPrimitive.Root open={isOpen} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay 
-          className="fixed inset-0 bg-black/50" 
+        <DialogPrimitive.Overlay
+          className="fixed inset-0 bg-black/50"
           onPointerDown={() => onOpenChange(false)}
         />
-        <DialogPrimitive.Content 
+        <DialogPrimitive.Content
           ref={dialogContentRef}
           onPointerDownOutside={handlePointerDownOutside}
-          className={cn(
-            "fixed left-[50%] top-[50%] z-50 max-w-4xl max-h-[90vh] w-full overflow-y-auto rounded-lg bg-background p-6 shadow-lg transform -translate-x-1/2 -translate-y-1/2 focus:outline-none"
-          )}
+          className="fixed left-[50%] top-[50%] z-50 max-w-4xl max-h-[90vh] w-full overflow-y-auto rounded-lg bg-background p-6 shadow-lg transform -translate-x-1/2 -translate-y-1/2 focus:outline-none"
         >
           {/* Close button top right */}
-          <DialogPrimitive.Close 
+          <DialogPrimitive.Close
             aria-label="Kapat"
             className="absolute right-4 top-4 rounded-md p-1 text-gray-500 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:ring-offset-2"
           >
