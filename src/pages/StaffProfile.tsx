@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -867,4 +868,563 @@ function WorkplacesPositionsSection({
   const startAdd = () => {
     setAdding(true);
     setNewIsyeri("");
-    setNewGorev
+    setNewGorev("");
+  };
+
+  const cancelAdd = () => {
+    setAdding(false);
+    setNewIsyeri("");
+    setNewGorev("");
+  };
+
+  const saveAdd = async () => {
+    if (!newIsyeri.trim() || !newGorev.trim()) {
+      toast.error("İş yeri ve görev zorunludur.");
+      return;
+    }
+
+    setSaving(true);
+    const newIsyerleri = [...historyData.isyerleri, newIsyeri.trim()];
+    const newGorevPozisyon = [...historyData.gorevpozisyon, newGorev.trim()];
+
+    setHistoryData(prev => ({
+      ...prev,
+      isyerleri: newIsyerleri,
+      gorevpozisyon: newGorevPozisyon,
+      _newIsYeri: "",
+      _newGorev: "",
+    }));
+
+    try {
+      await saveHistoryDataWithParams(newIsyerleri, newGorevPozisyon, historyData.belgeler, historyData.yarismalar, historyData.cv);
+      toast.success("İş yeri ve görev başarıyla eklendi.");
+      setAdding(false);
+    } catch (error) {
+      toast.error("Ekleme işlemi sırasında hata oluştu.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const startEdit = (index: number) => {
+    setEditIndex(index);
+    setEditIsyeri(historyData.isyerleri[index]);
+    setEditGorev(historyData.gorevpozisyon[index]);
+  };
+
+  const cancelEdit = () => {
+    setEditIndex(null);
+    setEditIsyeri("");
+    setEditGorev("");
+  };
+
+  const saveEdit = async () => {
+    if (editIndex === null) return;
+
+    if (!editIsyeri.trim() || !editGorev.trim()) {
+      toast.error("İş yeri ve görev zorunludur.");
+      return;
+    }
+
+    setSaving(true);
+    const newIsyerleri = [...historyData.isyerleri];
+    const newGorevPozisyon = [...historyData.gorevpozisyon];
+    newIsyerleri[editIndex] = editIsyeri.trim();
+    newGorevPozisyon[editIndex] = editGorev.trim();
+
+    setHistoryData(prev => ({
+      ...prev,
+      isyerleri: newIsyerleri,
+      gorevpozisyon: newGorevPozisyon,
+    }));
+
+    try {
+      await saveHistoryDataWithParams(newIsyerleri, newGorevPozisyon, historyData.belgeler, historyData.yarismalar, historyData.cv);
+      toast.success("İş yeri ve görev başarıyla güncellendi.");
+      setEditIndex(null);
+      setEditIsyeri("");
+      setEditGorev("");
+    } catch (error) {
+      toast.error("Güncelleme işlemi sırasında hata oluştu.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const removeAtIndex = async (index: number) => {
+    setSaving(true);
+    const newIsyerleri = [...historyData.isyerleri];
+    const newGorevPozisyon = [...historyData.gorevpozisyon];
+    newIsyerleri.splice(index, 1);
+    newGorevPozisyon.splice(index, 1);
+    setHistoryData(prev => ({
+      ...prev,
+      isyerleri: newIsyerleri,
+      gorevpozisyon: newGorevPozisyon,
+    }));
+
+    try {
+      await saveHistoryDataWithParams(newIsyerleri, newGorevPozisyon, historyData.belgeler, historyData.yarismalar, historyData.cv);
+      toast.success("İş yeri ve görev başarıyla silindi.");
+    } catch (error) {
+      toast.error("Silme işlemi sırasında hata oluştu.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div>
+      <h3 className="text-xl font-semibold mb-3">İşyerleri ve Görevler</h3>
+      {historyData.isyerleri.length === 0 && <p>Henüz işyeri ve görev bilgisi eklenmemiş.</p>}
+
+      {historyData.isyerleri.map((isyeri, index) => (
+        <div key={index} className="mb-2 flex items-center space-x-4">
+          {editIndex === index ? (
+            <>
+              <input
+                type="text"
+                value={editIsyeri}
+                onChange={(e) => setEditIsyeri(e.target.value)}
+                className="border p-1 rounded"
+                disabled={saving}
+              />
+              <input
+                type="text"
+                value={editGorev}
+                onChange={(e) => setEditGorev(e.target.value)}
+                className="border p-1 rounded"
+                disabled={saving}
+              />
+              <Button disabled={saving} onClick={saveEdit}>Kaydet</Button>
+              <Button variant="outline" disabled={saving} onClick={cancelEdit}>İptal</Button>
+            </>
+          ) : (
+            <>
+              <span>{isyeri}</span>
+              <span>{historyData.gorevpozisyon[index]}</span>
+              <Button variant="default" onClick={() => startEdit(index)}>Düzenle</Button>
+              <Button variant="destructive" onClick={() => removeAtIndex(index)}>Sil</Button>
+            </>
+          )}
+        </div>
+      ))}
+
+      {adding ? (
+        <div className="mt-2 space-y-2">
+          <input
+            type="text"
+            value={newIsyeri}
+            onChange={(e) => setNewIsyeri(e.target.value)}
+            className="border p-1 rounded w-full"
+            placeholder="Yeni işyeri"
+            disabled={loading}
+          />
+          <input
+            type="text"
+            value={newGorev}
+            onChange={(e) => setNewGorev(e.target.value)}
+            className="border p-1 rounded w-full"
+            placeholder="Yeni görev"
+            disabled={loading}
+          />
+          <Button onClick={saveAdd} disabled={loading}>Ekle</Button>
+          <Button variant="outline" onClick={cancelAdd} disabled={loading}>İptal</Button>
+        </div>
+      ) : (
+        <Button className="mt-4" onClick={startAdd}>İş Yeri ve Görev Ekle</Button>
+      )}
+    </div>
+  );
+}
+
+function DocumentsSection({
+  historyData,
+  setHistoryData,
+  user,
+  saveHistoryDataWithParams,
+}: {
+  historyData: HistoryData;
+  setHistoryData: React.Dispatch<React.SetStateAction<HistoryData>>;
+  user: any;
+  saveHistoryDataWithParams: (
+    isyerleri: string[],
+    gorevpozisyon: string[],
+    belgeler: string[],
+    yarismalar: string[],
+    cv: string
+  ) => Promise<void>;
+}) {
+  const [adding, setAdding] = useState(false);
+  const [newBelge, setNewBelge] = useState("");
+  const [editIndex, setEditIndex] = useState<number | null>(null);
+  const [editValue, setEditValue] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const startAdd = () => {
+    setAdding(true);
+    setNewBelge("");
+  };
+
+  const cancelAdd = () => {
+    setAdding(false);
+    setNewBelge("");
+  };
+
+  const saveAdd = async () => {
+    if (!newBelge.trim()) {
+      toast.error("Lütfen belge adı giriniz.");
+      return;
+    }
+    setSaving(true);
+    const newBelgeler = [...historyData.belgeler, newBelge.trim()];
+    setHistoryData(prev => ({
+      ...prev,
+      belgeler: newBelgeler,
+      _newBelge: "",
+    }));
+
+    try {
+      await saveHistoryDataWithParams(historyData.isyerleri, historyData.gorevpozisyon, newBelgeler, historyData.yarismalar, historyData.cv);
+      toast.success("Belge eklendi.");
+      setAdding(false);
+    } catch (error) {
+      toast.error("Belge eklenirken hata oluştu.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const startEdit = (index: number) => {
+    setEditIndex(index);
+    setEditValue(historyData.belgeler[index]);
+  };
+
+  const cancelEdit = () => {
+    setEditIndex(null);
+    setEditValue("");
+  };
+
+  const saveEdit = async () => {
+    if (editIndex === null) return;
+    if (!editValue.trim()) {
+      toast.error("Belge adı boş olamaz.");
+      return;
+    }
+    setSaving(true);
+    const newBelgeler = [...historyData.belgeler];
+    newBelgeler[editIndex] = editValue.trim();
+    setHistoryData(prev => ({
+      ...prev,
+      belgeler: newBelgeler,
+    }));
+
+    try {
+      await saveHistoryDataWithParams(historyData.isyerleri, historyData.gorevpozisyon, newBelgeler, historyData.yarismalar, historyData.cv);
+      toast.success("Belge güncellendi.");
+      setEditIndex(null);
+      setEditValue("");
+    } catch (error) {
+      toast.error("Belge güncellenirken hata oluştu.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const removeAtIndex = async (index: number) => {
+    setSaving(true);
+    const newBelgeler = [...historyData.belgeler];
+    newBelgeler.splice(index, 1);
+    setHistoryData(prev => ({
+      ...prev,
+      belgeler: newBelgeler,
+    }));
+
+    try {
+      await saveHistoryDataWithParams(historyData.isyerleri, historyData.gorevpozisyon, newBelgeler, historyData.yarismalar, historyData.cv);
+      toast.success("Belge silindi.");
+    } catch (error) {
+      toast.error("Belge silinirken hata oluştu.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div>
+      <h3 className="text-xl font-semibold mb-3">Belgeler</h3>
+      {historyData.belgeler.length === 0 && <p>Henüz belge eklenmemiş.</p>}
+
+      {historyData.belgeler.map((belge, index) => (
+        <div key={index} className="mb-2 flex items-center space-x-4">
+          {editIndex === index ? (
+            <>
+              <input
+                type="text"
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                disabled={saving}
+                className="border p-1 rounded"
+              />
+              <Button disabled={saving} onClick={saveEdit}>Kaydet</Button>
+              <Button variant="outline" disabled={saving} onClick={cancelEdit}>İptal</Button>
+            </>
+          ) : (
+            <>
+              <span>{belge}</span>
+              <Button variant="default" onClick={() => startEdit(index)}>Düzenle</Button>
+              <Button variant="destructive" onClick={() => removeAtIndex(index)}>Sil</Button>
+            </>
+          )}
+        </div>
+      ))}
+
+      {adding ? (
+        <div className="mt-2 space-y-2">
+          <input
+            type="text"
+            value={newBelge}
+            onChange={(e) => setNewBelge(e.target.value)}
+            disabled={loading}
+            placeholder="Yeni belge adı"
+            className="border p-1 rounded w-full"
+          />
+          <Button onClick={saveAdd} disabled={loading}>Ekle</Button>
+          <Button variant="outline" onClick={cancelAdd} disabled={loading}>İptal</Button>
+        </div>
+      ) : (
+        <Button className="mt-4" onClick={startAdd}>Belge Ekle</Button>
+      )}
+    </div>
+  );
+}
+
+function CompetitionsSection({
+  historyData,
+  setHistoryData,
+  user,
+  saveHistoryDataWithParams,
+}: {
+  historyData: HistoryData;
+  setHistoryData: React.Dispatch<React.SetStateAction<HistoryData>>;
+  user: any;
+  saveHistoryDataWithParams: (
+    isyerleri: string[],
+    gorevpozisyon: string[],
+    belgeler: string[],
+    yarismalar: string[],
+    cv: string
+  ) => Promise<void>;
+}) {
+  const [adding, setAdding] = useState(false);
+  const [newYarisma, setNewYarisma] = useState("");
+  const [editIndex, setEditIndex] = useState<number | null>(null);
+  const [editValue, setEditValue] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const startAdd = () => {
+    setAdding(true);
+    setNewYarisma("");
+  };
+
+  const cancelAdd = () => {
+    setAdding(false);
+    setNewYarisma("");
+  };
+
+  const saveAdd = async () => {
+    if (!newYarisma.trim()) {
+      toast.error("Lütfen yarışma adı giriniz.");
+      return;
+    }
+    setSaving(true);
+    const newYarismalar = [...historyData.yarismalar, newYarisma.trim()];
+    setHistoryData(prev => ({
+      ...prev,
+      yarismalar: newYarismalar,
+      _newYarisma: "",
+    }));
+
+    try {
+      await saveHistoryDataWithParams(historyData.isyerleri, historyData.gorevpozisyon, historyData.belgeler, newYarismalar, historyData.cv);
+      toast.success("Yarışma eklendi.");
+      setAdding(false);
+    } catch (error) {
+      toast.error("Yarışma eklenirken hata oluştu.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const startEdit = (index: number) => {
+    setEditIndex(index);
+    setEditValue(historyData.yarismalar[index]);
+  };
+
+  const cancelEdit = () => {
+    setEditIndex(null);
+    setEditValue("");
+  };
+
+  const saveEdit = async () => {
+    if (editIndex === null) return;
+    if (!editValue.trim()) {
+      toast.error("Yarışma adı boş olamaz.");
+      return;
+    }
+    setSaving(true);
+    const newYarismalar = [...historyData.yarismalar];
+    newYarismalar[editIndex] = editValue.trim();
+    setHistoryData(prev => ({
+      ...prev,
+      yarismalar: newYarismalar,
+    }));
+
+    try {
+      await saveHistoryDataWithParams(historyData.isyerleri, historyData.gorevpozsyon, historyData.belgeler, newYarismalar, historyData.cv);
+      toast.success("Yarışma güncellendi.");
+      setEditIndex(null);
+      setEditValue("");
+    } catch (error) {
+      toast.error("Yarışma güncellenirken hata oluştu.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const removeAtIndex = async (index: number) => {
+    setSaving(true);
+    const newYarismalar = [...historyData.yarismalar];
+    newYarismalar.splice(index, 1);
+    setHistoryData(prev => ({
+      ...prev,
+      yarismalar: newYarismalar,
+    }));
+
+    try {
+      await saveHistoryDataWithParams(historyData.isyerleri, historyData.gorevpozsyon, historyData.belgeler, newYarismalar, historyData.cv);
+      toast.success("Yarışma silindi.");
+    } catch (error) {
+      toast.error("Yarışma silinirken hata oluştu.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div>
+      <h3 className="text-xl font-semibold mb-3">Yarışmalar</h3>
+      {historyData.yarismalar.length === 0 && <p>Henüz yarışma eklenmemiş.</p>}
+
+      {historyData.yarismalar.map((yarisma, index) => (
+        <div key={index} className="mb-2 flex items-center space-x-4">
+          {editIndex === index ? (
+            <>
+              <input
+                type="text"
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                disabled={saving}
+                className="border p-1 rounded"
+              />
+              <Button disabled={saving} onClick={saveEdit}>Kaydet</Button>
+              <Button variant="outline" disabled={saving} onClick={cancelEdit}>İptal</Button>
+            </>
+          ) : (
+            <>
+              <span>{yarisma}</span>
+              <Button variant="default" onClick={() => startEdit(index)}>Düzenle</Button>
+              <Button variant="destructive" onClick={() => removeAtIndex(index)}>Sil</Button>
+            </>
+          )}
+        </div>
+      ))}
+
+      {adding ? (
+        <div className="mt-2 space-y-2">
+          <input
+            type="text"
+            value={newYarisma}
+            onChange={(e) => setNewYarisma(e.target.value)}
+            disabled={loading}
+            placeholder="Yeni yarışma adı"
+            className="border p-1 rounded w-full"
+          />
+          <Button onClick={saveAdd} disabled={loading}>Ekle</Button>
+          <Button variant="outline" onClick={cancelAdd} disabled={loading}>İptal</Button>
+        </div>
+      ) : (
+        <Button className="mt-4" onClick={startAdd}>Yarışma Ekle</Button>
+      )}
+    </div>
+  );
+}
+
+function CvSection({
+  cv,
+  setCv,
+  user,
+  saveHistoryDataWithParams,
+  cvEditMode,
+  setCvEditMode,
+}: {
+  cv: string;
+  setCv: React.Dispatch<React.SetStateAction<string>>;
+  user: any;
+  saveHistoryDataWithParams: (
+    isyerleri: string[],
+    gorevpozisyon: string[],
+    belgeler: string[],
+    yarismalar: string[],
+    cvExtra: string
+  ) => Promise<void>;
+  cvEditMode: boolean;
+  setCvEditMode: React.Dispatch<React.SetStateAction<boolean>>;
+}) {
+  const [saving, setSaving] = useState(false);
+
+  const saveCv = async () => {
+    setSaving(true);
+    try {
+      await saveHistoryDataWithParams([], [], [], [], cv);
+      toast.success("CV kaydedildi.");
+      setCvEditMode(false);
+    } catch (error) {
+      toast.error("CV kaydedilirken hata oluştu.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div>
+      <h3 className="text-xl font-semibold mb-3">CV</h3>
+      {cvEditMode ? (
+        <>
+          <textarea
+            value={cv}
+            onChange={(e) => setCv(e.target.value)}
+            rows={10}
+            className="w-full border rounded p-2"
+            disabled={saving}
+          />
+          <div className="mt-2 flex space-x-2">
+            <Button disabled={saving} onClick={saveCv}>
+              Kaydet
+            </Button>
+            <Button variant="outline" disabled={saving} onClick={() => setCvEditMode(false)}>
+              İptal
+            </Button>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="whitespace-pre-wrap border rounded p-3 min-h-[200px]">{cv || "Henüz CV eklenmemiş."}</div>
+          <Button className="mt-2" onClick={() => setCvEditMode(true)}>
+            Düzenle
+          </Button>
+        </>
+      )}
+    </div>
+  );
+}
