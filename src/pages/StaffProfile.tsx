@@ -90,14 +90,14 @@ export default function StaffProfile() {
 
     setLoading(true);
 
-    // children_names DB'de string[] tipinde olabilir, ancak TS hatası nedeniyle string olarak göndereceğiz
+    // children_names veritabanında string[] olduğu için doğrudan dizi olarak gönderiyoruz.
     const personalData = {
       customer_id: user.id,
-      children_names: childrenNames.length > 0 ? childrenNames.join(", ") : null,
+      children_names: childrenNames.length > 0 ? childrenNames : [],
       updated_at: new Date().toISOString(),
     };
 
-    // Tek nesne olarak geçiriyoruz
+    // Tek nesne olarak (dizide değil)
     const { error } = await supabase
       .from("customer_personal_data")
       .upsert(personalData, { onConflict: ["customer_id"] });
@@ -115,8 +115,7 @@ export default function StaffProfile() {
     if (!user || !user.id) return;
     setLoading(true);
 
-    // Tüm değerler string, doğrudan gönder
-    const dataToUpsert = {
+    const dataToUpsert = [{
       personel_id: Number(user.id),
       ortaokuldurumu: educationData.ortaokuldurumu,
       lisedurumu: educationData.lisedurumu,
@@ -125,9 +124,8 @@ export default function StaffProfile() {
       universitedurumu: educationData.universitedurumu,
       universitebolum: educationData.universitebolum,
       updated_at: new Date().toISOString(),
-    };
+    }];
 
-    // Tek nesne olarak gönderiyoruz
     const { error } = await supabase
       .from("staff_education")
       .upsert(dataToUpsert, { onConflict: ["personel_id"] });
@@ -145,8 +143,7 @@ export default function StaffProfile() {
     if (!user || !user.id) return;
     setLoading(true);
 
-    // Array alanlar text olarak DB'de tutuluyor, bu yüzden string formatına çevirmeliyiz
-    const dataToUpsert = {
+    const dataToUpsert = [{
       personel_id: Number(user.id),
       isyerleri: arrayToString(historyData.isyerleri),
       gorevpozisyon: arrayToString(historyData.gorevpozisyon),
@@ -154,9 +151,8 @@ export default function StaffProfile() {
       yarismalar: arrayToString(historyData.yarismalar),
       cv: historyData.cv || "",
       updated_at: new Date().toISOString(),
-    };
+    }];
 
-    // Tek nesne olarak ve stringify edilmiş alanlar ile gönderiyoruz
     const { error } = await supabase
       .from("staff_history")
       .upsert(dataToUpsert, { onConflict: ["personel_id"] });
@@ -180,7 +176,7 @@ export default function StaffProfile() {
     if (!user || !user.id) return;
 
     setLoading(true);
-    const dataToUpsert = {
+    const dataToUpsert = [{
       personel_id: Number(user.id),
       isyerleri: arrayToString(isyerleri),
       gorevpozisyon: arrayToString(gorevpozisyon),
@@ -188,9 +184,8 @@ export default function StaffProfile() {
       yarismalar: arrayToString(yarismalar),
       cv: cv || "",
       updated_at: new Date().toISOString(),
-    };
+    }];
 
-    // Tek nesne olarak
     const { error } = await supabase
       .from("staff_history")
       .upsert(dataToUpsert, { onConflict: ["personel_id"] });
@@ -208,7 +203,7 @@ export default function StaffProfile() {
     if (!user || !user.id) return;
     setLoading(true);
 
-    const dataToUpsert = {
+    const dataToUpsert = [{
       personel_id: Number(user.id),
       ortaokuldurumu: educationData.ortaokuldurumu,
       lisedurumu: educationData.lisedurumu,
@@ -217,9 +212,8 @@ export default function StaffProfile() {
       universitedurumu: educationData.universitedurumu,
       universitebolum: educationData.universitebolum,
       updated_at: new Date().toISOString(),
-    };
+    }];
 
-    // Tek nesne olarak
     const { error } = await supabase
       .from("staff_education")
       .upsert(dataToUpsert, { onConflict: ["personel_id"] });
@@ -473,7 +467,7 @@ export default function StaffProfile() {
         return;
       }
 
-      const dataToUpsert = {
+      const dataToUpsert = [{
         personel_id: Number(user.id),
         ortaokuldurumu: educationData.ortaokuldurumu,
         lisedurumu: educationData.lisedurumu,
@@ -482,7 +476,7 @@ export default function StaffProfile() {
         universitedurumu: educationData.universitedurumu,
         universitebolum: educationData.universitebolum,
         updated_at: new Date().toISOString(),
-      };
+      }];
 
       const { error: educationError } = await supabase
         .from("staff_education")
@@ -494,7 +488,7 @@ export default function StaffProfile() {
         return;
       }
 
-      const historyToUpsert = {
+      const historyToUpsert = [{
         personel_id: Number(user.id),
         isyerleri: arrayToString(historyData.isyerleri),
         gorevpozisyon: arrayToString(historyData.gorevpozisyon),
@@ -502,7 +496,7 @@ export default function StaffProfile() {
         yarismalar: arrayToString(historyData.yarismalar),
         cv: historyData.cv || "",
         updated_at: new Date().toISOString(),
-      };
+      }];
 
       const { error: historyError } = await supabase
         .from("staff_history")
@@ -664,5 +658,197 @@ export default function StaffProfile() {
 
   const initials = `${profile?.first_name?.[0] || ""}${profile?.last_name?.[0] || ""}`;
 
-  return <></>;
-}
+  return (
+    <div className="container mx-auto py-8">
+      <Card className="w-full max-w-4xl mx-auto">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-2xl font-bold">Personel Profil</CardTitle>
+          <div className="flex items-center space-x-4">
+            <Button variant="outline" onClick={handleLogout}>
+              Çıkış Yap
+            </Button>
+          </div>
+        </CardHeader>
+
+        <CardContent>
+          <div className="flex items-start space-x-8">
+            <Avatar className="h-24 w-24">
+              <AvatarImage src={profile?.avatar_url} alt="Profile Picture" />
+              <AvatarFallback>{initials}</AvatarFallback>
+            </Avatar>
+
+            <div>
+              <h3 className="text-xl font-semibold">
+                {profile?.first_name} {profile?.last_name}
+              </h3>
+              <p className="text-gray-500">
+                {user?.email} | {userRole}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-6">
+            <Tabs defaultValue="profile" className="w-full">
+              <TabsList className="w-full flex space-x-4">
+                <TabsTrigger value="profile">Profil</TabsTrigger>
+                <TabsTrigger value="education">Eğitim</TabsTrigger>
+                <TabsTrigger value="history">Geçmiş</TabsTrigger>
+                <TabsTrigger value="children">Çocuklar</TabsTrigger>
+                {userRole === "staff" && (
+                  <TabsTrigger value="join">İşletmeye Katıl</TabsTrigger>
+                )}
+              </TabsList>
+              <div className="mt-4">
+                <TabsContent value="profile">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Ad
+                      </label>
+                      <input
+                        type="text"
+                        value={profile?.first_name || ""}
+                        onChange={(e) =>
+                          setProfile({ ...profile, first_name: e.target.value })
+                        }
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Soyad
+                      </label>
+                      <input
+                        type="text"
+                        value={profile?.last_name || ""}
+                        onChange={(e) =>
+                          setProfile({ ...profile, last_name: e.target.value })
+                        }
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Telefon
+                      </label>
+                      <input
+                        type="text"
+                        value={profile?.phone || ""}
+                        onChange={(e) =>
+                          setProfile({ ...profile, phone: e.target.value })
+                        }
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Adres
+                      </label>
+                      <input
+                        type="text"
+                        value={profile?.address || ""}
+                        onChange={(e) =>
+                          setProfile({ ...profile, address: e.target.value })
+                        }
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Cinsiyet
+                      </label>
+                      <select
+                        value={profile?.gender || ""}
+                        onChange={(e) =>
+                          setProfile({ ...profile, gender: e.target.value })
+                        }
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      >
+                        <option value="">Seçiniz</option>
+                        <option value="erkek">Erkek</option>
+                        <option value="kadın">Kadın</option>
+                      </select>
+                    </div>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="education">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Ortaokul Durumu
+                      </label>
+                      <select
+                        name="ortaokuldurumu"
+                        value={educationData.ortaokuldurumu}
+                        onChange={handleEducationChange}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      >
+                        <option value="">Seçiniz</option>
+                        <option value="okuyor">Okuyor</option>
+                        <option value="bitirdi">Bitirdi</option>
+                        <option value="ayrildi">Ayrıldı</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Lise Durumu
+                      </label>
+                      <select
+                        name="lisedurumu"
+                        value={educationData.lisedurumu}
+                        onChange={handleEducationChange}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        disabled={educationData.ortaokuldurumu !== "bitirdi"}
+                      >
+                        <option value="">Seçiniz</option>
+                        <option value="okuyor">Okuyor</option>
+                        <option value="bitirdi">Bitirdi</option>
+                        <option value="ayrildi">Ayrıldı</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Lise Türü
+                      </label>
+                      <select
+                        name="liseturu"
+                        value={educationData.liseturu}
+                        onChange={handleEducationChange}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        disabled={
+                          educationData.lisedurumu !== "okuyor" &&
+                          educationData.lisedurumu !== "bitirdi"
+                        }
+                      >
+                        <option value="">Seçiniz</option>
+                        {liseTuruOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Meslek / Branş
+                      </label>
+                      <input
+                        type="text"
+                        name="meslekibrans"
+                        value={educationData.meslekibrans}
+                        onChange={handleEducationChange}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        disabled={
+                          educationData.lisedurumu !== "okuyor" &&
+                          educationData.lisedurumu !== "bitirdi" &&
+                          educationData.liseturu !== "cok_programli_anadolu" &&
+                          educationData.liseturu !== "meslek_ve_teknik_anadolu"
+                        }
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Üniversite Durumu
+                      </label>
+                      <select
