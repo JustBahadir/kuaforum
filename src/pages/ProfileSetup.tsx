@@ -20,9 +20,10 @@ export default function ProfileSetup() {
     firstName: "",
     lastName: "",
     phone: "",
-    gender: "erkek",
+    gender: "",
     role: "",
     shopName: "",
+    shopCode: "", // Yeni işletme kodu opsiyonel alanı
   });
 
   const [errors, setErrors] = useState<{
@@ -30,6 +31,7 @@ export default function ProfileSetup() {
     firstName?: string;
     lastName?: string;
     phone?: string;
+    gender?: string;
     shopName?: string;
   }>({});
 
@@ -56,11 +58,12 @@ export default function ProfileSetup() {
           firstName: metadata.first_name || user.user_metadata?.given_name || "",
           lastName: metadata.last_name || user.user_metadata?.family_name || "",
           phone: metadata.phone || "",
+          gender: metadata.gender || "", // Cinsiyet metadata varsa alındı
         }));
 
         const { data: profileData } = await supabase
           .from("profiles")
-          .select("id, role, first_name, last_name, phone")
+          .select("id, role, first_name, last_name, phone, gender")
           .eq("id", user.id)
           .single();
 
@@ -69,7 +72,8 @@ export default function ProfileSetup() {
           profileData.first_name &&
           profileData.last_name &&
           profileData.phone &&
-          profileData.role
+          profileData.role &&
+          profileData.gender
         ) {
           if (profileData.role === "admin") {
             navigate("/shop-home");
@@ -107,6 +111,11 @@ export default function ProfileSetup() {
     if (errors.role) {
       setErrors(prev => ({ ...prev, role: undefined }));
     }
+
+    // shopCode alanını temizle personel değilse
+    if (value !== "staff") {
+      setFormData(prev => ({ ...prev, shopCode: "" }));
+    }
   };
 
   const validateForm = () => {
@@ -122,6 +131,9 @@ export default function ProfileSetup() {
     }
     if (!formData.role.trim()) {
       newErrors.role = "Bu alan zorunludur";
+    }
+    if (!formData.gender.trim()) {
+      newErrors.gender = "Bu alan zorunludur";
     }
     if (formData.role === "admin" && !formData.shopName.trim()) {
       newErrors.shopName = "Bu alan zorunludur";
@@ -151,12 +163,19 @@ export default function ProfileSetup() {
         first_name: formData.firstName,
         last_name: formData.lastName,
         phone: formData.phone,
-        gender: formData.gender,
+        gender: formData.gender || null,
         role: formData.role === "admin" ? "admin" : "staff",
       };
 
       if (formData.role === "admin") {
         updateData["shopName"] = formData.shopName;
+      }
+
+      if (
+        formData.role === "staff" &&
+        formData.shopCode.trim().length > 0
+      ) {
+        updateData["shopCode"] = formData.shopCode.trim();
       }
 
       const { error } = await supabase
@@ -165,7 +184,7 @@ export default function ProfileSetup() {
 
       if (error) {
         console.error("Profil güncellenirken hata (detay): ", error);
-        toast.error("Profil bilgileri kaydedilirken bir sorun oluştu. Lütfen tekrar deneyin.");
+        toast.error(`Profil bilgileri kaydedilirken bir sorun oluştu: ${error.message || "Bilinmeyen hata"}`);
         setSubmitting(false);
         return;
       }
@@ -179,7 +198,7 @@ export default function ProfileSetup() {
       } else {
         navigate("/customer-dashboard");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Profil güncelleme sırasında hata: ", error);
       toast.error("Profil bilgileri kaydedilirken bir sorun oluştu. Lütfen tekrar deneyin.");
     } finally {
@@ -215,8 +234,10 @@ export default function ProfileSetup() {
                   onChange={handleInputChange}
                   className={errors.firstName ? "border-red-600 focus:border-red-600 focus:ring-red-600" : ""}
                   required
+                  aria-invalid={!!errors.firstName}
+                  aria-describedby="firstName-error"
                 />
-                {errors.firstName && <p className="text-xs text-red-600 mt-1">{errors.firstName}</p>}
+                {errors.firstName && <p id="firstName-error" className="text-xs text-red-600 mt-1">{errors.firstName}</p>}
               </div>
               <div>
                 <Label htmlFor="lastName" className={`block ${errors.lastName ? "text-red-600" : ""}`}>
@@ -229,8 +250,10 @@ export default function ProfileSetup() {
                   onChange={handleInputChange}
                   className={errors.lastName ? "border-red-600 focus:border-red-600 focus:ring-red-600" : ""}
                   required
+                  aria-invalid={!!errors.lastName}
+                  aria-describedby="lastName-error"
                 />
-                {errors.lastName && <p className="text-xs text-red-600 mt-1">{errors.lastName}</p>}
+                {errors.lastName && <p id="lastName-error" className="text-xs text-red-600 mt-1">{errors.lastName}</p>}
               </div>
             </div>
 
@@ -246,16 +269,50 @@ export default function ProfileSetup() {
                 placeholder="05XX XXX XX XX"
                 className={errors.phone ? "border-red-600 focus:border-red-600 focus:ring-red-600" : ""}
                 required
+                aria-invalid={!!errors.phone}
+                aria-describedby="phone-error"
               />
-              {errors.phone && <p className="text-xs text-red-600 mt-1">{errors.phone}</p>}
+              {errors.phone && <p id="phone-error" className="text-xs text-red-600 mt-1">{errors.phone}</p>}
+            </div>
+
+            <div>
+              <Label htmlFor="gender" className={`block ${errors.gender ? "text-red-600" : ""}`}>
+                Cinsiyet*
+              </Label>
+              <Select 
+                value={formData.gender} 
+                onValueChange={(value) => {
+                  setFormData(prev => ({...prev, gender: value}));
+                  if (errors.gender) setErrors(prev => ({...prev, gender: undefined}));
+                }} 
+                aria-invalid={!!errors.gender}
+                aria-describedby="gender-error"
+                aria-required="true"
+              >
+                <SelectTrigger id="gender">
+                  <SelectValue placeholder="Cinsiyet seçin" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="erkek">Erkek</SelectItem>
+                  <SelectItem value="kadın">Kadın</SelectItem>
+                </SelectContent>
+              </Select>
+              {errors.gender && <p id="gender-error" className="text-xs text-red-600 mt-1">{errors.gender}</p>}
             </div>
 
             <div>
               <Label htmlFor="role" className={`block ${errors.role ? "text-red-600" : ""}`}>
                 Kayıt Türü*
               </Label>
-              <Select value={formData.role} onValueChange={handleRoleChange} required>
-                <SelectTrigger className={errors.role ? "border-red-600 focus:border-red-600 focus:ring-red-600" : ""}>
+              <Select 
+                value={formData.role} 
+                onValueChange={handleRoleChange} 
+                required 
+                aria-invalid={!!errors.role}
+                aria-describedby="role-error"
+                aria-required="true"
+              >
+                <SelectTrigger id="role">
                   <SelectValue placeholder="Kayıt türü seçin" />
                 </SelectTrigger>
                 <SelectContent>
@@ -263,9 +320,9 @@ export default function ProfileSetup() {
                   <SelectItem value="admin">İşletme Sahibi</SelectItem>
                 </SelectContent>
               </Select>
-              {errors.role && <p className="text-xs text-red-600 mt-1">{errors.role}</p>}
+              {errors.role && <p id="role-error" className="text-xs text-red-600 mt-1">{errors.role}</p>}
             </div>
-
+            
             {formData.role === "admin" && (
               <div>
                 <Label htmlFor="shopName" className={`block ${errors.shopName ? "text-red-600" : ""}`}>
@@ -279,8 +336,26 @@ export default function ProfileSetup() {
                   placeholder="Salonunuzun/işletmenizin ismini girin"
                   className={errors.shopName ? "border-red-600 focus:border-red-600 focus:ring-red-600" : ""}
                   required
+                  aria-invalid={!!errors.shopName}
+                  aria-describedby="shopName-error"
+                  aria-required="true"
                 />
-                {errors.shopName && <p className="text-xs text-red-600 mt-1">{errors.shopName}</p>}
+                {errors.shopName && <p id="shopName-error" className="text-xs text-red-600 mt-1">{errors.shopName}</p>}
+              </div>
+            )}
+            
+            {formData.role === "staff" && (
+              <div className="space-y-2">
+                <Label htmlFor="shopCode" className="block">
+                  İşletme Kodu (Opsiyonel)
+                </Label>
+                <Input
+                  id="shopCode"
+                  name="shopCode"
+                  value={formData.shopCode}
+                  onChange={handleInputChange}
+                  placeholder="Dükkan yöneticisinden alınan kod"
+                />
               </div>
             )}
 

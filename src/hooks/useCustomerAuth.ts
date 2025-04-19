@@ -13,7 +13,6 @@ export function useCustomerAuth() {
   const [dukkanAdi, setDukkanAdi] = useState<string>('');
   const [userId, setUserId] = useState<string>('');
 
-  // Sağlam ve senkron auth kontrol fonksiyonu
   const fetchUserSession = async () => {
     setLoading(true);
     try {
@@ -106,7 +105,6 @@ export function useCustomerAuth() {
   useEffect(() => {
     let isMounted = true;
 
-    // Öncelikle async olmayan callback ile onAuthStateChange kurulumu
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (isMounted) {
         if (event === 'SIGNED_IN') {
@@ -114,13 +112,11 @@ export function useCustomerAuth() {
             setIsAuthenticated(true);
             setUserId(session.user.id);
 
-            // Metadata daha sonra async fetch ile güncellenecek
             setUserName('');
             setUserRole('');
             setDukkanId(0);
             setDukkanAdi('');
 
-            // Async bilgilendirme için bekleme
             setTimeout(() => {
               fetchUserSession();
             }, 0);
@@ -143,7 +139,6 @@ export function useCustomerAuth() {
       }
     });
 
-    // İlk mount'ta session kontrolü (authListener kurulumu sonrası)
     fetchUserSession();
 
     return () => {
@@ -190,3 +185,4 @@ export function useCustomerAuth() {
     refreshProfile,
   };
 }
+
