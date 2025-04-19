@@ -21,10 +21,13 @@ interface HistoryData {
   cv: string;
 }
 
+// Helper function to ensure value is string for upsert
 const arrayToString = (value: string[] | string): string => {
   if (Array.isArray(value)) {
+    // Convert array to comma-separated string
     return value.join(", ");
   }
+  // If already string, just return as is
   return value || "";
 };
 
