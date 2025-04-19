@@ -1,3 +1,4 @@
+
 import React, { useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
@@ -85,9 +86,9 @@ function App() {
               <Route path="*" element={<NotFound />} />
             </Routes>
           </RouteProtection>
-          <ReactQueryDevtools />
-          <Toaster />
         </BrowserRouter>
+        <ReactQueryDevtools />
+        <Toaster />
       </QueryClientProvider>
     </ThemeProvider>
   );
