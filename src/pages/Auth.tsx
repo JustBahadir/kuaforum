@@ -4,7 +4,14 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
@@ -15,16 +22,33 @@ export default function Auth() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
-  // Form fields
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  // Form fields for Login
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
 
-  // Registration specific
+  // Form fields for Register
+  const [registerEmail, setRegisterEmail] = useState('');
+  const [registerPassword, setRegisterPassword] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
 
   // Active tab: login or register
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
+
+  // Reset all form inputs and error states on tab change
+  const resetForms = () => {
+    setLoginEmail('');
+    setLoginPassword('');
+    setRegisterEmail('');
+    setRegisterPassword('');
+    setFirstName('');
+    setLastName('');
+    toast.dismiss();
+  };
+
+  useEffect(() => {
+    resetForms();
+  }, [activeTab]);
 
   useEffect(() => {
     const checkSession = async () => {
@@ -51,14 +75,15 @@ export default function Auth() {
     checkSession();
   }, [navigate]);
 
+  // Login handler
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!email) {
+    if (!loginEmail) {
       toast.error('Lütfen e-posta adresinizi girin');
       return;
     }
-    if (!password) {
+    if (!loginPassword) {
       toast.error('Lütfen şifrenizi girin');
       return;
     }
@@ -66,8 +91,8 @@ export default function Auth() {
     setLoading(true);
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+        email: loginEmail,
+        password: loginPassword,
       });
 
       if (error) {
@@ -75,7 +100,9 @@ export default function Auth() {
           error.message.includes('User not found') ||
           error.message.includes('Invalid login credentials')
         ) {
-          toast.error("Böyle bir kullanıcı bulunamadı. Kayıt olmak için 'Kayıt Ol' bölümüne geçin.");
+          toast.error(
+            "Bu e-posta ile eşleşen bir kayıt bulunamadı. Kayıt olmak için 'Kayıt Ol' sekmesini kullanın."
+          );
           setActiveTab('register');
           setLoading(false);
           return;
@@ -102,14 +129,15 @@ export default function Auth() {
     }
   };
 
+  // Register handler
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!email) {
+    if (!registerEmail) {
       toast.error('Lütfen e-posta adresinizi girin');
       return;
     }
-    if (!password) {
+    if (!registerPassword) {
       toast.error('Lütfen şifrenizi girin');
       return;
     }
@@ -125,8 +153,8 @@ export default function Auth() {
     setLoading(true);
     try {
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
+        email: registerEmail,
+        password: registerPassword,
         options: {
           data: {
             first_name: firstName,
@@ -157,30 +185,51 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Kuaför Randevu Sistemi</CardTitle>
-          <CardDescription>Randevu almak için giriş yapın veya hesap oluşturun</CardDescription>
+      <Card className="w-full max-w-md shadow-lg">
+        <CardHeader className="bg-gradient-to-r from-purple-600 to-pink-600 text-white py-6 px-8 rounded-t-md">
+          <CardTitle className="text-center text-lg font-semibold">Kuaför Girişi</CardTitle>
+          <CardDescription className="text-center">
+            Giriş Yap veya Kayıt Ol sekmesini kullanın
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'login' | 'register')} className="space-y-4">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login" className="flex items-center justify-center gap-1">
-                <LogIn size={14} /> Giriş Yap
+          <Tabs
+            value={activeTab}
+            onValueChange={(v) => {
+              setActiveTab(v as 'login' | 'register');
+            }}
+            className="space-y-4"
+          >
+            <TabsList className="grid w-full grid-cols-2 rounded-full bg-gray-200 p-1">
+              <TabsTrigger
+                value="login"
+                className={`flex items-center justify-center gap-2 rounded-full text-sm font-semibold transition-colors ${
+                  activeTab === 'login' ? 'bg-white text-purple-700 shadow-md' : 'text-gray-500'
+                }`}
+              >
+                <LogIn size={16} />
+                Giriş Yap
               </TabsTrigger>
-              <TabsTrigger value="register" className="flex items-center justify-center gap-1">
-                <UserPlus size={14} /> Kayıt Ol
+              <TabsTrigger
+                value="register"
+                className={`flex items-center justify-center gap-2 rounded-full text-sm font-semibold transition-colors ${
+                  activeTab === 'register' ? 'bg-white text-purple-700 shadow-md' : 'text-gray-500'
+                }`}
+              >
+                <UserPlus size={16} />
+                Kayıt Ol
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="login">
-              <div className="text-center mb-3 font-semibold text-gray-700">
+            <TabsContent value="login" className="space-y-6">
+              <div className="text-center mb-2 font-semibold text-gray-700">
                 GOOGLE İLE GİRİŞ YAP
               </div>
               <GoogleAuthButton
                 text="Google ile Giriş Yap"
                 className="bg-white text-gray-800 hover:bg-gray-100 border border-gray-300"
               />
+
               <div className="relative my-5">
                 <div className="absolute inset-0 flex items-center">
                   <span className="w-full border-t border-gray-300"></span>
@@ -189,14 +238,15 @@ export default function Auth() {
                   veya
                 </div>
               </div>
+
               <form onSubmit={handleSignIn} className="space-y-4">
                 <div>
                   <Label htmlFor="loginEmail">E-posta</Label>
                   <Input
                     id="loginEmail"
                     type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    value={loginEmail}
+                    onChange={(e) => setLoginEmail(e.target.value)}
                     autoComplete="email"
                     required
                   />
@@ -206,8 +256,8 @@ export default function Auth() {
                   <Input
                     id="loginPassword"
                     type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
                     autoComplete="current-password"
                     required
                   />
@@ -218,14 +268,15 @@ export default function Auth() {
               </form>
             </TabsContent>
 
-            <TabsContent value="register">
-              <div className="text-center mb-3 font-semibold text-gray-700">
+            <TabsContent value="register" className="space-y-6">
+              <div className="text-center mb-2 font-semibold text-gray-700">
                 GOOGLE İLE KAYDOL
               </div>
               <GoogleAuthButton
                 text="Google ile Kayıt Ol"
                 className="bg-white text-gray-800 hover:bg-gray-100 border border-gray-300"
               />
+
               <div className="relative my-5">
                 <div className="absolute inset-0 flex items-center">
                   <span className="w-full border-t border-gray-300"></span>
@@ -234,14 +285,15 @@ export default function Auth() {
                   veya
                 </div>
               </div>
+
               <form onSubmit={handleSignUp} className="space-y-4">
                 <div>
                   <Label htmlFor="registerEmail">E-posta</Label>
                   <Input
                     id="registerEmail"
                     type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    value={registerEmail}
+                    onChange={(e) => setRegisterEmail(e.target.value)}
                     autoComplete="email"
                     required
                   />
@@ -251,8 +303,8 @@ export default function Auth() {
                   <Input
                     id="registerPassword"
                     type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    value={registerPassword}
+                    onChange={(e) => setRegisterPassword(e.target.value)}
                     autoComplete="new-password"
                     required
                   />
