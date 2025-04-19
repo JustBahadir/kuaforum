@@ -66,23 +66,21 @@ export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabPr
 
   // Handle salary input with validation
   const handleSalaryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value === '' ? '' : Math.max(0, Number(e.target.value));
-    setSalary(value === '' ? 0 : Number(value));
+    const value = e.target.value;
+    
+    // Allow empty input or numeric values
+    if (value === '' || /^\d{0,7}$/.test(value)) {
+      setSalary(value === '' ? 0 : parseInt(value, 10));
+    }
   };
 
   // Handle commission input with validation (0-100)
   const handleCommissionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const rawValue = e.target.value;
-    // Allow empty input for typing purposes
-    if (rawValue === '') {
-      setCommission(0);
-      return;
-    }
+    const value = e.target.value;
     
-    const numValue = Number(rawValue);
-    // Validate commission is between 0-100
-    if (numValue >= 0 && numValue <= 100) {
-      setCommission(numValue);
+    // Allow empty input or valid commission values
+    if (value === '' || (/^\d{0,3}$/.test(value) && parseInt(value, 10) <= 100)) {
+      setCommission(value === '' ? 0 : parseInt(value, 10));
     }
   };
 
@@ -131,12 +129,12 @@ export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabPr
           <div className="space-y-2">
             <Label>Maaş Tutarı</Label>
             <Input
-              type="number"
-              min="0"
-              value={salary === 0 ? '' : salary}
+              type="text"
+              inputMode="numeric"
+              value={salary === 0 ? '' : salary.toString()}
               onChange={handleSalaryChange}
               placeholder="Maaş tutarını girin"
-              inputMode="numeric"
+              min="0"
             />
           </div>
         </div>
@@ -146,13 +144,13 @@ export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabPr
         <div className="space-y-2">
           <Label>Prim Yüzdesi (%)</Label>
           <Input
-            type="number"
-            min="0"
-            max="100"
-            value={commission === 0 ? '' : commission}
+            type="text"
+            inputMode="numeric"
+            value={commission === 0 ? '' : commission.toString()}
             onChange={handleCommissionChange}
             placeholder="Prim yüzdesini girin (0-100)"
-            inputMode="numeric"
+            min="0"
+            max="100"
           />
         </div>
       )}

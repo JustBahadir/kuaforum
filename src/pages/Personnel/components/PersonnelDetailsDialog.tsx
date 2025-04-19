@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useQuery } from "@tanstack/react-query";
-import { personelServisi, personelIslemleriServisi } from "@/lib/supabase";
+import { personelServisi } from "@/lib/supabase";
 import { formatCurrency } from "@/lib/utils";
 
 // Import tabs
@@ -32,12 +32,12 @@ export function PersonnelDetailsDialog({
   showPoints = false
 }: PersonnelDetailsDialogProps) {
   const [activeTab, setActiveTab] = useState("personal-info");
-  const [personnelData, setPersonnelData] = useState(personnel);
+  const [personnelData, setPersonnelData] = useState(personnel || {});
   
   // Fetch the most up-to-date personnel data when dialog opens
   const { data: fetchedPersonnel, isLoading } = useQuery({
     queryKey: ["personel", personnel?.id],
-    queryFn: () => personelServisi.getirById(personnel.id),
+    queryFn: () => personelServisi.getirById(personnel?.id),
     enabled: isOpen && !!personnel?.id,
   });
 
@@ -68,6 +68,13 @@ export function PersonnelDetailsDialog({
   const displayPersonnel = fetchedPersonnel || personnelData || {};
   
   console.log("Display personnel data:", displayPersonnel);
+  
+  // Make sure displayPersonnel has all the required properties
+  const safeDisplayPersonnel = {
+    ...displayPersonnel,
+    ad_soyad: displayPersonnel.ad_soyad || '',
+    avatar_url: displayPersonnel.avatar_url || null,
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -75,17 +82,17 @@ export function PersonnelDetailsDialog({
         <DialogHeader className="flex flex-row items-center justify-between">
           <div className="flex items-center gap-4">
             <Avatar className="h-12 w-12">
-              {displayPersonnel?.avatar_url ? (
-                <AvatarImage src={displayPersonnel.avatar_url} alt={displayPersonnel.ad_soyad || ''} />
+              {safeDisplayPersonnel?.avatar_url ? (
+                <AvatarImage src={safeDisplayPersonnel.avatar_url} alt={safeDisplayPersonnel.ad_soyad} />
               ) : (
                 <AvatarFallback className="bg-purple-100 text-purple-600">
-                  {getInitials(displayPersonnel?.ad_soyad || '')}
+                  {getInitials(safeDisplayPersonnel?.ad_soyad)}
                 </AvatarFallback>
               )}
             </Avatar>
             <div>
               <DialogTitle className="text-xl">
-                {displayPersonnel?.ad_soyad || 'Personel'}
+                {safeDisplayPersonnel?.ad_soyad || 'Personel'}
               </DialogTitle>
               <DialogDescription>
                 Personel Bilgileri
@@ -103,23 +110,23 @@ export function PersonnelDetailsDialog({
           </TabsList>
           
           <TabsContent value="personal-info">
-            <PersonalInfoTab personnel={displayPersonnel} />
+            <PersonalInfoTab personnel={safeDisplayPersonnel} />
           </TabsContent>
           
           <TabsContent value="work-info">
             <WorkInfoTab 
-              personnel={displayPersonnel} 
+              personnel={safeDisplayPersonnel} 
               onEdit={onUpdate} 
               canEdit={true} 
             />
           </TabsContent>
           
           <TabsContent value="operations-history">
-            <OperationsHistoryTab personnelId={displayPersonnel?.id} showPoints={showPoints} />
+            <OperationsHistoryTab personnelId={safeDisplayPersonnel?.id} showPoints={showPoints} />
           </TabsContent>
           
           <TabsContent value="performance">
-            <PerformanceTab personnelId={displayPersonnel?.id} />
+            <PerformanceTab personnelId={safeDisplayPersonnel?.id} />
           </TabsContent>
         </Tabs>
       </DialogContent>

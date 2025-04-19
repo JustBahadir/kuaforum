@@ -42,8 +42,6 @@ export function PersonalInfoTab({ personnel = {} }: PersonalInfoTabProps) {
     });
   };
 
-  console.log("Personnel data:", personnel);
-
   // Safely access personnel data with fallbacks
   const {
     avatar_url = null,
@@ -52,8 +50,11 @@ export function PersonalInfoTab({ personnel = {} }: PersonalInfoTabProps) {
     eposta = null,
     telefon = null,
     adres = null,
-    iban = null
+    iban = null,
+    formattedIban = null
   } = personnel || {};
+
+  const displayIban = formattedIban || iban || "-";
 
   return (
     <div className="space-y-6">
@@ -129,10 +130,10 @@ export function PersonalInfoTab({ personnel = {} }: PersonalInfoTabProps) {
                   <p className="text-sm font-medium text-muted-foreground">IBAN</p>
                   <div className="flex items-center">
                     <CreditCard className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <p className="text-base">{iban || "-"}</p>
-                    {iban && (
+                    <p className="text-base">{displayIban}</p>
+                    {displayIban !== "-" && (
                       <button 
-                        onClick={() => handleCopy(iban, "IBAN")}
+                        onClick={() => handleCopy(iban || displayIban, "IBAN")}
                         className="ml-2 text-muted-foreground hover:text-primary"
                       >
                         <Copy className="h-4 w-4" />
