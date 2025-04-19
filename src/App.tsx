@@ -1,4 +1,3 @@
-
 import React, { useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
@@ -27,6 +26,7 @@ import ShopSettings from "./pages/ShopSettings";
 import OperationsHistory from "./pages/OperationsHistory";
 import CustomerOperations from "./pages/operations/CustomerOperations";
 import StaffOperations from "./pages/operations/StaffOperations";
+import Profile from "./pages/Profile";
 
 // Create the query client
 const queryClient = new QueryClient({
