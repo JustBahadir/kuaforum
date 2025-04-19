@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Edit, Trash2, Save } from "lucide-react";
 
 interface EducationData {
   ortaokuldurumu: string;
@@ -501,14 +502,21 @@ export default function StaffProfile() {
   const initials = `${profile?.first_name?.[0] || ""}${profile?.last_name?.[0] || ""}`;
 
   const showLisedurumu = educationData.ortaokuldurumu.toLowerCase() === "bitirdi";
-  const showLiseturu = showLisedurumu && 
-    (educationData.lisedurumu.toLowerCase() === "bitirdi" || educationData.lisedurumu.toLowerCase() === "okuyor");
-  const showMeslekibrans = showLiseturu &&
-    ["cok_programli_anadolu", "meslek_ve_teknik_anadolu"].includes(educationData.liseturu);
+  const showLiseturu =
+    showLisedurumu &&
+    (educationData.lisedurumu.toLowerCase() === "bitirdi" ||
+      educationData.lisedurumu.toLowerCase() === "okuyor");
+  const showMeslekibrans =
+    showLiseturu &&
+    ["cok_programli_anadolu", "meslek_ve_teknik_anadolu"].includes(
+      educationData.liseturu
+    );
   const showUniversitedurumu = educationData.lisedurumu.toLowerCase() === "bitirdi";
-  const showUniversitebolum = showUniversitedurumu &&
-    (educationData.universitedurumu.toLowerCase() === "bitirdi" || educationData.universitedurumu.toLowerCase() === "okuyor");
-  
+  const showUniversitebolum =
+    showUniversitedurumu &&
+    (educationData.universitedurumu.toLowerCase() === "bitirdi" ||
+      educationData.universitedurumu.toLowerCase() === "okuyor");
+
   const handleTabChange = (value: string) => {
     setActiveTab(value as "profile" | "education" | "history" | "join");
   };
@@ -533,8 +541,14 @@ export default function StaffProfile() {
             </Avatar>
 
             <div className="flex-grow">
-              <p className="text-gray-500 mb-3">{user?.email} | {userRole}</p>
-              <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+              <p className="text-gray-500 mb-3">
+                {user?.email} | {userRole}
+              </p>
+              <Tabs
+                value={activeTab}
+                onValueChange={handleTabChange}
+                className="w-full"
+              >
                 <TabsList className="w-full flex space-x-4">
                   <TabsTrigger value="profile">Profil</TabsTrigger>
                   <TabsTrigger value="education">Eğitim</TabsTrigger>
@@ -544,10 +558,13 @@ export default function StaffProfile() {
                   )}
                 </TabsList>
 
+                {/* Profile Tab */}
                 <TabsContent value="profile">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Ad</label>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Ad
+                      </label>
                       <input
                         type="text"
                         value={profile?.first_name || ""}
@@ -559,7 +576,9 @@ export default function StaffProfile() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Soyad</label>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Soyad
+                      </label>
                       <input
                         type="text"
                         value={profile?.last_name || ""}
@@ -571,7 +590,9 @@ export default function StaffProfile() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Telefon</label>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Telefon
+                      </label>
                       <input
                         type="text"
                         value={profile?.phone || ""}
@@ -583,7 +604,9 @@ export default function StaffProfile() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Adres</label>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Adres
+                      </label>
                       <input
                         type="text"
                         value={profile?.address || ""}
@@ -595,7 +618,9 @@ export default function StaffProfile() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Cinsiyet</label>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Cinsiyet
+                      </label>
                       <select
                         value={profile?.gender || ""}
                         onChange={(e) =>
@@ -610,22 +635,26 @@ export default function StaffProfile() {
                       </select>
                     </div>
                   </div>
+                  <div className="mt-4 flex justify-end">
+                    <Button variant="default" onClick={saveProfileEdits} disabled={loading}>
+                      Kaydet
+                    </Button>
+                  </div>
                 </TabsContent>
 
+                {/* Education Tab */}
                 <TabsContent value="education">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Ortaokul Durumu</label>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Ortaokul Durumu
+                      </label>
                       <select
                         name="ortaokuldurumu"
                         value={educationData.ortaokuldurumu}
                         onChange={handleEducationChange}
-                        disabled={!editMode}
-                        className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
-                          editMode
-                            ? "focus:border-indigo-500"
-                            : "bg-gray-100 cursor-not-allowed"
-                        }`}
+                        disabled={loading}
+                        className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500`}
                       >
                         <option value="">Seçiniz</option>
                         <option value="okuyor">Okuyor</option>
@@ -636,17 +665,15 @@ export default function StaffProfile() {
 
                     {showLisedurumu && (
                       <div>
-                        <label className="block text-sm font-medium text-gray-700">Lise Durumu</label>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Lise Durumu
+                        </label>
                         <select
                           name="lisedurumu"
                           value={educationData.lisedurumu}
                           onChange={handleEducationChange}
-                          disabled={!editMode}
-                          className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
-                            editMode
-                              ? "focus:border-indigo-500"
-                              : "bg-gray-100 cursor-not-allowed"
-                          }`}
+                          disabled={loading}
+                          className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500`}
                         >
                           <option value="">Seçiniz</option>
                           <option value="okuyor">Okuyor</option>
@@ -658,17 +685,15 @@ export default function StaffProfile() {
 
                     {showLiseturu && (
                       <div>
-                        <label className="block text-sm font-medium text-gray-700">Lise Türü</label>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Lise Türü
+                        </label>
                         <select
                           name="liseturu"
                           value={educationData.liseturu}
                           onChange={handleEducationChange}
-                          disabled={!editMode}
-                          className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
-                            editMode
-                              ? "focus:border-indigo-500"
-                              : "bg-gray-100 cursor-not-allowed"
-                          }`}
+                          disabled={loading}
+                          className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500`}
                         >
                           <option value="">Seçiniz</option>
                           <option value="fen">Fen Lisesi</option>
@@ -677,8 +702,12 @@ export default function StaffProfile() {
                           <option value="guzel_sanatlar">Güzel Sanatlar Lisesi</option>
                           <option value="spor">Spor Lisesi</option>
                           <option value="imam_hatip">Anadolu İmam Hatip Lisesi</option>
-                          <option value="cok_programli_anadolu">Çok Programlı Anadolu Lisesi</option>
-                          <option value="meslek_ve_teknik_anadolu">Mesleki ve Teknik Anadolu Lisesi</option>
+                          <option value="cok_programli_anadolu">
+                            Çok Programlı Anadolu Lisesi
+                          </option>
+                          <option value="meslek_ve_teknik_anadolu">
+                            Mesleki ve Teknik Anadolu Lisesi
+                          </option>
                           <option value="aksam">Akşam Lisesi</option>
                           <option value="acik_ogretim">Açık Öğretim Lisesi</option>
                         </select>
@@ -687,7 +716,9 @@ export default function StaffProfile() {
 
                     {showMeslekibrans && (
                       <div>
-                        <label className="block text-sm font-medium text-gray-700">Meslek / Branş</label>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Meslek / Branş
+                        </label>
                         <input
                           type="text"
                           name="meslekibrans"
@@ -696,29 +727,23 @@ export default function StaffProfile() {
                             const { name, value } = e.target;
                             setEducationData((prev) => ({ ...prev, [name]: value }));
                           }}
-                          disabled={!editMode}
-                          className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
-                            editMode
-                              ? "focus:border-indigo-500"
-                              : "bg-gray-100 cursor-not-allowed"
-                          }`}
+                          disabled={loading}
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500"
                         />
                       </div>
                     )}
 
                     {showUniversitedurumu && (
                       <div>
-                        <label className="block text-sm font-medium text-gray-700">Üniversite Durumu</label>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Üniversite Durumu
+                        </label>
                         <select
                           name="universitedurumu"
                           value={educationData.universitedurumu}
                           onChange={handleEducationChange}
-                          disabled={!editMode}
-                          className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
-                            editMode
-                              ? "focus:border-indigo-500"
-                              : "bg-gray-100 cursor-not-allowed"
-                          }`}
+                          disabled={loading}
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500"
                         >
                           <option value="">Seçiniz</option>
                           <option value="okuyor">Okuyor</option>
@@ -730,7 +755,9 @@ export default function StaffProfile() {
 
                     {showUniversitebolum && (
                       <div>
-                        <label className="block text-sm font-medium text-gray-700">Üniversite Bölümü</label>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Üniversite Bölümü
+                        </label>
                         <input
                           type="text"
                           name="universitebolum"
@@ -739,18 +766,15 @@ export default function StaffProfile() {
                             const { name, value } = e.target;
                             setEducationData((prev) => ({ ...prev, [name]: value }));
                           }}
-                          disabled={!editMode}
-                          className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
-                            editMode
-                              ? "focus:border-indigo-500"
-                              : "bg-gray-100 cursor-not-allowed"
-                          }`}
+                          disabled={loading}
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500"
                         />
                       </div>
                     )}
                   </div>
                 </TabsContent>
 
+                {/* History Tab */}
                 <TabsContent value="history">
                   <div className="space-y-6">
                     <WorkplacesPositionsSection
@@ -770,12 +794,15 @@ export default function StaffProfile() {
                     />
                     <CvSection
                       cv={historyData.cv}
-                      setCv={(cvValue) => setHistoryData(prev => ({ ...prev, cv: cvValue }))}
+                      setCv={(cvValue) =>
+                        setHistoryData((prev) => ({ ...prev, cv: cvValue }))
+                      }
                       saveHistoryDataWithParams={saveHistoryDataWithParams}
                     />
                   </div>
                 </TabsContent>
 
+                {/* Join Tab */}
                 <TabsContent value="join">
                   <div>
                     <label className="block mb-2 font-semibold">İşletme Kodu</label>
@@ -806,26 +833,41 @@ export default function StaffProfile() {
   );
 }
 
-function WorkplacesPositionsSection({ historyData, setHistoryData, saveHistoryDataWithParams }: any) {
-  const [addingEntry, setAddingEntry] = useState(false);
+function WorkplacesPositionsSection({
+  historyData,
+  setHistoryData,
+  saveHistoryDataWithParams,
+}: {
+  historyData: HistoryData;
+  setHistoryData: React.Dispatch<React.SetStateAction<HistoryData>>;
+  saveHistoryDataWithParams: (
+    isyerleri: string[],
+    gorevpozisyon: string[],
+    belgeler: string[],
+    yarismalar: string[],
+    cv: string
+  ) => Promise<void>;
+}) {
+  const [adding, setAdding] = useState(false);
   const [newIsyeri, setNewIsyeri] = useState("");
   const [newGorev, setNewGorev] = useState("");
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editIsyeri, setEditIsyeri] = useState("");
   const [editGorev, setEditGorev] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const startAdd = () => {
+    setAdding(true);
+    setNewIsyeri("");
+    setNewGorev("");
+  };
+
+  const cancelAdd = () => {
+    setAdding(false);
+    setNewIsyeri("");
+    setNewGorev("");
+  };
 
   const startEdit = (index: number) => {
     setEditIndex(index);
     setEditIsyeri(historyData.isyerleri[index]);
-    setEditGorev(historyData.gorevpozisyon[index]);
-  };
-
-  const cancelEdit = () => {
-    setEditIndex(null);
-    setEditIsyeri("");
-    setEditGorev("");
-  };
-
-  const saveEdit = async () => {
-    if (editIsyeri.trim() === "" || editGorev.trim() === "") {
-      toast.error("İş yeri ve görev boş olamaz.");
