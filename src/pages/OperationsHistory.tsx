@@ -11,6 +11,7 @@ import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import { DateControlBar } from "@/components/ui/date-control-bar";
 import { format } from "date-fns";
+import { tr } from "date-fns/locale";
 
 export default function OperationsHistory() {
   const [dateRange, setDateRange] = useState({
@@ -164,7 +165,7 @@ export default function OperationsHistory() {
         <!DOCTYPE html>
         <html>
         <head>
-          <title>İşlem Raporu - ${format(dateRange.from, 'dd.MM.yyyy')} - ${format(dateRange.to, 'dd.MM.yyyy')}</title>
+          <title>İşlem Raporu - ${format(dateRange.from, 'dd.MM.yyyy', { locale: tr })} - ${format(dateRange.to, 'dd.MM.yyyy', { locale: tr })}</title>
           <style>
             body { font-family: Arial, sans-serif; }
             table { width: 100%; border-collapse: collapse; }
@@ -179,7 +180,7 @@ export default function OperationsHistory() {
         <body>
           <div class="header">
             <h2>İşlem Raporu</h2>
-            <p>Tarih Aralığı: ${format(dateRange.from, 'dd.MM.yyyy')} - ${format(dateRange.to, 'dd.MM.yyyy')}</p>
+            <p>Tarih Aralığı: ${format(dateRange.from, 'dd.MM.yyyy', { locale: tr })} - ${format(dateRange.to, 'dd.MM.yyyy', { locale: tr })}</p>
           </div>
           
           <div class="summary">
@@ -205,7 +206,7 @@ export default function OperationsHistory() {
             <tbody>
               ${filteredOperations.map(operation => `
                 <tr>
-                  <td>${format(new Date(operation.created_at || ''), 'dd.MM.yyyy')}</td>
+                  <td>${format(new Date(operation.created_at || ''), 'dd.MM.yyyy', { locale: tr })}</td>
                   <td>${operation.personel?.ad_soyad || 'Belirtilmemiş'}</td>
                   <td>${operation.musteri 
                     ? `${operation.musteri.first_name || ''} ${operation.musteri.last_name || ''}`.trim() || 'Belirtilmemiş'
@@ -224,12 +225,7 @@ export default function OperationsHistory() {
       // Write to the window
       printWindow.document.write(reportHTML);
       
-      // Function to format the date
-      function format(date: Date) {
-        return date ? new Intl.DateTimeFormat('tr-TR').format(date) : '';
-      }
-      
-      // Print the document
+      // Close the document
       printWindow.document.close();
       printWindow.focus();
       setTimeout(() => {
@@ -331,7 +327,7 @@ export default function OperationsHistory() {
                       filteredOperations.map((operation) => (
                         <tr key={operation.id} className="hover:bg-gray-50">
                           <td className="px-6 py-4 whitespace-nowrap text-sm">
-                            {format(new Date(operation.created_at || ''), 'dd.MM.yyyy')}
+                            {format(new Date(operation.created_at || ''), 'dd.MM.yyyy', { locale: tr })}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm">
                             {operation.personel?.ad_soyad || 'Belirtilmemiş'}
