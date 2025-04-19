@@ -41,7 +41,10 @@ const arrayToString = (value: string[] | string): string => {
 
 const stringToArray = (str: string | null | undefined): string[] => {
   if (!str) return [];
-  return str.split(",").map(s => s.trim()).filter(s => s.length > 0);
+  return str
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
 };
 
 export default function StaffProfile() {
@@ -49,7 +52,9 @@ export default function StaffProfile() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<"profile" | "education" | "history" | "children" | "join">("profile");
+  const [activeTab, setActiveTab] = useState<
+    "profile" | "education" | "history" | "children" | "join"
+  >("profile");
   const [shopCode, setShopCode] = useState("");
   const [validatingCode, setValidatingCode] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -68,38 +73,38 @@ export default function StaffProfile() {
     gorevpozisyon: [],
     belgeler: [],
     yarismalar: [],
-    cv: ""
+    cv: "",
   });
 
   const [childrenData, setChildrenData] = useState<ChildrenData>({
     children_names: [],
-    _newChildName: ""
+    _newChildName: "",
   });
 
   const [userRole, setUserRole] = useState("");
 
-  // Yeni: Çocuk bilgilerini kaydetme fonksiyonu
-  // Eğer çocuk bilgilerini farklı tabloda saklıyorsanız bu fonksiyonu değiştirin.
   const saveChildrenDataWithParams = async (childrenNames: string[]) => {
     if (!user) return;
 
     setLoading(true);
-    // Örnek: Eğer çocuk isimlerini DB'de text array olarak saklayabilen bir tablo varsa burada güncellenebilir.
-    // Mevcut veritabanı yapısına göre düzenleyin.
-
-    // Örnek güncelleme:
-    /*
     const { error } = await supabase
       .from("customer_personal_data")
-      .upsert({ 
-        customer_id: user.id,
-        children_names: childrenNames
-      }, { onConflict: ["customer_id"] });
-    */
+      .upsert(
+        {
+          customer_id: user.id,
+          children_names: childrenNames.length > 0 ? childrenNames : null,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: ["customer_id"] }
+      );
 
-    // Şimdilik simüle edelim
     setLoading(false);
-    toast.success("Çocuk bilgileri güncellendi.");
+    if (error) {
+      console.error("Çocuk bilgileri kaydedilirken hata:", error);
+      toast.error("Çocuk bilgileri kaydedilemedi.");
+    } else {
+      toast.success("Çocuk bilgileri güncellendi.");
+    }
   };
 
   const saveEducationData = useCallback(async () => {
@@ -114,6 +119,7 @@ export default function StaffProfile() {
       meslekibrans: educationData.meslekibrans,
       universitedurumu: educationData.universitedurumu,
       universitebolum: educationData.universitebolum,
+      updated_at: new Date().toISOString(),
     };
 
     const { error } = await supabase
@@ -140,6 +146,7 @@ export default function StaffProfile() {
       belgeler: historyData.belgeler.join(","),
       yarismalar: historyData.yarismalar.join(","),
       cv: historyData.cv || "",
+      updated_at: new Date().toISOString(),
     };
 
     const { error } = await supabase
@@ -172,6 +179,7 @@ export default function StaffProfile() {
       belgeler: belgeler.join(","),
       yarismalar: yarismalar.join(","),
       cv: cv || "",
+      updated_at: new Date().toISOString(),
     };
 
     const { error } = await supabase
@@ -199,6 +207,7 @@ export default function StaffProfile() {
       meslekibrans: educationData.meslekibrans,
       universitedurumu: educationData.universitedurumu,
       universitebolum: educationData.universitebolum,
+      updated_at: new Date().toISOString(),
     };
 
     const { error } = await supabase
@@ -221,15 +230,21 @@ export default function StaffProfile() {
     }
     const newIsyerleri = [...historyData.isyerleri, historyData._newIsYeri];
     const newGorevPozisyon = [...historyData.gorevpozisyon, historyData._newGorev];
-    setHistoryData(prev => ({
+    setHistoryData((prev) => ({
       ...prev,
       isyerleri: newIsyerleri,
       gorevpozisyon: newGorevPozisyon,
       _newIsYeri: "",
-      _newGorev: ""
+      _newGorev: "",
     }));
 
-    await saveHistoryDataWithParams(newIsyerleri, newGorevPozisyon, historyData.belgeler, historyData.yarismalar, historyData.cv);
+    await saveHistoryDataWithParams(
+      newIsyerleri,
+      newGorevPozisyon,
+      historyData.belgeler,
+      historyData.yarismalar,
+      historyData.cv
+    );
   };
 
   const removeWorkplaceAtIndex = async (index: number) => {
@@ -237,7 +252,7 @@ export default function StaffProfile() {
     const newGorevPozisyon = [...historyData.gorevpozisyon];
     newIsyerleri.splice(index, 1);
     newGorevPozisyon.splice(index, 1);
-    setHistoryData(prev => ({
+    setHistoryData((prev) => ({
       ...prev,
       isyerleri: newIsyerleri,
       gorevpozisyon: newGorevPozisyon
@@ -252,7 +267,7 @@ export default function StaffProfile() {
       return;
     }
     const newBelgeler = [...historyData.belgeler, historyData._newBelge];
-    setHistoryData(prev => ({
+    setHistoryData((prev) => ({
       ...prev,
       belgeler: newBelgeler,
       _newBelge: ""
@@ -264,7 +279,7 @@ export default function StaffProfile() {
   const removeBelgeAtIndex = async (index: number) => {
     const newBelgeler = [...historyData.belgeler];
     newBelgeler.splice(index, 1);
-    setHistoryData(prev => ({ ...prev, belgeler: newBelgeler }));
+    setHistoryData((prev) => ({ ...prev, belgeler: newBelgeler }));
 
     await saveHistoryDataWithParams(historyData.isyerleri, historyData.gorevpozisyon, newBelgeler, historyData.yarismalar, historyData.cv);
   };
@@ -275,7 +290,7 @@ export default function StaffProfile() {
       return;
     }
     const newYarismalar = [...historyData.yarismalar, historyData._newYarisma];
-    setHistoryData(prev => ({
+    setHistoryData((prev) => ({
       ...prev,
       yarismalar: newYarismalar,
       _newYarisma: ""
@@ -287,21 +302,21 @@ export default function StaffProfile() {
   const removeYarismalarAtIndex = async (index: number) => {
     const newYarismalar = [...historyData.yarismalar];
     newYarismalar.splice(index, 1);
-    setHistoryData(prev => ({ ...prev, yarismalar: newYarismalar }));
+    setHistoryData((prev) => ({ ...prev, yarismalar: newYarismalar }));
 
     await saveHistoryDataWithParams(historyData.isyerleri, historyData.gorevpozisyon, historyData.belgeler, newYarismalar, historyData.cv);
   };
 
   const handleCvChange = async (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const { value } = e.target;
-    setHistoryData(prev => ({ ...prev, cv: value }));
+    setHistoryData((prev) => ({ ...prev, cv: value }));
     await saveHistoryDataWithParams(historyData.isyerleri, historyData.gorevpozisyon, historyData.belgeler, historyData.yarismalar, value);
   };
 
   const handleEducationChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
 
-    setEducationData(prev => {
+    setEducationData((prev) => {
       const newData = { ...prev, [name]: value };
 
       if (name === "ortaokuldurumu" && value !== "bitirdi") {
@@ -372,9 +387,8 @@ export default function StaffProfile() {
     
     setValidatingCode(true);
     try {
-      // İşletme kodunu doğrula
       const { data: shopData, error: shopError } = await supabase
-        .from("dukkan")
+        .from("dukkanlar")
         .select("id, ad")
         .eq("kod", shopCode.trim())
         .maybeSingle();
@@ -386,7 +400,6 @@ export default function StaffProfile() {
         return;
       }
       
-      // Personel kaydı oluştur
       const { error: personelError } = await supabase
         .from("personel")
         .upsert({
@@ -458,6 +471,7 @@ export default function StaffProfile() {
         meslekibrans: educationData.meslekibrans,
         universitedurumu: educationData.universitedurumu,
         universitebolum: educationData.universitebolum,
+        updated_at: new Date().toISOString(),
       };
 
       const { error: educationError } = await supabase
@@ -477,6 +491,7 @@ export default function StaffProfile() {
         belgeler: historyData.belgeler.join(","),
         yarismalar: historyData.yarismalar.join(","),
         cv: historyData.cv || "",
+        updated_at: new Date().toISOString(),
       };
 
       const { error: historyError } = await supabase
@@ -489,7 +504,7 @@ export default function StaffProfile() {
         return;
       }
 
-      await saveChildrenData();
+      await saveChildrenDataWithParams(childrenData.children_names);
 
       setEditMode(false);
       toast.success("Bilgiler güncellendi.");
@@ -542,12 +557,28 @@ export default function StaffProfile() {
           .maybeSingle();
 
         setEducationData({
-          ortaokuldurumu: typeof educationRes?.ortaokuldurumu === "string" ? educationRes.ortaokuldurumu : "",
-          lisedurumu: typeof educationRes?.lisedurumu === "string" ? educationRes.lisedurumu : "",
-          liseturu: typeof educationRes?.liseturu === "string" ? educationRes.liseturu : "",
-          meslekibrans: typeof educationRes?.meslekibrans === "string" ? educationRes.meslekibrans : "",
-          universitedurumu: typeof educationRes?.universitedurumu === "string" ? educationRes.universitedurumu : "",
-          universitebolum: typeof educationRes?.universitebolum === "string" ? educationRes.universitebolum : "",
+          ortaokuldurumu:
+            typeof educationRes?.ortaokuldurumu === "string"
+              ? educationRes.ortaokuldurumu
+              : "",
+          lisedurumu:
+            typeof educationRes?.lisedurumu === "string"
+              ? educationRes.lisedurumu
+              : "",
+          liseturu:
+            typeof educationRes?.liseturu === "string" ? educationRes.liseturu : "",
+          meslekibrans:
+            typeof educationRes?.meslekibrans === "string"
+              ? educationRes.meslekibrans
+              : "",
+          universitedurumu:
+            typeof educationRes?.universitedurumu === "string"
+              ? educationRes.universitedurumu
+              : "",
+          universitebolum:
+            typeof educationRes?.universitebolum === "string"
+              ? educationRes.universitebolum
+              : "",
         });
 
         const { data: historyRes } = await supabase
@@ -567,8 +598,6 @@ export default function StaffProfile() {
           _newBelge: "",
           _newYarisma: ""
         });
-
-        // For children, dummy initial state. If you have actual DB, load here.
 
         if (role === "staff") {
           const { data: personelData } = await supabase
@@ -633,12 +662,17 @@ export default function StaffProfile() {
             <Card>
               <CardContent className="p-6 text-center">
                 <Avatar className="h-24 w-24 mx-auto mb-4">
-                  <AvatarImage src={profile?.avatar_url} alt={`${profile?.first_name} ${profile?.last_name}`} />
+                  <AvatarImage
+                    src={profile?.avatar_url}
+                    alt={`${profile?.first_name} ${profile?.last_name}`}
+                  />
                   <AvatarFallback className="text-lg bg-purple-100 text-purple-600">
                     {initials}
                   </AvatarFallback>
                 </Avatar>
-                <h2 className="text-xl font-semibold">{profile?.first_name} {profile?.last_name}</h2>
+                <h2 className="text-xl font-semibold">
+                  {profile?.first_name} {profile?.last_name}
+                </h2>
                 <p className="text-muted-foreground text-sm">Personel</p>
               </CardContent>
             </Card>
