@@ -70,8 +70,7 @@ export default function ProfileSetup() {
           profileData.last_name &&
           profileData.phone &&
           profileData.role &&
-          profileData.gender &&
-          profileData.shopName
+          profileData.gender
         ) {
           if (profileData.role === "admin") {
             navigate("/shop-home");
@@ -133,9 +132,7 @@ export default function ProfileSetup() {
     if (!formData.role.trim()) {
       newErrors.role = "Bu alan zorunludur";
     }
-    if (formData.role === "admin" && !formData.shopName.trim()) {
-      newErrors.shopName = "Bu alan zorunludur";
-    }
+    // Remove shopName validation since it is no longer mandatory or requested
 
     setErrors(newErrors);
 
@@ -168,9 +165,10 @@ export default function ProfileSetup() {
       if (formData.role === "staff" && formData.shopCode.trim().length > 0) {
         updateData.shopCode = formData.shopCode.trim();
       }
-      if (formData.role === "admin") {
-        updateData.shopName = formData.shopName.trim();
-      }
+      // Do not send shopName now, since it's not requested anymore
+      // if (formData.role === "admin") {
+      //   updateData.shopName = formData.shopName.trim();
+      // }
 
       console.log("Profil güncelleme için gönderilen veri:", updateData);
 
@@ -255,7 +253,7 @@ export default function ProfileSetup() {
 
             <div>
               <Label htmlFor="phone" className={`block ${errors.phone ? "text-red-600" : ""}`}>
-                Telefon*
+                Telefon Numarası*
               </Label>
               <PhoneInputField
                 id="phone"
@@ -319,6 +317,8 @@ export default function ProfileSetup() {
               {errors.role && <p id="role-error" className="text-xs text-red-600 mt-1">{errors.role}</p>}
             </div>
             
+            {/*
+            Removed the business/shop name field since it's not wanted anymore
             {formData.role === "admin" && (
               <div>
                 <Label htmlFor="shopName" className={`block ${errors.shopName ? "text-red-600" : ""}`}>
@@ -339,6 +339,7 @@ export default function ProfileSetup() {
                 {errors.shopName && <p id="shopName-error" className="text-xs text-red-600 mt-1">{errors.shopName}</p>}
               </div>
             )}
+            */}
 
             {formData.role === "staff" && (
               <div className="space-y-2">
@@ -369,4 +370,3 @@ export default function ProfileSetup() {
     </div>
   );
 }
-
