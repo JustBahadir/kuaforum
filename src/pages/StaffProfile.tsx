@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,6 +56,7 @@ export default function StaffProfile() {
 
   const [userRole, setUserRole] = useState("");
 
+  // Move handleJoinShop here to fix the error "Cannot find name 'handleJoinShop'."
   const handleJoinShop = async () => {
     toast.success("İşletmeye katılma işlevi henüz uygulanmadı.");
   };
@@ -85,7 +87,7 @@ export default function StaffProfile() {
           .from("profiles")
           .select("*")
           .eq("id", data.session.user.id)
-          .single();
+          .maybeSingle();
 
         if (profileError && profileError.code !== "PGRST116") {
           throw profileError;
@@ -274,6 +276,7 @@ export default function StaffProfile() {
         return;
       }
 
+      // Convert arrays to comma-separated strings before upsert for education
       const dataToUpsert = [{
         personel_id: user.id,
         ortaokulDurumu: Array.isArray(educationData.ortaokulDurumu) ? educationData.ortaokulDurumu.join(", ") : educationData.ortaokulDurumu,
@@ -291,6 +294,7 @@ export default function StaffProfile() {
         return;
       }
 
+      // Convert arrays to comma-separated strings before upsert for history
       const historyToUpsert = [{
         personel_id: user.id,
         isYerleri: arrayToString(historyData.isYerleri),
@@ -781,3 +785,4 @@ export default function StaffProfile() {
     </div>
   );
 }
+
