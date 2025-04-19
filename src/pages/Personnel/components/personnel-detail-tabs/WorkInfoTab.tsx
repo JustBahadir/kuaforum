@@ -22,8 +22,9 @@ export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabPr
   const [isEditing, setIsEditing] = useState(false);
   const [workSystem, setWorkSystem] = useState(personnel.calisma_sistemi === 'komisyon' ? 'komisyonlu' : 'maasli');
   const [paymentPeriod, setPaymentPeriod] = useState(personnel.calisma_sistemi || 'aylik');
-  const [salary, setSalary] = useState(personnel.maas?.toString() || '');
-  const [commission, setCommission] = useState(personnel.prim_yuzdesi?.toString() || '');
+  // Initialize with empty strings instead of converting to string
+  const [salary, setSalary] = useState(personnel.maas && personnel.maas > 0 ? personnel.maas.toString() : '');
+  const [commission, setCommission] = useState(personnel.prim_yuzdesi && personnel.prim_yuzdesi > 0 ? personnel.prim_yuzdesi.toString() : '');
 
   const updateMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -44,7 +45,7 @@ export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabPr
   });
 
   const handleSave = () => {
-    // Parse the string values to numbers
+    // Parse the string values to numbers, defaulting to 0 if empty
     const parsedSalary = salary ? parseInt(salary, 10) : 0;
     const parsedCommission = commission ? parseInt(commission, 10) : 0;
     
@@ -68,7 +69,7 @@ export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabPr
     updateMutation.mutate(updateData);
   };
 
-  // Handle salary input with validation for digits only
+  // Handle salary input with validation for digits only - fixed to allow multi-character input
   const handleSalaryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     
@@ -78,7 +79,7 @@ export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabPr
     }
   };
 
-  // Handle commission input with validation (0-100)
+  // Handle commission input with validation (0-100) - fixed to allow multi-character input
   const handleCommissionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     
@@ -168,9 +169,9 @@ export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabPr
   );
 
   const DisplayContent = () => {
-    // For display purposes, ensure we're showing valid numbers
-    const displaySalary = salary !== '' ? parseInt(salary, 10) : personnel.maas || 0;
-    const displayCommission = commission !== '' ? parseInt(commission, 10) : personnel.prim_yuzdesi || 0;
+    // For display purposes, don't show zero values
+    const displaySalary = salary !== '' ? parseInt(salary, 10) : null;
+    const displayCommission = commission !== '' ? parseInt(commission, 10) : null;
     
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -190,7 +191,11 @@ export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabPr
               <p className="text-sm font-medium text-muted-foreground">Maaş</p>
               <div className="flex items-center mt-1">
                 <Banknote className="h-4 w-4 mr-2 text-muted-foreground" />
-                <p className="text-base">{formatCurrency(displaySalary)}</p>
+                {displaySalary !== null ? (
+                  <p className="text-base">{formatCurrency(displaySalary)}</p>
+                ) : (
+                  <p className="text-base text-muted-foreground">Belirtilmemiş</p>
+                )}
               </div>
             </div>
           )}
@@ -200,7 +205,11 @@ export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabPr
               <p className="text-sm font-medium text-muted-foreground">Prim Yüzdesi</p>
               <div className="flex items-center mt-1">
                 <PercentIcon className="h-4 w-4 mr-2 text-muted-foreground" />
-                <p className="text-base">%{displayCommission}</p>
+                {displayCommission !== null ? (
+                  <p className="text-base">%{displayCommission}</p>
+                ) : (
+                  <p className="text-base text-muted-foreground">Belirtilmemiş</p>
+                )}
               </div>
             </div>
           )}
