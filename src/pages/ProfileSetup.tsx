@@ -1,11 +1,17 @@
 
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
 
@@ -38,10 +44,7 @@ export default function ProfileSetup() {
     const checkSession = async () => {
       try {
         const { data, error } = await supabase.auth.getSession();
-
-        if (error) {
-          throw error;
-        }
+        if (error) throw error;
 
         if (!data.session) {
           navigate("/login");
@@ -51,29 +54,20 @@ export default function ProfileSetup() {
         const user = data.session.user;
         setUserData(user);
 
-        const metadata = user.user_metadata || {};
-        setFormData(prev => ({
-          ...prev,
-          firstName: metadata.first_name || user.user_metadata?.given_name || "",
-          lastName: metadata.last_name || user.user_metadata?.family_name || "",
-          phone: metadata.phone || "",
-          gender: metadata.gender || "",
-        }));
-
         const { data: profileData } = await supabase
           .from("profiles")
-          .select("id, role, first_name, last_name, phone, gender, shopName, shopCode")
+          .select("first_name, last_name, phone, gender, role, shopName, shopCode")
           .eq("id", user.id)
           .maybeSingle();
 
-        // Eğer profil ve temel bilgiler tamamsa doğrudan ilgili panele yönlendirme yap
+        // If profile already completed, redirect to dashboard or appropriate page
         if (
           profileData &&
           profileData.first_name &&
           profileData.last_name &&
           profileData.phone &&
-          profileData.role &&
-          profileData.gender
+          profileData.gender &&
+          profileData.role
         ) {
           if (profileData.role === "admin") {
             navigate("/shop-home");
@@ -98,22 +92,22 @@ export default function ProfileSetup() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
 
     if (errors[name as keyof typeof errors]) {
-      setErrors(prev => ({ ...prev, [name]: undefined }));
+      setErrors((prev) => ({ ...prev, [name]: undefined }));
     }
   };
 
   const handleRoleChange = (value: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       role: value,
-      shopCode: value !== "staff" ? "" : prev.shopCode
+      shopCode: value !== "staff" ? "" : prev.shopCode,
     }));
 
     if (errors.role) {
-      setErrors(prev => ({ ...prev, role: undefined }));
+      setErrors((prev) => ({ ...prev, role: undefined }));
     }
   };
 
@@ -159,27 +153,24 @@ export default function ProfileSetup() {
     setSubmitting(true);
 
     try {
-      // Güncelleme için gönderilecek veriyi normalize et
+      // Prepare data for upsert
       const updateData: Record<string, any> = {
         first_name: formData.firstName,
         last_name: formData.lastName,
         phone: formData.phone,
-        gender: formData.gender || null,
+        gender: formData.gender,
         role: formData.role === "admin" ? "admin" : "staff",
       };
 
       if (formData.role === "admin") {
         updateData.shopName = formData.shopName;
       }
-      
+
       if (formData.role === "staff" && formData.shopCode.trim().length > 0) {
         updateData.shopCode = formData.shopCode.trim();
       }
 
-      // Loglama: gönderilen veri
-      console.log("Profil güncelleme için gönderilen veri:", updateData);
-
-      // Supabase upsert
+      // Upsert profile info
       const { error } = await supabase
         .from("profiles")
         .upsert({ id: userData.id, ...updateData });
@@ -220,15 +211,13 @@ export default function ProfileSetup() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-purple-50 to-pink-50 p-4">
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="bg-gradient-to-r from-pink-500 to-purple-500 text-white py-6 px-8 rounded-t-lg">
-          <h2 className="text-2xl font-bold text-center">Profil Bilgilerinizi Tamamlayın</h2>
+          <CardTitle className="text-2xl font-bold text-center">Profil Bilgilerinizi Tamamlayın</CardTitle>
         </CardHeader>
         <CardContent className="p-6">
           <form onSubmit={handleSubmit} className="space-y-4" noValidate>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="firstName" className={`block ${errors.firstName ? "text-red-600" : ""}`}>
-                  Ad*
-                </Label>
+                <Label htmlFor="firstName" className={`${errors.firstName ? "text-red-600" : ""}`}>Ad*</Label>
                 <Input
                   id="firstName"
                   name="firstName"
@@ -242,9 +231,7 @@ export default function ProfileSetup() {
                 {errors.firstName && <p id="firstName-error" className="text-xs text-red-600 mt-1">{errors.firstName}</p>}
               </div>
               <div>
-                <Label htmlFor="lastName" className={`block ${errors.lastName ? "text-red-600" : ""}`}>
-                  Soyad*
-                </Label>
+                <Label htmlFor="lastName" className={`${errors.lastName ? "text-red-600" : ""}`}>Soyad*</Label>
                 <Input
                   id="lastName"
                   name="lastName"
@@ -260,9 +247,7 @@ export default function ProfileSetup() {
             </div>
 
             <div>
-              <Label htmlFor="phone" className={`block ${errors.phone ? "text-red-600" : ""}`}>
-                Telefon*
-              </Label>
+              <Label htmlFor="phone" className={`${errors.phone ? "text-red-600" : ""}`}>Telefon*</Label>
               <Input
                 id="phone"
                 name="phone"
@@ -278,14 +263,12 @@ export default function ProfileSetup() {
             </div>
 
             <div>
-              <Label htmlFor="gender" className={`block ${errors.gender ? "text-red-600" : ""}`}>
-                Cinsiyet*
-              </Label>
+              <Label htmlFor="gender" className={`${errors.gender ? "text-red-600" : ""}`}>Cinsiyet*</Label>
               <Select 
                 value={formData.gender} 
                 onValueChange={(value) => {
-                  setFormData(prev => ({...prev, gender: value}));
-                  if (errors.gender) setErrors(prev => ({...prev, gender: undefined}));
+                  setFormData((prev) => ({ ...prev, gender: value }));
+                  if (errors.gender) setErrors((prev) => ({ ...prev, gender: undefined }));
                 }} 
                 aria-invalid={!!errors.gender}
                 aria-describedby="gender-error"
@@ -303,9 +286,7 @@ export default function ProfileSetup() {
             </div>
 
             <div>
-              <Label htmlFor="role" className={`block ${errors.role ? "text-red-600" : ""}`}>
-                Kayıt Türü*
-              </Label>
+              <Label htmlFor="role" className={`${errors.role ? "text-red-600" : ""}`}>Kayıt Türü*</Label>
               <Select 
                 value={formData.role} 
                 onValueChange={handleRoleChange} 
@@ -324,12 +305,10 @@ export default function ProfileSetup() {
               </Select>
               {errors.role && <p id="role-error" className="text-xs text-red-600 mt-1">{errors.role}</p>}
             </div>
-            
+
             {formData.role === "admin" && (
               <div>
-                <Label htmlFor="shopName" className={`block ${errors.shopName ? "text-red-600" : ""}`}>
-                  İşletme Adı*
-                </Label>
+                <Label htmlFor="shopName" className={`${errors.shopName ? "text-red-600" : ""}`}>İşletme Adı*</Label>
                 <Input
                   id="shopName"
                   name="shopName"
@@ -348,9 +327,7 @@ export default function ProfileSetup() {
 
             {formData.role === "staff" && (
               <div className="space-y-2">
-                <Label htmlFor="shopCode" className="block">
-                  İşletme Kodu (Opsiyonel)
-                </Label>
+                <Label htmlFor="shopCode" className="block">İşletme Kodu (Opsiyonel)</Label>
                 <Input
                   id="shopCode"
                   name="shopCode"
