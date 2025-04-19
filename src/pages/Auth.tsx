@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
-import { Home, user, userPlus, logIn } from 'lucide-react';
+import { Home, User, UserPlus, LogIn } from 'lucide-react';
 import { GoogleAuthButton } from '@/components/auth/GoogleAuthButton';
 
 export default function Auth() {
@@ -26,10 +26,6 @@ export default function Auth() {
   // Active tab: login or register
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
 
-  // Additional registration-specific fields to maintain UI consistency later if needed
-  // For now, not needed but can be added if user wants
-
-  // Check if user is already logged in and redirect accordingly
   useEffect(() => {
     const checkSession = async () => {
       try {
@@ -39,7 +35,6 @@ export default function Auth() {
           return;
         }
         if (data.session) {
-          // Get user role from session metadata
           const metadata = data.session.user?.user_metadata;
           const userRole = metadata?.role || 'customer';
 
@@ -56,7 +51,6 @@ export default function Auth() {
     checkSession();
   }, [navigate]);
 
-  // Handle user sign-in
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -77,7 +71,6 @@ export default function Auth() {
       });
 
       if (error) {
-        // Kullanıcı bulunamadığında veya login bilgisi yanlışsa
         if (
           error.message.includes('User not found') ||
           error.message.includes('Invalid login credentials')
@@ -92,7 +85,6 @@ export default function Auth() {
         return;
       }
 
-      // sadece müşteri kullanıcılar için giriş sayfası
       const metadata = data.user?.user_metadata;
       if (metadata && metadata.role !== 'customer') {
         await supabase.auth.signOut();
@@ -110,11 +102,9 @@ export default function Auth() {
     }
   };
 
-  // Handle user sign-up
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Basit alan kontrolü
     if (!email) {
       toast.error('Lütfen e-posta adresinizi girin');
       return;
@@ -159,7 +149,6 @@ export default function Auth() {
       toast.success('Kayıt başarılı! Giriş yapabilirsiniz.');
       setActiveTab('login');
     } catch (error: any) {
-      // Daha detaylı yönetim yapılabilir
       toast.error(error.message || 'Kayıt sırasında bir hata oluştu.');
     } finally {
       setLoading(false);
@@ -177,10 +166,10 @@ export default function Auth() {
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'login' | 'register')} className="space-y-4">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="login" className="flex items-center justify-center gap-1">
-                <logIn size={14} /> Giriş Yap
+                <LogIn size={14} /> Giriş Yap
               </TabsTrigger>
               <TabsTrigger value="register" className="flex items-center justify-center gap-1">
-                <userPlus size={14} /> Kayıt Ol
+                <UserPlus size={14} /> Kayıt Ol
               </TabsTrigger>
             </TabsList>
 
@@ -314,3 +303,4 @@ export default function Auth() {
     </div>
   );
 }
+
