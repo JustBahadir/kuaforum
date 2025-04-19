@@ -279,10 +279,18 @@ export default function StaffProfile() {
         return;
       }
 
-      const ortaokulDurumuStr: string = Array.isArray(educationData.ortaokulDurumu) ? educationData.ortaokulDurumu.join(", ") : (educationData.ortaokulDurumu ?? "");
-      const liseDurumuStr: string = Array.isArray(educationData.liseDurumu) ? educationData.liseDurumu.join(", ") : (educationData.liseDurumu ?? "");
-      const liseTuruStr: string = Array.isArray(educationData.liseTuru) ? educationData.liseTuru.join(", ") : (educationData.liseTuru ?? "");
-      const meslekiBransStr: string = Array.isArray(educationData.meslekiBrans) ? educationData.meslekiBrans.join(", ") : (educationData.meslekiBrans ?? "");
+      const ortaokulDurumuStr: string = Array.isArray(educationData.ortaokulDurumu)
+        ? educationData.ortaokulDurumu.join(", ")
+        : (educationData.ortaokulDurumu ?? "");
+      const liseDurumuStr: string = Array.isArray(educationData.liseDurumu)
+        ? educationData.liseDurumu.join(", ")
+        : (educationData.liseDurumu ?? "");
+      const liseTuruStr: string = Array.isArray(educationData.liseTuru)
+        ? educationData.liseTuru.join(", ")
+        : (educationData.liseTuru ?? "");
+      const meslekiBransStr: string = Array.isArray(educationData.meslekiBrans)
+        ? educationData.meslekiBrans.join(", ")
+        : (educationData.meslekiBrans ?? "");
 
       const dataToUpsert = [{
         personel_id: user.id,
