@@ -76,7 +76,7 @@ export default function StaffProfile() {
     if (!user) return;
     setLoading(true);
 
-    const dataToUpsert = {
+    const dataToUpsert = [{
       personel_id: user.id,
       ortaokuldurumu: educationData.ortaokuldurumu,
       lisedurumu: educationData.lisedurumu,
@@ -84,7 +84,7 @@ export default function StaffProfile() {
       meslekibrans: educationData.meslekibrans,
       universitedurumu: educationData.universitedurumu,
       universitebolum: educationData.universitebolum,
-    };
+    }];
 
     const { error } = await supabase
       .from("staff_education")
@@ -104,14 +104,14 @@ export default function StaffProfile() {
     if (!user) return;
     setLoading(true);
 
-    const dataToUpsert = {
+    const dataToUpsert = [{
       personel_id: user.id,
-      isyerleri: arrayToString(historyData.isyerleri),
-      gorevpozisyon: arrayToString(historyData.gorevpozisyon),
-      belgeler: arrayToString(historyData.belgeler),
-      yarismalar: arrayToString(historyData.yarismalar),
+      isyerleri: historyData.isyerleri.join(","),
+      gorevpozisyon: historyData.gorevpozisyon.join(","),
+      belgeler: historyData.belgeler.join(","),
+      yarismalar: historyData.yarismalar.join(","),
       cv: historyData.cv || "",
-    };
+    }];
 
     const { error } = await supabase
       .from("staff_history")
@@ -267,8 +267,8 @@ export default function StaffProfile() {
         return;
       }
 
-      // Save education separately using the same pattern (no array wrapping)
-      const dataToUpsert = {
+      // Save education separately using the same pattern (must be array for upsert)
+      const dataToUpsert = [{
         personel_id: user.id,
         ortaokuldurumu: educationData.ortaokuldurumu,
         lisedurumu: educationData.lisedurumu,
@@ -276,7 +276,7 @@ export default function StaffProfile() {
         meslekibrans: educationData.meslekibrans,
         universitedurumu: educationData.universitedurumu,
         universitebolum: educationData.universitebolum,
-      };
+      }];
 
       const { error: educationError } = await supabase
         .from("staff_education")
@@ -288,14 +288,15 @@ export default function StaffProfile() {
         return;
       }
 
-      const historyToUpsert = {
+      // Convert arrays to comma-separated strings
+      const historyToUpsert = [{
         personel_id: user.id,
-        isyerleri: arrayToString(historyData.isyerleri),
-        gorevpozisyon: arrayToString(historyData.gorevpozisyon),
-        belgeler: arrayToString(historyData.belgeler),
-        yarismalar: arrayToString(historyData.yarismalar),
+        isyerleri: historyData.isyerleri.join(","),
+        gorevpozisyon: historyData.gorevpozisyon.join(","),
+        belgeler: historyData.belgeler.join(","),
+        yarismalar: historyData.yarismalar.join(","),
         cv: historyData.cv || "",
-      };
+      }];
 
       const { error: historyError } = await supabase
         .from("staff_history")
