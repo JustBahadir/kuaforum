@@ -21,7 +21,7 @@ interface HistoryData {
   cv: string;
 }
 
-const arrayToString = (value: string[] | string) => {
+const arrayToString = (value: string[] | string): string => {
   if (Array.isArray(value)) {
     return value.join(", ");
   }
