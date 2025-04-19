@@ -1,12 +1,5 @@
-
 import React, { useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -16,10 +9,9 @@ import { formatCurrency } from "@/lib/utils";
 
 // Import tabs
 import { PersonalInfoTab } from "./personnel-detail-tabs/PersonalInfoTab";
-import { WorkInfoTab } from "./personnel-detail-tabs/WorkInfoTab"; 
+import { WorkInfoTab } from "./personnel-detail-tabs/WorkInfoTab";
 import { OperationsHistoryTab } from "./personnel-detail-tabs/OperationsHistoryTab";
 import { PerformanceTab } from "./personnel-detail-tabs/PerformanceTab";
-
 interface PersonnelDetailsDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
@@ -28,42 +20,31 @@ interface PersonnelDetailsDialogProps {
   onClose?: () => void;
   showPoints?: boolean;
 }
-
 export function PersonnelDetailsDialog({
   isOpen,
   onOpenChange,
   personnel,
   onUpdate,
   onClose,
-  showPoints = false,
+  showPoints = false
 }: PersonnelDetailsDialogProps) {
   const [activeTab, setActiveTab] = useState("personal-info");
-
   const handleClose = () => {
     if (onClose) {
       onClose();
     }
     onOpenChange(false);
   };
-  
   if (!personnel) {
     return null;
   }
-  
   const getInitials = (fullName: string) => {
-    return fullName
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .substring(0, 2);
+    return fullName.split(" ").map(n => n[0]).join("").toUpperCase().substring(0, 2);
   };
 
   // Determine if the Edit button should be shown based on active tab
   const showEditButton = activeTab === "work-info";
-
-  return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
+  return <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto sm:max-h-[90vh]">
         <DialogHeader className="flex flex-row items-center justify-between">
           <div className="flex items-center gap-4">
@@ -82,15 +63,7 @@ export function PersonnelDetailsDialog({
               </DialogDescription>
             </div>
           </div>
-          {showEditButton && (
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => onUpdate()}
-            >
-              Düzenle
-            </Button>
-          )}
+          {showEditButton}
         </DialogHeader>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
@@ -106,18 +79,11 @@ export function PersonnelDetailsDialog({
           </TabsContent>
           
           <TabsContent value="work-info">
-            <WorkInfoTab 
-              personnel={personnel}
-              onEdit={onUpdate} 
-              canEdit={true}
-            />
+            <WorkInfoTab personnel={personnel} onEdit={onUpdate} canEdit={true} />
           </TabsContent>
           
           <TabsContent value="operations-history">
-            <OperationsHistoryTab 
-              personnelId={personnel.id}
-              showPoints={showPoints} 
-            />
+            <OperationsHistoryTab personnelId={personnel.id} showPoints={showPoints} />
           </TabsContent>
           
           <TabsContent value="performance">
@@ -125,6 +91,5 @@ export function PersonnelDetailsDialog({
           </TabsContent>
         </Tabs>
       </DialogContent>
-    </Dialog>
-  );
+    </Dialog>;
 }
