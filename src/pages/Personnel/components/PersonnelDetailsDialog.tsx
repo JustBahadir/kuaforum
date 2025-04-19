@@ -1,11 +1,11 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useQuery } from "@tanstack/react-query";
-import { personelIslemleriServisi } from "@/lib/supabase";
+import { personelServisi, personelIslemleriServisi } from "@/lib/supabase";
 import { formatCurrency } from "@/lib/utils";
 
 // Import tabs
@@ -13,6 +13,7 @@ import { PersonalInfoTab } from "./personnel-detail-tabs/PersonalInfoTab";
 import { WorkInfoTab } from "./personnel-detail-tabs/WorkInfoTab";
 import { OperationsHistoryTab } from "./personnel-detail-tabs/OperationsHistoryTab";
 import { PerformanceTab } from "./personnel-detail-tabs/PerformanceTab";
+
 interface PersonnelDetailsDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
@@ -21,6 +22,7 @@ interface PersonnelDetailsDialogProps {
   onClose?: () => void;
   showPoints?: boolean;
 }
+
 export function PersonnelDetailsDialog({
   isOpen,
   onOpenChange,
@@ -30,34 +32,57 @@ export function PersonnelDetailsDialog({
   showPoints = false
 }: PersonnelDetailsDialogProps) {
   const [activeTab, setActiveTab] = useState("personal-info");
+  const [personnelData, setPersonnelData] = useState(personnel);
+  
+  // Fetch the most up-to-date personnel data when dialog opens
+  const { data: fetchedPersonnel, isLoading } = useQuery({
+    queryKey: ["personel", personnel?.id],
+    queryFn: () => personelServisi.getirById(personnel.id),
+    enabled: isOpen && !!personnel?.id,
+  });
+
+  // Update local state when query returns
+  useEffect(() => {
+    if (fetchedPersonnel) {
+      setPersonnelData(fetchedPersonnel);
+    }
+  }, [fetchedPersonnel]);
+  
   const handleClose = () => {
     if (onClose) {
       onClose();
     }
     onOpenChange(false);
   };
+  
   if (!personnel) {
     return null;
   }
+  
   const getInitials = (fullName: string) => {
+    if (!fullName) return "??";
     return fullName.split(" ").map(n => n[0]).join("").toUpperCase().substring(0, 2);
   };
 
-  // Determine if the Edit button should be shown based on active tab
-  const showEditButton = activeTab === "work-info";
-  return <Dialog open={isOpen} onOpenChange={handleClose}>
+  // Use the updated personnel data if available, otherwise use the passed personnel
+  const displayPersonnel = fetchedPersonnel || personnelData;
+  
+  console.log("Display personnel data:", displayPersonnel);
+
+  return (
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto sm:max-h-[90vh]">
         <DialogHeader className="flex flex-row items-center justify-between">
           <div className="flex items-center gap-4">
             <Avatar className="h-12 w-12">
-              <AvatarImage src={personnel.avatar_url} alt={personnel.ad_soyad} />
+              <AvatarImage src={displayPersonnel.avatar_url} alt={displayPersonnel.ad_soyad} />
               <AvatarFallback className="bg-purple-100 text-purple-600">
-                {getInitials(personnel.ad_soyad)}
+                {getInitials(displayPersonnel.ad_soyad)}
               </AvatarFallback>
             </Avatar>
             <div>
               <DialogTitle className="text-xl">
-                {personnel.ad_soyad}
+                {displayPersonnel.ad_soyad}
               </DialogTitle>
               <DialogDescription>
                 Personel Bilgileri
@@ -75,21 +100,26 @@ export function PersonnelDetailsDialog({
           </TabsList>
           
           <TabsContent value="personal-info">
-            <PersonalInfoTab personnel={personnel} />
+            <PersonalInfoTab personnel={displayPersonnel} />
           </TabsContent>
           
           <TabsContent value="work-info">
-            <WorkInfoTab personnel={personnel} onEdit={onUpdate} canEdit={true} />
+            <WorkInfoTab 
+              personnel={displayPersonnel} 
+              onEdit={onUpdate} 
+              canEdit={true} 
+            />
           </TabsContent>
           
           <TabsContent value="operations-history">
-            <OperationsHistoryTab personnelId={personnel.id} showPoints={showPoints} />
+            <OperationsHistoryTab personnelId={displayPersonnel.id} showPoints={showPoints} />
           </TabsContent>
           
           <TabsContent value="performance">
-            <PerformanceTab personnelId={personnel.id} />
+            <PerformanceTab personnelId={displayPersonnel.id} />
           </TabsContent>
         </Tabs>
       </DialogContent>
-    </Dialog>;
+    </Dialog>
+  );
 }

@@ -11,6 +11,8 @@ interface PersonalInfoTabProps {
 
 export function PersonalInfoTab({ personnel }: PersonalInfoTabProps) {
   const getInitials = (fullName: string) => {
+    if (!fullName) return "??";
+    
     return fullName
       .split(" ")
       .map((n) => n[0])
@@ -21,7 +23,12 @@ export function PersonalInfoTab({ personnel }: PersonalInfoTabProps) {
   
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "-";
-    return new Date(dateString).toLocaleDateString('tr-TR');
+    try {
+      return new Date(dateString).toLocaleDateString('tr-TR');
+    } catch (error) {
+      console.error("Date formatting error:", error);
+      return "-";
+    }
   };
 
   const handleCopy = (text: string, label: string) => {
@@ -34,6 +41,8 @@ export function PersonalInfoTab({ personnel }: PersonalInfoTabProps) {
       toast.error('Kopyalama başarısız');
     });
   };
+
+  console.log("Personnel data:", personnel);
 
   return (
     <div className="space-y-6">

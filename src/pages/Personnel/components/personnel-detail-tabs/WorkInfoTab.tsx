@@ -64,6 +64,28 @@ export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabPr
     updateMutation.mutate(updateData);
   };
 
+  // Handle salary input with validation
+  const handleSalaryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value === '' ? '' : Math.max(0, Number(e.target.value));
+    setSalary(value === '' ? 0 : Number(value));
+  };
+
+  // Handle commission input with validation (0-100)
+  const handleCommissionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value;
+    // Allow empty input for typing purposes
+    if (rawValue === '') {
+      setCommission(0);
+      return;
+    }
+    
+    const numValue = Number(rawValue);
+    // Validate commission is between 0-100
+    if (numValue >= 0 && numValue <= 100) {
+      setCommission(numValue);
+    }
+  };
+
   const EditableContent = () => (
     <div className="space-y-6">
       <div className="space-y-4">
@@ -111,9 +133,10 @@ export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabPr
             <Input
               type="number"
               min="0"
-              value={salary}
-              onChange={(e) => setSalary(Number(e.target.value))}
+              value={salary === 0 ? '' : salary}
+              onChange={handleSalaryChange}
               placeholder="Maaş tutarını girin"
+              inputMode="numeric"
             />
           </div>
         </div>
@@ -126,9 +149,10 @@ export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabPr
             type="number"
             min="0"
             max="100"
-            value={commission}
-            onChange={(e) => setCommission(Number(e.target.value))}
-            placeholder="Prim yüzdesini girin"
+            value={commission === 0 ? '' : commission}
+            onChange={handleCommissionChange}
+            placeholder="Prim yüzdesini girin (0-100)"
+            inputMode="numeric"
           />
         </div>
       )}
