@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,7 +28,6 @@ interface HistoryData {
   _newYarisma?: string;
 }
 
-// Helper: convert array to comma-separated string and vice versa
 const arrayToString = (value: string[] | string): string => {
   if (Array.isArray(value)) {
     return value.join(", ");
@@ -80,7 +78,6 @@ export default function StaffProfile() {
 
   const [userRole, setUserRole] = useState("");
 
-  // Save Education data - single object inside array for upsert
   const saveEducationData = useCallback(async () => {
     if (!user || !user.id) return;
     setLoading(true);
@@ -109,7 +106,6 @@ export default function StaffProfile() {
     }
   }, [educationData, user]);
 
-  // Save History data - convert arrays to comma-separated string, single object for upsert
   const saveHistoryData = useCallback(async () => {
     if (!user || !user.id) return;
     setLoading(true);
@@ -137,7 +133,6 @@ export default function StaffProfile() {
     }
   }, [historyData, user]);
 
-  // Helper to save history with parameters (used on add/remove item)
   const saveHistoryDataWithParams = async (
     isyerleri: string[],
     gorevpozisyon: string[],
@@ -146,8 +141,8 @@ export default function StaffProfile() {
     cv: string
   ) => {
     if (!user || !user.id) return;
-
     setLoading(true);
+
     const dataToUpsert = {
       personel_id: Number(user.id),
       isyerleri: arrayToString(isyerleri),
@@ -165,13 +160,12 @@ export default function StaffProfile() {
     setLoading(false);
     if (error) {
       console.error("Geçmiş bilgileri kaydedilirken hata:", error);
-      toast.error("Geçmiş bilgileri güncellendi.");
+      toast.error("Geçmiş bilgileri güncellenemedi.");
     } else {
       toast.success("Geçmiş bilgileri güncellendi.");
     }
   };
 
-  // Add workplace and position
   const addWorkplaceWithPosition = async () => {
     if (!historyData._newIsYeri || !historyData._newGorev) {
       toast.error("İş yeri ve görev giriniz.");
@@ -196,7 +190,6 @@ export default function StaffProfile() {
     );
   };
 
-  // Remove workplace+position pair by index
   const removeWorkplaceAtIndex = async (index: number) => {
     const newIsyerleri = [...historyData.isyerleri];
     const newGorevPozisyon = [...historyData.gorevpozisyon];
@@ -211,7 +204,6 @@ export default function StaffProfile() {
     await saveHistoryDataWithParams(newIsyerleri, newGorevPozisyon, historyData.belgeler, historyData.yarismalar, historyData.cv);
   };
 
-  // Add document
   const addBelge = async () => {
     if (!historyData._newBelge) {
       toast.error("Belge adı giriniz.");
@@ -227,7 +219,6 @@ export default function StaffProfile() {
     await saveHistoryDataWithParams(historyData.isyerleri, historyData.gorevpozisyon, newBelgeler, historyData.yarismalar, historyData.cv);
   };
 
-  // Remove document by index
   const removeBelgeAtIndex = async (index: number) => {
     const newBelgeler = [...historyData.belgeler];
     newBelgeler.splice(index, 1);
@@ -236,7 +227,6 @@ export default function StaffProfile() {
     await saveHistoryDataWithParams(historyData.isyerleri, historyData.gorevpozisyon, newBelgeler, historyData.yarismalar, historyData.cv);
   };
 
-  // Add competition
   const addYarismalar = async () => {
     if (!historyData._newYarisma) {
       toast.error("Yarışma adı giriniz.");
@@ -252,7 +242,6 @@ export default function StaffProfile() {
     await saveHistoryDataWithParams(historyData.isyerleri, historyData.gorevpozisyon, historyData.belgeler, newYarismalar, historyData.cv);
   };
 
-  // Remove competition by index
   const removeYarismalarAtIndex = async (index: number) => {
     const newYarismalar = [...historyData.yarismalar];
     newYarismalar.splice(index, 1);
@@ -261,14 +250,12 @@ export default function StaffProfile() {
     await saveHistoryDataWithParams(historyData.isyerleri, historyData.gorevpozisyon, historyData.belgeler, newYarismalar, historyData.cv);
   };
 
-  // Handle CV change with saving
   const handleCvChange = async (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const { value } = e.target;
     setHistoryData((prev) => ({ ...prev, cv: value }));
     await saveHistoryDataWithParams(historyData.isyerleri, historyData.gorevpozisyon, historyData.belgeler, historyData.yarismalar, value);
   };
 
-  // Handle education change with conditional reset of fields
   const handleEducationChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
 
@@ -306,17 +293,14 @@ export default function StaffProfile() {
     });
   };
 
-  // Join Shop with notification logic stub (detailed notification with Accept/Reject buttons should be handled server-side or in a dedicated component)
   const handleJoinShop = async () => {
     if (!shopCode.trim()) {
       toast.error("Lütfen bir işletme kodu girin.");
       return;
     }
 
-    // Validate and format code automatically to lowercase and add dashes every 5 chars (like crazy-kuafr-533)
     const cleanedCode = shopCode.toLowerCase().replace(/[^a-z0-9]/g, '');
 
-    // Auto-formatting to xxx-xxxx-xxx style (this can be adjusted as needed)
     const formattedCode = cleanedCode.replace(/^(.{5})(.{4})(.{3})$/, '$1-$2-$3');
 
     if (formattedCode !== shopCode) {
@@ -340,13 +324,10 @@ export default function StaffProfile() {
         return;
       }
 
-      // Send notification logic here - this part requires a backend function or similar to handle the accept/reject process
-      // For now just console log
       console.log(`Join request sent to shop owner (${shopData.sahibi_id}) from person ${profile?.first_name} ${profile?.last_name} (${user.email})`);
 
       toast.success(`${shopData.ad} işletmesine katılma talebiniz gönderildi.`);
 
-      // You can navigate or await owner approval later
       setShopCode("");
     } catch (error) {
       console.error("İşletmeye katılma hatası:", error);
@@ -433,7 +414,6 @@ export default function StaffProfile() {
           throw profileError;
         }
 
-        // Automatically fill profile data with fallback placeholders
         setProfile({
           first_name: profileData?.first_name || "",
           last_name: profileData?.last_name || "",
@@ -520,7 +500,6 @@ export default function StaffProfile() {
 
   const initials = `${profile?.first_name?.[0] || ""}${profile?.last_name?.[0] || ""}`;
 
-  // Conditional visibility helpers for education
   const showLisedurumu = educationData.ortaokuldurumu.toLowerCase() === "bitirdi";
   const showLiseturu = showLisedurumu && 
     (educationData.lisedurumu.toLowerCase() === "bitirdi" || educationData.lisedurumu.toLowerCase() === "okuyor");
@@ -530,6 +509,10 @@ export default function StaffProfile() {
   const showUniversitebolum = showUniversitedurumu &&
     (educationData.universitedurumu.toLowerCase() === "bitirdi" || educationData.universitedurumu.toLowerCase() === "okuyor");
   
+  const handleTabChange = (value: string) => {
+    setActiveTab(value as "profile" | "education" | "history" | "join");
+  };
+
   return (
     <div className="container mx-auto py-8">
       <Card className="w-full max-w-5xl mx-auto">
@@ -539,22 +522,6 @@ export default function StaffProfile() {
             <Button variant="outline" onClick={handleLogout}>
               Çıkış Yap
             </Button>
-            {/* Düzenleme modunu aç/kapa butonu */}
-            {!editMode && (
-              <Button variant="default" onClick={() => setEditMode(true)}>
-                Düzenle
-              </Button>
-            )}
-            {editMode && (
-              <>
-                <Button variant="default" onClick={saveProfileEdits}>
-                  Kaydet
-                </Button>
-                <Button variant="outline" onClick={() => setEditMode(false)}>
-                  İptal
-                </Button>
-              </>
-            )}
           </div>
         </CardHeader>
 
@@ -567,7 +534,7 @@ export default function StaffProfile() {
 
             <div className="flex-grow">
               <p className="text-gray-500 mb-3">{user?.email} | {userRole}</p>
-              <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "profile" | "education" | "history" | "join")} className="w-full">
+              <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
                 <TabsList className="w-full flex space-x-4">
                   <TabsTrigger value="profile">Profil</TabsTrigger>
                   <TabsTrigger value="education">Eğitim</TabsTrigger>
@@ -587,12 +554,8 @@ export default function StaffProfile() {
                         onChange={(e) =>
                           setProfile({ ...profile, first_name: e.target.value })
                         }
-                        disabled={!editMode}
-                        className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
-                          editMode
-                            ? "focus:border-indigo-500"
-                            : "bg-gray-100 cursor-not-allowed"
-                        }`}
+                        disabled={false}
+                        className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500`}
                       />
                     </div>
                     <div>
@@ -603,12 +566,8 @@ export default function StaffProfile() {
                         onChange={(e) =>
                           setProfile({ ...profile, last_name: e.target.value })
                         }
-                        disabled={!editMode}
-                        className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
-                          editMode
-                            ? "focus:border-indigo-500"
-                            : "bg-gray-100 cursor-not-allowed"
-                        }`}
+                        disabled={false}
+                        className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500`}
                       />
                     </div>
                     <div>
@@ -619,12 +578,8 @@ export default function StaffProfile() {
                         onChange={(e) =>
                           setProfile({ ...profile, phone: e.target.value })
                         }
-                        disabled={!editMode}
-                        className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
-                          editMode
-                            ? "focus:border-indigo-500"
-                            : "bg-gray-100 cursor-not-allowed"
-                        }`}
+                        disabled={false}
+                        className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500`}
                       />
                     </div>
                     <div>
@@ -635,12 +590,8 @@ export default function StaffProfile() {
                         onChange={(e) =>
                           setProfile({ ...profile, address: e.target.value })
                         }
-                        disabled={!editMode}
-                        className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
-                          editMode
-                            ? "focus:border-indigo-500"
-                            : "bg-gray-100 cursor-not-allowed"
-                        }`}
+                        disabled={false}
+                        className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500`}
                       />
                     </div>
                     <div>
@@ -650,12 +601,8 @@ export default function StaffProfile() {
                         onChange={(e) =>
                           setProfile({ ...profile, gender: e.target.value })
                         }
-                        disabled={!editMode}
-                        className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 ${
-                          editMode
-                            ? "focus:border-indigo-500"
-                            : "bg-gray-100 cursor-not-allowed"
-                        }`}
+                        disabled={false}
+                        className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500`}
                       >
                         <option value="">Seçiniz</option>
                         <option value="erkek">Erkek</option>
@@ -806,149 +753,29 @@ export default function StaffProfile() {
 
                 <TabsContent value="history">
                   <div className="space-y-6">
-                    <div>
-                      <label className="block font-semibold mb-2">İş Yerleri ve Görev/Pozisyonlar</label>
-                      {historyData.isyerleri.map((isyeri, idx) => (
-                        <div key={idx} className="flex items-center space-x-2 mb-1">
-                          <span className="flex-grow border rounded-md px-3 py-2 bg-gray-50">
-                            {isyeri} – {historyData.gorevpozisyon[idx] || ""}
-                          </span>
-                          {editMode && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => removeWorkplaceAtIndex(idx)}
-                            >
-                              Sil
-                            </Button>
-                          )}
-                        </div>
-                      ))}
-                      {editMode && (
-                        <div className="flex space-x-2 mt-2">
-                          <input
-                            type="text"
-                            placeholder="İş yeri"
-                            value={historyData._newIsYeri || ""}
-                            onChange={(e) =>
-                              setHistoryData((prev) => ({
-                                ...prev,
-                                _newIsYeri: e.target.value,
-                              }))
-                            }
-                            className="flex-grow rounded-md border border-gray-300 px-3 py-2"
-                          />
-                          <input
-                            type="text"
-                            placeholder="Görev / Pozisyon"
-                            value={historyData._newGorev || ""}
-                            onChange={(e) =>
-                              setHistoryData((prev) => ({
-                                ...prev,
-                                _newGorev: e.target.value,
-                              }))
-                            }
-                            className="flex-grow rounded-md border border-gray-300 px-3 py-2"
-                          />
-                          <Button variant="default" onClick={addWorkplaceWithPosition}>
-                            Ekle
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block font-semibold mb-2">Belgeler</label>
-                      <ul className="mb-2 list-disc list-inside">
-                        {historyData.belgeler.map((belge, idx) => (
-                          <li key={idx} className="flex items-center justify-between">
-                            <span>{belge}</span>
-                            {editMode && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => removeBelgeAtIndex(idx)}
-                              >
-                                Sil
-                              </Button>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                      {editMode && (
-                        <div className="flex space-x-2">
-                          <input
-                            type="text"
-                            placeholder="Belge adı"
-                            value={historyData._newBelge || ""}
-                            onChange={(e) =>
-                              setHistoryData((prev) => ({
-                                ...prev,
-                                _newBelge: e.target.value,
-                              }))
-                            }
-                            className="flex-grow rounded-md border border-gray-300 px-3 py-2"
-                          />
-                          <Button variant="default" onClick={addBelge}>
-                            Ekle
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block font-semibold mb-2">Yarışmalar</label>
-                      <ul className="mb-2 list-disc list-inside">
-                        {historyData.yarismalar.map((yarisma, idx) => (
-                          <li key={idx} className="flex items-center justify-between">
-                            <span>{yarisma}</span>
-                            {editMode && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => removeYarismalarAtIndex(idx)}
-                              >
-                                Sil
-                              </Button>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                      {editMode && (
-                        <div className="flex space-x-2">
-                          <input
-                            type="text"
-                            placeholder="Yarışma adı"
-                            value={historyData._newYarisma || ""}
-                            onChange={(e) =>
-                              setHistoryData((prev) => ({
-                                ...prev,
-                                _newYarisma: e.target.value,
-                              }))
-                            }
-                            className="flex-grow rounded-md border border-gray-300 px-3 py-2"
-                          />
-                          <Button variant="default" onClick={addYarismalar}>
-                            Ekle
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block font-semibold mb-2">CV</label>
-                      <textarea
-                        value={historyData.cv}
-                        disabled={!editMode}
-                        onChange={handleCvChange}
-                        placeholder="Daha önceki iş deneyimlerinizi, çalışma tarzınızı, ilgi alanlarınızı ve kariyer hedeflerinizi burada paylaşabilirsiniz."
-                        className="w-full rounded-md border border-gray-300 px-3 py-2 resize-y"
-                      />
-                    </div>
+                    <WorkplacesPositionsSection
+                      historyData={historyData}
+                      setHistoryData={setHistoryData}
+                      saveHistoryDataWithParams={saveHistoryDataWithParams}
+                    />
+                    <DocumentsSection
+                      historyData={historyData}
+                      setHistoryData={setHistoryData}
+                      saveHistoryDataWithParams={saveHistoryDataWithParams}
+                    />
+                    <CompetitionsSection
+                      historyData={historyData}
+                      setHistoryData={setHistoryData}
+                      saveHistoryDataWithParams={saveHistoryDataWithParams}
+                    />
+                    <CvSection
+                      cv={historyData.cv}
+                      setCv={(cvValue) => setHistoryData(prev => ({ ...prev, cv: cvValue }))}
+                      saveHistoryDataWithParams={saveHistoryDataWithParams}
+                    />
                   </div>
                 </TabsContent>
 
-                {/* Join Shop Tab */}
                 <TabsContent value="join">
                   <div>
                     <label className="block mb-2 font-semibold">İşletme Kodu</label>
@@ -978,3 +805,27 @@ export default function StaffProfile() {
     </div>
   );
 }
+
+function WorkplacesPositionsSection({ historyData, setHistoryData, saveHistoryDataWithParams }: any) {
+  const [addingEntry, setAddingEntry] = useState(false);
+  const [newIsyeri, setNewIsyeri] = useState("");
+  const [newGorev, setNewGorev] = useState("");
+  const [editIndex, setEditIndex] = useState<number | null>(null);
+  const [editIsyeri, setEditIsyeri] = useState("");
+  const [editGorev, setEditGorev] = useState("");
+
+  const startEdit = (index: number) => {
+    setEditIndex(index);
+    setEditIsyeri(historyData.isyerleri[index]);
+    setEditGorev(historyData.gorevpozisyon[index]);
+  };
+
+  const cancelEdit = () => {
+    setEditIndex(null);
+    setEditIsyeri("");
+    setEditGorev("");
+  };
+
+  const saveEdit = async () => {
+    if (editIsyeri.trim() === "" || editGorev.trim() === "") {
+      toast.error("İş yeri ve görev boş olamaz.");
