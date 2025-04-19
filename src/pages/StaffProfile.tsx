@@ -6,7 +6,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Edit, Trash2, Save } from "lucide-react";
 
 interface EducationData {
   ortaokuldurumu: string;
@@ -97,7 +96,7 @@ export default function StaffProfile() {
 
     const { error } = await supabase
       .from("staff_education")
-      .upsert(dataToUpsert, { onConflict: ["personel_id"] });
+      .upsert([dataToUpsert], { onConflict: ["personel_id"] });
 
     setLoading(false);
     if (error) {
@@ -124,7 +123,7 @@ export default function StaffProfile() {
 
     const { error } = await supabase
       .from("staff_history")
-      .upsert(dataToUpsert, { onConflict: ["personel_id"] });
+      .upsert([dataToUpsert], { onConflict: ["personel_id"] });
 
     setLoading(false);
     if (error) {
@@ -157,7 +156,7 @@ export default function StaffProfile() {
 
     const { error } = await supabase
       .from("staff_history")
-      .upsert(dataToUpsert, { onConflict: ["personel_id"] });
+      .upsert([dataToUpsert], { onConflict: ["personel_id"] });
 
     setLoading(false);
     if (error) {
@@ -654,7 +653,7 @@ export default function StaffProfile() {
                         name="ortaokuldurumu"
                         value={educationData.ortaokuldurumu}
                         onChange={handleEducationChange}
-                        disabled={loading}
+                        disabled={loading || editMode}
                         className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500`}
                       >
                         <option value="">Seçiniz</option>
@@ -673,7 +672,7 @@ export default function StaffProfile() {
                           name="lisedurumu"
                           value={educationData.lisedurumu}
                           onChange={handleEducationChange}
-                          disabled={loading}
+                          disabled={loading || editMode}
                           className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500`}
                         >
                           <option value="">Seçiniz</option>
@@ -693,7 +692,7 @@ export default function StaffProfile() {
                           name="liseturu"
                           value={educationData.liseturu}
                           onChange={handleEducationChange}
-                          disabled={loading}
+                          disabled={loading || editMode}
                           className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500`}
                         >
                           <option value="">Seçiniz</option>
@@ -728,7 +727,7 @@ export default function StaffProfile() {
                             const { name, value } = e.target;
                             setEducationData((prev) => ({ ...prev, [name]: value }));
                           }}
-                          disabled={loading}
+                          disabled={loading || editMode}
                           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500"
                         />
                       </div>
@@ -743,7 +742,7 @@ export default function StaffProfile() {
                           name="universitedurumu"
                           value={educationData.universitedurumu}
                           onChange={handleEducationChange}
-                          disabled={loading}
+                          disabled={loading || editMode}
                           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500"
                         >
                           <option value="">Seçiniz</option>
@@ -767,7 +766,7 @@ export default function StaffProfile() {
                             const { name, value } = e.target;
                             setEducationData((prev) => ({ ...prev, [name]: value }));
                           }}
-                          disabled={loading}
+                          disabled={loading || editMode}
                           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm focus:ring-2 focus:ring-indigo-500"
                         />
                       </div>
