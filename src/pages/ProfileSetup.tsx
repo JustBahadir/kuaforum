@@ -61,7 +61,7 @@ export default function ProfileSetup() {
           lastName: metadata.last_name || user.user_metadata?.family_name || "",
           phone: metadata.phone || "",
           gender: metadata.gender || "",
-          shopName: metadata.shopname || "", // fixed key to shopname lowercase as in DB
+          shopName: metadata.shopname || "",
         }));
 
         const { data: profileData } = await supabase
