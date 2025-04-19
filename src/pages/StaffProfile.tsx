@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -161,6 +162,7 @@ export default function StaffProfile() {
     }
   };
 
+  // ===== History form handlers =====
   const addWorkplaceWithPosition = () => {
     setHistoryData(prev => ({
       ...prev,
@@ -241,23 +243,32 @@ export default function StaffProfile() {
     });
   };
 
+  // ===== Education form handler =====
   const handleEducationChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setEducationData(prev => ({ ...prev, [name]: value }));
+    setEducationData(prev => {
+      const newData = { ...prev, [name]: value };
+
+      // Clear meslekiBrans if liseTuru is not a vocational type
+      if (name === "liseTuru" && !["cok_programli_anadolu", "meslek_ve_teknik_anadolu"].includes(value)) {
+        newData.meslekiBrans = "";
+      }
+      return newData;
+    });
   };
 
+  // CV textarea change handler
   const handleCvChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const { value } = e.target;
-    setHistoryData(prev => ({
-      ...prev,
-      cv: value
-    }));
+    setHistoryData(prev => ({ ...prev, cv: value }));
   };
 
+  // The save function fixing the array-to-string issues
   const saveProfileEdits = async () => {
     try {
       setLoading(true);
 
+      // Update profile table
       const { error: profileUpdateError } = await supabase
         .from("profiles")
         .update({
@@ -271,13 +282,15 @@ export default function StaffProfile() {
 
       if (profileUpdateError) {
         toast.error("Profil bilgileri güncellenirken hata oluştu.");
+        setLoading(false);
         return;
       }
 
-      const ortaokulDurumuStr: string = arrayToString(educationData.ortaokulDurumu);
-      const liseDurumuStr: string = arrayToString(educationData.liseDurumu);
-      const liseTuruStr: string = arrayToString(educationData.liseTuru);
-      const meslekiBransStr: string = arrayToString(educationData.meslekiBrans);
+      // Convert arrays to strings before upserting education
+      const ortaokulDurumuStr = arrayToString(educationData.ortaokulDurumu);
+      const liseDurumuStr = arrayToString(educationData.liseDurumu);
+      const liseTuruStr = arrayToString(educationData.liseTuru);
+      const meslekiBransStr = arrayToString(educationData.meslekiBrans);
 
       const dataToUpsert = [{
         personel_id: user.id,
@@ -293,13 +306,15 @@ export default function StaffProfile() {
 
       if (educationError) {
         toast.error("Eğitim bilgileri kaydedilemedi.");
+        setLoading(false);
         return;
       }
 
-      const isYerleriStr: string = arrayToString(historyData.isYerleri);
-      const gorevPozisyonStr: string = arrayToString(historyData.gorevPozisyon);
-      const belgelerStr: string = arrayToString(historyData.belgeler);
-      const yarismalarStr: string = arrayToString(historyData.yarismalar);
+      // Convert arrays to strings before upserting history
+      const isYerleriStr = arrayToString(historyData.isYerleri);
+      const gorevPozisyonStr = arrayToString(historyData.gorevPozisyon);
+      const belgelerStr = arrayToString(historyData.belgeler);
+      const yarismalarStr = arrayToString(historyData.yarismalar);
 
       const historyToUpsert = [{
         personel_id: user.id,
@@ -316,6 +331,7 @@ export default function StaffProfile() {
 
       if (historyError) {
         toast.error("Geçmiş bilgileri kaydedilemedi.");
+        setLoading(false);
         return;
       }
 
@@ -339,6 +355,20 @@ export default function StaffProfile() {
   }
 
   const initials = `${profile?.first_name?.[0] || ""}${profile?.last_name?.[0] || ""}`;
+
+  // Updated liseTuru options as requested
+  const liseTuruOptions = [
+    { label: "Fen Lisesi", value: "fen" },
+    { label: "Sosyal Bilimler Lisesi", value: "sosyal_bilimler" },
+    { label: "Anadolu Lisesi", value: "anatoli" },
+    { label: "Güzel Sanatlar Lisesi", value: "guzel_sanatlar" },
+    { label: "Spor Lisesi", value: "spor" },
+    { label: "Anadolu İmam Hatip Lisesi", value: "imam_hatip" },
+    { label: "Çok Programlı Anadolu Lisesi", value: "cok_programli_anadolu" },
+    { label: "Mesleki ve Teknik Anadolu Lisesi", value: "meslek_ve_teknik_anadolu" },
+    { label: "Akşam Lisesi", value: "aksam" },
+    { label: "Açık Öğretim Lisesi", value: "acik_ogretim" },
+  ];
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -520,7 +550,9 @@ export default function StaffProfile() {
                         <p><strong>Ortaokul Durumu:</strong> {educationData.ortaokulDurumu || "Bilgi yok"}</p>
                         <p><strong>Lise Durumu:</strong> {educationData.liseDurumu || "Bilgi yok"}</p>
                         <p><strong>Lise Türü:</strong> {educationData.liseTuru || "Bilgi yok"}</p>
-                        <p><strong>Mesleki Branş:</strong> {educationData.meslekiBrans || "Bilgi yok"}</p>
+                        {["cok_programli_anadolu", "meslek_ve_teknik_anadolu"].includes(educationData.liseTuru) && (
+                          <p><strong>Mesleki Branş:</strong> {educationData.meslekiBrans || "Bilgi yok"}</p>
+                        )}
                         <Button onClick={() => setEditMode(true)}>Eğitim Bilgilerini Düzenle</Button>
                       </div>
                     ) : (
@@ -547,55 +579,52 @@ export default function StaffProfile() {
                               <option value="bitirmedi">Bitirmedi</option>
                             </select>
                           </div>
-                          {educationData.ortaokulDurumu === "bitirdi" && (
+
+                          <div>
+                            <label htmlFor="liseDurumu" className="block text-sm font-medium">Lise Durumu</label>
+                            <select
+                              id="liseDurumu"
+                              name="liseDurumu"
+                              value={educationData.liseDurumu}
+                              onChange={handleEducationChange}
+                              className="w-full rounded border border-gray-300 px-3 py-2"
+                            >
+                              <option value="">Seçiniz</option>
+                              <option value="bitirdi">Bitirdi</option>
+                              <option value="okuyor">Okuyor</option>
+                              <option value="bitirmedi">Bitirmedi</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label htmlFor="liseTuru" className="block text-sm font-medium">Lise Türü</label>
+                            <select
+                              id="liseTuru"
+                              name="liseTuru"
+                              value={educationData.liseTuru}
+                              onChange={handleEducationChange}
+                              className="w-full rounded border border-gray-300 px-3 py-2"
+                            >
+                              <option value="">Seçiniz</option>
+                              {liseTuruOptions.map(opt => (
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          {["cok_programli_anadolu", "meslek_ve_teknik_anadolu"].includes(educationData.liseTuru) && (
                             <div>
-                              <label htmlFor="liseDurumu" className="block text-sm font-medium">Lise Durumu</label>
-                              <select
-                                id="liseDurumu"
-                                name="liseDurumu"
-                                value={educationData.liseDurumu}
+                              <label htmlFor="meslekiBrans" className="block text-sm font-medium">Mesleki Branş</label>
+                              <input
+                                type="text"
+                                id="meslekiBrans"
+                                name="meslekiBrans"
+                                value={educationData.meslekiBrans}
                                 onChange={handleEducationChange}
                                 className="w-full rounded border border-gray-300 px-3 py-2"
-                              >
-                                <option value="">Seçiniz</option>
-                                <option value="bitirdi">Bitirdi</option>
-                                <option value="okuyor">Okuyor</option>
-                                <option value="bitirmedi">Bitirmedi</option>
-                              </select>
+                                placeholder="Örn: Kuaförlük, Güzellik Uzmanlığı"
+                              />
                             </div>
-                          )}
-                          {(educationData.liseDurumu === "bitirdi" || educationData.liseDurumu === "okuyor") && (
-                            <>
-                              <div>
-                                <label htmlFor="liseTuru" className="block text-sm font-medium">Lise Türü</label>
-                                <select
-                                  id="liseTuru"
-                                  name="liseTuru"
-                                  value={educationData.liseTuru}
-                                  onChange={handleEducationChange}
-                                  className="w-full rounded border border-gray-300 px-3 py-2"
-                                >
-                                  <option value="">Seçiniz</option>
-                                  <option value="meslek">Meslek Lisesi</option>
-                                  <option value="genel">Genel Lise</option>
-                                  <option value="anatomi">Anadolu Lisesi</option>
-                                </select>
-                              </div>
-                              {educationData.liseTuru === "meslek" && (
-                                <div>
-                                  <label htmlFor="meslekiBrans" className="block text-sm font-medium">Mesleki Branş</label>
-                                  <input
-                                    type="text"
-                                    id="meslekiBrans"
-                                    name="meslekiBrans"
-                                    value={educationData.meslekiBrans}
-                                    onChange={handleEducationChange}
-                                    className="w-full rounded border border-gray-300 px-3 py-2"
-                                    placeholder="Örn: Kuaförlük, Güzellik Uzmanlığı"
-                                  />
-                                </div>
-                              )}
-                            </>
                           )}
                         </div>
 
@@ -611,7 +640,7 @@ export default function StaffProfile() {
                 {activeTab === "history" && (
                   <>
                     {!editMode ? (
-                      <div className="space-y-4">
+                      <div className="space-y-6">
                         <div>
                           <strong>İş Yerleri ve Görevler</strong>
                           {historyData.isYerleri.length === 0 && <p>Bilgi yok</p>}
@@ -648,10 +677,10 @@ export default function StaffProfile() {
                         <Button onClick={() => setEditMode(true)}>Geçmiş Bilgileri Düzenle</Button>
                       </div>
                     ) : (
-                      <form onSubmit={(e) => {
-                        e.preventDefault();
-                        saveProfileEdits();
-                      }} className="space-y-6">
+                      <form 
+                        onSubmit={(e) => { e.preventDefault(); saveProfileEdits(); }} 
+                        className="space-y-6"
+                      >
                         <div>
                           <strong>İş Yerleri ve Görevler</strong>
                           {historyData.isYerleri.map((yeri, i) => (
@@ -672,12 +701,7 @@ export default function StaffProfile() {
                                 onChange={(e) => updatePositionAtIndex(i, e.target.value)}
                                 required
                               />
-                              <button
-                                type="button"
-                                className="text-destructive"
-                                onClick={() => removeWorkplaceAtIndex(i)}
-                                aria-label="İş yeri sil"
-                              >
+                              <button type="button" className="text-destructive" onClick={() => removeWorkplaceAtIndex(i)} aria-label="İş yeri sil">
                                 Sil
                               </button>
                             </div>
@@ -699,12 +723,7 @@ export default function StaffProfile() {
                                 onChange={(e) => updateBelgeAtIndex(i, e.target.value)}
                                 required
                               />
-                              <button
-                                type="button"
-                                className="text-destructive"
-                                onClick={() => removeBelgeAtIndex(i)}
-                                aria-label="Belge sil"
-                              >
+                              <button type="button" className="text-destructive" onClick={() => removeBelgeAtIndex(i)} aria-label="Belge sil">
                                 Sil
                               </button>
                             </div>
@@ -726,12 +745,7 @@ export default function StaffProfile() {
                                 onChange={(e) => updateYarismalarAtIndex(i, e.target.value)}
                                 required
                               />
-                              <button
-                                type="button"
-                                className="text-destructive"
-                                onClick={() => removeYarismalarAtIndex(i)}
-                                aria-label="Yarışma sil"
-                              >
+                              <button type="button" className="text-destructive" onClick={() => removeYarismalarAtIndex(i)} aria-label="Yarışma sil">
                                 Sil
                               </button>
                             </div>
