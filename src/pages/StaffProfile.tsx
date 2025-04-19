@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label"; // Import Label to fix "Cannot find name 'Label'"
 
 interface EducationData {
   ortaokuldurumu: string;
@@ -50,6 +51,8 @@ export default function StaffProfile() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
+  // Fix type of activeTab state setter to match Tabs onValueChange argument type (string)
+  // Use union for activeTab variable to enforce allowed values
   const [activeTab, setActiveTab] = useState<"profile" | "education" | "history" | "join">(
     "profile"
   );
@@ -112,7 +115,7 @@ export default function StaffProfile() {
       const { data: education, error: educationError } = await supabase
         .from("staff_education")
         .select("*")
-        .eq("personel_id", profileData.id)
+        .eq("personel_id", Number(profileData.id))  // Convert id to number if needed
         .single();
 
       if (educationError && educationError.code !== "PGRST116") {
@@ -143,7 +146,7 @@ export default function StaffProfile() {
       const { data: history, error: historyError } = await supabase
         .from("staff_history")
         .select("*")
-        .eq("personel_id", profileData.id)
+        .eq("personel_id", Number(profileData.id))  // Convert id to number if needed
         .single();
 
       if (historyError && historyError.code !== "PGRST116") {
@@ -287,22 +290,23 @@ export default function StaffProfile() {
     }));
   };
 
+  // Fix handleAddToArray and handleRemoveFromArray keys to lowercase for keys of historyData
   const handleAddToArray = (arrayName: string) => {
     setHistoryData((prev) => {
-      const newValue = prev[`_new${arrayName}`];
+      const newValue = prev[`_new${arrayName}` as keyof HistoryData] as string;
       if (!newValue) return prev;
 
       return {
         ...prev,
-        [arrayName.toLowerCase()]: [...prev[arrayName.toLowerCase()], newValue],
-        [`_new${arrayName}`]: "",
+        [arrayName.toLowerCase()]: [...(prev[arrayName.toLowerCase() as keyof HistoryData] as string[]), newValue],
+        [`_new${arrayName}` as keyof HistoryData]: "",
       };
     });
   };
 
   const handleRemoveFromArray = (arrayName: string, index: number) => {
     setHistoryData((prev) => {
-      const newArray = [...prev[arrayName.toLowerCase()]];
+      const newArray = [...(prev[arrayName.toLowerCase() as keyof HistoryData] as string[])];
       newArray.splice(index, 1);
       return {
         ...prev,
@@ -456,7 +460,21 @@ export default function StaffProfile() {
             </CardContent>
           </Card>
 
-          <Tabs defaultValue="profile" className="mt-4" onValueChange={setActiveTab}>
+          <Tabs 
+            defaultValue="profile" 
+            className="mt-4" 
+            onValueChange={(value) => {
+              // Ensure value is one of allowed tab types
+              if (
+                value === "profile" || 
+                value === "education" || 
+                value === "history" || 
+                value === "join"
+              ) {
+                setActiveTab(value);
+              }
+            }}
+          >
             <TabsList>
               <TabsTrigger value="profile">Profil</TabsTrigger>
               <TabsTrigger value="education">Eğitim</TabsTrigger>
@@ -869,3 +887,4 @@ const CvSection: React.FC<CvSectionProps> = ({
     />
   </div>
 );
+
