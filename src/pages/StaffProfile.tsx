@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
 
 interface EducationData {
   ortaokuldurumu: string;
@@ -865,6 +866,4 @@ function WorkplacesPositionsSection({
   const [saving, setSaving] = useState(false);
 
   const startAdd = () => {
-    setAdding(true);
-    setNewIsyeri("");
-    setNewGorev
+    setAdding(
