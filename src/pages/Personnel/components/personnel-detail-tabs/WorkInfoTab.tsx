@@ -70,36 +70,47 @@ export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabPr
     updateMutation.mutate(updateData);
   };
 
-  // Handlers for number inputs that prevent focus loss
+  // Similar approach to the PhoneInputField component for handling numeric inputs
   const handleSalaryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const inputValue = e.target.value;
+    const value = e.target.value;
     
-    // Allow empty input or valid positive integers
-    if (inputValue === '' || /^\d+$/.test(inputValue)) {
-      // Prevent leading zeros and limit to reasonable number
-      const num = inputValue === '' ? '' : parseInt(inputValue, 10).toString();
-      if (num === '0') {
-        // Allow single zero
-        setSalary('0');
-      } else if (parseInt(num, 10) <= 9999999 || num === '') {
-        setSalary(num);
-      }
+    // Only allow digits (no dots, commas or other characters)
+    const digitsOnly = value.replace(/\D/g, '');
+    
+    // Remove leading zeros except for a single zero
+    let formattedValue = digitsOnly;
+    if (formattedValue.length > 1 && formattedValue.startsWith('0')) {
+      formattedValue = formattedValue.replace(/^0+/, '');
     }
+    
+    // Limit to a reasonable length
+    const limitedValue = formattedValue.substring(0, 7);
+    
+    // Update state with the clean value
+    setSalary(limitedValue);
   };
 
-  // Handler for commission with 0-100 validation
+  // Similar approach for commission with added validation for 0-100 range
   const handleCommissionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const inputValue = e.target.value;
+    const value = e.target.value;
     
-    // Allow empty input or valid digits
-    if (inputValue === '' || /^\d+$/.test(inputValue)) {
-      // Convert to number to validate range (0-100) and remove leading zeros
-      const num = inputValue === '' ? '' : parseInt(inputValue, 10).toString();
-      
-      // Only update state if within valid range or empty
-      if (num === '' || (parseInt(num, 10) >= 0 && parseInt(num, 10) <= 100)) {
-        setCommission(num);
-      }
+    // Only allow digits
+    const digitsOnly = value.replace(/\D/g, '');
+    
+    // Remove leading zeros except for a single zero
+    let formattedValue = digitsOnly;
+    if (formattedValue.length > 1 && formattedValue.startsWith('0')) {
+      formattedValue = formattedValue.replace(/^0+/, '');
+    }
+    
+    // Parse as number to check range
+    const numValue = parseInt(formattedValue, 10);
+    
+    // Only update if empty or within 0-100 range
+    if (formattedValue === '' || (numValue >= 0 && numValue <= 100)) {
+      // Limit to 3 digits (for values like 100)
+      const limitedValue = formattedValue.substring(0, 3);
+      setCommission(limitedValue);
     }
   };
 
@@ -149,10 +160,12 @@ export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabPr
             <Label>Maaş Tutarı</Label>
             <Input
               type="text"
-              inputMode="numeric"
               value={salary}
               onChange={handleSalaryChange}
-              placeholder="₺ Maaş tutarını girin"
+              placeholder="Maaş tutarını girin (₺)"
+              className="placeholder:text-muted-foreground"
+              inputMode="numeric"
+              pattern="[0-9]*"
             />
           </div>
         </div>
@@ -163,10 +176,12 @@ export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabPr
           <Label>Prim Yüzdesi (%)</Label>
           <Input
             type="text"
-            inputMode="numeric"
             value={commission}
             onChange={handleCommissionChange}
-            placeholder="% Prim yüzdesini girin (0-100)"
+            placeholder="Prim yüzdesini girin (0-100)"
+            className="placeholder:text-muted-foreground"
+            inputMode="numeric"
+            pattern="[0-9]*"
           />
         </div>
       )}
@@ -254,4 +269,3 @@ export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabPr
     </div>
   );
 }
-
