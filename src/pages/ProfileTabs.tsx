@@ -2,7 +2,8 @@
 import React, { useState } from "react";
 import { ProfileDisplay } from "@/components/customer-profile/ProfileDisplay";
 import StaffPersonalInfoTab from "@/pages/Profile/StaffPersonalInfoTab";
-import StaffPreRegistrationTab from "@/pages/Profile/StaffPreRegistrationTab";
+import EducationTab from "@/pages/Profile/EducationTab";
+import HistoryTab from "@/pages/Profile/HistoryTab";
 
 interface ProfileTabsProps {
   profile: {
@@ -59,20 +60,20 @@ const ProfileTabs = ({
   onSaveEducationHistory,
   isLoadingEducationHistory
 }: ProfileTabsProps) => {
-  // Main view state: kişisel bilgiler veya eğitim-geçmiş
+  // Ana view: "personalInfo" veya "educationHistory"
   const [mainView, setMainView] = useState<"personalInfo" | "educationHistory">("personalInfo");
 
-  // Eğitim ve geçmiş için alt sekmeler (yan yana)
+  // Alt sekme: sadece eğitim veya geçmiş gösterilecek
   const [subTab, setSubTab] = useState<"education" | "history">("education");
 
   return (
     <div className="max-w-4xl mx-auto px-4">
-      {/* Mevcut Bilgiler: sayfa içindeki normal üst kısım, scroll ile gitmeli, sabit olmamalı */}
+      {/* Mevcut Bilgiler bölümü, sayfa doğal akışında, scrolla bağlı */}
       <div className="mb-6 bg-white rounded-md shadow-sm border border-gray-200 p-6">
         <ProfileDisplay {...profile} />
       </div>
 
-      {/* İkiye bölünmüş büyük buton */}
+      {/* Ana butonlar */}
       <div className="mb-6 flex border border-gray-300 rounded-md overflow-hidden shadow-sm select-none">
         <button
           className={`flex-1 py-3 text-center font-semibold transition-colors duration-200 ${
@@ -94,7 +95,7 @@ const ProfileTabs = ({
           }`}
           onClick={() => {
             setMainView("educationHistory");
-            setSubTab("education"); // Eğitim sekmesini varsayılan yap
+            setSubTab("education");
           }}
           type="button"
           aria-label="Eğitim ve Geçmiş"
@@ -103,7 +104,7 @@ const ProfileTabs = ({
         </button>
       </div>
 
-      {/* Ana içerik */}
+      {/* İçerik alanı */}
       <div>
         {mainView === "personalInfo" && (
           <StaffPersonalInfoTab
@@ -119,7 +120,7 @@ const ProfileTabs = ({
 
         {mainView === "educationHistory" && (
           <div>
-            {/* Alt menü bar: Eğitim Bilgileri / Geçmiş Bilgileri */}
+            {/* Alt sekmeler */}
             <nav className="flex border-b border-gray-300 mb-4">
               <button
                 onClick={() => setSubTab("education")}
@@ -147,23 +148,19 @@ const ProfileTabs = ({
               </button>
             </nav>
 
-            {/* Alt içerik */}
+            {/* Alt sekme içerikleri */}
             {subTab === "education" && (
-              <StaffPreRegistrationTab
+              <EducationTab
                 educationData={educationData}
-                historyData={historyData}
                 onEducationChange={onEducationChange}
-                onHistoryChange={onHistoryChange}
                 onSave={onSaveEducationHistory}
                 isLoading={isLoadingEducationHistory}
               />
             )}
 
             {subTab === "history" && (
-              <StaffPreRegistrationTab
-                educationData={educationData}
+              <HistoryTab
                 historyData={historyData}
-                onEducationChange={onEducationChange}
                 onHistoryChange={onHistoryChange}
                 onSave={onSaveEducationHistory}
                 isLoading={isLoadingEducationHistory}
