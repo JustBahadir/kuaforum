@@ -17,18 +17,18 @@ import { personelServisi, randevuServisi } from "@/lib/supabase";
 import { kategoriServisi } from "@/lib/supabase/services/kategoriServisi";
 import { islemServisi } from "@/lib/supabase/services/islemServisi";
 import { calismaSaatleriServisi } from "@/lib/supabase/services/calismaSaatleriServisi";
-import { CalismaSaati, Randevu, RandevuDurumu } from "@/lib/supabase/types";
+import { CalismaSaati, RandevuDurumu } from "@/lib/supabase/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { personelIslemleriServisi } from "@/lib/supabase/services/personelIslemleriServisi";
 
 interface AppointmentFormProps {
-  onAppointmentCreated: (appointment: Randevu) => void;
+  onAppointmentCreated: (appointment: any) => void;
   initialDate?: string;
   initialServiceId?: number;
 }
 
 export function AppointmentForm({ onAppointmentCreated, initialDate, initialServiceId }: AppointmentFormProps) {
-  const { dukkanId, userId } = useCustomerAuth();
+  const { dukkanId, userId, role } = useCustomerAuth();
   const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState(initialDate || format(new Date(), 'yyyy-MM-dd'));
   const [selectedTime, setSelectedTime] = useState("");
@@ -97,18 +97,8 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
       console.log(`Fetching available times for date: ${date}`);
       
       const selected = new Date(date);
-      
-      // We will allow past dates and times,
-      // so isToday will be false always (no time filtering based on current time)
+      // Remove past-date check (allow past dates)
       const isToday = false;
-      
-      /* Removed isToday date check because we allow past times and dates */
-      /*
-      const now = new Date();
-      const isToday = selected.getDate() === now.getDate() && 
-                      selected.getMonth() === now.getMonth() && 
-                      selected.getFullYear() === now.getFullYear();
-      */
       
       const dayOfWeek = selected.getDay();
       const dayNames = ["pazar", "pazartesi", "sali", "carsamba", "persembe", "cuma", "cumartesi"];
@@ -204,8 +194,11 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
     }
     
     if (!selectedTime) {
-      toast.error("Lütfen bir saat seçin");
-      return;
+      // Show error only if role is customer (not staff/admin)
+      if (role === "customer" || !role) {
+        toast.error("Lütfen bir saat seçin");
+        return;
+      }
     }
     
     if (!selectedService) {
@@ -321,7 +314,7 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
               isFetchingTimes 
                 ? "Saatler yükleniyor..." 
                 : availableTimes.length === 0 
-                  ? "Saat seçin" 
+                  ? "Saat seçin"
                   : "Saat seçin"
             } />
           </SelectTrigger>
@@ -332,8 +325,12 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
                 <Skeleton className="h-5 w-full mt-2" />
               </div>
             ) : availableTimes.length === 0 ? (
-              // Removed error display, just show empty options now
-              null
+              // No options shown for staff/admin, for customer (role) show a disabled item?
+              role === "customer" || !role ? (
+                <SelectItem value="empty" disabled>
+                  Seçilen tarihte müsait saat yok
+                </SelectItem>
+              ) : null
             ) : (
               availableTimes.map((time) => (
                 <SelectItem key={time} value={time}>

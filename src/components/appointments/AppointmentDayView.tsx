@@ -4,7 +4,7 @@ import { format, addDays, subDays, isSameDay, isYesterday, isToday, isTomorrow, 
 import { tr } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronLeft, ChevronRight, CheckSquare, XSquare, Info, RefreshCw } from "lucide-react";
+import { ChevronLeft, ChevronRight, CheckSquare, XSquare, Info } from "lucide-react";
 import { Randevu } from "@/lib/supabase/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge"; 
@@ -27,6 +27,10 @@ interface AppointmentDayViewProps {
   onCancelClick: (appointment: Randevu) => void;
   onUndoCancelClick?: (appointment: Randevu) => void;
 }
+
+type AppointmentWithExtras = Randevu & {
+  isReturnedFromCancel?: boolean;
+};
 
 export function AppointmentDayView({
   selectedDate,
@@ -116,7 +120,7 @@ export function AppointmentDayView({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between mb-4">
-        <Button variant="outline" size="icon" onClick={handlePrevDay}>
+        <Button variant="outline" size="icon" onClick={handlePrevDay} aria-label="Önceki Gün">
           <ChevronLeft className="h-4 w-4" />
         </Button>
         
@@ -128,19 +132,9 @@ export function AppointmentDayView({
           <Button variant="outline" size="sm" onClick={handleToday}>
             Bugüne Git
           </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="ml-2"
-            onClick={toggleCalendar}
-            aria-label="Takvimi Aç/Kapat"
-            title="Takvimi Aç/Kapat"
-          >
-            <RefreshCw className="h-4 w-4" />
-          </Button>
         </div>
         
-        <Button variant="outline" size="icon" onClick={handleNextDay}>
+        <Button variant="outline" size="icon" onClick={handleNextDay} aria-label="Sonraki Gün">
           <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
@@ -186,7 +180,8 @@ export function AppointmentDayView({
       ) : (
         <div className="space-y-4">
           {sortedAppointments.map((appointment) => {
-            const isReturnedFromCancel = (appointment as any).isReturnedFromCancel === true;
+            const appWithExtras = appointment as AppointmentWithExtras;
+            const isReturnedFromCancel = appWithExtras.isReturnedFromCancel === true;
             const isUndoable = appointment.durum === "iptal_edildi";
             return (
               <Card key={appointment.id} className="overflow-hidden">
@@ -301,4 +296,3 @@ export function AppointmentDayView({
     </div>
   );
 }
-

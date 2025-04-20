@@ -34,7 +34,7 @@ interface FormValues {
 
 export function StaffAppointmentForm({ onAppointmentCreated, initialDate }: StaffAppointmentFormProps) {
   const navigate = useNavigate();
-  const { dukkanId } = useCustomerAuth();
+  const { dukkanId, role } = useCustomerAuth();
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [availableTimes, setAvailableTimes] = useState<string[]>([]);
   const [selectedService, setSelectedService] = useState<number | null>(null);
@@ -87,11 +87,10 @@ export function StaffAppointmentForm({ onAppointmentCreated, initialDate }: Staf
       setIsFetchingTimes(true);
       
       // Determine if selected date is today
-      const isToday = format(new Date(), 'yyyy-MM-dd') === date;
+      const isToday = false;
       
-      // Get the day of the week (0 for Sunday, 1 for Monday, etc.)
+      // Get the day of the week
       const dayOfWeek = new Date(date).getDay();
-      // Convert to our internal format (pazartesi, sali, etc.)
       const dayNames = ["pazar", "pazartesi", "sali", "carsamba", "persembe", "cuma", "cumartesi"];
       const dayName = dayNames[dayOfWeek];
       
@@ -108,7 +107,7 @@ export function StaffAppointmentForm({ onAppointmentCreated, initialDate }: Staf
         return;
       }
       
-      // Generate time slots from opening to closing with 30-minute intervals
+      // Generate time slots from opening to closing
       const slots = generateTimeSlots(dayHours.acilis, dayHours.kapanis, isToday);
       console.log("Generated time slots:", slots);
       setAvailableTimes(slots);
@@ -116,7 +115,7 @@ export function StaffAppointmentForm({ onAppointmentCreated, initialDate }: Staf
       console.error("Error fetching available times:", error);
       
       // Fallback - generate default time slots for the selected day
-      const isToday = format(new Date(), 'yyyy-MM-dd') === date;
+      const isToday = false;
       const defaultSlots = generateTimeSlots('09:00', '19:00', isToday);
       setAvailableTimes(defaultSlots);
     } finally {
@@ -132,15 +131,6 @@ export function StaffAppointmentForm({ onAppointmentCreated, initialDate }: Staf
     let currentMinutes = openHour * 60 + openMinute;
     const closingMinutes = closeHour * 60 + closeMinute;
     
-    // If today, start from current time (rounded to next 30 min)
-    if (isToday) {
-      const now = new Date();
-      const currentTimeMinutes = now.getHours() * 60 + now.getMinutes();
-      // No need to round to next slot for staff - they can book any time
-      currentMinutes = Math.max(currentMinutes, currentMinutes);
-    }
-    
-    // Generate slots until 30 minutes before closing time
     while (currentMinutes < closingMinutes - 30) {
       const hour = Math.floor(currentMinutes / 60);
       const minute = currentMinutes % 60;
@@ -149,7 +139,6 @@ export function StaffAppointmentForm({ onAppointmentCreated, initialDate }: Staf
         `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
       );
       
-      // Add 30 minutes for the next slot
       currentMinutes += 30;
     }
     
@@ -346,7 +335,7 @@ export function StaffAppointmentForm({ onAppointmentCreated, initialDate }: Staf
           id="tarih" 
           type="date" 
           {...register('tarih', { required: true })}
-          min={format(new Date(), 'yyyy-MM-dd')}
+          min={undefined}
         />
       </div>
       
@@ -358,7 +347,7 @@ export function StaffAppointmentForm({ onAppointmentCreated, initialDate }: Staf
               isFetchingTimes 
                 ? "Saatler yükleniyor..." 
                 : availableTimes.length === 0 
-                  ? "Seçilen tarihte müsait saat yok" 
+                  ? "Saat seçin"
                   : "Saat seçin"
             } />
           </SelectTrigger>
@@ -369,9 +358,8 @@ export function StaffAppointmentForm({ onAppointmentCreated, initialDate }: Staf
                 <Skeleton className="h-5 w-full mt-2" />
               </div>
             ) : availableTimes.length === 0 ? (
-              <SelectItem value="empty" disabled>
-                Seçilen tarihte müsait saat yok
-              </SelectItem>
+              // Removed error showing for no available time
+              null
             ) : (
               availableTimes.map((time) => (
                 <SelectItem key={time} value={time}>
@@ -398,3 +386,4 @@ export function StaffAppointmentForm({ onAppointmentCreated, initialDate }: Staf
     </form>
   );
 }
+

@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Input, InputProps } from "@/components/ui/input";
 import { formatPhoneNumber } from "@/utils/phoneFormatter";
@@ -22,7 +21,7 @@ export function PhoneInput({ value, onChange, ...props }: PhoneInputProps) {
       type="tel"
       value={formatPhoneNumber(value)}
       onChange={handleChange}
-      placeholder="05XX XXX XX XX"
+      placeholder="05xx xxx xx xx"
       {...props}
     />
   );
