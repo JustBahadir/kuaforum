@@ -17,18 +17,18 @@ export function PhoneInputField({
   value,
   onChange,
   label = "Telefon Numarası",
-  placeholder = "05XX XXX XX XX",
+  placeholder = "Örn: 0555 123 45 67",
   id = "phone",
   error,
   disabled = false
 }: PhoneInputFieldProps) {
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (disabled) return;
-    
+
     // Allow exactly 11 digits (including the leading 0)
     const digitsOnly = e.target.value.replace(/\D/g, '');
     const limitedDigits = digitsOnly.substring(0, 11);
-    
+
     // Format and update the phone number
     onChange(limitedDigits);
   };
@@ -48,3 +48,4 @@ export function PhoneInputField({
     </div>
   );
 }
+
