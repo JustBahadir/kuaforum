@@ -40,7 +40,7 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [selectedService, setSelectedService] = useState<number | null>(initialServiceId || null);
   const [selectedPersonel, setSelectedPersonel] = useState<number | null>(null);
-  const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(initialCustomerId || null);
   const [notes, setNotes] = useState("");
   const [availableTimes, setAvailableTimes] = useState<string[]>([]);
   const [isFetchingTimes, setIsFetchingTimes] = useState(false);
@@ -152,24 +152,23 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
 
   const toggleCalendar = () => setShowCalendar(prev => !prev);
 
+  const createAppointmentData = {
+    dukkan_id: dukkanId,
+    customer_id: String(selectedCustomerId),
+    personel_id: selectedPersonel,
+    tarih: selectedDate,
+    saat: selectedTime,
+    durum: "onaylandi" as RandevuDurumu,
+    islemler: [selectedService],
+    notlar: notes
+  };
+
   const { mutate: createAppointment, isPending: isCreating } = useMutation({
     mutationFn: async () => {
       if (!dukkanId || !selectedCustomerId || !selectedPersonel || !selectedService) {
         throw new Error("Gerekli bilgiler eksik");
       }
-
-      const randevuData = {
-        dukkan_id: dukkanId,
-        customer_id: selectedCustomerId,
-        personel_id: selectedPersonel,
-        tarih: selectedDate,
-        saat: selectedTime,
-        durum: "onaylandi" as RandevuDurumu,
-        islemler: [selectedService],
-        notlar: notes
-      };
-
-      return randevuServisi.ekle(randevuData);
+      return randevuServisi.ekle(createAppointmentData);
     },
     onSuccess: (data) => {
       personelIslemleriServisi.updateShopStatistics().catch(error => {

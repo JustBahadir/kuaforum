@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -15,7 +14,7 @@ import { CustomerPhotoGallery } from "./CustomerPhotoGallery";
 import { customerPersonalDataService } from "@/lib/supabase/services/customerPersonalDataService";
 import { Input } from "@/components/ui/input";
 import { formatPhoneNumber } from "@/utils/phoneFormatter";
-import { PhoneInputField } from "../FormFields/PhoneInputField";  // Added import
+import { PhoneInputField } from "./FormFields/PhoneInputField";
 
 interface CustomerDetailsProps {
   customerId?: number;
@@ -72,10 +71,10 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
     lastName: customer?.last_name || "",
     phone: customer?.phone || "",
     birthdate: customer?.birthdate ? new Date(customer.birthdate).toISOString().split('T')[0] : "",
-    spouseName: customer?.spouse_name || "",
-    spouseBirthdate: customer?.spouse_birthdate ? new Date(customer.spouse_birthdate).toISOString().split('T')[0] : "",
-    anniversaryDate: customer?.anniversary_date ? new Date(customer.anniversary_date).toISOString().split('T')[0] : "",
-    childrenNames: customer?.children_names || []
+    spouseName: (customerWithPersonalData as any)?.spouse_name || "",
+    spouseBirthdate: (customerWithPersonalData as any)?.spouse_birthdate ? new Date((customerWithPersonalData as any).spouse_birthdate).toISOString().split('T')[0] : "",
+    anniversaryDate: (customerWithPersonalData as any)?.anniversary_date ? new Date((customerWithPersonalData as any).anniversary_date).toISOString().split('T')[0] : "",
+    childrenNames: (customerWithPersonalData as any)?.children_names || []
   });
 
   useEffect(() => {
@@ -84,12 +83,12 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
       lastName: customer?.last_name || "",
       phone: customer?.phone || "",
       birthdate: customer?.birthdate ? new Date(customer.birthdate).toISOString().split('T')[0] : "",
-      spouseName: customer?.spouse_name || "",
-      spouseBirthdate: customer?.spouse_birthdate ? new Date(customer.spouse_birthdate).toISOString().split('T')[0] : "",
-      anniversaryDate: customer?.anniversary_date ? new Date(customer.anniversary_date).toISOString().split('T')[0] : "",
-      childrenNames: customer?.children_names || []
+      spouseName: (customerWithPersonalData as any)?.spouse_name || "",
+      spouseBirthdate: (customerWithPersonalData as any)?.spouse_birthdate ? new Date((customerWithPersonalData as any).spouse_birthdate).toISOString().split('T')[0] : "",
+      anniversaryDate: (customerWithPersonalData as any)?.anniversary_date ? new Date((customerWithPersonalData as any).anniversary_date).toISOString().split('T')[0] : "",
+      childrenNames: (customerWithPersonalData as any)?.children_names || []
     });
-  }, [customer]);
+  }, [customer, customerWithPersonalData]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -97,7 +96,6 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
   };
 
   const handlePhoneChange = (value: string) => {
-    // value is digits only, max 11 chars enforced by PhoneInputField
     setFormData(prev => ({ ...prev, phone: value }));
   };
 
@@ -326,4 +324,3 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
     </div>
   );
 }
-
