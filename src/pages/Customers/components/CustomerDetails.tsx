@@ -126,7 +126,7 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
 
   const handleCreateAppointment = () => {
     if (customerId) {
-      navigate(`/appointments?customerId=${customerId}&newAppointment=true`);
+      navigate(`/appointments?customerId=${customerId.toString()}&newAppointment=true`);
     }
   };
 

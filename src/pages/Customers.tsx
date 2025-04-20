@@ -19,48 +19,44 @@ export default function Customers() {
   const [searchText, setSearchText] = useState("");
   const [isNewCustomerModalOpen, setIsNewCustomerModalOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Musteri | null>(null);
-  const { dukkanData } = useShopData(null);
+  const { isletmeData } = useShopData(null);
   const location = useLocation();
   const navigate = useNavigate();
   
-  // Check if we should open the new customer dialog based on URL parameter
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
     const shouldOpenNewCustomer = searchParams.get('new') === 'true';
     
     if (shouldOpenNewCustomer) {
       setIsNewCustomerModalOpen(true);
-      // Remove the parameter from the URL without refreshing the page
       navigate(location.pathname, { replace: true });
     }
   }, [location, navigate]);
   
-  // Query with shop context
   const { 
     data: customers = [], 
     isLoading, 
     refetch,
     isRefetching
   } = useQuery({
-    queryKey: ['musteriler', dukkanData?.id],
+    queryKey: ['musteriler', isletmeData?.id],
     queryFn: async () => {
       try {
-        if (!dukkanData?.id) {
+        if (!isletmeData?.id) {
           throw new Error("Dükkan ID bulunamadı");
         }
-        return await musteriServisi.hepsiniGetir(dukkanData?.id);
+        return await musteriServisi.hepsiniGetir(isletmeData?.id);
       } catch (err) {
         console.error("Müşteri verisi yüklenirken hata:", err);
         throw err;
       }
     },
     refetchOnWindowFocus: false,
-    staleTime: 30000, // 30 seconds
+    staleTime: 30000,
     retry: 1,
-    enabled: !!dukkanData?.id // Only run query when shop data is available
+    enabled: !!isletmeData?.id
   });
 
-  // Filter customers based on search text
   const filteredCustomers = searchText
     ? customers.filter((customer: Musteri) => 
         `${customer.first_name} ${customer.last_name || ''}`.toLowerCase().includes(searchText.toLowerCase()) ||
@@ -91,17 +87,15 @@ export default function Customers() {
 
   const handleCustomerUpdated = async () => {
     await refetch();
-    // Keep the customer selected but refresh the data
   };
 
   const handleCustomerDeleted = async () => {
     await refetch();
-    setSelectedCustomer(null); // Go back to list after deletion
+    setSelectedCustomer(null);
   };
 
   return (
     <StaffLayout>
-      {/* Only use Sonner Toaster for notifications */}
       <Toaster position="bottom-right" richColors />
       
       <div className="container mx-auto p-4">
@@ -142,13 +136,13 @@ export default function Customers() {
                     variant="outline" 
                     className="gap-1"
                     onClick={handleOpenNewCustomerModal}
-                    disabled={!dukkanData?.id}
+                    disabled={!isletmeData?.id}
                   >
                     <UserPlus className="h-4 w-4" />
                     <span>Yeni Müşteri</span>
                   </Button>
                 </div>
-                {!dukkanData?.id && (
+                {!isletmeData?.id && (
                   <p className="text-sm text-red-500 mt-2">
                     Müşteri eklemek için dükkan yöneticisi olmanız gerekmektedir.
                   </p>
@@ -175,7 +169,7 @@ export default function Customers() {
             <NewCustomerForm 
               onSuccess={handleCustomerAdded} 
               onCancel={handleCloseNewCustomerModal} 
-              dukkanId={dukkanData?.id}
+              dukkanId={isletmeData?.id}
             />
           </DialogContent>
         </Dialog>

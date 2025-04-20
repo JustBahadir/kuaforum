@@ -172,9 +172,9 @@ export default function ShopSettings() {
                     <Button 
                       className="flex-1" 
                       onClick={handleAddressUpdate}
-                      disabled={updateShopAddress.isLoading}
+                      disabled={updateShopAddress.isPending}
                     >
-                      {updateShopAddress.isLoading ? "Kaydediliyor..." : "Açık Adresi Kaydet"}
+                      {updateShopAddress.isPending ? "Kaydediliyor..." : "Açık Adresi Kaydet"}
                     </Button>
                     <Button 
                       variant="outline" 

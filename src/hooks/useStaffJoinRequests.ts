@@ -29,12 +29,10 @@ export function useStaffJoinRequests() {
       return [];
     }
 
-    // TypeScript expects 2 parameters for useQuery generic, fix accordingly
-    // Remove unnecessary casting usage with safe types
-
     return data;
   };
 
+  // Fixed to provide two generic arguments for useQuery
   const { data, isLoading, isError } = useQuery<StaffJoinRequest[], Error>({
     queryKey: ["staff_join_requests"],
     queryFn: fetchRequests,
