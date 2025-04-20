@@ -16,7 +16,7 @@ export function useStaffJoinRequests() {
 
   const fetchRequests = async (): Promise<StaffJoinRequest[]> => {
     const { data, error } = await supabase
-      .from<StaffJoinRequest>("staff_join_requests")
+      .from<StaffJoinRequest, StaffJoinRequest>("staff_join_requests")
       .select("*")
       .order("created_at", { ascending: false });
 

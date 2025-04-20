@@ -8,7 +8,7 @@ import { useStaffJoinRequests } from "@/hooks/useStaffJoinRequests";
 import { toast } from "sonner";
 
 export function StaffJoinRequestForm() {
-  const { user } = useCustomerAuth();
+  const { userId } = useCustomerAuth(); // Adjusted to userId (or profile?.id if available)
   const { addRequest, data } = useStaffJoinRequests();
 
   const [shopCode, setShopCode] = useState("");
@@ -39,7 +39,7 @@ export function StaffJoinRequestForm() {
 
       const dukkan = dukkanData[0];
 
-      if (!user?.id) {
+      if (!userId) {
         toast.error("Kullanıcı bulunamadı, lütfen giriş yapın.");
         setLoading(false);
         return;
@@ -47,7 +47,7 @@ export function StaffJoinRequestForm() {
 
       // Check if request already exists for this personel & dükkan
       const existingRequest = data?.find(
-        (req) => req.personel_id === user.id && req.dukkan_id === dukkan.id
+        (req) => req.personel_id === userId && req.dukkan_id === dukkan.id
       );
       if (existingRequest) {
         toast.error("Bu dükkana zaten bir katılım talebiniz var.");
@@ -56,7 +56,7 @@ export function StaffJoinRequestForm() {
       }
 
       await addRequest.mutateAsync({
-        personel_id: user.id,
+        personel_id: userId,
         dukkan_id: dukkan.id,
       });
 
@@ -85,4 +85,3 @@ export function StaffJoinRequestForm() {
     </form>
   );
 }
-
