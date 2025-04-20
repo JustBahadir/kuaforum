@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -295,7 +296,10 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
 
       <div className="space-y-2">
         <Label htmlFor="personel">Personel</Label>
-        <Select onValueChange={(value) => setSelectedPersonel(Number(value))} value={selectedPersonel?.toString() || ""}>
+        <Select 
+          onValueChange={(value) => setSelectedPersonel(Number(value))} 
+          value={selectedPersonel !== null ? selectedPersonel.toString() : ""}
+        >
           <SelectTrigger id="personel">
             <SelectValue placeholder="Personel seçin" />
           </SelectTrigger>

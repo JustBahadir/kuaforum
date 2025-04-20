@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -101,9 +102,9 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
     try {
       setIsEditing(false);
 
-      const phoneDigitsOnly = formData.phone.replace(/\D/g, '');
-
       if (!customer || !customer.id) throw new Error("Customer ID is missing");
+
+      const phoneDigitsOnly = formData.phone.replace(/\D/g, '');
 
       await musteriServisi.guncelle(customer.id, {
         first_name: formData.firstName,
