@@ -5,12 +5,11 @@ import { personelServisi, personelIslemleriServisi } from "@/lib/supabase";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { PersonnelDetailsDialog } from "./PersonnelDetailsDialog";
 import { PersonnelForm } from "./PersonnelForm";
 import { PersonnelCard } from "./PersonnelCard";
 import { toast } from "sonner";
-import { Search, RefreshCcw } from "lucide-react";
+import { RefreshCcw } from "lucide-react";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 
 interface PersonnelListProps {
@@ -117,7 +116,7 @@ export function PersonnelList({
             </div>
             <div className="flex gap-2">
               {userRole === 'admin' && (
-                <Button onClick={() => setIsAddPersonnelDialogOpen(true)} leftIcon={<RefreshCcw size={16} />}>
+                <Button onClick={() => setIsAddPersonnelDialogOpen(true)} >
                   Personel Ekle
                 </Button>
               )}
@@ -142,8 +141,6 @@ export function PersonnelList({
         <PersonnelForm
           onSubmit={handleAddPersonnelSubmit}
           isLoading={false}
-          open={isAddPersonnelDialogOpen}
-          onOpenChange={setIsAddPersonnelDialogOpen}
         />
       )}
 
@@ -151,7 +148,7 @@ export function PersonnelList({
       {selectedPersonnel && (
         <PersonnelDetailsDialog
           personnel={selectedPersonnel}
-          open={isPersonnelDetailsDialogOpen}
+          isOpen={isPersonnelDetailsDialogOpen}
           onOpenChange={setIsPersonnelDetailsDialogOpen}
         />
       )}
