@@ -1,11 +1,11 @@
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, UseQueryResult } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 interface StaffJoinRequest {
   id: number;
-  personel_id: number;
-  dukkan_id: number;
+  personel_id: number | null;
+  dukkan_id: number | null;
   durum: string; // pending, accepted, rejected
   created_at: string;
   updated_at: string;
@@ -14,6 +14,7 @@ interface StaffJoinRequest {
 export function useStaffJoinRequests() {
   const queryClient = useQueryClient();
 
+  // Fetch function to retrieve join requests
   const fetchRequests = async (): Promise<StaffJoinRequest[]> => {
     const { data, error } = await supabase
       .from<StaffJoinRequest>("staff_join_requests")
@@ -26,26 +27,24 @@ export function useStaffJoinRequests() {
     if (!data) {
       return [];
     }
-    // Defensive: Confirm data is an array of StaffJoinRequest
     if (!Array.isArray(data)) {
       throw new Error("Received invalid data shape from staff_join_requests");
     }
     return data;
   };
 
-  const { data, isLoading, isError } = useQuery<StaffJoinRequest[]>({
+  // Correct useQuery with 2 generics: Data, Error
+  const { data, isLoading, isError } = useQuery<StaffJoinRequest[], unknown>({
     queryKey: ["staff_join_requests"],
     queryFn: fetchRequests,
   });
 
-  const mutateStatus = useMutation({
-    mutationFn: async ({
-      id,
-      status,
-    }: {
-      id: number;
-      status: "accepted" | "rejected";
-    }) => {
+  const mutateStatus = useMutation<
+    void,
+    unknown,
+    { id: number; status: "accepted" | "rejected" }
+  >({
+    mutationFn: async ({ id, status }) => {
       const { error } = await supabase
         .from("staff_join_requests")
         .update({ durum: status })
@@ -58,14 +57,12 @@ export function useStaffJoinRequests() {
     },
   });
 
-  const addRequest = useMutation({
-    mutationFn: async ({
-      personel_id,
-      dukkan_id,
-    }: {
-      personel_id: number;
-      dukkan_id: number;
-    }) => {
+  const addRequest = useMutation<
+    StaffJoinRequest,
+    unknown,
+    { personel_id: number; dukkan_id: number }
+  >({
+    mutationFn: async ({ personel_id, dukkan_id }) => {
       const { data, error } = await supabase
         .from("staff_join_requests")
         .insert([{ personel_id, dukkan_id }])
@@ -73,6 +70,7 @@ export function useStaffJoinRequests() {
         .single();
 
       if (error) throw error;
+      if (!data) throw new Error("No data returned from insert");
       return data;
     },
     onSuccess: () => {
@@ -82,3 +80,4 @@ export function useStaffJoinRequests() {
 
   return { data, isLoading, isError, mutateStatus, addRequest };
 }
+

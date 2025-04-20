@@ -14,7 +14,6 @@ export function StaffJoinRequestForm() {
   const [shopCode, setShopCode] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // On submit: validate shop code exists and send join request
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -26,7 +25,6 @@ export function StaffJoinRequestForm() {
     setLoading(true);
 
     try {
-      // Lookup dükkan by code
       const responseRaw = await fetch(
         "/api/dukkanlar?code=" + encodeURIComponent(shopCode.trim())
       );
@@ -38,7 +36,6 @@ export function StaffJoinRequestForm() {
       }
 
       const response = await responseRaw.json();
-
       const dukkanData = response?.dukkanData || response;
       if (!dukkanData || !Array.isArray(dukkanData) || dukkanData.length === 0) {
         toast.error("Dükkan bulunamadı, lütfen kodu kontrol edin.");
@@ -54,15 +51,17 @@ export function StaffJoinRequestForm() {
         return;
       }
 
-      // personel_id is number, userId may be string, convert accordingly
+      // Ensure userId is number
       const numericUserId =
-        typeof userId === "string" && !isNaN(Number(userId)) ? Number(userId) : userId;
+        typeof userId === "string" && !isNaN(Number(userId))
+          ? Number(userId)
+          : (userId as number);
 
-      // dukkan.id should be number, but confirm it; if it's a string, convert to number
+      // Convert dukkan.id to number safely
       const numericDukkanId =
         typeof dukkan.id === "number" ? dukkan.id : parseInt(dukkan.id, 10);
 
-      // Check if request already exists for this personel & dükkan - ensure type consistency
+      // Check if request already exists for this personel & dükkan
       const existingRequest = data?.find(
         (req) =>
           req.personel_id === numericUserId && req.dukkan_id === numericDukkanId
@@ -74,7 +73,7 @@ export function StaffJoinRequestForm() {
       }
 
       await addRequest.mutateAsync({
-        personel_id: numericUserId as number,
+        personel_id: numericUserId,
         dukkan_id: numericDukkanId,
       });
 
@@ -103,3 +102,4 @@ export function StaffJoinRequestForm() {
     </form>
   );
 }
+
