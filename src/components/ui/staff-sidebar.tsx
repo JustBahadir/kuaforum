@@ -54,22 +54,37 @@ export function StaffSidebar() {
 
   const isAdmin = userRole === 'admin';
 
-  const navItems = [
-    { href: "/shop-home", title: "Ana Sayfa", icon: <Home size={18} />, roles: ["admin", "staff"] },
-    { href: "/personnel", title: "Personel İşlemleri", icon: <Users size={18} />, roles: ["admin"] },
-    { href: "/appointments", title: "Randevular", icon: <Calendar size={18} />, roles: ["admin", "staff"] },
-    { href: "/admin/operations", title: "Hizmet Yönetimi", icon: <Scissors size={18} />, roles: ["admin"] },
-    { href: "/customers", title: "Müşteriler", icon: <UserCircle size={18} />, roles: ["admin", "staff"] },
-    { href: "/shop-settings", title: "İşletme Ayarları", icon: <Store size={18} />, roles: ["admin"] },
-    { href: "/shop-statistics", title: "İşletme İstatistikleri", icon: <BarChart2 size={18} />, roles: ["admin"] },
-    { href: "/operations-history", title: "İşlem Geçmişi", icon: <FileText size={18} />, roles: ["admin", "staff"] },
-    { href: "/profile", title: "Profilim", icon: <User size={18} />, roles: ["admin", "staff"] },
-    { href: "/settings", title: "Ayarlar", icon: <Settings size={18} />, roles: ["admin", "staff"] },
+  // Personel için soldaki menü 7 öğeden oluşmalı, admin'e özel menüler ayrılacak
+  const navItemsAdmin = [
+    { href: "/shop-home", title: "Ana Sayfa", icon: <Home size={18} /> },
+    { href: "/personnel", title: "Personel İşlemleri", icon: <Users size={18} /> },
+    { href: "/appointments", title: "Randevular", icon: <Calendar size={18} /> },
+    { href: "/admin/operations", title: "Hizmet Yönetimi", icon: <Scissors size={18} /> },
+    { href: "/customers", title: "Müşteriler", icon: <UserCircle size={18} /> },
+    { href: "/shop-settings", title: "İşletme Ayarları", icon: <Store size={18} /> },
+    { href: "/shop-statistics", title: "İşletme İstatistikleri", icon: <BarChart2 size={18} /> },
+    { href: "/operations-history", title: "İşlem Geçmişi", icon: <FileText size={18} /> },
+    { href: "/profile", title: "Profilim", icon: <User size={18} /> },
+    { href: "/settings", title: "Ayarlar", icon: <Settings size={18} /> },
   ];
 
-  const filteredNavItems = navItems.filter(item => 
-    item.roles.includes(userRole)
-  );
+  const navItemsStaff = [
+    { href: "/shop-home", title: "Ana Sayfa", icon: <Home size={18} /> },
+    { href: "/appointments", title: "Randevular", icon: <Calendar size={18} /> },
+    { href: "/customers", title: "Müşteriler", icon: <UserCircle size={18} /> },
+    { href: "/operations-history", title: "İşlem Geçmişi", icon: <FileText size={18} /> },
+    { href: "/profile", title: "Profilim", icon: <User size={18} /> },
+    { href: "/settings", title: "Ayarlar", icon: <Settings size={18} /> },
+  ];
+
+  // Add Çıkış Yap as last item always
+  if (!isAdmin) {
+    navItemsStaff.push({ href: "/logout", title: "Çıkış Yap", icon: <LogOut size={18} /> });
+  } else {
+    navItemsAdmin.push({ href: "/logout", title: "Çıkış Yap", icon: <LogOut size={18} /> });
+  }
+
+  const filteredNavItems = isAdmin ? navItemsAdmin : navItemsStaff;
 
   // Close mobile sidebar when route changes
   useEffect(() => {
@@ -83,7 +98,7 @@ export function StaffSidebar() {
         <div className="text-lg font-bold">Kuaför Paneli</div>
         <Sheet open={isOpen} onOpenChange={setIsOpen}>
           <SheetTrigger asChild>
-            <button className="p-2">
+            <button className="p-2" aria-label="Menu button">
               <Menu size={24} />
             </button>
           </SheetTrigger>
@@ -91,7 +106,7 @@ export function StaffSidebar() {
             <div className="flex flex-col h-full">
               <div className="flex items-center justify-between p-4 border-b">
                 <div className="text-lg font-bold">Kuaför Paneli</div>
-                <button onClick={() => setIsOpen(false)} className="p-1">
+                <button onClick={() => setIsOpen(false)} className="p-1" aria-label="Close menu">
                   <X size={18} />
                 </button>
               </div>
@@ -107,27 +122,29 @@ export function StaffSidebar() {
                   {filteredNavItems.map((item, index) => (
                     <NavItem
                       key={index}
-                      href={item.href}
+                      href={item.href === "/logout" ? undefined : item.href}
                       title={item.title}
                       icon={item.icon}
                       active={path === item.href}
-                      onClick={() => setIsOpen(false)}
+                      onClick={item.href === "/logout" ? handleLogout : () => setIsOpen(false)}
                     />
                   ))}
                 </nav>
               </div>
 
               <div className="p-2 border-t">
-                <button
-                  onClick={handleLogout}
-                  className={cn(
-                    buttonVariants({ variant: "ghost" }),
-                    "w-full justify-start gap-2 text-destructive"
-                  )}
-                >
-                  <LogOut size={18} />
-                  Çıkış Yap
-                </button>
+                { isAdmin ? (
+                  <button
+                    onClick={handleLogout}
+                    className={cn(
+                      buttonVariants({ variant: "ghost" }),
+                      "w-full justify-start gap-2 text-destructive"
+                    )}
+                  >
+                    <LogOut size={18} />
+                    Çıkış Yap
+                  </button>
+                ) : null }
               </div>
             </div>
           </SheetContent>
@@ -149,26 +166,29 @@ export function StaffSidebar() {
             {filteredNavItems.map((item, index) => (
               <NavItem
                 key={index}
-                href={item.href}
+                href={item.href === "/logout" ? undefined : item.href}
                 title={item.title}
                 icon={item.icon}
                 active={path === item.href}
+                onClick={item.href === "/logout" ? handleLogout : undefined}
               />
             ))}
           </nav>
 
-          <div className="mt-auto">
-            <button
-              onClick={handleLogout}
-              className={cn(
-                buttonVariants({ variant: "ghost" }),
-                "w-full justify-start gap-2 text-destructive"
-              )}
-            >
-              <LogOut size={18} />
-              Çıkış Yap
-            </button>
-          </div>
+          { !isAdmin && (
+            <div className="mt-auto">
+              <button
+                onClick={handleLogout}
+                className={cn(
+                  buttonVariants({ variant: "ghost" }),
+                  "w-full justify-start gap-2 text-destructive"
+                )}
+              >
+                <LogOut size={18} />
+                Çıkış Yap
+              </button>
+            </div>
+          )}
         </div>
       </aside>
     </>

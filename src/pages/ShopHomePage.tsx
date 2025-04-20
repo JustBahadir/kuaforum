@@ -12,7 +12,7 @@ import { ShopPersonnelCard } from "@/components/shop/ShopPersonnelCard";
 import { useNavigate } from "react-router-dom";
 
 export default function ShopHomePage() {
-  const { userRole, dukkanId, refreshProfile } = useCustomerAuth();
+  const { userRole, dukkanId } = useCustomerAuth();
   const queryClient = new QueryClient();
   const navigate = useNavigate();
 
@@ -26,7 +26,7 @@ export default function ShopHomePage() {
 
   useEffect(() => {
     if (userRole === "staff" && !dukkanId) {
-      // personel için işletme yoksa direkt staff profile sayfasına yönlendir
+      // personel için işletme yoksa staff profile'a yönlendir
       navigate("/staff-profile", { replace: true });
     }
   }, [userRole, dukkanId, navigate]);
@@ -41,7 +41,6 @@ export default function ShopHomePage() {
     );
   }
 
-  // Hata varsa ve personel değilse göster, aksi halde gizle
   if (error) {
     if (userRole !== "staff") {
       return (
@@ -57,7 +56,6 @@ export default function ShopHomePage() {
     }
   }
 
-  // İşletme verisi yoksa ve personel değilse hata göster, personel ise boş dön
   if (!isletmeData) {
     if (userRole !== "staff") {
       return (
@@ -72,24 +70,39 @@ export default function ShopHomePage() {
         </StaffLayout>
       );
     }
-    // personel için işletme yoksa zaten yukarı useEffect ile yönlendirme var
-    return null;
+    return null; // personel için işletme yoksa null
   }
 
+  // Admin ve staff ortak görüntü, sadece personel düzenleme butonu olmasın
   return (
     <StaffLayout>
       <div className="container mx-auto px-4 py-6 space-y-6">
-        <ShopProfileHeader isletmeData={isletmeData} userRole={userRole} queryClient={queryClient} />
+        <ShopProfileHeader
+          isletmeData={isletmeData}
+          userRole={userRole}
+          queryClient={queryClient}
+        />
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-4 space-y-6">
             <ShopContactCard isletmeData={isletmeData} />
-            <ShopWorkingHoursCard calisma_saatleri={calisma_saatleri} userRole={userRole} dukkanId={dukkanId} />
+            <ShopWorkingHoursCard
+              calisma_saatleri={calisma_saatleri}
+              userRole={userRole}
+              dukkanId={dukkanId}
+            />
           </div>
 
           <div className="lg:col-span-8 space-y-6">
-            <ShopGalleryCard isletmeId={isletmeData.id} userRole={userRole} queryClient={queryClient} />
-            <ShopPersonnelCard personelListesi={personelListesi} userRole={userRole} />
+            <ShopGalleryCard
+              isletmeId={isletmeData.id}
+              userRole={userRole}
+              queryClient={queryClient}
+            />
+            <ShopPersonnelCard
+              personelListesi={personelListesi}
+              userRole={userRole}
+            />
           </div>
         </div>
       </div>
