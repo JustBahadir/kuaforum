@@ -9,8 +9,6 @@ import { Randevu } from "@/lib/supabase/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge"; 
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { islemServisi } from "@/lib/supabase/services/islemServisi";
-import { useEffect as useEffectReact } from "react";
 import { supabase } from "@/lib/supabase/client";
 import React from "react";
 
@@ -233,9 +231,6 @@ export function AppointmentDayView({
                         >
                           Geri Al
                         </Button>
-                        {appointment.durum === "aktif" && (
-                          <CheckSquare className="text-green-600" />
-                        )}
                       </div>
                     )}
                   </div>
@@ -248,3 +243,4 @@ export function AppointmentDayView({
     </div>
   );
 }
+
