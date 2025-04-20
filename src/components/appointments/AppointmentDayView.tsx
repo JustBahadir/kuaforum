@@ -12,6 +12,9 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/lib/supabase/client";
 import React from "react";
 
+// Import Calendar correctly
+import { Calendar } from "@/components/ui/calendar";
+
 interface AppointmentDayViewProps {
   selectedDate: Date;
   appointments: Randevu[];
@@ -298,3 +301,4 @@ export function AppointmentDayView({
     </div>
   );
 }
+

@@ -9,6 +9,9 @@ import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
+// Import the Turkish locale
+import { tr } from "date-fns/locale";
+
 import { Calendar } from "@/components/ui/calendar";
 import { personelServisi, randevuServisi } from "@/lib/supabase";
 import { kategoriServisi } from "@/lib/supabase/services/kategoriServisi";
@@ -94,13 +97,19 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
       console.log(`Fetching available times for date: ${date}`);
       
       const selected = new Date(date);
-      // Esneklik için isToday kontrolü kaldırıldı
-      // const now = new Date();
-      // const isToday = selected.getDate() === now.getDate() && 
-      //                 selected.getMonth() === now.getMonth() && 
-      //                 selected.getFullYear() === now.getFullYear();
       
-      // Bu nedenle, saatlerin her zaman tamamı veya çalışma saatleri gösterilecek
+      // We will allow past dates and times,
+      // so isToday will be false always (no time filtering based on current time)
+      const isToday = false;
+      
+      /* Removed isToday date check because we allow past times and dates */
+      /*
+      const now = new Date();
+      const isToday = selected.getDate() === now.getDate() && 
+                      selected.getMonth() === now.getMonth() && 
+                      selected.getFullYear() === now.getFullYear();
+      */
+      
       const dayOfWeek = selected.getDay();
       const dayNames = ["pazar", "pazartesi", "sali", "carsamba", "persembe", "cuma", "cumartesi"];
       const dayName = dayNames[dayOfWeek];
@@ -119,7 +128,7 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
         return;
       }
       
-      const slots = generateTimeSlots(dayHours.acilis, dayHours.kapanis, false); // always false to allow all times confidently
+      const slots = generateTimeSlots(dayHours.acilis, dayHours.kapanis, isToday);
       console.log("Generated time slots:", slots);
       setAvailableTimes(slots);
     } catch (error) {
@@ -300,7 +309,6 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
           type="date" 
           value={selectedDate}
           onChange={handleDateChange}
-          min={undefined /* min tarih kaldırıldı */}
           placeholder="GG.AA.YYYY"
         />
       </div>
@@ -324,7 +332,7 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
                 <Skeleton className="h-5 w-full mt-2" />
               </div>
             ) : availableTimes.length === 0 ? (
-              // Saat yoksa boş bırakıyoruz, artık hata göstermiyoruz
+              // Removed error display, just show empty options now
               null
             ) : (
               availableTimes.map((time) => (
@@ -385,3 +393,4 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
     </div>
   );
 }
+
