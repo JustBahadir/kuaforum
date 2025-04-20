@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,10 +11,7 @@ import { useQuery } from "@tanstack/react-query";
 import { musteriServisi, islemServisi } from "@/lib/supabase";
 import { useParams, useNavigate } from "react-router-dom";
 import { CustomerPersonalData } from "./CustomerPersonalData";
-import { CustomerPhotoGallery } from "./CustomerPhotoGallery";
-import { customerPersonalDataService } from "@/lib/supabase/services/customerPersonalDataService";
-import { Input } from "@/components/ui/input";
-import { formatPhoneNumber } from "@/utils/phoneFormatter";
+// Fixed import path, it was ../FormFields/PhoneInputField but should be ./FormFields/PhoneInputField (relative to current file)
 import { PhoneInputField } from "./FormFields/PhoneInputField";
 
 interface CustomerDetailsProps {
@@ -52,6 +50,7 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
     enabled: !!customerId
   });
 
+  // Compose customer with personal data
   const customerWithPersonalData = customer && personalData ? {
     ...customer,
     ...personalData
@@ -95,6 +94,7 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  // Using PhoneInputField already does formatting and digit-only input
   const handlePhoneChange = (value: string) => {
     setFormData(prev => ({ ...prev, phone: value }));
   };
@@ -324,3 +324,4 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
     </div>
   );
 }
+
