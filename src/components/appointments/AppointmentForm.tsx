@@ -20,6 +20,7 @@ import { calismaSaatleriServisi } from "@/lib/supabase/services/calismaSaatleriS
 import { CalismaSaati, RandevuDurumu } from "@/lib/supabase/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { personelIslemleriServisi } from "@/lib/supabase/services/personelIslemleriServisi";
+import { PhoneInput } from "@/components/ui/phone-input";
 
 interface AppointmentFormProps {
   onAppointmentCreated: (appointment: any) => void;
@@ -40,6 +41,9 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
   const [isFetchingTimes, setIsFetchingTimes] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   
+  // For phone number input change if you have one to demonstrate, else leaving it here for possible reuse.
+  const [phone, setPhone] = React.useState("");
+
   const { data: personeller = [], isLoading: isLoadingPersoneller } = useQuery({
     queryKey: ['personeller'],
     queryFn: personelServisi.hepsiniGetir,
@@ -97,8 +101,10 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
       console.log(`Fetching available times for date: ${date}`);
       
       const selected = new Date(date);
-      // Remove past-date check (allow past dates)
-      const isToday = false;
+      // Allow past dates now (do not block)
+      const now = new Date();
+      // Determine if selected date is today
+      const isToday = selected.toDateString() === now.toDateString();
       
       const dayOfWeek = selected.getDay();
       const dayNames = ["pazar", "pazartesi", "sali", "carsamba", "persembe", "cuma", "cumartesi"];
@@ -216,11 +222,22 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
   
   const isFormValid = selectedDate && selectedTime && selectedService && selectedPersonel;
 
+  // Undo button logic (if we had something to undo, here is a placeholder, since no clear undo action was provided)
+  // For now, I restore a simple "Geri Al" button that resets fields to default or initial state
+  const handleUndo = () => {
+    setSelectedCategory(null);
+    setSelectedService(null);
+    setSelectedPersonel(null);
+    setSelectedDate(initialDate || format(new Date(), 'yyyy-MM-dd'));
+    setSelectedTime("");
+    setNotes("");
+  };
+
   return (
     <div className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="category">Kategori</Label>
-        <Select onValueChange={(value) => setSelectedCategory(Number(value))}>
+        <Select onValueChange={(value) => setSelectedCategory(Number(value))} value={selectedCategory?.toString() || ""}>
           <SelectTrigger id="category">
             <SelectValue placeholder="Kategori seçin" />
           </SelectTrigger>
@@ -274,7 +291,7 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
       
       <div className="space-y-2">
         <Label htmlFor="personel">Personel</Label>
-        <Select onValueChange={(value) => setSelectedPersonel(Number(value))}>
+        <Select onValueChange={(value) => setSelectedPersonel(Number(value))} value={selectedPersonel?.toString() || ""}>
           <SelectTrigger id="personel">
             <SelectValue placeholder="Personel seçin" />
           </SelectTrigger>
@@ -308,13 +325,13 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
       
       <div className="space-y-2">
         <Label htmlFor="time">Saat</Label>
-        <Select onValueChange={setSelectedTime}>
+        <Select onValueChange={setSelectedTime} value={selectedTime}>
           <SelectTrigger id="time">
             <SelectValue placeholder={
               isFetchingTimes 
                 ? "Saatler yükleniyor..." 
                 : availableTimes.length === 0 
-                  ? userRole === "customer" || !userRole ? "Seçilen tarihte müsait saat yok" : ""
+                  ? (userRole === "customer" || !userRole ? "Seçilen tarihte müsait saat yok" : "")
                   : "Saat seçin"
             } />
           </SelectTrigger>
@@ -351,14 +368,23 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
         />
       </div>
       
-      <Button 
-        className="w-full" 
-        onClick={handleCreateAppointment}
-        disabled={!isFormValid || isCreating}
-      >
-        {isCreating ? "Randevu Oluşturuluyor..." : "Randevu Oluştur"}
-      </Button>
-
+      <div className="flex justify-between gap-4">
+        <Button 
+          variant="outline"
+          type="button"
+          onClick={handleUndo}
+        >
+          Geri Al
+        </Button>
+        <Button 
+          className="flex-grow" 
+          onClick={handleCreateAppointment}
+          disabled={!isFormValid || isCreating}
+        >
+          {isCreating ? "Randevu Oluşturuluyor..." : "Randevu Oluştur"}
+        </Button>
+      </div>
+      
       {showCalendar && (
         <div className="mb-4">
           <div className="p-3 pointer-events-auto border rounded-md max-w-sm">

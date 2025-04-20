@@ -17,6 +17,7 @@ import { CalismaSaati, RandevuDurumu } from "@/lib/supabase/types";
 import { calismaSaatleriServisi } from "@/lib/supabase/services/calismaSaatleriServisi";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PhoneInput } from "@/components/ui/phone-input";
 
 interface StaffAppointmentFormProps {
   onAppointmentCreated: () => void;
@@ -86,11 +87,13 @@ export function StaffAppointmentForm({ onAppointmentCreated, initialDate }: Staf
     try {
       setIsFetchingTimes(true);
       
-      // Determine if selected date is today
-      const isToday = false;
+      // Allow past dates
+      const selected = new Date(date);
+      const now = new Date();
+      const isToday = selected.toDateString() === now.toDateString();
       
       // Get the day of the week
-      const dayOfWeek = new Date(date).getDay();
+      const dayOfWeek = selected.getDay();
       const dayNames = ["pazar", "pazartesi", "sali", "carsamba", "persembe", "cuma", "cumartesi"];
       const dayName = dayNames[dayOfWeek];
       
@@ -115,8 +118,7 @@ export function StaffAppointmentForm({ onAppointmentCreated, initialDate }: Staf
       console.error("Error fetching available times:", error);
       
       // Fallback - generate default time slots for the selected day
-      const isToday = false;
-      const defaultSlots = generateTimeSlots('09:00', '19:00', isToday);
+      const defaultSlots = generateTimeSlots('09:00', '19:00', false);
       setAvailableTimes(defaultSlots);
     } finally {
       setIsFetchingTimes(false);
@@ -130,6 +132,14 @@ export function StaffAppointmentForm({ onAppointmentCreated, initialDate }: Staf
     
     let currentMinutes = openHour * 60 + openMinute;
     const closingMinutes = closeHour * 60 + closeMinute;
+    
+    if (isToday) {
+      const now = new Date();
+      const currentTimeMinutes = now.getHours() * 60 + now.getMinutes();
+      // Add buffer to current time (30 min)
+      const roundedMinutes = Math.ceil((currentTimeMinutes + 30) / 30) * 30;
+      currentMinutes = Math.max(currentMinutes, roundedMinutes);
+    }
     
     while (currentMinutes < closingMinutes - 30) {
       const hour = Math.floor(currentMinutes / 60);
@@ -205,6 +215,7 @@ export function StaffAppointmentForm({ onAppointmentCreated, initialDate }: Staf
         <Select 
           onValueChange={(value) => setValue('musteri_id', Number(value))} 
           required
+          value={watch('musteri_id')?.toString() || ""}
         >
           <SelectTrigger id="musteri">
             <SelectValue placeholder="Müşteri seçin" />
@@ -243,7 +254,7 @@ export function StaffAppointmentForm({ onAppointmentCreated, initialDate }: Staf
       
       <div className="space-y-2">
         <Label htmlFor="kategori">Kategori Seçin</Label>
-        <Select onValueChange={handleCategoryChange}>
+        <Select onValueChange={handleCategoryChange} value={selectedCategory?.toString() || ""}>
           <SelectTrigger id="kategori">
             <SelectValue placeholder="Kategori seçin" />
           </SelectTrigger>
@@ -269,7 +280,7 @@ export function StaffAppointmentForm({ onAppointmentCreated, initialDate }: Staf
         <Select 
           onValueChange={handleServiceChange}
           disabled={!selectedCategory || isLoadingIslemler}
-          value={selectedService?.toString()}
+          value={selectedService?.toString() || ""}
         >
           <SelectTrigger id="hizmet">
             <SelectValue placeholder={
@@ -304,7 +315,11 @@ export function StaffAppointmentForm({ onAppointmentCreated, initialDate }: Staf
       
       <div className="space-y-2">
         <Label htmlFor="personel">Personel Seçin</Label>
-        <Select onValueChange={(value) => setValue('personel_id', Number(value))} required>
+        <Select 
+          onValueChange={(value) => setValue('personel_id', Number(value))}
+          required
+          value={watch('personel_id')?.toString() || ""}
+        >
           <SelectTrigger id="personel">
             <SelectValue placeholder="Personel seçin" />
           </SelectTrigger>
@@ -335,19 +350,23 @@ export function StaffAppointmentForm({ onAppointmentCreated, initialDate }: Staf
           id="tarih" 
           type="date" 
           {...register('tarih', { required: true })}
-          min={undefined}
+          min={undefined} // Allow past dates
         />
       </div>
       
       <div className="space-y-2">
         <Label htmlFor="saat">Saat Seçin</Label>
-        <Select onValueChange={(value) => setValue('saat', value)} required>
+        <Select 
+          onValueChange={(value) => setValue('saat', value)}
+          required
+          value={watch('saat') || ""}
+        >
           <SelectTrigger id="saat">
             <SelectValue placeholder={
               isFetchingTimes 
                 ? "Saatler yükleniyor..." 
-                : availableTimes.length === 0 
-                  ? userRole === "customer" || !userRole ? "Seçilen tarihte müsait saat yok" : ""
+                : availableTimes.length === 0
+                  ? (userRole === "customer" || !userRole ? "Seçilen tarihte müsait saat yok" : "")
                   : "Saat seçin"
             } />
           </SelectTrigger>
@@ -389,4 +408,3 @@ export function StaffAppointmentForm({ onAppointmentCreated, initialDate }: Staf
     </form>
   );
 }
-
