@@ -16,7 +16,7 @@ export function useStaffJoinRequests() {
 
   const fetchRequests = async (): Promise<StaffJoinRequest[]> => {
     const { data, error } = await supabase
-      .from<StaffJoinRequest, StaffJoinRequest>("staff_join_requests")
+      .from<StaffJoinRequest>("staff_join_requests")
       .select("*")
       .order("created_at", { ascending: false });
 
@@ -45,8 +45,6 @@ export function useStaffJoinRequests() {
         .eq("id", id);
 
       if (error) throw error;
-
-      // Optionally, if accepted, assign the personel to the dukkan? (Not automatic here)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["staff_join_requests"] });
@@ -77,3 +75,4 @@ export function useStaffJoinRequests() {
 
   return { data, isLoading, isError, mutateStatus, addRequest };
 }
+

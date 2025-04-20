@@ -8,7 +8,7 @@ import { useStaffJoinRequests } from "@/hooks/useStaffJoinRequests";
 import { toast } from "sonner";
 
 export function StaffJoinRequestForm() {
-  const { userId } = useCustomerAuth(); // Adjusted to userId (or profile?.id if available)
+  const { userId } = useCustomerAuth();
   const { addRequest, data } = useStaffJoinRequests();
 
   const [shopCode, setShopCode] = useState("");
@@ -27,11 +27,12 @@ export function StaffJoinRequestForm() {
 
     try {
       // Lookup dükkan by code
-      const { data: dukkanData, error } = await fetch(
+      const { data: response } = await fetch(
         "/api/dukkanlar?code=" + encodeURIComponent(shopCode.trim())
       ).then((r) => r.json());
 
-      if (error || !dukkanData?.length) {
+      const dukkanData = response?.dukkanData || response;
+      if (!dukkanData || !Array.isArray(dukkanData) || dukkanData.length === 0) {
         toast.error("Dükkan bulunamadı, lütfen kodu kontrol edin.");
         setLoading(false);
         return;
@@ -45,9 +46,17 @@ export function StaffJoinRequestForm() {
         return;
       }
 
-      // Check if request already exists for this personel & dükkan
+      // personel_id is number, userId may be string, convert accordingly
+      const numericUserId = typeof userId === "string" && !isNaN(Number(userId)) ? Number(userId) : userId;
+
+      // dukkan.id should be number, but confirm it
+      const numericDukkanId = typeof dukkan.id === "number" ? dukkan.id : parseInt(dukkan.id, 10);
+
+      // Check if request already exists for this personel & dükkan - ensure type consistency
       const existingRequest = data?.find(
-        (req) => req.personel_id === userId && req.dukkan_id === dukkan.id
+        (req) =>
+          req.personel_id === numericUserId &&
+          req.dukkan_id === numericDukkanId
       );
       if (existingRequest) {
         toast.error("Bu dükkana zaten bir katılım talebiniz var.");
@@ -56,8 +65,8 @@ export function StaffJoinRequestForm() {
       }
 
       await addRequest.mutateAsync({
-        personel_id: userId,
-        dukkan_id: dukkan.id,
+        personel_id: numericUserId as number,
+        dukkan_id: numericDukkanId,
       });
 
       toast.success(`Katılım talebiniz "${dukkan.ad}" için gönderildi.`);
