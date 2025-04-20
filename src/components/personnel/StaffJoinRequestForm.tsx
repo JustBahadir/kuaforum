@@ -27,9 +27,17 @@ export function StaffJoinRequestForm() {
 
     try {
       // Lookup dükkan by code
-      const { data: response } = await fetch(
+      const responseRaw = await fetch(
         "/api/dukkanlar?code=" + encodeURIComponent(shopCode.trim())
-      ).then((r) => r.json());
+      );
+
+      if (!responseRaw.ok) {
+        toast.error("Dükkan bulunamadı, lütfen kodu kontrol edin.");
+        setLoading(false);
+        return;
+      }
+
+      const response = await responseRaw.json();
 
       const dukkanData = response?.dukkanData || response;
       if (!dukkanData || !Array.isArray(dukkanData) || dukkanData.length === 0) {
@@ -47,16 +55,17 @@ export function StaffJoinRequestForm() {
       }
 
       // personel_id is number, userId may be string, convert accordingly
-      const numericUserId = typeof userId === "string" && !isNaN(Number(userId)) ? Number(userId) : userId;
+      const numericUserId =
+        typeof userId === "string" && !isNaN(Number(userId)) ? Number(userId) : userId;
 
-      // dukkan.id should be number, but confirm it
-      const numericDukkanId = typeof dukkan.id === "number" ? dukkan.id : parseInt(dukkan.id, 10);
+      // dukkan.id should be number, but confirm it; if it's a string, convert to number
+      const numericDukkanId =
+        typeof dukkan.id === "number" ? dukkan.id : parseInt(dukkan.id, 10);
 
       // Check if request already exists for this personel & dükkan - ensure type consistency
       const existingRequest = data?.find(
         (req) =>
-          req.personel_id === numericUserId &&
-          req.dukkan_id === numericDukkanId
+          req.personel_id === numericUserId && req.dukkan_id === numericDukkanId
       );
       if (existingRequest) {
         toast.error("Bu dükkana zaten bir katılım talebiniz var.");

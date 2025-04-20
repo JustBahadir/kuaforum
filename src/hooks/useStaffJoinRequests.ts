@@ -23,10 +23,17 @@ export function useStaffJoinRequests() {
     if (error) {
       throw error;
     }
-    return data || [];
+    if (!data) {
+      return [];
+    }
+    // Defensive: Confirm data is an array of StaffJoinRequest
+    if (!Array.isArray(data)) {
+      throw new Error("Received invalid data shape from staff_join_requests");
+    }
+    return data;
   };
 
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError } = useQuery<StaffJoinRequest[]>({
     queryKey: ["staff_join_requests"],
     queryFn: fetchRequests,
   });
@@ -75,4 +82,3 @@ export function useStaffJoinRequests() {
 
   return { data, isLoading, isError, mutateStatus, addRequest };
 }
-
