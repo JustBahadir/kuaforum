@@ -1,6 +1,4 @@
 
-// Fix property dukkanData to isletmeData in useShopData destructuring
-
 import React from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
@@ -95,4 +93,3 @@ export default function ShopHomePage() {
     </StaffLayout>
   );
 }
-

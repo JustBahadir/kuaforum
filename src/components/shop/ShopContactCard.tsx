@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MapPin, Phone, ExternalLink, Copy, PhoneCall } from "lucide-react";
@@ -5,38 +6,38 @@ import { toast } from "sonner";
 import { formatPhoneNumber } from "@/utils/phoneFormatter";
 
 interface ShopContactCardProps {
-  dukkanData: any;
+  isletmeData: any; // changed prop name from dukkanData to isletmeData
 }
 
-export function ShopContactCard({ dukkanData }: ShopContactCardProps) {
+export function ShopContactCard({ isletmeData }: ShopContactCardProps) {
   const openInMaps = () => {
-    if (!dukkanData?.acik_adres) {
+    if (!isletmeData?.acik_adres) {
       toast.error("Haritada göstermek için bir açık adres girilmelidir");
       return;
     }
     
-    const encodedAddress = encodeURIComponent(dukkanData.acik_adres);
+    const encodedAddress = encodeURIComponent(isletmeData.acik_adres);
     window.open(`https://www.google.com/maps/search/?api=1&query=${encodedAddress}`, '_blank');
   };
 
   const callPhone = () => {
-    if (!dukkanData?.telefon) {
+    if (!isletmeData?.telefon) {
       toast.error("Telefon numarası bulunamadı");
       return;
     }
     
     // Format for tel: link - remove all non-digit characters
-    const phoneNumber = dukkanData.telefon.replace(/\D/g, '');
+    const phoneNumber = isletmeData.telefon.replace(/\D/g, '');
     window.location.href = `tel:${phoneNumber}`;
   };
 
   const copyPhoneNumber = () => {
-    if (!dukkanData?.telefon) {
+    if (!isletmeData?.telefon) {
       toast.error("Telefon numarası bulunamadı");
       return;
     }
     
-    navigator.clipboard.writeText(dukkanData.telefon);
+    navigator.clipboard.writeText(isletmeData.telefon);
     toast.success("Telefon numarası kopyalandı");
   };
 
@@ -49,14 +50,14 @@ export function ShopContactCard({ dukkanData }: ShopContactCardProps) {
         <div className="flex items-start gap-3">
           <MapPin className="h-5 w-5 text-purple-600 flex-shrink-0 mt-0.5" />
           <div>
-            <div>{dukkanData.adres || "Adres bilgisi bulunmuyor"}</div>
-            {dukkanData.acik_adres && (
-              <div className="text-gray-500 text-sm mt-1">{dukkanData.acik_adres}</div>
+            <div>{isletmeData.adres || "Adres bilgisi bulunmuyor"}</div>
+            {isletmeData.acik_adres && (
+              <div className="text-gray-500 text-sm mt-1">{isletmeData.acik_adres}</div>
             )}
           </div>
         </div>
         
-        {dukkanData.acik_adres && (
+        {isletmeData.acik_adres && (
           <Button 
             variant="outline" 
             size="sm"
@@ -71,13 +72,13 @@ export function ShopContactCard({ dukkanData }: ShopContactCardProps) {
         <div className="flex items-start gap-3">
           <Phone className="h-5 w-5 text-purple-600 flex-shrink-0 mt-0.5" />
           <span>
-            {dukkanData.telefon 
-              ? formatPhoneNumber(dukkanData.telefon) 
+            {isletmeData.telefon 
+              ? formatPhoneNumber(isletmeData.telefon) 
               : "Telefon bilgisi bulunmuyor"}
           </span>
         </div>
         
-        {dukkanData.telefon && (
+        {isletmeData.telefon && (
           <div className="flex gap-2">
             <Button 
               variant="outline" 

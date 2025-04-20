@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { isletmeServisi } from "@/lib/supabase";  // Changed import from dukkanServisi to isletmeServisi
+import { isletmeServisi } from "@/lib/supabase";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
@@ -55,7 +55,7 @@ export default function ShopSettings() {
       try {
         console.log("Açık adres güncelleniyor:", newFullAddress);
         
-        const result = await isletmeServisi.dukkaniGuncelle(dukkanId, {
+        const result = await isletmeServisi.guncelle(dukkanId, {
           acik_adres: newFullAddress
         });
         
@@ -172,9 +172,9 @@ export default function ShopSettings() {
                     <Button 
                       className="flex-1" 
                       onClick={handleAddressUpdate}
-                      disabled={updateShopAddress.isPending}
+                      disabled={updateShopAddress.isLoading}
                     >
-                      {updateShopAddress.isPending ? "Kaydediliyor..." : "Açık Adresi Kaydet"}
+                      {updateShopAddress.isLoading ? "Kaydediliyor..." : "Açık Adresi Kaydet"}
                     </Button>
                     <Button 
                       variant="outline" 

@@ -1,6 +1,4 @@
 
-// Fix useQuery generic types and typescript syntax for supabase usage
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -31,12 +29,10 @@ export function useStaffJoinRequests() {
       return [];
     }
 
-    if (!Array.isArray(data)) {
-      throw new Error("Received invalid data shape from staff_join_requests");
-    }
+    // TypeScript expects 2 parameters for useQuery generic, fix accordingly
+    // Remove unnecessary casting usage with safe types
 
-    // Safely assert type via unknown cast to suppress error
-    return data as StaffJoinRequest[];
+    return data;
   };
 
   const { data, isLoading, isError } = useQuery<StaffJoinRequest[], Error>({
@@ -76,7 +72,7 @@ export function useStaffJoinRequests() {
 
       if (error) throw error;
       if (!data) throw new Error("No data returned from insert");
-      return data as StaffJoinRequest;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["staff_join_requests"] });
