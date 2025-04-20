@@ -1,5 +1,4 @@
 
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { formatPhoneNumber } from "@/utils/phoneFormatter";
 
@@ -35,7 +34,7 @@ export function PhoneInputField({
 
   return (
     <div>
-      <Label htmlFor={id}>{label}</Label>
+      {/* Removed the internal Label component to avoid duplicate label */}
       <Input
         id={id}
         value={formatPhoneNumber(value)}
@@ -48,4 +47,3 @@ export function PhoneInputField({
     </div>
   );
 }
-
