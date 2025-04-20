@@ -11,7 +11,8 @@ import { useQuery } from "@tanstack/react-query";
 import { musteriServisi, islemServisi } from "@/lib/supabase";
 import { useParams, useNavigate } from "react-router-dom";
 import { CustomerPersonalData } from "./CustomerPersonalData";
-// Fixed import path, it was ../FormFields/PhoneInputField but should be ./FormFields/PhoneInputField (relative to current file)
+import { CustomerPhotoGallery } from "./CustomerPhotoGallery";
+import { customerPersonalDataService } from "@/lib/supabase/services/customerPersonalDataService";
 import { PhoneInputField } from "./FormFields/PhoneInputField";
 
 interface CustomerDetailsProps {
