@@ -1,7 +1,6 @@
-
 import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { dukkanServisi } from "@/lib/supabase";
+import { isletmeServisi } from "@/lib/supabase";  // Changed import from dukkanServisi to isletmeServisi
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
@@ -23,7 +22,7 @@ export default function ShopSettings() {
 
   const { data: isletme, isLoading, error } = useQuery({
     queryKey: ['dukkan', dukkanId],
-    queryFn: () => dukkanId ? dukkanServisi.getirById(dukkanId) : null,
+    queryFn: () => dukkanId ? isletmeServisi.getirById(dukkanId) : null,
     enabled: !!dukkanId
   });
 
@@ -56,7 +55,7 @@ export default function ShopSettings() {
       try {
         console.log("Açık adres güncelleniyor:", newFullAddress);
         
-        const result = await dukkanServisi.dukkaniGuncelle(dukkanId, {
+        const result = await isletmeServisi.dukkaniGuncelle(dukkanId, {
           acik_adres: newFullAddress
         });
         
@@ -240,4 +239,3 @@ export default function ShopSettings() {
     </StaffLayout>
   );
 }
-

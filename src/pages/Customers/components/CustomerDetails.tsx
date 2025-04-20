@@ -213,8 +213,7 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
                         value={formData.phone} 
                         onChange={handlePhoneChange} 
                         placeholder="05xx xxx xx xx" 
-                        id="phone" 
-                        maxLength={15}
+                        id="phone"
                       />
                     </div>
                   </div>

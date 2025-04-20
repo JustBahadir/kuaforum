@@ -1,11 +1,11 @@
 
-// Fix export name to match the actual exported service name "isletmeServisi"
+// Fix import/export name for isletmeServisi, remove nonexistent dukkanServisi reference
 
 export * from './types';
 export * from './services/customerOperationsService';
 export * from './services/customerPersonalDataService';
 
-// Export services
+// Export services with correct names
 export { isletmeServisi } from './services/dukkanServisi';
 export { personelServisi } from './services/personelServisi';
 export { profilServisi } from './services/profilServisi';

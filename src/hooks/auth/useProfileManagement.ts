@@ -1,3 +1,6 @@
+
+// Fix method calls and imports to use isletmeServisi and correct method names
+
 import { useState } from "react";
 import { profileService } from "@/lib/auth/profileService";
 import { isletmeServisi } from "@/lib/supabase/services/dukkanServisi";
@@ -32,13 +35,14 @@ export function useProfileManagement(
       
       if (role === 'admin') {
         try {
-          const userShop = await isletmeServisi.kullanicininDukkani(user.id);
+          // Correct method name kullanıcının işletmesi
+          const userShop = await isletmeServisi.kullanicininIsletmesi(user.id);
           if (userShop) {
             setDukkanId(userShop.id);
             setDukkanAdi(userShop.ad);
           } else if (location.pathname.includes('/personnel') || location.pathname.includes('/appointments')) {
-            // Önce toast göster, sonra dükkan oluşturma sayfasına yönlendir
-            toast.error("Dükkan bilgileriniz bulunamadı. Lütfen dükkan bilgilerinizi oluşturun.");
+            // Önce toast göster, sonra işletme oluşturma sayfasına yönlendir
+            toast.error("İşletme bilgileriniz bulunamadı. Lütfen işletme bilgilerinizi oluşturun.");
             
             // Kısa bir gecikme ekleyelim ki toast görülebilsin
             setTimeout(() => {
@@ -46,19 +50,20 @@ export function useProfileManagement(
             }, 2000);
           }
         } catch (error) {
-          console.error("Dükkan bilgisi alınırken hata:", error);
+          console.error("İşletme bilgisi alınırken hata:", error);
         }
       } else if (role === 'staff') {
         try {
-          const staffShop = await isletmeServisi.personelAuthIdDukkani(user.id);
+          // Correct method name personelAuthIdIsletmesi
+          const staffShop = await isletmeServisi.personelAuthIdIsletmesi(user.id);
           if (staffShop) {
             setDukkanId(staffShop.id);
             setDukkanAdi(staffShop.ad);
           } else if (location.pathname.includes('/personnel')) {
-            toast.error("Dükkan bilgileriniz bulunamadı. Lütfen yönetici ile iletişime geçin.");
+            toast.error("İşletme bilgileriniz bulunamadı. Lütfen yönetici ile iletişime geçin.");
           }
         } catch (error) {
-          console.error("Personel dükkan bilgisi alınırken hata:", error);
+          console.error("Personel işletme bilgisi alınırken hata:", error);
         }
       }
       

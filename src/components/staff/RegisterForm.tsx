@@ -10,6 +10,7 @@ import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { isletmeServisi } from "@/lib/supabase/services/dukkanServisi";
 import { personelServisi } from "@/lib/supabase/services/personelServisi";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 
 interface RegisterFormProps {
   onSuccess: () => void;

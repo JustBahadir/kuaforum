@@ -1,5 +1,5 @@
 
-// Fix properties and imports due to changed service naming
+// Fix property dukkanData to isletmeData in useShopData destructuring
 
 import React from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
@@ -17,7 +17,7 @@ export default function ShopHomePage() {
   const queryClient = new QueryClient();
 
   const { 
-    isletmeData, // was dukkanData
+    isletmeData, // fixed from dukkanData
     loading, 
     error, 
     personelListesi, 
@@ -52,7 +52,7 @@ export default function ShopHomePage() {
       <StaffLayout>
         <div className="container mx-auto p-6">
           <div className="text-center">
-            <h2 className="text-2xl font-semibold mb-4">Henüz bir dükkan bulunamadı</h2>
+            <h2 className="text-2xl font-semibold mb-4">Henüz bir işletme bulunamadı</h2>
           </div>
         </div>
       </StaffLayout>

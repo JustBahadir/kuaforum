@@ -1,5 +1,5 @@
 
-// Fix useQuery generics and cast data properly
+// Fix useQuery generic types and typescript syntax for supabase usage
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,17 +36,17 @@ export function useStaffJoinRequests() {
     }
 
     // Safely assert type via unknown cast to suppress error
-    return data as unknown as StaffJoinRequest[];
+    return data as StaffJoinRequest[];
   };
 
-  const { data, isLoading, isError } = useQuery<StaffJoinRequest[], unknown>({
+  const { data, isLoading, isError } = useQuery<StaffJoinRequest[], Error>({
     queryKey: ["staff_join_requests"],
     queryFn: fetchRequests,
   });
 
   const mutateStatus = useMutation<
     void,
-    unknown,
+    Error,
     { id: number; status: "accepted" | "rejected" }
   >({
     mutationFn: async ({ id, status }) => {
@@ -64,7 +64,7 @@ export function useStaffJoinRequests() {
 
   const addRequest = useMutation<
     StaffJoinRequest,
-    unknown,
+    Error,
     { personel_id: number; dukkan_id: number }
   >({
     mutationFn: async ({ personel_id, dukkan_id }) => {

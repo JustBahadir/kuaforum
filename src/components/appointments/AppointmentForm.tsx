@@ -152,6 +152,10 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
 
   const toggleCalendar = () => setShowCalendar(prev => !prev);
 
+  const handleCategoryChange = (value: string) => {
+    setSelectedCategory(Number(value));
+  };
+
   const createAppointmentData = {
     dukkan_id: dukkanId,
     customer_id: String(selectedCustomerId),
@@ -235,7 +239,7 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
     <div className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="category">Kategori</Label>
-        <Select onValueChange={(value) => setSelectedCategory(Number(value))} value={selectedCategory?.toString() || ""}>
+        <Select onValueChange={handleCategoryChange} value={selectedCategory?.toString() || ""}>
           <SelectTrigger id="category">
             <div className="flex items-center justify-between pr-2">
               <SelectValue placeholder="Kategori seçin" />
