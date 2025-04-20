@@ -1,17 +1,12 @@
 
-// Add a right sidebar menu with two tabs in the staff Profile page,
-// conditionally rendering tab content. Only for staff role.
-
 import React, { useState, useEffect } from "react";
 import { ProfileDisplay } from "@/components/customer-profile/ProfileDisplay";
-import { ProfileEditForm } from "@/components/customer-profile/ProfileEditForm";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
 import { formatPhoneNumber } from "@/utils/phoneFormatter";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { profilServisi } from "@/lib/supabase/services/profilServisi";
-import StaffPersonalInfoTab from "@/pages/Profile/StaffPersonalInfoTab";
-import StaffPreRegistrationTab from "@/pages/Profile/StaffPreRegistrationTab";
+import ProfileTabs from "@/pages/ProfileTabs";
 
 const Profile = () => {
   const [loading, setLoading] = useState(true);
@@ -29,9 +24,6 @@ const Profile = () => {
   });
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-
-  // New state for sidebar tab selection: "personalInfo" | "preRegistration"
-  const [activeTab, setActiveTab] = useState<"personalInfo" | "preRegistration">("personalInfo");
 
   // Education and history states for Pre-registration tab
   const [educationData, setEducationData] = useState({
@@ -55,7 +47,6 @@ const Profile = () => {
     fetchProfile();
   }, []);
 
-  // Fetch staff profile and education/history data
   const fetchProfile = async () => {
     try {
       setLoading(true);
@@ -155,7 +146,6 @@ const Profile = () => {
     }
   };
 
-  // Handlers (same as original)
   const handleAvatarUpload = async (url: string) => {
     try {
       setIsUploading(true);
@@ -238,7 +228,6 @@ const Profile = () => {
     }
   };
 
-  // Handlers for education/history update: passed down to PreRegistration tab component
   const handleEducationChange = (field: keyof typeof educationData, value: string) => {
     setEducationData(prev => ({ ...prev, [field]: value }));
   };
@@ -299,68 +288,23 @@ const Profile = () => {
     );
   }
 
-  const isStaff = profile.role === "staff";
-
-  // Layout with right sidebar only for staff role
   return (
     <StaffLayout>
-      <div className="container mx-auto py-6">
-        <div className="flex flex-col md:flex-row max-w-6xl mx-auto gap-6">
-          {/* Main content */}
-          <div className="flex-1 space-y-6">
-            <ProfileDisplay {...profile} />
-            {/* No editing here - editing moved to tabs */}
-          </div>
-
-          {/* Right Sidebar Menu for Staff */}
-          {isStaff && (
-            <div className="w-full md:w-96 flex flex-col bg-white rounded-md shadow-md border overflow-hidden">
-              <nav className="flex flex-col border-b">
-                <button
-                  onClick={() => setActiveTab("personalInfo")}
-                  className={`px-6 py-3 font-semibold text-left border-b-2 transition-colors duration-200 ${
-                    activeTab === "personalInfo" ? "border-purple-700 text-purple-700 bg-purple-50" : "border-transparent hover:bg-gray-100"
-                  }`}
-                >
-                  Özlük Bilgileri
-                </button>
-                <button
-                  onClick={() => setActiveTab("preRegistration")}
-                  className={`px-6 py-3 font-semibold text-left border-b-2 transition-colors duration-200 ${
-                    activeTab === "preRegistration" ? "border-purple-700 text-purple-700 bg-purple-50" : "border-transparent hover:bg-gray-100"
-                  }`}
-                >
-                  Eğitim ve Geçmiş
-                </button>
-              </nav>
-
-              <div className="p-6 overflow-y-auto flex-grow min-h-[400px]">
-                {activeTab === "personalInfo" && (
-                  <StaffPersonalInfoTab
-                    profile={profile}
-                    handleChange={handleChange}
-                    handleSelectChange={handleSelectChange}
-                    handleAvatarUpload={handleAvatarUpload}
-                    handleSave={handleSave}
-                    isSaving={isSaving}
-                    isUploading={isUploading}
-                  />
-                )}
-                {activeTab === "preRegistration" && (
-                  <StaffPreRegistrationTab
-                    educationData={educationData}
-                    historyData={historyData}
-                    onEducationChange={handleEducationChange}
-                    onHistoryChange={handleHistoryChange}
-                    onSave={handleSaveEducationHistory}
-                    isLoading={loadingEduHist}
-                  />
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+      <ProfileTabs
+        profile={profile}
+        handleChange={handleChange}
+        handleSelectChange={handleSelectChange}
+        handleAvatarUpload={handleAvatarUpload}
+        handleSave={handleSave}
+        isSaving={isSaving}
+        isUploading={isUploading}
+        educationData={educationData}
+        historyData={historyData}
+        onEducationChange={handleEducationChange}
+        onHistoryChange={handleHistoryChange}
+        onSaveEducationHistory={handleSaveEducationHistory}
+        isLoadingEducationHistory={loadingEduHist}
+      />
     </StaffLayout>
   );
 };
