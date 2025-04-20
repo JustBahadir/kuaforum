@@ -1,7 +1,6 @@
-
 import { useState } from "react";
 import { profileService } from "@/lib/auth/profileService";
-import { dukkanServisi } from "@/lib/supabase/services/dukkanServisi";
+import { isletmeServisi } from "@/lib/supabase/services/dukkanServisi";
 import { authService } from "@/lib/auth/authService";
 import { toast } from "sonner";
 
@@ -33,7 +32,7 @@ export function useProfileManagement(
       
       if (role === 'admin') {
         try {
-          const userShop = await dukkanServisi.kullanicininDukkani(user.id);
+          const userShop = await isletmeServisi.kullanicininDukkani(user.id);
           if (userShop) {
             setDukkanId(userShop.id);
             setDukkanAdi(userShop.ad);
@@ -51,7 +50,7 @@ export function useProfileManagement(
         }
       } else if (role === 'staff') {
         try {
-          const staffShop = await dukkanServisi.personelAuthIdDukkani(user.id);
+          const staffShop = await isletmeServisi.personelAuthIdDukkani(user.id);
           if (staffShop) {
             setDukkanId(staffShop.id);
             setDukkanAdi(staffShop.ad);

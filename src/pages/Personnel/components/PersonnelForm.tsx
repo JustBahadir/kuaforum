@@ -13,7 +13,7 @@ import {
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { authService } from "@/lib/auth/authService";
 import { toast } from "sonner";
-import { dukkanServisi } from "@/lib/supabase/services/dukkanServisi";
+import { isletmeServisi } from "@/lib/supabase/services/dukkanServisi";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 

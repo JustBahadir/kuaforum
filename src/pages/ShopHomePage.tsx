@@ -1,3 +1,6 @@
+
+// Fix properties and imports due to changed service naming
+
 import React from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
@@ -12,15 +15,15 @@ import { ShopPersonnelCard } from "@/components/shop/ShopPersonnelCard";
 export default function ShopHomePage() {
   const { userRole, dukkanId } = useCustomerAuth();
   const queryClient = new QueryClient();
-  
+
   const { 
-    dukkanData: isletmeData, 
+    isletmeData, // was dukkanData
     loading, 
     error, 
     personelListesi, 
     calisma_saatleri 
   } = useShopData(dukkanId);
-  
+
   if (loading) {
     return (
       <StaffLayout>
@@ -92,3 +95,4 @@ export default function ShopHomePage() {
     </StaffLayout>
   );
 }
+

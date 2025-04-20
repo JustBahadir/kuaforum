@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,15 +8,8 @@ import { z } from "zod";
 import { authService } from "@/lib/auth/authService";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { dukkanServisi } from "@/lib/supabase/services/dukkanServisi";
+import { isletmeServisi } from "@/lib/supabase/services/dukkanServisi";
 import { personelServisi } from "@/lib/supabase/services/personelServisi";
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 interface RegisterFormProps {
   onSuccess: () => void;
@@ -268,7 +260,7 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
             ? `${districtInfo.name}, ${cityInfo.name}`
             : city;
           
-          const dukkan = await dukkanServisi.ekle({
+          const dukkan = await isletmeServisi.ekle({
             ad: shopName,
             adres: shopAddress || "",
             telefon: shopPhone || phone,
@@ -301,7 +293,7 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
       } else if (role === "staff" && dukkanKodu && user) {
         // Personel dükkan kodunu doğrulama
         try {
-          const dukkan = await dukkanServisi.getirByKod(dukkanKodu);
+          const dukkan = await isletmeServisi.getirByKod(dukkanKodu);
           
           if (!dukkan) {
             setGlobalError("Geçersiz dükkan kodu. Lütfen dükkan yöneticinizden doğru kodu alınız.");

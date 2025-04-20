@@ -1,11 +1,12 @@
 
-// Export types
+// Fix export name to match the actual exported service name "isletmeServisi"
+
 export * from './types';
 export * from './services/customerOperationsService';
 export * from './services/customerPersonalDataService';
 
 // Export services
-export { dukkanServisi } from './services/dukkanServisi';
+export { isletmeServisi } from './services/dukkanServisi';
 export { personelServisi } from './services/personelServisi';
 export { profilServisi } from './services/profilServisi';
 export { randevuServisi } from './services/randevuServisi';
@@ -19,3 +20,4 @@ export { customerPersonalDataService } from './services/customerPersonalDataServ
 export { customerOperationsService } from './services/customerOperationsService';
 export { supabase } from './client';
 export { siralamaServisi } from './services/siralamaServisi';
+

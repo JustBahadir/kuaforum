@@ -1,8 +1,7 @@
-
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
-import { isletmeServisi } from "@/lib/supabase";
+import { isletmeServisi } from "@/lib/supabase/services/dukkanServisi";
 import { authService } from "@/lib/auth/authService";
 import { gunSiralama } from "@/components/operations/constants/workingDays";
 import { calismaSaatleriServisi } from "@/lib/supabase/services/calismaSaatleriServisi";
@@ -140,4 +139,3 @@ export function useShopData(isletmeId: number | null) {
     isLoadingSaatler
   };
 }
-
