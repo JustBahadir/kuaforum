@@ -30,7 +30,7 @@ export function CategoryEditForm({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Kategori Düzenle</DialogTitle>
+          <DialogTitle>Kategori Adını Düzenle</DialogTitle>
           <DialogDescription>
             Kategori adını değiştirmek için aşağıdaki formu kullanın.
           </DialogDescription>
