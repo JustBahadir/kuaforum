@@ -13,7 +13,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import { CustomerPersonalData } from "./CustomerPersonalData";
 import { CustomerPhotoGallery } from "./CustomerPhotoGallery";
 import { customerPersonalDataService } from "@/lib/supabase/services/customerPersonalDataService";
-import { PhoneInputField } from "./FormFields/PhoneInputField";
 
 interface CustomerDetailsProps {
   customerId?: number;
@@ -23,57 +22,48 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
   const [activeTab, setActiveTab] = useState("basic");
   const params = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [isAppointmentDialogOpen, setIsAppointmentDialogOpen] = useState(false);
-  const [appointmentCustomerId, setAppointmentCustomerId] = useState<number | undefined>(undefined);
+  
+  const customerId = propCustomerId !== undefined ? propCustomerId : params.id ? Number(params.id) : undefined;
 
-  const customerId =
-    propCustomerId !== undefined
-      ? propCustomerId
-      : params.id
-      ? Number(params.id)
-      : undefined;
-
-  const {
-    data: customer,
+  const { 
+    data: customer, 
     isLoading: isLoadingCustomer,
-    error: customerError,
+    error: customerError
   } = useQuery({
-    queryKey: ["customer", customerId],
+    queryKey: ['customer', customerId],
     queryFn: async () => {
       if (!customerId) throw new Error("No customer ID provided");
       return musteriServisi.getirById(customerId);
     },
     enabled: !!customerId,
   });
-
+  
   const {
     data: personalData,
-    isLoading: isLoadingPersonalData,
+    isLoading: isLoadingPersonalData
   } = useQuery({
-    queryKey: ["customer-personal-data", customerId],
+    queryKey: ['customer-personal-data', customerId],
     queryFn: async () => {
       if (!customerId) throw new Error("No customer ID provided");
       return customerPersonalDataService.getCustomerPersonalData(customerId);
     },
-    enabled: !!customerId,
+    enabled: !!customerId
   });
 
-  const customerWithPersonalData =
-    customer && personalData ? { ...customer, ...personalData } : customer;
+  const customerWithPersonalData = customer && personalData ? {
+    ...customer,
+    ...personalData
+  } : customer;
 
   const { data: services = [] } = useQuery({
-    queryKey: ["islemler"],
+    queryKey: ['islemler'],
     queryFn: islemServisi.hepsiniGetir,
   });
 
-  const isPointSystemEnabled = services.some(
-    (service: any) => service.puan > 0
-  );
-
+  const isPointSystemEnabled = services.some((service: any) => service.puan > 0);
+  
   const handleCreateAppointment = () => {
     if (customerId) {
-      setAppointmentCustomerId(customerId);
-      setIsAppointmentDialogOpen(true);
       navigate(`/appointments?customerId=${customerId}&newAppointment=true`);
     }
   };
@@ -90,22 +80,18 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
     return (
       <div className="p-4 md:p-6 border border-gray-200 rounded-md bg-gray-50">
         <h3 className="text-lg font-medium text-gray-900">Müşteri Bulunamadı</h3>
-        <p className="mt-1 text-sm text-gray-500">
-          Bu müşteri bulunamadı veya bir hata oluştu.
-        </p>
+        <p className="mt-1 text-sm text-gray-500">Bu müşteri bulunamadı veya bir hata oluştu.</p>
       </div>
     );
   }
 
-  const customerName = `${customer.first_name || ""} ${customer.last_name || ""}`.trim();
+  const customerName = `${customer.first_name || ''} ${customer.last_name || ''}`.trim();
 
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-xl md:text-2xl font-bold">
-            {customerName || "İsimsiz Müşteri"}
-          </h2>
+          <h2 className="text-xl md:text-2xl font-bold">{customerName || 'İsimsiz Müşteri'}</h2>
           <p className="text-sm text-gray-500">Müşteri #: {customer.id}</p>
         </div>
 
@@ -113,9 +99,7 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
           <Button variant="outline" size="sm" onClick={() => {}}>
             Mesaj Gönder
           </Button>
-          <Button size="sm" onClick={handleCreateAppointment}>
-            Randevu Oluştur
-          </Button>
+          <Button size="sm" onClick={handleCreateAppointment}>Randevu Oluştur</Button>
         </div>
       </div>
 
@@ -125,28 +109,17 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
           <TabsTrigger value="detailed">Detaylı Bilgiler</TabsTrigger>
           <TabsTrigger value="operations">İşlem Geçmişi</TabsTrigger>
           <TabsTrigger value="photos">Fotoğraflar</TabsTrigger>
-          {isPointSystemEnabled && <TabsTrigger value="loyalty">Sadakat & Puanlar</TabsTrigger>}
+          {isPointSystemEnabled && (
+            <TabsTrigger value="loyalty">Sadakat & Puanlar</TabsTrigger>
+          )}
         </TabsList>
-
+        
         <TabsContent value="basic">
           <Card>
             <CardHeader>
               <CardTitle>Müşteri Bilgileri</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                <div>
-                  <strong>Telefon:</strong>
-                </div>
-                <PhoneInputField
-                  value={customer.phone || ""}
-                  onChange={() => {
-                    // readonly here in details, no changes allowed
-                  }}
-                  disabled
-                  placeholder="05xx xxx xx xx"
-                />
-              </div>
               <CustomerProfile customer={customerWithPersonalData} />
             </CardContent>
           </Card>
@@ -157,18 +130,24 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
             <CardHeader>
               <CardTitle>Detaylı Bilgiler</CardTitle>
             </CardHeader>
-            <CardContent>{customerId && <CustomerPersonalData customerId={customerId} />}</CardContent>
+            <CardContent>
+              {customerId && <CustomerPersonalData customerId={customerId} />}
+            </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="operations">{customerId && <CustomerOperationsTable customerId={customerId} />}</TabsContent>
+        <TabsContent value="operations">
+          {customerId && <CustomerOperationsTable customerId={customerId} />}
+        </TabsContent>
 
         <TabsContent value="photos">
           <Card>
             <CardHeader>
               <CardTitle>Müşteri Fotoğrafları</CardTitle>
             </CardHeader>
-            <CardContent>{customerId && <CustomerPhotoGallery customerId={customerId} />}</CardContent>
+            <CardContent>
+              {customerId && <CustomerPhotoGallery customerId={customerId} />}
+            </CardContent>
           </Card>
         </TabsContent>
 
@@ -178,7 +157,9 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
               <CardHeader>
                 <CardTitle>Sadakat Programı ve Puanlar</CardTitle>
               </CardHeader>
-              <CardContent>{customerId && <CustomerLoyaltyCard customerId={customerId} expanded={true} />}</CardContent>
+              <CardContent>
+                {customerId && <CustomerLoyaltyCard customerId={customerId} expanded={true} />}
+              </CardContent>
             </Card>
           </TabsContent>
         )}
@@ -186,4 +167,3 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
     </div>
   );
 }
-
