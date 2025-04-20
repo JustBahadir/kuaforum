@@ -12,10 +12,18 @@ import { ShopPersonnelCard } from "@/components/shop/ShopPersonnelCard";
 import { useNavigate } from "react-router-dom";
 
 export default function ShopHomePage() {
-  const { userRole, dukkanId } = useCustomerAuth();
+  const { userRole, dukkanId, userId } = useCustomerAuth();
   const queryClient = new QueryClient();
   const navigate = useNavigate();
 
+  // personel için işletme id yoksa personel profil sayfasına yönlendir
+  useEffect(() => {
+    if (userRole === "staff" && !dukkanId) {
+      navigate("/staff-profile", { replace: true });
+    }
+  }, [userRole, dukkanId, navigate]);
+
+  // İşletme verisini personel için de userId ile işletme alınacak
   const {
     isletmeData,
     loading,
@@ -23,13 +31,6 @@ export default function ShopHomePage() {
     personelListesi,
     calisma_saatleri,
   } = useShopData(dukkanId);
-
-  useEffect(() => {
-    if (userRole === "staff" && !dukkanId) {
-      // personel için işletme yoksa staff profile'a yönlendir
-      navigate("/staff-profile", { replace: true });
-    }
-  }, [userRole, dukkanId, navigate]);
 
   if (loading) {
     return (
@@ -73,7 +74,6 @@ export default function ShopHomePage() {
     return null; // personel için işletme yoksa null
   }
 
-  // Admin ve staff ortak görüntü, sadece personel düzenleme butonu olmasın
   return (
     <StaffLayout>
       <div className="container mx-auto px-4 py-6 space-y-6">
@@ -109,3 +109,4 @@ export default function ShopHomePage() {
     </StaffLayout>
   );
 }
+
