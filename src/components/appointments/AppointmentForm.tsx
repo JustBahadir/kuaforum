@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +10,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
-import { Calendar as CalendarIcon } from "lucide-react";
+import { CalendarIcon } from "lucide-react";
 import { personelServisi, randevuServisi } from "@/lib/supabase";
 import { kategoriServisi } from "@/lib/supabase/services/kategoriServisi";
 import { islemServisi } from "@/lib/supabase/services/islemServisi";
@@ -17,8 +18,13 @@ import { calismaSaatleriServisi } from "@/lib/supabase/services/calismaSaatleriS
 import { CalismaSaati, RandevuDurumu } from "@/lib/supabase/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { personelIslemleriServisi } from "@/lib/supabase/services/personelIslemleriServisi";
-import { PhoneInput } from "@/components/ui/phone-input";
+import { PhoneInputField } from "@/pages/Customers/components/FormFields/PhoneInputField";
 import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 interface AppointmentFormProps {
   onAppointmentCreated: (appointment: any) => void;
@@ -113,32 +119,12 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
         return;
       }
 
-      const slots = [];
-      const [openHour, openMinute] = dayHours.acilis.split(':').map(Number);
-      const [closeHour, closeMinute] = dayHours.kapanis.split(':').map(Number);
-
-      let currentMinutes = openHour * 60 + openMinute;
-      const closingMinutes = closeHour * 60 + closeMinute;
-
-      while (currentMinutes < closingMinutes) {
-        const hour = Math.floor(currentMinutes / 60);
-        const minute = currentMinutes % 60;
-        slots.push(`${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`);
-        currentMinutes += 30;
-      }
+      const slots = generateTimeSlots(dayHours.acilis, dayHours.kapanis, isToday);
 
       setAvailableTimes(slots);
     } catch (error) {
       console.error("Error fetching available times:", error);
-      const fallbackSlots = [];
-      let min = 9 * 60;
-      const max = 19 * 60;
-      while (min < max) {
-        const h = Math.floor(min / 60);
-        const m = min % 60;
-        fallbackSlots.push(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`);
-        min += 30;
-      }
+      const fallbackSlots = generateTimeSlots('09:00', '19:00', false);
       setAvailableTimes(fallbackSlots);
     } finally {
       setIsFetchingTimes(false);
@@ -230,6 +216,7 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
     setSelectedDate(initialDate || format(new Date(), 'yyyy-MM-dd'));
     setSelectedTime("");
     setNotes("");
+    setPhone("");
   };
 
   return (
@@ -322,38 +309,37 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
             placeholder="GG.AA.YYYY"
             className="flex-grow"
           />
-          <button 
-            type="button"
-            aria-label="Takvimi Aç/Kapat"
-            onClick={toggleCalendar}
-            className="inline-flex items-center justify-center p-2 rounded border border-input bg-background hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1"
-          >
-            <CalendarIcon className="h-5 w-5" />
-          </button>
+          <Popover open={showCalendar} onOpenChange={setShowCalendar}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                aria-label="Takvimi Aç/Kapat"
+                className="p-2"
+                type="button"
+              >
+                <CalendarIcon className="h-5 w-5 text-gray-900" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <Calendar 
+                mode="single" 
+                selected={new Date(selectedDate)} 
+                onSelect={(date) => {
+                  if (date) {
+                    const formattedDate = format(date, 'yyyy-MM-dd');
+                    setSelectedDate(formattedDate);
+                    fetchAvailableTimes(formattedDate);
+                    setShowCalendar(false);
+                  }
+                }} 
+                locale={tr}
+                initialFocus
+                className="pointer-events-auto rounded-md bg-white"
+              />
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
-
-      {showCalendar && (
-        <div className="mb-4">
-          <div className="p-3 pointer-events-auto border rounded-md max-w-sm">
-            <Calendar
-              mode="single"
-              selected={selectedDate ? new Date(selectedDate) : undefined}
-              onSelect={(date) => {
-                if (date) {
-                  const formattedDate = format(date, 'yyyy-MM-dd');
-                  setSelectedDate(formattedDate);
-                  fetchAvailableTimes(formattedDate);
-                  setShowCalendar(false);
-                }
-              }}
-              locale={tr}
-              initialFocus
-              className="pointer-events-auto"
-            />
-          </div>
-        </div>
-      )}
 
       <div className="space-y-2">
         <Label htmlFor="time">Saat</Label>
@@ -392,11 +378,11 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
 
       <div className="space-y-2">
         <Label htmlFor="phone">Telefon</Label>
-        <PhoneInput 
+        <PhoneInputField 
           id="phone" 
           value={phone} 
           onChange={setPhone} 
-          placeholder="Telefon numarası"
+          placeholder="05xx xxx xx xx" 
         />
       </div>
 
@@ -429,3 +415,4 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
     </div>
   );
 }
+

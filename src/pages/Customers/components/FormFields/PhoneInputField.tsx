@@ -21,24 +21,20 @@ export function PhoneInputField({
   error,
   disabled = false
 }: PhoneInputFieldProps) {
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (disabled) return;
 
-    // Allow exactly 11 digits (including the leading 0)
-    const digitsOnly = e.target.value.replace(/\D/g, '');
-    const limitedDigits = digitsOnly.substring(0, 11);
-
-    // Format and update the phone number
-    onChange(limitedDigits);
+    const digitsOnly = e.target.value.replace(/\D/g, '').substring(0, 11);
+    onChange(digitsOnly);
   };
 
   return (
     <div>
-      {/* Removed the internal Label component to avoid duplicate label */}
+      {/* Label removed as user didn't want duplicate */}
       <Input
         id={id}
         value={formatPhoneNumber(value)}
-        onChange={handlePhoneChange}
+        onChange={handleInputChange}
         placeholder={placeholder}
         className={error ? "border-red-500" : ""}
         disabled={disabled}
