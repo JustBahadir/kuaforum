@@ -137,7 +137,7 @@ export function PersonnelList({
       </Card>
 
       {/* Personel Ekleme Dialogu */}
-      {userRole === 'admin' && (
+      {userRole === 'admin' && isAddPersonnelDialogOpen && (
         <PersonnelForm
           onSubmit={handleAddPersonnelSubmit}
           isLoading={false}
