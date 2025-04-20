@@ -94,9 +94,9 @@ export interface Randevu {
   notlar?: string;
   islemler: any;
   created_at?: string;
-  // Add these properties to the interface to fix the TS errors
   musteri?: Musteri;
   personel?: Personel;
+  isReturnedFromCancel?: boolean;  // Added this optional property to fix TS error
 }
 
 // Profil veri modeli

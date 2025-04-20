@@ -114,7 +114,7 @@ export function AppointmentDayView({
         </Button>
         
         <div className="flex space-x-2 items-center">
-          <h2 className="text-xl font-semibold">
+          <h2 className="text-xl font-semibold flex items-center">
             {format(selectedDate, "d MMMM yyyy, EEEE", { locale: tr })}
             {dayLabel && <span className="ml-2 text-muted-foreground">({dayLabel})</span>}
           </h2>
@@ -148,113 +148,116 @@ export function AppointmentDayView({
         <div className="space-y-4">
           {sortedAppointments.map((appointment) => {
             const isReturnedFromCancel = appointment.durum === "onaylandi" && appointment.isReturnedFromCancel;
-            // Assuming there is a flag isReturnedFromCancel to detect if it came from cancellation
+            const isUndoable = appointment.durum === "iptal_edildi";
             return (
-            <Card key={appointment.id} className="overflow-hidden">
-              <CardContent className="p-0">
-                <div className={`grid grid-cols-1 md:grid-cols-5 border-l-4 ${
-                  appointment.durum === "tamamlandi" ? "border-green-500" : 
-                  appointment.durum === "iptal_edildi" ? "border-red-500" : 
-                  "border-blue-500"
-                } p-4`}>
-                  <div className="col-span-4 grid grid-cols-4 gap-4">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Saat</p>
-                      <p className="font-medium">{appointment.saat.substring(0, 5)}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Müşteri</p>
-                      {appointment.musteri ? (
-                        <p className="font-medium">
-                          {appointment.musteri.first_name} {appointment.musteri.last_name}
-                        </p>
-                      ) : (
-                        <p className="text-xs text-muted-foreground">Müşteri kaydı yok</p>
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Personel</p>
-                      <p className="font-medium">
-                        {appointment.personel ? appointment.personel.ad_soyad : "Atanmamış"}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Hizmetler</p>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {Array.isArray(appointment.islemler) && appointment.islemler.map((islemId, idx) => (
-                          <Badge key={`${islemId}-${idx}`} variant="outline" className="text-xs">
-                            {serviceNames[islemId] || `İşlem ${islemId}`}
-                          </Badge>
-                        ))}
+              <Card key={appointment.id} className="overflow-hidden">
+                <CardContent className="p-0">
+                  <div className={`grid grid-cols-1 md:grid-cols-5 border-l-4 ${
+                    appointment.durum === "tamamlandi" ? "border-green-500" : 
+                    appointment.durum === "iptal_edildi" ? "border-red-500" : 
+                    "border-blue-500"
+                  } p-4`}>
+                    <div className="col-span-4 grid grid-cols-4 gap-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Saat</p>
+                        <p className="font-medium">{appointment.saat.substring(0, 5)}</p>
                       </div>
-                    </div>
-                  </div>
-                  
-                  <div className="col-span-1 flex items-center justify-end flex-col sm:flex-row gap-2">
-                    {appointment.durum === "onaylandi" && (
-                      <div className="flex flex-col sm:flex-row gap-2">
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          className="flex items-center gap-1" 
-                          onClick={() => onCompleteClick(appointment)}
-                        >
-                          <CheckSquare className="h-4 w-4" /> Tamamlandı
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="destructive"
-                          className="flex items-center gap-1" 
-                          onClick={() => onCancelClick(appointment)}
-                        >
-                          <XSquare className="h-4 w-4" /> İptal
-                        </Button>
-                      </div>
-                    )}
-                    
-                    {appointment.durum === "tamamlandi" && (
-                      <div className="flex items-center gap-2">
-                        <Badge className="bg-green-100 text-green-800 border-green-200">
-                          Tamamlandı
-                        </Badge>
-                        <CheckSquare className="text-green-600" />
-                      </div>
-                    )}
-                    
-                    {appointment.durum === "iptal_edildi" && (
-                      <div className="flex flex-col sm:flex-row gap-2 items-center">
-                        <Badge className="bg-red-100 text-red-800 border-red-200">
-                          İptal Edildi
-                        </Badge>
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          className="flex items-center gap-1"
-                          onClick={() => onUndoCancelClick && onUndoCancelClick(appointment)}
-                        >
-                          Geri Al
-                        </Button>
-                        {isReturnedFromCancel && (
-                          <Button 
-                            variant="ghost"
-                            size="icon"
-                            className="ml-1 text-blue-600"
-                            onClick={() => alert("İptalden dönen randevu")}
-                            aria-label="İptalden dönen randevu hakkında bilgi"
-                          >
-                            <Info className="h-5 w-5" />
-                          </Button>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Müşteri</p>
+                        {appointment.musteri ? (
+                          <p className="font-medium">
+                            {appointment.musteri.first_name} {appointment.musteri.last_name}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">Müşteri kaydı yok</p>
                         )}
                       </div>
-                    )}
+                      <div>
+                        <p className="text-sm text-muted-foreground">Personel</p>
+                        <p className="font-medium">
+                          {appointment.personel ? appointment.personel.ad_soyad : "Atanmamış"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Hizmetler</p>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {Array.isArray(appointment.islemler) && appointment.islemler.map((islemId, idx) => (
+                            <Badge key={`${islemId}-${idx}`} variant="outline" className="text-xs">
+                              {serviceNames[islemId] || `İşlem ${islemId}`}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="col-span-1 flex items-center justify-end flex-col sm:flex-row gap-2">
+                      {appointment.durum === "onaylandi" && (
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className="flex items-center gap-1" 
+                            onClick={() => onCompleteClick(appointment)}
+                          >
+                            <CheckSquare className="h-4 w-4" /> Tamamlandı
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="destructive"
+                            className="flex items-center gap-1" 
+                            onClick={() => onCancelClick(appointment)}
+                          >
+                            <XSquare className="h-4 w-4" /> İptal
+                          </Button>
+                        </div>
+                      )}
+                      
+                      {appointment.durum === "tamamlandi" && (
+                        <div className="flex items-center gap-2">
+                          <Badge className="bg-green-100 text-green-800 border-green-200">
+                            Tamamlandı
+                          </Badge>
+                          <CheckSquare className="text-green-600" />
+                        </div>
+                      )}
+                      
+                      {isUndoable && (
+                        <div className="flex flex-col sm:flex-row gap-2 items-center">
+                          <Badge className="bg-red-100 text-red-800 border-red-200">
+                            İptal Edildi
+                          </Badge>
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="flex items-center gap-1"
+                            onClick={() => onUndoCancelClick && onUndoCancelClick(appointment)}
+                          >
+                            Geri Al
+                          </Button>
+                          {isReturnedFromCancel && (
+                            <>
+                              <CheckSquare className="text-green-600" />
+                              <Button 
+                                variant="ghost"
+                                size="icon"
+                                className="ml-1 text-blue-600"
+                                onClick={() => alert("İptalden dönen randevu")}
+                                aria-label="İptalden dönen randevu hakkında bilgi"
+                              >
+                                <Info className="h-5 w-5" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          )})}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>
   );
 }
-
