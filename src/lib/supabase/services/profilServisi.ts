@@ -1,7 +1,7 @@
 
 import { getProfile, getUserRole } from './profileServices/fetchProfile';
 import { updateProfile } from './profileServices/updateProfile';
-import { createOrUpdateProfile } from './profileServices/createProfile';  // Fixed import path
+import { createProfile } from './profileServices/createProfile';  // Correct import, no createOrUpdateProfile
 
 // Temiz IBAN için yardımcı fonksiyon
 const cleanIBANForStorage = (iban?: string) => {
@@ -70,11 +70,11 @@ export const profilServisi = {
     return updateProfile(data);
   },
   getUserRole,
-  createOrUpdateProfile: (userId: string, data: any) => {
+  createProfile: (userId: string, data: any) => {
     if (data.iban) {
       data.iban = cleanIBANForStorage(data.iban);
     }
-    return createOrUpdateProfile(userId, data);
+    return createProfile(userId, data);
   },
   formatIBAN,
   cleanIBANForStorage,
