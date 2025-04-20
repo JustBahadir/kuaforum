@@ -6,9 +6,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import DocumentsSection from "./components/DocumentsSection.tsx";
-import CompetitionsSection from "./components/CompetitionsSection.tsx";
-import CvSection from "./components/CvSection.tsx";
+import DocumentsSection from "./components/DocumentsSection";
+import CompetitionsSection from "./components/CompetitionsSection";
+import CvSection from "./components/CvSection";
 
 interface EducationData {
   ortaokuldurumu: string;
@@ -861,32 +861,3 @@ function WorkplacesPositionsSection({
 }) {
   const [adding, setAdding] = React.useState(false);
   const [newIsyeri, setNewIsyeri] = React.useState("");
-  const [newGorev, setNewGorev] = React.useState("");
-  const [editIndex, setEditIndex] = React.useState<number | null>(null);
-  const [editIsyeri, setEditIsyeri] = React.useState("");
-  const [editGorev, setEditGorev] = React.useState("");
-  const [saving, setSaving] = React.useState(false);
-
-  const startAdd = () => {
-    setAdding(true);
-    setNewIsyeri("");
-    setNewGorev("");
-  };
-
-  return (
-    <div>
-      {historyData.isyerleri.length === 0 ? (
-        <p>Henüz iş yeri bilgisi yok.</p>
-      ) : (
-        <ul>
-          {historyData.isyerleri.map((isyeri, index) => (
-            <li key={index}>
-              {isyeri} - {historyData.gorevpozisyon[index]}
-              {/* Buttons to edit or remove could go here */}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
