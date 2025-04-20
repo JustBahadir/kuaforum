@@ -34,7 +34,6 @@ export default function CustomerAppointments() {
   const location = useLocation();
   const { dukkanId } = useCustomerAuth();
   
-  // Get serviceId from URL if it exists
   const serviceId = React.useMemo(() => {
     const params = new URLSearchParams(location.search);
     const service = params.get('service');
@@ -42,7 +41,6 @@ export default function CustomerAppointments() {
   }, [location.search]);
   
   useEffect(() => {
-    // If we have a service ID from the URL, open the dialog automatically
     if (serviceId) {
       setDialogOpen(true);
     }
@@ -91,7 +89,7 @@ export default function CustomerAppointments() {
   const handleAppointmentCreated = () => {
     setDialogOpen(false);
     toast.success("Randevunuz başarıyla oluşturuldu");
-    loadAppointments(); // Reload all appointments to get the newest data
+    loadAppointments();
   };
   
   const handleDateSelect = (date: Date | undefined) => {
@@ -128,7 +126,7 @@ export default function CustomerAppointments() {
               mode="single"
               selected={date}
               onSelect={(day) => day && setDate(day)}
-              weekStartsOn={1} // Start week on Monday
+              weekStartsOn={1}
               locale={tr}
               className="rounded-md border"
             />
@@ -200,7 +198,6 @@ export default function CustomerAppointments() {
                 </DialogHeader>
                 <AppointmentForm 
                   shopId={dukkanId || 0}
-                  initialDate={selectedDate ? format(selectedDate, 'yyyy-MM-dd') : undefined}
                 />
               </DialogContent>
             </Dialog>

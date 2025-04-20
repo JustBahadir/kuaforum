@@ -147,7 +147,7 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
     );
   }
 
-  const customerName = `${customer.first_name || ''} ${customer.last_name || ''}`.trim();
+  const customerName = `${String(customer.first_name || '')} ${String(customer.last_name || '')}`.trim();
 
   return (
     <div className="space-y-4 md:space-y-6">

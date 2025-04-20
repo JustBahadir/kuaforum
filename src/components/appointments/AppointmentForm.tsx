@@ -68,7 +68,10 @@ export function AppointmentForm({ shopId }: { shopId: number }) {
   const { data: operations } = useOperations(shopId);
   const { data: personnel } = usePersonnel(shopId);
   
-  const { availableTimeSlots, isLoading: timeSlotsLoading } = useAvailableTimeSlots({
+  const {
+    data: availableTimeSlots,
+    isLoading: timeSlotsLoading
+  } = useAvailableTimeSlots({
     date: selectedDate,
     shopId,
     personnelId: selectedPersonnelId ? Number(selectedPersonnelId) : undefined,
@@ -81,18 +84,14 @@ export function AppointmentForm({ shopId }: { shopId: number }) {
     },
   });
 
-  // Reset time when date or personnel changes
   useEffect(() => {
     form.setValue("time", "");
   }, [selectedDate, selectedPersonnelId, form]);
 
-  // Filter personnel by selected service
   const filteredPersonnel = React.useMemo(() => {
     if (!selectedServiceId || !personnel) return personnel;
     
-    // If no service is selected, show all personnel
     return personnel.filter((person) => {
-      // Check if this person can perform the selected service
       const canPerformService = person.hizmetler?.some(
         (service) => service.id.toString() === selectedServiceId
       );
@@ -110,12 +109,10 @@ export function AppointmentForm({ shopId }: { shopId: number }) {
     setIsSubmitting(true);
 
     try {
-      // Format date and time for database
       const appointmentDate = new Date(values.date);
       const [hours, minutes] = values.time.split(":").map(Number);
       appointmentDate.setHours(hours, minutes, 0, 0);
 
-      // Get service details
       const selectedService = operations?.find(
         (op) => op.id.toString() === values.service
       );
@@ -126,13 +123,11 @@ export function AppointmentForm({ shopId }: { shopId: number }) {
         return;
       }
 
-      // Calculate end time based on service duration
       const endDate = new Date(appointmentDate);
       endDate.setMinutes(
         endDate.getMinutes() + (selectedService.sure || 30)
       );
 
-      // Create appointment
       const { data, error } = await supabase.from("randevular").insert([
         {
           musteri_id: userId,
@@ -155,13 +150,11 @@ export function AppointmentForm({ shopId }: { shopId: number }) {
       toast.success("Randevunuz başarıyla oluşturuldu!");
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
       
-      // Reset form
       form.reset();
       setSelectedDate(undefined);
       setSelectedServiceId("");
       setSelectedPersonnelId("");
       
-      // Navigate to appointments page
       navigate("/appointments");
     } catch (error) {
       console.error("Randevu oluşturma hatası:", error);
@@ -175,7 +168,6 @@ export function AppointmentForm({ shopId }: { shopId: number }) {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Date Selection */}
           <FormField
             control={form.control}
             name="date"
@@ -210,7 +202,6 @@ export function AppointmentForm({ shopId }: { shopId: number }) {
                         setSelectedDate(date || undefined);
                       }}
                       disabled={(date) => {
-                        // Disable past dates and dates more than 30 days in the future
                         const today = new Date();
                         today.setHours(0, 0, 0, 0);
                         const thirtyDaysLater = new Date();
@@ -218,7 +209,6 @@ export function AppointmentForm({ shopId }: { shopId: number }) {
                         return (
                           date < today ||
                           date > thirtyDaysLater ||
-                          // Disable Sundays (0 is Sunday in JavaScript)
                           date.getDay() === 0
                         );
                       }}
@@ -231,7 +221,6 @@ export function AppointmentForm({ shopId }: { shopId: number }) {
             )}
           />
 
-          {/* Service Selection */}
           <FormField
             control={form.control}
             name="service"
@@ -242,7 +231,6 @@ export function AppointmentForm({ shopId }: { shopId: number }) {
                   onValueChange={(value) => {
                     field.onChange(value);
                     setSelectedServiceId(value);
-                    // Reset personnel when service changes
                     form.setValue("personnel", "");
                     setSelectedPersonnelId("");
                   }}
@@ -269,7 +257,6 @@ export function AppointmentForm({ shopId }: { shopId: number }) {
             )}
           />
 
-          {/* Personnel Selection */}
           <FormField
             control={form.control}
             name="personnel"
@@ -311,7 +298,6 @@ export function AppointmentForm({ shopId }: { shopId: number }) {
             )}
           />
 
-          {/* Time Selection */}
           <FormField
             control={form.control}
             name="time"
@@ -360,7 +346,6 @@ export function AppointmentForm({ shopId }: { shopId: number }) {
           />
         </div>
 
-        {/* Notes */}
         <FormField
           control={form.control}
           name="notes"
