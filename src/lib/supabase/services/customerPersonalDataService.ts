@@ -30,7 +30,6 @@ export interface CustomerPersonalData {
   dye_preferences?: string[];
   root_dye_frequency?: string;
   bleach_tolerance?: boolean;
-  // allergy_notes removed because column missing
 
   // Heat treatment preferences
   straightener_preference?: string;
@@ -134,8 +133,8 @@ export const customerPersonalDataService = {
         hair_types = [...hair_types.filter(t => !['İnce Telli', 'Kalın Telli'].includes(t)), personalData.hair_thickness];
       }
 
-      // Omit allergy_notes from personalData (no such column or property)
-      const { allergy_notes, ...restData } = personalData;
+      // Omit allergy_notes from personalData since it doesn't exist in DB/type
+      const { allergy_notes, ...restData } = personalData as any;
 
       const dataToSave = {
         ...restData,

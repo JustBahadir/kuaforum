@@ -33,9 +33,11 @@ export function useStaffJoinRequests() {
       throw new Error("Received invalid data shape from staff_join_requests");
     }
 
-    return data;
+    // Safely assert type
+    return data as StaffJoinRequest[];
   };
 
+  // Fix useQuery generics to have 2 type arguments, data and error
   const { data, isLoading, isError } = useQuery<StaffJoinRequest[], unknown>({
     queryKey: ["staff_join_requests"],
     queryFn: fetchRequests,
@@ -73,7 +75,7 @@ export function useStaffJoinRequests() {
 
       if (error) throw error;
       if (!data) throw new Error("No data returned from insert");
-      return data;
+      return data as StaffJoinRequest;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["staff_join_requests"] });
