@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -76,28 +77,28 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
     const slots = [];
     const [openHour, openMinute] = openingTime.split(':').map(Number);
     const [closeHour, closeMinute] = closingTime.split(':').map(Number);
-    
+
     let currentMinutes = openHour * 60 + openMinute;
     const closingMinutes = closeHour * 60 + closeMinute;
-    
+
     if (isToday) {
       const now = new Date();
       const currentTimeMinutes = now.getHours() * 60 + now.getMinutes();
       const roundedMinutes = Math.ceil((currentTimeMinutes + 30) / 30) * 30;
       currentMinutes = Math.max(currentMinutes, roundedMinutes);
     }
-    
+
     while (currentMinutes < closingMinutes - 30) {
       const hour = Math.floor(currentMinutes / 60);
       const minute = currentMinutes % 60;
-      
+
       slots.push(
         `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
       );
-      
+
       currentMinutes += 30;
     }
-    
+
     return slots;
   };
 
@@ -239,33 +240,69 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
     <div className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="category">Kategori</Label>
-        <SelectExample />
+        <Select
+          onValueChange={handleCategoryChange}
+          value={selectedCategory?.toString() || ""}
+        >
+          <SelectTrigger id="category">
+            <div className="flex items-center justify-between pr-2">
+              <SelectValue placeholder="Kategori seçin" />
+              <CalendarIcon className="ml-2 h-5 w-5 text-gray-900" />
+            </div>
+          </SelectTrigger>
+          <SelectContent>
+            {isLoadingKategoriler ? (
+              <div className="p-2">
+                <Skeleton className="h-5 w-full" />
+                <Skeleton className="h-5 w-full mt-2" />
+              </div>
+            ) : (
+              kategoriler.map((kategori) => (
+                <SelectItem key={kategori.id} value={kategori.id.toString()}>
+                  {kategori.kategori_adi}
+                </SelectItem>
+              ))
+            )}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="service">Hizmet</Label>
-        <Select 
+        <Select
           onValueChange={(value) => setSelectedService(Number(value))}
           disabled={!selectedCategory || isLoadingIslemler}
           value={selectedService?.toString()}
         >
           <SelectTrigger id="service">
-            <SelectValue placeholder={!selectedCategory ? "Önce kategori seçin" : "Hizmet seçin"} />
+            <SelectValue
+              placeholder={
+                isFetchingTimes
+                  ? "Saatler yükleniyor..."
+                  : availableTimes.length === 0
+                  ? userRole === "customer" || !userRole
+                    ? "Seçilen tarihte müsait saat yok"
+                    : ""
+                  : "Saat seçin"
+              }
+            />
           </SelectTrigger>
           <SelectContent>
-            {isLoadingIslemler ? (
+            {isFetchingTimes ? (
               <div className="p-2">
                 <Skeleton className="h-5 w-full" />
                 <Skeleton className="h-5 w-full mt-2" />
               </div>
-            ) : islemler.length === 0 ? (
-              <SelectItem value="empty" disabled>
-                Bu kategoride işlem bulunamadı
-              </SelectItem>
+            ) : availableTimes.length === 0 ? (
+              userRole === "customer" || !userRole ? (
+                <SelectItem value="empty" disabled>
+                  Seçilen tarihte müsait saat yok
+                </SelectItem>
+              ) : null
             ) : (
-              islemler.map((islem) => (
-                <SelectItem key={islem.id} value={islem.id.toString()}>
-                  {islem.islem_adi} - {islem.fiyat} TL
+              availableTimes.map((time) => (
+                <SelectItem key={time} value={time}>
+                  {time}
                 </SelectItem>
               ))
             )}
@@ -275,7 +312,10 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
 
       <div className="space-y-2">
         <Label htmlFor="personel">Personel</Label>
-        <Select onValueChange={(value) => setSelectedPersonel(Number(value))} value={selectedPersonel?.toString() || ""}>
+        <Select
+          onValueChange={(value) => setSelectedPersonel(Number(value))}
+          value={selectedPersonel?.toString() || ""}
+        >
           <SelectTrigger id="personel">
             <SelectValue placeholder="Personel seçin" />
           </SelectTrigger>
@@ -299,9 +339,9 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
       <div className="space-y-2 relative">
         <Label htmlFor="date">Tarih</Label>
         <div className="relative flex items-center gap-2">
-          <Input 
-            id="date" 
-            type="date" 
+          <Input
+            id="date"
+            type="date"
             value={selectedDate}
             onChange={handleDateChange}
             placeholder="GG.AA.YYYY"
@@ -309,27 +349,22 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
           />
           <Popover open={showCalendar} onOpenChange={setShowCalendar}>
             <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                aria-label="Takvimi Aç/Kapat"
-                className="p-2"
-                type="button"
-              >
+              <Button variant="outline" aria-label="Takvimi Aç/Kapat" className="p-2" type="button">
                 <CalendarIcon className="h-5 w-5 text-gray-800" />
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0 bg-white rounded-md shadow-md">
-              <Calendar 
-                mode="single" 
-                selected={new Date(selectedDate)} 
+              <Calendar
+                mode="single"
+                selected={new Date(selectedDate)}
                 onSelect={(date) => {
                   if (date) {
-                    const formattedDate = format(date, 'yyyy-MM-dd');
+                    const formattedDate = format(date, "yyyy-MM-dd");
                     setSelectedDate(formattedDate);
                     fetchAvailableTimes(formattedDate);
                     setShowCalendar(false);
                   }
-                }} 
+                }}
                 locale={tr}
                 initialFocus
                 className="pointer-events-auto rounded-md bg-white"
@@ -343,13 +378,17 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
         <Label htmlFor="time">Saat</Label>
         <Select onValueChange={setSelectedTime} value={selectedTime}>
           <SelectTrigger id="time">
-            <SelectValue placeholder={
-              isFetchingTimes 
-                ? "Saatler yükleniyor..." 
-                : availableTimes.length === 0 
-                  ? (userRole === "customer" || !userRole ? "Seçilen tarihte müsait saat yok" : "")
+            <SelectValue
+              placeholder={
+                isFetchingTimes
+                  ? "Saatler yükleniyor..."
+                  : availableTimes.length === 0
+                  ? userRole === "customer" || !userRole
+                    ? "Seçilen tarihte müsait saat yok"
+                    : ""
                   : "Saat seçin"
-            } />
+              }
+            />
           </SelectTrigger>
           <SelectContent>
             {isFetchingTimes ? (
@@ -376,67 +415,27 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
 
       <div className="space-y-2">
         <Label htmlFor="phone">Telefon</Label>
-        <PhoneInputField 
-          id="phone" 
-          value={phone} 
-          onChange={setPhone} 
-          placeholder="05xx xxx xx xx" 
-        />
+        <PhoneInputField id="phone" value={phone} onChange={setPhone} placeholder="05xx xxx xx xx" />
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="notes">Notlar (Opsiyonel)</Label>
-        <Textarea 
-          id="notes" 
-          placeholder="Randevu hakkında notlar..." 
+        <Textarea
+          id="notes"
+          placeholder="Randevu hakkında notlar..."
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
         />
       </div>
 
       <div className="flex justify-between gap-4">
-        <Button 
-          variant="outline"
-          type="button"
-          onClick={handleUndo}
-        >
+        <Button variant="outline" type="button" onClick={handleUndo}>
           Geri Al
         </Button>
-        <Button 
-          className="flex-grow" 
-          onClick={handleCreateAppointment}
-          disabled={!isFormValid || isCreating}
-        >
+        <Button className="flex-grow" onClick={handleCreateAppointment} disabled={!isFormValid || isCreating}>
           {isCreating ? "Randevu Oluşturuluyor..." : "Randevu Oluştur"}
         </Button>
       </div>
     </div>
-  );
-}
-
-const SelectExample = () => {
-  return (
-    <Select onValueChange={handleCategoryChange} value={selectedCategory?.toString() || ""}>
-      <SelectTrigger id="category">
-        <div className="flex items-center justify-between pr-2">
-          <SelectValue placeholder="Kategori seçin" />
-          <CalendarIcon className="ml-2 h-5 w-5 text-gray-900" />
-        </div>
-      </SelectTrigger>
-      <SelectContent>
-        {isLoadingKategoriler ? (
-          <div className="p-2">
-            <Skeleton className="h-5 w-full" />
-            <Skeleton className="h-5 w-full mt-2" />
-          </div>
-        ) : (
-          kategoriler.map((kategori) => (
-            <SelectItem key={kategori.id} value={kategori.id.toString()}>
-              {kategori.kategori_adi}
-            </SelectItem>
-          ))
-        )}
-      </SelectContent>
-    </Select>
   );
 }

@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { QueryClient } from "@tanstack/react-query";
@@ -9,18 +9,27 @@ import { ShopContactCard } from "@/components/shop/ShopContactCard";
 import { ShopWorkingHoursCard } from "@/components/shop/ShopWorkingHoursCard";
 import { ShopGalleryCard } from "@/components/shop/ShopGalleryCard";
 import { ShopPersonnelCard } from "@/components/shop/ShopPersonnelCard";
+import { useNavigate } from "react-router-dom";
 
 export default function ShopHomePage() {
-  const { userRole, dukkanId } = useCustomerAuth();
+  const { userRole, dukkanId, refreshProfile } = useCustomerAuth();
   const queryClient = new QueryClient();
+  const navigate = useNavigate();
 
-  const { 
-    isletmeData, // fixed from dukkanData
-    loading, 
-    error, 
-    personelListesi, 
-    calisma_saatleri 
+  const {
+    isletmeData,
+    loading,
+    error,
+    personelListesi,
+    calisma_saatleri,
   } = useShopData(dukkanId);
+
+  useEffect(() => {
+    if (userRole === "staff" && !dukkanId) {
+      // staff without shop redirect to staff profile page immediately
+      navigate("/staff-profile", { replace: true });
+    }
+  }, [userRole, dukkanId, navigate]);
 
   if (loading) {
     return (
@@ -33,60 +42,53 @@ export default function ShopHomePage() {
   }
 
   if (error) {
-    return (
-      <StaffLayout>
-        <div className="container mx-auto p-6">
-          <div className="text-center">
-            <h2 className="text-2xl font-semibold mb-4">Bir hata oluştu</h2>
-            <p className="text-red-500 mb-4">{error}</p>
+    // Only show error if user is not staff (staff without shop handled above)
+    if (userRole !== "staff") {
+      return (
+        <StaffLayout>
+          <div className="container mx-auto p-6">
+            <div className="text-center">
+              <h2 className="text-2xl font-semibold mb-4">Bir hata oluştu</h2>
+              <p className="text-red-500 mb-4">{error}</p>
+            </div>
           </div>
-        </div>
-      </StaffLayout>
-    );
+        </StaffLayout>
+      );
+    }
+    // Staff with no shop should not see this error here
   }
 
   if (!isletmeData) {
-    return (
-      <StaffLayout>
-        <div className="container mx-auto p-6">
-          <div className="text-center">
-            <h2 className="text-2xl font-semibold mb-4">Henüz bir işletme bulunamadı</h2>
+    if (userRole !== "staff") {
+      return (
+        <StaffLayout>
+          <div className="container mx-auto p-6">
+            <div className="text-center">
+              <h2 className="text-2xl font-semibold mb-4">
+                Henüz bir işletme bulunamadı
+              </h2>
+            </div>
           </div>
-        </div>
-      </StaffLayout>
-    );
+        </StaffLayout>
+      );
+    }
+    // Staff without shop will be redirected above, so no UI here
   }
 
   return (
     <StaffLayout>
       <div className="container mx-auto px-4 py-6 space-y-6">
-        <ShopProfileHeader 
-          isletmeData={isletmeData} 
-          userRole={userRole} 
-          queryClient={queryClient} 
-        />
+        <ShopProfileHeader isletmeData={isletmeData} userRole={userRole} queryClient={queryClient} />
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-4 space-y-6">
             <ShopContactCard isletmeData={isletmeData} />
-            <ShopWorkingHoursCard 
-              calisma_saatleri={calisma_saatleri}
-              userRole={userRole}
-              dukkanId={dukkanId}
-            />
+            <ShopWorkingHoursCard calisma_saatleri={calisma_saatleri} userRole={userRole} dukkanId={dukkanId} />
           </div>
-          
+
           <div className="lg:col-span-8 space-y-6">
-            <ShopGalleryCard 
-              isletmeId={isletmeData.id}
-              userRole={userRole}
-              queryClient={queryClient}
-            />
-            
-            <ShopPersonnelCard 
-              personelListesi={personelListesi}
-              userRole={userRole}
-            />
+            <ShopGalleryCard isletmeId={isletmeData.id} userRole={userRole} queryClient={queryClient} />
+            <ShopPersonnelCard personelListesi={personelListesi} userRole={userRole} />
           </div>
         </div>
       </div>

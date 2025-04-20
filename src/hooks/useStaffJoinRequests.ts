@@ -17,7 +17,7 @@ export function useStaffJoinRequests() {
   // Fetch function to retrieve join requests
   const fetchRequests = async (): Promise<StaffJoinRequest[]> => {
     const { data, error } = await supabase
-      .from<StaffJoinRequest>("staff_join_requests")
+      .from("staff_join_requests")
       .select("*")
       .order("created_at", { ascending: false });
 
@@ -32,7 +32,7 @@ export function useStaffJoinRequests() {
     return data;
   };
 
-  // Added two generic arguments for useQuery (data type, error type)
+  // Fix useQuery generic: it expects two types: <TData, TError>
   const { data, isLoading, isError } = useQuery<StaffJoinRequest[], Error>({
     queryKey: ["staff_join_requests"],
     queryFn: fetchRequests,
