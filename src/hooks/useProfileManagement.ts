@@ -56,8 +56,7 @@ export function useProfileManagement(
             setDukkanId(staffShop.id);
             setDukkanAdi(staffShop.ad);
           } else {
-            // For staff without a shop, redirect to staff profile page,
-            // no toast error, no "shop not found" message
+            // Personel işletme yoksa sadece /staff-profile yönlendirme (toast ve hata mesajı yok)
             if (location.pathname !== "/staff-profile") {
               window.location.href = "/staff-profile";
             }

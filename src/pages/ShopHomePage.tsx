@@ -26,7 +26,7 @@ export default function ShopHomePage() {
 
   useEffect(() => {
     if (userRole === "staff" && !dukkanId) {
-      // staff without shop redirect to staff profile page immediately
+      // personel için işletme yoksa direkt staff profile sayfasına yönlendir
       navigate("/staff-profile", { replace: true });
     }
   }, [userRole, dukkanId, navigate]);
@@ -41,8 +41,8 @@ export default function ShopHomePage() {
     );
   }
 
+  // Hata varsa ve personel değilse göster, aksi halde gizle
   if (error) {
-    // Only show error if user is not staff (staff without shop handled above)
     if (userRole !== "staff") {
       return (
         <StaffLayout>
@@ -55,9 +55,9 @@ export default function ShopHomePage() {
         </StaffLayout>
       );
     }
-    // Staff with no shop should not see this error here
   }
 
+  // İşletme verisi yoksa ve personel değilse hata göster, personel ise boş dön
   if (!isletmeData) {
     if (userRole !== "staff") {
       return (
@@ -72,7 +72,8 @@ export default function ShopHomePage() {
         </StaffLayout>
       );
     }
-    // Staff without shop will be redirected above, so no UI here
+    // personel için işletme yoksa zaten yukarı useEffect ile yönlendirme var
+    return null;
   }
 
   return (
