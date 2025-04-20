@@ -225,7 +225,10 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
         <Label htmlFor="category">Kategori</Label>
         <Select onValueChange={(value) => setSelectedCategory(Number(value))} value={selectedCategory?.toString() || ""}>
           <SelectTrigger id="category">
-            <SelectValue placeholder="Kategori seçin" />
+            <div className="flex items-center justify-between pr-2">
+              <SelectValue placeholder="Kategori seçin" />
+              <CalendarIcon className="ml-2 h-5 w-5 text-gray-900" />
+            </div>
           </SelectTrigger>
           <SelectContent>
             {isLoadingKategoriler ? (
@@ -298,7 +301,7 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
         </Select>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-2 relative">
         <Label htmlFor="date">Tarih</Label>
         <div className="relative flex items-center gap-2">
           <Input 
@@ -317,10 +320,10 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
                 className="p-2"
                 type="button"
               >
-                <CalendarIcon className="h-5 w-5 text-gray-900" />
+                <CalendarIcon className="h-5 w-5 text-gray-800" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
+            <PopoverContent className="w-auto p-0 bg-white rounded-md shadow-md">
               <Calendar 
                 mode="single" 
                 selected={new Date(selectedDate)} 

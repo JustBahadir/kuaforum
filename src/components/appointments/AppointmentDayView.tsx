@@ -139,7 +139,7 @@ export function AppointmentDayView({
 
       {showCalendar && (
         <div className="mb-4">
-          <div className="p-3 pointer-events-auto border rounded-md max-w-sm">
+          <div className="p-3 pointer-events-auto border rounded-md max-w-sm bg-white">
             <Calendar
               mode="single"
               selected={selectedDate}
@@ -151,6 +151,7 @@ export function AppointmentDayView({
               }}
               locale={tr}
               initialFocus
+              className="bg-white rounded-md"
             />
           </div>
         </div>
@@ -179,7 +180,11 @@ export function AppointmentDayView({
             const isReturnedFromCancel = appWithExtras.isReturnedFromCancel === true;
             const isUndoable = appointment.durum === "iptal_edildi";
             return (
-              <Card key={appointment.id} className="overflow-hidden">
+              <Card key={appointment.id} 
+                className={`overflow-hidden ${
+                  isReturnedFromCancel ? "bg-[#FFE5E5]" : ""
+                }`}
+              >
                 <CardContent className="p-0">
                   <div className={`grid grid-cols-1 md:grid-cols-5 border-l-4 ${
                     appointment.durum === "tamamlandi" ? "border-green-500" : 
@@ -265,6 +270,9 @@ export function AppointmentDayView({
                           </Button>
                           {isReturnedFromCancel && (
                             <>
+                              <Badge variant="outline" className="ml-2 text-xs flex items-center gap-1 bg-pink-50 text-pink-600 border-pink-200 rounded-full px-2 py-[2px] select-none" >
+                                🔁 İptalden Döndü
+                              </Badge>
                               <CheckSquare className="text-green-600" />
                               <Button 
                                 variant="ghost"
