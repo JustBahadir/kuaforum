@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -78,7 +79,7 @@ export default function ProfileSetup() {
           profileData.gender &&
           profileData.shopname // check shopname presence
         ) {
-          if (profileData.role === "isletmeci") {
+          if (profileData.role === "admin") {
             navigate("/shop-home");
           } else if (profileData.role === "staff") {
             navigate("/staff-profile");
@@ -169,7 +170,7 @@ export default function ProfileSetup() {
         last_name: formData.lastName,
         phone: formData.phone,
         gender: formData.gender || null,
-        role: formData.role === "admin" ? "isletmeci" : "staff",
+        role: formData.role === "admin" ? "admin" : "staff",
         shopname: formData.role === "admin" ? formData.shopName.trim() : null,
       };
 
