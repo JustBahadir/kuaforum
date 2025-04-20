@@ -1,16 +1,14 @@
-
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Select,
   SelectContent,
   SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { supabase } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/button";
 
 export interface EducationTabProps {
   educationData: {
@@ -184,9 +182,9 @@ const EducationTab = ({
           value={educationData.ortaokuldurumu || ""}
         >
           <SelectTrigger className="w-full">
-            <SelectValue placeholder="Ortaokul mezuniyet durumunu seçiniz..." />
+            <SelectValue placeholder="Lütfen ortaokul durumunuzu seçiniz. Örn: Mezun, Devam Ediyor..." />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-white dark:bg-gray-800 z-50 max-h-60 overflow-y-auto">
             <SelectGroup>
               <SelectItem value="Mezun">Mezun</SelectItem>
               <SelectItem value="Devam Ediyor">Devam Ediyor</SelectItem>
@@ -195,7 +193,7 @@ const EducationTab = ({
           </SelectContent>
         </Select>
         <p className="text-xs text-gray-500 dark:text-gray-300 mt-1">
-          Ortaokul mezuniyet durumunuzu seçiniz. Örneğin "Mezun" seçerseniz diğer eğitim aşamalarına erişebilirsiniz.
+          Ortaokul durumunuzu seçiniz. "Mezun" veya "Devam Ediyor" ise sonraki eğitim aşamalarına erişebilirsiniz.
         </p>
       </div>
 
@@ -208,9 +206,9 @@ const EducationTab = ({
             value={educationData.lisedurumu || ""}
           >
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Lise mezuniyet durumunu seçiniz..." />
+              <SelectValue placeholder="Lütfen lise durumunuzu seçiniz. Örn: Mezun, Devam Ediyor..." />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white dark:bg-gray-800 z-50 max-h-60 overflow-y-auto">
               <SelectGroup>
                 <SelectItem value="Mezun">Mezun</SelectItem>
                 <SelectItem value="Devam Ediyor">Devam Ediyor</SelectItem>
@@ -219,7 +217,7 @@ const EducationTab = ({
             </SelectContent>
           </Select>
           <p className="text-xs text-gray-500 dark:text-gray-300 mt-1">
-            Lise mezuniyet durumunuzu seçiniz. "Mezun" ya da "Devam Ediyor" seçerseniz sonraki alanlar aktif olur.
+            Lise durumunuzu seçiniz. "Mezun" veya "Devam Ediyor" ise sonraki alanlar aktif olur.
           </p>
         </div>
       )}
@@ -235,7 +233,7 @@ const EducationTab = ({
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Lise türünüzü seçiniz..." />
             </SelectTrigger>
-            <SelectContent className="max-h-60 overflow-y-auto">
+            <SelectContent className="bg-white dark:bg-gray-800 z-50 max-h-60 overflow-y-auto">
               <SelectGroup>
                 {liseOptions.map((option) => (
                   <SelectItem key={option} value={option}>
@@ -246,7 +244,7 @@ const EducationTab = ({
             </SelectContent>
           </Select>
           <p className="text-xs text-gray-500 dark:text-gray-300 mt-1">
-            Lise türünü seçiniz. Mesleki lise seçerseniz mesleki branş alanı aktiflecektir.
+            Lise türünüzü seçiniz. Mesleki lise seçerseniz mesleki branş alanı aktif olur.
           </p>
         </div>
       )}
@@ -254,15 +252,15 @@ const EducationTab = ({
       {/* Mesleki Branş */}
       {showMeslekBrans && (
         <div>
-          <label className="block font-medium mb-1 text-black dark:text-white">Mesleki Branş</label>
+          <label className="block font-medium mb-1 text-white dark:text-white">Mesleki Branş</label>
           <input
             type="text"
             className="input-primary w-full bg-black text-white placeholder-gray-400"
             value={educationData.meslekibrans}
             onChange={(e) => onEducationChange("meslekibrans", e.target.value)}
-            placeholder="Örneğin Kuaförlük, Estetik..."
+            placeholder="Örneğin Kuaförlük, Estetik... Lütfen mesleki branşınızı detaylı yazınız."
           />
-          <p className="text-xs text-gray-500 dark:text-gray-300 mt-1">
+          <p className="text-xs text-gray-400 mt-1">
             Çok Programlı Anadolu Lisesi veya Mesleki ve Teknik Anadolu Lisesi için mesleki branşı detaylı olarak giriniz.
           </p>
         </div>
@@ -279,7 +277,7 @@ const EducationTab = ({
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Üniversite mezuniyet durumunuzu seçiniz..." />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white dark:bg-gray-800 z-50 max-h-60 overflow-y-auto">
               <SelectGroup>
                 <SelectItem value="Mezun">Mezun</SelectItem>
                 <SelectItem value="Devam Ediyor">Devam Ediyor</SelectItem>
@@ -289,7 +287,7 @@ const EducationTab = ({
             </SelectContent>
           </Select>
           <p className="text-xs text-gray-500 dark:text-gray-300 mt-1">
-            Üniversite mezuniyet durumunuzu seçiniz. "Mezun" ya da "Devam Ediyor" ise bölümünü belirtiniz.
+            Üniversite mezuniyet durumunuzu seçiniz. "Mezun" veya "Devam Ediyor" ise bölümünü belirtiniz.
           </p>
         </div>
       )}
@@ -306,7 +304,7 @@ const EducationTab = ({
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Üniversite bölümünüzü seçiniz..." />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white dark:bg-gray-800 z-50 max-h-60 overflow-y-auto">
               <SelectGroup>
                 {universiteBolumOptions.map((option) => (
                   <SelectItem key={option} value={option}>
@@ -317,14 +315,16 @@ const EducationTab = ({
             </SelectContent>
           </Select>
           <p className="text-xs text-gray-500 dark:text-gray-300 mt-1">
-            Üniversite bölümünü belirtiniz.
+            Üniversite bölümünü detaylı olarak belirtiniz.
           </p>
         </div>
       )}
 
       {/* Yeni Bölüm: Geçmiş Bilgileri - İş Yeri ve Görevler */}
       <div className="mt-8">
-        <h3 className="text-lg font-semibold border-b pb-2 mb-4 text-black dark:text-white">İş Yeri ve Görevler (Tecrübeler)</h3>
+        <h3 className="text-lg font-semibold border-b pb-2 mb-4 text-black dark:text-white">
+          İş Yeri ve Görevler (Tecrübeler)
+        </h3>
 
         <div className="flex gap-2 mb-3">
           <input
@@ -333,6 +333,7 @@ const EducationTab = ({
             className="input-primary flex-grow bg-black text-white placeholder-gray-400"
             value={isyeriInput}
             onChange={(e) => setIsyeriInput(e.target.value)}
+            disabled={isLoading}
           />
           <input
             type="text"
@@ -340,16 +341,21 @@ const EducationTab = ({
             className="input-primary flex-grow bg-black text-white placeholder-gray-400"
             value={pozisyonInput}
             onChange={(e) => setPozisyonInput(e.target.value)}
+            disabled={isLoading}
           />
-          <button
+          <Button
             type="button"
             onClick={handleAddExperience}
-            className="btn btn-primary self-center px-4 py-1"
+            className="self-center px-4 py-1"
+            variant="default"
+            disabled={isLoading}
           >
             Tecrübe Ekle
-          </button>
+          </Button>
         </div>
-        <p className="text-xs text-gray-500 dark:text-gray-300 mb-4">İş yeri ve görev bilgileri birlikte kaydedilir.</p>
+        <p className="text-xs text-gray-500 dark:text-gray-300 mb-4">
+          İş yeri ve görev bilgileri birlikte kaydedilir.
+        </p>
 
         {/* İş Yeri-Pozisyon Tablosu */}
         <table className="w-full table-auto border border-gray-300 dark:border-gray-700">
@@ -363,7 +369,9 @@ const EducationTab = ({
           <tbody className="text-black dark:text-white">
             {historyData.isyerleri.length === 0 ? (
               <tr>
-                <td colSpan={3} className="text-center p-4 italic text-gray-500 dark:text-gray-400">Henüz iş yeri ve görev bilgisi eklenmemiş.</td>
+                <td colSpan={3} className="text-center p-4 italic text-gray-500 dark:text-gray-400">
+                  Henüz iş yeri ve görev bilgisi eklenmemiş.
+                </td>
               </tr>
             ) : (
               historyData.isyerleri.map((item, index) => (
@@ -376,12 +384,11 @@ const EducationTab = ({
                       aria-label="Düzenle"
                       className="mr-2 text-purple-700 dark:text-purple-300 hover:text-purple-900"
                       onClick={() => {
-                        // For this example, edit will put values to inputs for update. Remove from list.
                         setIsyeriInput(item.isyeri);
                         setPozisyonInput(item.pozisyon);
-                        // Remove edited item for update
                         handleRemoveExperience(index);
                       }}
+                      disabled={isLoading}
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -397,6 +404,7 @@ const EducationTab = ({
                       aria-label="Sil"
                       className="text-red-600 hover:text-red-800"
                       onClick={() => handleRemoveExperience(index)}
+                      disabled={isLoading}
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -429,29 +437,40 @@ const EducationTab = ({
             className="input-primary flex-grow bg-black text-white placeholder-gray-400"
             value={belgeInput}
             onChange={(e) => setBelgeInput(e.target.value)}
+            disabled={isLoading}
           />
-          <button
+          <Button
             type="button"
             onClick={handleAddBelge}
-            className="btn btn-primary self-center px-4 py-1"
+            className="self-center px-4 py-1"
+            variant="default"
+            disabled={isLoading}
           >
             Belge Ekle
-          </button>
+          </Button>
         </div>
-        <p className="text-xs text-gray-500 dark:text-gray-300 mb-4">Belgeler tek başına kaydedilir.</p>
+        <p className="text-xs text-gray-500 dark:text-gray-300 mb-4">
+          Belgeler tek başına kaydedilir.
+        </p>
 
         {/* Belgeler Tablosu */}
         <table className="w-full table-auto border border-gray-300 dark:border-gray-700">
           <thead className="bg-gray-100 dark:bg-gray-900 text-black dark:text-white">
             <tr>
-              <th className="border border-gray-300 dark:border-gray-700 px-3 py-1 text-left">Belge Adı</th>
-              <th className="border border-gray-300 dark:border-gray-700 px-3 py-1 text-center">İşlemler</th>
+              <th className="border border-gray-300 dark:border-gray-700 px-3 py-1 text-left">
+                Belge Adı
+              </th>
+              <th className="border border-gray-300 dark:border-gray-700 px-3 py-1 text-center">
+                İşlemler
+              </th>
             </tr>
           </thead>
           <tbody className="text-black dark:text-white">
             {historyData.belgeler.length === 0 ? (
               <tr>
-                <td colSpan={2} className="text-center p-4 italic text-gray-500 dark:text-gray-400">Henüz belge eklenmemiş.</td>
+                <td colSpan={2} className="text-center p-4 italic text-gray-500 dark:text-gray-400">
+                  Henüz belge eklenmemiş.
+                </td>
               </tr>
             ) : (
               historyData.belgeler.map((item, index) => (
@@ -467,6 +486,7 @@ const EducationTab = ({
                         const newList = historyData.belgeler.filter((_, i) => i !== index);
                         onHistoryChange("belgeler", newList);
                       }}
+                      disabled={isLoading}
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -485,6 +505,7 @@ const EducationTab = ({
                         const newList = historyData.belgeler.filter((_, i) => i !== index);
                         onHistoryChange("belgeler", newList);
                       }}
+                      disabled={isLoading}
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -517,16 +538,21 @@ const EducationTab = ({
             className="input-primary flex-grow bg-black text-white placeholder-gray-400"
             value={yarismaInput}
             onChange={(e) => setYarismaInput(e.target.value)}
+            disabled={isLoading}
           />
-          <button
+          <Button
             type="button"
             onClick={handleAddYarisma}
-            className="btn btn-primary self-center px-4 py-1"
+            className="self-center px-4 py-1"
+            variant="default"
+            disabled={isLoading}
           >
             Yarışma Ekle
-          </button>
+          </Button>
         </div>
-        <p className="text-xs text-gray-500 dark:text-gray-300 mb-4">Yarışmalar tek başına kaydedilir.</p>
+        <p className="text-xs text-gray-500 dark:text-gray-300 mb-4">
+          Yarışmalar tek başına kaydedilir.
+        </p>
 
         {/* Yarışmalar Tablosu */}
         <table className="w-full table-auto border border-gray-300 dark:border-gray-700">
@@ -555,6 +581,7 @@ const EducationTab = ({
                         const newList = historyData.yarismalar.filter((_, i) => i !== index);
                         onHistoryChange("yarismalar", newList);
                       }}
+                      disabled={isLoading}
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -573,6 +600,7 @@ const EducationTab = ({
                         const newList = historyData.yarismalar.filter((_, i) => i !== index);
                         onHistoryChange("yarismalar", newList);
                       }}
+                      disabled={isLoading}
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -602,19 +630,20 @@ const EducationTab = ({
           value={historyData.cv}
           onChange={handleCvChange}
           className="input-primary w-full min-h-[120px] bg-black text-white placeholder-gray-400 resize-y"
-          placeholder="CV'nizi buraya giriniz..."
+          placeholder="CV'nizi detaylı ve anlaşılır şekilde buraya giriniz..."
+          disabled={isLoading}
         />
       </div>
 
       <div className="mt-6 flex justify-end">
-        <button
-          className="btn btn-primary px-6 py-2 rounded"
+        <Button
+          className="px-6 py-2 rounded"
           onClick={onSave}
           disabled={isLoading}
-          type="button"
+          variant="default"
         >
           {isLoading ? "Kaydediliyor..." : "Bilgileri Kaydet"}
-        </button>
+        </Button>
       </div>
     </div>
   );

@@ -1,4 +1,7 @@
 
+// Fix: pass missing props historyData and onHistoryChange to EducationTab
+// Fix: fix typings of historyData and educationData to match EducationTabProps
+
 import React, { useState } from "react";
 import { ProfileDisplay } from "@/components/customer-profile/ProfileDisplay";
 import StaffPersonalInfoTab from "@/pages/Profile/StaffPersonalInfoTab";
@@ -33,14 +36,14 @@ interface ProfileTabsProps {
     universitebolum: string;
   };
   historyData: {
-    isyerleri: string;
+    isyerleri: Array<{ isyeri?: string; pozisyon?: string }>;
     gorevpozisyon: string;
-    belgeler: string;
-    yarismalar: string;
+    belgeler: Array<{ belgeadi?: string }>;
+    yarismalar: Array<{ yarismaadi?: string }>;
     cv: string;
   };
   onEducationChange: (field: keyof ProfileTabsProps["educationData"], value: string) => void;
-  onHistoryChange: (field: keyof ProfileTabsProps["historyData"], value: string) => void;
+  onHistoryChange: (field: keyof ProfileTabsProps["historyData"], value: any) => void;
   onSaveEducationHistory: () => Promise<void>;
   isLoadingEducationHistory: boolean;
 }
@@ -58,7 +61,7 @@ const ProfileTabs = ({
   onEducationChange,
   onHistoryChange,
   onSaveEducationHistory,
-  isLoadingEducationHistory
+  isLoadingEducationHistory,
 }: ProfileTabsProps) => {
   // Ana view: "personalInfo" veya "educationHistory"
   const [mainView, setMainView] = useState<"personalInfo" | "educationHistory">("personalInfo");
@@ -153,6 +156,8 @@ const ProfileTabs = ({
               <EducationTab
                 educationData={educationData}
                 onEducationChange={onEducationChange}
+                historyData={historyData}
+                onHistoryChange={onHistoryChange}
                 onSave={onSaveEducationHistory}
                 isLoading={isLoadingEducationHistory}
               />
@@ -174,3 +179,4 @@ const ProfileTabs = ({
 };
 
 export default ProfileTabs;
+
