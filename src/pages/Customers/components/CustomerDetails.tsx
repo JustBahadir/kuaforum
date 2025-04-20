@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,6 +12,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { CustomerPersonalData } from "./CustomerPersonalData";
 import { CustomerPhotoGallery } from "./CustomerPhotoGallery";
 import { customerPersonalDataService } from "@/lib/supabase/services/customerPersonalDataService";
+import { Input } from "@/components/ui/input";
+import { formatPhoneNumber } from "@/utils/phoneFormatter";
 
 interface CustomerDetailsProps {
   customerId?: number;
@@ -61,7 +62,47 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
   });
 
   const isPointSystemEnabled = services.some((service: any) => service.puan > 0);
+
+  const [isEditing, setIsEditing] = useState(false);
   
+  const [formData, setFormData] = useState({
+    firstName: customer?.first_name || "",
+    lastName: customer?.last_name || "",
+    phone: customer?.phone || "",
+    birthdate: customer?.birthdate ? new Date(customer.birthdate).toISOString().split('T')[0] : "",
+    spouseName: customer?.spouse_name || "",
+    spouseBirthdate: customer?.spouse_birthdate ? new Date(customer.spouse_birthdate).toISOString().split('T')[0] : "",
+    anniversaryDate: customer?.anniversary_date ? new Date(customer.anniversary_date).toISOString().split('T')[0] : "",
+    childrenNames: customer?.children_names || []
+  });
+
+  useEffect(() => {
+    setFormData({
+      firstName: customer?.first_name || "",
+      lastName: customer?.last_name || "",
+      phone: customer?.phone || "",
+      birthdate: customer?.birthdate ? new Date(customer.birthdate).toISOString().split('T')[0] : "",
+      spouseName: customer?.spouse_name || "",
+      spouseBirthdate: customer?.spouse_birthdate ? new Date(customer.spouse_birthdate).toISOString().split('T')[0] : "",
+      anniversaryDate: customer?.anniversary_date ? new Date(customer.anniversary_date).toISOString().split('T')[0] : "",
+      childrenNames: customer?.children_names || []
+    });
+  }, [customer]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    if (name === "phone") {
+      const digitsOnly = value.replace(/\D/g, "").substring(0, 11);
+      setFormData(prev => ({ ...prev, phone: digitsOnly }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
+  };
+
+  const handleSave = async () => {
+    setIsEditing(false);
+  };
+
   const handleCreateAppointment = () => {
     if (customerId) {
       navigate(`/appointments?customerId=${customerId}&newAppointment=true`);
@@ -120,7 +161,128 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
               <CardTitle>Müşteri Bilgileri</CardTitle>
             </CardHeader>
             <CardContent>
-              <CustomerProfile customer={customerWithPersonalData} />
+              {isEditing ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-3 items-center border-b py-2">
+                    <div className="font-medium">İsim</div>
+                    <div className="col-span-2 grid grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        name="firstName"
+                        className="border rounded p-2 w-full"
+                        value={formData.firstName}
+                        onChange={handleInputChange}
+                        placeholder="Ad"
+                      />
+                      <input
+                        type="text"
+                        name="lastName"
+                        className="border rounded p-2 w-full"
+                        value={formData.lastName}
+                        onChange={handleInputChange}
+                        placeholder="Soyad"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 items-center border-b py-2">
+                    <div className="font-medium">Telefon</div>
+                    <div className="col-span-2">
+                      <Input
+                        id="phone"
+                        name="phone"
+                        type="tel"
+                        inputMode="tel"
+                        placeholder="05XX XXX XX XX"
+                        value={formatPhoneNumber(formData.phone)}
+                        onChange={handleInputChange}
+                        maxLength={15}
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 items-center border-b py-2">
+                    <div className="font-medium">Doğum Tarihi</div>
+                    <div className="col-span-2">
+                      <input
+                        type="date"
+                        name="birthdate"
+                        className="border rounded p-2 w-full"
+                        value={formData.birthdate}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 items-center border-b py-2">
+                    <div className="font-medium">Kayıt Tarihi</div>
+                    <div className="col-span-2">
+                      {new Date(customer.created_at).toLocaleDateString('tr-TR')}
+                    </div>
+                  </div>
+
+                  <div className="pt-4">
+                    <h4 className="font-medium text-md mb-2">Aile Bilgileri</h4>
+                  </div>
+
+                  <div className="grid grid-cols-3 items-center border-b py-2">
+                    <div className="font-medium">Eş İsmi</div>
+                    <div className="col-span-2">
+                      <input
+                        type="text"
+                        name="spouseName"
+                        className="border rounded p-2 w-full"
+                        value={formData.spouseName}
+                        onChange={handleInputChange}
+                        placeholder="Eş adı"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 items-center border-b py-2">
+                    <div className="font-medium">Eş Doğum Tarihi</div>
+                    <div className="col-span-2">
+                      <input
+                        type="date"
+                        name="spouseBirthdate"
+                        className="border rounded p-2 w-full"
+                        value={formData.spouseBirthdate}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 items-center border-b py-2">
+                    <div className="font-medium">Evlilik Yıldönümü</div>
+                    <div className="col-span-2">
+                      <input
+                        type="date"
+                        name="anniversaryDate"
+                        className="border rounded p-2 w-full"
+                        value={formData.anniversaryDate}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 items-start border-b py-2">
+                    <div className="font-medium pt-2">Çocuklar</div>
+                    <div className="col-span-2">
+                      {formData.childrenNames && formData.childrenNames.length > 0 
+                        ? formData.childrenNames.join(", ") 
+                        : "Belirtilmemiş"}
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setIsEditing(false)}>İptal</Button>
+                    <Button size="sm" onClick={handleSave}>Kaydet</Button>
+                  </div>
+                </div>
+              ) : (
+                <CustomerProfile customer={customerWithPersonalData} />
+              )}
             </CardContent>
           </Card>
         </TabsContent>
