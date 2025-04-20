@@ -37,7 +37,7 @@ export function useStaffJoinRequests() {
     return data as unknown as StaffJoinRequest[];
   };
 
-  const { data, isLoading, isError } = useQuery<StaffJoinRequest[], unknown>({
+  const { data, isLoading, isError } = useQuery<StaffJoinRequest[], unknown, StaffJoinRequest[]>({
     queryKey: ["staff_join_requests"],
     queryFn: fetchRequests,
   });
@@ -83,4 +83,3 @@ export function useStaffJoinRequests() {
 
   return { data, isLoading, isError, mutateStatus, addRequest };
 }
-
