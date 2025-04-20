@@ -10,8 +10,8 @@ import { CustomerProfile } from "./CustomerProfile";
 import { useQuery } from "@tanstack/react-query";
 import { musteriServisi, islemServisi } from "@/lib/supabase";
 import { useParams, useNavigate } from "react-router-dom";
-import { CustomerPersonalInfo } from "./CustomerPersonalData";
-import { CustomerPhotoGallery } from "./CustomerPhotoGallery";
+import { CustomerPersonalData } from "./CustomerPersonalData";
+import { CustomerPhotoGallery } from "./CustomerPhotoGallery"; // Ensure this import exists and is correct
 import { customerPersonalDataService } from "@/lib/supabase/services/customerPersonalDataService";
 import { PhoneInputField } from "./FormFields/PhoneInputField";
 
@@ -23,7 +23,7 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
   const [activeTab, setActiveTab] = useState("basic");
   const params = useParams<{ id: string }>();
   const navigate = useNavigate();
-
+  
   const customerId = propCustomerId !== undefined ? propCustomerId : params.id ? Number(params.id) : undefined;
 
   const { 
@@ -38,7 +38,7 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
     },
     enabled: !!customerId,
   });
-
+  
   const {
     data: personalData,
     isLoading: isLoadingPersonalData
@@ -51,6 +51,7 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
     enabled: !!customerId
   });
 
+  // Compose customer with personal data
   const customerWithPersonalData = customer && personalData ? {
     ...customer,
     ...personalData
@@ -64,11 +65,11 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
   const isPointSystemEnabled = services.some((service: any) => service.puan > 0);
 
   const [isEditing, setIsEditing] = useState(false);
-
+  
   const [formData, setFormData] = useState({
     firstName: customer?.first_name || "",
     lastName: customer?.last_name || "",
-    phone: customer?.phone ? String(customer.phone) : "",
+    phone: customer?.phone || "",
     birthdate: customer?.birthdate ? new Date(customer.birthdate).toISOString().split('T')[0] : "",
     spouseName: (customerWithPersonalData as any)?.spouse_name || "",
     spouseBirthdate: (customerWithPersonalData as any)?.spouse_birthdate ? new Date((customerWithPersonalData as any).spouse_birthdate).toISOString().split('T')[0] : "",
@@ -80,7 +81,7 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
     setFormData({
       firstName: customer?.first_name || "",
       lastName: customer?.last_name || "",
-      phone: customer?.phone ? String(customer.phone) : "",
+      phone: customer?.phone || "",
       birthdate: customer?.birthdate ? new Date(customer.birthdate).toISOString().split('T')[0] : "",
       spouseName: (customerWithPersonalData as any)?.spouse_name || "",
       spouseBirthdate: (customerWithPersonalData as any)?.spouse_birthdate ? new Date((customerWithPersonalData as any).spouse_birthdate).toISOString().split('T')[0] : "",
@@ -95,6 +96,7 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
   };
 
   const handlePhoneChange = (value: string) => {
+    // Only digits allowed, limit to 11 digits (handled by PhoneInputField)
     setFormData(prev => ({ ...prev, phone: value }));
   };
 
@@ -102,28 +104,32 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
     try {
       setIsEditing(false);
 
-      if (!customer || !customer.id) throw new Error("Customer ID is missing");
-
+      // Prepare update data: phone digits only (remove spaces)
       const phoneDigitsOnly = formData.phone.replace(/\D/g, '');
 
-      await musteriServisi.guncelle(customer.id, {
+      // Update basic customer info
+      await musteriServisi.guncelle(customer!.id, {
         first_name: formData.firstName,
-        last_name: formData.lastName || null,
-        phone: phoneDigitsOnly || null,
+        last_name: formData.lastName,
+        phone: phoneDigitsOnly,
         birthdate: formData.birthdate || null,
       });
 
-      await customerPersonalDataService.updateCustomerPersonalData(customer.id, {
-        customer_id: customer.id,
+      // Similarly update personal data
+      const { customerPersonalDataService } = await import('@/lib/supabase/services/customerPersonalDataService');
+      await customerPersonalDataService.updateCustomerPersonalData(customer!.id, {
+        customer_id: customer!.id,
         spouse_name: formData.spouseName || null,
         spouse_birthdate: formData.spouseBirthdate || null,
         anniversary_date: formData.anniversaryDate || null,
         children_names: formData.childrenNames || [],
+        // Assuming zodiacInfo calculation outside here or not needed in this simplified version
       });
 
+      // Optionally re-fetch or update local states
     } catch (error) {
       console.error("Müşteri güncelleme hatası:", error);
-      setIsEditing(true);
+      // Show error toast here if needed
     }
   };
 
@@ -178,7 +184,7 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
             <TabsTrigger value="loyalty">Sadakat & Puanlar</TabsTrigger>
           )}
         </TabsList>
-
+        
         <TabsContent value="basic">
           <Card>
             <CardHeader>
@@ -212,11 +218,12 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
                   <div className="grid grid-cols-3 items-center border-b py-2">
                     <div className="font-medium">Telefon</div>
                     <div className="col-span-2">
-                      <PhoneInputField
-                        value={formData.phone}
-                        onChange={handlePhoneChange}
-                        placeholder="05xx xxx xx xx"
-                        id="phone"
+                      <PhoneInputField 
+                        value={formData.phone} 
+                        onChange={handlePhoneChange} 
+                        placeholder="05xx xxx xx xx" 
+                        id="phone" 
+                        maxLength={15} // to accommodate spaces
                       />
                     </div>
                   </div>
@@ -312,7 +319,7 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
               <CardTitle>Detaylı Bilgiler</CardTitle>
             </CardHeader>
             <CardContent>
-              {customerId && <CustomerPersonalInfo customer={customerWithPersonalData as any} customerId={customerId} />}
+              {customerId && <CustomerPersonalData customerId={customerId} />}
             </CardContent>
           </Card>
         </TabsContent>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,7 +37,7 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
   const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState(initialDate || format(new Date(), 'yyyy-MM-dd'));
   const [selectedTime, setSelectedTime] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined);
+  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [selectedService, setSelectedService] = useState<number | null>(initialServiceId || null);
   const [selectedPersonel, setSelectedPersonel] = useState<number | null>(null);
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(initialCustomerId || null);
@@ -67,8 +66,8 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
   });
 
   const { data: islemler = [], isLoading: isLoadingIslemler } = useQuery({
-    queryKey: ['islemler', selectedCategory ? Number(selectedCategory) : undefined],
-    queryFn: () => islemServisi.kategoriIslemleriGetir(selectedCategory ? Number(selectedCategory) : 0),
+    queryKey: ['islemler', selectedCategory],
+    queryFn: () => islemServisi.kategoriIslemleriGetir(selectedCategory || 0),
     enabled: !!selectedCategory,
     staleTime: 300000
   });
@@ -223,7 +222,7 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
   const isFormValid = selectedDate && selectedTime && selectedService && selectedPersonel;
 
   const handleUndo = () => {
-    setSelectedCategory(undefined);
+    setSelectedCategory(null);
     setSelectedService(null);
     setSelectedPersonel(null);
     setSelectedDate(initialDate || format(new Date(), 'yyyy-MM-dd'));
@@ -236,10 +235,7 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
     <div className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="category">Kategori</Label>
-        <Select
-          onValueChange={(value) => setSelectedCategory(value)}
-          value={selectedCategory || ""}
-        >
+        <Select onValueChange={(value) => setSelectedCategory(Number(value))} value={selectedCategory?.toString() || ""}>
           <SelectTrigger id="category">
             <div className="flex items-center justify-between pr-2">
               <SelectValue placeholder="Kategori seçin" />
@@ -265,7 +261,7 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
 
       <div className="space-y-2">
         <Label htmlFor="service">Hizmet</Label>
-        <Select
+        <Select 
           onValueChange={(value) => setSelectedService(Number(value))}
           disabled={!selectedCategory || isLoadingIslemler}
           value={selectedService?.toString()}
@@ -296,10 +292,7 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
 
       <div className="space-y-2">
         <Label htmlFor="personel">Personel</Label>
-        <Select 
-          onValueChange={(value) => setSelectedPersonel(Number(value))} 
-          value={selectedPersonel !== null ? selectedPersonel.toString() : ""}
-        >
+        <Select onValueChange={(value) => setSelectedPersonel(Number(value))} value={selectedPersonel?.toString() || ""}>
           <SelectTrigger id="personel">
             <SelectValue placeholder="Personel seçin" />
           </SelectTrigger>

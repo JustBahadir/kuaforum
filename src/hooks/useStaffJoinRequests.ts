@@ -1,4 +1,6 @@
 
+// Fix useQuery generics and cast data properly
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -37,7 +39,7 @@ export function useStaffJoinRequests() {
     return data as unknown as StaffJoinRequest[];
   };
 
-  const { data, isLoading, isError } = useQuery<StaffJoinRequest[], unknown, StaffJoinRequest[]>({
+  const { data, isLoading, isError } = useQuery<StaffJoinRequest[], unknown>({
     queryKey: ["staff_join_requests"],
     queryFn: fetchRequests,
   });
@@ -83,3 +85,4 @@ export function useStaffJoinRequests() {
 
   return { data, isLoading, isError, mutateStatus, addRequest };
 }
+
