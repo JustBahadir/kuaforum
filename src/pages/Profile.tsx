@@ -1,3 +1,7 @@
+
+// Fix: Initialize historyData with empty arrays per type definition to avoid undefined 'isyerleri' error
+// Fix typing for historyData to match ProfileTabs and EducationTab expectations
+
 import React, { useState, useEffect } from "react";
 import { ProfileDisplay } from "@/components/customer-profile/ProfileDisplay";
 import { toast } from "sonner";
@@ -32,13 +36,16 @@ const Profile = () => {
     universitedurumu: "",
     universitebolum: ""
   });
+
+  // Properly initialize historyData with arrays to fix isyerleri access error
   const [historyData, setHistoryData] = useState({
-    isyerleri: "",
+    isyerleri: [] as Array<{ isyeri: string; pozisyon: string }>,
     gorevpozisyon: "",
-    belgeler: "",
-    yarismalar: "",
+    belgeler: [] as Array<{ belgeadi: string }>,
+    yarismalar: [] as Array<{ yarismaadi: string }>,
     cv: ""
   });
+
   const [loadingEduHist, setLoadingEduHist] = useState(false);
 
   useEffect(() => {
@@ -120,10 +127,10 @@ const Profile = () => {
 
         if (!histError && histData) {
           setHistoryData({
-            isyerleri: histData.isyerleri || "",
+            isyerleri: histData.isyerleri ?? [],
             gorevpozisyon: histData.gorevpozisyon || "",
-            belgeler: histData.belgeler || "",
-            yarismalar: histData.yarismalar || "",
+            belgeler: histData.belgeler ?? [],
+            yarismalar: histData.yarismalar ?? [],
             cv: histData.cv || ""
           });
         }
@@ -226,7 +233,7 @@ const Profile = () => {
   const handleEducationChange = (field: keyof typeof educationData, value: string) => {
     setEducationData(prev => ({ ...prev, [field]: value }));
   };
-  const handleHistoryChange = (field: keyof typeof historyData, value: string) => {
+  const handleHistoryChange = (field: keyof typeof historyData, value: any) => {
     setHistoryData(prev => ({ ...prev, [field]: value }));
   };
   const handleSaveEducationHistory = async () => {

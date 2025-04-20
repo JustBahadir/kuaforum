@@ -1,7 +1,3 @@
-
-// Fix: pass missing props historyData and onHistoryChange to EducationTab
-// Fix: fix typings of historyData and educationData to match EducationTabProps
-
 import React, { useState } from "react";
 import { ProfileDisplay } from "@/components/customer-profile/ProfileDisplay";
 import StaffPersonalInfoTab from "@/pages/Profile/StaffPersonalInfoTab";
@@ -36,10 +32,10 @@ interface ProfileTabsProps {
     universitebolum: string;
   };
   historyData: {
-    isyerleri: Array<{ isyeri?: string; pozisyon?: string }>;
+    isyerleri: Array<{ isyeri: string; pozisyon: string }>;
     gorevpozisyon: string;
-    belgeler: Array<{ belgeadi?: string }>;
-    yarismalar: Array<{ yarismaadi?: string }>;
+    belgeler: Array<{ belgeadi: string }>;
+    yarismalar: Array<{ yarismaadi: string }>;
     cv: string;
   };
   onEducationChange: (field: keyof ProfileTabsProps["educationData"], value: string) => void;
@@ -63,20 +59,15 @@ const ProfileTabs = ({
   onSaveEducationHistory,
   isLoadingEducationHistory,
 }: ProfileTabsProps) => {
-  // Ana view: "personalInfo" veya "educationHistory"
   const [mainView, setMainView] = useState<"personalInfo" | "educationHistory">("personalInfo");
-
-  // Alt sekme: sadece eğitim veya geçmiş gösterilecek
   const [subTab, setSubTab] = useState<"education" | "history">("education");
 
   return (
     <div className="max-w-4xl mx-auto px-4">
-      {/* Mevcut Bilgiler bölümü, sayfa doğal akışında, scrolla bağlı */}
       <div className="mb-6 bg-white rounded-md shadow-sm border border-gray-200 p-6">
         <ProfileDisplay {...profile} />
       </div>
 
-      {/* Ana butonlar */}
       <div className="mb-6 flex border border-gray-300 rounded-md overflow-hidden shadow-sm select-none">
         <button
           className={`flex-1 py-3 text-center font-semibold transition-colors duration-200 ${
@@ -107,7 +98,6 @@ const ProfileTabs = ({
         </button>
       </div>
 
-      {/* İçerik alanı */}
       <div>
         {mainView === "personalInfo" && (
           <StaffPersonalInfoTab
@@ -123,7 +113,6 @@ const ProfileTabs = ({
 
         {mainView === "educationHistory" && (
           <div>
-            {/* Alt sekmeler */}
             <nav className="flex border-b border-gray-300 mb-4">
               <button
                 onClick={() => setSubTab("education")}
@@ -151,13 +140,10 @@ const ProfileTabs = ({
               </button>
             </nav>
 
-            {/* Alt sekme içerikleri */}
             {subTab === "education" && (
               <EducationTab
                 educationData={educationData}
                 onEducationChange={onEducationChange}
-                historyData={historyData}
-                onHistoryChange={onHistoryChange}
                 onSave={onSaveEducationHistory}
                 isLoading={isLoadingEducationHistory}
               />
@@ -179,4 +165,3 @@ const ProfileTabs = ({
 };
 
 export default ProfileTabs;
-
