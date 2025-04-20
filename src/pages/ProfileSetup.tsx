@@ -64,12 +64,20 @@ export default function ProfileSetup() {
           shopName: metadata.shopname || "",
         }));
 
-        const { data: profileData } = await supabase
+        const { data: profileData, error: profileError } = await supabase
           .from("profiles")
           .select("id, role, first_name, last_name, phone, gender, shopname")
           .eq("id", user.id)
           .maybeSingle();
 
+        if (profileError) {
+          console.error("Profile fetch error:", profileError);
+          toast.error("Profil bilgileri alınırken bir hata oluştu.");
+          setLoading(false);
+          return;
+        }
+
+        // If profile exists and required fields present, redirect accordingly
         if (
           profileData &&
           profileData.first_name &&
@@ -79,6 +87,7 @@ export default function ProfileSetup() {
           profileData.gender &&
           profileData.shopname // check shopname presence
         ) {
+          // Navigate based on role
           if (profileData.role === "admin") {
             navigate("/shop-home");
           } else if (profileData.role === "staff") {
@@ -88,6 +97,9 @@ export default function ProfileSetup() {
           }
           return;
         }
+
+        // If profile incomplete, stay here for completion
+        setLoading(false);
       } catch (error) {
         console.error("Oturum kontrolü sırasında hata:", error);
         toast.error(
@@ -165,6 +177,7 @@ export default function ProfileSetup() {
     setSubmitting(true);
 
     try {
+      // Compose the update data ensuring role matches enum: 'admin' or 'staff'
       const updateData: Record<string, any> = {
         first_name: formData.firstName,
         last_name: formData.lastName,
@@ -197,7 +210,9 @@ export default function ProfileSetup() {
 
       toast.success("Profil başarıyla kaydedildi!");
 
+      // After successful save, navigate based on role
       if (formData.role === "admin") {
+        // For admins, if profile might still be incomplete (shopname?), allow staying here or redirect to setup page
         navigate("/shop-home");
       } else if (formData.role === "staff") {
         navigate("/staff-profile");
@@ -435,3 +450,4 @@ export default function ProfileSetup() {
     </div>
   );
 }
+
