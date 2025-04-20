@@ -4,7 +4,7 @@ import { format, addDays, subDays, isSameDay, isYesterday, isToday, isTomorrow, 
 import { tr } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronLeft, ChevronRight, CheckSquare, XSquare, Info } from "lucide-react";
+import { ChevronLeft, ChevronRight, CheckSquare, XSquare, Info, RefreshCw } from "lucide-react";
 import { Randevu } from "@/lib/supabase/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge"; 
@@ -38,6 +38,7 @@ export function AppointmentDayView({
   onUndoCancelClick
 }: AppointmentDayViewProps) {
   const [serviceNames, setServiceNames] = useState<Record<number, string>>({});
+  const [showCalendar, setShowCalendar] = useState(false);
   
   useEffect(() => {
     const fetchServiceNames = async () => {
@@ -106,6 +107,9 @@ export function AppointmentDayView({
 
   const dayLabel = getDayLabel(selectedDate);
 
+  // Calendar toggle button handler
+  const toggleCalendar = () => setShowCalendar(prev => !prev);
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between mb-4">
@@ -121,12 +125,44 @@ export function AppointmentDayView({
           <Button variant="outline" size="sm" onClick={handleToday}>
             Bugüne Git
           </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="ml-2"
+            onClick={toggleCalendar}
+            aria-label="Takvimi Aç/Kapat"
+            title="Takvimi Aç/Kapat"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </Button>
         </div>
         
         <Button variant="outline" size="icon" onClick={handleNextDay}>
           <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
+
+      {showCalendar && (
+        <div className="mb-4">
+          {/* Reuse Shadcn UI Calendar component */}
+          {/* We wrap it in div with pointer-events-auto for interactivity */}
+          <div className="p-3 pointer-events-auto border rounded-md max-w-sm">
+            {/* On selecting a date, update selectedDate and close calendar */}
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={(date) => {
+                if (date) {
+                  onDateChange(date);
+                  setShowCalendar(false);
+                }
+              }}
+              locale={tr}
+              initialFocus
+            />
+          </div>
+        </div>
+      )}
 
       {isLoading ? (
         <div className="space-y-4">
@@ -147,7 +183,7 @@ export function AppointmentDayView({
       ) : (
         <div className="space-y-4">
           {sortedAppointments.map((appointment) => {
-            const isReturnedFromCancel = appointment.durum === "onaylandi" && appointment.isReturnedFromCancel;
+            const isReturnedFromCancel = (appointment as any).isReturnedFromCancel === true;
             const isUndoable = appointment.durum === "iptal_edildi";
             return (
               <Card key={appointment.id} className="overflow-hidden">
@@ -243,6 +279,7 @@ export function AppointmentDayView({
                                 className="ml-1 text-blue-600"
                                 onClick={() => alert("İptalden dönen randevu")}
                                 aria-label="İptalden dönen randevu hakkında bilgi"
+                                title="İptalden dönen randevu"
                               >
                                 <Info className="h-5 w-5" />
                               </Button>

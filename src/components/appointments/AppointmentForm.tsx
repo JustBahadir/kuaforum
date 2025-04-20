@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +9,7 @@ import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
 import { personelServisi, randevuServisi } from "@/lib/supabase";
 import { kategoriServisi } from "@/lib/supabase/services/kategoriServisi";
 import { islemServisi } from "@/lib/supabase/services/islemServisi";
@@ -33,6 +35,7 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
   const [notes, setNotes] = useState("");
   const [availableTimes, setAvailableTimes] = useState<string[]>([]);
   const [isFetchingTimes, setIsFetchingTimes] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
   
   const { data: personeller = [], isLoading: isLoadingPersoneller } = useQuery({
     queryKey: ['personeller'],
@@ -91,11 +94,13 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
       console.log(`Fetching available times for date: ${date}`);
       
       const selected = new Date(date);
-      const now = new Date();
-      const isToday = selected.getDate() === now.getDate() && 
-                      selected.getMonth() === now.getMonth() && 
-                      selected.getFullYear() === now.getFullYear();
+      // Esneklik için isToday kontrolü kaldırıldı
+      // const now = new Date();
+      // const isToday = selected.getDate() === now.getDate() && 
+      //                 selected.getMonth() === now.getMonth() && 
+      //                 selected.getFullYear() === now.getFullYear();
       
+      // Bu nedenle, saatlerin her zaman tamamı veya çalışma saatleri gösterilecek
       const dayOfWeek = selected.getDay();
       const dayNames = ["pazar", "pazartesi", "sali", "carsamba", "persembe", "cuma", "cumartesi"];
       const dayName = dayNames[dayOfWeek];
@@ -114,14 +119,13 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
         return;
       }
       
-      const slots = generateTimeSlots(dayHours.acilis, dayHours.kapanis, isToday);
+      const slots = generateTimeSlots(dayHours.acilis, dayHours.kapanis, false); // always false to allow all times confidently
       console.log("Generated time slots:", slots);
       setAvailableTimes(slots);
     } catch (error) {
       console.error("Error fetching available times:", error);
       // Fallback
-      const isToday = new Date(date).toDateString() === new Date().toDateString();
-      const defaultSlots = generateTimeSlots('09:00', '19:00', isToday);
+      const defaultSlots = generateTimeSlots('09:00', '19:00', false);
       console.log("Using fallback time slots:", defaultSlots);
       setAvailableTimes(defaultSlots);
     } finally {
@@ -142,7 +146,10 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
     setSelectedDate(date);
     fetchAvailableTimes(date);
   };
-  
+
+  // Calendar toggle handler
+  const toggleCalendar = () => setShowCalendar(prev => !prev);
+
   const { mutate: createAppointment, isPending: isCreating } = useMutation({
     mutationFn: async () => {
       if (!dukkanId || !userId || !selectedPersonel || !selectedService) {
@@ -293,7 +300,8 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
           type="date" 
           value={selectedDate}
           onChange={handleDateChange}
-          min={format(new Date(), 'yyyy-MM-dd')}
+          min={undefined /* min tarih kaldırıldı */}
+          placeholder="GG.AA.YYYY"
         />
       </div>
       
@@ -305,7 +313,7 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
               isFetchingTimes 
                 ? "Saatler yükleniyor..." 
                 : availableTimes.length === 0 
-                  ? "Seçilen tarihte müsait saat yok" 
+                  ? "Saat seçin" 
                   : "Saat seçin"
             } />
           </SelectTrigger>
@@ -316,9 +324,8 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
                 <Skeleton className="h-5 w-full mt-2" />
               </div>
             ) : availableTimes.length === 0 ? (
-              <SelectItem value="empty" disabled>
-                Seçilen tarihte müsait saat yok
-              </SelectItem>
+              // Saat yoksa boş bırakıyoruz, artık hata göstermiyoruz
+              null
             ) : (
               availableTimes.map((time) => (
                 <SelectItem key={time} value={time}>
@@ -346,6 +353,34 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
         disabled={!isFormValid || isCreating}
       >
         {isCreating ? "Randevu Oluşturuluyor..." : "Randevu Oluştur"}
+      </Button>
+
+      {showCalendar && (
+        <div className="mb-4">
+          <div className="p-3 pointer-events-auto border rounded-md max-w-sm">
+            <Calendar
+              mode="single"
+              selected={selectedDate ? new Date(selectedDate) : undefined}
+              onSelect={(date) => {
+                if (date) {
+                  setSelectedDate(format(date, 'yyyy-MM-dd'));
+                  fetchAvailableTimes(format(date, 'yyyy-MM-dd'));
+                  setShowCalendar(false);
+                }
+              }}
+              locale={tr}
+              initialFocus
+            />
+          </div>
+        </div>
+      )}
+      
+      <Button 
+        variant="outline"
+        size="sm"
+        onClick={toggleCalendar}
+      >
+        Takvimi Aç/Kapat
       </Button>
     </div>
   );
