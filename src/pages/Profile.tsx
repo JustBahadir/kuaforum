@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { ProfileDisplay } from "@/components/customer-profile/ProfileDisplay";
 import { toast } from "sonner";
@@ -25,7 +24,6 @@ const Profile = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Education and history states for Pre-registration tab
   const [educationData, setEducationData] = useState({
     ortaokuldurumu: "",
     lisedurumu: "",
@@ -72,7 +70,6 @@ const Profile = () => {
       }));
 
       try {
-        // Fetch profile table data to override if exists
         const profileData = await profilServisi.getir();
 
         if (profileData) {
@@ -89,10 +86,8 @@ const Profile = () => {
           }));
         }
       } catch {
-        // Ignore if fetch fails
       }
 
-      // Fetch education and history data for staff
       setLoadingEduHist(true);
       try {
         if (!user.id) {
@@ -237,35 +232,45 @@ const Profile = () => {
   const handleSaveEducationHistory = async () => {
     setLoadingEduHist(true);
     try {
-      const { data: { user }, error: userErr } = await supabase.auth.getUser();
+      const {
+        data: { user },
+        error: userErr,
+      } = await supabase.auth.getUser();
       if (userErr || !user) {
         toast.error("Kullanıcı bilgisi alınamadı");
         setLoadingEduHist(false);
         return;
       }
 
-      const upsertEducation = supabase
+      const upsertEducationPromise = supabase
         .from("staff_education")
-        .upsert({
-          personel_id: user.id,
-          ...educationData,
-          updated_at: new Date().toISOString()
-        }, { onConflict: "personel_id" });
+        .upsert(
+          {
+            personel_id: user.id,
+            ...educationData,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "personel_id" }
+        );
 
-      const upsertHistory = supabase
+      const upsertHistoryPromise = supabase
         .from("staff_history")
-        .upsert({
-          personel_id: user.id,
-          ...historyData,
-          updated_at: new Date().toISOString()
-        }, { onConflict: "personel_id" });
+        .upsert(
+          {
+            personel_id: user.id,
+            ...historyData,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "personel_id" }
+        );
 
-      const [eduResult, histResult] = await Promise.all([upsertEducation, upsertHistory]);
-      const [eduData, eduError] = eduResult;
-      const [histData, histError] = histResult;
+      const [eduResult, histResult] = await Promise.all([
+        upsertEducationPromise,
+        upsertHistoryPromise,
+      ]);
 
-      if (eduError || histError) {
-        console.error("Error saving education/history:", eduError || histError);
+      if (eduResult.error || histResult.error) {
+        console.error("Error saving education/history:", eduResult.error || histResult.error);
         toast.error("Eğitim ve geçmiş bilgileri kaydedilemedi");
       } else {
         toast.success("Eğitim ve geçmiş bilgileri başarıyla kaydedildi");
@@ -310,4 +315,3 @@ const Profile = () => {
 };
 
 export default Profile;
-

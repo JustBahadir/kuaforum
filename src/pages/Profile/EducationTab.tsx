@@ -52,11 +52,13 @@ const EducationTab = ({
   isLoading,
 }: EducationTabProps) => {
   // Determine visibility based on selections
-  const ortaokulBitirdi = educationData.ortaokuldurumu.toLowerCase().includes("mezun") ||
+  const ortaokulBitirdi =
+    educationData.ortaokuldurumu.toLowerCase().includes("mezun") ||
     educationData.ortaokuldurumu.toLowerCase().includes("bitiriyor") ||
     educationData.ortaokuldurumu.toLowerCase().includes("devam ediyor");
 
-  const liseBitirdi = educationData.lisedurumu.toLowerCase().includes("mezun") ||
+  const liseBitirdi =
+    educationData.lisedurumu.toLowerCase().includes("mezun") ||
     educationData.lisedurumu.toLowerCase().includes("bitiriyor") ||
     educationData.lisedurumu.toLowerCase().includes("devam ediyor");
 
@@ -156,7 +158,7 @@ const EducationTab = ({
           <label className="block font-medium mb-1">Üniversite Durumu</label>
           <Select
             onValueChange={(value) => onEducationChange("universitedurumu", value)}
-            value={educationData.universitedurumu}
+            value={educationData.universitedurumu || "Yok"}
           >
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Seçiniz..." />
@@ -166,7 +168,7 @@ const EducationTab = ({
                 <SelectItem value="Mezun">Mezun</SelectItem>
                 <SelectItem value="Devam Ediyor">Devam Ediyor</SelectItem>
                 <SelectItem value="Bitirmedi">Bitirmedi</SelectItem>
-                <SelectItem value="">Yok</SelectItem>
+                <SelectItem value="Yok">Yok</SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>
@@ -213,4 +215,5 @@ const EducationTab = ({
 };
 
 export default EducationTab;
+
 
