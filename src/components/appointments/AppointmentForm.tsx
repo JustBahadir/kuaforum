@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,10 +8,8 @@ import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
-// Import the Turkish locale
 import { tr } from "date-fns/locale";
-
-import { Calendar } from "@/components/ui/calendar";
+import { Calendar as CalendarIcon } from "lucide-react";
 import { personelServisi, randevuServisi } from "@/lib/supabase";
 import { kategoriServisi } from "@/lib/supabase/services/kategoriServisi";
 import { islemServisi } from "@/lib/supabase/services/islemServisi";
@@ -40,29 +37,27 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
   const [availableTimes, setAvailableTimes] = useState<string[]>([]);
   const [isFetchingTimes, setIsFetchingTimes] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
-  
-  // For phone number input change if you have one to demonstrate, else leaving it here for possible reuse.
   const [phone, setPhone] = React.useState("");
 
   const { data: personeller = [], isLoading: isLoadingPersoneller } = useQuery({
     queryKey: ['personeller'],
     queryFn: personelServisi.hepsiniGetir,
-    staleTime: 300000 // 5 minutes
+    staleTime: 300000
   });
-  
+
   const { data: kategoriler = [], isLoading: isLoadingKategoriler } = useQuery({
     queryKey: ['kategoriler'],
     queryFn: kategoriServisi.hepsiniGetir,
-    staleTime: 300000 // 5 minutes
+    staleTime: 300000
   });
-  
+
   const { data: islemler = [], isLoading: isLoadingIslemler } = useQuery({
     queryKey: ['islemler', selectedCategory],
     queryFn: () => islemServisi.kategoriIslemleriGetir(selectedCategory || 0),
     enabled: !!selectedCategory,
-    staleTime: 300000 // 5 minutes
+    staleTime: 300000
   });
-  
+
   const generateTimeSlots = (openingTime: string, closingTime: string, isToday: boolean) => {
     const slots = [];
     const [openHour, openMinute] = openingTime.split(':').map(Number);
@@ -74,7 +69,6 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
     if (isToday) {
       const now = new Date();
       const currentTimeMinutes = now.getHours() * 60 + now.getMinutes();
-      // Add buffer to current time (30 min)
       const roundedMinutes = Math.ceil((currentTimeMinutes + 30) / 30) * 30;
       currentMinutes = Math.max(currentMinutes, roundedMinutes);
     }
@@ -92,67 +86,76 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
     
     return slots;
   };
-  
+
   const fetchAvailableTimes = async (date: string) => {
-    if (!dukkanId) return;
-    
+    if (!dukkanId) {
+      setAvailableTimes([]);
+      return;
+    }
+
     try {
       setIsFetchingTimes(true);
-      console.log(`Fetching available times for date: ${date}`);
-      
       const selected = new Date(date);
-      // Allow past dates now (do not block)
       const now = new Date();
-      // Determine if selected date is today
       const isToday = selected.toDateString() === now.toDateString();
-      
+
       const dayOfWeek = selected.getDay();
       const dayNames = ["pazar", "pazartesi", "sali", "carsamba", "persembe", "cuma", "cumartesi"];
       const dayName = dayNames[dayOfWeek];
-      
-      console.log(`Day of week: ${dayName}, Dukkan ID: ${dukkanId}`);
-      
+
       const workingHours = await calismaSaatleriServisi.dukkanSaatleriGetir(dukkanId);
-      console.log("Working hours retrieved:", workingHours);
-      
+
       const dayHours = workingHours.find((h: CalismaSaati) => h.gun === dayName);
-      console.log("Hours for this day:", dayHours);
-      
+
       if (!dayHours || dayHours.kapali || !dayHours.acilis || !dayHours.kapanis) {
-        console.log("Shop is closed or working hours not set for this day");
         setAvailableTimes([]);
         return;
       }
-      
-      const slots = generateTimeSlots(dayHours.acilis, dayHours.kapanis, isToday);
-      console.log("Generated time slots:", slots);
+
+      const slots = [];
+      const [openHour, openMinute] = dayHours.acilis.split(':').map(Number);
+      const [closeHour, closeMinute] = dayHours.kapanis.split(':').map(Number);
+
+      let currentMinutes = openHour * 60 + openMinute;
+      const closingMinutes = closeHour * 60 + closeMinute;
+
+      while (currentMinutes < closingMinutes) {
+        const hour = Math.floor(currentMinutes / 60);
+        const minute = currentMinutes % 60;
+        slots.push(`${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`);
+        currentMinutes += 30;
+      }
+
       setAvailableTimes(slots);
     } catch (error) {
       console.error("Error fetching available times:", error);
-      // Fallback
-      const defaultSlots = generateTimeSlots('09:00', '19:00', false);
-      console.log("Using fallback time slots:", defaultSlots);
-      setAvailableTimes(defaultSlots);
+      const fallbackSlots = [];
+      let min = 9 * 60;
+      const max = 19 * 60;
+      while (min < max) {
+        const h = Math.floor(min / 60);
+        const m = min % 60;
+        fallbackSlots.push(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`);
+        min += 30;
+      }
+      setAvailableTimes(fallbackSlots);
     } finally {
       setIsFetchingTimes(false);
     }
   };
-  
-  // Force fetch times when component mounts or date changes
+
   useEffect(() => {
     if (selectedDate) {
       fetchAvailableTimes(selectedDate);
     }
   }, [selectedDate, dukkanId]);
-  
-  // Handle date change
+
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const date = e.target.value;
     setSelectedDate(date);
     fetchAvailableTimes(date);
   };
 
-  // Calendar toggle handler
   const toggleCalendar = () => setShowCalendar(prev => !prev);
 
   const { mutate: createAppointment, isPending: isCreating } = useMutation({
@@ -160,7 +163,7 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
       if (!dukkanId || !userId || !selectedPersonel || !selectedService) {
         throw new Error("Gerekli bilgiler eksik");
       }
-      
+
       const randevuData = {
         dukkan_id: dukkanId,
         customer_id: userId,
@@ -171,19 +174,17 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
         islemler: [selectedService],
         notlar: notes
       };
-      
+
       return randevuServisi.ekle(randevuData);
     },
     onSuccess: (data) => {
-      // Force update shop statistics
       personelIslemleriServisi.updateShopStatistics().catch(error => {
         console.error("Error updating statistics after appointment creation:", error);
       });
-      
-      // Invalidate all relevant queries
+
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
       queryClient.invalidateQueries({ queryKey: ['shop-statistics'] });
-      
+
       toast.success("Randevu başarıyla oluşturuldu");
       onAppointmentCreated(data);
     },
@@ -192,38 +193,35 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
       toast.error(`Randevu eklenirken bir hata oluştu: ${error.message || "Bilinmeyen hata"}`);
     }
   });
-  
+
   const handleCreateAppointment = () => {
     if (!selectedDate) {
       toast.error("Lütfen bir tarih seçin");
       return;
     }
-    
+
     if (!selectedTime) {
-      // Show error only if userRole is customer (not staff/admin)
       if (userRole === "customer" || !userRole) {
         toast.error("Lütfen bir saat seçin");
         return;
       }
     }
-    
+
     if (!selectedService) {
       toast.error("Lütfen bir hizmet seçin");
       return;
     }
-    
+
     if (!selectedPersonel) {
       toast.error("Lütfen bir personel seçin");
       return;
     }
-    
+
     createAppointment();
   };
-  
+
   const isFormValid = selectedDate && selectedTime && selectedService && selectedPersonel;
 
-  // Undo button logic (if we had something to undo, here is a placeholder, since no clear undo action was provided)
-  // For now, I restore a simple "Geri Al" button that resets fields to default or initial state
   const handleUndo = () => {
     setSelectedCategory(null);
     setSelectedService(null);
@@ -257,7 +255,7 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
           </SelectContent>
         </Select>
       </div>
-      
+
       <div className="space-y-2">
         <Label htmlFor="service">Hizmet</Label>
         <Select 
@@ -288,7 +286,7 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
           </SelectContent>
         </Select>
       </div>
-      
+
       <div className="space-y-2">
         <Label htmlFor="personel">Personel</Label>
         <Select onValueChange={(value) => setSelectedPersonel(Number(value))} value={selectedPersonel?.toString() || ""}>
@@ -311,18 +309,51 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
           </SelectContent>
         </Select>
       </div>
-      
+
       <div className="space-y-2">
         <Label htmlFor="date">Tarih</Label>
-        <Input 
-          id="date" 
-          type="date" 
-          value={selectedDate}
-          onChange={handleDateChange}
-          placeholder="GG.AA.YYYY"
-        />
+        <div className="relative flex items-center gap-2">
+          <Input 
+            id="date" 
+            type="date" 
+            value={selectedDate}
+            onChange={handleDateChange}
+            placeholder="GG.AA.YYYY"
+            className="flex-grow"
+          />
+          <button 
+            type="button"
+            aria-label="Takvimi Aç/Kapat"
+            onClick={toggleCalendar}
+            className="inline-flex items-center justify-center p-2 rounded border border-input bg-background hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1"
+          >
+            <CalendarIcon className="h-5 w-5" />
+          </button>
+        </div>
       </div>
-      
+
+      {showCalendar && (
+        <div className="mb-4">
+          <div className="p-3 pointer-events-auto border rounded-md max-w-sm">
+            <Calendar
+              mode="single"
+              selected={selectedDate ? new Date(selectedDate) : undefined}
+              onSelect={(date) => {
+                if (date) {
+                  const formattedDate = format(date, 'yyyy-MM-dd');
+                  setSelectedDate(formattedDate);
+                  fetchAvailableTimes(formattedDate);
+                  setShowCalendar(false);
+                }
+              }}
+              locale={tr}
+              initialFocus
+              className="pointer-events-auto"
+            />
+          </div>
+        </div>
+      )}
+
       <div className="space-y-2">
         <Label htmlFor="time">Saat</Label>
         <Select onValueChange={setSelectedTime} value={selectedTime}>
@@ -357,7 +388,17 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
           </SelectContent>
         </Select>
       </div>
-      
+
+      <div className="space-y-2">
+        <Label htmlFor="phone">Telefon</Label>
+        <PhoneInput 
+          id="phone" 
+          value={phone} 
+          onChange={setPhone} 
+          placeholder="Telefon numarası"
+        />
+      </div>
+
       <div className="space-y-2">
         <Label htmlFor="notes">Notlar (Opsiyonel)</Label>
         <Textarea 
@@ -367,7 +408,7 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
           onChange={(e) => setNotes(e.target.value)}
         />
       </div>
-      
+
       <div className="flex justify-between gap-4">
         <Button 
           variant="outline"
@@ -384,35 +425,6 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
           {isCreating ? "Randevu Oluşturuluyor..." : "Randevu Oluştur"}
         </Button>
       </div>
-      
-      {showCalendar && (
-        <div className="mb-4">
-          <div className="p-3 pointer-events-auto border rounded-md max-w-sm">
-            <Calendar
-              mode="single"
-              selected={selectedDate ? new Date(selectedDate) : undefined}
-              onSelect={(date) => {
-                if (date) {
-                  setSelectedDate(format(date, 'yyyy-MM-dd'));
-                  fetchAvailableTimes(format(date, 'yyyy-MM-dd'));
-                  setShowCalendar(false);
-                }
-              }}
-              locale={tr}
-              initialFocus
-            />
-          </div>
-        </div>
-      )}
-      
-      <Button 
-        variant="outline"
-        size="sm"
-        onClick={toggleCalendar}
-      >
-        Takvimi Aç/Kapat
-      </Button>
     </div>
   );
 }
-

@@ -262,17 +262,17 @@ export function AppointmentDayView({
                           >
                             <Undo className="h-4 w-4" /> Geri Al
                           </Button>
-
                           {isReturnedFromCancel && (
                             <>
                               <CheckSquare className="text-green-600" />
                               <Button 
                                 variant="ghost"
                                 size="icon"
-                                className="ml-1 text-blue-600"
-                                onClick={() => alert("İptalden dönen randevu")}
+                                className="ml-1 text-blue-600 cursor-default"
                                 aria-label="İptalden dönen randevu hakkında bilgi"
                                 title="İptalden dönen randevu"
+                                tabIndex={-1}
+                                disabled
                               >
                                 <Info className="h-5 w-5" />
                               </Button>
