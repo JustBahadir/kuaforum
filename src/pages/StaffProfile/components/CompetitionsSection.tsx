@@ -4,7 +4,11 @@ import { Button } from "@/components/ui/button";
 
 interface HistoryDataProps {
   historyData: {
+    isyerleri: string[];
+    gorevpozisyon: string[];
+    belgeler: string[];
     yarismalar: string[];
+    cv: string;
     _newYarisma?: string;
   };
   setHistoryData: React.Dispatch<React.SetStateAction<any>>;
@@ -71,7 +75,7 @@ export default function CompetitionsSection({
         {historyData.yarismalar.map((yarisma, idx) => (
           <li key={idx} className="flex justify-between items-center">
             <span>{yarisma}</span>
-            <Button size="xs" variant="ghost" onClick={() => removeYarisma(idx)}>
+            <Button size="sm" variant="ghost" onClick={() => removeYarisma(idx)}>
               Sil
             </Button>
           </li>
@@ -92,4 +96,3 @@ export default function CompetitionsSection({
     </div>
   );
 }
-

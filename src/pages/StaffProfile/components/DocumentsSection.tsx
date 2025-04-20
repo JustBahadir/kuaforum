@@ -4,7 +4,11 @@ import { Button } from "@/components/ui/button";
 
 interface HistoryDataProps {
   historyData: {
+    isyerleri: string[];
+    gorevpozisyon: string[];
     belgeler: string[];
+    yarismalar: string[];
+    cv: string;
     _newBelge?: string;
   };
   setHistoryData: React.Dispatch<React.SetStateAction<any>>;
@@ -71,7 +75,7 @@ export default function DocumentsSection({
         {historyData.belgeler.map((belge, idx) => (
           <li key={idx} className="flex justify-between items-center">
             <span>{belge}</span>
-            <Button size="xs" variant="ghost" onClick={() => removeBelge(idx)}>
+            <Button size="sm" variant="ghost" onClick={() => removeBelge(idx)}>
               Sil
             </Button>
           </li>
@@ -92,4 +96,3 @@ export default function DocumentsSection({
     </div>
   );
 }
-

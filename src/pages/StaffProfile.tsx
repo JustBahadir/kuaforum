@@ -99,7 +99,7 @@ export default function StaffProfile() {
 
     const { error } = await supabase
       .from("staff_education")
-      .upsert([dataToUpsert], { onConflict: ["personel_id"] });
+      .upsert(dataToUpsert, { onConflict: ["personel_id"] });
 
     setLoading(false);
     if (error) {
@@ -126,7 +126,7 @@ export default function StaffProfile() {
 
     const { error } = await supabase
       .from("staff_history")
-      .upsert([dataToUpsert], { onConflict: ["personel_id"] });
+      .upsert(dataToUpsert, { onConflict: ["personel_id"] });
 
     setLoading(false);
     if (error) {
@@ -159,7 +159,7 @@ export default function StaffProfile() {
 
     const { error } = await supabase
       .from("staff_history")
-      .upsert([dataToUpsert], { onConflict: ["personel_id"] });
+      .upsert(dataToUpsert, { onConflict: ["personel_id"] });
 
     setLoading(false);
     if (error) {
@@ -561,7 +561,6 @@ export default function StaffProfile() {
                   )}
                 </TabsList>
 
-                {/* Profile Tab */}
                 <TabsContent value="profile">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
@@ -645,7 +644,6 @@ export default function StaffProfile() {
                   </div>
                 </TabsContent>
 
-                {/* Education Tab */}
                 <TabsContent value="education">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
@@ -777,7 +775,6 @@ export default function StaffProfile() {
                   </div>
                 </TabsContent>
 
-                {/* History Tab */}
                 <TabsContent value="history">
                   <div className="space-y-6">
                     <WorkplacesPositionsSection
@@ -811,7 +808,6 @@ export default function StaffProfile() {
                   </div>
                 </TabsContent>
 
-                {/* Join Tab */}
                 <TabsContent value="join">
                   <div>
                     <label className="block mb-2 font-semibold">İşletme Kodu</label>
