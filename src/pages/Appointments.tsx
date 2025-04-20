@@ -134,8 +134,8 @@ export default function Appointments() {
             </DialogHeader>
             <AppointmentFormComponent 
               onAppointmentCreated={handleAppointmentCreated}
-              initialDate={selectedDate.toISOString().split('T')[0]}
-              initialCustomerId={initialSelectedCustomerId || undefined}
+              shopId={dukkanId || 0} // add shopId prop required by AppointmentFormComponent
+              // Remove initialCustomerId because StaffAppointmentForm does not support it
             />
           </DialogContent>
         </Dialog>

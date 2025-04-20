@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -24,6 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { AppointmentForm } from "@/components/appointments/AppointmentForm";
 import { useLocation } from "react-router-dom";
+import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 
 export default function CustomerAppointments() {
   const [date, setDate] = useState<Date>(new Date());
@@ -32,6 +32,7 @@ export default function CustomerAppointments() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const location = useLocation();
+  const { dukkanId } = useCustomerAuth();
   
   // Get serviceId from URL if it exists
   const serviceId = React.useMemo(() => {
@@ -198,9 +199,8 @@ export default function CustomerAppointments() {
                   </DialogDescription>
                 </DialogHeader>
                 <AppointmentForm 
-                  onAppointmentCreated={handleAppointmentCreated}
+                  shopId={dukkanId || 0}
                   initialDate={selectedDate ? format(selectedDate, 'yyyy-MM-dd') : undefined}
-                  initialServiceId={serviceId}
                 />
               </DialogContent>
             </Dialog>
