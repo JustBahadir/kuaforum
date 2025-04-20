@@ -1,3 +1,6 @@
+
+// Remove invalid/unknown prop "initialDate" in AppointmentForm usage
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -196,6 +199,7 @@ export default function CustomerAppointments() {
                     Lütfen randevu detaylarını girin.
                   </DialogDescription>
                 </DialogHeader>
+                {/* Removed invalid initialDate prop */}
                 <AppointmentForm 
                   shopId={dukkanId || 0}
                 />

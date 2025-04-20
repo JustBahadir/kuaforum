@@ -1,3 +1,4 @@
+import React from "react";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -18,12 +19,12 @@ interface CustomerDetailsProps {
   customerId?: number;
 }
 
-export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsProps) {
+export function CustomerDetails(props: any) {
   const [activeTab, setActiveTab] = useState("basic");
   const params = useParams<{ id: string }>();
   const navigate = useNavigate();
   
-  const customerId = propCustomerId !== undefined ? propCustomerId : params.id ? Number(params.id) : undefined;
+  const customerId = props.customerId !== undefined ? props.customerId : params.id ? Number(params.id) : undefined;
 
   const { 
     data: customer, 

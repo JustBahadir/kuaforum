@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
+import { StaffSidebar } from "@/components/ui/staff-sidebar";
 
 export default function StaffProfile() {
   const [loading, setLoading] = useState(false);
@@ -91,14 +92,17 @@ export default function StaffProfile() {
   };
 
   return (
-    <div className="p-4">
-      {/* Placeholders for UI to update educationData and historyData */}
-      <button onClick={saveEducation} className="btn btn-primary mb-4" disabled={loading}>
-        {loading ? "Kaydediliyor..." : "Save Education"}
-      </button>
-      <button onClick={saveHistory} className="btn btn-primary" disabled={loading}>
-        {loading ? "Kaydediliyor..." : "Save History"}
-      </button>
+    <div className="flex h-screen">
+      <StaffSidebar />
+      <main className="flex-grow p-8 overflow-y-auto">
+        {/* Placeholders for UI to update educationData and historyData */}
+        <button onClick={saveEducation} className="btn btn-primary mb-4" disabled={loading}>
+          {loading ? "Kaydediliyor..." : "Save Education"}
+        </button>
+        <button onClick={saveHistory} className="btn btn-primary" disabled={loading}>
+          {loading ? "Kaydediliyor..." : "Save History"}
+        </button>
+      </main>
     </div>
   );
 }

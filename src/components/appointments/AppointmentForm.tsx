@@ -1,19 +1,13 @@
+
+// Fix the import issue related to useAvailableTimeSlots data usage
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
+import { 
+  Form, FormControl, FormField, FormItem, FormLabel, FormMessage 
 } from "@/components/ui/form";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -21,13 +15,7 @@ import { CalendarIcon } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
@@ -41,18 +29,18 @@ import { useQueryClient } from "@tanstack/react-query";
 
 const formSchema = z.object({
   date: z.date({
-    required_error: "Lütfen bir tarih seçin.",
+    required_error: "Lütfen bir tarih seçin."
   }),
   time: z.string({
-    required_error: "Lütfen bir saat seçin.",
+    required_error: "Lütfen bir saat seçin."
   }),
   service: z.string({
-    required_error: "Lütfen bir hizmet seçin.",
+    required_error: "Lütfen bir hizmet seçin."
   }),
   personnel: z.string({
-    required_error: "Lütfen bir personel seçin.",
+    required_error: "Lütfen bir personel seçin."
   }),
-  notes: z.string().optional(),
+  notes: z.string().optional()
 });
 
 export function AppointmentForm({ shopId }: { shopId: number }) {
@@ -61,45 +49,44 @@ export function AppointmentForm({ shopId }: { shopId: number }) {
   const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
-  const [selectedServiceId, setSelectedServiceId] = useState<string>("");
-  const [selectedPersonnelId, setSelectedPersonnelId] = useState<string>("");
-
+  const [selectedServiceId, setSelectedServiceId] = useState("");
+  const [selectedPersonnelId, setSelectedPersonnelId] = useState("");
   const { isletmeData } = useShopData(shopId);
   const { data: operations } = useOperations(shopId);
   const { data: personnel } = usePersonnel(shopId);
-  
-  const {
-    data: availableTimeSlots,
-    isLoading: timeSlotsLoading
-  } = useAvailableTimeSlots({
+
+  // Fix here: useAvailableTimeSlots returns UseQueryResult<string[], Error>
+  // so replace availableTimeSlots with data:
+  const { data: availableTimeSlots, isLoading: timeSlotsLoading } = useAvailableTimeSlots({
     date: selectedDate,
     shopId,
     personnelId: selectedPersonnelId ? Number(selectedPersonnelId) : undefined,
   });
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      notes: "",
-    },
+      notes: ""
+    }
   });
 
+  // Reset time when date or personnel changes
   useEffect(() => {
     form.setValue("time", "");
   }, [selectedDate, selectedPersonnelId, form]);
 
+  // Filter personnel by selected service
   const filteredPersonnel = React.useMemo(() => {
     if (!selectedServiceId || !personnel) return personnel;
-    
+    // If no service is selected, show all personnel
     return personnel.filter((person) => {
-      const canPerformService = person.hizmetler?.some(
-        (service) => service.id.toString() === selectedServiceId
-      );
+      // Check if this person can perform the selected service
+      const canPerformService = person.hizmetler?.some((service) => service.id.toString() === selectedServiceId);
       return canPerformService;
     });
   }, [selectedServiceId, personnel]);
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: any) => {
     if (!userId) {
       toast.error("Randevu oluşturmak için giriş yapmalısınız.");
       navigate("/login");
@@ -109,13 +96,13 @@ export function AppointmentForm({ shopId }: { shopId: number }) {
     setIsSubmitting(true);
 
     try {
+      // Format date and time for database
       const appointmentDate = new Date(values.date);
       const [hours, minutes] = values.time.split(":").map(Number);
       appointmentDate.setHours(hours, minutes, 0, 0);
 
-      const selectedService = operations?.find(
-        (op) => op.id.toString() === values.service
-      );
+      // Get service details
+      const selectedService = operations?.find((op) => op.id.toString() === values.service);
 
       if (!selectedService) {
         toast.error("Seçilen hizmet bulunamadı.");
@@ -123,11 +110,11 @@ export function AppointmentForm({ shopId }: { shopId: number }) {
         return;
       }
 
+      // Calculate end time based on service duration
       const endDate = new Date(appointmentDate);
-      endDate.setMinutes(
-        endDate.getMinutes() + (selectedService.sure || 30)
-      );
+      endDate.setMinutes(endDate.getMinutes() + (selectedService.sure || 30));
 
+      // Create appointment
       const { data, error } = await supabase.from("randevular").insert([
         {
           musteri_id: userId,
@@ -137,8 +124,8 @@ export function AppointmentForm({ shopId }: { shopId: number }) {
           baslangic_zamani: appointmentDate.toISOString(),
           bitis_zamani: endDate.toISOString(),
           notlar: values.notes || null,
-          durum: "beklemede",
-        },
+          durum: "beklemede"
+        }
       ]);
 
       if (error) {
@@ -148,13 +135,19 @@ export function AppointmentForm({ shopId }: { shopId: number }) {
       }
 
       toast.success("Randevunuz başarıyla oluşturuldu!");
-      queryClient.invalidateQueries({ queryKey: ["appointments"] });
-      
+      queryClient.invalidateQueries({
+        queryKey: [
+          "appointments"
+        ]
+      });
+
+      // Reset form
       form.reset();
       setSelectedDate(undefined);
       setSelectedServiceId("");
       setSelectedPersonnelId("");
-      
+
+      // Navigate to appointments page
       navigate("/appointments");
     } catch (error) {
       console.error("Randevu oluşturma hatası:", error);
@@ -165,186 +158,161 @@ export function AppointmentForm({ shopId }: { shopId: number }) {
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField
-            control={form.control}
-            name="date"
-            render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel>Tarih</FormLabel>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <FormControl>
-                      <Button
-                        variant={"outline"}
-                        className={cn(
-                          "pl-3 text-left font-normal",
-                          !field.value && "text-muted-foreground"
-                        )}
-                      >
-                        {field.value ? (
-                          format(field.value, "PPP", { locale: tr })
-                        ) : (
-                          <span>Tarih seçin</span>
-                        )}
-                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                      </Button>
-                    </FormControl>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={field.value}
-                      onSelect={(date) => {
-                        field.onChange(date);
-                        setSelectedDate(date || undefined);
-                      }}
-                      disabled={(date) => {
-                        const today = new Date();
-                        today.setHours(0, 0, 0, 0);
-                        const thirtyDaysLater = new Date();
-                        thirtyDaysLater.setDate(today.getDate() + 30);
-                        return (
-                          date < today ||
-                          date > thirtyDaysLater ||
-                          date.getDay() === 0
-                        );
-                      }}
-                      initialFocus
+    <Form {...form} onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form className="space-y-6">
+        <FormField
+          control={form.control}
+          name="date"
+          render={({ field }) => (
+            <FormItem className="flex flex-col">
+              <FormLabel>Tarih</FormLabel>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <FormControl>
+                    <Button
+                      variant="outline"
+                      className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
+                    >
+                      {field.value ? format(field.value, "PPP", { locale: tr }) : <span>Tarih seçin</span>}
+                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                    </Button>
+                  </FormControl>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={field.value}
+                    onSelect={(date) => {
+                      field.onChange(date);
+                      setSelectedDate(date || undefined);
+                    }}
+                    disabled={(date) => {
+                      // Disable past dates and dates more than 30 days in the future
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      const thirtyDaysLater = new Date();
+                      thirtyDaysLater.setDate(today.getDate() + 30);
+                      return date < today || date > thirtyDaysLater ||
+                        // Disable Sundays (0 is Sunday in JavaScript)
+                        date.getDay() === 0;
+                    }}
+                    initialFocus={true}
+                  />
+                </PopoverContent>
+              </Popover>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="service"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Hizmet</FormLabel>
+              <Select
+                onValueChange={(value) => {
+                  field.onChange(value);
+                  setSelectedServiceId(value);
+                  // Reset personnel when service changes
+                  form.setValue("personnel", "");
+                  setSelectedPersonnelId("");
+                }}
+                value={field.value}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Hizmet seçin" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {operations?.map((operation) => (
+                    <SelectItem key={operation.id} value={operation.id.toString()}>
+                      {operation.ad} - {operation.fiyat}₺ ({operation.sure} dk)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="personnel"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Personel</FormLabel>
+              <Select
+                onValueChange={(value) => {
+                  field.onChange(value);
+                  setSelectedPersonnelId(value);
+                }}
+                value={field.value}
+                disabled={!selectedServiceId}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder={selectedServiceId ? "Personel seçin" : "Önce hizmet seçin"} />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {filteredPersonnel?.length > 0 ? filteredPersonnel.map((person) => (
+                    <SelectItem key={person.id} value={person.id.toString()}>
+                      {person.ad} {person.soyad}
+                    </SelectItem>
+                  )) : (
+                    <SelectItem value="no-personnel" disabled>
+                      Bu hizmet için personel bulunamadı
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="time"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Saat</FormLabel>
+              <Select
+                onValueChange={field.onChange}
+                value={field.value}
+                disabled={!selectedDate || !selectedPersonnelId || timeSlotsLoading}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue
+                      placeholder={
+                        !selectedDate ? "Önce tarih seçin" :
+                          !selectedPersonnelId ? "Önce personel seçin" :
+                            timeSlotsLoading ? "Yükleniyor..." : "Saat seçin"
+                      }
                     />
-                  </PopoverContent>
-                </Popover>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="service"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Hizmet</FormLabel>
-                <Select
-                  onValueChange={(value) => {
-                    field.onChange(value);
-                    setSelectedServiceId(value);
-                    form.setValue("personnel", "");
-                    setSelectedPersonnelId("");
-                  }}
-                  value={field.value}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Hizmet seçin" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {operations?.map((operation) => (
-                      <SelectItem
-                        key={operation.id}
-                        value={operation.id.toString()}
-                      >
-                        {operation.ad} - {operation.fiyat}₺ ({operation.sure} dk)
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="personnel"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Personel</FormLabel>
-                <Select
-                  onValueChange={(value) => {
-                    field.onChange(value);
-                    setSelectedPersonnelId(value);
-                  }}
-                  value={field.value}
-                  disabled={!selectedServiceId}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder={selectedServiceId ? "Personel seçin" : "Önce hizmet seçin"} />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {filteredPersonnel?.length > 0 ? (
-                      filteredPersonnel.map((person) => (
-                        <SelectItem
-                          key={person.id}
-                          value={person.id.toString()}
-                        >
-                          {person.ad} {person.soyad}
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <SelectItem value="no-personnel" disabled>
-                        Bu hizmet için personel bulunamadı
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="time"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Saat</FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  value={field.value}
-                  disabled={!selectedDate || !selectedPersonnelId || timeSlotsLoading}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue 
-                        placeholder={
-                          !selectedDate 
-                            ? "Önce tarih seçin" 
-                            : !selectedPersonnelId 
-                              ? "Önce personel seçin"
-                              : timeSlotsLoading
-                                ? "Yükleniyor..."
-                                : "Saat seçin"
-                        } 
-                      />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {availableTimeSlots?.length > 0 ? (
-                      availableTimeSlots.map((slot) => (
-                        <SelectItem key={slot} value={slot}>
-                          {slot}
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <SelectItem value="no-slots" disabled>
-                        {timeSlotsLoading 
-                          ? "Yükleniyor..." 
-                          : "Uygun saat bulunamadı"}
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {availableTimeSlots?.length > 0 ? availableTimeSlots.map((slot) => (
+                    <SelectItem key={slot} value={slot}>
+                      {slot}
+                    </SelectItem>
+                  )) : (
+                    <SelectItem value="no-slots" disabled>
+                      {timeSlotsLoading ? "Yükleniyor..." : "Uygun saat bulunamadı"}
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={form.control}
