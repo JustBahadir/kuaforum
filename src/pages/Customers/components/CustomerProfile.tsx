@@ -126,22 +126,20 @@ export function CustomerProfile({ customer }: CustomerProfileProps) {
         phone: formData.phone,
         birthdate: formData.birthdate || null
       });
-      
+
       // Update customer personal data
-      // This may include family information and other personal details
       if (customer.id) {
         const personalData = {
           customer_id: customer.id,
-          spouse_name: formData.spouseName,
-          spouse_birthdate: formData.spouseBirthdate,
-          anniversary_date: formData.anniversaryDate,
-          children_names: formData.childrenNames,
-          // Add horoscope data based on birthdate
-          horoscope: zodiacInfo?.sign,
-          horoscope_description: zodiacInfo?.description
+          spouse_name: formData.spouseName || null,
+          spouse_birthdate: formData.spouseBirthdate || null,
+          anniversary_date: formData.anniversaryDate || null,
+          children_names: formData.childrenNames || [],
+          horoscope: zodiacInfo?.sign || null,
+          horoscope_description: zodiacInfo?.description || null
+          // Removed unwanted properties like hair_types here
         };
         
-        // Import the service here to avoid circular dependencies
         const { customerPersonalDataService } = await import('@/lib/supabase/services/customerPersonalDataService');
         await customerPersonalDataService.updateCustomerPersonalData(customer.id, personalData);
       }
