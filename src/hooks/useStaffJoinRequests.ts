@@ -32,7 +32,7 @@ export function useStaffJoinRequests() {
     return data;
   };
 
-  // Fixed to provide two generic arguments for useQuery
+  // Added two generic arguments for useQuery (data type, error type)
   const { data, isLoading, isError } = useQuery<StaffJoinRequest[], Error>({
     queryKey: ["staff_join_requests"],
     queryFn: fetchRequests,
@@ -79,4 +79,3 @@ export function useStaffJoinRequests() {
 
   return { data, isLoading, isError, mutateStatus, addRequest };
 }
-

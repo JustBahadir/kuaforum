@@ -239,28 +239,7 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
     <div className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="category">Kategori</Label>
-        <Select onValueChange={handleCategoryChange} value={selectedCategory?.toString() || ""}>
-          <SelectTrigger id="category">
-            <div className="flex items-center justify-between pr-2">
-              <SelectValue placeholder="Kategori seçin" />
-              <CalendarIcon className="ml-2 h-5 w-5 text-gray-900" />
-            </div>
-          </SelectTrigger>
-          <SelectContent>
-            {isLoadingKategoriler ? (
-              <div className="p-2">
-                <Skeleton className="h-5 w-full" />
-                <Skeleton className="h-5 w-full mt-2" />
-              </div>
-            ) : (
-              kategoriler.map((kategori) => (
-                <SelectItem key={kategori.id} value={kategori.id.toString()}>
-                  {kategori.kategori_adi}
-                </SelectItem>
-              ))
-            )}
-          </SelectContent>
-        </Select>
+        <SelectExample />
       </div>
 
       <div className="space-y-2">
@@ -432,5 +411,32 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
         </Button>
       </div>
     </div>
+  );
+}
+
+const SelectExample = () => {
+  return (
+    <Select onValueChange={handleCategoryChange} value={selectedCategory?.toString() || ""}>
+      <SelectTrigger id="category">
+        <div className="flex items-center justify-between pr-2">
+          <SelectValue placeholder="Kategori seçin" />
+          <CalendarIcon className="ml-2 h-5 w-5 text-gray-900" />
+        </div>
+      </SelectTrigger>
+      <SelectContent>
+        {isLoadingKategoriler ? (
+          <div className="p-2">
+            <Skeleton className="h-5 w-full" />
+            <Skeleton className="h-5 w-full mt-2" />
+          </div>
+        ) : (
+          kategoriler.map((kategori) => (
+            <SelectItem key={kategori.id} value={kategori.id.toString()}>
+              {kategori.kategori_adi}
+            </SelectItem>
+          ))
+        )}
+      </SelectContent>
+    </Select>
   );
 }
