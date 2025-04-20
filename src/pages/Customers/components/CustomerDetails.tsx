@@ -23,8 +23,8 @@ export function CustomerDetails(props: any) {
   const [activeTab, setActiveTab] = useState("basic");
   const params = useParams<{ id: string }>();
   const navigate = useNavigate();
-  
-  const customerId = props.customerId !== undefined ? props.customerId : params.id ? Number(params.id) : undefined;
+
+  const customerId = props.customerId !== undefined ? props.customerId : params.id ? parseInt(params.id) : undefined;
 
   const { 
     data: customer, 

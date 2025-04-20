@@ -1,6 +1,4 @@
 
-// Fix the import issue related to useAvailableTimeSlots data usage
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -43,6 +41,8 @@ const formSchema = z.object({
   notes: z.string().optional()
 });
 
+type FormValues = z.infer<typeof formSchema>;
+
 export function AppointmentForm({ shopId }: { shopId: number }) {
   const { userId } = useCustomerAuth();
   const navigate = useNavigate();
@@ -55,17 +55,20 @@ export function AppointmentForm({ shopId }: { shopId: number }) {
   const { data: operations } = useOperations(shopId);
   const { data: personnel } = usePersonnel(shopId);
 
-  // Fix here: useAvailableTimeSlots returns UseQueryResult<string[], Error>
-  // so replace availableTimeSlots with data:
+  // useAvailableTimeSlots returns UseQueryResult<string[], Error>
   const { data: availableTimeSlots, isLoading: timeSlotsLoading } = useAvailableTimeSlots({
     date: selectedDate,
     shopId,
     personnelId: selectedPersonnelId ? Number(selectedPersonnelId) : undefined,
   });
 
-  const form = useForm({
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      date: undefined,
+      time: "",
+      service: "",
+      personnel: "",
       notes: ""
     }
   });
@@ -86,7 +89,7 @@ export function AppointmentForm({ shopId }: { shopId: number }) {
     });
   }, [selectedServiceId, personnel]);
 
-  const onSubmit = async (values: any) => {
+  const onSubmit = async (values: FormValues) => {
     if (!userId) {
       toast.error("Randevu oluşturmak için giriş yapmalısınız.");
       navigate("/login");
