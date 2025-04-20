@@ -6,9 +6,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import DocumentsSection from "./components/DocumentsSection";
-import CompetitionsSection from "./components/CompetitionsSection";
-import CvSection from "./components/CvSection";
+import DocumentsSection from "./components/DocumentsSection.tsx";
+import CompetitionsSection from "./components/CompetitionsSection.tsx";
+import CvSection from "./components/CvSection.tsx";
 
 interface EducationData {
   ortaokuldurumu: string;
@@ -86,7 +86,7 @@ export default function StaffProfile() {
     if (!user || !user.id) return;
     setLoading(true);
 
-    const dataToUpsert = [{
+    const dataToUpsert = {
       personel_id: Number(user.id),
       ortaokuldurumu: educationData.ortaokuldurumu,
       lisedurumu: educationData.lisedurumu,
@@ -95,7 +95,7 @@ export default function StaffProfile() {
       universitedurumu: educationData.universitedurumu,
       universitebolum: educationData.universitebolum,
       updated_at: new Date().toISOString(),
-    }];
+    };
 
     const { error } = await supabase
       .from("staff_education")
@@ -114,7 +114,7 @@ export default function StaffProfile() {
     if (!user || !user.id) return;
     setLoading(true);
 
-    const dataToUpsert = [{
+    const dataToUpsert = {
       personel_id: Number(user.id),
       isyerleri: arrayToString(historyData.isyerleri),
       gorevpozisyon: arrayToString(historyData.gorevpozisyon),
@@ -122,7 +122,7 @@ export default function StaffProfile() {
       yarismalar: arrayToString(historyData.yarismalar),
       cv: historyData.cv || "",
       updated_at: new Date().toISOString(),
-    }];
+    };
 
     const { error } = await supabase
       .from("staff_history")
@@ -147,7 +147,7 @@ export default function StaffProfile() {
     if (!user || !user.id) return;
     setLoading(true);
 
-    const dataToUpsert = [{
+    const dataToUpsert = {
       personel_id: Number(user.id),
       isyerleri: arrayToString(isyerleri),
       gorevpozisyon: arrayToString(gorevpozisyon),
@@ -155,7 +155,7 @@ export default function StaffProfile() {
       yarismalar: arrayToString(yarismalar),
       cv: cv || "",
       updated_at: new Date().toISOString(),
-    }];
+    };
 
     const { error } = await supabase
       .from("staff_history")
