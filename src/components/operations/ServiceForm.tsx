@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -135,9 +134,7 @@ export function ServiceForm({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[550px]">
         <DialogHeader>
-          <DialogTitle>
-            {isNewService ? "Yeni Hizmet Ekle" : "Hizmet Düzenle"}
-          </DialogTitle>
+          <DialogTitle>{isNewService ? "Yeni Hizmet Ekle" : "Hizmet Düzenle"}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit}>
@@ -149,6 +146,7 @@ export function ServiceForm({
                 value={islemAdi}
                 onChange={(e) => setIslemAdi(e.target.value)}
                 required
+                placeholder="Örn: Saç Kesimi"
               />
             </div>
 
@@ -188,6 +186,20 @@ export function ServiceForm({
                 min="0"
                 step="0.01"
                 required
+                placeholder="Örn: 250 TL"
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="maliyet">Süre (dakika)</Label>
+              <Input
+                type="number"
+                id="maliyet"
+                value={maliyet}
+                onChange={handleMaliyetChange}
+                min="0"
+                step="1"
+                placeholder="Örn: 30 dakika"
               />
             </div>
 

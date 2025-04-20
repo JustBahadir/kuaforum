@@ -11,14 +11,18 @@ import { PersonnelForm } from "./PersonnelForm";
 import { PersonnelCard } from "./PersonnelCard";
 import { toast } from "sonner";
 import { Search, RefreshCcw } from "lucide-react";
+import { useCustomerAuth } from "@/hooks/useCustomerAuth";
+
 interface PersonnelListProps {
   personnel?: any[];
   onPersonnelSelect?: (id: number | null) => void;
 }
+
 export function PersonnelList({
   personnel: externalPersonnel,
   onPersonnelSelect
 }: PersonnelListProps) {
+  const { userRole } = useCustomerAuth();
   const [isAddPersonnelDialogOpen, setIsAddPersonnelDialogOpen] = useState(false);
   const [isPersonnelDetailsDialogOpen, setIsPersonnelDetailsDialogOpen] = useState(false);
   const [selectedPersonnel, setSelectedPersonnel] = useState<any>(null);
@@ -97,7 +101,8 @@ export function PersonnelList({
     };
   });
   const filteredPersonnel = enrichedPersonnel.filter(p => p.ad_soyad?.toLowerCase().includes(search.toLowerCase()));
-  return <div className="space-y-6">
+  return (
+    <div className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>Personel Listesi</CardTitle>
@@ -108,48 +113,48 @@ export function PersonnelList({
         <CardContent>
           <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
             <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input type="search" placeholder="Personel ara..." value={search} onChange={e => setSearch(e.target.value)} className="pl-8" />
+              <Input type="search" placeholder="Personel ara..." value={search} onChange={e => setSearch(e.target.value)} className="pl-4" />
             </div>
-            
             <div className="flex gap-2">
-              <Button variant="outline" size="icon" onClick={() => refreshList()} className="h-10 w-10">
-                <RefreshCcw className="h-4 w-4" />
-              </Button>
-              <Button onClick={() => {
-              setSelectedPersonnel(null);
-              setIsAddPersonnelDialogOpen(true);
-            }}>
-                Personel Ekle
-              </Button>
+              {userRole === 'admin' && (
+                <Button onClick={() => setIsAddPersonnelDialogOpen(true)} leftIcon={<RefreshCcw size={16} />}>
+                  Personel Ekle
+                </Button>
+              )}
             </div>
           </div>
 
-          {isLoading ? <div className="flex justify-center p-12">
-              <div className="w-10 h-10 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
-            </div> : filteredPersonnel.length === 0 ? <div className="text-center p-12 text-muted-foreground">
-              {search ? 'Arama kriterlerinize uygun personel bulunamadı.' : 'Henüz personel eklenmemiş.'}
-            </div> : <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {filteredPersonnel.map(personnel => <PersonnelCard key={personnel.id} personnel={personnel} onClick={() => handlePersonnelSelect(personnel)} />)}
-            </div>}
+          {/* Personel Kartları */}
+          <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
+            {filteredPersonnel.map(personnel => (
+              <PersonnelCard
+                key={personnel.id}
+                personnel={personnel}
+                onClick={() => handlePersonnelSelect(personnel)}
+              />
+            ))}
+          </div>
         </CardContent>
       </Card>
 
-      <PersonnelDetailsDialog isOpen={isPersonnelDetailsDialogOpen} onOpenChange={setIsPersonnelDetailsDialogOpen} personnel={selectedPersonnel} onUpdate={() => {}} />
+      {/* Personel Ekleme Dialogu */}
+      {userRole === 'admin' && (
+        <PersonnelForm
+          onSubmit={handleAddPersonnelSubmit}
+          isLoading={false}
+          open={isAddPersonnelDialogOpen}
+          onOpenChange={setIsAddPersonnelDialogOpen}
+        />
+      )}
 
-      <AlertDialog open={isAddPersonnelDialogOpen} onOpenChange={setIsAddPersonnelDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Personel Ekle</AlertDialogTitle>
-          </AlertDialogHeader>
-          <PersonnelForm personnel={null} readOnly={false} showWorkInfo={true} showPersonalInfo={true} onSubmit={handleAddPersonnelSubmit} />
-          <AlertDialogFooter>
-            <AlertDialogCancel>İptal</AlertDialogCancel>
-            <AlertDialogAction onClick={() => handleAddPersonnelSubmit((document.querySelector('form') as HTMLFormElement)?.elements)}>
-              Kaydet
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>;
+      {/* Personel Detayları Dialogu */}
+      {selectedPersonnel && (
+        <PersonnelDetailsDialog
+          personnel={selectedPersonnel}
+          open={isPersonnelDetailsDialogOpen}
+          onOpenChange={setIsPersonnelDetailsDialogOpen}
+        />
+      )}
+    </div>
+  );
 }

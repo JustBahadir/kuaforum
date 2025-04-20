@@ -1,4 +1,3 @@
-
 import { supabase } from '../client';
 import { Musteri } from '../types';
 
@@ -70,9 +69,20 @@ export const musteriServisi = {
     try {
       console.log("Eklenecek müşteri verileri:", musteri);
 
+      // Explicitly set optional fields to null if undefined to ensure DB has values
+      const dataForInsert = {
+        first_name: musteri.first_name,
+        last_name: musteri.last_name || null,
+        phone: musteri.phone || null,
+        birthdate: musteri.birthdate || null,
+        dukkan_id: musteri.dukkan_id || null,
+        adres: (musteri as any).adres || null,
+        not: (musteri as any).not || null,
+      };
+
       const { data, error } = await supabase
         .from('musteriler')
-        .insert([musteri])
+        .insert([dataForInsert])
         .select();
       
       if (error) {
