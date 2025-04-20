@@ -861,3 +861,134 @@ function WorkplacesPositionsSection({
 }) {
   const [adding, setAdding] = React.useState(false);
   const [newIsyeri, setNewIsyeri] = React.useState("");
+  const [newGorev, setNewGorev] = React.useState("");
+  const [saving, setSaving] = React.useState(false);
+
+  const addWorkplace = async () => {
+    if (!newIsyeri.trim() || !newGorev.trim()) {
+      toast.error("İş yeri ve görev bilgileri boş olamaz!");
+      return;
+    }
+    setSaving(true);
+    try {
+      const newIsyerleri = [...historyData.isyerleri, newIsyeri.trim()];
+      const newGorevPozisyon = [...historyData.gorevpozisyon, newGorev.trim()];
+      setHistoryData((prev) => ({
+        ...prev,
+        isyerleri: newIsyerleri,
+        gorevpozisyon: newGorevPozisyon,
+      }));
+      await saveHistoryDataWithParams(
+        newIsyerleri,
+        newGorevPozisyon,
+        historyData.belgeler,
+        historyData.yarismalar,
+        historyData.cv
+      );
+      setNewIsyeri("");
+      setNewGorev("");
+      setAdding(false);
+    } catch (error) {
+      toast.error("İş yeri eklenirken hata oluştu.");
+      console.error(error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const removeWorkplace = async (index: number) => {
+    const newIsyerleri = [...historyData.isyerleri];
+    const newGorevPozisyon = [...historyData.gorevpozisyon];
+    newIsyerleri.splice(index, 1);
+    newGorevPozisyon.splice(index, 1);
+
+    setHistoryData((prev) => ({
+      ...prev,
+      isyerleri: newIsyerleri,
+      gorevpozisyon: newGorevPozisyon,
+    }));
+
+    await saveHistoryDataWithParams(
+      newIsyerleri,
+      newGorevPozisyon,
+      historyData.belgeler,
+      historyData.yarismalar,
+      historyData.cv
+    );
+  };
+
+  return (
+    <div>
+      <h2 className="text-lg font-semibold mb-2">İş Yerleri ve Görevler</h2>
+
+      {historyData.isyerleri.length === 0 ? (
+        <p>Henüz iş yeri bilgisi yok.</p>
+      ) : (
+        <ul className="list-disc list-inside mb-4 space-y-1">
+          {historyData.isyerleri.map((isyeri, index) => (
+            <li key={index} className="flex justify-between items-center">
+              <span>
+                {isyeri} - {historyData.gorevpozisyon[index]}
+              </span>
+              <button
+                onClick={() => removeWorkplace(index)}
+                className="text-red-600 hover:text-red-800 text-sm"
+                aria-label={`Remove workplace ${isyeri}`}
+                type="button"
+              >
+                Sil
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {!adding ? (
+        <button
+          onClick={() => setAdding(true)}
+          className="rounded bg-indigo-600 px-3 py-1.5 text-white hover:bg-indigo-700"
+          type="button"
+        >
+          Yeni İş Yeri Ekle
+        </button>
+      ) : (
+        <div className="space-y-2">
+          <input
+            type="text"
+            placeholder="İş yeri adı"
+            value={newIsyeri}
+            onChange={(e) => setNewIsyeri(e.target.value)}
+            className="w-full rounded border border-gray-300 px-3 py-2"
+            disabled={saving}
+          />
+          <input
+            type="text"
+            placeholder="Görev / Pozisyon"
+            value={newGorev}
+            onChange={(e) => setNewGorev(e.target.value)}
+            className="w-full rounded border border-gray-300 px-3 py-2"
+            disabled={saving}
+          />
+          <div className="flex space-x-2">
+            <button
+              onClick={addWorkplace}
+              disabled={saving}
+              className="flex-grow rounded bg-green-600 py-1.5 text-white hover:bg-green-700 disabled:opacity-60"
+              type="button"
+            >
+              Kaydet
+            </button>
+            <button
+              onClick={() => setAdding(false)}
+              className="rounded border border-gray-300 px-3 py-1.5 hover:bg-gray-100"
+              type="button"
+              disabled={saving}
+            >
+              İptal
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
