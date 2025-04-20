@@ -87,10 +87,7 @@ const ProfileTabs = ({
               ? "bg-purple-600 text-white"
               : "bg-gray-50 text-gray-600 hover:bg-gray-100"
           }`}
-          onClick={() => {
-            setMainView("educationHistory");
-            setSubTab("education");
-          }}
+          onClick={() => setMainView("educationHistory")}
           type="button"
           aria-label="Eğitim ve Geçmiş"
         >
@@ -113,50 +110,20 @@ const ProfileTabs = ({
 
         {mainView === "educationHistory" && (
           <div>
-            <nav className="flex border-b border-gray-300 mb-4">
-              <button
-                onClick={() => setSubTab("education")}
-                className={`flex-1 py-2 font-semibold text-center transition-colors duration-150 ${
-                  subTab === "education"
-                    ? "border-b-2 border-purple-600 text-purple-600"
-                    : "text-gray-600 hover:text-purple-600"
-                }`}
-                type="button"
-                aria-label="Eğitim Bilgileri"
-              >
-                Eğitim Bilgileri
-              </button>
-              <button
-                onClick={() => setSubTab("history")}
-                className={`flex-1 py-2 font-semibold text-center transition-colors duration-150 ${
-                  subTab === "history"
-                    ? "border-b-2 border-purple-600 text-purple-600"
-                    : "text-gray-600 hover:text-purple-600"
-                }`}
-                type="button"
-                aria-label="Geçmiş Bilgileri"
-              >
-                Geçmiş Bilgileri
-              </button>
-            </nav>
-
-            {subTab === "education" && (
-              <EducationTab
-                educationData={educationData}
-                onEducationChange={onEducationChange}
-                onSave={onSaveEducationHistory}
-                isLoading={isLoadingEducationHistory}
-              />
-            )}
-
-            {subTab === "history" && (
-              <HistoryTab
-                historyData={historyData}
-                onHistoryChange={onHistoryChange}
-                onSave={onSaveEducationHistory}
-                isLoading={isLoadingEducationHistory}
-              />
-            )}
+            <h2 className="text-lg font-semibold border-b pb-2 mb-4">Eğitim Bilgileri</h2>
+            <EducationTab
+              educationData={educationData}
+              onEducationChange={onEducationChange}
+              onSave={onSaveEducationHistory}
+              isLoading={isLoadingEducationHistory}
+            />
+            <h2 className="text-lg font-semibold border-b pb-2 mt-10 mb-4">Geçmiş Bilgileri</h2>
+            <HistoryTab
+              historyData={historyData}
+              onHistoryChange={onHistoryChange}
+              onSave={onSaveEducationHistory}
+              isLoading={isLoadingEducationHistory}
+            />
           </div>
         )}
       </div>
