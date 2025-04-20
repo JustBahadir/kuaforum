@@ -346,4 +346,3 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
     </div>
   );
 }
-

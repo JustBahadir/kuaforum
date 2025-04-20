@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -19,66 +20,78 @@ interface CustomerPersonalInfoProps {
 }
 
 // Zodiac sign calculator
-const getZodiacSign = (day: number, month: number): { sign: string, description: string } => {
+const getZodiacSign = (day: number, month: number): { sign: string; description: string } => {
   if ((month === 3 && day >= 21) || (month === 4 && day <= 19)) {
-    return { 
-      sign: "Koç", 
-      description: "Enerjik, cesur ve maceracı. Genellikle atletik yapılı ve güçlüdür. Cesareti ve liderlik özellikleriyle tanınır."
+    return {
+      sign: "Koç",
+      description:
+        "Enerjik, cesur ve maceracı. Genellikle atletik yapılı ve güçlüdür. Cesareti ve liderlik özellikleriyle tanınır."
     };
   } else if ((month === 4 && day >= 20) || (month === 5 && day <= 20)) {
-    return { 
-      sign: "Boğa", 
-      description: "Kararlı, güvenilir ve pratik. Genellikle sabırlı ve istikrarlıdır. Konfor ve lüksü sever, değişime dirençli olabilir."
+    return {
+      sign: "Boğa",
+      description:
+        "Kararlı, güvenilir ve pratik. Genellikle sabırlı ve istikrarlıdır. Konfor ve lüksü sever, değişime dirençli olabilir."
     };
   } else if ((month === 5 && day >= 21) || (month === 6 && day <= 20)) {
-    return { 
-      sign: "İkizler", 
-      description: "Meraklı, uyarlanabilir ve hızlı düşünen. Genellikle sosyal ve iletişimcidir. Çok yönlü, değişken ve hareketlidir."
+    return {
+      sign: "İkizler",
+      description:
+        "Meraklı, uyarlanabilir ve hızlı düşünen. Genellikle sosyal ve iletişimcidir. Çok yönlü, değişken ve hareketlidir."
     };
   } else if ((month === 6 && day >= 21) || (month === 7 && day <= 22)) {
-    return { 
-      sign: "Yengeç", 
-      description: "Duygusal, koruyucu ve sezgisel. Genellikle empati yeteneği yüksektir. Aile odaklı, korumacı ve gelenekseldir."
+    return {
+      sign: "Yengeç",
+      description:
+        "Duygusal, koruyucu ve sezgisel. Genellikle empati yeteneği yüksektir. Aile odaklı, korumacı ve gelenekseldir."
     };
   } else if ((month === 7 && day >= 23) || (month === 8 && day <= 22)) {
-    return { 
-      sign: "Aslan", 
-      description: "Yaratıcı, tutkulu ve sadık. Genellikle güçlü bir kişiliğe sahiptir. Dikkat çekmeyi ve takdir görmeyi sever."
+    return {
+      sign: "Aslan",
+      description:
+        "Yaratıcı, tutkulu ve sadık. Genellikle güçlü bir kişiliğe sahiptir. Dikkat çekmeyi ve takdir görmeyi sever."
     };
   } else if ((month === 8 && day >= 23) || (month === 9 && day <= 22)) {
-    return { 
-      sign: "Başak", 
-      description: "Analitik, pratik ve çalışkan. Genellikle detaylara önem verir. Mükemmeliyetçi, düzenli ve titizdir."
+    return {
+      sign: "Başak",
+      description:
+        "Analitik, pratik ve çalışkan. Genellikle detaylara önem verir. Mükemmeliyetçi, düzenli ve titizdir."
     };
   } else if ((month === 9 && day >= 23) || (month === 10 && day <= 22)) {
-    return { 
-      sign: "Terazi", 
-      description: "Diplomatik, uyumlu ve adil. Genellikle sosyal ve zarif davranır. Denge, güzellik ve barışı önemser."
+    return {
+      sign: "Terazi",
+      description:
+        "Diplomatik, uyumlu ve adil. Genellikle sosyal ve zarif davranır. Denge, güzellik ve barışı önemser."
     };
   } else if ((month === 10 && day >= 23) || (month === 11 && day <= 21)) {
-    return { 
-      sign: "Akrep", 
-      description: "Tutkulu, kararlı ve sezgisel. Genellikle duygusal derinliğe sahiptir. Gizem ve yoğunluk barındırır."
+    return {
+      sign: "Akrep",
+      description:
+        "Tutkulu, kararlı ve sezgisel. Genellikle duygusal derinliğe sahiptir. Gizem ve yoğunluk barındırır."
     };
   } else if ((month === 11 && day >= 22) || (month === 12 && day <= 21)) {
-    return { 
-      sign: "Yay", 
-      description: "İyimser, maceracı ve açık fikirli. Genellikle felsefi bakış açısına sahiptir. Özgürlüğü ve seyahati sever."
+    return {
+      sign: "Yay",
+      description:
+        "İyimser, maceracı ve açık fikirli. Genellikle felsefi bakış açısına sahiptir. Özgürlüğü ve seyahati sever."
     };
   } else if ((month === 12 && day >= 22) || (month === 1 && day <= 19)) {
-    return { 
-      sign: "Oğlak", 
-      description: "Disiplinli, sorumlu ve başarı odaklı. Genellikle kararlı ve hırslıdır. Geleneksel, pratik ve sabırlıdır."
+    return {
+      sign: "Oğlak",
+      description:
+        "Disiplinli, sorumlu ve başarı odaklı. Genellikle kararlı ve hırslıdır. Geleneksel, pratik ve sabırlıdır."
     };
   } else if ((month === 1 && day >= 20) || (month === 2 && day <= 18)) {
-    return { 
-      sign: "Kova", 
-      description: "Yaratıcı, bağımsız ve analitik. Genellikle yenilikçi fikirlere sahiptir. Orijinal, insancıl ve özgün davranır."
+    return {
+      sign: "Kova",
+      description:
+        "Yaratıcı, bağımsız ve analitik. Genellikle yenilikçi fikirlere sahiptir. Orijinal, insancıl ve özgün davranır."
     };
   } else {
-    return { 
-      sign: "Balık", 
-      description: "Sezgisel, sanatsal ve duygusal. Genellikle empatik ve hassastır. Hayal gücü kuvvetli, romantik ve yardımseverdir."
+    return {
+      sign: "Balık",
+      description:
+        "Sezgisel, sanatsal ve duygusal. Genellikle empatik ve hassastır. Hayal gücü kuvvetli, romantik ve yardımseverdir."
     };
   }
 };
@@ -138,11 +151,11 @@ export function CustomerPersonalInfo({ customer, customerId, editMode = false }:
     if (existingPersonalData) {
       setPersonalData({
         spouseName: existingPersonalData.spouse_name || "",
-        spouseBirthdate: existingPersonalData.spouse_birthdate 
-          ? format(new Date(existingPersonalData.spouse_birthdate), "yyyy-MM-dd") 
+        spouseBirthdate: existingPersonalData.spouse_birthdate
+          ? format(new Date(existingPersonalData.spouse_birthdate), "yyyy-MM-dd")
           : "",
-        anniversaryDate: existingPersonalData.anniversary_date 
-          ? format(new Date(existingPersonalData.anniversary_date), "yyyy-MM-dd") 
+        anniversaryDate: existingPersonalData.anniversary_date
+          ? format(new Date(existingPersonalData.anniversary_date), "yyyy-MM-dd")
           : "",
         childrenNames: existingPersonalData.children_names || [],
         style: existingPersonalData.custom_notes || ""
@@ -158,11 +171,10 @@ export function CustomerPersonalInfo({ customer, customerId, editMode = false }:
       children_names: personalData.childrenNames,
       custom_notes: personalData.style || null
     };
-    
+
     mutation.mutate(dataToSave);
   };
 
-  // Only define addChildName once
   const addChildName = () => {
     if (newChildName.trim()) {
       setPersonalData(prev => ({
@@ -173,7 +185,6 @@ export function CustomerPersonalInfo({ customer, customerId, editMode = false }:
     }
   };
 
-  // Only define removeChildName once
   const removeChildName = (index: number) => {
     setPersonalData(prev => ({
       ...prev,
@@ -181,12 +192,11 @@ export function CustomerPersonalInfo({ customer, customerId, editMode = false }:
     }));
   };
 
-  // Get zodiac sign if birthdate exists
   const getHoroscopeInfo = () => {
     if (customer.birthdate) {
       const birthDate = new Date(customer.birthdate);
       const day = birthDate.getDate();
-      const month = birthDate.getMonth() + 1; // getMonth is 0-indexed
+      const month = birthDate.getMonth() + 1;
       const zodiacInfo = getZodiacSign(day, month);
       return zodiacInfo;
     }
@@ -268,29 +278,28 @@ export function CustomerPersonalInfo({ customer, customerId, editMode = false }:
               {isEditing ? (
                 <Input
                   id="spouseBirthdate"
-                  type="text" 
+                  type="text"
                   placeholder="gg.aa"
                   value={personalData.spouseBirthdate ? format(new Date(personalData.spouseBirthdate), "dd.MM") : ""}
                   onChange={(e) => {
                     const value = e.target.value;
                     let formattedDate = "";
-                    
-                    // If valid input like "dd.MM", create a full date with current year
+
                     if (/^\d{2}\.\d{2}$/.test(value)) {
                       const [day, month] = value.split('.');
                       const currentYear = new Date().getFullYear();
                       formattedDate = `${currentYear}-${month}-${day}`;
                     }
-                    
-                    setPersonalData(prev => ({ 
-                      ...prev, 
-                      spouseBirthdate: formattedDate || value 
+
+                    setPersonalData(prev => ({
+                      ...prev,
+                      spouseBirthdate: formattedDate || value
                     }));
                   }}
                 />
               ) : (
                 <div className="p-2 border rounded mt-1 bg-gray-50">
-                  {existingPersonalData?.spouse_birthdate 
+                  {existingPersonalData?.spouse_birthdate
                     ? format(new Date(existingPersonalData.spouse_birthdate), "dd MMMM", { locale: tr })
                     : "Belirtilmemiş"}
                 </div>
@@ -309,23 +318,22 @@ export function CustomerPersonalInfo({ customer, customerId, editMode = false }:
                 onChange={(e) => {
                   const value = e.target.value;
                   let formattedDate = "";
-                  
-                  // If valid input like "dd.MM", create a full date with current year
+
                   if (/^\d{2}\.\d{2}$/.test(value)) {
                     const [day, month] = value.split('.');
                     const currentYear = new Date().getFullYear();
                     formattedDate = `${currentYear}-${month}-${day}`;
                   }
-                  
-                  setPersonalData(prev => ({ 
-                    ...prev, 
-                    anniversaryDate: formattedDate || value 
+
+                  setPersonalData(prev => ({
+                    ...prev,
+                    anniversaryDate: formattedDate || value
                   }));
                 }}
               />
             ) : (
               <div className="p-2 border rounded mt-1 bg-gray-50">
-                {existingPersonalData?.anniversary_date 
+                {existingPersonalData?.anniversary_date
                   ? format(new Date(existingPersonalData.anniversary_date), "dd MMMM", { locale: tr })
                   : "Belirtilmemiş"}
               </div>
@@ -350,9 +358,9 @@ export function CustomerPersonalInfo({ customer, customerId, editMode = false }:
                   {personalData.childrenNames.map((name, index) => (
                     <div key={index} className="flex justify-between items-center p-2 border rounded">
                       <span>{name}</span>
-                      <Button 
-                        size="sm" 
-                        variant="ghost" 
+                      <Button
+                        size="sm"
+                        variant="ghost"
                         onClick={() => removeChildName(index)}
                       >
                         Sil
@@ -366,7 +374,7 @@ export function CustomerPersonalInfo({ customer, customerId, editMode = false }:
               </>
             ) : (
               <div className="p-2 border rounded mt-1 bg-gray-50 min-h-[40px]">
-                {(existingPersonalData?.children_names || []).length > 0 
+                {(existingPersonalData?.children_names || []).length > 0
                   ? (existingPersonalData?.children_names || []).join(", ")
                   : "Belirtilmemiş"}
               </div>
@@ -409,14 +417,12 @@ export function CustomerPersonalInfo({ customer, customerId, editMode = false }:
           </div>
         </div>
       )}
-      
+
       {!customer.birthdate && (
         <div className="space-y-4">
           <h3 className="text-lg font-medium">Burç Bilgisi</h3>
           <div className="p-4 border rounded bg-gray-50">
-            <p className="text-center text-gray-500">
-              Burç bilgisi için doğum tarihi gereklidir.
-            </p>
+            <p className="text-center text-gray-500">Burç bilgisi için doğum tarihi gereklidir.</p>
           </div>
         </div>
       )}
