@@ -59,20 +59,20 @@ const ProfileTabs = ({
   onSaveEducationHistory,
   isLoadingEducationHistory
 }: ProfileTabsProps) => {
-  // State to control which main view is active: "personalInfo" or "educationHistory"
+  // Main view state: kişisel bilgiler veya eğitim-geçmiş
   const [mainView, setMainView] = useState<"personalInfo" | "educationHistory">("personalInfo");
 
-  // For the right side's inner tabs ("Eğitim Bilgileri" and "Geçmiş Bilgileri")
+  // Eğitim ve geçmiş için alt sekmeler (yan yana)
   const [subTab, setSubTab] = useState<"education" | "history">("education");
 
   return (
-    <div className="max-w-4xl mx-auto">
-      {/* Mevcut Bilgiler (üstte sabit) */}
-      <div className="mb-6 sticky top-4 bg-white z-20 rounded-md shadow-sm border border-gray-200 p-6">
+    <div className="max-w-4xl mx-auto px-4">
+      {/* Mevcut Bilgiler: sayfa içindeki normal üst kısım, scroll ile gitmeli, sabit olmamalı */}
+      <div className="mb-6 bg-white rounded-md shadow-sm border border-gray-200 p-6">
         <ProfileDisplay {...profile} />
       </div>
 
-      {/* Split button */}
+      {/* İkiye bölünmüş büyük buton */}
       <div className="mb-6 flex border border-gray-300 rounded-md overflow-hidden shadow-sm select-none">
         <button
           className={`flex-1 py-3 text-center font-semibold transition-colors duration-200 ${
@@ -92,18 +92,20 @@ const ProfileTabs = ({
               ? "bg-purple-600 text-white"
               : "bg-gray-50 text-gray-600 hover:bg-gray-100"
           }`}
-          onClick={() => setMainView("educationHistory")}
+          onClick={() => {
+            setMainView("educationHistory");
+            setSubTab("education"); // Eğitim sekmesini varsayılan yap
+          }}
           type="button"
-          aria-label="Eğitim ve Geçmiş Bilgileri"
+          aria-label="Eğitim ve Geçmiş"
         >
           Eğitim ve Geçmiş
         </button>
       </div>
 
-      {/* İçerik */}
+      {/* Ana içerik */}
       <div>
         {mainView === "personalInfo" && (
-          /* Kişisel bilgiler işletmeci tipindeki gibi, düzenlenebilir */
           <StaffPersonalInfoTab
             profile={profile}
             handleChange={handleChange}
@@ -114,9 +116,10 @@ const ProfileTabs = ({
             isUploading={isUploading}
           />
         )}
+
         {mainView === "educationHistory" && (
           <div>
-            {/* Alt menüler */}
+            {/* Alt menü bar: Eğitim Bilgileri / Geçmiş Bilgileri */}
             <nav className="flex border-b border-gray-300 mb-4">
               <button
                 onClick={() => setSubTab("education")}
@@ -146,29 +149,25 @@ const ProfileTabs = ({
 
             {/* Alt içerik */}
             {subTab === "education" && (
-              <div>
-                <StaffPreRegistrationTab
-                  educationData={educationData}
-                  historyData={historyData}
-                  onEducationChange={onEducationChange}
-                  onHistoryChange={onHistoryChange}
-                  onSave={onSaveEducationHistory}
-                  isLoading={isLoadingEducationHistory}
-                />
-              </div>
+              <StaffPreRegistrationTab
+                educationData={educationData}
+                historyData={historyData}
+                onEducationChange={onEducationChange}
+                onHistoryChange={onHistoryChange}
+                onSave={onSaveEducationHistory}
+                isLoading={isLoadingEducationHistory}
+              />
             )}
 
             {subTab === "history" && (
-              <div>
-                <StaffPreRegistrationTab
-                  educationData={educationData}
-                  historyData={historyData}
-                  onEducationChange={onEducationChange}
-                  onHistoryChange={onHistoryChange}
-                  onSave={onSaveEducationHistory}
-                  isLoading={isLoadingEducationHistory}
-                />
-              </div>
+              <StaffPreRegistrationTab
+                educationData={educationData}
+                historyData={historyData}
+                onEducationChange={onEducationChange}
+                onHistoryChange={onHistoryChange}
+                onSave={onSaveEducationHistory}
+                isLoading={isLoadingEducationHistory}
+              />
             )}
           </div>
         )}
@@ -178,4 +177,3 @@ const ProfileTabs = ({
 };
 
 export default ProfileTabs;
-
