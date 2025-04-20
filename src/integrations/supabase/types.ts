@@ -704,6 +704,55 @@ export type Database = {
           },
         ]
       }
+      staff_join_requests: {
+        Row: {
+          created_at: string
+          dukkan_id: number | null
+          durum: string
+          id: number
+          personel_id: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          dukkan_id?: number | null
+          durum?: string
+          id?: number
+          personel_id?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          dukkan_id?: number | null
+          durum?: string
+          id?: number
+          personel_id?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_join_requests_dukkan_id_fkey"
+            columns: ["dukkan_id"]
+            isOneToOne: false
+            referencedRelation: "dukkanlar"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_join_requests_personel_id_fkey"
+            columns: ["personel_id"]
+            isOneToOne: false
+            referencedRelation: "personel"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_join_requests_personel_id_fkey"
+            columns: ["personel_id"]
+            isOneToOne: false
+            referencedRelation: "personel_performans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       personel_performans: {
