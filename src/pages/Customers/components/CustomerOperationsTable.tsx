@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useCustomerOperations } from "@/hooks/useCustomerOperations";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -28,14 +28,19 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
   const [isPhotoDialogOpen, setIsPhotoDialogOpen] = useState(false);
   const [operationNotes, setOperationNotes] = useState<OperationNote[]>([]);
   const [currentNote, setCurrentNote] = useState("");
-  
+
+  // Refs for file inputs
+  const cameraInputRef = useRef<HTMLInputElement | null>(null);
+  const galleryInputRef = useRef<HTMLInputElement | null>(null);
+
   const {
     operations,
     isLoading,
     dateRange,
     setDateRange,
     handleForceRecover,
-    totals
+    totals,
+    refetch
   } = useCustomerOperations(customerId);
 
   const handleRecovery = async () => {
@@ -55,12 +60,11 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
   const handleOpenNoteDialog = (operation: any) => {
     setSelectedOperation(operation);
     setCurrentNote(operation.notlar || "");
-    
+
     const existingNote = operationNotes.find(note => note.id === operation.id);
     if (!existingNote) {
       setOperationNotes([...operationNotes, { id: operation.id, note: operation.notlar || "", isEditing: false }]);
     }
-    
     setIsNoteDialogOpen(true);
   };
 
@@ -71,58 +75,135 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
 
   const handleSaveNote = async () => {
     if (!selectedOperation) return;
-    
+
     try {
       await supabase
         .from('personel_islemleri')
         .update({ notlar: currentNote })
         .eq('id', selectedOperation.id);
-      
-      setOperationNotes(operationNotes.map(note => 
-        note.id === selectedOperation.id 
-          ? { ...note, note: currentNote, isEditing: false } 
+
+      setOperationNotes(operationNotes.map(note =>
+        note.id === selectedOperation.id
+          ? { ...note, note: currentNote, isEditing: false }
           : note
       ));
-      
+
       toast.success("Not başarıyla kaydedildi");
       setIsNoteDialogOpen(false);
+
+      // Refresh data
+      await refetch();
     } catch (error) {
       console.error("Error saving note:", error);
       toast.error("Not kaydedilirken bir hata oluştu");
     }
   };
 
-  // New handler to delete note
+  // Handler to delete note
   const handleDeleteNote = async () => {
     if (!selectedOperation) return;
-    
+
     try {
-      // Set note to empty string in database
       await supabase
         .from('personel_islemleri')
         .update({ notlar: "" })
         .eq('id', selectedOperation.id);
 
-      // Update local state
       setCurrentNote("");
       setOperationNotes(operationNotes.map(note =>
-        note.id === selectedOperation.id 
+        note.id === selectedOperation.id
           ? { ...note, note: "", isEditing: false }
           : note
       ));
-      
+
       toast.success("Not başarıyla silindi");
       setIsNoteDialogOpen(false);
+
+      // Refresh data
+      await refetch();
     } catch (error) {
       console.error("Error deleting note:", error);
       toast.error("Not silinirken bir hata oluştu");
     }
   };
 
-  const handleUploadPhoto = async (method: 'camera' | 'gallery') => {
-    console.log(`Uploading photo using ${method}`, selectedOperation);
-    toast.info(`${method === 'camera' ? 'Kamera' : 'Galeri'} kullanarak fotoğraf yükleme özelliği yakında eklenecek`);
-    setIsPhotoDialogOpen(false);
+  // Trigger native camera input
+  const triggerCameraInput = () => {
+    if (cameraInputRef.current) {
+      cameraInputRef.current.value = ''; // Clear previous selected file
+      cameraInputRef.current.click();
+    }
+  };
+
+  // Trigger native gallery input
+  const triggerGalleryInput = () => {
+    if (galleryInputRef.current) {
+      galleryInputRef.current.value = ''; // Clear previous selected file
+      galleryInputRef.current.click();
+    }
+  };
+
+  // Upload photo function
+  const uploadPhoto = async (file: File) => {
+    if (!selectedOperation) {
+      toast.error("İşlem seçilmedi");
+      return;
+    }
+
+    if (file.size > 20 * 1024 * 1024) { // 20MB limit
+      toast.error("Dosya boyutu 20MB'dan büyük olamaz");
+      return;
+    }
+
+    try {
+      toast.info("Fotoğraf yükleniyor...");
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${selectedOperation.id}_${Date.now()}.${fileExt}`;
+      const bucket = 'operation-photos';
+
+      const { data, error: uploadError } = await supabase.storage
+        .from(bucket)
+        .upload(fileName, file, { cacheControl: '3600', upsert: false });
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from(bucket)
+        .getPublicUrl(data.path);
+
+      // Add photo URL to operation in the DB
+      const updatedPhotos = selectedOperation.photos ? [...selectedOperation.photos, publicUrlData.publicUrl] : [publicUrlData.publicUrl];
+
+      const { error: updateError } = await supabase
+        .from('personel_islemleri')
+        .update({ photos: updatedPhotos })
+        .eq('id', selectedOperation.id);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      toast.success("Fotoğraf başarıyla yüklendi");
+      setIsPhotoDialogOpen(false);
+
+      // Refresh data
+      await refetch();
+
+    } catch (error: any) {
+      console.error("Fotoğraf yüklenirken hata:", error);
+      toast.error("Fotoğraf yüklenirken bir hata oluştu: " + (error.message || error));
+    }
+  };
+
+  // Handle file input change for camera/gallery
+  const handlePhotoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    uploadPhoto(files[0]);
   };
 
   const formatDate = (date: Date | string) => {
@@ -155,16 +236,16 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
           <h3 className="text-base md:text-lg font-medium">İşlem Geçmişi</h3>
           <p className="text-xs md:text-sm text-gray-500">Müşterinin daha önce yaptırdığı işlemler</p>
         </div>
-        
+
         <div className="flex flex-col md:flex-row items-end md:items-center gap-2">
           <div className="w-full md:w-auto">
-            <DatePickerWithRange 
-              date={dateRange} 
-              setDate={setDateRange} 
+            <DatePickerWithRange
+              date={dateRange}
+              setDate={setDateRange}
             />
           </div>
           <div className="flex gap-2">
-            <Button 
+            <Button
               variant="outline"
               size="icon"
               onClick={handleRecovery}
@@ -174,9 +255,9 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
             >
               <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
             </Button>
-            
+
             {operations && operations.length > 0 && (
-              <Button 
+              <Button
                 variant="outline"
                 size="icon"
                 onClick={handleReportDownload}
@@ -212,7 +293,7 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
               </p>
             </Card>
           </div>
-          
+
           <div className="overflow-auto -mx-4 px-4">
             <table className="w-full border-collapse min-w-[650px]">
               <thead>
@@ -249,8 +330,8 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
                       </td>
                     )}
                     <td className="py-2 px-2 md:px-4 text-center text-xs md:text-sm">
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         size="sm"
                         className="h-8 w-8 p-0"
                         onClick={() => handleOpenNoteDialog(op)}
@@ -263,10 +344,10 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
                       </Button>
                     </td>
                     <td className="py-2 px-2 md:px-4 text-center text-xs md:text-sm">
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         size="sm"
-                        className="h-8 w-8 p-0" 
+                        className="h-8 w-8 p-0"
                         onClick={() => handleOpenPhotoDialog(op)}
                       >
                         {hasPhotos(op) ? (
@@ -303,6 +384,23 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
         </div>
       )}
 
+      {/* Hidden file inputs for camera and gallery */}
+      <input
+        type="file"
+        capture="environment"
+        accept="image/*"
+        ref={cameraInputRef}
+        className="hidden"
+        onChange={handlePhotoFileChange}
+      />
+      <input
+        type="file"
+        accept="image/*"
+        ref={galleryInputRef}
+        className="hidden"
+        onChange={handlePhotoFileChange}
+      />
+
       {/* Note Dialog */}
       <Dialog open={isNoteDialogOpen} onOpenChange={setIsNoteDialogOpen}>
         <DialogContent className="sm:max-w-md">
@@ -312,7 +410,7 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
               {selectedOperation?.service_name || selectedOperation?.aciklama || "İşlem"} için notunuzu düzenleyin
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <Textarea
               value={currentNote}
@@ -320,7 +418,7 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
               placeholder="İşlem hakkında notlarınızı buraya ekleyin..."
               className="min-h-[150px]"
             />
-            
+
             <div className="flex justify-between">
               <div>
                 <Button variant="destructive" onClick={handleDeleteNote}>
@@ -349,35 +447,41 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
               {selectedOperation?.service_name || selectedOperation?.aciklama || "İşlem"} için fotoğraf ekleyin (en fazla 2 fotoğraf)
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="flex flex-col gap-4">
-            <Button 
-              onClick={() => handleUploadPhoto('camera')} 
+            <Button
+              onClick={() => {
+                triggerCameraInput();
+                setIsPhotoDialogOpen(false);
+              }}
               className="flex items-center gap-2"
             >
               <Camera className="h-5 w-5" />
               Kamera ile Çek
             </Button>
-            
-            <Button 
-              onClick={() => handleUploadPhoto('gallery')} 
+
+            <Button
+              onClick={() => {
+                triggerGalleryInput();
+                setIsPhotoDialogOpen(false);
+              }}
               variant="outline"
               className="flex items-center gap-2"
             >
               <Image className="h-5 w-5" />
               Galeriden Seç
             </Button>
-            
+
             {selectedOperation && selectedOperation.photos && selectedOperation.photos.length > 0 && (
               <div className="mt-4">
                 <h4 className="text-sm font-medium mb-2">Mevcut Fotoğraflar</h4>
                 <div className="grid grid-cols-2 gap-2">
                   {selectedOperation.photos.map((photo: string, index: number) => (
                     <div key={index} className="border rounded overflow-hidden aspect-square">
-                      <img 
-                        src={photo} 
-                        alt={`İşlem fotoğrafı ${index + 1}`} 
-                        className="w-full h-full object-cover" 
+                      <img
+                        src={photo}
+                        alt={`İşlem fotoğrafı ${index + 1}`}
+                        className="w-full h-full object-cover"
                       />
                     </div>
                   ))}
