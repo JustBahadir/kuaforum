@@ -95,19 +95,19 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFo
   
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Removed duplicate phone input field */}
       <CustomerFormFields 
         firstName={firstName}
         lastName={lastName}
+        phone={phone}
         onFirstNameChange={setFirstName}
         onLastNameChange={setLastName}
+        onPhoneChange={setPhone}
         errors={errors}
       />
       
-      <PhoneInputField 
-        value={phone}
-        onChange={setPhone}
-      />
-      
+      {/* This was a duplicate phone input previously, removed */}
+
       <DatePickerField
         value={birthdate}
         onChange={setBirthdate}

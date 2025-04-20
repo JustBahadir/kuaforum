@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format, addDays, subDays, isSameDay, isYesterday, isToday, isTomorrow, parseISO } from "date-fns";
 import { tr } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -10,8 +10,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge"; 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { islemServisi } from "@/lib/supabase/services/islemServisi";
-import { useEffect } from "react";
+import { useEffect as useEffectReact } from "react";
 import { supabase } from "@/lib/supabase/client";
+import React from "react";
 
 interface AppointmentDayViewProps {
   selectedDate: Date;
@@ -23,6 +24,7 @@ interface AppointmentDayViewProps {
   onDateChange: (date: Date) => void;
   onCompleteClick: (appointment: Randevu) => void;
   onCancelClick: (appointment: Randevu) => void;
+  onUndoCancelClick?: (appointment: Randevu) => void;
 }
 
 export function AppointmentDayView({
@@ -34,14 +36,13 @@ export function AppointmentDayView({
   currentPersonelId,
   onDateChange,
   onCompleteClick,
-  onCancelClick
+  onCancelClick,
+  onUndoCancelClick
 }: AppointmentDayViewProps) {
   const [serviceNames, setServiceNames] = useState<Record<number, string>>({});
   
-  // Get service names
   useEffect(() => {
     const fetchServiceNames = async () => {
-      // Extract all service IDs from appointments
       const serviceIds = appointments
         .flatMap(appointment => 
           Array.isArray(appointment.islemler) ? appointment.islemler : [])
@@ -83,7 +84,6 @@ export function AppointmentDayView({
     onDateChange(new Date());
   };
 
-  // Get the appropriate day label
   const getDayLabel = (date: Date) => {
     if (isToday(date)) {
       return "Bugün";
@@ -95,7 +95,6 @@ export function AppointmentDayView({
     return "";
   };
 
-  // Filter appointments for the selected date
   const filteredAppointments = appointments.filter(appointment => {
     const appointmentDate = typeof appointment.tarih === 'string' 
       ? parseISO(appointment.tarih) 
@@ -103,7 +102,6 @@ export function AppointmentDayView({
     return isSameDay(appointmentDate, selectedDate);
   });
 
-  // Sort by time
   const sortedAppointments = [...filteredAppointments].sort((a, b) => {
     return a.saat.localeCompare(b.saat);
   });
@@ -191,7 +189,7 @@ export function AppointmentDayView({
                     </div>
                   </div>
                   
-                  <div className="col-span-1 flex items-center justify-end">
+                  <div className="col-span-1 flex items-center justify-end flex-col sm:flex-row gap-2">
                     {appointment.durum === "onaylandi" && (
                       <div className="flex flex-col sm:flex-row gap-2">
                         <Button 
@@ -214,15 +212,31 @@ export function AppointmentDayView({
                     )}
                     
                     {appointment.durum === "tamamlandi" && (
-                      <Badge className="bg-green-100 text-green-800 border-green-200">
-                        Tamamlandı
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge className="bg-green-100 text-green-800 border-green-200">
+                          Tamamlandı
+                        </Badge>
+                        <CheckSquare className="text-green-600" />
+                      </div>
                     )}
                     
                     {appointment.durum === "iptal_edildi" && (
-                      <Badge className="bg-red-100 text-red-800 border-red-200">
-                        İptal Edildi
-                      </Badge>
+                      <div className="flex flex-col sm:flex-row gap-2 items-center">
+                        <Badge className="bg-red-100 text-red-800 border-red-200">
+                          İptal Edildi
+                        </Badge>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="flex items-center gap-1"
+                          onClick={() => onUndoCancelClick && onUndoCancelClick(appointment)}
+                        >
+                          Geri Al
+                        </Button>
+                        {appointment.durum === "aktif" && (
+                          <CheckSquare className="text-green-600" />
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>

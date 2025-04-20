@@ -6,6 +6,7 @@ import { Randevu, Personel, Musteri } from "@/lib/supabase/types";
 import { toast } from "sonner";
 import { personelServisi } from "@/lib/supabase";
 import { supabase } from '@/lib/supabase/client';
+
 import { musteriServisi } from "@/lib/supabase/services/musteriServisi";
 import { personelIslemleriServisi } from "@/lib/supabase/services/personelIslemleriServisi";
 
@@ -68,13 +69,12 @@ export function useAppointments(dukkanId?: number) {
       }
     },
     enabled: true,
-    staleTime: 1000, // Reduced to 1 second to improve freshness
-    refetchInterval: 5000, // Check for updates every 5 seconds
+    staleTime: 1000,
+    refetchInterval: 5000,
     refetchOnMount: true,
     refetchOnWindowFocus: true
   });
   
-  // Optimize the enhancement of appointments by using a more efficient approach
   const enhanceAppointments = useCallback(async () => {
     if (!appointmentsRaw?.length) {
       setAppointmentData([]);
@@ -84,19 +84,16 @@ export function useAppointments(dukkanId?: number) {
     try {
       const enhancedAppointments = [...appointmentsRaw];
       
-      // Get all personel IDs that need to be fetched
       const personelIds = enhancedAppointments
         .filter(app => app.personel_id && !app.personel)
         .map(app => app.personel_id)
         .filter((id, index, self) => id !== null && self.indexOf(id) === index) as number[];
       
-      // Get all customer IDs that need to be fetched
       const customerIds = enhancedAppointments
         .filter(app => app.musteri_id && !app.musteri)
         .map(app => app.musteri_id)
         .filter((id, index, self) => id !== null && self.indexOf(id) === index) as number[];
       
-      // Fetch all personnel in one query
       if (personelIds.length > 0) {
         const { data: personelData } = await supabase
           .from('personel')
@@ -109,7 +106,6 @@ export function useAppointments(dukkanId?: number) {
             return map;
           }, {} as Record<number, Personel>);
           
-          // Assign personnel to appointments
           enhancedAppointments.forEach(app => {
             if (app.personel_id && !app.personel && personelMap[app.personel_id]) {
               app.personel = personelMap[app.personel_id];
@@ -118,7 +114,6 @@ export function useAppointments(dukkanId?: number) {
         }
       }
       
-      // Fetch all customers in one query
       if (customerIds.length > 0) {
         const { data: customerData } = await supabase
           .from('musteriler')
@@ -127,7 +122,6 @@ export function useAppointments(dukkanId?: number) {
         
         if (customerData) {
           const customerMap = customerData.reduce((map, c) => {
-            // Add a role property to make it compatible with Profile type
             const customerWithRole = {
               ...c,
               role: 'customer'
@@ -136,7 +130,6 @@ export function useAppointments(dukkanId?: number) {
             return map;
           }, {} as Record<number, any>);
           
-          // Assign customers to appointments
           enhancedAppointments.forEach(app => {
             if (app.musteri_id && !app.musteri && customerMap[app.musteri_id]) {
               app.musteri = customerMap[app.musteri_id];
@@ -160,12 +153,10 @@ export function useAppointments(dukkanId?: number) {
       try {
         console.log(`Completing appointment with ID: ${appointmentId}`);
         
-        // First mark the appointment as completed
         const result = await randevuServisi.guncelle(appointmentId, {
           durum: "tamamlandi"
         });
         
-        // Make sure to create operations for personnel and customer
         await randevuServisi.randevuTamamlandi(appointmentId);
         
         return result;
@@ -177,17 +168,14 @@ export function useAppointments(dukkanId?: number) {
     onSuccess: async (_, appointmentId) => {
       toast.success("Randevu tamamlandı");
       
-      // Get the appointment details to retrieve customer and personnel IDs
       const appointment = appointmentsRaw.find(app => app.id === appointmentId);
       
       if (appointment) {
-        // Invalidate relevant queries to ensure data refresh
         queryClient.invalidateQueries({ queryKey: ['appointments'] });
         queryClient.invalidateQueries({ queryKey: ['personnelOperations'] });
         queryClient.invalidateQueries({ queryKey: ['customerOperations'] });
         queryClient.invalidateQueries({ queryKey: ['shop-statistics'] });
         
-        // Invalidate specific personnel and customer queries if we have their IDs
         if (appointment.personel_id) {
           queryClient.invalidateQueries({ queryKey: ['personelIslemleri', appointment.personel_id] });
         }
@@ -196,14 +184,10 @@ export function useAppointments(dukkanId?: number) {
           queryClient.invalidateQueries({ queryKey: ['customerOperations', appointment.musteri_id] });
         }
       } else {
-        // If we can't find the appointment, just invalidate all possible related queries
         queryClient.invalidateQueries();
       }
       
-      // Close the dialog
       setConfirmDialogOpen(false);
-      
-      // Immediately trigger a refetch
       await refetch();
     },
     onError: (error: any) => {
@@ -225,13 +209,29 @@ export function useAppointments(dukkanId?: number) {
       
       toast.success("Randevu iptal edildi");
       setCancelDialogOpen(false);
-      
-      // Immediately trigger a refetch
       refetch();
     },
     onError: (error: any) => {
       console.error("Error canceling appointment:", error);
       toast.error(`Randevu iptal edilirken bir hata oluştu: ${error.message || "Bilinmeyen hata"}`);
+    }
+  });
+
+  // Added mutate to undo cancel (set status back to onaylandi)
+  const { mutate: undoCancelAppointment } = useMutation({
+    mutationFn: async (appointmentId: number) => {
+      return randevuServisi.guncelle(appointmentId, {
+        durum: "onaylandi"
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      toast.success("Randevu geri alındı");
+      refetch();
+    },
+    onError: (error: any) => {
+      console.error("Error undoing appointment cancel:", error);
+      toast.error(`Randevu geri alınırken bir hata oluştu: ${error.message || "Bilinmeyen hata"}`);
     }
   });
   
@@ -243,6 +243,10 @@ export function useAppointments(dukkanId?: number) {
   const handleCancelClick = (appointment: Randevu) => {
     setSelectedAppointment(appointment);
     setCancelDialogOpen(true);
+  };
+
+  const handleUndoCancelClick = (appointment: Randevu) => {
+    undoCancelAppointment(appointment.id);
   };
   
   const handleAppointmentComplete = () => {
@@ -273,6 +277,7 @@ export function useAppointments(dukkanId?: number) {
     currentPersonelId,
     handleCompleteClick,
     handleCancelClick,
+    handleUndoCancelClick,
     handleAppointmentComplete,
     handleAppointmentCancel,
     isCompletingAppointment,
