@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -12,18 +11,15 @@ import { supabase } from "@/lib/supabase/client";
 import { profilServisi } from "@/lib/supabase/services/profilServisi";
 import { Toaster } from "@/components/ui/toaster";
 
-// New icons imports
 import { ChevronRight, CheckCircle, Scissors, Calendar, Users, CreditCard, PieChart, Bell } from "lucide-react";
 
 export default function Dashboard() {
   const navigate = useNavigate();
   
-  // Check if user is already logged in
   useEffect(() => {
     const checkSession = async () => {
       const { data } = await supabase.auth.getSession();
       if (data.session) {
-        // User is already logged in, fetch profile to determine redirect path
         const profile = await profilServisi.getir();
         if (profile?.role === 'staff') {
           navigate('/personnel');
@@ -36,12 +32,10 @@ export default function Dashboard() {
     checkSession();
   }, [navigate]);
   
-  // Customer auth state
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   
-  // Customer login fields
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -51,12 +45,10 @@ export default function Dashboard() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loginError, setLoginError] = useState("");
   
-  // Clear error when form changes
   const clearError = () => {
     if (loginError) setLoginError("");
   };
 
-  // Handle customer login
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -65,7 +57,6 @@ export default function Dashboard() {
     try {
       console.log("Attempting login with:", email);
       
-      // Sign in with email/password
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email,
         password: password,
@@ -84,7 +75,6 @@ export default function Dashboard() {
         return;
       }
       
-      // Fetch profile
       try {
         const profile = await profilServisi.getir();
         
@@ -93,12 +83,10 @@ export default function Dashboard() {
           description: "Giriş başarılı! Müşteri sayfanıza yönlendiriliyorsunuz."
         });
         
-        // Save auth in browser if remember me is checked
         if (rememberMe) {
           localStorage.setItem('supabase.auth.token', JSON.stringify(data.session));
         }
         
-        // Navigate to appropriate page based on role
         if (profile?.role === 'staff') {
           setTimeout(() => navigate("/personnel"), 500);
         } else {
@@ -118,14 +106,12 @@ export default function Dashboard() {
     }
   };
 
-  // Handle customer registration
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setLoginError("");
     
     try {
-      // Validate form
       if (!email || !password || !firstName || !lastName || !phone) {
         setLoginError("Lütfen tüm zorunlu alanları doldurunuz");
         setLoading(false);
@@ -138,7 +124,6 @@ export default function Dashboard() {
         return;
       }
       
-      // Create new user with email/password
       const { data, error } = await supabase.auth.signUp({
         email: email,
         password: password,
@@ -170,9 +155,8 @@ export default function Dashboard() {
         throw new Error("Kullanıcı oluşturulamadı");
       }
       
-      // Create or update profile with customer role
       try {
-        await profilServisi.createOrUpdateProfile(data.user.id, {
+        await profilServisi.createProfile(data.user.id, {
           first_name: firstName,
           last_name: lastName,
           role: "customer",
@@ -184,7 +168,6 @@ export default function Dashboard() {
           description: "Kayıt başarılı! Müşteri sayfanıza yönlendiriliyorsunuz."
         });
         
-        // Navigate to customer dashboard page
         setTimeout(() => {
           navigate("/customer-dashboard");
         }, 500);
@@ -208,14 +191,12 @@ export default function Dashboard() {
     }
   };
 
-  // Staff login handler - redirects to empty page for now
   const handleStaffLogin = () => {
     navigate("/staff-login");
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-purple-50">
-      {/* Top Navigation Bar */}
       <nav className="bg-white shadow-sm py-4">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center">
@@ -243,7 +224,6 @@ export default function Dashboard() {
         </div>
       </nav>
 
-      {/* Hero Section */}
       <div className="bg-gradient-to-r from-pink-100 to-purple-100 py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="md:flex md:items-center md:justify-between">
@@ -260,7 +240,6 @@ export default function Dashboard() {
               </Button>
             </div>
             <div className="md:w-1/2">
-              {/* Login/Registration Card */}
               <Card className="shadow-lg border-0">
                 <CardHeader className="bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-t-lg">
                   <CardTitle className="text-center text-2xl">
@@ -483,7 +462,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Highlight Section */}
       <div className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl font-bold text-gray-800 mb-2">
@@ -493,9 +471,7 @@ export default function Dashboard() {
             60 Ülkede <span className="text-pink-600">Aşkla</span> Kullanılıyor!
           </h3>
           
-          {/* Feature Grid */}
           <div className="grid md:grid-cols-3 gap-8">
-            {/* Feature 1 */}
             <div className="bg-gray-50 rounded-lg p-6 text-left shadow-sm hover:shadow-md transition-shadow">
               <div className="bg-pink-100 p-3 rounded-full inline-block mb-4">
                 <Calendar className="h-6 w-6 text-pink-600" />
@@ -506,7 +482,6 @@ export default function Dashboard() {
               </p>
             </div>
             
-            {/* Feature 2 */}
             <div className="bg-gray-50 rounded-lg p-6 text-left shadow-sm hover:shadow-md transition-shadow">
               <div className="bg-purple-100 p-3 rounded-full inline-block mb-4">
                 <CreditCard className="h-6 w-6 text-purple-600" />
@@ -517,7 +492,6 @@ export default function Dashboard() {
               </p>
             </div>
             
-            {/* Feature 3 */}
             <div className="bg-gray-50 rounded-lg p-6 text-left shadow-sm hover:shadow-md transition-shadow">
               <div className="bg-pink-100 p-3 rounded-full inline-block mb-4">
                 <PieChart className="h-6 w-6 text-pink-600" />
@@ -528,7 +502,6 @@ export default function Dashboard() {
               </p>
             </div>
             
-            {/* Feature 4 */}
             <div className="bg-gray-50 rounded-lg p-6 text-left shadow-sm hover:shadow-md transition-shadow">
               <div className="bg-purple-100 p-3 rounded-full inline-block mb-4">
                 <Scissors className="h-6 w-6 text-purple-600" />
@@ -539,7 +512,6 @@ export default function Dashboard() {
               </p>
             </div>
             
-            {/* Feature 5 */}
             <div className="bg-gray-50 rounded-lg p-6 text-left shadow-sm hover:shadow-md transition-shadow">
               <div className="bg-pink-100 p-3 rounded-full inline-block mb-4">
                 <Users className="h-6 w-6 text-pink-600" />
@@ -550,7 +522,6 @@ export default function Dashboard() {
               </p>
             </div>
             
-            {/* Feature 6 */}
             <div className="bg-gray-50 rounded-lg p-6 text-left shadow-sm hover:shadow-md transition-shadow">
               <div className="bg-purple-100 p-3 rounded-full inline-block mb-4">
                 <Bell className="h-6 w-6 text-purple-600" />
@@ -564,7 +535,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Call To Action Section */}
       <div className="bg-gradient-to-r from-purple-600 to-pink-600 py-12 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl font-bold mb-4">Salon Yönetiminizi Dijitalleştirmeye Başlayın</h2>
@@ -577,13 +547,11 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Testimonials Section */}
       <div className="py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl font-bold text-gray-800 mb-12">Müşterilerimiz Ne Diyor?</h2>
           
           <div className="grid md:grid-cols-3 gap-8">
-            {/* Testimonial 1 */}
             <div className="bg-white p-6 rounded-lg shadow text-left relative">
               <div className="absolute -top-4 left-6 bg-pink-100 p-2 rounded-full">
                 <CheckCircle className="h-6 w-6 text-pink-600" />
@@ -595,7 +563,6 @@ export default function Dashboard() {
               <p className="text-sm text-gray-500">Kuaför Salonu Sahibi, İstanbul</p>
             </div>
             
-            {/* Testimonial 2 */}
             <div className="bg-white p-6 rounded-lg shadow text-left relative">
               <div className="absolute -top-4 left-6 bg-purple-100 p-2 rounded-full">
                 <CheckCircle className="h-6 w-6 text-purple-600" />
@@ -607,7 +574,6 @@ export default function Dashboard() {
               <p className="text-sm text-gray-500">Güzellik Merkezi Sahibi, Ankara</p>
             </div>
             
-            {/* Testimonial 3 */}
             <div className="bg-white p-6 rounded-lg shadow text-left relative">
               <div className="absolute -top-4 left-6 bg-pink-100 p-2 rounded-full">
                 <CheckCircle className="h-6 w-6 text-pink-600" />
@@ -622,7 +588,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Footer */}
       <footer className="bg-gray-800 text-white py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-4 gap-8">

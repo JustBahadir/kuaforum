@@ -1,19 +1,18 @@
 
-// Profil güncelleme servisinde enum rolü uygun şekilde set ediyoruz
-
+// Fix type comparison issue and add runtime checking for "isletmeci" role from possibly unknown input
 import { ProfileUpdateData } from "./profileTypes";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
 
 export async function updateProfile(data: ProfileUpdateData & { id?: string }) {
   try {
-    // role alanını normalize et
-    let role = data.role;
+    let role = data.role as string | undefined;
+
     if (role === "isletmeci") {
-      role = "admin"; // veya uygun enum değeri
+      role = "admin"; // or map to appropriate enum
     }
 
-    // Supabase update requires id, so check if id exists in data (optional)
+    // Supabase update requires id, so check if id exists in data
     const idToUse = data.id;
     if (!idToUse) {
       throw new Error("Profile id is required for updateProfile");
@@ -26,7 +25,7 @@ export async function updateProfile(data: ProfileUpdateData & { id?: string }) {
         last_name: data.last_name,
         phone: data.phone,
         gender: data.gender,
-        shopname: (data as any).shopname, // shopname may not be part of ProfileUpdateData; cast to any
+        shopname: (data as any).shopname, // cast since shopname might not be in ProfileUpdateData
         role: role,
       })
       .eq("id", idToUse);

@@ -1,4 +1,3 @@
-
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase, supabaseAdmin } from "@/lib/supabase/client";
 import { Personel } from "@/lib/supabase";
@@ -70,7 +69,7 @@ async function updateExistingUser(userId: string, personelData: PersonelData): P
     
     // Update profile using service_role key via profile service
     try {
-      await profilServisi.createOrUpdateProfile(userId, {
+      await profilServisi.createProfile(userId, {
         first_name: firstName,
         last_name: lastName,
         role: 'staff',
@@ -207,7 +206,7 @@ async function connectPersonelToAuthUser(personelData: PersonelData, personelId:
       await updatePersonelWithAuthId(personelId, newUser.id);
         
       // Create profile
-      await profilServisi.createOrUpdateProfile(newUser.id, {
+      await profilServisi.createProfile(newUser.id, {
         first_name: firstName,
         last_name: lastName,
         role: 'staff',
