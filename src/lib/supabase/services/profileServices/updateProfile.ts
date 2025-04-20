@@ -1,8 +1,8 @@
 
 // Profil güncelleme servisinde enum rolü uygun şekilde set ediyoruz
 
+import { ProfileUpdateData } from "./profileTypes";
 import { supabase } from "@/lib/supabase/client";
-import { ProfileUpdateData } from "../types";
 import { toast } from "sonner";
 
 export async function updateProfile(data: ProfileUpdateData) {
@@ -38,4 +38,3 @@ export async function updateProfile(data: ProfileUpdateData) {
     throw error;
   }
 }
-
