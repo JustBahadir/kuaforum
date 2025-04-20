@@ -1,17 +1,17 @@
 
-// Rewrite phone input from profile page to reuse anywhere
-
 import * as React from "react";
 import { Input } from "./input";
 
-interface PhoneInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+interface PhoneInputProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   id?: string;
+  className?: string;
+  disabled?: boolean;
 }
 
-export function PhoneInput({ value, onChange, placeholder = "Telefon numarası", id, ...props }: PhoneInputProps) {
+export function PhoneInput({ value, onChange, placeholder = "Telefon numarası", id, className, disabled, ...props }: PhoneInputProps) {
   // Format phone number as you like (simple formatting here)
   const formatPhone = (phone: string) => {
     // Remove non-digits
@@ -35,8 +35,9 @@ export function PhoneInput({ value, onChange, placeholder = "Telefon numarası",
       value={formatPhone(value)}
       onChange={handleChange}
       placeholder={placeholder}
+      className={className}
+      disabled={disabled}
       {...props}
     />
   );
 }
-

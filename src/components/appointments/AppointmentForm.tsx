@@ -18,6 +18,7 @@ import { CalismaSaati, RandevuDurumu } from "@/lib/supabase/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { personelIslemleriServisi } from "@/lib/supabase/services/personelIslemleriServisi";
 import { PhoneInput } from "@/components/ui/phone-input";
+import { Calendar } from "@/components/ui/calendar";
 
 interface AppointmentFormProps {
   onAppointmentCreated: (appointment: any) => void;
