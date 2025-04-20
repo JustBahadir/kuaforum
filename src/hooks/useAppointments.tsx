@@ -4,12 +4,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { randevuServisi } from "@/lib/supabase/services/randevuServisi";
 import { Randevu, Personel, Musteri } from "@/lib/supabase/types";
 import { toast } from "sonner";
-import { personelServisi } from "@/lib/supabase";
 import { supabase } from '@/lib/supabase/client';
-
-import { musteriServisi } from "@/lib/supabase/services/musteriServisi";
+import { personelServisi } from "@/lib/supabase";
 import { personelIslemleriServisi } from "@/lib/supabase/services/personelIslemleriServisi";
 
+import { Undo } from "lucide-react"; // icon import for Undo button (if needed in a component)
+ 
 export function useAppointments(dukkanId?: number) {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedAppointment, setSelectedAppointment] = useState<Randevu | null>(null);
@@ -27,7 +27,6 @@ export function useAppointments(dukkanId?: number) {
         if (data.user) {
           const personel = await personelServisi.getirByAuthId(data.user.id);
           if (personel) {
-            console.log("Mevcut personel bulundu:", personel);
             setCurrentPersonelId(personel.id);
           }
         }
@@ -48,7 +47,6 @@ export function useAppointments(dukkanId?: number) {
   } = useQuery({
     queryKey: ['appointments', dukkanId, selectedDate],
     queryFn: async () => {
-      console.log("Randevuları getirme fonksiyonu çalıştırılıyor - Dükkan ID:", dukkanId);
       try {
         let data: Randevu[] = [];
         
@@ -60,17 +58,14 @@ export function useAppointments(dukkanId?: number) {
           data = randevular || [];
         }
         
-        // Here set a flag isReturnedFromCancel if the appointment was previously cancelled and then re-activated
         data.forEach(app => {
           if(app.durum === "onaylandi" && app.notlar?.toLowerCase().includes("geri alındı")) {
             (app as any).isReturnedFromCancel = true;
           }
         });
         
-        console.log("Randevular başarıyla getirildi:", data);
         return data;
       } catch (error) {
-        console.error("Randevuları getirme hatası:", error);
         toast.error("Randevular yüklenirken bir hata oluştu");
         throw error;
       }
@@ -158,8 +153,6 @@ export function useAppointments(dukkanId?: number) {
   const { mutate: completeAppointment, isPending: isCompletingAppointment } = useMutation({
     mutationFn: async (appointmentId: number) => {
       try {
-        console.log(`Completing appointment with ID: ${appointmentId}`);
-        
         const result = await randevuServisi.guncelle(appointmentId, {
           durum: "tamamlandi"
         });
@@ -168,37 +161,21 @@ export function useAppointments(dukkanId?: number) {
         
         return result;
       } catch (error) {
-        console.error("Error during appointment completion:", error);
         throw error;
       }
     },
     onSuccess: async (_, appointmentId) => {
       toast.success("Randevu tamamlandı");
       
-      const appointment = appointmentsRaw.find(app => app.id === appointmentId);
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['personnelOperations'] });
+      queryClient.invalidateQueries({ queryKey: ['customerOperations'] });
+      queryClient.invalidateQueries({ queryKey: ['shop-statistics'] });
       
-      if (appointment) {
-        queryClient.invalidateQueries({ queryKey: ['appointments'] });
-        queryClient.invalidateQueries({ queryKey: ['personnelOperations'] });
-        queryClient.invalidateQueries({ queryKey: ['customerOperations'] });
-        queryClient.invalidateQueries({ queryKey: ['shop-statistics'] });
-        
-        if (appointment.personel_id) {
-          queryClient.invalidateQueries({ queryKey: ['personelIslemleri', appointment.personel_id] });
-        }
-        
-        if (appointment.musteri_id) {
-          queryClient.invalidateQueries({ queryKey: ['customerOperations', appointment.musteri_id] });
-        }
-      } else {
-        queryClient.invalidateQueries();
-      }
-      
-      setConfirmDialogOpen(false);
       await refetch();
+      setConfirmDialogOpen(false);
     },
     onError: (error: any) => {
-      console.error("Error completing appointment:", error);
       toast.error(`Randevu tamamlanırken bir hata oluştu: ${error.message || "Bilinmeyen hata"}`);
       setConfirmDialogOpen(false);
     }
@@ -213,21 +190,19 @@ export function useAppointments(dukkanId?: number) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
       queryClient.invalidateQueries({ queryKey: ['shop-statistics'] });
-      
       toast.success("Randevu iptal edildi");
       setCancelDialogOpen(false);
       refetch();
     },
     onError: (error: any) => {
-      console.error("Error canceling appointment:", error);
       toast.error(`Randevu iptal edilirken bir hata oluştu: ${error.message || "Bilinmeyen hata"}`);
     }
   });
 
   // Undo cancel: reactivate appointment to "onaylandi"
-  const { mutate: undoCancelAppointment } = useMutation({
+  const { mutate: undoCancelAppointment, isPending: isUndoingCancel } = useMutation({
     mutationFn: async (appointmentId: number) => {
-      // Update appointment status to "onaylandi"
+      // Update appointment status to "onaylandi" and add note
       return randevuServisi.guncelle(appointmentId, {
         durum: "onaylandi",
         notlar: "Geri alındı"
@@ -239,7 +214,6 @@ export function useAppointments(dukkanId?: number) {
       refetch();
     },
     onError: (error: any) => {
-      console.error("Error undoing appointment cancel:", error);
       toast.error(`Randevu geri alınırken bir hata oluştu: ${error.message || "Bilinmeyen hata"}`);
     }
   });
@@ -291,6 +265,7 @@ export function useAppointments(dukkanId?: number) {
     handleAppointmentCancel,
     isCompletingAppointment,
     isCancelingAppointment,
+    isUndoingCancel,
     refetch
   };
 }

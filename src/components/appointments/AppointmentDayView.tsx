@@ -1,10 +1,9 @@
-
 import { useState, useEffect } from "react";
 import { format, addDays, subDays, isSameDay, isYesterday, isToday, isTomorrow, parseISO } from "date-fns";
 import { tr } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronLeft, ChevronRight, CheckSquare, XSquare, Info } from "lucide-react";
+import { ChevronLeft, ChevronRight, CheckSquare, XSquare, Info, Undo } from "lucide-react";
 import { Randevu } from "@/lib/supabase/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge"; 
@@ -12,7 +11,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/lib/supabase/client";
 import React from "react";
 
-// Import Calendar correctly
 import { Calendar } from "@/components/ui/calendar";
 
 interface AppointmentDayViewProps {
@@ -114,7 +112,6 @@ export function AppointmentDayView({
 
   const dayLabel = getDayLabel(selectedDate);
 
-  // Calendar toggle button handler
   const toggleCalendar = () => setShowCalendar(prev => !prev);
 
   return (
@@ -141,10 +138,7 @@ export function AppointmentDayView({
 
       {showCalendar && (
         <div className="mb-4">
-          {/* Reuse Shadcn UI Calendar component */}
-          {/* We wrap it in div with pointer-events-auto for interactivity */}
           <div className="p-3 pointer-events-auto border rounded-md max-w-sm">
-            {/* On selecting a date, update selectedDate and close calendar */}
             <Calendar
               mode="single"
               selected={selectedDate}
@@ -266,8 +260,9 @@ export function AppointmentDayView({
                             className="flex items-center gap-1"
                             onClick={() => onUndoCancelClick && onUndoCancelClick(appointment)}
                           >
-                            Geri Al
+                            <Undo className="h-4 w-4" /> Geri Al
                           </Button>
+
                           {isReturnedFromCancel && (
                             <>
                               <CheckSquare className="text-green-600" />
