@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,9 +29,10 @@ interface AppointmentFormProps {
   onAppointmentCreated: (appointment: any) => void;
   initialDate?: string;
   initialServiceId?: number;
+  initialCustomerId?: number;
 }
 
-export function AppointmentForm({ onAppointmentCreated, initialDate, initialServiceId }: AppointmentFormProps) {
+export function AppointmentForm({ onAppointmentCreated, initialDate, initialServiceId, initialCustomerId }: AppointmentFormProps) {
   const { dukkanId, userId, userRole } = useCustomerAuth();
   const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState(initialDate || format(new Date(), 'yyyy-MM-dd'));
@@ -40,11 +40,18 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [selectedService, setSelectedService] = useState<number | null>(initialServiceId || null);
   const [selectedPersonel, setSelectedPersonel] = useState<number | null>(null);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
   const [notes, setNotes] = useState("");
   const [availableTimes, setAvailableTimes] = useState<string[]>([]);
   const [isFetchingTimes, setIsFetchingTimes] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const [phone, setPhone] = React.useState("");
+
+  useEffect(() => {
+    if (initialCustomerId) {
+      setSelectedCustomerId(initialCustomerId);
+    }
+  }, [initialCustomerId]);
 
   const { data: personeller = [], isLoading: isLoadingPersoneller } = useQuery({
     queryKey: ['personeller'],
@@ -147,13 +154,13 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
 
   const { mutate: createAppointment, isPending: isCreating } = useMutation({
     mutationFn: async () => {
-      if (!dukkanId || !userId || !selectedPersonel || !selectedService) {
+      if (!dukkanId || !selectedCustomerId || !selectedPersonel || !selectedService) {
         throw new Error("Gerekli bilgiler eksik");
       }
 
       const randevuData = {
         dukkan_id: dukkanId,
-        customer_id: userId,
+        customer_id: selectedCustomerId,
         personel_id: selectedPersonel,
         tarih: selectedDate,
         saat: selectedTime,
@@ -180,6 +187,12 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
       toast.error(`Randevu eklenirken bir hata oluştu: ${error.message || "Bilinmeyen hata"}`);
     }
   });
+
+  useEffect(() => {
+    if (!initialCustomerId && userRole === "customer" && userId) {
+      setSelectedCustomerId(userId);
+    }
+  }, [initialCustomerId, userRole, userId]);
 
   const handleCreateAppointment = () => {
     if (!selectedDate) {
@@ -418,4 +431,3 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
     </div>
   );
 }
-

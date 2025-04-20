@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -23,11 +22,24 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useLocation } from "react-router-dom";
 
 export default function Appointments() {
   const { dukkanId, userRole } = useCustomerAuth();
+  const location = useLocation();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [initialSelectedCustomerId, setInitialSelectedCustomerId] = useState<number | null>(null);
   
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const newAppointment = searchParams.get("newAppointment") === "true";
+    const customerIdParam = searchParams.get("customerId");
+    if (newAppointment && customerIdParam) {
+      setAddDialogOpen(true);
+      setInitialSelectedCustomerId(Number(customerIdParam));
+    }
+  }, [location]);
+
   const {
     appointments,
     isLoading,
@@ -51,6 +63,7 @@ export default function Appointments() {
   const handleAppointmentCreated = () => {
     refetch();
     setAddDialogOpen(false);
+    setInitialSelectedCustomerId(null);
   };
   
   const AppointmentFormComponent = userRole === 'staff' || userRole === 'admin' 
@@ -122,6 +135,7 @@ export default function Appointments() {
             <AppointmentFormComponent 
               onAppointmentCreated={handleAppointmentCreated}
               initialDate={selectedDate.toISOString().split('T')[0]}
+              initialCustomerId={initialSelectedCustomerId || undefined}
             />
           </DialogContent>
         </Dialog>

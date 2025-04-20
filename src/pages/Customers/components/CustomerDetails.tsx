@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -23,7 +22,6 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
   const params = useParams<{ id: string }>();
   const navigate = useNavigate();
   
-  // Use the prop customerId if provided, otherwise get it from URL params
   const customerId = propCustomerId !== undefined ? propCustomerId : params.id ? Number(params.id) : undefined;
 
   const { 
@@ -39,7 +37,6 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
     enabled: !!customerId,
   });
   
-  // Fetch customer personal data
   const {
     data: personalData,
     isLoading: isLoadingPersonalData
@@ -52,13 +49,11 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
     enabled: !!customerId
   });
 
-  // Merge customer data with personal data
   const customerWithPersonalData = customer && personalData ? {
     ...customer,
     ...personalData
   } : customer;
 
-  // Check if points system is enabled
   const { data: services = [] } = useQuery({
     queryKey: ['islemler'],
     queryFn: islemServisi.hepsiniGetir,
@@ -66,11 +61,9 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
 
   const isPointSystemEnabled = services.some((service: any) => service.puan > 0);
   
-  // Handle appointment creation
   const handleCreateAppointment = () => {
     if (customerId) {
-      // Navigate to appointments page with customer ID in the URL
-      navigate(`/appointments?customerId=${customerId}`);
+      navigate(`/appointments?customerId=${customerId}&newAppointment=true`);
     }
   };
 
@@ -101,7 +94,6 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
           <p className="text-sm text-gray-500">Müşteri #: {customer.id}</p>
         </div>
 
-        {/* Action buttons */}
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => {}}>
             Mesaj Gönder
@@ -121,7 +113,6 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
           )}
         </TabsList>
         
-        {/* Temel Bilgiler (Basic Info) */}
         <TabsContent value="basic">
           <Card>
             <CardHeader>
@@ -133,7 +124,6 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
           </Card>
         </TabsContent>
 
-        {/* Detaylı Bilgiler (Detailed Info) */}
         <TabsContent value="detailed">
           <Card>
             <CardHeader>
@@ -145,12 +135,10 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
           </Card>
         </TabsContent>
 
-        {/* İşlem Geçmişi (Operations) */}
         <TabsContent value="operations">
           {customerId && <CustomerOperationsTable customerId={customerId} />}
         </TabsContent>
 
-        {/* Fotoğraflar (Photos) */}
         <TabsContent value="photos">
           <Card>
             <CardHeader>
@@ -162,7 +150,6 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
           </Card>
         </TabsContent>
 
-        {/* Sadakat & Puanlar (Loyalty) */}
         {isPointSystemEnabled && (
           <TabsContent value="loyalty">
             <Card>
