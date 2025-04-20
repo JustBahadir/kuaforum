@@ -51,7 +51,7 @@ const EducationTab = ({
   onSave,
   isLoading,
 }: EducationTabProps) => {
-  // Determine visibility based on selections
+  // Determine visibility based on selection
   const ortaokulBitirdi =
     educationData.ortaokuldurumu.toLowerCase().includes("mezun") ||
     educationData.ortaokuldurumu.toLowerCase().includes("bitiriyor") ||
@@ -72,12 +72,12 @@ const EducationTab = ({
     <div className="space-y-6">
       <h2 className="text-lg font-semibold border-b pb-2">Eğitim Bilgileri</h2>
 
-      {/* Ortaokul Durumu: dropdown, seçenekler Mezun, Devam Ediyor, Bitirmedi */}
+      {/* Ortaokul Durumu */}
       <div>
         <label className="block font-medium mb-1">Ortaokul Durumu</label>
         <Select
           onValueChange={(value) => onEducationChange("ortaokuldurumu", value)}
-          value={educationData.ortaokuldurumu}
+          value={educationData.ortaokuldurumu || ""}
         >
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Seçiniz..." />
@@ -90,15 +90,16 @@ const EducationTab = ({
             </SelectGroup>
           </SelectContent>
         </Select>
+        <p className="text-xs text-gray-500 mt-1">Ortaokul mezuniyet durumunu seçiniz.</p>
       </div>
 
-      {/* Lise Durumu: dropdown, görünürlük ortaokul mezun ve devam edenlerde */}
+      {/* Lise Durumu */}
       {ortaokulBitirdi && (
         <div>
           <label className="block font-medium mb-1">Lise Durumu</label>
           <Select
             onValueChange={(value) => onEducationChange("lisedurumu", value)}
-            value={educationData.lisedurumu}
+            value={educationData.lisedurumu || ""}
           >
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Seçiniz..." />
@@ -111,16 +112,17 @@ const EducationTab = ({
               </SelectGroup>
             </SelectContent>
           </Select>
+          <p className="text-xs text-gray-500 mt-1">Lise mezuniyet durumunu seçiniz.</p>
         </div>
       )}
 
-      {/* Lise Türü: dropdown, görünürlük lise mezun/devam edenlerde */}
+      {/* Lise Türü */}
       {ortaokulBitirdi && liseBitirdi && (
         <div>
           <label className="block font-medium mb-1">Lise Türü</label>
           <Select
             onValueChange={(value) => onEducationChange("liseturu", value)}
-            value={educationData.liseturu}
+            value={educationData.liseturu || ""}
           >
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Seçiniz..." />
@@ -135,10 +137,11 @@ const EducationTab = ({
               </SelectGroup>
             </SelectContent>
           </Select>
+          <p className="text-xs text-gray-500 mt-1">Lise türünü seçiniz.</p>
         </div>
       )}
 
-      {/* Mesleki Branş: input, yalnızca çok programlı veya mesleki teknik lisede görünür */}
+      {/* Mesleki Branş */}
       {showMeslekBrans && (
         <div>
           <label className="block font-medium mb-1">Mesleki Branş</label>
@@ -149,10 +152,13 @@ const EducationTab = ({
             onChange={(e) => onEducationChange("meslekibrans", e.target.value)}
             placeholder="Ör: Kuaförlük, Estetik..."
           />
+          <p className="text-xs text-gray-500 mt-1">
+            Çok Programlı Anadolu Lisesi veya Mesleki ve Teknik Anadolu Lisesi için mesleki branşı giriniz.
+          </p>
         </div>
       )}
 
-      {/* Üniversite Durumu: dropdown, görünürlük lise mezun/devam edenlerde */}
+      {/* Üniversite Durumu */}
       {showUniversite && (
         <div>
           <label className="block font-medium mb-1">Üniversite Durumu</label>
@@ -172,17 +178,18 @@ const EducationTab = ({
               </SelectGroup>
             </SelectContent>
           </Select>
+          <p className="text-xs text-gray-500 mt-1">Üniversite mezuniyet durumunu seçiniz.</p>
         </div>
       )}
 
-      {/* Üniversite Bölüm: dropdown, görünürlük üniversite durumu Mezun veya Devam Ediyor */}
+      {/* Üniversite Bölüm */}
       {(educationData.universitedurumu === "Mezun" ||
         educationData.universitedurumu === "Devam Ediyor") && (
         <div>
           <label className="block font-medium mb-1">Üniversite Bölüm</label>
           <Select
             onValueChange={(value) => onEducationChange("universitebolum", value)}
-            value={educationData.universitebolum}
+            value={educationData.universitebolum || ""}
           >
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Seçiniz..." />
@@ -197,6 +204,7 @@ const EducationTab = ({
               </SelectGroup>
             </SelectContent>
           </Select>
+          <p className="text-xs text-gray-500 mt-1">Üniversite bölümünü seçiniz.</p>
         </div>
       )}
 
@@ -215,5 +223,4 @@ const EducationTab = ({
 };
 
 export default EducationTab;
-
 

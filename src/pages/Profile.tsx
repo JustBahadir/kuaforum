@@ -242,11 +242,18 @@ const Profile = () => {
         return;
       }
 
+      const idNumber = Number(user.id);
+      if (isNaN(idNumber)) {
+        toast.error("Geçersiz kullanıcı kimliği");
+        setLoadingEduHist(false);
+        return;
+      }
+
       const upsertEducationPromise = supabase
         .from("staff_education")
         .upsert(
           {
-            personel_id: user.id,
+            personel_id: idNumber,
             ...educationData,
             updated_at: new Date().toISOString(),
           },
@@ -257,7 +264,7 @@ const Profile = () => {
         .from("staff_history")
         .upsert(
           {
-            personel_id: user.id,
+            personel_id: idNumber,
             ...historyData,
             updated_at: new Date().toISOString(),
           },
