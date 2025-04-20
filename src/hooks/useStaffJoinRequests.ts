@@ -20,15 +20,19 @@ export function useStaffJoinRequests() {
       .from<StaffJoinRequest>("staff_join_requests")
       .select("*")
       .order("created_at", { ascending: false });
+
     if (error) {
       throw error;
     }
+
     if (!data) {
       return [];
     }
+
     if (!Array.isArray(data)) {
       throw new Error("Received invalid data shape from staff_join_requests");
     }
+
     return data;
   };
 

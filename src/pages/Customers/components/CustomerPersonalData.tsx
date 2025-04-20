@@ -10,13 +10,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { format } from "date-fns"; // Add this import for the format function
+import { format } from "date-fns";
 
 interface CustomerPersonalDataProps {
   customerId: number;
 }
 
-// Define constants for preference options
 const BEVERAGE_OPTIONS = ["Kahve", "Çay", "Su", "Soğuk İçecekler"];
 const HAIR_TYPE_OPTIONS = {
   structure: ["Düz", "Dalgalı", "Kıvırcık"],
@@ -44,149 +43,96 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
   const [isEditing, setIsEditing] = useState(false);
   const [childName, setChildName] = useState("");
   const [formData, setFormData] = useState({
-    // Beverage Preference
     beverage_preferences: [] as string[],
     beverage_notes: "",
-
-    // Hair Type - Updated structure for radio buttons
-    hair_structure: "", // Single value for radio button
-    hair_condition: "", // Single value for radio button
-    hair_thickness: "", // Single value for radio button
-    hair_types: [] as string[], // Keep compatibility with existing data
-    
-    // Hair Dye Preference
+    hair_structure: "",
+    hair_condition: "",
+    hair_thickness: "",
+    hair_types: [] as string[],
     dye_preferences: [] as string[],
     root_dye_frequency: "",
     bleach_tolerance: false,
-    allergy_notes: "",
-    
-    // Heat Treatment Tolerance
+    // Removed allergy_notes from form state, no such field exists in DB or type
     straightener_preference: "",
     curling_preference: "",
     heat_sensitive_hair: false,
     heat_notes: "",
-    
-    // Care Preferences
     care_preferences: [] as string[],
     care_notes: "",
-    
-    // Hair Length & Goal
     hair_length: "",
     hair_goal: "",
     hair_goal_notes: "",
-    
-    // Brow/Mustache/Eyelash Preferences
     brow_preference: "",
     mustache_preference: "",
     waxing_preference: false,
     eyelash_preference: false,
     face_preference_notes: "",
-    
-    // Sensitivities
     sensitivities: [] as string[],
     sensitivity_notes: "",
-    
-    // Free Notes
     stylist_observations: "",
-    
-    // Add children_names to fix missing property error
     children_names: [] as string[],
   });
 
-  const {
-    data: personalData,
-    isLoading,
-  } = useQuery({
+  const { data: personalData, isLoading } = useQuery({
     queryKey: ["customer-personal-data", customerId],
-    queryFn: async () => {
-      return customerPersonalDataService.getCustomerPersonalData(customerId);
-    },
+    queryFn: async () => customerPersonalDataService.getCustomerPersonalData(customerId),
   });
 
-  // Extract hair type categories from existing data
   useEffect(() => {
     if (personalData) {
       const hairTypes = personalData.hair_types || [];
-      
-      // Find hair structure
-      const hairStructure = HAIR_TYPE_OPTIONS.structure.find(type => hairTypes.includes(type)) || "";
-      
-      // Find hair condition
-      const hairCondition = HAIR_TYPE_OPTIONS.condition.find(type => hairTypes.includes(type)) || "";
-      
-      // Find hair thickness
-      const hairThickness = HAIR_TYPE_OPTIONS.thickness.find(type => hairTypes.includes(type)) || "";
-      
+
+      const hairStructure = HAIR_TYPE_OPTIONS.structure.find(t => hairTypes.includes(t)) || "";
+      const hairCondition = HAIR_TYPE_OPTIONS.condition.find(t => hairTypes.includes(t)) || "";
+      const hairThickness = HAIR_TYPE_OPTIONS.thickness.find(t => hairTypes.includes(t)) || "";
+
       setFormData({
         beverage_preferences: personalData.beverage_preferences || [],
         beverage_notes: personalData.beverage_notes || "",
-        
         hair_structure: hairStructure,
         hair_condition: hairCondition,
         hair_thickness: hairThickness,
         hair_types: personalData.hair_types || [],
-        
         dye_preferences: personalData.dye_preferences || [],
         root_dye_frequency: personalData.root_dye_frequency || "",
         bleach_tolerance: personalData.bleach_tolerance || false,
-        // Remove allergy_notes from initial form data settings as it doesn't exist
-        // allergy_notes: personalData.allergy_notes || "",
-        
         straightener_preference: personalData.straightener_preference || "",
         curling_preference: personalData.curling_preference || "",
         heat_sensitive_hair: personalData.heat_sensitive_hair || false,
         heat_notes: personalData.heat_notes || "",
-        
         care_preferences: personalData.care_preferences || [],
         care_notes: personalData.care_notes || "",
-        
         hair_length: personalData.hair_length || "",
         hair_goal: personalData.hair_goal || "",
         hair_goal_notes: personalData.hair_goal_notes || "",
-        
         brow_preference: personalData.brow_preference || "",
         mustache_preference: personalData.mustache_preference || "",
         waxing_preference: personalData.waxing_preference || false,
         eyelash_preference: personalData.eyelash_preference || false,
         face_preference_notes: personalData.face_preference_notes || "",
-        
         sensitivities: personalData.sensitivities || [],
         sensitivity_notes: personalData.sensitivity_notes || "",
-        
         stylist_observations: personalData.stylist_observations || "",
-        
-        // Add children_names from personalData
-        children_names: personalData.children_names || [],
+        children_names: personalData.children_names || []
       });
     }
   }, [personalData]);
 
   const updatePersonalDataMutation = useMutation({
     mutationFn: async (data: any) => {
-      // Convert radio button selections back to array format
-      const hairTypes = [] as string[];
-      
-      if (data.hair_structure) {
-        hairTypes.push(data.hair_structure);
-      }
-      
-      if (data.hair_condition) {
-        hairTypes.push(data.hair_condition);
-      }
-      
-      if (data.hair_thickness) {
-        hairTypes.push(data.hair_thickness);
-      }
-      
-      // Prepare data for saving
+      const hairTypes = [];
+      if (data.hair_structure) hairTypes.push(data.hair_structure);
+      if (data.hair_condition) hairTypes.push(data.hair_condition);
+      if (data.hair_thickness) hairTypes.push(data.hair_thickness);
+
       const dataToSave = {
         ...data,
         hair_types: hairTypes,
         customer_id: customerId.toString(),
       };
-      
+
       console.log("Saving data:", dataToSave);
-      
+
       try {
         await customerPersonalDataService.updateCustomerPersonalData(customerId, dataToSave);
         return true;
@@ -214,13 +160,11 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
   const handleCheckboxChange = (name: string, value: string, checked: boolean) => {
     setFormData((prev) => {
       if (checked) {
-        // Add to array if checked
         return { ...prev, [name]: [...(prev[name as keyof typeof prev] as string[]), value] };
       } else {
-        // Remove from array if unchecked
-        return { 
-          ...prev, 
-          [name]: (prev[name as keyof typeof prev] as string[]).filter(item => item !== value)
+        return {
+          ...prev,
+          [name]: (prev[name as keyof typeof prev] as string[]).filter(item => item !== value),
         };
       }
     });
@@ -264,10 +208,7 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
     }
   };
 
-  // Check if value is in array helper
-  const isSelected = (array: string[], value: string) => {
-    return array.includes(value);
-  };
+  const isSelected = (array: string[], value: string) => array.includes(value);
 
   if (isLoading) {
     return (
@@ -302,11 +243,11 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
             <div className="flex flex-wrap gap-2">
               {BEVERAGE_OPTIONS.map((beverage) => (
                 <div key={beverage} className="flex items-center space-x-2">
-                  <Checkbox 
+                  <Checkbox
                     id={`beverage-${beverage}`}
                     checked={isSelected(formData.beverage_preferences, beverage)}
-                    onCheckedChange={(checked) => 
-                      handleCheckboxChange('beverage_preferences', beverage, checked as boolean)
+                    onCheckedChange={(checked) =>
+                      handleCheckboxChange("beverage_preferences", beverage, checked as boolean)
                     }
                     disabled={!isEditing}
                   />
