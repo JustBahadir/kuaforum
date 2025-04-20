@@ -1,3 +1,5 @@
+
+
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2, ImagePlus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -7,23 +9,23 @@ import { toast } from "sonner";
 import { useState } from "react";
 import { ShopProfilePhotoUpload } from "@/components/shop/ShopProfilePhotoUpload";
 interface ShopProfileHeaderProps {
-  dukkanData: any;
+  isletmeData: any;
   userRole: string;
   queryClient: QueryClient;
 }
 export function ShopProfileHeader({
-  dukkanData,
+  isletmeData,
   userRole
 }: ShopProfileHeaderProps) {
   const navigate = useNavigate();
   const [removing, setRemoving] = useState(false);
   const handleRemovePhoto = async () => {
-    if (!dukkanData?.id || !dukkanData?.logo_url) return;
+    if (!isletmeData?.id || !isletmeData?.logo_url) return;
     try {
       setRemoving(true);
 
       // Extract the path from the URL
-      const urlParts = dukkanData.logo_url.split('/');
+      const urlParts = isletmeData.logo_url.split('/');
       const bucketName = urlParts[urlParts.indexOf('shop-photos') - 1];
       const pathParts = urlParts.slice(urlParts.indexOf('shop-photos'));
       const filePath = pathParts.join('/');
@@ -34,14 +36,14 @@ export function ShopProfileHeader({
       } = await supabase.storage.from(bucketName).remove([filePath]);
       if (removeError) throw removeError;
 
-      // Update the dukkan record
+      // Update the isletme record
       const {
         error: updateError
       } = await supabase.from('dukkanlar').update({
         logo_url: null
-      }).eq('id', dukkanData.id);
+      }).eq('id', isletmeData.id);
       if (updateError) throw updateError;
-      toast.success('Dükkan logosu başarıyla kaldırıldı');
+      toast.success('İşletme logosu başarıyla kaldırıldı');
 
       // Reload the page to reflect changes
       window.location.reload();
@@ -57,20 +59,20 @@ export function ShopProfileHeader({
         {/* Logo section with larger size and better button placement */}
         <div className="flex flex-col items-center gap-4">
           <div className="w-28 h-28 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center border-2 border-purple-200">
-            {dukkanData?.logo_url ? <img src={dukkanData.logo_url} alt={dukkanData.isletme_adi || "İşletme Adı Girilmemiş"} className="w-full h-full object-cover" /> : <div className="text-3xl font-bold text-purple-500">
-                {dukkanData?.isletme_adi ? dukkanData.isletme_adi[0].toUpperCase() : '?'}
+            {isletmeData?.logo_url ? <img src={isletmeData.logo_url} alt={isletmeData.isletme_adi || "İşletme Adı Girilmemiş"} className="w-full h-full object-cover" /> : <div className="text-3xl font-bold text-purple-500">
+                {isletmeData?.isletme_adi ? isletmeData.isletme_adi[0].toUpperCase() : '?'}
               </div>}
           </div>
           
           {userRole === 'admin' && <div className="flex gap-2">
-              <ShopProfilePhotoUpload dukkanId={dukkanData?.id} onSuccess={() => window.location.reload()} acceptVideoFiles={false} galleryMode={false}>
+              <ShopProfilePhotoUpload dukkanId={isletmeData?.id} onSuccess={() => window.location.reload()} acceptVideoFiles={false} galleryMode={false}>
                 <Button size="sm" variant="secondary" className="whitespace-nowrap">
                   <ImagePlus className="h-4 w-4 mr-1" />
-                  {dukkanData?.logo_url ? 'Logoyu Değiştir' : 'Logo Ekle'}
+                  {isletmeData?.logo_url ? 'Logoyu Değiştir' : 'Logo Ekle'}
                 </Button>
               </ShopProfilePhotoUpload>
 
-              {dukkanData?.logo_url && <Button variant="destructive" size="sm" onClick={handleRemovePhoto} disabled={removing}>
+              {isletmeData?.logo_url && <Button variant="destructive" size="sm" onClick={handleRemovePhoto} disabled={removing}>
                   <Trash2 className="h-4 w-4" />
                 </Button>}
             </div>}
@@ -81,9 +83,9 @@ export function ShopProfileHeader({
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <h1 className="font-bold text-gray-800 text-3xl text-center">
-                {dukkanData?.isletme_adi || "İşletme Adı Girilmemiş"}
+                {isletmeData?.isletme_adi || "İşletme Adı Girilmemiş"}
               </h1>
-              {dukkanData?.adres && <p className="text-muted-foreground text-center text-xl">{dukkanData.adres}</p>}
+              {isletmeData?.adres && <p className="text-muted-foreground text-center text-xl">{isletmeData.adres}</p>}
             </div>
             
             <div className="flex flex-col sm:flex-row gap-2">
@@ -93,7 +95,7 @@ export function ShopProfileHeader({
               
               {userRole === 'admin' && <Button variant="outline" onClick={() => navigate("/shop-settings")} className="px-0 py-[14px]">
                   <Edit className="mr-2 h-4 w-4" />
-                  Dükkan Bilgilerini Düzenle
+                  İşletme Bilgilerini Düzenle
                 </Button>}
             </div>
           </div>
@@ -101,3 +103,4 @@ export function ShopProfileHeader({
       </div>
     </div>;
 }
+

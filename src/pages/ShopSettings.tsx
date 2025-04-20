@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { dukkanServisi } from "@/lib/supabase";
@@ -14,31 +15,31 @@ import { Textarea } from "@/components/ui/textarea";
 
 export default function ShopSettings() {
   const { userRole, dukkanId } = useCustomerAuth();
-  const [shopCode, setShopCode] = useState<string>("");
+  const [isletmeKodu, setIsletmeKodu] = useState<string>("");
   const [copied, setCopied] = useState(false);
   const [address, setAddress] = useState("");
   const [fullAddress, setFullAddress] = useState("");
   const queryClient = useQueryClient();
 
-  const { data: dukkan, isLoading, error } = useQuery({
+  const { data: isletme, isLoading, error } = useQuery({
     queryKey: ['dukkan', dukkanId],
     queryFn: () => dukkanId ? dukkanServisi.getirById(dukkanId) : null,
     enabled: !!dukkanId
   });
 
   useEffect(() => {
-    if (dukkan) {
-      setShopCode(dukkan.kod);
-      setAddress(dukkan.adres || "");
-      setFullAddress(dukkan.acik_adres || "");
+    if (isletme) {
+      setIsletmeKodu(isletme.kod);
+      setAddress(isletme.adres || "");
+      setFullAddress(isletme.acik_adres || "");
     }
-  }, [dukkan]);
+  }, [isletme]);
 
   const handleCopyCode = () => {
-    if (shopCode) {
-      navigator.clipboard.writeText(shopCode);
+    if (isletmeKodu) {
+      navigator.clipboard.writeText(isletmeKodu);
       setCopied(true);
-      toast.success("Dükkan kodu panoya kopyalandı");
+      toast.success("İşletme kodu panoya kopyalandı");
       
       setTimeout(() => {
         setCopied(false);
@@ -49,7 +50,7 @@ export default function ShopSettings() {
   const updateShopAddress = useMutation({
     mutationFn: async (newFullAddress: string) => {
       if (!dukkanId) {
-        throw new Error("Dükkan ID bulunamadı");
+        throw new Error("İşletme ID bulunamadı");
       }
       
       try {
@@ -68,7 +69,7 @@ export default function ShopSettings() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['dukkan', dukkanId] });
-      toast.success("Dükkan açık adresi güncellendi");
+      toast.success("İşletme açık adresi güncellendi");
       setFullAddress(data.acik_adres || "");
     },
     onError: (error) => {
@@ -107,7 +108,7 @@ export default function ShopSettings() {
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Bu sayfaya erişim yetkiniz bulunmamaktadır. Yalnızca yöneticiler dükkan ayarlarını düzenleyebilir.
+            Bu sayfaya erişim yetkiniz bulunmamaktadır. Yalnızca yöneticiler işletme ayarlarını düzenleyebilir.
           </AlertDescription>
         </Alert>
       </StaffLayout>
@@ -117,7 +118,7 @@ export default function ShopSettings() {
   return (
     <StaffLayout>
       <div className="container mx-auto p-4">
-        <h1 className="text-2xl font-bold mb-6">Dükkan Ayarları</h1>
+        <h1 className="text-2xl font-bold mb-6">İşletme Ayarları</h1>
         
         {isLoading ? (
           <div className="flex justify-center p-8">
@@ -127,23 +128,23 @@ export default function ShopSettings() {
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              Dükkan bilgileri alınırken bir hata oluştu: {(error as Error).message}
+              İşletme bilgileri alınırken bir hata oluştu: {(error as Error).message}
             </AlertDescription>
           </Alert>
-        ) : dukkan ? (
+        ) : isletme ? (
           <div className="grid gap-6 md:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle>Dükkan Bilgileri</CardTitle>
+                <CardTitle>İşletme Bilgileri</CardTitle>
                 <CardDescription>
-                  Dükkanınızın temel bilgileri
+                  İşletmenizin temel bilgileri
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="shopName">Dükkan Adı</Label>
-                    <Input id="shopName" value={dukkan.ad} readOnly />
+                    <Label htmlFor="shopName">İşletme Adı</Label>
+                    <Input id="shopName" value={isletme.ad} readOnly />
                   </div>
                   
                   <div className="space-y-2">
@@ -158,12 +159,12 @@ export default function ShopSettings() {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="shopFullAddress">Dükkan Açık Adresi</Label>
+                    <Label htmlFor="shopFullAddress">İşletme Açık Adresi</Label>
                     <Textarea 
                       id="shopFullAddress" 
                       value={fullAddress} 
                       onChange={(e) => setFullAddress(e.target.value)}
-                      placeholder="Dükkanınızın açık adresini giriniz"
+                      placeholder="İşletmenizin açık adresini giriniz"
                       rows={3}
                     />
                   </div>
@@ -189,7 +190,7 @@ export default function ShopSettings() {
                   
                   <div className="space-y-2">
                     <Label htmlFor="shopPhone">Telefon</Label>
-                    <Input id="shopPhone" value={dukkan.telefon || "Telefon girilmemiş"} readOnly />
+                    <Input id="shopPhone" value={isletme.telefon || "Telefon girilmemiş"} readOnly />
                   </div>
                 </div>
               </CardContent>
@@ -197,7 +198,7 @@ export default function ShopSettings() {
             
             <Card>
               <CardHeader>
-                <CardTitle>Dükkan Kodu</CardTitle>
+                <CardTitle>İşletme Kodu</CardTitle>
                 <CardDescription>
                   Bu kodu personelleriniz ile paylaşarak onların sisteme kaydolmalarını sağlayabilirsiniz
                 </CardDescription>
@@ -206,7 +207,7 @@ export default function ShopSettings() {
                 <div className="space-y-4">
                   <div className="relative">
                     <Input 
-                      value={shopCode} 
+                      value={isletmeKodu} 
                       readOnly 
                       className="pr-12 bg-gray-50 font-mono text-center" 
                     />
@@ -221,7 +222,7 @@ export default function ShopSettings() {
                   </div>
                   
                   <div className="text-sm text-muted-foreground">
-                    Not: Bu kod dükkanınıza özeldir ve değiştirilemez. Personellerinizin
+                    Not: Bu kod işletmenize özeldir ve değiştirilemez. Personellerinizin
                     sisteme kaydolabilmesi için bu kodu kullanmaları gerekir.
                   </div>
                 </div>
@@ -231,7 +232,7 @@ export default function ShopSettings() {
         ) : (
           <Alert>
             <AlertDescription>
-              Dükkan bulunamadı. Lütfen dükkan kaydınızı tamamlayın.
+              İşletme bulunamadı. Lütfen işletme kaydınızı tamamlayın.
             </AlertDescription>
           </Alert>
         )}
@@ -239,3 +240,4 @@ export default function ShopSettings() {
     </StaffLayout>
   );
 }
+

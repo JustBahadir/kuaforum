@@ -2,8 +2,8 @@
 import { supabase } from '../client';
 import { Dukkan } from '../types';
 
-export const dukkanServisi = {
-  async kullanicininDukkani(userId: string) {
+export const isletmeServisi = {
+  async kullanicininIsletmesi(userId: string) {
     const { data, error } = await supabase
       .from('dukkanlar')
       .select('*')
@@ -11,14 +11,14 @@ export const dukkanServisi = {
       .single();
     
     if (error) {
-      console.error("Dükkan getirme hatası:", error);
+      console.error("İşletme getirme hatası:", error);
       return null;
     }
     
     return data;
   },
   
-  async personelAuthIdDukkani(authId: string) {
+  async personelAuthIdIsletmesi(authId: string) {
     // First get the personnel record with this auth_id
     const { data: personel, error: personelError } = await supabase
       .from('personel')
@@ -27,30 +27,30 @@ export const dukkanServisi = {
       .single();
     
     if (personelError || !personel?.dukkan_id) {
-      console.error("Personel dükkan bilgisi hatası:", personelError);
+      console.error("Personel işletme bilgisi hatası:", personelError);
       return null;
     }
     
     // Now get the shop with this id
-    const { data: dukkan, error } = await supabase
+    const { data: isletme, error } = await supabase
       .from('dukkanlar')
       .select('*')
       .eq('id', personel.dukkan_id)
       .single();
     
     if (error) {
-      console.error("Dükkan getirme hatası:", error);
+      console.error("İşletme getirme hatası:", error);
       return null;
     }
     
-    return dukkan;
+    return isletme;
   },
 
-  async getirById(dukkanId: number) {
+  async getirById(isletmeId: number) {
     const { data, error } = await supabase
       .from('dukkanlar')
       .select('*')
-      .eq('id', dukkanId)
+      .eq('id', isletmeId)
       .single();
     
     if (error) {
@@ -61,8 +61,8 @@ export const dukkanServisi = {
   },
   
   // Add alias for getirById to be accessible as getir
-  async getir(dukkanId: number) {
-    return this.getirById(dukkanId);
+  async getir(isletmeId: number) {
+    return this.getirById(isletmeId);
   },
   
   async getirByKod(kod: string) {
@@ -74,7 +74,7 @@ export const dukkanServisi = {
       .single();
     
     if (error) {
-      console.error("Dükkan kodu ile getirme hatası:", error);
+      console.error("İşletme kodu ile getirme hatası:", error);
       return null;
     }
     
@@ -95,10 +95,10 @@ export const dukkanServisi = {
     return data || [];
   },
   
-  async dukkanEkle(dukkan: Omit<Dukkan, 'id' | 'created_at'>) {
+  async isletmeEkle(isletme: Omit<Dukkan, 'id' | 'created_at'>) {
     const { data, error } = await supabase
       .from('dukkanlar')
-      .insert([dukkan])
+      .insert([isletme])
       .select()
       .single();
     
@@ -109,15 +109,15 @@ export const dukkanServisi = {
     return data;
   },
   
-  async ekle(dukkan: Omit<Dukkan, 'id' | 'created_at'>) {
-    return this.dukkanEkle(dukkan);
+  async ekle(isletme: Omit<Dukkan, 'id' | 'created_at'>) {
+    return this.isletmeEkle(isletme);
   },
 
-  async dukkaniGuncelle(dukkanId: number, guncellemeler: Partial<Dukkan>) {
+  async isletmeyiGuncelle(isletmeId: number, guncellemeler: Partial<Dukkan>) {
     const { data, error } = await supabase
       .from('dukkanlar')
       .update(guncellemeler)
-      .eq('id', dukkanId)
+      .eq('id', isletmeId)
       .select()
       .single();
     
@@ -128,17 +128,17 @@ export const dukkanServisi = {
     return data;
   },
   
-  // Add alias for dukkaniGuncelle to be accessible as guncelle
-  async guncelle(dukkanId: number, guncellemeler: Partial<Dukkan>) {
-    return this.dukkaniGuncelle(dukkanId, guncellemeler);
+  // Add alias for isletmeyiGuncelle to be accessible as guncelle
+  async guncelle(isletmeId: number, guncellemeler: Partial<Dukkan>) {
+    return this.isletmeyiGuncelle(isletmeId, guncellemeler);
   },
   
-  async dukkanSil(dukkanId: number) {
+  async isletmeSil(isletmeId: number) {
     // Instead of deleting, just mark it as inactive
     const { data, error } = await supabase
       .from('dukkanlar')
       .update({ active: false })
-      .eq('id', dukkanId)
+      .eq('id', isletmeId)
       .select()
       .single();
     
@@ -149,3 +149,4 @@ export const dukkanServisi = {
     return data;
   }
 };
+

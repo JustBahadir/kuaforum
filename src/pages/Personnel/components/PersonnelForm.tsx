@@ -41,9 +41,9 @@ export function PersonnelForm({ onSubmit, isLoading }: PersonnelFormProps) {
     dukkan_id: dukkanId || undefined
   });
   
-  const [dukkanKodu, setDukkanKodu] = useState("");
+  const [isletmeKodu, setIsletmeKodu] = useState("");
   const [dogrulamaYapiliyor, setDogrulamaYapiliyor] = useState(false);
-  const [dogrulanmisDukkan, setDogrulanmisDukkan] = useState<{id: number, ad: string} | null>(null);
+  const [dogrulanmisIsletme, setDogrulanmisIsletme] = useState<{id: number, ad: string} | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   
   useEffect(() => {
@@ -56,8 +56,8 @@ export function PersonnelForm({ onSubmit, isLoading }: PersonnelFormProps) {
   }, [dukkanId]);
   
   const handleVerifyShopCode = async () => {
-    if (!dukkanKodu) {
-      toast.error("Lütfen dükkan kodunu girin");
+    if (!isletmeKodu) {
+      toast.error("Lütfen işletme kodunu girin");
       return;
     }
     
@@ -65,24 +65,24 @@ export function PersonnelForm({ onSubmit, isLoading }: PersonnelFormProps) {
     setFormError(null);
     
     try {
-      const dukkan = await authService.verifyShopCode(dukkanKodu);
+      const isletme = await authService.verifyShopCode(isletmeKodu);
       
-      if (dukkan) {
-        setDogrulanmisDukkan(dukkan);
+      if (isletme) {
+        setDogrulanmisIsletme(isletme);
         setYeniPersonel(prev => ({
           ...prev,
-          dukkan_id: dukkan.id
+          dukkan_id: isletme.id
         }));
-        toast.success(`"${dukkan.ad}" dükkanı doğrulandı!`);
+        toast.success(`"${isletme.ad}" işletmesi doğrulandı!`);
       } else {
-        setDogrulanmisDukkan(null);
-        toast.error("Geçersiz dükkan kodu");
-        setFormError("Girdiğiniz dükkan kodu sistemde bulunamadı. Lütfen kodu kontrol edip tekrar deneyiniz.");
+        setDogrulanmisIsletme(null);
+        toast.error("Geçersiz işletme kodu");
+        setFormError("Girdiğiniz işletme kodu sistemde bulunamadı. Lütfen kodu kontrol edip tekrar deneyiniz.");
       }
     } catch (error) {
-      console.error("Dükkan kodu doğrulama hatası:", error);
-      toast.error("Dükkan kodu doğrulanırken bir hata oluştu");
-      setFormError("Dükkan kodu doğrulanırken bir hata oluştu. Lütfen daha sonra tekrar deneyiniz.");
+      console.error("İşletme kodu doğrulama hatası:", error);
+      toast.error("İşletme kodu doğrulanırken bir hata oluştu");
+      setFormError("İşletme kodu doğrulanırken bir hata oluştu. Lütfen daha sonra tekrar deneyiniz.");
     } finally {
       setDogrulamaYapiliyor(false);
     }
@@ -113,7 +113,7 @@ export function PersonnelForm({ onSubmit, isLoading }: PersonnelFormProps) {
       }
     } 
     else {
-      if (!dogrulanmisDukkan) {
+      if (!dogrulanmisIsletme) {
         setFormError("Lütfen önce dükkan kodunu doğrulayın.");
         return false;
       }
@@ -159,14 +159,14 @@ export function PersonnelForm({ onSubmit, isLoading }: PersonnelFormProps) {
       return;
     }
     
-    if (!dogrulanmisDukkan) {
+    if (!dogrulanmisIsletme) {
       setFormError("Lütfen önce dükkan kodunu doğrulayın");
       return;
     }
     
     const personelData = {
       ...yeniPersonel,
-      dukkan_id: dogrulanmisDukkan.id
+      dukkan_id: dogrulanmisIsletme.id
     };
     
     onSubmit(personelData);
@@ -311,33 +311,33 @@ export function PersonnelForm({ onSubmit, isLoading }: PersonnelFormProps) {
         )}
         
         <div className="space-y-2 mb-6">
-          <Label htmlFor="dukkan_kodu">Dükkan Kodu</Label>
+          <Label htmlFor="isletme_kodu">İşletme Kodu</Label>
           <div className="flex space-x-2">
             <Input
-              id="dukkan_kodu"
-              value={dukkanKodu}
-              onChange={(e) => setDukkanKodu(e.target.value)}
-              placeholder="Dükkan yöneticisinden alınan kod"
-              disabled={!!dogrulanmisDukkan}
+              id="isletme_kodu"
+              value={isletmeKodu}
+              onChange={(e) => setIsletmeKodu(e.target.value)}
+              placeholder="İşletme yöneticisinden alınan kod"
+              disabled={!!dogrulanmisIsletme}
               required
             />
             <Button 
               type="button" 
               onClick={handleVerifyShopCode} 
-              disabled={dogrulamaYapiliyor || !!dogrulanmisDukkan || !dukkanKodu}
+              disabled={dogrulamaYapiliyor || !!dogrulanmisIsletme || !isletmeKodu}
               variant="outline"
             >
               {dogrulamaYapiliyor ? "..." : "Doğrula"}
             </Button>
           </div>
-          {dogrulanmisDukkan && (
+          {dogrulanmisIsletme && (
             <p className="text-sm text-green-600 mt-1">
-              "{dogrulanmisDukkan.ad}" dükkanına bağlanacaksınız.
+              "{dogrulanmisIsletme.ad}" işletmesine bağlanacaksınız.
             </p>
           )}
         </div>
 
-        {dogrulanmisDukkan && (
+        {dogrulanmisIsletme && (
           <>
             <div className="space-y-2">
               <Label htmlFor="ad_soyad">Ad Soyad</Label>

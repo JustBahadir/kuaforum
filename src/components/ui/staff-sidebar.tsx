@@ -60,8 +60,8 @@ export function StaffSidebar() {
     { href: "/appointments", title: "Randevular", icon: <Calendar size={18} />, roles: ["admin", "staff"] },
     { href: "/admin/operations", title: "Hizmet Yönetimi", icon: <Scissors size={18} />, roles: ["admin"] },
     { href: "/customers", title: "Müşteriler", icon: <UserCircle size={18} />, roles: ["admin", "staff"] },
-    { href: "/shop-settings", title: "Dükkan Ayarları", icon: <Store size={18} />, roles: ["admin"] },
-    { href: "/shop-statistics", title: "Dükkan İstatistikleri", icon: <BarChart2 size={18} />, roles: ["admin"] },
+    { href: "/shop-settings", title: "İşletme Ayarları", icon: <Store size={18} />, roles: ["admin"] },
+    { href: "/shop-statistics", title: "İşletme İstatistikleri", icon: <BarChart2 size={18} />, roles: ["admin"] },
     { href: "/operations-history", title: "İşlem Geçmişi", icon: <FileText size={18} />, roles: ["admin", "staff"] },
     { href: "/profile", title: "Profilim", icon: <User size={18} />, roles: ["admin", "staff"] },
     { href: "/settings", title: "Ayarlar", icon: <Settings size={18} />, roles: ["admin", "staff"] },
@@ -99,7 +99,7 @@ export function StaffSidebar() {
               <div className="text-center py-3 border-b">
                 <p className="text-sm text-muted-foreground">Hoşgeldiniz</p>
                 <p className="font-medium">{userName || "Kullanıcı"}</p>
-                <p className="text-xs text-muted-foreground mt-1">{isAdmin ? 'Dükkan Sahibi' : 'Personel'}</p>
+                <p className="text-xs text-muted-foreground mt-1">{isAdmin ? 'İşletme Sahibi' : 'Personel'}</p>
               </div>
 
               <div className="flex-1 overflow-auto py-2 px-2">
@@ -142,7 +142,7 @@ export function StaffSidebar() {
           <div className="text-center py-2 mb-2">
             <p className="text-sm text-muted-foreground">Hoşgeldiniz</p>
             <p className="font-medium">{userName || "Kullanıcı"}</p>
-            <p className="text-xs text-muted-foreground mt-1">{isAdmin ? 'Dükkan Sahibi' : 'Personel'}</p>
+            <p className="text-xs text-muted-foreground mt-1">{isAdmin ? 'İşletme Sahibi' : 'Personel'}</p>
           </div>
           
           <nav className="flex flex-col gap-1 overflow-y-auto">
@@ -174,3 +174,4 @@ export function StaffSidebar() {
     </>
   );
 }
+

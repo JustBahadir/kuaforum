@@ -2,13 +2,13 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
-import { dukkanServisi } from "@/lib/supabase";
+import { isletmeServisi } from "@/lib/supabase";
 import { authService } from "@/lib/auth/authService";
 import { gunSiralama } from "@/components/operations/constants/workingDays";
 import { calismaSaatleriServisi } from "@/lib/supabase/services/calismaSaatleriServisi";
 
-export function useShopData(dukkanId: number | null) {
-  const [dukkanData, setDukkanData] = useState<any>(null);
+export function useShopData(isletmeId: number | null) {
+  const [isletmeData, setIsletmeData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -18,45 +18,45 @@ export function useShopData(dukkanId: number | null) {
         setLoading(true);
         setError(null);
         
-        if (!dukkanId) {
+        if (!isletmeId) {
           const user = await authService.getCurrentUser();
           if (!user) {
             throw new Error("Kullanıcı bulunamadı");
           }
           
-          const dukkan = await dukkanServisi.kullanicininDukkani(user.id);
-          if (!dukkan) {
-            setError("Dükkan bulunamadı. Lütfen önce dükkan bilgilerinizi oluşturun.");
+          const isletme = await isletmeServisi.kullanicininIsletmesi(user.id);
+          if (!isletme) {
+            setError("İşletme bulunamadı. Lütfen önce işletme bilgilerinizi oluşturun.");
             setLoading(false);
             return;
           }
           
-          setDukkanData(dukkan);
+          setIsletmeData(isletme);
         } else {
-          const dukkan = await dukkanServisi.getirById(dukkanId);
-          if (!dukkan) {
-            setError("Dükkan bilgileri alınamadı.");
+          const isletme = await isletmeServisi.getirById(isletmeId);
+          if (!isletme) {
+            setError("İşletme bilgileri alınamadı.");
             setLoading(false);
             return;
           }
           
-          setDukkanData(dukkan);
+          setIsletmeData(isletme);
         }
       } catch (err) {
-        console.error("Dükkan bilgileri alınırken hata:", err);
-        setError("Dükkan bilgileri alınamadı: " + (err instanceof Error ? err.message : String(err)));
+        console.error("İşletme bilgileri alınırken hata:", err);
+        setError("İşletme bilgileri alınamadı: " + (err instanceof Error ? err.message : String(err)));
       } finally {
         setLoading(false);
       }
     };
     
     fetchData();
-  }, [dukkanId]);
+  }, [isletmeId]);
 
   const { data: personelListesi = [] } = useQuery({
-    queryKey: ['personel', dukkanData?.id || dukkanId],
+    queryKey: ['personel', isletmeData?.id || isletmeId],
     queryFn: async () => {
-      const shopId = dukkanId || dukkanData?.id;
+      const shopId = isletmeId || isletmeData?.id;
       if (!shopId) return [];
       
       try {
@@ -105,14 +105,14 @@ export function useShopData(dukkanId: number | null) {
         return [];
       }
     },
-    enabled: !!(dukkanData?.id || dukkanId)
+    enabled: !!(isletmeData?.id || isletmeId)
   });
 
   const { data: calisma_saatleri = [], isLoading: isLoadingSaatler } = useQuery({
-    queryKey: ['dukkan_saatleri', dukkanData?.id || dukkanId],
+    queryKey: ['dukkan_saatleri', isletmeData?.id || isletmeId],
     queryFn: async () => {
       try {
-        const shopId = dukkanData?.id || dukkanId;
+        const shopId = isletmeData?.id || isletmeId;
         if (!shopId) return [];
         
         console.log("useShopData: Fetching working hours for shop ID:", shopId);
@@ -125,14 +125,14 @@ export function useShopData(dukkanId: number | null) {
         return [];
       }
     },
-    enabled: !!(dukkanData?.id || dukkanId),
+    enabled: !!(isletmeData?.id || isletmeId),
     staleTime: 30000, // Refresh every 30 seconds
     retry: 3          // Retry 3 times on failure
   });
 
   return { 
-    dukkanData, 
-    setDukkanData, 
+    isletmeData, 
+    setIsletmeData, 
     loading, 
     error, 
     personelListesi, 
@@ -140,3 +140,4 @@ export function useShopData(dukkanId: number | null) {
     isLoadingSaatler
   };
 }
+

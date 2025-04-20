@@ -7,23 +7,23 @@ import { ShopProfilePhotoUpload } from "@/components/shop/ShopProfilePhotoUpload
 import { QueryClient } from "@tanstack/react-query";
 
 interface ShopGalleryCardProps {
-  dukkanId: number;
+  isletmeId: number;
   userRole: string;
   queryClient: QueryClient;
 }
 
-export function ShopGalleryCard({ dukkanId, userRole, queryClient }: ShopGalleryCardProps) {
+export function ShopGalleryCard({ isletmeId, userRole, queryClient }: ShopGalleryCardProps) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Dükkan Galerisi</CardTitle>
+        <CardTitle>İşletme Galerisi</CardTitle>
         {userRole === 'admin' && (
           <ShopProfilePhotoUpload 
-            dukkanId={dukkanId} 
+            dukkanId={isletmeId} 
             galleryMode
             acceptVideoFiles={false}
             onSuccess={() => {
-              queryClient.invalidateQueries({ queryKey: ['shop-photos', dukkanId] });
+              queryClient.invalidateQueries({ queryKey: ['shop-photos', isletmeId] });
             }}
           >
             <Button variant="outline" size="sm">
@@ -34,8 +34,9 @@ export function ShopGalleryCard({ dukkanId, userRole, queryClient }: ShopGallery
         )}
       </CardHeader>
       <CardContent>
-        <ShopGallery dukkanId={dukkanId} />
+        <ShopGallery dukkanId={isletmeId} />
       </CardContent>
     </Card>
   );
 }
+

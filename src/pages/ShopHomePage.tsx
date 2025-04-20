@@ -1,4 +1,3 @@
-
 import React from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
@@ -15,7 +14,7 @@ export default function ShopHomePage() {
   const queryClient = new QueryClient();
   
   const { 
-    dukkanData, 
+    dukkanData: isletmeData, 
     loading, 
     error, 
     personelListesi, 
@@ -45,7 +44,7 @@ export default function ShopHomePage() {
     );
   }
 
-  if (!dukkanData) {
+  if (!isletmeData) {
     return (
       <StaffLayout>
         <div className="container mx-auto p-6">
@@ -61,14 +60,14 @@ export default function ShopHomePage() {
     <StaffLayout>
       <div className="container mx-auto px-4 py-6 space-y-6">
         <ShopProfileHeader 
-          dukkanData={dukkanData} 
+          isletmeData={isletmeData} 
           userRole={userRole} 
           queryClient={queryClient} 
         />
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-4 space-y-6">
-            <ShopContactCard dukkanData={dukkanData} />
+            <ShopContactCard isletmeData={isletmeData} />
             <ShopWorkingHoursCard 
               calisma_saatleri={calisma_saatleri}
               userRole={userRole}
@@ -78,7 +77,7 @@ export default function ShopHomePage() {
           
           <div className="lg:col-span-8 space-y-6">
             <ShopGalleryCard 
-              dukkanId={dukkanData.id}
+              isletmeId={isletmeData.id}
               userRole={userRole}
               queryClient={queryClient}
             />

@@ -13,12 +13,11 @@ export default function CreateShop() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    shopName: '',
-    shopAddress: '',
-    shopOpenAddress: '',
-    shopPhone: '',
-    shopCode: '',
-    ownerId: ''
+    isletmeAdi: '',
+    isletmeAdresi: '',
+    isletmeAcikAdres: '',
+    isletmeTelefon: '',
+    isletmeKodu: '',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -39,16 +38,16 @@ export default function CreateShop() {
 
       const ownerId = authData.session.user.id;
 
-      // Create shop record
+      // Create isletme record
       const { data: shopData, error: shopError } = await supabase
         .from('dukkanlar')
         .insert([
           {
-            ad: formData.shopName,
-            adres: formData.shopAddress,
-            acik_adres: formData.shopOpenAddress,
-            telefon: formData.shopPhone,
-            kod: formData.shopCode,
+            ad: formData.isletmeAdi,
+            adres: formData.isletmeAdresi,
+            acik_adres: formData.isletmeAcikAdres,
+            telefon: formData.isletmeTelefon,
+            kod: formData.isletmeKodu,
             sahibi_id: ownerId,
             active: true
           }
@@ -59,21 +58,21 @@ export default function CreateShop() {
         throw shopError;
       }
 
-      const dukkanId = shopData?.[0]?.id;
+      const isletmeId = shopData?.[0]?.id;
 
-      if (!dukkanId) {
-        throw new Error('Dükkan oluşturulamadı.');
+      if (!isletmeId) {
+        throw new Error('İşletme oluşturulamadı.');
       }
 
       // Create working hours with all required fields
       const workingHours: CalismaSaati[] = [
-        { id: 1, gun: "pazartesi", gun_sira: 1, acilis: "09:00", kapanis: "18:00", kapali: false, dukkan_id: dukkanId },
-        { id: 2, gun: "sali", gun_sira: 2, acilis: "09:00", kapanis: "18:00", kapali: false, dukkan_id: dukkanId },
-        { id: 3, gun: "carsamba", gun_sira: 3, acilis: "09:00", kapanis: "18:00", kapali: false, dukkan_id: dukkanId },
-        { id: 4, gun: "persembe", gun_sira: 4, acilis: "09:00", kapanis: "18:00", kapali: false, dukkan_id: dukkanId },
-        { id: 5, gun: "cuma", gun_sira: 5, acilis: "09:00", kapanis: "18:00", kapali: false, dukkan_id: dukkanId },
-        { id: 6, gun: "cumartesi", gun_sira: 6, acilis: "09:00", kapanis: "18:00", kapali: false, dukkan_id: dukkanId },
-        { id: 7, gun: "pazar", gun_sira: 7, acilis: "09:00", kapanis: "18:00", kapali: true, dukkan_id: dukkanId }
+        { id: 1, gun: "pazartesi", gun_sira: 1, acilis: "09:00", kapanis: "18:00", kapali: false, dukkan_id: isletmeId },
+        { id: 2, gun: "sali", gun_sira: 2, acilis: "09:00", kapanis: "18:00", kapali: false, dukkan_id: isletmeId },
+        { id: 3, gun: "carsamba", gun_sira: 3, acilis: "09:00", kapanis: "18:00", kapali: false, dukkan_id: isletmeId },
+        { id: 4, gun: "persembe", gun_sira: 4, acilis: "09:00", kapanis: "18:00", kapali: false, dukkan_id: isletmeId },
+        { id: 5, gun: "cuma", gun_sira: 5, acilis: "09:00", kapanis: "18:00", kapali: false, dukkan_id: isletmeId },
+        { id: 6, gun: "cumartesi", gun_sira: 6, acilis: "09:00", kapanis: "18:00", kapali: false, dukkan_id: isletmeId },
+        { id: 7, gun: "pazar", gun_sira: 7, acilis: "09:00", kapanis: "18:00", kapali: true, dukkan_id: isletmeId }
       ];
 
       const { error: workingHoursError } = await supabase
@@ -84,10 +83,10 @@ export default function CreateShop() {
         throw workingHoursError;
       }
 
-      toast.success('Dükkanınız başarıyla oluşturuldu!');
+      toast.success('İşletmeniz başarıyla oluşturuldu!');
       navigate('/admin');
     } catch (err: any) {
-      setError(err.message || 'Dükkan oluşturulurken bir hata oluştu.');
+      setError(err.message || 'İşletme oluşturulurken bir hata oluştu.');
     } finally {
       setLoading(false);
     }
@@ -109,52 +108,52 @@ export default function CreateShop() {
           )}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="shopName">Dükkan Adı</Label>
+              <Label htmlFor="isletmeAdi">İşletme Adı</Label>
               <Input
-                id="shopName"
-                value={formData.shopName}
-                onChange={(e) => setFormData({ ...formData, shopName: e.target.value })}
+                id="isletmeAdi"
+                value={formData.isletmeAdi}
+                onChange={(e) => setFormData({ ...formData, isletmeAdi: e.target.value })}
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="shopAddress">Dükkan Adresi</Label>
+              <Label htmlFor="isletmeAdresi">İşletme Adresi</Label>
               <Input
-                id="shopAddress"
-                value={formData.shopAddress}
-                onChange={(e) => setFormData({ ...formData, shopAddress: e.target.value })}
+                id="isletmeAdresi"
+                value={formData.isletmeAdresi}
+                onChange={(e) => setFormData({ ...formData, isletmeAdresi: e.target.value })}
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="shopOpenAddress">Açık Adres</Label>
+              <Label htmlFor="isletmeAcikAdres">Açık Adres</Label>
               <Input
-                id="shopOpenAddress"
-                value={formData.shopOpenAddress}
-                onChange={(e) => setFormData({ ...formData, shopOpenAddress: e.target.value })}
+                id="isletmeAcikAdres"
+                value={formData.isletmeAcikAdres}
+                onChange={(e) => setFormData({ ...formData, isletmeAcikAdres: e.target.value })}
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="shopPhone">Dükkan Telefonu</Label>
+              <Label htmlFor="isletmeTelefon">İşletme Telefonu</Label>
               <Input
-                id="shopPhone"
-                value={formData.shopPhone}
-                onChange={(e) => setFormData({ ...formData, shopPhone: e.target.value })}
+                id="isletmeTelefon"
+                value={formData.isletmeTelefon}
+                onChange={(e) => setFormData({ ...formData, isletmeTelefon: e.target.value })}
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="shopCode">Dükkan Kodu</Label>
+              <Label htmlFor="isletmeKodu">İşletme Kodu</Label>
               <Input
-                id="shopCode"
-                value={formData.shopCode}
-                onChange={(e) => setFormData({ ...formData, shopCode: e.target.value })}
+                id="isletmeKodu"
+                value={formData.isletmeKodu}
+                onChange={(e) => setFormData({ ...formData, isletmeKodu: e.target.value })}
                 required
               />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Oluşturuluyor...' : 'Dükkan Oluştur'}
+              {loading ? 'Oluşturuluyor...' : 'İşletmeyi Oluştur'}
             </Button>
           </form>
         </CardContent>
