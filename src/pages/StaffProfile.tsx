@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, ReactElement } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -856,15 +856,34 @@ function WorkplacesPositionsSection({
     cv: string
   ) => Promise<void>;
 }) {
-  const [adding, setAdding] = useState(false);
-  const [newIsyeri, setNewIsyeri] = useState("");
-  const [newGorev, setNewGorev] = useState("");
-  const [editIndex, setEditIndex] = useState<number | null>(null);
-  const [editIsyeri, setEditIsyeri] = useState("");
-  const [editGorev, setEditGorev] = useState("");
-  const [saving, setSaving] = useState(false);
+  const [adding, setAdding] = React.useState(false);
+  const [newIsyeri, setNewIsyeri] = React.useState("");
+  const [newGorev, setNewGorev] = React.useState("");
+  const [editIndex, setEditIndex] = React.useState<number | null>(null);
+  const [editIsyeri, setEditIsyeri] = React.useState("");
+  const [editGorev, setEditGorev] = React.useState("");
+  const [saving, setSaving] = React.useState(false);
 
   const startAdd = () => {
     setAdding(true);
     setNewIsyeri("");
     setNewGorev("");
+  };
+
+  return (
+    <div>
+      {historyData.isyerleri.length === 0 ? (
+        <p>Henüz iş yeri bilgisi yok.</p>
+      ) : (
+        <ul>
+          {historyData.isyerleri.map((isyeri, index) => (
+            <li key={index}>
+              {isyeri} - {historyData.gorevpozisyon[index]}
+              {/* Buttons to edit or remove could go here */}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
