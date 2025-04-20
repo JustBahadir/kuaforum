@@ -124,10 +124,11 @@ export function ServiceForm({
           ? "Hizmet başarıyla eklendi!"
           : "Hizmet başarıyla güncellendi!"
       );
-      queryClient.invalidateQueries({ queryKey: ["services"] });
+      queryClient.invalidateQueries({ queryKey: ["islemler"] });
       onOpenChange(false);
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      // Show detailed error message if present, fallback to generic
       console.error(error);
       toast.error(
         isNewService
@@ -162,7 +163,7 @@ export function ServiceForm({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[550px]">
         <DialogHeader>
-          <DialogTitle>{isNewService ? "Yeni Hizmet Ekle" : "Hizmeti Düzenle"}</DialogTitle>
+          <DialogTitle>{duzenleId ? "Hizmeti Düzenle" : "Yeni Hizmet Ekle"}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit}>
@@ -175,6 +176,7 @@ export function ServiceForm({
                 onChange={(e) => setIslemAdi(e.target.value)}
                 required
                 placeholder="Örn: Saç Kesimi"
+                spellCheck={false}
               />
             </div>
 
@@ -211,10 +213,12 @@ export function ServiceForm({
                 id="fiyat"
                 value={localFiyat}
                 onChange={handleFiyatChange}
-                placeholder="Örn: 250 TL"
+                placeholder="Örn: 250"
                 inputMode="decimal"
               />
-              <small className="text-gray-500 text-xs mt-1">Lütfen fiyatı TL cinsinden, örn: 250</small>
+              <small className="text-gray-500 text-xs mt-1">
+                Lütfen fiyatı TL cinsinden, örn: 250
+              </small>
             </div>
 
             <div className="grid gap-2">
@@ -224,10 +228,12 @@ export function ServiceForm({
                 id="maliyet"
                 value={localMaliyet}
                 onChange={handleMaliyetChange}
-                placeholder="Örn: 30 dakika"
+                placeholder="Örn: 30"
                 inputMode="numeric"
               />
-              <small className="text-gray-500 text-xs mt-1">Lütfen süreyi dakika cinsinden tam sayı olarak girin, örn: 30</small>
+              <small className="text-gray-500 text-xs mt-1">
+                Lütfen süreyi dakika cinsinden tam sayı olarak girin, örn: 30
+              </small>
             </div>
 
             {puanlamaAktif && (
@@ -241,7 +247,9 @@ export function ServiceForm({
                   placeholder="Örn: 18"
                   inputMode="numeric"
                 />
-                <small className="text-gray-500 text-xs mt-1">Lütfen puanı tam sayı olarak girin, örn: 18</small>
+                <small className="text-gray-500 text-xs mt-1">
+                  Lütfen puanı tam sayı olarak girin, örn: 18
+                </small>
               </div>
             )}
           </div>
@@ -266,4 +274,3 @@ export function ServiceForm({
     </Dialog>
   );
 }
-

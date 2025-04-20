@@ -223,6 +223,7 @@ export type Database = {
           id: number
           islem_adi: string
           kategori_id: number | null
+          maliyet: number | null
           puan: number
           sira: number | null
         }
@@ -232,6 +233,7 @@ export type Database = {
           id?: number
           islem_adi: string
           kategori_id?: number | null
+          maliyet?: number | null
           puan: number
           sira?: number | null
         }
@@ -241,6 +243,7 @@ export type Database = {
           id?: number
           islem_adi?: string
           kategori_id?: number | null
+          maliyet?: number | null
           puan?: number
           sira?: number | null
         }

@@ -1,14 +1,49 @@
 
+// Fix the type errors related to setKategoriId usages by wrapping setters that accept number in a function to accept string | number
+
 import { useState } from "react";
 import { ServiceItem } from "./ServiceItem";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit, Trash2 } from "lucide-react";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy, arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  arrayMove,
+  sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable";
 import { ServiceForm } from "./ServiceForm";
 
-export function CategoryCard({ kategori, islemler, isStaff, onServiceEdit, onServiceDelete, onCategoryDelete, onCategoryEdit, onSiralamaChange, onRandevuAl, puanlamaAktif }) {
+export function CategoryCard({
+  kategori,
+  islemler,
+  isStaff,
+  onServiceEdit,
+  onServiceDelete,
+  onCategoryDelete,
+  onCategoryEdit,
+  onSiralamaChange,
+  onRandevuAl,
+  puanlamaAktif,
+}) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isServiceFormOpen, setIsServiceFormOpen] = useState(false);
   const [islemAdi, setIslemAdi] = useState("");
@@ -16,28 +51,28 @@ export function CategoryCard({ kategori, islemler, isStaff, onServiceEdit, onSer
   const [maliyet, setMaliyet] = useState(0);
   const [puan, setPuan] = useState(0);
   const [duzenleId, setDuzenleId] = useState(null);
-  
+
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
-  
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    
+
     if (over && active.id !== over.id) {
-      const oldIndex = islemler.findIndex(item => item.id === active.id);
-      const newIndex = islemler.findIndex(item => item.id === over.id);
-      
+      const oldIndex = islemler.findIndex((item) => item.id === active.id);
+      const newIndex = islemler.findIndex((item) => item.id === over.id);
+
       if (oldIndex !== -1 && newIndex !== -1) {
         const newItems = arrayMove(islemler, oldIndex, newIndex);
         onSiralamaChange(newItems);
       }
     }
   };
-  
+
   const handleAddServiceClick = () => {
     setIslemAdi("");
     setFiyat(0);
@@ -46,25 +81,53 @@ export function CategoryCard({ kategori, islemler, isStaff, onServiceEdit, onSer
     setDuzenleId(null);
     setIsServiceFormOpen(true);
   };
-  
+
   const handleServiceFormSubmit = (e) => {
     e.preventDefault();
-    
+
     const service = {
       islem_adi: islemAdi,
       fiyat,
       maliyet,
       puan,
-      kategori_id: kategori.id
+      kategori_id: kategori.id,
     };
-    
+
     if (duzenleId) {
       onServiceEdit({ ...service, id: duzenleId });
     } else {
       onServiceEdit(service);
     }
-    
+
     setIsServiceFormOpen(false);
+  };
+
+  // Wrapper setters to accept string or number for TypeScript compatibility
+  const handleSetFiyat = (value) => {
+    if (typeof value === "string") {
+      const numeric = parseFloat(value);
+      setFiyat(isNaN(numeric) ? 0 : numeric);
+    } else {
+      setFiyat(value);
+    }
+  };
+
+  const handleSetMaliyet = (value) => {
+    if (typeof value === "string") {
+      const numeric = parseInt(value, 10);
+      setMaliyet(isNaN(numeric) ? 0 : numeric);
+    } else {
+      setMaliyet(value);
+    }
+  };
+
+  const handleSetPuan = (value) => {
+    if (typeof value === "string") {
+      const numeric = parseInt(value, 10);
+      setPuan(isNaN(numeric) ? 0 : numeric);
+    } else {
+      setPuan(value);
+    }
   };
 
   return (
@@ -94,15 +157,15 @@ export function CategoryCard({ kategori, islemler, isStaff, onServiceEdit, onSer
           </div>
         )}
       </div>
-      
+
       <div className="rounded-lg border bg-card">
-        <DndContext 
-          sensors={sensors} 
+        <DndContext
+          sensors={sensors}
           collisionDetection={closestCenter}
           onDragEnd={handleDragEnd}
         >
-          <SortableContext 
-            items={islemler.map(item => item.id)} 
+          <SortableContext
+            items={islemler.map((item) => item.id)}
             strategy={verticalListSortingStrategy}
           >
             <div className="divide-y">
@@ -120,13 +183,13 @@ export function CategoryCard({ kategori, islemler, isStaff, onServiceEdit, onSer
             </div>
           </SortableContext>
         </DndContext>
-        
+
         {islemler.length === 0 && (
           <div className="p-4 text-center text-sm text-muted-foreground">
             Bu kategoride henüz hizmet bulunmamaktadır.
           </div>
         )}
-        
+
         {isStaff && (
           <div className="border-t px-4 py-3">
             <Button
@@ -141,7 +204,7 @@ export function CategoryCard({ kategori, islemler, isStaff, onServiceEdit, onSer
           </div>
         )}
       </div>
-      
+
       <ServiceForm
         isOpen={isServiceFormOpen}
         onOpenChange={setIsServiceFormOpen}
@@ -149,11 +212,11 @@ export function CategoryCard({ kategori, islemler, isStaff, onServiceEdit, onSer
         islemAdi={islemAdi}
         setIslemAdi={setIslemAdi}
         fiyat={fiyat}
-        setFiyat={setFiyat}
+        setFiyat={handleSetFiyat}
         maliyet={maliyet}
-        setMaliyet={setMaliyet}
+        setMaliyet={handleSetMaliyet}
         puan={puan}
-        setPuan={setPuan}
+        setPuan={handleSetPuan}
         kategoriId={kategori.id}
         setKategoriId={() => {}} // Kategori ID'si zaten belirlenmiş olduğu için boş fonksiyon
         duzenleId={duzenleId}
@@ -162,7 +225,7 @@ export function CategoryCard({ kategori, islemler, isStaff, onServiceEdit, onSer
         puanlamaAktif={puanlamaAktif}
         showCategorySelect={false} // Kategori seçimini gösterme
       />
-      
+
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -173,7 +236,7 @@ export function CategoryCard({ kategori, islemler, isStaff, onServiceEdit, onSer
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>İptal</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={() => onCategoryDelete(kategori.id)}
               className="bg-red-500 hover:bg-red-600"
             >
