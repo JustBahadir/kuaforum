@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { ProfileDisplay } from "@/components/customer-profile/ProfileDisplay";
 import StaffPersonalInfoTab from "@/pages/Profile/StaffPersonalInfoTab";
@@ -32,14 +33,14 @@ interface ProfileTabsProps {
     universitebolum: string;
   };
   historyData: {
-    isyerleri: Array<{ isyeri: string; pozisyon: string }>;
+    isyerleri: string;
     gorevpozisyon: string;
-    belgeler: Array<{ belgeadi: string }>;
-    yarismalar: Array<{ yarismaadi: string }>;
+    belgeler: string;
+    yarismalar: string;
     cv: string;
   };
   onEducationChange: (field: keyof ProfileTabsProps["educationData"], value: string) => void;
-  onHistoryChange: (field: keyof ProfileTabsProps["historyData"], value: any) => void;
+  onHistoryChange: (field: keyof ProfileTabsProps["historyData"], value: string) => void;
   onSaveEducationHistory: () => Promise<void>;
   isLoadingEducationHistory: boolean;
 }
@@ -57,17 +58,22 @@ const ProfileTabs = ({
   onEducationChange,
   onHistoryChange,
   onSaveEducationHistory,
-  isLoadingEducationHistory,
+  isLoadingEducationHistory
 }: ProfileTabsProps) => {
+  // Ana view: "personalInfo" veya "educationHistory"
   const [mainView, setMainView] = useState<"personalInfo" | "educationHistory">("personalInfo");
+
+  // Alt sekme: sadece eğitim veya geçmiş gösterilecek
   const [subTab, setSubTab] = useState<"education" | "history">("education");
 
   return (
     <div className="max-w-4xl mx-auto px-4">
+      {/* Mevcut Bilgiler bölümü, sayfa doğal akışında, scrolla bağlı */}
       <div className="mb-6 bg-white rounded-md shadow-sm border border-gray-200 p-6">
         <ProfileDisplay {...profile} />
       </div>
 
+      {/* Ana butonlar */}
       <div className="mb-6 flex border border-gray-300 rounded-md overflow-hidden shadow-sm select-none">
         <button
           className={`flex-1 py-3 text-center font-semibold transition-colors duration-200 ${
@@ -87,7 +93,10 @@ const ProfileTabs = ({
               ? "bg-purple-600 text-white"
               : "bg-gray-50 text-gray-600 hover:bg-gray-100"
           }`}
-          onClick={() => setMainView("educationHistory")}
+          onClick={() => {
+            setMainView("educationHistory");
+            setSubTab("education");
+          }}
           type="button"
           aria-label="Eğitim ve Geçmiş"
         >
@@ -95,6 +104,7 @@ const ProfileTabs = ({
         </button>
       </div>
 
+      {/* İçerik alanı */}
       <div>
         {mainView === "personalInfo" && (
           <StaffPersonalInfoTab
@@ -110,20 +120,52 @@ const ProfileTabs = ({
 
         {mainView === "educationHistory" && (
           <div>
-            <h2 className="text-lg font-semibold border-b pb-2 mb-4">Eğitim Bilgileri</h2>
-            <EducationTab
-              educationData={educationData}
-              onEducationChange={onEducationChange}
-              onSave={onSaveEducationHistory}
-              isLoading={isLoadingEducationHistory}
-            />
-            <h2 className="text-lg font-semibold border-b pb-2 mt-10 mb-4">Geçmiş Bilgileri</h2>
-            <HistoryTab
-              historyData={historyData}
-              onHistoryChange={onHistoryChange}
-              onSave={onSaveEducationHistory}
-              isLoading={isLoadingEducationHistory}
-            />
+            {/* Alt sekmeler */}
+            <nav className="flex border-b border-gray-300 mb-4">
+              <button
+                onClick={() => setSubTab("education")}
+                className={`flex-1 py-2 font-semibold text-center transition-colors duration-150 ${
+                  subTab === "education"
+                    ? "border-b-2 border-purple-600 text-purple-600"
+                    : "text-gray-600 hover:text-purple-600"
+                }`}
+                type="button"
+                aria-label="Eğitim Bilgileri"
+              >
+                Eğitim Bilgileri
+              </button>
+              <button
+                onClick={() => setSubTab("history")}
+                className={`flex-1 py-2 font-semibold text-center transition-colors duration-150 ${
+                  subTab === "history"
+                    ? "border-b-2 border-purple-600 text-purple-600"
+                    : "text-gray-600 hover:text-purple-600"
+                }`}
+                type="button"
+                aria-label="Geçmiş Bilgileri"
+              >
+                Geçmiş Bilgileri
+              </button>
+            </nav>
+
+            {/* Alt sekme içerikleri */}
+            {subTab === "education" && (
+              <EducationTab
+                educationData={educationData}
+                onEducationChange={onEducationChange}
+                onSave={onSaveEducationHistory}
+                isLoading={isLoadingEducationHistory}
+              />
+            )}
+
+            {subTab === "history" && (
+              <HistoryTab
+                historyData={historyData}
+                onHistoryChange={onHistoryChange}
+                onSave={onSaveEducationHistory}
+                isLoading={isLoadingEducationHistory}
+              />
+            )}
           </div>
         )}
       </div>

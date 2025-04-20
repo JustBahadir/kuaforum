@@ -379,7 +379,7 @@ const HistoryTab = ({
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto bg-white p-6 rounded-md shadow-sm border border-gray-200">
+    <div className="space-y-6 max-w-4xl mx-auto">
       <h2 className="text-lg font-semibold border-b pb-2">Geçmiş Bilgileri</h2>
 
       {/* İş Yerleri ve Görevler */}
@@ -389,7 +389,7 @@ const HistoryTab = ({
           <input
             type="text"
             placeholder="İş yeri adı giriniz..."
-            className="bg-white text-black placeholder:text-gray-400 rounded-md border border-gray-300 px-3 py-2 flex-grow"
+            className="bg-black text-white placeholder:text-gray-400 rounded-md border border-gray-600 px-3 py-2 flex-grow"
             value={newIsYeri}
             onChange={(e) => setNewIsYeri(e.target.value)}
             disabled={isLoading}
@@ -397,7 +397,7 @@ const HistoryTab = ({
           <input
             type="text"
             placeholder="Görev / Pozisyon giriniz..."
-            className="bg-white text-black placeholder:text-gray-400 rounded-md border border-gray-300 px-3 py-2 flex-grow"
+            className="bg-black text-white placeholder:text-gray-400 rounded-md border border-gray-600 px-3 py-2 flex-grow"
             value={newGorevPozisyon}
             onChange={(e) => setNewGorevPozisyon(e.target.value)}
             disabled={isLoading}
@@ -414,7 +414,7 @@ const HistoryTab = ({
             Tecrübe Ekle
           </Button>
         </div>
-        <p className="text-xs text-gray-500 mb-2">İş yeri ve görev bilgileri birlikte kaydedilir.</p>
+        <p className="text-xs text-gray-400 mb-2">İş yeri ve görev bilgileri birlikte kaydedilir.</p>
         {workplaceList.length > 0 ? (
           <table className="w-full border border-gray-200 rounded-md">
             <thead className="bg-gray-100 border-b border-gray-200">
@@ -438,7 +438,7 @@ const HistoryTab = ({
           <input
             type="text"
             placeholder="Belge adını giriniz..."
-            className="bg-white text-black placeholder:text-gray-400 rounded-md border border-gray-300 px-3 py-2 flex-grow"
+            className="bg-black text-white placeholder:text-gray-400 rounded-md border border-gray-600 px-3 py-2 flex-grow"
             value={newDocument}
             onChange={(e) => setNewDocument(e.target.value)}
             disabled={isLoading}
@@ -455,7 +455,7 @@ const HistoryTab = ({
             Belge Ekle
           </Button>
         </div>
-        <p className="text-xs text-gray-500 mb-2">Belgeler tek başına kaydedilir.</p>
+        <p className="text-xs text-gray-400 mb-2">Belgeler tek başına kaydedilir.</p>
         {documentList.length > 0 ? (
           <table className="w-full border border-gray-200 rounded-md">
             <thead className="bg-gray-100 border-b border-gray-200">
@@ -478,7 +478,7 @@ const HistoryTab = ({
           <input
             type="text"
             placeholder="Yarışma adını giriniz..."
-            className="bg-white text-black placeholder:text-gray-400 rounded-md border border-gray-300 px-3 py-2 flex-grow"
+            className="bg-black text-white placeholder:text-gray-400 rounded-md border border-gray-600 px-3 py-2 flex-grow"
             value={newCompetition}
             onChange={(e) => setNewCompetition(e.target.value)}
             disabled={isLoading}
@@ -495,7 +495,7 @@ const HistoryTab = ({
             Yarışma Ekle
           </Button>
         </div>
-        <p className="text-xs text-gray-500 mb-2">Yarışmalar tek başına kaydedilir.</p>
+        <p className="text-xs text-gray-400 mb-2">Yarışmalar tek başına kaydedilir.</p>
         {competitionList.length > 0 ? (
           <table className="w-full border border-gray-200 rounded-md">
             <thead className="bg-gray-100 border-b border-gray-200">
@@ -515,7 +515,7 @@ const HistoryTab = ({
       <div>
         <label className="block font-medium mb-1">CV</label>
         <textarea
-          className="bg-white text-black rounded-md border border-gray-300 px-3 py-2 w-full min-h-[90px] placeholder:text-gray-400"
+          className="bg-black text-white rounded-md border border-gray-600 px-3 py-2 w-full min-h-[90px] placeholder:text-gray-400"
           value={cvText}
           onChange={handleCvChange}
           placeholder="Serbest metin"
