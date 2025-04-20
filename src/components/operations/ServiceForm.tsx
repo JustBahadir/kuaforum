@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -134,7 +135,7 @@ export function ServiceForm({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[550px]">
         <DialogHeader>
-          <DialogTitle>{isNewService ? "Yeni Hizmet Ekle" : "Hizmet Düzenle"}</DialogTitle>
+          <DialogTitle>{isNewService ? "Yeni Hizmet Ekle" : "Hizmeti Düzenle"}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit}>
@@ -213,6 +214,7 @@ export function ServiceForm({
                   onChange={handlePuanChange}
                   min="0"
                   step="1"
+                  placeholder="Örn: 18"
                 />
               </div>
             )}
@@ -238,3 +240,4 @@ export function ServiceForm({
     </Dialog>
   );
 }
+
