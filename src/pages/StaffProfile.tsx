@@ -6,6 +6,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import DocumentsSection from "./components/DocumentsSection";
+import CompetitionsSection from "./components/CompetitionsSection";
+import CvSection from "./components/CvSection";
 
 interface EducationData {
   ortaokuldurumu: string;
@@ -96,7 +99,7 @@ export default function StaffProfile() {
 
     const { error } = await supabase
       .from("staff_education")
-      .upsert(dataToUpsert, { onConflict: ["personel_id"] });
+      .upsert([dataToUpsert], { onConflict: ["personel_id"] });
 
     setLoading(false);
     if (error) {
@@ -123,7 +126,7 @@ export default function StaffProfile() {
 
     const { error } = await supabase
       .from("staff_history")
-      .upsert(dataToUpsert, { onConflict: ["personel_id"] });
+      .upsert([dataToUpsert], { onConflict: ["personel_id"] });
 
     setLoading(false);
     if (error) {
@@ -156,7 +159,7 @@ export default function StaffProfile() {
 
     const { error } = await supabase
       .from("staff_history")
-      .upsert(dataToUpsert, { onConflict: ["personel_id"] });
+      .upsert([dataToUpsert], { onConflict: ["personel_id"] });
 
     setLoading(false);
     if (error) {
