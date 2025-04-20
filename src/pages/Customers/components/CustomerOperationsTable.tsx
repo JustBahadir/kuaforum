@@ -8,7 +8,7 @@ import { format } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { CalendarIcon, RefreshCw, FileDown, Camera, Image, Check, Edit, X } from "lucide-react";
+import { CalendarIcon, RefreshCw, FileDown, Camera, Image, Check, Edit } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 
 interface CustomerOperationsTableProps {
@@ -48,7 +48,6 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
   };
 
   const handleReportDownload = () => {
-    // Placeholder for PDF download functionality
     console.log("Downloading report for operations:", operations);
     toast.info("Rapor indirme özelliği yakında eklenecek");
   };
@@ -57,7 +56,6 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
     setSelectedOperation(operation);
     setCurrentNote(operation.notlar || "");
     
-    // Check if we already have this operation in our notes state
     const existingNote = operationNotes.find(note => note.id === operation.id);
     if (!existingNote) {
       setOperationNotes([...operationNotes, { id: operation.id, note: operation.notlar || "", isEditing: false }]);
@@ -75,13 +73,11 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
     if (!selectedOperation) return;
     
     try {
-      // Here would be the API call to save the note
       await supabase
         .from('personel_islemleri')
         .update({ notlar: currentNote })
         .eq('id', selectedOperation.id);
       
-      // Update local state
       setOperationNotes(operationNotes.map(note => 
         note.id === selectedOperation.id 
           ? { ...note, note: currentNote, isEditing: false } 
@@ -96,9 +92,34 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
     }
   };
 
+  // New handler to delete note
+  const handleDeleteNote = async () => {
+    if (!selectedOperation) return;
+    
+    try {
+      // Set note to empty string in database
+      await supabase
+        .from('personel_islemleri')
+        .update({ notlar: "" })
+        .eq('id', selectedOperation.id);
+
+      // Update local state
+      setCurrentNote("");
+      setOperationNotes(operationNotes.map(note =>
+        note.id === selectedOperation.id 
+          ? { ...note, note: "", isEditing: false }
+          : note
+      ));
+      
+      toast.success("Not başarıyla silindi");
+      setIsNoteDialogOpen(false);
+    } catch (error) {
+      console.error("Error deleting note:", error);
+      toast.error("Not silinirken bir hata oluştu");
+    }
+  };
+
   const handleUploadPhoto = async (method: 'camera' | 'gallery') => {
-    // This is a placeholder for photo upload functionality
-    // In a real implementation, you would use the device camera or file picker
     console.log(`Uploading photo using ${method}`, selectedOperation);
     toast.info(`${method === 'camera' ? 'Kamera' : 'Galeri'} kullanarak fotoğraf yükleme özelliği yakında eklenecek`);
     setIsPhotoDialogOpen(false);
@@ -108,7 +129,6 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
     return format(new Date(date), "dd.MM.yyyy");
   };
 
-  // Check if we should show points column - default to true if totalPoints > 0
   const showPointsColumn = totals && totals.totalPoints > 0;
 
   if (isLoading) {
@@ -120,12 +140,10 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
     );
   }
 
-  // Helper function to check if operation has notes
   const hasNotes = (operation: any) => {
     return operation.notlar && operation.notlar.trim().length > 0;
   };
 
-  // Helper function to check if operation has photos
   const hasPhotos = (operation: any) => {
     return operation.photos && operation.photos.length > 0;
   };
@@ -303,13 +321,20 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
               className="min-h-[150px]"
             />
             
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setIsNoteDialogOpen(false)}>
-                İptal
-              </Button>
-              <Button onClick={handleSaveNote}>
-                Kaydet
-              </Button>
+            <div className="flex justify-between">
+              <div>
+                <Button variant="destructive" onClick={handleDeleteNote}>
+                  Sil
+                </Button>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setIsNoteDialogOpen(false)}>
+                  İptal
+                </Button>
+                <Button onClick={handleSaveNote}>
+                  Kaydet
+                </Button>
+              </div>
             </div>
           </div>
         </DialogContent>
@@ -365,3 +390,4 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
     </div>
   );
 }
+
