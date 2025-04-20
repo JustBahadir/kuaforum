@@ -60,6 +60,13 @@ export function useAppointments(dukkanId?: number) {
           data = randevular || [];
         }
         
+        // Here set a flag isReturnedFromCancel if the appointment was previously cancelled and then re-activated
+        data.forEach(app => {
+          if(app.durum === "onaylandi" && app.notlar?.toLowerCase().includes("geri alındı")) {
+            (app as any).isReturnedFromCancel = true;
+          }
+        });
+        
         console.log("Randevular başarıyla getirildi:", data);
         return data;
       } catch (error) {
@@ -217,11 +224,13 @@ export function useAppointments(dukkanId?: number) {
     }
   });
 
-  // Added mutate to undo cancel (set status back to onaylandi)
+  // Undo cancel: reactivate appointment to "onaylandi"
   const { mutate: undoCancelAppointment } = useMutation({
     mutationFn: async (appointmentId: number) => {
+      // Update appointment status to "onaylandi"
       return randevuServisi.guncelle(appointmentId, {
-        durum: "onaylandi"
+        durum: "onaylandi",
+        notlar: "Geri alındı"
       });
     },
     onSuccess: () => {

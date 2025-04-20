@@ -4,7 +4,7 @@ import { format, addDays, subDays, isSameDay, isYesterday, isToday, isTomorrow, 
 import { tr } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronLeft, ChevronRight, CheckSquare, XSquare } from "lucide-react";
+import { ChevronLeft, ChevronRight, CheckSquare, XSquare, Info } from "lucide-react";
 import { Randevu } from "@/lib/supabase/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge"; 
@@ -146,7 +146,10 @@ export function AppointmentDayView({
         </div>
       ) : (
         <div className="space-y-4">
-          {sortedAppointments.map((appointment) => (
+          {sortedAppointments.map((appointment) => {
+            const isReturnedFromCancel = appointment.durum === "onaylandi" && appointment.isReturnedFromCancel;
+            // Assuming there is a flag isReturnedFromCancel to detect if it came from cancellation
+            return (
             <Card key={appointment.id} className="overflow-hidden">
               <CardContent className="p-0">
                 <div className={`grid grid-cols-1 md:grid-cols-5 border-l-4 ${
@@ -231,13 +234,24 @@ export function AppointmentDayView({
                         >
                           Geri Al
                         </Button>
+                        {isReturnedFromCancel && (
+                          <Button 
+                            variant="ghost"
+                            size="icon"
+                            className="ml-1 text-blue-600"
+                            onClick={() => alert("İptalden dönen randevu")}
+                            aria-label="İptalden dönen randevu hakkında bilgi"
+                          >
+                            <Info className="h-5 w-5" />
+                          </Button>
+                        )}
                       </div>
                     )}
                   </div>
                 </div>
               </CardContent>
             </Card>
-          ))}
+          )})}
         </div>
       )}
     </div>

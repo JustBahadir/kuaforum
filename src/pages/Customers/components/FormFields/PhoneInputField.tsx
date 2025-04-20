@@ -16,7 +16,7 @@ export function PhoneInputField({
   value,
   onChange,
   label = "Telefon Numarası",
-  placeholder = "Örn: 0555 123 45 67",
+  placeholder = "05xx xxx xx xx",
   id = "phone",
   error,
   disabled = false
