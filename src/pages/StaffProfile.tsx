@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, ReactElement } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -86,7 +86,7 @@ export default function StaffProfile() {
     if (!user || !user.id) return;
     setLoading(true);
 
-    const dataToUpsert = {
+    const dataToUpsert = [{
       personel_id: Number(user.id),
       ortaokuldurumu: educationData.ortaokuldurumu,
       lisedurumu: educationData.lisedurumu,
@@ -95,7 +95,7 @@ export default function StaffProfile() {
       universitedurumu: educationData.universitedurumu,
       universitebolum: educationData.universitebolum,
       updated_at: new Date().toISOString(),
-    };
+    }];
 
     const { error } = await supabase
       .from("staff_education")
@@ -114,7 +114,7 @@ export default function StaffProfile() {
     if (!user || !user.id) return;
     setLoading(true);
 
-    const dataToUpsert = {
+    const dataToUpsert = [{
       personel_id: Number(user.id),
       isyerleri: arrayToString(historyData.isyerleri),
       gorevpozisyon: arrayToString(historyData.gorevpozisyon),
@@ -122,7 +122,7 @@ export default function StaffProfile() {
       yarismalar: arrayToString(historyData.yarismalar),
       cv: historyData.cv || "",
       updated_at: new Date().toISOString(),
-    };
+    }];
 
     const { error } = await supabase
       .from("staff_history")
@@ -147,7 +147,7 @@ export default function StaffProfile() {
     if (!user || !user.id) return;
     setLoading(true);
 
-    const dataToUpsert = {
+    const dataToUpsert = [{
       personel_id: Number(user.id),
       isyerleri: arrayToString(isyerleri),
       gorevpozisyon: arrayToString(gorevpozisyon),
@@ -155,7 +155,7 @@ export default function StaffProfile() {
       yarismalar: arrayToString(yarismalar),
       cv: cv || "",
       updated_at: new Date().toISOString(),
-    };
+    }];
 
     const { error } = await supabase
       .from("staff_history")
@@ -664,7 +664,7 @@ export default function StaffProfile() {
                       </select>
                     </div>
 
-                    {showLisedurumu && (
+                    {educationData.ortaokuldurumu.toLowerCase() === "bitirdi" && (
                       <div>
                         <label className="block text-sm font-medium text-gray-700">
                           Lise Durumu
@@ -684,7 +684,8 @@ export default function StaffProfile() {
                       </div>
                     )}
 
-                    {showLiseturu && (
+                    {(educationData.lisedurumu.toLowerCase() === "bitirdi" ||
+                      educationData.lisedurumu.toLowerCase() === "okuyor") && (
                       <div>
                         <label className="block text-sm font-medium text-gray-700">
                           Lise Türü
@@ -715,7 +716,9 @@ export default function StaffProfile() {
                       </div>
                     )}
 
-                    {showMeslekibrans && (
+                    {["cok_programli_anadolu", "meslek_ve_teknik_anadolu"].includes(
+                      educationData.liseturu
+                    ) && (
                       <div>
                         <label className="block text-sm font-medium text-gray-700">
                           Meslek / Branş
@@ -734,7 +737,7 @@ export default function StaffProfile() {
                       </div>
                     )}
 
-                    {showUniversitedurumu && (
+                    {educationData.lisedurumu.toLowerCase() === "bitirdi" && (
                       <div>
                         <label className="block text-sm font-medium text-gray-700">
                           Üniversite Durumu
@@ -754,7 +757,8 @@ export default function StaffProfile() {
                       </div>
                     )}
 
-                    {showUniversitebolum && (
+                    {(educationData.universitedurumu.toLowerCase() === "bitirdi" ||
+                      educationData.universitedurumu.toLowerCase() === "okuyor") && (
                       <div>
                         <label className="block text-sm font-medium text-gray-700">
                           Üniversite Bölümü
