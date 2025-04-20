@@ -29,12 +29,12 @@ export interface ServiceFormProps {
   kategoriler: any[];
   islemAdi: string;
   setIslemAdi: (value: string) => void;
-  fiyat: number;
-  setFiyat: (value: number) => void;
-  maliyet?: number;
-  setMaliyet?: (value: number) => void;
-  puan: number;
-  setPuan: (value: number) => void;
+  fiyat: number | string;
+  setFiyat: (value: number | string) => void;
+  maliyet?: number | string;
+  setMaliyet?: (value: number | string) => void;
+  puan: number | string;
+  setPuan: (value: number | string) => void;
   kategoriId: number | undefined;
   setKategoriId: (value: number | undefined) => void;
   isNewService?: boolean;
@@ -54,7 +54,7 @@ export function ServiceForm({
   setIslemAdi,
   fiyat,
   setFiyat,
-  maliyet = 0,
+  maliyet = "",
   setMaliyet = () => {},
   puan,
   setPuan,
@@ -70,19 +70,46 @@ export function ServiceForm({
 }: ServiceFormProps) {
   const queryClient = useQueryClient();
 
+  // Use local states as string for controlled input handling
+  const [localFiyat, setLocalFiyat] = useState<string>("");
+  const [localMaliyet, setLocalMaliyet] = useState<string>("");
+  const [localPuan, setLocalPuan] = useState<string>("");
+
+  useEffect(() => {
+    setLocalFiyat(fiyat === 0 ? "" : fiyat.toString());
+  }, [fiyat]);
+
+  useEffect(() => {
+    setLocalMaliyet(maliyet === 0 ? "" : maliyet?.toString() || "");
+  }, [maliyet]);
+
+  useEffect(() => {
+    setLocalPuan(puan === 0 ? "" : puan.toString());
+  }, [puan]);
+
   const handleFiyatChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseFloat(e.target.value);
-    setFiyat(isNaN(value) ? 0 : value);
+    const value = e.target.value;
+    // Allow only numbers and decimals
+    if (/^\d*\.?\d*$/.test(value)) {
+      setLocalFiyat(value);
+      setFiyat(value === "" ? "" : parseFloat(value));
+    }
   };
 
   const handleMaliyetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseFloat(e.target.value);
-    setMaliyet(isNaN(value) ? 0 : value);
+    const value = e.target.value;
+    if (/^\d*$/.test(value)) {
+      setLocalMaliyet(value);
+      setMaliyet(value === "" ? "" : parseInt(value, 10));
+    }
   };
 
   const handlePuanChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseFloat(e.target.value);
-    setPuan(isNaN(value) ? 0 : value);
+    const value = e.target.value;
+    if (/^\d*$/.test(value)) {
+      setLocalPuan(value);
+      setPuan(value === "" ? "" : parseInt(value, 10));
+    }
   };
 
   const addServiceMutation = useMutation({
@@ -119,9 +146,9 @@ export function ServiceForm({
 
     const serviceData: any = {
       islem_adi: islemAdi,
-      fiyat,
-      maliyet,
-      puan,
+      fiyat: parseFloat(localFiyat) || 0,
+      maliyet: parseInt(localMaliyet) || 0,
+      puan: parseInt(localPuan) || 0,
     };
 
     if (kategoriId) {
@@ -180,42 +207,41 @@ export function ServiceForm({
             <div className="grid gap-2">
               <Label htmlFor="fiyat">Fiyat (₺)</Label>
               <Input
-                type="number"
+                type="text"
                 id="fiyat"
-                value={fiyat}
+                value={localFiyat}
                 onChange={handleFiyatChange}
-                min="0"
-                step="0.01"
-                required
                 placeholder="Örn: 250 TL"
+                inputMode="decimal"
               />
+              <small className="text-gray-500 text-xs mt-1">Lütfen fiyatı TL cinsinden, örn: 250</small>
             </div>
 
             <div className="grid gap-2">
               <Label htmlFor="maliyet">Süre (dakika)</Label>
               <Input
-                type="number"
+                type="text"
                 id="maliyet"
-                value={maliyet}
+                value={localMaliyet}
                 onChange={handleMaliyetChange}
-                min="0"
-                step="1"
                 placeholder="Örn: 30 dakika"
+                inputMode="numeric"
               />
+              <small className="text-gray-500 text-xs mt-1">Lütfen süreyi dakika cinsinden tam sayı olarak girin, örn: 30</small>
             </div>
 
             {puanlamaAktif && (
               <div className="grid gap-2">
                 <Label htmlFor="puan">Puan</Label>
                 <Input
-                  type="number"
+                  type="text"
                   id="puan"
-                  value={puan}
+                  value={localPuan}
                   onChange={handlePuanChange}
-                  min="0"
-                  step="1"
                   placeholder="Örn: 18"
+                  inputMode="numeric"
                 />
+                <small className="text-gray-500 text-xs mt-1">Lütfen puanı tam sayı olarak girin, örn: 18</small>
               </div>
             )}
           </div>
