@@ -34,7 +34,7 @@ interface FormValues {
 
 export function StaffAppointmentForm({ onAppointmentCreated, initialDate }: StaffAppointmentFormProps) {
   const navigate = useNavigate();
-  const { dukkanId, role } = useCustomerAuth();
+  const { dukkanId, userRole } = useCustomerAuth();
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [availableTimes, setAvailableTimes] = useState<string[]>([]);
   const [selectedService, setSelectedService] = useState<number | null>(null);
@@ -347,7 +347,7 @@ export function StaffAppointmentForm({ onAppointmentCreated, initialDate }: Staf
               isFetchingTimes 
                 ? "Saatler yükleniyor..." 
                 : availableTimes.length === 0 
-                  ? "Saat seçin"
+                  ? userRole === "customer" || !userRole ? "Seçilen tarihte müsait saat yok" : ""
                   : "Saat seçin"
             } />
           </SelectTrigger>
@@ -358,8 +358,11 @@ export function StaffAppointmentForm({ onAppointmentCreated, initialDate }: Staf
                 <Skeleton className="h-5 w-full mt-2" />
               </div>
             ) : availableTimes.length === 0 ? (
-              // Removed error showing for no available time
-              null
+              userRole === "customer" || !userRole ? (
+                <SelectItem value="empty" disabled>
+                  Seçilen tarihte müsait saat yok
+                </SelectItem>
+              ) : null
             ) : (
               availableTimes.map((time) => (
                 <SelectItem key={time} value={time}>

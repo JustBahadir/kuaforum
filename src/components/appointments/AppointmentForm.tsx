@@ -28,7 +28,7 @@ interface AppointmentFormProps {
 }
 
 export function AppointmentForm({ onAppointmentCreated, initialDate, initialServiceId }: AppointmentFormProps) {
-  const { dukkanId, userId, role } = useCustomerAuth();
+  const { dukkanId, userId, userRole } = useCustomerAuth();
   const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState(initialDate || format(new Date(), 'yyyy-MM-dd'));
   const [selectedTime, setSelectedTime] = useState("");
@@ -194,8 +194,8 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
     }
     
     if (!selectedTime) {
-      // Show error only if role is customer (not staff/admin)
-      if (role === "customer" || !role) {
+      // Show error only if userRole is customer (not staff/admin)
+      if (userRole === "customer" || !userRole) {
         toast.error("Lütfen bir saat seçin");
         return;
       }
@@ -314,7 +314,7 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
               isFetchingTimes 
                 ? "Saatler yükleniyor..." 
                 : availableTimes.length === 0 
-                  ? "Saat seçin"
+                  ? userRole === "customer" || !userRole ? "Seçilen tarihte müsait saat yok" : ""
                   : "Saat seçin"
             } />
           </SelectTrigger>
@@ -325,8 +325,7 @@ export function AppointmentForm({ onAppointmentCreated, initialDate, initialServ
                 <Skeleton className="h-5 w-full mt-2" />
               </div>
             ) : availableTimes.length === 0 ? (
-              // No options shown for staff/admin, for customer (role) show a disabled item?
-              role === "customer" || !role ? (
+              userRole === "customer" || !userRole ? (
                 <SelectItem value="empty" disabled>
                   Seçilen tarihte müsait saat yok
                 </SelectItem>
