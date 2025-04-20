@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,6 +15,7 @@ import { CustomerPhotoGallery } from "./CustomerPhotoGallery";
 import { customerPersonalDataService } from "@/lib/supabase/services/customerPersonalDataService";
 import { Input } from "@/components/ui/input";
 import { formatPhoneNumber } from "@/utils/phoneFormatter";
+import { PhoneInputField } from "../FormFields/PhoneInputField";  // Added import
 
 interface CustomerDetailsProps {
   customerId?: number;
@@ -91,12 +93,12 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    if (name === "phone") {
-      const digitsOnly = value.replace(/\D/g, "").substring(0, 11);
-      setFormData(prev => ({ ...prev, phone: digitsOnly }));
-    } else {
-      setFormData(prev => ({ ...prev, [name]: value }));
-    }
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handlePhoneChange = (value: string) => {
+    // value is digits only, max 11 chars enforced by PhoneInputField
+    setFormData(prev => ({ ...prev, phone: value }));
   };
 
   const handleSave = async () => {
@@ -188,16 +190,11 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
                   <div className="grid grid-cols-3 items-center border-b py-2">
                     <div className="font-medium">Telefon</div>
                     <div className="col-span-2">
-                      <Input
-                        id="phone"
-                        name="phone"
-                        type="tel"
-                        inputMode="tel"
-                        placeholder="05XX XXX XX XX"
-                        value={formatPhoneNumber(formData.phone)}
-                        onChange={handleInputChange}
-                        maxLength={15}
-                        className="w-full"
+                      <PhoneInputField 
+                        value={formData.phone} 
+                        onChange={handlePhoneChange} 
+                        placeholder="05xx xxx xx xx" 
+                        id="phone" 
                       />
                     </div>
                   </div>
@@ -329,3 +326,4 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
     </div>
   );
 }
+
