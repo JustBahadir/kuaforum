@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,7 +9,7 @@ import { CustomerProfile } from "./CustomerProfile";
 import { useQuery } from "@tanstack/react-query";
 import { musteriServisi, islemServisi } from "@/lib/supabase";
 import { useParams, useNavigate } from "react-router-dom";
-import { CustomerPersonalInfo } from "./CustomerPersonalData"; // fixed import name
+import { CustomerPersonalInfo } from "./CustomerPersonalData";
 import { CustomerPhotoGallery } from "./CustomerPhotoGallery";
 import { customerPersonalDataService } from "@/lib/supabase/services/customerPersonalDataService";
 import { PhoneInputField } from "./FormFields/PhoneInputField";
@@ -23,7 +22,7 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
   const [activeTab, setActiveTab] = useState("basic");
   const params = useParams<{ id: string }>();
   const navigate = useNavigate();
-  
+
   const customerId = propCustomerId !== undefined ? propCustomerId : params.id ? Number(params.id) : undefined;
 
   const { 
@@ -38,7 +37,7 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
     },
     enabled: !!customerId,
   });
-  
+
   const {
     data: personalData,
     isLoading: isLoadingPersonalData
@@ -64,11 +63,11 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
   const isPointSystemEnabled = services.some((service: any) => service.puan > 0);
 
   const [isEditing, setIsEditing] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     firstName: customer?.first_name || "",
     lastName: customer?.last_name || "",
-    phone: customer?.phone ? String(customer.phone) : "", // ensure string
+    phone: customer?.phone ? String(customer.phone) : "",
     birthdate: customer?.birthdate ? new Date(customer.birthdate).toISOString().split('T')[0] : "",
     spouseName: (customerWithPersonalData as any)?.spouse_name || "",
     spouseBirthdate: (customerWithPersonalData as any)?.spouse_birthdate ? new Date((customerWithPersonalData as any).spouse_birthdate).toISOString().split('T')[0] : "",
@@ -80,7 +79,7 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
     setFormData({
       firstName: customer?.first_name || "",
       lastName: customer?.last_name || "",
-      phone: customer?.phone ? String(customer.phone) : "", // ensure string
+      phone: customer?.phone ? String(customer.phone) : "",
       birthdate: customer?.birthdate ? new Date(customer.birthdate).toISOString().split('T')[0] : "",
       spouseName: (customerWithPersonalData as any)?.spouse_name || "",
       spouseBirthdate: (customerWithPersonalData as any)?.spouse_birthdate ? new Date((customerWithPersonalData as any).spouse_birthdate).toISOString().split('T')[0] : "",
@@ -104,16 +103,17 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
 
       const phoneDigitsOnly = formData.phone.replace(/\D/g, '');
 
-      await musteriServisi.guncelle(customer!.id, {
+      if (!customer || !customer.id) throw new Error("Customer ID is missing");
+
+      await musteriServisi.guncelle(customer.id, {
         first_name: formData.firstName,
-        last_name: formData.lastName,
-        phone: phoneDigitsOnly,
+        last_name: formData.lastName || null,
+        phone: phoneDigitsOnly || null,
         birthdate: formData.birthdate || null,
       });
 
-      const { customerPersonalDataService } = await import('@/lib/supabase/services/customerPersonalDataService');
-      await customerPersonalDataService.updateCustomerPersonalData(customer!.id, {
-        customer_id: customer!.id,
+      await customerPersonalDataService.updateCustomerPersonalData(customer.id, {
+        customer_id: customer.id,
         spouse_name: formData.spouseName || null,
         spouse_birthdate: formData.spouseBirthdate || null,
         anniversary_date: formData.anniversaryDate || null,
@@ -122,6 +122,7 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
 
     } catch (error) {
       console.error("Müşteri güncelleme hatası:", error);
+      setIsEditing(true);
     }
   };
 
@@ -176,7 +177,7 @@ export function CustomerDetails({ customerId: propCustomerId }: CustomerDetailsP
             <TabsTrigger value="loyalty">Sadakat & Puanlar</TabsTrigger>
           )}
         </TabsList>
-        
+
         <TabsContent value="basic">
           <Card>
             <CardHeader>
