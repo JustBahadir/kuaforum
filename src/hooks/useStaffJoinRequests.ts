@@ -1,5 +1,5 @@
 
-import { useQuery, useMutation, useQueryClient, UseQueryResult } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 interface StaffJoinRequest {
@@ -20,7 +20,6 @@ export function useStaffJoinRequests() {
       .from<StaffJoinRequest>("staff_join_requests")
       .select("*")
       .order("created_at", { ascending: false });
-
     if (error) {
       throw error;
     }
@@ -33,7 +32,6 @@ export function useStaffJoinRequests() {
     return data;
   };
 
-  // Correct useQuery with 2 generics: Data, Error
   const { data, isLoading, isError } = useQuery<StaffJoinRequest[], unknown>({
     queryKey: ["staff_join_requests"],
     queryFn: fetchRequests,
@@ -80,4 +78,3 @@ export function useStaffJoinRequests() {
 
   return { data, isLoading, isError, mutateStatus, addRequest };
 }
-

@@ -51,15 +51,41 @@ export function StaffJoinRequestForm() {
         return;
       }
 
-      // Ensure userId is number
-      const numericUserId =
-        typeof userId === "string" && !isNaN(Number(userId))
-          ? Number(userId)
-          : (userId as number);
+      // Ensure userId is number safely
+      let numericUserId: number;
+      if (typeof userId === "number") {
+        numericUserId = userId;
+      } else if (typeof userId === "string") {
+        const parsedId = Number(userId);
+        if (isNaN(parsedId)) {
+          toast.error("Geçersiz kullanıcı ID");
+          setLoading(false);
+          return;
+        }
+        numericUserId = parsedId;
+      } else {
+        toast.error("Geçersiz kullanıcı ID");
+        setLoading(false);
+        return;
+      }
 
       // Convert dukkan.id to number safely
-      const numericDukkanId =
-        typeof dukkan.id === "number" ? dukkan.id : parseInt(dukkan.id, 10);
+      let numericDukkanId: number;
+      if (typeof dukkan.id === "number") {
+        numericDukkanId = dukkan.id;
+      } else if (typeof dukkan.id === "string") {
+        const parsedId = Number(dukkan.id);
+        if (isNaN(parsedId)) {
+          toast.error("Geçersiz dükkan ID");
+          setLoading(false);
+          return;
+        }
+        numericDukkanId = parsedId;
+      } else {
+        toast.error("Geçersiz dükkan ID");
+        setLoading(false);
+        return;
+      }
 
       // Check if request already exists for this personel & dükkan
       const existingRequest = data?.find(
@@ -102,4 +128,3 @@ export function StaffJoinRequestForm() {
     </form>
   );
 }
-

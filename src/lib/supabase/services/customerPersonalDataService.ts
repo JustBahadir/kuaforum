@@ -1,4 +1,3 @@
-
 import { supabase } from '../client';
 
 export interface CustomerPersonalData {
@@ -134,9 +133,10 @@ export const customerPersonalDataService = {
         hair_types = [...hair_types.filter(t => !['İnce Telli', 'Kalın Telli'].includes(t)), personalData.hair_thickness];
       }
       
-      // Remove allergy_notes field from dataToSave
+      // Remove allergy_notes field from dataToSave (it does not exist in the interface or DB)
+      // So we omit allergy_notes from restData
       const {
-        allergy_notes, // exclude this field as it doesn't exist
+        allergy_notes, // exclude
         ...restData
       } = personalData;
       
@@ -190,4 +190,3 @@ export const customerPersonalDataService = {
     return this.updateCustomerPersonalData(personalData.customer_id, personalData);
   }
 };
-

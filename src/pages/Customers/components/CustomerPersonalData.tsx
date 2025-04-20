@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -130,7 +129,8 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
         dye_preferences: personalData.dye_preferences || [],
         root_dye_frequency: personalData.root_dye_frequency || "",
         bleach_tolerance: personalData.bleach_tolerance || false,
-        allergy_notes: personalData.allergy_notes || "",
+        // Remove allergy_notes from initial form data settings as it doesn't exist
+        // allergy_notes: personalData.allergy_notes || "",
         
         straightener_preference: personalData.straightener_preference || "",
         curling_preference: personalData.curling_preference || "",
