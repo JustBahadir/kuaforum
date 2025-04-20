@@ -1,807 +1,422 @@
-
 import { useState, useEffect } from "react";
-import { Label } from "@/components/ui/label";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
-import { customerPersonalDataService } from "@/lib/supabase/services/customerPersonalDataService";
-import { Checkbox } from "@/components/ui/checkbox";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Musteri } from "@/lib/supabase/types";
+import { customerPersonalDataService } from "@/lib/supabase/services/customerPersonalDataService";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 import { format } from "date-fns";
+import { tr } from "date-fns/locale";
+import { formatPhoneNumber } from "@/utils/phoneFormatter";
 
-interface CustomerPersonalDataProps {
+interface CustomerPersonalInfoProps {
+  customer: Musteri;
   customerId: number;
+  editMode?: boolean;
 }
 
-const BEVERAGE_OPTIONS = ["Kahve", "Çay", "Su", "Soğuk İçecekler"];
-const HAIR_TYPE_OPTIONS = {
-  structure: ["Düz", "Dalgalı", "Kıvırcık"],
-  condition: ["Kuru", "Normal", "Yağlı"],
-  thickness: ["İnce Telli", "Kalın Telli"]
+// Zodiac sign calculator
+const getZodiacSign = (day: number, month: number): { sign: string, description: string } => {
+  if ((month === 3 && day >= 21) || (month === 4 && day <= 19)) {
+    return { 
+      sign: "Koç", 
+      description: "Enerjik, cesur ve maceracı. Genellikle atletik yapılı ve güçlüdür. Cesareti ve liderlik özellikleriyle tanınır."
+    };
+  } else if ((month === 4 && day >= 20) || (month === 5 && day <= 20)) {
+    return { 
+      sign: "Boğa", 
+      description: "Kararlı, güvenilir ve pratik. Genellikle sabırlı ve istikrarlıdır. Konfor ve lüksü sever, değişime dirençli olabilir."
+    };
+  } else if ((month === 5 && day >= 21) || (month === 6 && day <= 20)) {
+    return { 
+      sign: "İkizler", 
+      description: "Meraklı, uyarlanabilir ve hızlı düşünen. Genellikle sosyal ve iletişimcidir. Çok yönlü, değişken ve hareketlidir."
+    };
+  } else if ((month === 6 && day >= 21) || (month === 7 && day <= 22)) {
+    return { 
+      sign: "Yengeç", 
+      description: "Duygusal, koruyucu ve sezgisel. Genellikle empati yeteneği yüksektir. Aile odaklı, korumacı ve gelenekseldir."
+    };
+  } else if ((month === 7 && day >= 23) || (month === 8 && day <= 22)) {
+    return { 
+      sign: "Aslan", 
+      description: "Yaratıcı, tutkulu ve sadık. Genellikle güçlü bir kişiliğe sahiptir. Dikkat çekmeyi ve takdir görmeyi sever."
+    };
+  } else if ((month === 8 && day >= 23) || (month === 9 && day <= 22)) {
+    return { 
+      sign: "Başak", 
+      description: "Analitik, pratik ve çalışkan. Genellikle detaylara önem verir. Mükemmeliyetçi, düzenli ve titizdir."
+    };
+  } else if ((month === 9 && day >= 23) || (month === 10 && day <= 22)) {
+    return { 
+      sign: "Terazi", 
+      description: "Diplomatik, uyumlu ve adil. Genellikle sosyal ve zarif davranır. Denge, güzellik ve barışı önemser."
+    };
+  } else if ((month === 10 && day >= 23) || (month === 11 && day <= 21)) {
+    return { 
+      sign: "Akrep", 
+      description: "Tutkulu, kararlı ve sezgisel. Genellikle duygusal derinliğe sahiptir. Gizem ve yoğunluk barındırır."
+    };
+  } else if ((month === 11 && day >= 22) || (month === 12 && day <= 21)) {
+    return { 
+      sign: "Yay", 
+      description: "İyimser, maceracı ve açık fikirli. Genellikle felsefi bakış açısına sahiptir. Özgürlüğü ve seyahati sever."
+    };
+  } else if ((month === 12 && day >= 22) || (month === 1 && day <= 19)) {
+    return { 
+      sign: "Oğlak", 
+      description: "Disiplinli, sorumlu ve başarı odaklı. Genellikle kararlı ve hırslıdır. Geleneksel, pratik ve sabırlıdır."
+    };
+  } else if ((month === 1 && day >= 20) || (month === 2 && day <= 18)) {
+    return { 
+      sign: "Kova", 
+      description: "Yaratıcı, bağımsız ve analitik. Genellikle yenilikçi fikirlere sahiptir. Orijinal, insancıl ve özgün davranır."
+    };
+  } else {
+    return { 
+      sign: "Balık", 
+      description: "Sezgisel, sanatsal ve duygusal. Genellikle empatik ve hassastır. Hayal gücü kuvvetli, romantik ve yardımseverdir."
+    };
+  }
 };
-const HAIR_DYE_OPTIONS = ["Kalıcı Boya", "Geçici Boya"];
-const HEAT_PREFERENCES = ["Seviyor", "Sevmiyor", "Nötr"];
-const STYLING_PREFERENCES = ["Maşa", "Düzleştirici", "Bigudi", "Doğal Kurutma"];
-const CARE_PREFERENCES = ["Keratin Bakımı", "Saç Botoksu", "Bitkisel İçerikli Ürün", "Vegan/Hayvan Deneysiz", "Parfümsüz Ürün"];
-const HAIR_LENGTH_OPTIONS = ["Kısa", "Orta", "Uzun"];
-const HAIR_GOAL_OPTIONS = ["Uzatmak İstiyor", "Düzenli Kestiriyor", "Mevcut Uzunluğu Korumak İstiyor"];
-const BROW_OPTIONS = ["Kaş Aldırır", "Kaş Aldırmaz", "Kaş Boyatır"];
-const MUSTACHE_OPTIONS = ["Bıyık Temizliği İster", "Bıyık Temizliği İstemez"];
-const SENSITIVITY_OPTIONS = [
-  "Saç Derisi Hassasiyeti",
-  "Kimyasallara Alerji",
-  "Bel/Omurga Rahatsızlığı",
-  "Uzun Süre Oturamama",
-  "Boya Kokusuna Hassasiyet"
-];
 
-export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) {
+export function CustomerPersonalInfo({ customer, customerId, editMode = false }: CustomerPersonalInfoProps) {
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
-  const [childName, setChildName] = useState("");
-  const [formData, setFormData] = useState({
-    beverage_preferences: [] as string[],
-    beverage_notes: "",
-    hair_structure: "",
-    hair_condition: "",
-    hair_thickness: "",
-    hair_types: [] as string[],
-    dye_preferences: [] as string[],
-    root_dye_frequency: "",
-    bleach_tolerance: false,
-    // Removed allergy_notes from form state as it's not on type/interface
-    straightener_preference: "",
-    curling_preference: "",
-    heat_sensitive_hair: false,
-    heat_notes: "",
-    care_preferences: [] as string[],
-    care_notes: "",
-    hair_length: "",
-    hair_goal: "",
-    hair_goal_notes: "",
-    brow_preference: "",
-    mustache_preference: "",
-    waxing_preference: false,
-    eyelash_preference: false,
-    face_preference_notes: "",
-    sensitivities: [] as string[],
-    sensitivity_notes: "",
-    stylist_observations: "",
-    children_names: [] as string[],
+  const [personalData, setPersonalData] = useState({
+    spouseName: "",
+    spouseBirthdate: "",
+    anniversaryDate: "",
+    childrenNames: [] as string[],
+    style: ""
   });
+  const [newChildName, setNewChildName] = useState("");
 
-  const { data: personalData, isLoading } = useQuery({
-    queryKey: ["customer-personal-data", customerId],
-    queryFn: async () => customerPersonalDataService.getCustomerPersonalData(customerId),
-  });
+  // Convert customerId to string for query key consistency
+  const customerIdStr = String(customerId);
 
-  useEffect(() => {
-    if (personalData) {
-      const hairTypes = personalData.hair_types || [];
-
-      const hairStructure = HAIR_TYPE_OPTIONS.structure.find(t => hairTypes.includes(t)) || "";
-      const hairCondition = HAIR_TYPE_OPTIONS.condition.find(t => hairTypes.includes(t)) || "";
-      const hairThickness = HAIR_TYPE_OPTIONS.thickness.find(t => hairTypes.includes(t)) || "";
-
-      setFormData({
-        beverage_preferences: personalData.beverage_preferences || [],
-        beverage_notes: personalData.beverage_notes || "",
-        hair_structure: hairStructure,
-        hair_condition: hairCondition,
-        hair_thickness: hairThickness,
-        hair_types: personalData.hair_types || [],
-        dye_preferences: personalData.dye_preferences || [],
-        root_dye_frequency: personalData.root_dye_frequency || "",
-        bleach_tolerance: personalData.bleach_tolerance || false,
-        // allergy_notes removed from form data setting
-        straightener_preference: personalData.straightener_preference || "",
-        curling_preference: personalData.curling_preference || "",
-        heat_sensitive_hair: personalData.heat_sensitive_hair || false,
-        heat_notes: personalData.heat_notes || "",
-        care_preferences: personalData.care_preferences || [],
-        care_notes: personalData.care_notes || "",
-        hair_length: personalData.hair_length || "",
-        hair_goal: personalData.hair_goal || "",
-        hair_goal_notes: personalData.hair_goal_notes || "",
-        brow_preference: personalData.brow_preference || "",
-        mustache_preference: personalData.mustache_preference || "",
-        waxing_preference: personalData.waxing_preference || false,
-        eyelash_preference: personalData.eyelash_preference || false,
-        face_preference_notes: personalData.face_preference_notes || "",
-        sensitivities: personalData.sensitivities || [],
-        sensitivity_notes: personalData.sensitivity_notes || "",
-        stylist_observations: personalData.stylist_observations || "",
-        children_names: personalData.children_names || []
-      });
-    }
-  }, [personalData]);
-
-  const updatePersonalDataMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const hairTypes = [];
-      if (data.hair_structure) hairTypes.push(data.hair_structure);
-      if (data.hair_condition) hairTypes.push(data.hair_condition);
-      if (data.hair_thickness) hairTypes.push(data.hair_thickness);
-
-      const dataToSave = {
-        ...data,
-        hair_types: hairTypes,
-        customer_id: customerId.toString(),
-      };
-
-      console.log("Saving data:", dataToSave);
-
+  const { data: existingPersonalData, isLoading } = useQuery({
+    queryKey: ['customer_personal_data', customerIdStr],
+    queryFn: async () => {
+      console.log("Fetching personal data for customer ID:", customerId);
       try {
-        await customerPersonalDataService.updateCustomerPersonalData(customerId, dataToSave);
-        return true;
+        const data = await customerPersonalDataService.getCustomerPersonalData(customerId);
+        console.log("Fetched personal data:", data);
+        return data;
       } catch (error) {
-        console.error("Error updating personal data:", error);
-        throw error;
+        console.error("Error fetching personal data:", error);
+        return null;
+      }
+    }
+  });
+
+  const mutation = useMutation({
+    mutationFn: async (data: any) => {
+      if (existingPersonalData) {
+        return await customerPersonalDataService.updateCustomerPersonalData(customerId, data);
+      } else {
+        // Use updateCustomerPersonalData instead of createCustomerPersonalData
+        return await customerPersonalDataService.updateCustomerPersonalData(customerId, data);
       }
     },
     onSuccess: () => {
-      toast.success("Müşteri bilgileri güncellendi");
+      queryClient.invalidateQueries({ queryKey: ['customer_personal_data', customerIdStr] });
       setIsEditing(false);
-      queryClient.invalidateQueries({ queryKey: ["customer-personal-data", customerId] });
+      toast.success("Müşteri kişisel bilgileri kaydedildi");
     },
     onError: (error) => {
-      console.error("Error updating personal data:", error);
-      toast.error("Bilgiler güncellenirken bir hata oluştu");
-    },
+      console.error("Error saving personal data:", error);
+      toast.error("Kişisel bilgiler kaydedilemedi");
+    }
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+  // Initialize form with existing data when it's available
+  useEffect(() => {
+    if (existingPersonalData) {
+      setPersonalData({
+        spouseName: existingPersonalData.spouse_name || "",
+        spouseBirthdate: existingPersonalData.spouse_birthdate 
+          ? format(new Date(existingPersonalData.spouse_birthdate), "yyyy-MM-dd") 
+          : "",
+        anniversaryDate: existingPersonalData.anniversary_date 
+          ? format(new Date(existingPersonalData.anniversary_date), "yyyy-MM-dd") 
+          : "",
+        childrenNames: existingPersonalData.children_names || [],
+        style: existingPersonalData.custom_notes || ""
+      });
+    }
+  }, [existingPersonalData]);
+
+  const handleSave = () => {
+    const dataToSave = {
+      spouse_name: personalData.spouseName || null,
+      spouse_birthdate: personalData.spouseBirthdate || null,
+      anniversary_date: personalData.anniversaryDate || null,
+      children_names: personalData.childrenNames,
+      custom_notes: personalData.style || null
+    };
+    
+    mutation.mutate(dataToSave);
   };
 
-  const handleCheckboxChange = (name: string, value: string, checked: boolean) => {
-    setFormData((prev) => {
-      if (checked) {
-        return { ...prev, [name]: [...(prev[name as keyof typeof prev] as string[]), value] };
-      } else {
-        return {
-          ...prev,
-          [name]: (prev[name as keyof typeof prev] as string[]).filter(item => item !== value),
-        };
-      }
-    });
-  };
-
-  const handleBooleanChange = (name: string, checked: boolean) => {
-    setFormData((prev) => ({ ...prev, [name]: checked }));
-  };
-
-  const handleRadioChange = (name: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleAddChild = () => {
-    if (childName.trim()) {
-      setFormData((prev) => ({
+  // Only define addChildName once
+  const addChildName = () => {
+    if (newChildName.trim()) {
+      setPersonalData(prev => ({
         ...prev,
-        children_names: [...prev.children_names, childName.trim()],
+        childrenNames: [...prev.childrenNames, newChildName.trim()]
       }));
-      setChildName("");
+      setNewChildName("");
     }
   };
 
-  const handleRemoveChild = (index: number) => {
-    setFormData((prev) => ({
+  // Only define removeChildName once
+  const removeChildName = (index: number) => {
+    setPersonalData(prev => ({
       ...prev,
-      children_names: prev.children_names.filter((_, i) => i !== index),
+      childrenNames: prev.childrenNames.filter((_, i) => i !== index)
     }));
   };
 
-  const handleSave = () => {
-    updatePersonalDataMutation.mutate(formData);
-  };
-
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return "";
-    try {
-      return format(new Date(dateString), "dd.MM.yyyy");
-    } catch (error) {
-      return dateString;
+  // Get zodiac sign if birthdate exists
+  const getHoroscopeInfo = () => {
+    if (customer.birthdate) {
+      const birthDate = new Date(customer.birthdate);
+      const day = birthDate.getDate();
+      const month = birthDate.getMonth() + 1; // getMonth is 0-indexed
+      const zodiacInfo = getZodiacSign(day, month);
+      return zodiacInfo;
     }
+    return null;
   };
 
-  const isSelected = (array: string[], value: string) => array.includes(value);
+  const horoscopeInfo = getHoroscopeInfo();
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center p-4">
-        <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
-      </div>
-    );
+    return <div className="p-4 text-center">Bilgiler yükleniyor...</div>;
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
-        {isEditing ? (
-          <div className="space-x-2">
-            <Button variant="outline" onClick={() => setIsEditing(false)}>
-              İptal
-            </Button>
-            <Button onClick={handleSave} disabled={updatePersonalDataMutation.isPending}>
-              {updatePersonalDataMutation.isPending ? "Kaydediliyor..." : "Kaydet"}
-            </Button>
-          </div>
-        ) : (
-          <Button onClick={() => setIsEditing(true)}>Düzenle</Button>
-        )}
-      </div>
-
-      {/* 1. İçecek Tercihi */}
-      <div>
-        <h3 className="text-lg font-medium mb-4">İçecek Tercihi</h3>
-        <div className="grid gap-4">
-          <div className="space-y-2">
-            <div className="flex flex-wrap gap-2">
-              {BEVERAGE_OPTIONS.map((beverage) => (
-                <div key={beverage} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`beverage-${beverage}`}
-                    checked={isSelected(formData.beverage_preferences, beverage)}
-                    onCheckedChange={(checked) =>
-                      handleCheckboxChange("beverage_preferences", beverage, checked as boolean)
-                    }
-                    disabled={!isEditing}
-                  />
-                  <label htmlFor={`beverage-${beverage}`}>{beverage}</label>
-                </div>
-              ))}
-            </div>
-            <div className="mt-4">
-              <Label>Detaylı İçecek Notu</Label>
-              {isEditing ? (
-                <Textarea
-                  name="beverage_notes"
-                  value={formData.beverage_notes}
-                  onChange={handleChange}
-                  placeholder="Örn: şekersiz filtre kahve"
-                  className="h-20"
-                />
-              ) : (
-                <p className="p-2 border rounded-md bg-gray-50 min-h-[40px]">
-                  {formData.beverage_notes || "Belirtilmemiş"}
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <Separator className="my-6" />
-
-      {/* 2. Saç Tipi - Updated to use radio buttons in 3 columns */}
-      <div>
-        <h3 className="text-lg font-medium mb-4">Saç Tipi</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Column 1: Hair Structure */}
-          <div className="space-y-2">
-            <Label className="font-medium">Saç Yapısı</Label>
-            {isEditing ? (
-              <RadioGroup 
-                value={formData.hair_structure} 
-                onValueChange={(value) => handleRadioChange('hair_structure', value)}
-              >
-                {HAIR_TYPE_OPTIONS.structure.map(option => (
-                  <div key={option} className="flex items-center space-x-2">
-                    <RadioGroupItem value={option} id={`structure-${option}`} />
-                    <Label htmlFor={`structure-${option}`}>{option}</Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            ) : (
-              <p className="p-2 border rounded-md bg-gray-50">
-                {formData.hair_structure || "Belirtilmemiş"}
-              </p>
-            )}
-          </div>
-          
-          {/* Column 2: Hair Condition */}
-          <div className="space-y-2">
-            <Label className="font-medium">Saç Durumu</Label>
-            {isEditing ? (
-              <RadioGroup 
-                value={formData.hair_condition} 
-                onValueChange={(value) => handleRadioChange('hair_condition', value)}
-              >
-                {HAIR_TYPE_OPTIONS.condition.map(option => (
-                  <div key={option} className="flex items-center space-x-2">
-                    <RadioGroupItem value={option} id={`condition-${option}`} />
-                    <Label htmlFor={`condition-${option}`}>{option}</Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            ) : (
-              <p className="p-2 border rounded-md bg-gray-50">
-                {formData.hair_condition || "Belirtilmemiş"}
-              </p>
-            )}
-          </div>
-          
-          {/* Column 3: Hair Thickness */}
-          <div className="space-y-2">
-            <Label className="font-medium">Saç Kalınlığı</Label>
-            {isEditing ? (
-              <RadioGroup 
-                value={formData.hair_thickness} 
-                onValueChange={(value) => handleRadioChange('hair_thickness', value)}
-              >
-                {HAIR_TYPE_OPTIONS.thickness.map(option => (
-                  <div key={option} className="flex items-center space-x-2">
-                    <RadioGroupItem value={option} id={`thickness-${option}`} />
-                    <Label htmlFor={`thickness-${option}`}>{option}</Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            ) : (
-              <p className="p-2 border rounded-md bg-gray-50">
-                {formData.hair_thickness || "Belirtilmemiş"}
-              </p>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <Separator className="my-6" />
-
-      {/* 3. Boyama Tercihi */}
-      <div>
-        <h3 className="text-lg font-medium mb-4">Boyama Tercihi</h3>
-        <div className="grid gap-4">
-          <div className="space-y-2">
-            <div className="flex flex-wrap gap-4">
-              {HAIR_DYE_OPTIONS.map((dyeType) => (
-                <div key={dyeType} className="flex items-center space-x-2">
-                  <Checkbox 
-                    id={`dye-${dyeType}`}
-                    checked={isSelected(formData.dye_preferences, dyeType)}
-                    onCheckedChange={(checked) => 
-                      handleCheckboxChange('dye_preferences', dyeType, checked as boolean)
-                    }
-                    disabled={!isEditing}
-                  />
-                  <label htmlFor={`dye-${dyeType}`}>{dyeType}</label>
-                </div>
-              ))}
-            </div>
-            <div className="mt-4">
-              <Label>Dip Boya Sıklığı</Label>
-              {isEditing ? (
-                <Input
-                  name="root_dye_frequency"
-                  value={formData.root_dye_frequency}
-                  onChange={handleChange}
-                  placeholder="Örn: 4 haftada bir"
-                  className="max-w-md"
-                />
-              ) : (
-                <p className="p-2 border rounded-md bg-gray-50 max-w-md">
-                  {formData.root_dye_frequency || "Belirtilmemiş"}
-                </p>
-              )}
-            </div>
-            <div className="mt-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="bleach_tolerance" 
-                  checked={formData.bleach_tolerance}
-                  onCheckedChange={(checked) => 
-                    handleBooleanChange('bleach_tolerance', checked as boolean)
-                  }
-                  disabled={!isEditing}
-                />
-                <label htmlFor="bleach_tolerance">Açıcı Toleransı</label>
-              </div>
-              <div className="mt-2">
-                <Label>Alerji Notları</Label>
-                {isEditing ? (
-                  <Textarea
-                    name="allergy_notes"
-                    value={formData.allergy_notes}
-                    onChange={handleChange}
-                    placeholder="Alerjisi varsa belirtin"
-                    className="h-20"
-                  />
-                ) : (
-                  <p className="p-2 border rounded-md bg-gray-50 min-h-[40px]">
-                    {formData.allergy_notes || "Belirtilmemiş"}
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <Separator className="my-6" />
-
-      {/* 4. Isı İşlemi Toleransı */}
-      <div>
-        <h3 className="text-lg font-medium mb-4">Isı İşlemi Toleransı</h3>
-        <div className="grid gap-4">
-          <div className="space-y-4">
-            <div>
-              <Label>Düzleştirici Kullanımı</Label>
-              {isEditing ? (
-                <Select
-                  value={formData.straightener_preference}
-                  onValueChange={(value) => 
-                    setFormData((prev) => ({ ...prev, straightener_preference: value }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seçiniz" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {HEAT_PREFERENCES.map(pref => (
-                      <SelectItem key={pref} value={pref}>{pref}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <p className="p-2 border rounded-md bg-gray-50">
-                  {formData.straightener_preference || "Belirtilmemiş"}
-                </p>
-              )}
-            </div>
-            
-            <div>
-              <Label>Maşa / Bigudi Tercihi</Label>
-              {isEditing ? (
-                <Select
-                  value={formData.curling_preference}
-                  onValueChange={(value) => 
-                    setFormData((prev) => ({ ...prev, curling_preference: value }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seçiniz" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STYLING_PREFERENCES.map(pref => (
-                      <SelectItem key={pref} value={pref}>{pref}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <p className="p-2 border rounded-md bg-gray-50">
-                  {formData.curling_preference || "Belirtilmemiş"}
-                </p>
-              )}
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="heat_sensitive_hair" 
-                checked={formData.heat_sensitive_hair}
-                onCheckedChange={(checked) => 
-                  handleBooleanChange('heat_sensitive_hair', checked as boolean)
-                }
-                disabled={!isEditing}
-              />
-              <label htmlFor="heat_sensitive_hair">Isıya Hassas Saç</label>
-            </div>
-
-            <div>
-              <Label>Isı İşlemi Notları</Label>
-              {isEditing ? (
-                <Textarea
-                  name="heat_notes"
-                  value={formData.heat_notes}
-                  onChange={handleChange}
-                  placeholder="Müşterinin ısı işlemi tercihleri hakkında notlar"
-                  className="h-20"
-                />
-              ) : (
-                <p className="p-2 border rounded-md bg-gray-50 min-h-[40px]">
-                  {formData.heat_notes || "Belirtilmemiş"}
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <Separator className="my-6" />
-
-      {/* 5. Bakım Tercihleri */}
-      <div>
-        <h3 className="text-lg font-medium mb-4">Bakım Tercihleri</h3>
-        <div className="grid gap-4">
-          <div className="space-y-2">
-            <div className="flex flex-wrap gap-4">
-              {CARE_PREFERENCES.map((care) => (
-                <div key={care} className="flex items-center space-x-2">
-                  <Checkbox 
-                    id={`care-${care}`}
-                    checked={isSelected(formData.care_preferences, care)}
-                    onCheckedChange={(checked) => 
-                      handleCheckboxChange('care_preferences', care, checked as boolean)
-                    }
-                    disabled={!isEditing}
-                  />
-                  <label htmlFor={`care-${care}`}>{care}</label>
-                </div>
-              ))}
-            </div>
-            <div className="mt-4">
-              <Label>Bakım Notları</Label>
-              {isEditing ? (
-                <Textarea
-                  name="care_notes"
-                  value={formData.care_notes}
-                  onChange={handleChange}
-                  placeholder="Müşterinin bakım tercihleri hakkında notlar"
-                  className="h-20"
-                />
-              ) : (
-                <p className="p-2 border rounded-md bg-gray-50 min-h-[40px]">
-                  {formData.care_notes || "Belirtilmemiş"}
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <Separator className="my-6" />
-
-      {/* 6. Saç Uzunluğu & Hedefi */}
-      <div>
-        <h3 className="text-lg font-medium mb-4">Saç Uzunluğu & Hedefi</h3>
-        <div className="grid gap-4">
-          <div className="space-y-4">
-            <div>
-              <Label>Saç Uzunluğu</Label>
-              {isEditing ? (
-                <RadioGroup 
-                  value={formData.hair_length} 
-                  onValueChange={(value) => 
-                    setFormData((prev) => ({ ...prev, hair_length: value }))
-                  }
-                  className="flex gap-4 mt-2"
-                >
-                  {HAIR_LENGTH_OPTIONS.map(length => (
-                    <div key={length} className="flex items-center space-x-2">
-                      <RadioGroupItem value={length} id={`length-${length}`} />
-                      <Label htmlFor={`length-${length}`}>{length}</Label>
-                    </div>
-                  ))}
-                </RadioGroup>
-              ) : (
-                <p className="p-2 border rounded-md bg-gray-50">
-                  {formData.hair_length || "Belirtilmemiş"}
-                </p>
-              )}
-            </div>
-            
-            <div>
-              <Label>Hedef</Label>
-              {isEditing ? (
-                <RadioGroup 
-                  value={formData.hair_goal} 
-                  onValueChange={(value) => 
-                    setFormData((prev) => ({ ...prev, hair_goal: value }))
-                  }
-                  className="flex flex-col gap-2 mt-2"
-                >
-                  {HAIR_GOAL_OPTIONS.map(goal => (
-                    <div key={goal} className="flex items-center space-x-2">
-                      <RadioGroupItem value={goal} id={`goal-${goal}`} />
-                      <Label htmlFor={`goal-${goal}`}>{goal}</Label>
-                    </div>
-                  ))}
-                </RadioGroup>
-              ) : (
-                <p className="p-2 border rounded-md bg-gray-50">
-                  {formData.hair_goal || "Belirtilmemiş"}
-                </p>
-              )}
-            </div>
-            
-            <div>
-              <Label>Not</Label>
-              {isEditing ? (
-                <Input
-                  name="hair_goal_notes"
-                  value={formData.hair_goal_notes}
-                  onChange={handleChange}
-                  placeholder="Örn: Saç uçları kesilmesin istiyor"
-                  className="max-w-md"
-                />
-              ) : (
-                <p className="p-2 border rounded-md bg-gray-50">
-                  {formData.hair_goal_notes || "Belirtilmemiş"}
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <Separator className="my-6" />
-
-      {/* 7. Kaş/Bıyık/İpek Kirpik Tercihleri */}
-      <div>
-        <h3 className="text-lg font-medium mb-4">Kaş/Bıyık/İpek Kirpik Tercihleri</h3>
-        <div className="grid gap-4">
-          <div className="space-y-4">
-            <div>
-              <Label>Kaş Tercihi</Label>
-              {isEditing ? (
-                <Select
-                  value={formData.brow_preference}
-                  onValueChange={(value) => 
-                    setFormData((prev) => ({ ...prev, brow_preference: value }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seçiniz" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {BROW_OPTIONS.map(pref => (
-                      <SelectItem key={pref} value={pref}>{pref}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <p className="p-2 border rounded-md bg-gray-50">
-                  {formData.brow_preference || "Belirtilmemiş"}
-                </p>
-              )}
-            </div>
-            
-            <div>
-              <Label>Bıyık Tercihi</Label>
-              {isEditing ? (
-                <Select
-                  value={formData.mustache_preference}
-                  onValueChange={(value) => 
-                    setFormData((prev) => ({ ...prev, mustache_preference: value }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seçiniz" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {MUSTACHE_OPTIONS.map(pref => (
-                      <SelectItem key={pref} value={pref}>{pref}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <p className="p-2 border rounded-md bg-gray-50">
-                  {formData.mustache_preference || "Belirtilmemiş"}
-                </p>
-              )}
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="waxing_preference" 
-                checked={formData.waxing_preference}
-                onCheckedChange={(checked) => 
-                  handleBooleanChange('waxing_preference', checked as boolean)
-                }
-                disabled={!isEditing}
-              />
-              <label htmlFor="waxing_preference">Sir Ağda Yaptırır</label>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="eyelash_preference" 
-                checked={formData.eyelash_preference}
-                onCheckedChange={(checked) => 
-                  handleBooleanChange('eyelash_preference', checked as boolean)
-                }
-                disabled={!isEditing}
-              />
-              <label htmlFor="eyelash_preference">Kirpik Uzatma / İpek Kirpik Tercihi</label>
-            </div>
-            
-            <div>
-              <Label>Notlar</Label>
-              {isEditing ? (
-                <Textarea
-                  name="face_preference_notes"
-                  value={formData.face_preference_notes}
-                  onChange={handleChange}
-                  placeholder="Ek açıklamalar"
-                  className="h-20"
-                />
-              ) : (
-                <p className="p-2 border rounded-md bg-gray-50 min-h-[40px]">
-                  {formData.face_preference_notes || "Belirtilmemiş"}
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <Separator className="my-6" />
-
-      {/* 8. Hassasiyet / Alerji / Kısıtlar */}
-      <div>
-        <h3 className="text-lg font-medium mb-4">Hassasiyet / Alerji / Kısıtlar</h3>
-        <div className="grid gap-4">
-          <div className="space-y-2">
-            <div className="flex flex-wrap gap-4">
-              {SENSITIVITY_OPTIONS.map((sensitivity) => (
-                <div key={sensitivity} className="flex items-center space-x-2">
-                  <Checkbox 
-                    id={`sensitivity-${sensitivity}`}
-                    checked={isSelected(formData.sensitivities, sensitivity)}
-                    onCheckedChange={(checked) => 
-                      handleCheckboxChange('sensitivities', sensitivity, checked as boolean)
-                    }
-                    disabled={!isEditing}
-                  />
-                  <label htmlFor={`sensitivity-${sensitivity}`}>{sensitivity}</label>
-                </div>
-              ))}
-            </div>
-            <div className="mt-4">
-              <Label>Hassasiyet Notları</Label>
-              {isEditing ? (
-                <Textarea
-                  name="sensitivity_notes"
-                  value={formData.sensitivity_notes}
-                  onChange={handleChange}
-                  placeholder="Ek hassasiyet bilgileri"
-                  className="h-20"
-                />
-              ) : (
-                <p className="p-2 border rounded-md bg-gray-50 min-h-[40px]">
-                  {formData.sensitivity_notes || "Belirtilmemiş"}
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <Separator className="my-6" />
-
-      {/* 9. Serbest Not Alanı (Kuaför İçin Gözlem Notları) */}
-      <div>
-        <h3 className="text-lg font-medium mb-4">Kuaför Gözlem Notları</h3>
-        <div className="space-y-2">
-          {isEditing ? (
-            <Textarea
-              name="stylist_observations"
-              value={formData.stylist_observations}
-              onChange={handleChange}
-              placeholder="Çok konuşkan, sessiz ortam sever, bekletilmekten hoşlanmaz gibi gözlemlerinizi yazabilirsiniz..."
-              className="min-h-[100px]"
-            />
+      {/* Contact Information */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-medium flex justify-between">
+          <span>İletişim Bilgileri</span>
+          {!isEditing ? (
+            <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>Düzenle</Button>
           ) : (
-            <p className="p-2 border rounded-md bg-gray-50 min-h-[100px]">
-              {formData.stylist_observations || "Henüz not eklenmemiş"}
-            </p>
+            <div className="space-x-2">
+              <Button variant="outline" size="sm" onClick={() => setIsEditing(false)}>İptal</Button>
+              <Button size="sm" onClick={handleSave} disabled={mutation.isPending}>
+                {mutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Kaydediliyor
+                  </>
+                ) : "Kaydet"}
+              </Button>
+            </div>
           )}
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label>Telefon</Label>
+            <div className="p-2 border rounded mt-1 bg-gray-50">
+              {customer.phone ? formatPhoneNumber(customer.phone) : "Belirtilmemiş"}
+            </div>
+          </div>
+          <div>
+            <Label>Doğum Tarihi</Label>
+            <div className="p-2 border rounded mt-1 bg-gray-50">
+              {customer.birthdate ? format(new Date(customer.birthdate), "dd MMMM yyyy", { locale: tr }) : "Belirtilmemiş"}
+            </div>
+          </div>
         </div>
       </div>
 
-      {isEditing && (
-        <div className="flex justify-end pt-4">
-          <div className="space-x-2">
-            <Button variant="outline" onClick={() => setIsEditing(false)}>
-              İptal
-            </Button>
-            <Button onClick={handleSave} disabled={updatePersonalDataMutation.isPending}>
-              {updatePersonalDataMutation.isPending ? "Kaydediliyor..." : "Kaydet"}
-            </Button>
+      <Separator />
+
+      {/* Family Information */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-medium">
+          <span>Aile Bilgileri</span>
+        </h3>
+
+        <div className="space-y-4">
+          {/* Spouse Information */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="spouseName">Eş İsmi</Label>
+              {isEditing ? (
+                <Input
+                  id="spouseName"
+                  value={personalData.spouseName}
+                  onChange={(e) => setPersonalData(prev => ({ ...prev, spouseName: e.target.value }))}
+                  placeholder="Eşinin adı"
+                />
+              ) : (
+                <div className="p-2 border rounded mt-1 bg-gray-50">
+                  {personalData.spouseName || existingPersonalData?.spouse_name || "Belirtilmemiş"}
+                </div>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="spouseBirthdate">Eş Doğum Tarihi</Label>
+              {isEditing ? (
+                <Input
+                  id="spouseBirthdate"
+                  type="text" 
+                  placeholder="gg.aa"
+                  value={personalData.spouseBirthdate ? format(new Date(personalData.spouseBirthdate), "dd.MM") : ""}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    let formattedDate = "";
+                    
+                    // If valid input like "dd.MM", create a full date with current year
+                    if (/^\d{2}\.\d{2}$/.test(value)) {
+                      const [day, month] = value.split('.');
+                      const currentYear = new Date().getFullYear();
+                      formattedDate = `${currentYear}-${month}-${day}`;
+                    }
+                    
+                    setPersonalData(prev => ({ 
+                      ...prev, 
+                      spouseBirthdate: formattedDate || value 
+                    }));
+                  }}
+                />
+              ) : (
+                <div className="p-2 border rounded mt-1 bg-gray-50">
+                  {existingPersonalData?.spouse_birthdate 
+                    ? format(new Date(existingPersonalData.spouse_birthdate), "dd MMMM", { locale: tr })
+                    : "Belirtilmemiş"}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="anniversaryDate">Evlilik Yıldönümü</Label>
+            {isEditing ? (
+              <Input
+                id="anniversaryDate"
+                type="text"
+                placeholder="gg.aa"
+                value={personalData.anniversaryDate ? format(new Date(personalData.anniversaryDate), "dd.MM") : ""}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  let formattedDate = "";
+                  
+                  // If valid input like "dd.MM", create a full date with current year
+                  if (/^\d{2}\.\d{2}$/.test(value)) {
+                    const [day, month] = value.split('.');
+                    const currentYear = new Date().getFullYear();
+                    formattedDate = `${currentYear}-${month}-${day}`;
+                  }
+                  
+                  setPersonalData(prev => ({ 
+                    ...prev, 
+                    anniversaryDate: formattedDate || value 
+                  }));
+                }}
+              />
+            ) : (
+              <div className="p-2 border rounded mt-1 bg-gray-50">
+                {existingPersonalData?.anniversary_date 
+                  ? format(new Date(existingPersonalData.anniversary_date), "dd MMMM", { locale: tr })
+                  : "Belirtilmemiş"}
+              </div>
+            )}
+          </div>
+
+          {/* Children Names */}
+          <div>
+            <Label>Çocuklar</Label>
+            {isEditing ? (
+              <>
+                <div className="flex space-x-2 mb-2">
+                  <Input
+                    value={newChildName}
+                    onChange={(e) => setNewChildName(e.target.value)}
+                    placeholder="Çocuk adı"
+                    className="flex-1"
+                  />
+                  <Button type="button" onClick={addChildName}>Ekle</Button>
+                </div>
+                <div className="space-y-2">
+                  {personalData.childrenNames.map((name, index) => (
+                    <div key={index} className="flex justify-between items-center p-2 border rounded">
+                      <span>{name}</span>
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        onClick={() => removeChildName(index)}
+                      >
+                        Sil
+                      </Button>
+                    </div>
+                  ))}
+                  {personalData.childrenNames.length === 0 && (
+                    <div className="text-center p-2 text-gray-500">Henüz çocuk eklenmemiş</div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="p-2 border rounded mt-1 bg-gray-50 min-h-[40px]">
+                {(existingPersonalData?.children_names || []).length > 0 
+                  ? (existingPersonalData?.children_names || []).join(", ")
+                  : "Belirtilmemiş"}
+              </div>
+            )}
+          </div>
+
+          {/* Customer Style */}
+          <div>
+            <Label htmlFor="style">Tarz</Label>
+            {isEditing ? (
+              <Input
+                id="style"
+                value={personalData.style}
+                onChange={(e) => setPersonalData(prev => ({ ...prev, style: e.target.value }))}
+                placeholder="samimi, resmi..."
+              />
+            ) : (
+              <div className="p-2 border rounded mt-1 bg-gray-50">
+                {personalData.style || existingPersonalData?.custom_notes || "Belirtilmemiş"}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* Horoscope Information */}
+      {customer.birthdate && horoscopeInfo && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-medium">Burç Bilgisi</h3>
+          <div className="p-4 border rounded bg-purple-50">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 bg-purple-200 rounded-full flex items-center justify-center text-purple-700">
+                {horoscopeInfo.sign.charAt(0)}
+              </div>
+              <h4 className="text-lg font-medium text-purple-700">{horoscopeInfo.sign} Burcu</h4>
+            </div>
+            <p className="text-gray-700">{horoscopeInfo.description}</p>
+          </div>
+        </div>
+      )}
+      
+      {!customer.birthdate && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-medium">Burç Bilgisi</h3>
+          <div className="p-4 border rounded bg-gray-50">
+            <p className="text-center text-gray-500">
+              Burç bilgisi için doğum tarihi gereklidir.
+            </p>
           </div>
         </div>
       )}
