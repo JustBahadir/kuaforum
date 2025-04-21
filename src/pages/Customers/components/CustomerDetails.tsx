@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -101,11 +102,19 @@ export function CustomerDetails(props: any) {
     setFormData(prev => ({ ...prev, phone: value }));
   };
 
-  const handleAddChild = (childName: string) => {
-    if (childName.trim() === "") return;
+  const handleAddChild = () => {
+    if (newChildName.trim() === "") return;
     setFormData(prev => ({
       ...prev,
-      childrenNames: [...prev.childrenNames, childName.trim()]
+      childrenNames: [...prev.childrenNames, newChildName.trim()]
+    }));
+    setNewChildName("");
+  };
+
+  const handleRemoveChild = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      childrenNames: prev.childrenNames.filter((_, i) => i !== index)
     }));
   };
 
@@ -260,6 +269,7 @@ export function CustomerDetails(props: any) {
                       <Input
                         id="spouseName"
                         name="spouseName"
+                        type="text"
                         value={formData.spouseName}
                         onChange={handleInputChange}
                         placeholder="Eş adı"
@@ -302,25 +312,23 @@ export function CustomerDetails(props: any) {
                           id="addChildInput"
                           className="border rounded p-2 w-full"
                           placeholder="Çocuk adı"
+                          value={newChildName}
+                          onChange={(e) => setNewChildName(e.target.value)}
                           onKeyDown={(e) => {
                             if (e.key === "Enter") {
                               e.preventDefault();
-                              const input = e.currentTarget as HTMLInputElement;
-                              if (input.value.trim() !== "") {
-                                handleAddChild(input.value);
-                                input.value = "";
+                              if (newChildName.trim() !== "") {
+                                handleAddChild();
                               }
                             }
                           }}
                         />
                         <button
                           type="button"
-                          className="btn btn-primary px-4 py-2 rounded"
+                          className="btn btn-primary px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
                           onClick={() => {
-                            const input = document.getElementById("addChildInput") as HTMLInputElement | null;
-                            if (input && input.value.trim() !== "") {
-                              handleAddChild(input.value);
-                              input.value = "";
+                            if(newChildName.trim() !== "") {
+                              handleAddChild();
                             }
                           }}
                         >
@@ -387,3 +395,4 @@ export function CustomerDetails(props: any) {
     </div>
   );
 }
+
