@@ -1,6 +1,4 @@
-
-import React from "react";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -15,6 +13,7 @@ import { CustomerPersonalData } from "./CustomerPersonalData";
 import { CustomerPhotoGallery } from "./CustomerPhotoGallery";
 import { customerPersonalDataService } from "@/lib/supabase/services/customerPersonalDataService";
 import { PhoneInputField } from "./FormFields/PhoneInputField";
+import { Input } from "@/components/ui/input";
 
 interface CustomerDetailsProps {
   customerId?: number;
@@ -77,6 +76,8 @@ export function CustomerDetails(props: any) {
     childrenNames: customerWithPersonalData?.children_names || []
   });
 
+  const [newChildName, setNewChildName] = useState("");
+
   useEffect(() => {
     setFormData({
       firstName: customerWithPersonalData?.first_name || "",
@@ -88,6 +89,7 @@ export function CustomerDetails(props: any) {
       anniversaryDate: customerWithPersonalData?.anniversary_date ? new Date(customerWithPersonalData.anniversary_date).toISOString().split('T')[0] : "",
       childrenNames: customerWithPersonalData?.children_names || []
     });
+    setNewChildName(""); // Clear new child input on customer change
   }, [customerWithPersonalData]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -255,14 +257,12 @@ export function CustomerDetails(props: any) {
                   <div className="grid grid-cols-3 items-center border-b py-2">
                     <div className="font-medium">Eş İsmi</div>
                     <div className="col-span-2">
-                      <input
-                        type="text"
+                      <Input
+                        id="spouseName"
                         name="spouseName"
-                        className="border rounded p-2 w-full bg-white text-black"
                         value={formData.spouseName}
                         onChange={handleInputChange}
                         placeholder="Eş adı"
-                        autoComplete="off"
                       />
                     </div>
                   </div>
@@ -270,13 +270,12 @@ export function CustomerDetails(props: any) {
                   <div className="grid grid-cols-3 items-center border-b py-2">
                     <div className="font-medium">Eş Doğum Tarihi</div>
                     <div className="col-span-2">
-                      <input
-                        type="date"
+                      <Input
+                        id="spouseBirthdate"
                         name="spouseBirthdate"
-                        className="border rounded p-2 w-full"
-                        value={formData.spouseBirthdate}
+                        type="date"
+                        value={formData.spouseBirthdate || ""}
                         onChange={handleInputChange}
-                        autoComplete="off"
                       />
                     </div>
                   </div>
@@ -284,13 +283,12 @@ export function CustomerDetails(props: any) {
                   <div className="grid grid-cols-3 items-center border-b py-2">
                     <div className="font-medium">Evlilik Yıldönümü</div>
                     <div className="col-span-2">
-                      <input
-                        type="date"
+                      <Input
+                        id="anniversaryDate"
                         name="anniversaryDate"
-                        className="border rounded p-2 w-full"
-                        value={formData.anniversaryDate}
+                        type="date"
+                        value={formData.anniversaryDate || ""}
                         onChange={handleInputChange}
-                        autoComplete="off"
                       />
                     </div>
                   </div>
