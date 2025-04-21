@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -13,16 +14,13 @@ import { CustomerPersonalData } from "./CustomerPersonalData";
 import { CustomerPhotoGallery } from "./CustomerPhotoGallery";
 import { customerPersonalDataService } from "@/lib/supabase/services/customerPersonalDataService";
 import { PhoneInputField } from "./FormFields/PhoneInputField";
-import { Input } from "@/components/ui/input";
 
 interface CustomerDetailsProps {
   customerId?: number;
 }
 
 export function CustomerDetails(props: any) {
-  const [activeTab, setActiveTab] = useState<string>("basic");
-  const [isEditing, setIsEditing] = useState(false);
-
+  const [activeTab, setActiveTab] = useState("basic");
   const params = useParams<{ id: string }>();
   const navigate = useNavigate();
 
@@ -40,7 +38,7 @@ export function CustomerDetails(props: any) {
     },
     enabled: !!customerId,
   });
-
+  
   const {
     data: personalData,
     isLoading: isLoadingPersonalData
@@ -53,10 +51,10 @@ export function CustomerDetails(props: any) {
     enabled: !!customerId
   });
 
-  const customerWithPersonalData = customer ? {
+  const customerWithPersonalData = customer && personalData ? {
     ...customer,
-    ...(personalData || {})
-  } : undefined;
+    ...personalData
+  } : customer;
 
   const { data: services = [] } = useQuery({
     queryKey: ['islemler'],
@@ -65,44 +63,31 @@ export function CustomerDetails(props: any) {
 
   const isPointSystemEnabled = services.some((service: any) => service.puan > 0);
 
+  const [isEditing, setIsEditing] = useState(false);
+  
   const [formData, setFormData] = useState({
-    firstName: customerWithPersonalData?.first_name || "",
-    lastName: customerWithPersonalData?.last_name || "",
-    phone: customerWithPersonalData?.phone || "",
-    birthdate: customerWithPersonalData?.birthdate
-      ? new Date(customerWithPersonalData.birthdate).toISOString().split('T')[0]
-      : "",
-    spouseName: customerWithPersonalData?.spouse_name || "",
-    spouseBirthdate: customerWithPersonalData?.spouse_birthdate
-      ? new Date(customerWithPersonalData.spouse_birthdate).toISOString().split('T')[0]
-      : "",
-    anniversaryDate: customerWithPersonalData?.anniversary_date
-      ? new Date(customerWithPersonalData.anniversary_date).toISOString().split('T')[0]
-      : "",
-    childrenNames: customerWithPersonalData?.children_names || []
+    firstName: customer?.first_name || "",
+    lastName: customer?.last_name || "",
+    phone: customer?.phone || "",
+    birthdate: customer?.birthdate ? new Date(customer.birthdate).toISOString().split('T')[0] : "",
+    spouseName: (customerWithPersonalData as any)?.spouse_name || "",
+    spouseBirthdate: (customerWithPersonalData as any)?.spouse_birthdate ? new Date((customerWithPersonalData as any).spouse_birthdate).toISOString().split('T')[0] : "",
+    anniversaryDate: (customerWithPersonalData as any)?.anniversary_date ? new Date((customerWithPersonalData as any).anniversary_date).toISOString().split('T')[0] : "",
+    childrenNames: (customerWithPersonalData as any)?.children_names || []
   });
-
-  const [newChildName, setNewChildName] = useState("");
 
   useEffect(() => {
     setFormData({
-      firstName: customerWithPersonalData?.first_name || "",
-      lastName: customerWithPersonalData?.last_name || "",
-      phone: customerWithPersonalData?.phone || "",
-      birthdate: customerWithPersonalData?.birthdate
-        ? new Date(customerWithPersonalData.birthdate).toISOString().split('T')[0]
-        : "",
-      spouseName: customerWithPersonalData?.spouse_name || "",
-      spouseBirthdate: customerWithPersonalData?.spouse_birthdate
-        ? new Date(customerWithPersonalData.spouse_birthdate).toISOString().split('T')[0]
-        : "",
-      anniversaryDate: customerWithPersonalData?.anniversary_date
-        ? new Date(customerWithPersonalData.anniversary_date).toISOString().split('T')[0]
-        : "",
-      childrenNames: customerWithPersonalData?.children_names || []
+      firstName: customer?.first_name || "",
+      lastName: customer?.last_name || "",
+      phone: customer?.phone || "",
+      birthdate: customer?.birthdate ? new Date(customer.birthdate).toISOString().split('T')[0] : "",
+      spouseName: (customerWithPersonalData as any)?.spouse_name || "",
+      spouseBirthdate: (customerWithPersonalData as any)?.spouse_birthdate ? new Date((customerWithPersonalData as any).spouse_birthdate).toISOString().split('T')[0] : "",
+      anniversaryDate: (customerWithPersonalData as any)?.anniversary_date ? new Date((customerWithPersonalData as any).anniversary_date).toISOString().split('T')[0] : "",
+      childrenNames: (customerWithPersonalData as any)?.children_names || []
     });
-    setNewChildName("");
-  }, [customerWithPersonalData]);
+  }, [customer, customerWithPersonalData]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -113,54 +98,28 @@ export function CustomerDetails(props: any) {
     setFormData(prev => ({ ...prev, phone: value }));
   };
 
-  const handleAddChild = () => {
-    if (newChildName.trim() === "") return;
-    setFormData(prev => ({
-      ...prev,
-      childrenNames: [...prev.childrenNames, newChildName.trim()]
-    }));
-    setNewChildName("");
-  };
-
-  const handleRemoveChild = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      childrenNames: prev.childrenNames.filter((_, i) => i !== index)
-    }));
-  };
-
   const handleSave = async () => {
     try {
       setIsEditing(false);
 
       const phoneDigitsOnly = formData.phone.replace(/\D/g, '');
 
-      const birthdateValue = formData.birthdate && /^\d{4}-\d{2}-\d{2}$/.test(formData.birthdate)
-        ? formData.birthdate
-        : null;
-
-      const spouseBirthdateValue = formData.spouseBirthdate && /^\d{4}-\d{2}-\d{2}$/.test(formData.spouseBirthdate)
-        ? formData.spouseBirthdate
-        : null;
-
-      const anniversaryDateValue = formData.anniversaryDate && /^\d{4}-\d{2}-\d{2}$/.test(formData.anniversaryDate)
-        ? formData.anniversaryDate
-        : null;
-
       await musteriServisi.guncelle(customer!.id, {
         first_name: formData.firstName,
         last_name: formData.lastName,
         phone: phoneDigitsOnly,
-        birthdate: birthdateValue,
+        birthdate: formData.birthdate || null,
       });
 
+      const { customerPersonalDataService } = await import('@/lib/supabase/services/customerPersonalDataService');
       await customerPersonalDataService.updateCustomerPersonalData(customer!.id, {
-        customer_id: customer!.id.toString(),
+        customer_id: customer!.id,
         spouse_name: formData.spouseName || null,
-        spouse_birthdate: spouseBirthdateValue,
-        anniversary_date: anniversaryDateValue,
-        children_names: formData.childrenNames || []
+        spouse_birthdate: formData.spouseBirthdate || null,
+        anniversary_date: formData.anniversaryDate || null,
+        children_names: formData.childrenNames || [],
       });
+
     } catch (error) {
       console.error("Müşteri güncelleme hatası:", error);
     }
@@ -180,7 +139,7 @@ export function CustomerDetails(props: any) {
     );
   }
 
-  if (customerError || !customerWithPersonalData) {
+  if (customerError || !customer) {
     return (
       <div className="p-4 md:p-6 border border-gray-200 rounded-md bg-gray-50">
         <h3 className="text-lg font-medium text-gray-900">Müşteri Bulunamadı</h3>
@@ -189,14 +148,14 @@ export function CustomerDetails(props: any) {
     );
   }
 
-  const customerName = `${String(formData.firstName || '')} ${String(formData.lastName || '')}`.trim();
+  const customerName = `${String(customer.first_name || '')} ${String(customer.last_name || '')}`.trim();
 
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-xl md:text-2xl font-bold">{customerName || 'İsimsiz Müşteri'}</h2>
-          <p className="text-sm text-gray-500">Müşteri #: {customerId}</p>
+          <p className="text-sm text-gray-500">Müşteri #: {customer.id}</p>
         </div>
 
         <div className="flex gap-2">
@@ -213,7 +172,9 @@ export function CustomerDetails(props: any) {
           <TabsTrigger value="detailed">Detaylı Bilgiler</TabsTrigger>
           <TabsTrigger value="operations">İşlem Geçmişi</TabsTrigger>
           <TabsTrigger value="photos">Fotoğraflar</TabsTrigger>
-          {isPointSystemEnabled && <TabsTrigger value="loyalty">Sadakat & Puanlar</TabsTrigger>}
+          {isPointSystemEnabled && (
+            <TabsTrigger value="loyalty">Sadakat & Puanlar</TabsTrigger>
+          )}
         </TabsList>
         
         <TabsContent value="basic">
@@ -234,7 +195,6 @@ export function CustomerDetails(props: any) {
                         value={formData.firstName}
                         onChange={handleInputChange}
                         placeholder="Ad"
-                        autoComplete="given-name"
                       />
                       <input
                         type="text"
@@ -243,7 +203,6 @@ export function CustomerDetails(props: any) {
                         value={formData.lastName}
                         onChange={handleInputChange}
                         placeholder="Soyad"
-                        autoComplete="family-name"
                       />
                     </div>
                   </div>
@@ -269,8 +228,6 @@ export function CustomerDetails(props: any) {
                         className="border rounded p-2 w-full"
                         value={formData.birthdate}
                         onChange={handleInputChange}
-                        autoComplete="bday"
-                        max={new Date().toISOString().split('T')[0]}
                       />
                     </div>
                   </div>
@@ -278,7 +235,7 @@ export function CustomerDetails(props: any) {
                   <div className="grid grid-cols-3 items-center border-b py-2">
                     <div className="font-medium">Kayıt Tarihi</div>
                     <div className="col-span-2">
-                      {new Date(customerWithPersonalData.created_at).toLocaleDateString('tr-TR')}
+                      {new Date(customer.created_at).toLocaleDateString('tr-TR')}
                     </div>
                   </div>
 
@@ -290,9 +247,8 @@ export function CustomerDetails(props: any) {
                     <div className="font-medium">Eş İsmi</div>
                     <div className="col-span-2">
                       <input
-                        id="spouseName"
-                        name="spouseName"
                         type="text"
+                        name="spouseName"
                         className="border rounded p-2 w-full"
                         value={formData.spouseName}
                         onChange={handleInputChange}
@@ -305,13 +261,11 @@ export function CustomerDetails(props: any) {
                     <div className="font-medium">Eş Doğum Tarihi</div>
                     <div className="col-span-2">
                       <input
-                        id="spouseBirthdate"
-                        name="spouseBirthdate"
                         type="date"
+                        name="spouseBirthdate"
                         className="border rounded p-2 w-full"
-                        value={formData.spouseBirthdate || ""}
+                        value={formData.spouseBirthdate}
                         onChange={handleInputChange}
-                        max={new Date().toISOString().split('T')[0]}
                       />
                     </div>
                   </div>
@@ -320,71 +274,21 @@ export function CustomerDetails(props: any) {
                     <div className="font-medium">Evlilik Yıldönümü</div>
                     <div className="col-span-2">
                       <input
-                        id="anniversaryDate"
-                        name="anniversaryDate"
                         type="date"
+                        name="anniversaryDate"
                         className="border rounded p-2 w-full"
-                        value={formData.anniversaryDate || ""}
+                        value={formData.anniversaryDate}
                         onChange={handleInputChange}
-                        max={new Date().toISOString().split('T')[0]}
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-3 items-start border-b py-2">
                     <div className="font-medium pt-2">Çocuklar</div>
-                    <div className="col-span-2 space-y-2">
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          id="addChildInput"
-                          className="border rounded p-2 w-full"
-                          placeholder="Çocuk adı"
-                          value={newChildName}
-                          onChange={(e) => setNewChildName(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              e.preventDefault();
-                              if (newChildName.trim() !== "") {
-                                handleAddChild();
-                              }
-                            }
-                          }}
-                        />
-                        <button
-                          type="button"
-                          className="btn btn-primary px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
-                          onClick={() => {
-                            if(newChildName.trim() !== "") {
-                              handleAddChild();
-                            }
-                          }}
-                        >
-                          Ekle
-                        </button>
-                      </div>
-                      <div className="space-y-1 max-h-40 overflow-auto border border-gray-200 rounded p-2">
-                        {formData.childrenNames.length > 0 ? (
-                          formData.childrenNames.map((name, index) => (
-                            <div
-                              key={index}
-                              className="flex justify-between bg-gray-50 rounded px-2 py-1 items-center"
-                            >
-                              <span>{name}</span>
-                              <button
-                                type="button"
-                                className="text-red-600 hover:text-red-800"
-                                aria-label={`Remove child ${name}`}
-                                onClick={() => handleRemoveChild(index)}
-                              >
-                                &times;
-                              </button>
-                            </div>
-                          ))
-                        ) : (
-                          <p className="text-sm text-gray-600">Henüz çocuk eklenmemiş</p>
-                        )}
-                      </div>
+                    <div className="col-span-2">
+                      {formData.childrenNames && formData.childrenNames.length > 0 
+                        ? formData.childrenNames.join(", ") 
+                        : "Belirtilmemiş"}
                     </div>
                   </div>
 
@@ -406,7 +310,7 @@ export function CustomerDetails(props: any) {
               <CardTitle>Detaylı Bilgiler</CardTitle>
             </CardHeader>
             <CardContent>
-              {customerId && <CustomerPersonalData customerId={customerId} isEditing={isEditing} setIsEditing={setIsEditing} />}
+              {customerId && <CustomerPersonalData customerId={customerId} />}
             </CardContent>
           </Card>
         </TabsContent>

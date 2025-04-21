@@ -1,5 +1,4 @@
-
-import { useState, useEffect, Dispatch, SetStateAction } from "react";
+import { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,8 +14,6 @@ import { format } from "date-fns";
 
 interface CustomerPersonalDataProps {
   customerId: number;
-  isEditing: boolean;
-  setIsEditing: Dispatch<SetStateAction<boolean>>;
 }
 
 const BEVERAGE_OPTIONS = ["Kahve", "Çay", "Su", "Soğuk İçecekler"];
@@ -41,8 +38,9 @@ const SENSITIVITY_OPTIONS = [
   "Boya Kokusuna Hassasiyet"
 ];
 
-export function CustomerPersonalData({ customerId, isEditing, setIsEditing }: CustomerPersonalDataProps) {
+export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) {
   const queryClient = useQueryClient();
+  const [isEditing, setIsEditing] = useState(false);
   const [childName, setChildName] = useState("");
   const [formData, setFormData] = useState({
     beverage_preferences: [] as string[],
@@ -791,4 +789,3 @@ export function CustomerPersonalData({ customerId, isEditing, setIsEditing }: Cu
     </div>
   );
 }
-
