@@ -1,11 +1,10 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { musteriServisi } from "@/lib/supabase";
 import { formatPhoneNumber } from "@/utils/phoneFormatter";
-import { format } from "date-fns";
-import { tr } from "date-fns/locale";
 
 interface CustomerProfileProps {
   customer: any;
@@ -32,7 +31,7 @@ export function CustomerProfile({ customer }: CustomerProfileProps) {
     const birthDate = new Date(date);
     const day = birthDate.getDate();
     const month = birthDate.getMonth() + 1;
-    
+
     if ((month === 3 && day >= 21) || (month === 4 && day <= 19)) {
       return { 
         sign: "Koç", 
@@ -296,6 +295,9 @@ export function CustomerProfile({ customer }: CustomerProfileProps) {
                 value={formData.spouseName}
                 onChange={handleChange}
                 placeholder="Eş adı"
+                readOnly={false}
+                disabled={false}
+                className="" // remove any styling that might cause gray or readonly look
               />
             ) : (
               formData.spouseName || "Belirtilmemiş"

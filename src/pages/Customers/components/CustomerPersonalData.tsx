@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -5,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { customerPersonalDataService } from "@/lib/supabase/services/customerPersonalDataService";
+import { customerPersonalDataService, CustomerPersonalData } from "@/lib/supabase/services/customerPersonalDataService";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -17,14 +18,6 @@ interface CustomerPersonalDataProps {
 }
 
 const BEVERAGE_OPTIONS = ["Kahve", "Çay", "Su", "Soğuk İçecekler"];
-const HAIR_TYPE_OPTIONS = {
-  structure: ["Düz", "Dalgalı", "Kıvırcık"],
-  condition: ["Kuru", "Normal", "Yağlı"],
-  thickness: ["İnce Telli", "Kalın Telli"]
-};
-const HAIR_DYE_OPTIONS = ["Kalıcı Boya", "Geçici Boya"];
-const HEAT_PREFERENCES = ["Seviyor", "Sevmiyor", "Nötr"];
-const STYLING_PREFERENCES = ["Maşa", "Düzleştirici", "Bigudi", "Doğal Kurutma"];
 const CARE_PREFERENCES = ["Keratin Bakımı", "Saç Botoksu", "Bitkisel İçerikli Ürün", "Vegan/Hayvan Deneysiz", "Parfümsüz Ürün"];
 const HAIR_LENGTH_OPTIONS = ["Kısa", "Orta", "Uzun"];
 const HAIR_GOAL_OPTIONS = ["Uzatmak İstiyor", "Düzenli Kestiriyor", "Mevcut Uzunluğu Korumak İstiyor"];
@@ -37,26 +30,17 @@ const SENSITIVITY_OPTIONS = [
   "Uzun Süre Oturamama",
   "Boya Kokusuna Hassasiyet"
 ];
+const HEAT_PREFERENCES = ["Seviyor", "Sevmiyor", "Nötr"];
+const STYLING_PREFERENCES = ["Maşa", "Düzleştirici", "Bigudi", "Doğal Kurutma"];
 
 export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) {
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [childName, setChildName] = useState("");
-  const [formData, setFormData] = useState({
-    beverage_preferences: [] as string[],
+  const [formData, setFormData] = useState<Partial<CustomerPersonalData>>({
+    beverage_preferences: [],
     beverage_notes: "",
-    hair_structure: "",
-    hair_condition: "",
-    hair_thickness: "",
-    hair_types: [] as string[],
-    dye_preferences: [] as string[],
-    root_dye_frequency: "",
-    bleach_tolerance: false,
-    straightener_preference: "",
-    curling_preference: "",
-    heat_sensitive_hair: false,
-    heat_notes: "",
-    care_preferences: [] as string[],
+    care_preferences: [],
     care_notes: "",
     hair_length: "",
     hair_goal: "",
@@ -66,10 +50,19 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
     waxing_preference: false,
     eyelash_preference: false,
     face_preference_notes: "",
-    sensitivities: [] as string[],
+    sensitivities: [],
     sensitivity_notes: "",
     stylist_observations: "",
-    children_names: [] as string[],
+    children_names: [],
+    // Removed all hair_types, hair_structure, hair_condition, dye_preferences, etc.
+    // Heat and dye related fields removed as well.
+    // To avoid TS errors, we omit them here.
+    bleach_tolerance: undefined,
+    root_dye_frequency: undefined,
+    straightener_preference: undefined,
+    curling_preference: undefined,
+    heat_sensitive_hair: undefined,
+    heat_notes: undefined,
   });
 
   const { data: personalData, isLoading } = useQuery({
@@ -79,26 +72,9 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
 
   useEffect(() => {
     if (personalData) {
-      const hairTypes = personalData.hair_types || [];
-
-      const hairStructure = HAIR_TYPE_OPTIONS.structure.find(t => hairTypes.includes(t)) || "";
-      const hairCondition = HAIR_TYPE_OPTIONS.condition.find(t => hairTypes.includes(t)) || "";
-      const hairThickness = HAIR_TYPE_OPTIONS.thickness.find(t => hairTypes.includes(t)) || "";
-
       setFormData({
         beverage_preferences: personalData.beverage_preferences || [],
         beverage_notes: personalData.beverage_notes || "",
-        hair_structure: hairStructure,
-        hair_condition: hairCondition,
-        hair_thickness: hairThickness,
-        hair_types: personalData.hair_types || [],
-        dye_preferences: personalData.dye_preferences || [],
-        root_dye_frequency: personalData.root_dye_frequency || "",
-        bleach_tolerance: personalData.bleach_tolerance || false,
-        straightener_preference: personalData.straightener_preference || "",
-        curling_preference: personalData.curling_preference || "",
-        heat_sensitive_hair: personalData.heat_sensitive_hair || false,
-        heat_notes: personalData.heat_notes || "",
         care_preferences: personalData.care_preferences || [],
         care_notes: personalData.care_notes || "",
         hair_length: personalData.hair_length || "",
@@ -112,22 +88,35 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
         sensitivities: personalData.sensitivities || [],
         sensitivity_notes: personalData.sensitivity_notes || "",
         stylist_observations: personalData.stylist_observations || "",
-        children_names: personalData.children_names || []
+        children_names: personalData.children_names || [],
+        bleach_tolerance: undefined,
+        root_dye_frequency: undefined,
+        straightener_preference: undefined,
+        curling_preference: undefined,
+        heat_sensitive_hair: undefined,
+        heat_notes: undefined,
       });
     }
   }, [personalData]);
 
   const updatePersonalDataMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const hairTypes = [];
-      if (data.hair_structure) hairTypes.push(data.hair_structure);
-      if (data.hair_condition) hairTypes.push(data.hair_condition);
-      if (data.hair_thickness) hairTypes.push(data.hair_thickness);
+    mutationFn: async (data: Partial<CustomerPersonalData>) => {
+      // Omit removed fields explicitly
+      const {
+        bleach_tolerance,
+        root_dye_frequency,
+        straightener_preference,
+        curling_preference,
+        heat_sensitive_hair,
+        heat_notes,
+        ...dataWithoutRemovedFields
+      } = data;
 
+      // Prepare the data for saving with no references to removed fields
       const dataToSave = {
-        ...data,
-        hair_types: hairTypes,
+        ...dataWithoutRemovedFields,
         customer_id: customerId.toString(),
+        children_names: Array.isArray(data.children_names) ? data.children_names : []
       };
 
       console.log("Saving data:", dataToSave);
@@ -181,7 +170,7 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
     if (childName.trim()) {
       setFormData((prev) => ({
         ...prev,
-        children_names: [...prev.children_names, childName.trim()],
+        children_names: [...(prev.children_names || []), childName.trim()],
       }));
       setChildName("");
     }
@@ -190,7 +179,7 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
   const handleRemoveChild = (index: number) => {
     setFormData((prev) => ({
       ...prev,
-      children_names: prev.children_names.filter((_, i) => i !== index),
+      children_names: (prev.children_names || []).filter((_, i) => i !== index),
     }));
   };
 
@@ -244,7 +233,7 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
                 <div key={beverage} className="flex items-center space-x-2">
                   <Checkbox
                     id={`beverage-${beverage}`}
-                    checked={isSelected(formData.beverage_preferences, beverage)}
+                    checked={isSelected(formData.beverage_preferences || [], beverage)}
                     onCheckedChange={(checked) =>
                       handleCheckboxChange("beverage_preferences", beverage, checked as boolean)
                     }
@@ -259,7 +248,7 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
               {isEditing ? (
                 <Textarea
                   name="beverage_notes"
-                  value={formData.beverage_notes}
+                  value={formData.beverage_notes || ""}
                   onChange={handleChange}
                   placeholder="Örn: şekersiz filtre kahve"
                   className="h-20"
@@ -276,225 +265,7 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
 
       <Separator className="my-6" />
 
-      {/* 2. Saç Tipi - Updated to use radio buttons in 3 columns */}
-      <div>
-        <h3 className="text-lg font-medium mb-4">Saç Tipi</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Column 1: Hair Structure */}
-          <div className="space-y-2">
-            <Label className="font-medium">Saç Yapısı</Label>
-            {isEditing ? (
-              <RadioGroup 
-                value={formData.hair_structure} 
-                onValueChange={(value) => handleRadioChange('hair_structure', value)}
-              >
-                {HAIR_TYPE_OPTIONS.structure.map(option => (
-                  <div key={option} className="flex items-center space-x-2">
-                    <RadioGroupItem value={option} id={`structure-${option}`} />
-                    <Label htmlFor={`structure-${option}`}>{option}</Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            ) : (
-              <p className="p-2 border rounded-md bg-gray-50">
-                {formData.hair_structure || "Belirtilmemiş"}
-              </p>
-            )}
-          </div>
-          
-          {/* Column 2: Hair Condition */}
-          <div className="space-y-2">
-            <Label className="font-medium">Saç Durumu</Label>
-            {isEditing ? (
-              <RadioGroup 
-                value={formData.hair_condition} 
-                onValueChange={(value) => handleRadioChange('hair_condition', value)}
-              >
-                {HAIR_TYPE_OPTIONS.condition.map(option => (
-                  <div key={option} className="flex items-center space-x-2">
-                    <RadioGroupItem value={option} id={`condition-${option}`} />
-                    <Label htmlFor={`condition-${option}`}>{option}</Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            ) : (
-              <p className="p-2 border rounded-md bg-gray-50">
-                {formData.hair_condition || "Belirtilmemiş"}
-              </p>
-            )}
-          </div>
-          
-          {/* Column 3: Hair Thickness */}
-          <div className="space-y-2">
-            <Label className="font-medium">Saç Kalınlığı</Label>
-            {isEditing ? (
-              <RadioGroup 
-                value={formData.hair_thickness} 
-                onValueChange={(value) => handleRadioChange('hair_thickness', value)}
-              >
-                {HAIR_TYPE_OPTIONS.thickness.map(option => (
-                  <div key={option} className="flex items-center space-x-2">
-                    <RadioGroupItem value={option} id={`thickness-${option}`} />
-                    <Label htmlFor={`thickness-${option}`}>{option}</Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            ) : (
-              <p className="p-2 border rounded-md bg-gray-50">
-                {formData.hair_thickness || "Belirtilmemiş"}
-              </p>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <Separator className="my-6" />
-
-      {/* 3. Boyama Tercihi */}
-      <div>
-        <h3 className="text-lg font-medium mb-4">Boyama Tercihi</h3>
-        <div className="grid gap-4">
-          <div className="space-y-2">
-            <div className="flex flex-wrap gap-4">
-              {HAIR_DYE_OPTIONS.map((dyeType) => (
-                <div key={dyeType} className="flex items-center space-x-2">
-                  <Checkbox 
-                    id={`dye-${dyeType}`}
-                    checked={isSelected(formData.dye_preferences, dyeType)}
-                    onCheckedChange={(checked) => 
-                      handleCheckboxChange('dye_preferences', dyeType, checked as boolean)
-                    }
-                    disabled={!isEditing}
-                  />
-                  <label htmlFor={`dye-${dyeType}`}>{dyeType}</label>
-                </div>
-              ))}
-            </div>
-            <div className="mt-4">
-              <Label>Dip Boya Sıklığı</Label>
-              {isEditing ? (
-                <Input
-                  name="root_dye_frequency"
-                  value={formData.root_dye_frequency}
-                  onChange={handleChange}
-                  placeholder="Örn: 4 haftada bir"
-                  className="max-w-md"
-                />
-              ) : (
-                <p className="p-2 border rounded-md bg-gray-50 max-w-md">
-                  {formData.root_dye_frequency || "Belirtilmemiş"}
-                </p>
-              )}
-            </div>
-            <div className="mt-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="bleach_tolerance" 
-                  checked={formData.bleach_tolerance}
-                  onCheckedChange={(checked) => 
-                    handleBooleanChange('bleach_tolerance', checked as boolean)
-                  }
-                  disabled={!isEditing}
-                />
-                <label htmlFor="bleach_tolerance">Açıcı Toleransı</label>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <Separator className="my-6" />
-
-      {/* 4. Isı İşlemi Toleransı */}
-      <div>
-        <h3 className="text-lg font-medium mb-4">Isı İşlemi Toleransı</h3>
-        <div className="grid gap-4">
-          <div className="space-y-4">
-            <div>
-              <Label>Düzleştirici Kullanımı</Label>
-              {isEditing ? (
-                <Select
-                  value={formData.straightener_preference}
-                  onValueChange={(value) => 
-                    setFormData((prev) => ({ ...prev, straightener_preference: value }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seçiniz" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {HEAT_PREFERENCES.map(pref => (
-                      <SelectItem key={pref} value={pref}>{pref}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <p className="p-2 border rounded-md bg-gray-50">
-                  {formData.straightener_preference || "Belirtilmemiş"}
-                </p>
-              )}
-            </div>
-            
-            <div>
-              <Label>Maşa / Bigudi Tercihi</Label>
-              {isEditing ? (
-                <Select
-                  value={formData.curling_preference}
-                  onValueChange={(value) => 
-                    setFormData((prev) => ({ ...prev, curling_preference: value }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seçiniz" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STYLING_PREFERENCES.map(pref => (
-                      <SelectItem key={pref} value={pref}>{pref}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <p className="p-2 border rounded-md bg-gray-50">
-                  {formData.curling_preference || "Belirtilmemiş"}
-                </p>
-              )}
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="heat_sensitive_hair" 
-                checked={formData.heat_sensitive_hair}
-                onCheckedChange={(checked) => 
-                  handleBooleanChange('heat_sensitive_hair', checked as boolean)
-                }
-                disabled={!isEditing}
-              />
-              <label htmlFor="heat_sensitive_hair">Isıya Hassas Saç</label>
-            </div>
-
-            <div>
-              <Label>Isı İşlemi Notları</Label>
-              {isEditing ? (
-                <Textarea
-                  name="heat_notes"
-                  value={formData.heat_notes}
-                  onChange={handleChange}
-                  placeholder="Müşterinin ısı işlemi tercihleri hakkında notlar"
-                  className="h-20"
-                />
-              ) : (
-                <p className="p-2 border rounded-md bg-gray-50 min-h-[40px]">
-                  {formData.heat_notes || "Belirtilmemiş"}
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <Separator className="my-6" />
-
-      {/* 5. Bakım Tercihleri */}
+      {/* 2. Bakım Tercihleri */}
       <div>
         <h3 className="text-lg font-medium mb-4">Bakım Tercihleri</h3>
         <div className="grid gap-4">
@@ -504,7 +275,7 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
                 <div key={care} className="flex items-center space-x-2">
                   <Checkbox 
                     id={`care-${care}`}
-                    checked={isSelected(formData.care_preferences, care)}
+                    checked={isSelected(formData.care_preferences || [], care)}
                     onCheckedChange={(checked) => 
                       handleCheckboxChange('care_preferences', care, checked as boolean)
                     }
@@ -519,7 +290,7 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
               {isEditing ? (
                 <Textarea
                   name="care_notes"
-                  value={formData.care_notes}
+                  value={formData.care_notes || ""}
                   onChange={handleChange}
                   placeholder="Müşterinin bakım tercihleri hakkında notlar"
                   className="h-20"
@@ -536,7 +307,7 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
 
       <Separator className="my-6" />
 
-      {/* 6. Saç Uzunluğu & Hedefi */}
+      {/* 3. Saç Uzunluğu & Hedefi */}
       <div>
         <h3 className="text-lg font-medium mb-4">Saç Uzunluğu & Hedefi</h3>
         <div className="grid gap-4">
@@ -545,7 +316,7 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
               <Label>Saç Uzunluğu</Label>
               {isEditing ? (
                 <RadioGroup 
-                  value={formData.hair_length} 
+                  value={formData.hair_length || ""} 
                   onValueChange={(value) => 
                     setFormData((prev) => ({ ...prev, hair_length: value }))
                   }
@@ -569,7 +340,7 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
               <Label>Hedef</Label>
               {isEditing ? (
                 <RadioGroup 
-                  value={formData.hair_goal} 
+                  value={formData.hair_goal || ""} 
                   onValueChange={(value) => 
                     setFormData((prev) => ({ ...prev, hair_goal: value }))
                   }
@@ -594,7 +365,7 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
               {isEditing ? (
                 <Input
                   name="hair_goal_notes"
-                  value={formData.hair_goal_notes}
+                  value={formData.hair_goal_notes || ""}
                   onChange={handleChange}
                   placeholder="Örn: Saç uçları kesilmesin istiyor"
                   className="max-w-md"
@@ -611,7 +382,7 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
 
       <Separator className="my-6" />
 
-      {/* 7. Kaş/Bıyık/İpek Kirpik Tercihleri */}
+      {/* 4. Kaş/Bıyık/İpek Kirpik Tercihleri */}
       <div>
         <h3 className="text-lg font-medium mb-4">Kaş/Bıyık/İpek Kirpik Tercihleri</h3>
         <div className="grid gap-4">
@@ -620,7 +391,7 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
               <Label>Kaş Tercihi</Label>
               {isEditing ? (
                 <Select
-                  value={formData.brow_preference}
+                  value={formData.brow_preference || ""}
                   onValueChange={(value) => 
                     setFormData((prev) => ({ ...prev, brow_preference: value }))
                   }
@@ -645,7 +416,7 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
               <Label>Bıyık Tercihi</Label>
               {isEditing ? (
                 <Select
-                  value={formData.mustache_preference}
+                  value={formData.mustache_preference || ""}
                   onValueChange={(value) => 
                     setFormData((prev) => ({ ...prev, mustache_preference: value }))
                   }
@@ -669,7 +440,7 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
             <div className="flex items-center space-x-2">
               <Checkbox 
                 id="waxing_preference" 
-                checked={formData.waxing_preference}
+                checked={formData.waxing_preference || false}
                 onCheckedChange={(checked) => 
                   handleBooleanChange('waxing_preference', checked as boolean)
                 }
@@ -681,7 +452,7 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
             <div className="flex items-center space-x-2">
               <Checkbox 
                 id="eyelash_preference" 
-                checked={formData.eyelash_preference}
+                checked={formData.eyelash_preference || false}
                 onCheckedChange={(checked) => 
                   handleBooleanChange('eyelash_preference', checked as boolean)
                 }
@@ -695,7 +466,7 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
               {isEditing ? (
                 <Textarea
                   name="face_preference_notes"
-                  value={formData.face_preference_notes}
+                  value={formData.face_preference_notes || ""}
                   onChange={handleChange}
                   placeholder="Ek açıklamalar"
                   className="h-20"
@@ -712,7 +483,7 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
 
       <Separator className="my-6" />
 
-      {/* 8. Hassasiyet / Alerji / Kısıtlar */}
+      {/* 5. Hassasiyet / Alerji / Kısıtlar */}
       <div>
         <h3 className="text-lg font-medium mb-4">Hassasiyet / Alerji / Kısıtlar</h3>
         <div className="grid gap-4">
@@ -722,7 +493,7 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
                 <div key={sensitivity} className="flex items-center space-x-2">
                   <Checkbox 
                     id={`sensitivity-${sensitivity}`}
-                    checked={isSelected(formData.sensitivities, sensitivity)}
+                    checked={isSelected(formData.sensitivities || [], sensitivity)}
                     onCheckedChange={(checked) => 
                       handleCheckboxChange('sensitivities', sensitivity, checked as boolean)
                     }
@@ -737,7 +508,7 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
               {isEditing ? (
                 <Textarea
                   name="sensitivity_notes"
-                  value={formData.sensitivity_notes}
+                  value={formData.sensitivity_notes || ""}
                   onChange={handleChange}
                   placeholder="Ek hassasiyet bilgileri"
                   className="h-20"
@@ -754,14 +525,14 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
 
       <Separator className="my-6" />
 
-      {/* 9. Serbest Not Alanı (Kuaför İçin Gözlem Notları) */}
+      {/* 6. Serbest Not Alanı (Kuaför İçin Gözlem Notları) */}
       <div>
         <h3 className="text-lg font-medium mb-4">Kuaför Gözlem Notları</h3>
         <div className="space-y-2">
           {isEditing ? (
             <Textarea
               name="stylist_observations"
-              value={formData.stylist_observations}
+              value={formData.stylist_observations || ""}
               onChange={handleChange}
               placeholder="Çok konuşkan, sessiz ortam sever, bekletilmekten hoşlanmaz gibi gözlemlerinizi yazabilirsiniz..."
               className="min-h-[100px]"
@@ -789,3 +560,4 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
     </div>
   );
 }
+
