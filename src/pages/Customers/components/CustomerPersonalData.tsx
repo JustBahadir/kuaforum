@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -87,13 +88,21 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
     mutationFn: async (data: Partial<CustomerPersonalData>) => {
       const existingRecord = await customerPersonalDataService.getCustomerPersonalData(customerId);
       if (!existingRecord) {
-        await customerPersonalDataService.updateCustomerPersonalData(customerId.toString(), { customer_id: customerId.toString() });
+        // Insert minimal record first using customerId as string
+        await customerPersonalDataService.updateCustomerPersonalData(String(customerId), { customer_id: String(customerId), children_names: [] });
       }
 
+      // Remove unrelated properties and ensure children_names is array
       const { bleach_tolerance, root_dye_frequency, straightener_preference, curling_preference, heat_sensitive_hair, heat_notes, ...cleanData } = data as any;
       cleanData.children_names = Array.isArray(cleanData.children_names) ? cleanData.children_names : [];
 
-      await customerPersonalDataService.updateCustomerPersonalData(customerId.toString(), cleanData);
+      // Ensure customer_id is string to match interface
+      if (cleanData.customer_id && typeof cleanData.customer_id !== "string") {
+        cleanData.customer_id = String(cleanData.customer_id);
+      }
+
+      await customerPersonalDataService.updateCustomerPersonalData(String(customerId), cleanData);
+
       return true;
     },
     onSuccess: () => {
@@ -170,9 +179,9 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
             </Button>
             <Button 
               onClick={handleSave} 
-              disabled={updatePersonalDataMutation.isLoading}
+              disabled={updatePersonalDataMutation.isPending}
             >
-              {updatePersonalDataMutation.isLoading ? "Kaydediliyor..." : "Kaydet"}
+              {updatePersonalDataMutation.isPending ? "Kaydediliyor..." : "Kaydet"}
             </Button>
           </div>
         ) : (
