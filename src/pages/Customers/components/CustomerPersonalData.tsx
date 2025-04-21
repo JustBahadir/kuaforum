@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -12,7 +11,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { format } from "date-fns";
 
 interface CustomerPersonalDataProps {
   customerId: number;
@@ -55,9 +53,11 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
     children_names: [],
   });
 
-  const { data: personalData, isLoading } = useQuery({
+  const { data: personalData, isLoading } = useQuery<CustomerPersonalData | null>({
     queryKey: ["customer-personal-data", customerId],
-    queryFn: async () => customerPersonalDataService.getCustomerPersonalData(customerId),
+    queryFn: async () => {
+      return customerPersonalDataService.getCustomerPersonalData(customerId);
+    },
   });
 
   useEffect(() => {
@@ -83,45 +83,25 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
     }
   }, [personalData]);
 
-  const updatePersonalDataMutation = useMutation({
+  const updatePersonalDataMutation = useMutation<boolean, Error, Partial<CustomerPersonalData>>({
     mutationFn: async (data: Partial<CustomerPersonalData>) => {
-      // New logic: First check if a record exists for customerId, if not insert empty record
-      const { data: existingRecord, error: selectError } = await customerPersonalDataService.getCustomerPersonalData(customerId);
-      if (selectError) {
-        console.error("Select error on customerPersonalData:", selectError);
-        throw selectError;
-      }
+      const existingRecord = await customerPersonalDataService.getCustomerPersonalData(customerId);
       if (!existingRecord) {
-        // Insert empty record with customer_id to avoid FK error
-        const insertPayload = { customer_id: customerId };
-        try {
-          await customerPersonalDataService.updateCustomerPersonalData(customerId, insertPayload);
-        } catch (insertErr) {
-          console.error("Insert empty record error:", insertErr);
-          throw insertErr;
-        }
+        await customerPersonalDataService.updateCustomerPersonalData(customerId.toString(), { customer_id: customerId.toString() });
       }
-      
-      // Prepare update payload without extraneous fields
-      const { bleach_tolerance, root_dye_frequency, straightener_preference, curling_preference, heat_sensitive_hair, heat_notes, ...cleanData } = data;
 
-      // Ensure children_names is an array
+      const { bleach_tolerance, root_dye_frequency, straightener_preference, curling_preference, heat_sensitive_hair, heat_notes, ...cleanData } = data as any;
       cleanData.children_names = Array.isArray(cleanData.children_names) ? cleanData.children_names : [];
 
-      try {
-        await customerPersonalDataService.updateCustomerPersonalData(customerId, cleanData);
-        return true;
-      } catch (error) {
-        console.error("Error updating personal data:", error);
-        throw error;
-      }
+      await customerPersonalDataService.updateCustomerPersonalData(customerId.toString(), cleanData);
+      return true;
     },
     onSuccess: () => {
       toast.success("Müşteri bilgileri güncellendi");
       setIsEditing(false);
       queryClient.invalidateQueries({ queryKey: ["customer-personal-data", customerId] });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       console.error("Error updating personal data:", error);
       toast.error("Bilgiler güncellenirken bir hata oluştu");
     },
@@ -188,7 +168,10 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
             <Button variant="outline" onClick={() => setIsEditing(false)}>
               İptal
             </Button>
-            <Button onClick={handleSave} disabled={updatePersonalDataMutation.isLoading || updatePersonalDataMutation.isIdle === false}>
+            <Button 
+              onClick={handleSave} 
+              disabled={updatePersonalDataMutation.isLoading}
+            >
               {updatePersonalDataMutation.isLoading ? "Kaydediliyor..." : "Kaydet"}
             </Button>
           </div>
@@ -446,7 +429,7 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
                   className="h-20"
                 />
               ) : (
-                <p className="p-2 border rounded-md bg-gray-50 min-h-[40px]">
+                <p className="p-2 border rounded-md bg-gray-50">
                   {formData.face_preference_notes || "Belirtilmemiş"}
                 </p>
               )}
@@ -563,4 +546,3 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
     </div>
   );
 }
-

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -81,11 +80,8 @@ export function AppointmentForm({ shopId }: { shopId: number }) {
   // Filter personnel by selected service
   const filteredPersonnel = React.useMemo(() => {
     if (!selectedServiceId || !personnel) return personnel;
-    // If no service is selected, show all personnel
     return personnel.filter((person) => {
-      // Check if this person can perform the selected service
-      const canPerformService = person.hizmetler?.some((service) => service.id.toString() === selectedServiceId);
-      return canPerformService;
+      return person.hizmetler?.some((service) => service.id.toString() === selectedServiceId);
     });
   }, [selectedServiceId, personnel]);
 
@@ -99,12 +95,10 @@ export function AppointmentForm({ shopId }: { shopId: number }) {
     setIsSubmitting(true);
 
     try {
-      // Format date and time for database
       const appointmentDate = new Date(values.date);
       const [hours, minutes] = values.time.split(":").map(Number);
       appointmentDate.setHours(hours, minutes, 0, 0);
 
-      // Get service details
       const selectedService = operations?.find((op) => op.id.toString() === values.service);
 
       if (!selectedService) {
@@ -113,11 +107,9 @@ export function AppointmentForm({ shopId }: { shopId: number }) {
         return;
       }
 
-      // Calculate end time based on service duration
       const endDate = new Date(appointmentDate);
       endDate.setMinutes(endDate.getMinutes() + (selectedService.sure || 30));
 
-      // Create appointment
       const { data, error } = await supabase.from("randevular").insert([
         {
           musteri_id: userId,
@@ -134,6 +126,7 @@ export function AppointmentForm({ shopId }: { shopId: number }) {
       if (error) {
         console.error("Randevu oluşturma hatası:", error);
         toast.error("Randevu oluşturulurken bir hata oluştu.");
+        setIsSubmitting(false);
         return;
       }
 
@@ -144,16 +137,13 @@ export function AppointmentForm({ shopId }: { shopId: number }) {
         ]
       });
 
-      // Reset form
       form.reset();
       setSelectedDate(undefined);
       setSelectedServiceId("");
       setSelectedPersonnelId("");
 
-      // Navigate to appointments page
       navigate("/appointments");
-    } catch (error) {
-      console.error("Randevu oluşturma hatası:", error);
+    } catch {
       toast.error("Randevu oluşturulurken bir hata oluştu.");
     } finally {
       setIsSubmitting(false);
@@ -161,8 +151,8 @@ export function AppointmentForm({ shopId }: { shopId: number }) {
   };
 
   return (
-    <Form {...form} onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-      <form className="space-y-6">
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <FormField
           control={form.control}
           name="date"
@@ -190,13 +180,11 @@ export function AppointmentForm({ shopId }: { shopId: number }) {
                       setSelectedDate(date || undefined);
                     }}
                     disabled={(date) => {
-                      // Disable past dates and dates more than 30 days in the future
                       const today = new Date();
                       today.setHours(0, 0, 0, 0);
                       const thirtyDaysLater = new Date();
                       thirtyDaysLater.setDate(today.getDate() + 30);
                       return date < today || date > thirtyDaysLater ||
-                        // Disable Sundays (0 is Sunday in JavaScript)
                         date.getDay() === 0;
                     }}
                     initialFocus={true}
@@ -218,7 +206,6 @@ export function AppointmentForm({ shopId }: { shopId: number }) {
                 onValueChange={(value) => {
                   field.onChange(value);
                   setSelectedServiceId(value);
-                  // Reset personnel when service changes
                   form.setValue("personnel", "");
                   setSelectedPersonnelId("");
                 }}
