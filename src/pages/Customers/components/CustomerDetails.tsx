@@ -15,6 +15,7 @@ import { CustomerPersonalData } from "./CustomerPersonalData";
 import { CustomerPhotoGallery } from "./CustomerPhotoGallery";
 import { customerPersonalDataService } from "@/lib/supabase/services/customerPersonalDataService";
 import { PhoneInputField } from "./FormFields/PhoneInputField";
+import { toast } from "sonner";
 
 interface CustomerDetailsProps {
   customerId?: number;
@@ -101,40 +102,46 @@ export function CustomerDetails(props: any) {
   };
 
   const handleSave = async () => {
+    if (!customer) {
+      toast.error("Müşteri bilgileri mevcut değil, güncelleme yapılamadı.");
+      return;
+    }
     try {
       setIsEditing(false);
 
       const phoneDigitsOnly = formData.phone.replace(/\D/g, '');
 
-      await musteriServisi.guncelle(customer!.id.toString(), {
+      // 1. Update the main customer data
+      await musteriServisi.guncelle(customer.id, {
         first_name: formData.firstName,
         last_name: formData.lastName,
         phone: phoneDigitsOnly,
         birthdate: formData.birthdate || null,
       });
 
-      const { customerPersonalDataService } = await import('@/lib/supabase/services/customerPersonalDataService');
-
-      // Two-step: First select if record exists, if not insert empty, then update
-      const existingRecord = await customerPersonalDataService.getCustomerPersonalData(customer!.id);
+      // 2. Ensure personal data record exists before update
+      const existingRecord = await customerPersonalDataService.getCustomerPersonalData(customer.id);
 
       if (!existingRecord) {
-        await customerPersonalDataService.updateCustomerPersonalData(customer!.id, { customer_id: customer!.id });
+        await customerPersonalDataService.updateCustomerPersonalData(customer.id, { customer_id: customer.id.toString() });
       }
 
+      // 3. Prepare personal data update
       const personalDataUpdate = {
-        customer_id: customer!.id,
+        customer_id: customer.id.toString(),
         spouse_name: formData.spouseName || null,
         spouse_birthdate: formData.spouseBirthdate || null,
         anniversary_date: formData.anniversaryDate || null,
         children_names: formData.childrenNames || [],
       };
 
-      await customerPersonalDataService.updateCustomerPersonalData(customer!.id, personalDataUpdate);
-
-    } catch (error) {
+      // 4. Update personal data
+      await customerPersonalDataService.updateCustomerPersonalData(customer.id, personalDataUpdate);
+      
+      toast.success("Müşteri bilgileri başarıyla güncellendi.");
+    } catch (error: any) {
       console.error("Müşteri güncelleme hatası:", error);
-      toast.error("Müşteri bilgileri güncellenemedi: " + (error instanceof Error ? error.message : "Bilinmeyen hata"));
+      toast.error("Müşteri bilgileri güncellenemedi: " + (error.message || "Bilinmeyen hata"));
     }
   };
 
@@ -359,4 +366,5 @@ export function CustomerDetails(props: any) {
     </div>
   );
 }
+
 
