@@ -135,7 +135,13 @@ export function CustomerProfile({ customer }: CustomerProfileProps) {
         horoscope_description: zodiacInfo?.description || null,
       };
 
+      // Two-step: insert if not exists then update
       const { customerPersonalDataService } = await import('@/lib/supabase/services/customerPersonalDataService');
+
+      const existingRecord = await customerPersonalDataService.getCustomerPersonalData(customer.id);
+      if (!existingRecord) {
+        await customerPersonalDataService.updateCustomerPersonalData(customer.id, { customer_id: customer.id });
+      }
       await customerPersonalDataService.updateCustomerPersonalData(customer.id, personalData);
 
       toast.success("Müşteri bilgileri başarıyla güncellendi");
@@ -297,7 +303,7 @@ export function CustomerProfile({ customer }: CustomerProfileProps) {
                 placeholder="Eş adı"
                 readOnly={false}
                 disabled={false}
-                className="" // remove any styling that might cause gray or readonly look
+                className="" // unset any disabled styling
               />
             ) : (
               formData.spouseName || "Belirtilmemiş"
@@ -402,3 +408,4 @@ export function CustomerProfile({ customer }: CustomerProfileProps) {
     </div>
   );
 }
+

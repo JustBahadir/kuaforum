@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,6 +25,7 @@ export function CustomerDetails(props: any) {
   const params = useParams<{ id: string }>();
   const navigate = useNavigate();
 
+  // Convert customerId to string where needed because Supabase expects string keys for eq filters, and is safer to unify
   const customerId = props.customerId !== undefined ? props.customerId : params.id ? parseInt(params.id) : undefined;
 
   const { 
@@ -104,7 +106,7 @@ export function CustomerDetails(props: any) {
 
       const phoneDigitsOnly = formData.phone.replace(/\D/g, '');
 
-      await musteriServisi.guncelle(customer!.id, {
+      await musteriServisi.guncelle(customer!.id.toString(), {
         first_name: formData.firstName,
         last_name: formData.lastName,
         phone: phoneDigitsOnly,
@@ -112,16 +114,27 @@ export function CustomerDetails(props: any) {
       });
 
       const { customerPersonalDataService } = await import('@/lib/supabase/services/customerPersonalDataService');
-      await customerPersonalDataService.updateCustomerPersonalData(customer!.id, {
+
+      // Two-step: First select if record exists, if not insert empty, then update
+      const existingRecord = await customerPersonalDataService.getCustomerPersonalData(customer!.id);
+
+      if (!existingRecord) {
+        await customerPersonalDataService.updateCustomerPersonalData(customer!.id, { customer_id: customer!.id });
+      }
+
+      const personalDataUpdate = {
         customer_id: customer!.id,
         spouse_name: formData.spouseName || null,
         spouse_birthdate: formData.spouseBirthdate || null,
         anniversary_date: formData.anniversaryDate || null,
         children_names: formData.childrenNames || [],
-      });
+      };
+
+      await customerPersonalDataService.updateCustomerPersonalData(customer!.id, personalDataUpdate);
 
     } catch (error) {
       console.error("Müşteri güncelleme hatası:", error);
+      toast.error("Müşteri bilgileri güncellenemedi: " + (error instanceof Error ? error.message : "Bilinmeyen hata"));
     }
   };
 
@@ -346,3 +359,4 @@ export function CustomerDetails(props: any) {
     </div>
   );
 }
+

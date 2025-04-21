@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { customerPersonalDataService, CustomerPersonalData } from "@/lib/supabase/services/customerPersonalDataService";
+import type { CustomerPersonalData } from "@/lib/supabase/services/customerPersonalDataService";
+import { customerPersonalDataService } from "@/lib/supabase/services/customerPersonalDataService";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -30,8 +31,6 @@ const SENSITIVITY_OPTIONS = [
   "Uzun Süre Oturamama",
   "Boya Kokusuna Hassasiyet"
 ];
-const HEAT_PREFERENCES = ["Seviyor", "Sevmiyor", "Nötr"];
-const STYLING_PREFERENCES = ["Maşa", "Düzleştirici", "Bigudi", "Doğal Kurutma"];
 
 export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) {
   const queryClient = useQueryClient();
@@ -54,15 +53,6 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
     sensitivity_notes: "",
     stylist_observations: "",
     children_names: [],
-    // Removed all hair_types, hair_structure, hair_condition, dye_preferences, etc.
-    // Heat and dye related fields removed as well.
-    // To avoid TS errors, we omit them here.
-    bleach_tolerance: undefined,
-    root_dye_frequency: undefined,
-    straightener_preference: undefined,
-    curling_preference: undefined,
-    heat_sensitive_hair: undefined,
-    heat_notes: undefined,
   });
 
   const { data: personalData, isLoading } = useQuery({
@@ -89,40 +79,37 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
         sensitivity_notes: personalData.sensitivity_notes || "",
         stylist_observations: personalData.stylist_observations || "",
         children_names: personalData.children_names || [],
-        bleach_tolerance: undefined,
-        root_dye_frequency: undefined,
-        straightener_preference: undefined,
-        curling_preference: undefined,
-        heat_sensitive_hair: undefined,
-        heat_notes: undefined,
       });
     }
   }, [personalData]);
 
   const updatePersonalDataMutation = useMutation({
     mutationFn: async (data: Partial<CustomerPersonalData>) => {
-      // Omit removed fields explicitly
-      const {
-        bleach_tolerance,
-        root_dye_frequency,
-        straightener_preference,
-        curling_preference,
-        heat_sensitive_hair,
-        heat_notes,
-        ...dataWithoutRemovedFields
-      } = data;
+      // New logic: First check if a record exists for customerId, if not insert empty record
+      const { data: existingRecord, error: selectError } = await customerPersonalDataService.getCustomerPersonalData(customerId);
+      if (selectError) {
+        console.error("Select error on customerPersonalData:", selectError);
+        throw selectError;
+      }
+      if (!existingRecord) {
+        // Insert empty record with customer_id to avoid FK error
+        const insertPayload = { customer_id: customerId };
+        try {
+          await customerPersonalDataService.updateCustomerPersonalData(customerId, insertPayload);
+        } catch (insertErr) {
+          console.error("Insert empty record error:", insertErr);
+          throw insertErr;
+        }
+      }
+      
+      // Prepare update payload without extraneous fields
+      const { bleach_tolerance, root_dye_frequency, straightener_preference, curling_preference, heat_sensitive_hair, heat_notes, ...cleanData } = data;
 
-      // Prepare the data for saving with no references to removed fields
-      const dataToSave = {
-        ...dataWithoutRemovedFields,
-        customer_id: customerId.toString(),
-        children_names: Array.isArray(data.children_names) ? data.children_names : []
-      };
-
-      console.log("Saving data:", dataToSave);
+      // Ensure children_names is an array
+      cleanData.children_names = Array.isArray(cleanData.children_names) ? cleanData.children_names : [];
 
       try {
-        await customerPersonalDataService.updateCustomerPersonalData(customerId, dataToSave);
+        await customerPersonalDataService.updateCustomerPersonalData(customerId, cleanData);
         return true;
       } catch (error) {
         console.error("Error updating personal data:", error);
@@ -134,7 +121,7 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
       setIsEditing(false);
       queryClient.invalidateQueries({ queryKey: ["customer-personal-data", customerId] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error("Error updating personal data:", error);
       toast.error("Bilgiler güncellenirken bir hata oluştu");
     },
@@ -162,10 +149,6 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
     setFormData((prev) => ({ ...prev, [name]: checked }));
   };
 
-  const handleRadioChange = (name: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
   const handleAddChild = () => {
     if (childName.trim()) {
       setFormData((prev) => ({
@@ -187,15 +170,6 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
     updatePersonalDataMutation.mutate(formData);
   };
 
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return "";
-    try {
-      return format(new Date(dateString), "dd.MM.yyyy");
-    } catch (error) {
-      return dateString;
-    }
-  };
-
   const isSelected = (array: string[], value: string) => array.includes(value);
 
   if (isLoading) {
@@ -214,8 +188,8 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
             <Button variant="outline" onClick={() => setIsEditing(false)}>
               İptal
             </Button>
-            <Button onClick={handleSave} disabled={updatePersonalDataMutation.isPending}>
-              {updatePersonalDataMutation.isPending ? "Kaydediliyor..." : "Kaydet"}
+            <Button onClick={handleSave} disabled={updatePersonalDataMutation.isLoading || updatePersonalDataMutation.isIdle === false}>
+              {updatePersonalDataMutation.isLoading ? "Kaydediliyor..." : "Kaydet"}
             </Button>
           </div>
         ) : (
@@ -545,18 +519,47 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
         </div>
       </div>
 
-      {isEditing && (
-        <div className="flex justify-end pt-4">
-          <div className="space-x-2">
-            <Button variant="outline" onClick={() => setIsEditing(false)}>
-              İptal
-            </Button>
-            <Button onClick={handleSave} disabled={updatePersonalDataMutation.isPending}>
-              {updatePersonalDataMutation.isPending ? "Kaydediliyor..." : "Kaydet"}
-            </Button>
+      {/* Çocuklar */}
+      <div>
+        <h3 className="text-lg font-medium mb-4">Çocuklar</h3>
+        {isEditing ? (
+          <div className="space-y-3">
+            <div className="flex gap-2">
+              <Input
+                value={childName}
+                onChange={(e) => setChildName(e.target.value)}
+                placeholder="Çocuk adı"
+                className="flex-1"
+              />
+              <Button type="button" onClick={handleAddChild}>Ekle</Button>
+            </div>
+            <div className="space-y-2">
+              {formData.children_names && formData.children_names.length > 0 ? (
+                formData.children_names.map((name, index) => (
+                  <div key={index} className="flex items-center justify-between border p-2 rounded-md">
+                    <span>{name}</span>
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      onClick={() => handleRemoveChild(index)}
+                    >
+                      Sil
+                    </Button>
+                  </div>
+                ))
+              ) : (
+                <div className="text-sm text-gray-500 text-center p-2">
+                  Henüz çocuk eklenmemiş
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        ) : (
+          <p className="p-2 border rounded-md bg-gray-50">
+            {formData.children_names && formData.children_names.length > 0 ? formData.children_names.join(", ") : "Belirtilmemiş"}
+          </p>
+        )}
+      </div>
     </div>
   );
 }
