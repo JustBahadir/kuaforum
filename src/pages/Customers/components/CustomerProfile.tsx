@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,13 +26,12 @@ export function CustomerProfile({ customer }: CustomerProfileProps) {
   const [newChildName, setNewChildName] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Function to determine zodiac sign based on birthdate
   const getZodiacSign = (date: string): { sign: string, description: string } => {
     if (!date) return { sign: "Belirtilmemiş", description: "Doğum tarihi belirtilmediği için burç bilgisi hesaplanamıyor." };
     
     const birthDate = new Date(date);
     const day = birthDate.getDate();
-    const month = birthDate.getMonth() + 1; // getMonth is 0-indexed
+    const month = birthDate.getMonth() + 1;
     
     if ((month === 3 && day >= 21) || (month === 4 && day <= 19)) {
       return { 
@@ -98,11 +96,9 @@ export function CustomerProfile({ customer }: CustomerProfileProps) {
     }
   };
 
-  // Get zodiac information based on customer birthdate
   const zodiacInfo = formData.birthdate ? getZodiacSign(formData.birthdate) : null;
 
   useEffect(() => {
-    // Initialize form data from customer data
     setFormData({
       firstName: customer.first_name || "",
       lastName: customer.last_name || "",
@@ -130,7 +126,6 @@ export function CustomerProfile({ customer }: CustomerProfileProps) {
 
       await musteriServisi.guncelle(customer.id, updatePayload);
 
-      // Update customer personal data with zodiac info and family details
       const personalData = {
         customer_id: customer.id,
         spouse_name: formData.spouseName || null,
@@ -288,7 +283,6 @@ export function CustomerProfile({ customer }: CustomerProfileProps) {
           </div>
         </div>
 
-        {/* Aile Bilgileri */}
         <div className="pt-4">
           <h4 className="font-medium text-md mb-2">Aile Bilgileri</h4>
         </div>
@@ -385,7 +379,6 @@ export function CustomerProfile({ customer }: CustomerProfileProps) {
           </div>
         </div>
 
-        {/* Burç Bilgisi */}
         {formData.birthdate && zodiacInfo && (
           <>
             <div className="pt-4">
