@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,10 +21,11 @@ interface CustomerDetailsProps {
 }
 
 export function CustomerDetails(props: any) {
-  const [activeTab, setActiveTab] = useState("basic");
+  const [activeTab, setActiveTab] = useState<string>("basic");
   const params = useParams<{ id: string }>();
   const navigate = useNavigate();
 
+  // customerId türü string olabilir, parse edelim
   const customerId = props.customerId !== undefined ? props.customerId : params.id ? parseInt(params.id) : undefined;
 
   const { 
@@ -51,10 +53,11 @@ export function CustomerDetails(props: any) {
     enabled: !!customerId
   });
 
-  const customerWithPersonalData = customer && personalData ? {
+  // Combine customer with personalData, personalData might be null
+  const customerWithPersonalData = customer ? {
     ...customer,
-    ...personalData
-  } : customer;
+    ...(personalData || {})
+  } : undefined;
 
   const { data: services = [] } = useQuery({
     queryKey: ['islemler'],
@@ -66,29 +69,30 @@ export function CustomerDetails(props: any) {
   const [isEditing, setIsEditing] = useState(false);
   
   const [formData, setFormData] = useState({
-    firstName: customer?.first_name || "",
-    lastName: customer?.last_name || "",
-    phone: customer?.phone || "",
-    birthdate: customer?.birthdate ? new Date(customer.birthdate).toISOString().split('T')[0] : "",
-    spouseName: (customerWithPersonalData as any)?.spouse_name || "",
-    spouseBirthdate: (customerWithPersonalData as any)?.spouse_birthdate ? new Date((customerWithPersonalData as any).spouse_birthdate).toISOString().split('T')[0] : "",
-    anniversaryDate: (customerWithPersonalData as any)?.anniversary_date ? new Date((customerWithPersonalData as any).anniversary_date).toISOString().split('T')[0] : "",
-    childrenNames: (customerWithPersonalData as any)?.children_names || []
+    firstName: customerWithPersonalData?.first_name || "",
+    lastName: customerWithPersonalData?.last_name || "",
+    phone: customerWithPersonalData?.phone || "",
+    birthdate: customerWithPersonalData?.birthdate ? new Date(customerWithPersonalData.birthdate).toISOString().split('T')[0] : "",
+    spouseName: customerWithPersonalData?.spouse_name || "",
+    spouseBirthdate: customerWithPersonalData?.spouse_birthdate ? new Date(customerWithPersonalData.spouse_birthdate).toISOString().split('T')[0] : "",
+    anniversaryDate: customerWithPersonalData?.anniversary_date ? new Date(customerWithPersonalData.anniversary_date).toISOString().split('T')[0] : "",
+    childrenNames: customerWithPersonalData?.children_names || []
   });
 
   useEffect(() => {
     setFormData({
-      firstName: customer?.first_name || "",
-      lastName: customer?.last_name || "",
-      phone: customer?.phone || "",
-      birthdate: customer?.birthdate ? new Date(customer.birthdate).toISOString().split('T')[0] : "",
-      spouseName: (customerWithPersonalData as any)?.spouse_name || "",
-      spouseBirthdate: (customerWithPersonalData as any)?.spouse_birthdate ? new Date((customerWithPersonalData as any).spouse_birthdate).toISOString().split('T')[0] : "",
-      anniversaryDate: (customerWithPersonalData as any)?.anniversary_date ? new Date((customerWithPersonalData as any).anniversary_date).toISOString().split('T')[0] : "",
-      childrenNames: (customerWithPersonalData as any)?.children_names || []
+      firstName: customerWithPersonalData?.first_name || "",
+      lastName: customerWithPersonalData?.last_name || "",
+      phone: customerWithPersonalData?.phone || "",
+      birthdate: customerWithPersonalData?.birthdate ? new Date(customerWithPersonalData.birthdate).toISOString().split('T')[0] : "",
+      spouseName: customerWithPersonalData?.spouse_name || "",
+      spouseBirthdate: customerWithPersonalData?.spouse_birthdate ? new Date(customerWithPersonalData.spouse_birthdate).toISOString().split('T')[0] : "",
+      anniversaryDate: customerWithPersonalData?.anniversary_date ? new Date(customerWithPersonalData.anniversary_date).toISOString().split('T')[0] : "",
+      childrenNames: customerWithPersonalData?.children_names || []
     });
-  }, [customer, customerWithPersonalData]);
+  }, [customerWithPersonalData]);
 
+  // Generic input change handler for text/date fields
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -98,12 +102,25 @@ export function CustomerDetails(props: any) {
     setFormData(prev => ({ ...prev, phone: value }));
   };
 
+  // Add child to childrenNames array
+  const handleAddChild = (childName: string) => {
+    if (childName.trim() === "") return;
+    setFormData(prev => ({
+      ...prev,
+      childrenNames: [...prev.childrenNames, childName.trim()]
+    }));
+  };
+
+  // Remove child by index or name - (optional for future)
+
+  // Save changes for customer and customerPersonalData
   const handleSave = async () => {
     try {
       setIsEditing(false);
 
       const phoneDigitsOnly = formData.phone.replace(/\D/g, '');
 
+      // Save basic customer data
       await musteriServisi.guncelle(customer!.id, {
         first_name: formData.firstName,
         last_name: formData.lastName,
@@ -111,17 +128,18 @@ export function CustomerDetails(props: any) {
         birthdate: formData.birthdate || null,
       });
 
-      const { customerPersonalDataService } = await import('@/lib/supabase/services/customerPersonalDataService');
+      // Save personal data - beware of data type compliance
       await customerPersonalDataService.updateCustomerPersonalData(customer!.id, {
-        customer_id: customer!.id,
+        customer_id: customer!.id.toString(),
         spouse_name: formData.spouseName || null,
         spouse_birthdate: formData.spouseBirthdate || null,
         anniversary_date: formData.anniversaryDate || null,
-        children_names: formData.childrenNames || [],
+        children_names: formData.childrenNames || []
       });
 
     } catch (error) {
       console.error("Müşteri güncelleme hatası:", error);
+      // Hata mesajını kullanıcıya göstermek için toast veya state ekleyebilirsiniz
     }
   };
 
@@ -139,7 +157,7 @@ export function CustomerDetails(props: any) {
     );
   }
 
-  if (customerError || !customer) {
+  if (customerError || !customerWithPersonalData) {
     return (
       <div className="p-4 md:p-6 border border-gray-200 rounded-md bg-gray-50">
         <h3 className="text-lg font-medium text-gray-900">Müşteri Bulunamadı</h3>
@@ -148,14 +166,14 @@ export function CustomerDetails(props: any) {
     );
   }
 
-  const customerName = `${String(customer.first_name || '')} ${String(customer.last_name || '')}`.trim();
+  const customerName = `${String(formData.firstName || '')} ${String(formData.lastName || '')}`.trim();
 
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-xl md:text-2xl font-bold">{customerName || 'İsimsiz Müşteri'}</h2>
-          <p className="text-sm text-gray-500">Müşteri #: {customer.id}</p>
+          <p className="text-sm text-gray-500">Müşteri #: {customerId}</p>
         </div>
 
         <div className="flex gap-2">
@@ -195,6 +213,7 @@ export function CustomerDetails(props: any) {
                         value={formData.firstName}
                         onChange={handleInputChange}
                         placeholder="Ad"
+                        autoComplete="given-name"
                       />
                       <input
                         type="text"
@@ -203,6 +222,7 @@ export function CustomerDetails(props: any) {
                         value={formData.lastName}
                         onChange={handleInputChange}
                         placeholder="Soyad"
+                        autoComplete="family-name"
                       />
                     </div>
                   </div>
@@ -228,6 +248,7 @@ export function CustomerDetails(props: any) {
                         className="border rounded p-2 w-full"
                         value={formData.birthdate}
                         onChange={handleInputChange}
+                        autoComplete="bday"
                       />
                     </div>
                   </div>
@@ -235,7 +256,7 @@ export function CustomerDetails(props: any) {
                   <div className="grid grid-cols-3 items-center border-b py-2">
                     <div className="font-medium">Kayıt Tarihi</div>
                     <div className="col-span-2">
-                      {new Date(customer.created_at).toLocaleDateString('tr-TR')}
+                      {new Date(customerWithPersonalData.created_at).toLocaleDateString('tr-TR')}
                     </div>
                   </div>
 
@@ -249,10 +270,11 @@ export function CustomerDetails(props: any) {
                       <input
                         type="text"
                         name="spouseName"
-                        className="border rounded p-2 w-full"
+                        className="border rounded p-2 w-full bg-white text-black"
                         value={formData.spouseName}
                         onChange={handleInputChange}
                         placeholder="Eş adı"
+                        autoComplete="off"
                       />
                     </div>
                   </div>
@@ -266,6 +288,7 @@ export function CustomerDetails(props: any) {
                         className="border rounded p-2 w-full"
                         value={formData.spouseBirthdate}
                         onChange={handleInputChange}
+                        autoComplete="off"
                       />
                     </div>
                   </div>
@@ -279,16 +302,48 @@ export function CustomerDetails(props: any) {
                         className="border rounded p-2 w-full"
                         value={formData.anniversaryDate}
                         onChange={handleInputChange}
+                        autoComplete="off"
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-3 items-start border-b py-2">
                     <div className="font-medium pt-2">Çocuklar</div>
-                    <div className="col-span-2">
-                      {formData.childrenNames && formData.childrenNames.length > 0 
-                        ? formData.childrenNames.join(", ") 
-                        : "Belirtilmemiş"}
+                    <div className="col-span-2 space-y-2">
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          id="addChildInput"
+                          className="border rounded p-2 w-full"
+                          placeholder="Çocuk adı"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              const input = e.currentTarget as HTMLInputElement;
+                              if (input.value.trim() !== "") {
+                                handleAddChild(input.value);
+                                input.value = "";
+                              }
+                            }
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className="btn btn-primary px-4 py-2 rounded"
+                          onClick={() => {
+                            const input = document.getElementById("addChildInput") as HTMLInputElement | null;
+                            if (input && input.value.trim() !== "") {
+                              handleAddChild(input.value);
+                              input.value = "";
+                            }
+                          }}
+                        >
+                          Ekle
+                        </button>
+                      </div>
+                      <p className="text-sm text-gray-600">
+                        {formData.childrenNames.length > 0 ? formData.childrenNames.join(", ") : "Henüz çocuk eklenmemiş"}
+                      </p>
                     </div>
                   </div>
 
@@ -310,7 +365,7 @@ export function CustomerDetails(props: any) {
               <CardTitle>Detaylı Bilgiler</CardTitle>
             </CardHeader>
             <CardContent>
-              {customerId && <CustomerPersonalData customerId={customerId} />}
+              {customerId && <CustomerPersonalData customerId={customerId} isEditing={isEditing} setIsEditing={setIsEditing} />}
             </CardContent>
           </Card>
         </TabsContent>
