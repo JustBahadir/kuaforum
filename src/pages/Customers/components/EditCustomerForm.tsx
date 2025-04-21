@@ -64,20 +64,24 @@ export function EditCustomerForm({
       // If dukkanId is not passed, use the customer's existing dukkanId
       const shopId = dukkanId || customer.dukkan_id;
 
-      await musteriServisi.guncelle(customer.id, {
+      const updatePayload = {
         first_name: firstName,
         last_name: lastName || null,
         phone: phone || null,
         birthdate: birthdate || null,
         dukkan_id: shopId,
-      });
-      
-      toast.success("Müşteri bilgileri güncellendi");
+      };
+
+      console.log("Güncelleme verisi:", updatePayload);
+
+      await musteriServisi.guncelle(customer.id, updatePayload);
+
+      toast.success("Müşteri bilgileri başarıyla güncellendi");
       onSuccess();
       onOpenChange(false);
-    } catch (error) {
-      console.error("Müşteri güncellenirken hata:", error);
-      toast.error("Müşteri bilgileri güncellenemedi");
+    } catch (error: any) {
+      console.error("Müşteri güncellenirken hata:", JSON.stringify(error, null, 2));
+      toast.error("Müşteri bilgileri güncellenemedi: " + (error.message || "Bilinmeyen hata"));
     } finally {
       setLoading(false);
     }

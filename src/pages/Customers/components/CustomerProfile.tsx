@@ -118,37 +118,37 @@ export function CustomerProfile({ customer }: CustomerProfileProps) {
   const handleSave = async () => {
     try {
       setLoading(true);
-      
-      // Update basic customer info
-      await musteriServisi.guncelle(customer.id, {
+
+      const updatePayload = {
         first_name: formData.firstName,
         last_name: formData.lastName,
         phone: formData.phone,
-        birthdate: formData.birthdate || null
-      });
+        birthdate: formData.birthdate || null,
+      };
 
-      // Update customer personal data
-      if (customer.id) {
-        const personalData = {
-          customer_id: customer.id,
-          spouse_name: formData.spouseName || null,
-          spouse_birthdate: formData.spouseBirthdate || null,
-          anniversary_date: formData.anniversaryDate || null,
-          children_names: formData.childrenNames || [],
-          horoscope: zodiacInfo?.sign || null,
-          horoscope_description: zodiacInfo?.description || null
-          // Removed unwanted properties like hair_types here
-        };
-        
-        const { customerPersonalDataService } = await import('@/lib/supabase/services/customerPersonalDataService');
-        await customerPersonalDataService.updateCustomerPersonalData(customer.id, personalData);
-      }
-      
-      toast.success("Müşteri bilgileri güncellendi");
+      console.log("Müşteri güncelleme verisi:", updatePayload);
+
+      await musteriServisi.guncelle(customer.id, updatePayload);
+
+      // Update customer personal data with zodiac info and family details
+      const personalData = {
+        customer_id: customer.id,
+        spouse_name: formData.spouseName || null,
+        spouse_birthdate: formData.spouseBirthdate || null,
+        anniversary_date: formData.anniversaryDate || null,
+        children_names: formData.childrenNames || [],
+        horoscope: zodiacInfo?.sign || null,
+        horoscope_description: zodiacInfo?.description || null,
+      };
+
+      const { customerPersonalDataService } = await import('@/lib/supabase/services/customerPersonalDataService');
+      await customerPersonalDataService.updateCustomerPersonalData(customer.id, personalData);
+
+      toast.success("Müşteri bilgileri başarıyla güncellendi");
       setIsEditing(false);
-    } catch (error) {
-      console.error("Müşteri güncelleme hatası:", error);
-      toast.error("Müşteri bilgileri güncellenemedi");
+    } catch (error: any) {
+      console.error("Müşteri güncelleme hatası:", JSON.stringify(error, null, 2));
+      toast.error("Müşteri bilgileri güncellenemedi: " + (error.message || "Bilinmeyen hata"));
     } finally {
       setLoading(false);
     }
