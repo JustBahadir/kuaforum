@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,7 +24,6 @@ export function CustomerDetails(props: any) {
   const params = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  // customerId türü string olabilir, parse edelim
   const customerId = props.customerId !== undefined ? props.customerId : params.id ? parseInt(params.id) : undefined;
 
   const { 
@@ -53,7 +51,6 @@ export function CustomerDetails(props: any) {
     enabled: !!customerId
   });
 
-  // Combine customer with personalData, personalData might be null
   const customerWithPersonalData = customer ? {
     ...customer,
     ...(personalData || {})
@@ -66,8 +63,6 @@ export function CustomerDetails(props: any) {
 
   const isPointSystemEnabled = services.some((service: any) => service.puan > 0);
 
-  const [isEditing, setIsEditing] = useState(false);
-  
   const [formData, setFormData] = useState({
     firstName: customerWithPersonalData?.first_name || "",
     lastName: customerWithPersonalData?.last_name || "",
@@ -92,7 +87,6 @@ export function CustomerDetails(props: any) {
     });
   }, [customerWithPersonalData]);
 
-  // Generic input change handler for text/date fields
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -102,7 +96,6 @@ export function CustomerDetails(props: any) {
     setFormData(prev => ({ ...prev, phone: value }));
   };
 
-  // Add child to childrenNames array
   const handleAddChild = (childName: string) => {
     if (childName.trim() === "") return;
     setFormData(prev => ({
@@ -111,16 +104,12 @@ export function CustomerDetails(props: any) {
     }));
   };
 
-  // Remove child by index or name - (optional for future)
-
-  // Save changes for customer and customerPersonalData
   const handleSave = async () => {
     try {
       setIsEditing(false);
 
       const phoneDigitsOnly = formData.phone.replace(/\D/g, '');
 
-      // Save basic customer data
       await musteriServisi.guncelle(customer!.id, {
         first_name: formData.firstName,
         last_name: formData.lastName,
@@ -128,7 +117,6 @@ export function CustomerDetails(props: any) {
         birthdate: formData.birthdate || null,
       });
 
-      // Save personal data - beware of data type compliance
       await customerPersonalDataService.updateCustomerPersonalData(customer!.id, {
         customer_id: customer!.id.toString(),
         spouse_name: formData.spouseName || null,
@@ -139,7 +127,6 @@ export function CustomerDetails(props: any) {
 
     } catch (error) {
       console.error("Müşteri güncelleme hatası:", error);
-      // Hata mesajını kullanıcıya göstermek için toast veya state ekleyebilirsiniz
     }
   };
 
@@ -190,9 +177,7 @@ export function CustomerDetails(props: any) {
           <TabsTrigger value="detailed">Detaylı Bilgiler</TabsTrigger>
           <TabsTrigger value="operations">İşlem Geçmişi</TabsTrigger>
           <TabsTrigger value="photos">Fotoğraflar</TabsTrigger>
-          {isPointSystemEnabled && (
-            <TabsTrigger value="loyalty">Sadakat & Puanlar</TabsTrigger>
-          )}
+          {isPointSystemEnabled && <TabsTrigger value="loyalty">Sadakat & Puanlar</TabsTrigger>}
         </TabsList>
         
         <TabsContent value="basic">
@@ -365,7 +350,7 @@ export function CustomerDetails(props: any) {
               <CardTitle>Detaylı Bilgiler</CardTitle>
             </CardHeader>
             <CardContent>
-              {customerId && <CustomerPersonalData customerId={customerId} isEditing={isEditing} setIsEditing={setIsEditing} />}
+              {customerId && <CustomerPersonalData customerId={customerId} />}
             </CardContent>
           </Card>
         </TabsContent>
