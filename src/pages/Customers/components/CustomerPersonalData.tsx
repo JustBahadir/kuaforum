@@ -93,6 +93,7 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
       }
 
       // Remove unrelated properties and ensure children_names is array
+      // The following properties are not in CustomerPersonalData interface, so remove them before update
       const { bleach_tolerance, root_dye_frequency, straightener_preference, curling_preference, heat_sensitive_hair, heat_notes, ...cleanData } = data as any;
       cleanData.children_names = Array.isArray(cleanData.children_names) ? cleanData.children_names : [];
 
@@ -555,3 +556,4 @@ export function CustomerPersonalData({ customerId }: CustomerPersonalDataProps) 
     </div>
   );
 }
+
