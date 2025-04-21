@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,6 +22,8 @@ interface CustomerDetailsProps {
 
 export function CustomerDetails(props: any) {
   const [activeTab, setActiveTab] = useState<string>("basic");
+  const [isEditing, setIsEditing] = useState(false);
+
   const params = useParams<{ id: string }>();
   const navigate = useNavigate();
 
@@ -38,7 +41,7 @@ export function CustomerDetails(props: any) {
     },
     enabled: !!customerId,
   });
-  
+
   const {
     data: personalData,
     isLoading: isLoadingPersonalData
@@ -350,7 +353,7 @@ export function CustomerDetails(props: any) {
               <CardTitle>Detaylı Bilgiler</CardTitle>
             </CardHeader>
             <CardContent>
-              {customerId && <CustomerPersonalData customerId={customerId} />}
+              {customerId && <CustomerPersonalData customerId={customerId} isEditing={isEditing} setIsEditing={setIsEditing} />}
             </CardContent>
           </Card>
         </TabsContent>
