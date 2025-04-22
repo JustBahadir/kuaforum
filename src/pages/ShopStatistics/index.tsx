@@ -60,7 +60,7 @@ export default function ShopStatistics() {
     from: new Date(new Date().setDate(new Date().getDate() - 30)),
     to: new Date(),
   });
-  const [activeReportTab, setActiveReportTab] = useState("category");
+  const [activeTab, setActiveTab] = useState("category");
 
   const [monthCycleDay, setMonthCycleDay] = useState(1);
   const [useMonthCycle, setUseMonthCycle] = useState(false);
@@ -440,35 +440,39 @@ export default function ShopStatistics() {
         </div>
 
         {/* Rapor Tabs */}
-        <Tabs value={activeReportTab} onValueChange={setActiveReportTab} className="mb-8">
-          <TabsList className="w-full justify-start mb-6 bg-background border">
-            <TabsTrigger value="category" className="flex-1 max-w-[200px]">Kategori Raporu</TabsTrigger>
-            <TabsTrigger value="service" className="flex-1 max-w-[200px]">Hizmet Raporu</TabsTrigger>
+        <Tabs defaultValue="category" value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="w-full border-b mb-8">
+            <TabsTrigger value="category" className="text-lg py-3 px-6">Kategori Raporu</TabsTrigger>
+            <TabsTrigger value="service" className="text-lg py-3 px-6">Hizmet Raporu</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="category" className="space-y-8">
-            <CategoryDistributionChart data={categoryData} isLoading={isLoading} />
-            <RevenueSourceChart data={serviceData} isLoading={isLoading} />
+          <TabsContent value="category">
+            <div className="space-y-8">
+              <CategoryDistributionChart data={categoryData} isLoading={isLoading} />
+              <RevenueSourceChart data={serviceData} isLoading={isLoading} />
+            </div>
           </TabsContent>
           
-          <TabsContent value="service" className="space-y-8">
-            <ServiceDistributionChart 
-              data={serviceData.map(item => ({
-                name: item.name,
-                ciro: item.revenue,
-                islemSayisi: item.count
-              }))} 
-              isLoading={isLoading} 
-              title="Hizmet Performansı"
-            />
-            <OperationDistributionChart 
-              data={serviceData.map(item => ({
-                name: item.name,
-                count: item.count,
-                revenue: item.revenue
-              }))} 
-              isLoading={isLoading}
-            />
+          <TabsContent value="service">
+            <div className="space-y-8">
+              <ServiceDistributionChart 
+                data={serviceData.map(item => ({
+                  name: item.name,
+                  ciro: item.revenue,
+                  islemSayisi: item.count
+                }))} 
+                isLoading={isLoading} 
+                title="Hizmet Performansı"
+              />
+              <OperationDistributionChart 
+                data={serviceData.map(item => ({
+                  name: item.name,
+                  count: item.count,
+                  revenue: item.revenue
+                }))} 
+                isLoading={isLoading}
+              />
+            </div>
           </TabsContent>
         </Tabs>
       </div>
