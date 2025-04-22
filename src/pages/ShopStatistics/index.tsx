@@ -1,11 +1,13 @@
 
+// Fixed type errors and aligned UI with your requested 5-part structure per tab ("kategori", "hizmet").
+// Removed invalid props and ensured data matches expected interface types exactly.
+
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
@@ -16,8 +18,6 @@ import { personelIslemleriServisi, personelServisi, islemServisi, kategoriServis
 import { CategoryDistributionChart } from "./components/CategoryDistributionChart";
 import { RevenueSourceChart } from "./components/RevenueSourceChart";
 import { ServiceDistributionChart } from "./components/ServiceDistributionChart";
-// Import OperationDistributionChart only if needed
-// import { OperationDistributionChart } from "./components/OperationDistributionChart";
 
 import { AnalystBox } from "@/components/analyst/AnalystBox";
 
@@ -165,7 +165,7 @@ export default function ShopStatistics() {
 
   // Build performance chart data: combined column (revenue) and line (operation count)
   // For performance chart, will use data grouped by service for hizmet, and by category for kategori
-  const performanceChartData = (() => {
+  const performanceChartData: (CategoryDataItem | ServiceDataItem)[] = (() => {
     if (!operations.length) return [];
 
     if (activeTab === "kategori") {
@@ -174,14 +174,14 @@ export default function ShopStatistics() {
         return {
           name: item.name,
           revenue: item.value,
-          operations: item.count,
+          count: item.count,
         };
       });
     } else {
       return serviceData.map((item) => ({
         name: item.name,
         revenue: item.revenue,
-        operations: item.count,
+        count: item.count,
       }));
     }
   })();
@@ -340,6 +340,7 @@ export default function ShopStatistics() {
       <div className="container mx-auto py-6 px-4">
         <h1 className="text-2xl font-bold mb-6">İşletme İstatistikleri</h1>
 
+        {/* Tabs to switch between categories and services */}
         <Tabs value={activeTab} onValueChange={onTabChange} className="border rounded-md">
           <TabsList className="bg-muted flex justify-center">
             <TabsTrigger
@@ -360,14 +361,14 @@ export default function ShopStatistics() {
             </TabsTrigger>
           </TabsList>
 
-          {/* Akıllı Analiz always visible above each */}
+          {/* AI Insights box on top for both tabs */}
           <div className="my-6">
             <AnalystBox
               title="Akıllı Analiz"
               insights={insights}
               isLoading={isInsightsLoading}
               onRefresh={() => {
-                // refresh by re-setting date range
+                // refresh by re-setting date range - just simulate reload
                 setIsInsightsLoading(true);
                 setTimeout(() => setIsInsightsLoading(false), 600);
               }}
@@ -376,9 +377,9 @@ export default function ShopStatistics() {
             />
           </div>
 
-          {/* Tabs content */}
+          {/* Kategori Tab content */}
           <TabsContent value="kategori" className="p-0">
-            {/* Tarih satırı */}
+            {/* Date range picker row */}
             <div className="mb-6">
               <DateRangePicker
                 from={dateRange.from}
@@ -387,7 +388,7 @@ export default function ShopStatistics() {
               />
             </div>
 
-            {/* Performans Grafiği (bar + line) */}
+            {/* Performance Chart (bar + line) */}
             <Card className="mb-6">
               <CardHeader>
                 <CardTitle>Performans Grafiği</CardTitle>
@@ -406,22 +407,23 @@ export default function ShopStatistics() {
               </CardContent>
             </Card>
 
-            {/* Pie Chart and Legend */}
+            {/* Pie Chart and Legend side by side */}
             <Card className="mb-6 flex flex-col md:flex-row gap-4 p-4">
               <div className="w-full md:w-1/2 h-72">
                 <CategoryDistributionChart
                   data={categoryData}
                   isLoading={isLoading}
-                  showLegend={false}
                 />
               </div>
-              <div className="w-full md:w-1/2 overflow-auto max-h-72">
-                <ul className="divide-y border rounded-md overflow-auto max-h-72 cursor-default">
+              <div className="w-full md:w-1/2 overflow-auto max-h-72 cursor-default">
+                <ul className="divide-y border rounded-md overflow-auto max-h-72">
                   {categoryData.map((item, index) => (
                     <li
                       key={item.name}
                       className="flex items-center gap-4 px-4 py-2 hover:bg-muted"
-                      title={`İşlem Sayısı: ${item.count}, Ciro: ${formatCurrency(item.value)}, Yüzde: ${item.percentage?.toFixed(2)}%`}
+                      title={`İşlem Sayısı: ${item.count}, Ciro: ${formatCurrency(
+                        item.value
+                      )}, Yüzde: ${item.percentage?.toFixed(2)}%`}
                     >
                       <span
                         className="inline-block w-4 h-4 rounded"
@@ -445,7 +447,7 @@ export default function ShopStatistics() {
               </div>
             </Card>
 
-            {/* Tablo */}
+            {/* Table */}
             <Card className="overflow-auto">
               <CardHeader>
                 <CardTitle>Kategori Detayları</CardTitle>
@@ -489,8 +491,9 @@ export default function ShopStatistics() {
             </Card>
           </TabsContent>
 
+          {/* Hizmet Tab content */}
           <TabsContent value="hizmet" className="p-0">
-            {/* Tarih satırı */}
+            {/* Date range picker row */}
             <div className="mb-6">
               <DateRangePicker
                 from={dateRange.from}
@@ -499,7 +502,7 @@ export default function ShopStatistics() {
               />
             </div>
 
-            {/* Performans Grafiği (bar + line) */}
+            {/* Performance Chart (bar + line) */}
             <Card className="mb-6">
               <CardHeader>
                 <CardTitle>Performans Grafiği</CardTitle>
@@ -518,18 +521,20 @@ export default function ShopStatistics() {
               </CardContent>
             </Card>
 
-            {/* Pie Chart and Legend */}
+            {/* Pie Chart and Legend side by side */}
             <Card className="mb-6 flex flex-col md:flex-row gap-4 p-4">
               <div className="w-full md:w-1/2 h-72">
-                <ServiceDistributionChart data={serviceData} isLoading={isLoading} showLegend={false} />
+                <ServiceDistributionChart data={serviceData} isLoading={isLoading} />
               </div>
-              <div className="w-full md:w-1/2 overflow-auto max-h-72">
-                <ul className="divide-y border rounded-md overflow-auto max-h-72 cursor-default">
+              <div className="w-full md:w-1/2 overflow-auto max-h-72 cursor-default">
+                <ul className="divide-y border rounded-md overflow-auto max-h-72">
                   {serviceData.map((item, index) => (
                     <li
                       key={item.name}
                       className="flex items-center gap-4 px-4 py-2 hover:bg-muted"
-                      title={`İşlem Sayısı: ${item.count}, Ciro: ${formatCurrency(item.revenue)}, Yüzde: ${item.percentage?.toFixed(2)}%`}
+                      title={`İşlem Sayısı: ${item.count}, Ciro: ${formatCurrency(
+                        item.revenue
+                      )}, Yüzde: ${item.percentage?.toFixed(2)}%`}
                     >
                       <span
                         className="inline-block w-4 h-4 rounded"
@@ -553,7 +558,7 @@ export default function ShopStatistics() {
               </div>
             </Card>
 
-            {/* Tablo */}
+            {/* Table */}
             <Card className="overflow-auto">
               <CardHeader>
                 <CardTitle>Hizmet Detayları</CardTitle>
@@ -601,3 +606,4 @@ export default function ShopStatistics() {
     </StaffLayout>
   );
 }
+
