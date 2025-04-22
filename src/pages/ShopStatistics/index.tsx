@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -59,6 +60,7 @@ export default function ShopStatistics() {
     from: new Date(new Date().setDate(new Date().getDate() - 30)),
     to: new Date(),
   });
+  const [activeReportTab, setActiveReportTab] = useState("category");
 
   const [monthCycleDay, setMonthCycleDay] = useState(1);
   const [useMonthCycle, setUseMonthCycle] = useState(false);
@@ -338,7 +340,7 @@ export default function ShopStatistics() {
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
             Bu sayfaya erişim yetkiniz bulunmamaktadır. Yalnızca yöneticiler
-            dükkan istatistiklerini görüntüleyebilir.
+            işletme istatistiklerini görüntüleyebilir.
           </AlertDescription>
         </Alert>
       </StaffLayout>
@@ -437,28 +439,38 @@ export default function ShopStatistics() {
           </Card>
         </div>
 
-        <ServiceDistributionChart 
-          data={serviceData.map(item => ({
-            name: item.name,
-            ciro: item.revenue,
-            islemSayisi: item.count
-          }))} 
-          isLoading={isLoading} 
-          title="Hizmet Performansı"
-        />
-
-        <CategoryDistributionChart data={categoryData} isLoading={isLoading} />
-
-        <RevenueSourceChart data={serviceData} isLoading={isLoading} />
-
-        <OperationDistributionChart 
-          data={serviceData.map(item => ({
-            name: item.name,
-            count: item.count,
-            revenue: item.revenue
-          }))} 
-          isLoading={isLoading}
-        />
+        {/* Rapor Tabs */}
+        <Tabs value={activeReportTab} onValueChange={setActiveReportTab} className="mb-8">
+          <TabsList className="w-full justify-start mb-6 bg-background border">
+            <TabsTrigger value="category" className="flex-1 max-w-[200px]">Kategori Raporu</TabsTrigger>
+            <TabsTrigger value="service" className="flex-1 max-w-[200px]">Hizmet Raporu</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="category" className="space-y-8">
+            <CategoryDistributionChart data={categoryData} isLoading={isLoading} />
+            <RevenueSourceChart data={serviceData} isLoading={isLoading} />
+          </TabsContent>
+          
+          <TabsContent value="service" className="space-y-8">
+            <ServiceDistributionChart 
+              data={serviceData.map(item => ({
+                name: item.name,
+                ciro: item.revenue,
+                islemSayisi: item.count
+              }))} 
+              isLoading={isLoading} 
+              title="Hizmet Performansı"
+            />
+            <OperationDistributionChart 
+              data={serviceData.map(item => ({
+                name: item.name,
+                count: item.count,
+                revenue: item.revenue
+              }))} 
+              isLoading={isLoading}
+            />
+          </TabsContent>
+        </Tabs>
       </div>
     </StaffLayout>
   );
