@@ -160,7 +160,7 @@ export default function ShopStatistics() {
     return result;
   })[0];
 
-  const categoryData: CategoryData[] = useState(() => {
+  const categoryData = useState(() => {
     if (!operations.length) return [];
 
     const categoryMap = new Map<string, CategoryData>();

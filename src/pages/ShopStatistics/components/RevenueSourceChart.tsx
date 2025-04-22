@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
 import { formatCurrency } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 
 interface ServiceDataItem {
   name: string;
@@ -22,19 +23,49 @@ const COLORS = [
 ];
 
 export function RevenueSourceChart({ data, isLoading }: RevenueSourceChartProps) {
-  // Format number as percentage
-  const formatPercent = (value: number) => `${(value * 100).toFixed(1)}%`;
+  // Calculate totals
+  const totalRevenue = data.reduce((sum, item) => sum + item.revenue, 0);
+  const totalCount = data.reduce((sum, item) => sum + item.count, 0);
+
+  // Enhanced data with calculated percentages
+  const enhancedData = data.map(item => ({
+    ...item,
+    revenuePercent: totalRevenue > 0 ? (item.revenue / totalRevenue) * 100 : 0,
+    countPercent: totalCount > 0 ? (item.count / totalCount) * 100 : 0
+  }));
+
+  // Custom label formatter
+  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index }: any) => {
+    const RADIAN = Math.PI / 180;
+    const radius = outerRadius * 1.1;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+    if (percent < 0.05) return null; // Don't show labels for very small slices
+
+    return (
+      <text
+        x={x}
+        y={y}
+        fill="#333"
+        textAnchor={x > cx ? 'start' : 'end'}
+        dominantBaseline="central"
+        fontSize={12}
+      >
+        {`${(percent * 100).toFixed(1)}%`}
+      </text>
+    );
+  };
 
   // Custom tooltip component
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const item = payload[0].payload;
       return (
-        <div className="bg-white p-3 rounded-md shadow-md border border-gray-200">
-          <p className="font-bold">{item.name}</p>
-          <p className="text-sm">Tutar: {formatCurrency(item.revenue)}</p>
-          <p className="text-sm">İşlem Sayısı: {item.count}</p>
-          <p className="text-sm">Oran: {formatPercent(payload[0].percent)}</p>
+        <div className="bg-white p-4 rounded-md shadow-md border border-gray-200">
+          <p className="font-bold text-lg mb-2">{item.name}</p>
+          <p className="text-sm mb-1">Ciro: {formatCurrency(item.revenue)} ({item.revenuePercent.toFixed(1)}%)</p>
+          <p className="text-sm mb-1">İşlem Sayısı: {item.count} ({item.countPercent.toFixed(1)}%)</p>
         </div>
       );
     }
@@ -42,34 +73,35 @@ export function RevenueSourceChart({ data, isLoading }: RevenueSourceChartProps)
   };
 
   return (
-    <Card className="mb-6">
+    <Card className="mb-8">
       <CardHeader>
-        <CardTitle>İşlem Dağılımı</CardTitle>
+        <CardTitle>İşlem Dağılımı (Gelir Kaynakları)</CardTitle>
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="flex justify-center items-center h-[400px]">
+          <div className="flex justify-center items-center h-[500px]">
             <Loader2 className="h-8 w-8 text-primary animate-spin" />
           </div>
         ) : data.length === 0 ? (
-          <div className="flex justify-center items-center h-[400px]">
+          <div className="flex justify-center items-center h-[500px]">
             <p className="text-muted-foreground">Bu aralıkta veri bulunamadı</p>
           </div>
         ) : (
-          <div className="h-[400px]">
+          <div className="h-[500px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={data}
+                  data={enhancedData}
                   dataKey="revenue"
                   nameKey="name"
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  outerRadius={150}
+                  label={renderCustomizedLabel}
+                  outerRadius={180}
                   fill="#8884d8"
                 >
-                  {data.map((entry, index) => (
+                  {enhancedData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
@@ -78,7 +110,15 @@ export function RevenueSourceChart({ data, isLoading }: RevenueSourceChartProps)
                   layout="vertical" 
                   verticalAlign="middle" 
                   align="right"
-                  formatter={(value) => <span className="text-sm font-medium">{value}</span>}
+                  formatter={(value, entry: any, index) => (
+                    <span className="text-sm font-medium flex items-center">
+                      <span 
+                        className="inline-block w-3 h-3 mr-2 rounded-full" 
+                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                      />
+                      {value}
+                    </span>
+                  )}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -88,19 +128,20 @@ export function RevenueSourceChart({ data, isLoading }: RevenueSourceChartProps)
         {/* Data Table */}
         {!isLoading && data.length > 0 && (
           <div className="mt-6 overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="border-b">
-                  <th className="py-2 px-4 text-left">İşlem</th>
-                  <th className="py-2 px-4 text-right">İşlem Sayısı</th>
-                  <th className="py-2 px-4 text-right">Ciro</th>
-                  <th className="py-2 px-4 text-right">Oran</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.map((service, index) => (
-                  <tr key={index} className="border-b hover:bg-gray-50">
-                    <td className="py-2 px-4 text-left">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>İşlem</TableHead>
+                  <TableHead className="text-right">İşlem Sayısı</TableHead>
+                  <TableHead className="text-right">İşlem Yüzdesi (%)</TableHead>
+                  <TableHead className="text-right">Ciro</TableHead>
+                  <TableHead className="text-right">Ciro Yüzdesi (%)</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {enhancedData.map((service, index) => (
+                  <TableRow key={index}>
+                    <TableCell>
                       <div className="flex items-center">
                         <span 
                           className="inline-block w-3 h-3 mr-2 rounded-full" 
@@ -108,17 +149,15 @@ export function RevenueSourceChart({ data, isLoading }: RevenueSourceChartProps)
                         />
                         {service.name}
                       </div>
-                    </td>
-                    <td className="py-2 px-4 text-right">{service.count}</td>
-                    <td className="py-2 px-4 text-right">{formatCurrency(service.revenue)}</td>
-                    <td className="py-2 px-4 text-right">
-                      {service.percentage ? `${(service.percentage).toFixed(1)}%` : 
-                        formatPercent(service.revenue / data.reduce((sum, item) => sum + item.revenue, 0))}
-                    </td>
-                  </tr>
+                    </TableCell>
+                    <TableCell className="text-right">{service.count}</TableCell>
+                    <TableCell className="text-right">{service.countPercent.toFixed(1)}%</TableCell>
+                    <TableCell className="text-right">{formatCurrency(service.revenue)}</TableCell>
+                    <TableCell className="text-right">{service.revenuePercent.toFixed(1)}%</TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         )}
       </CardContent>
