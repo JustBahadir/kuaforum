@@ -22,22 +22,41 @@ const COLORS = [
 ];
 
 export function RevenueSourceChart({ data, isLoading }: RevenueSourceChartProps) {
+  // Format number as percentage
+  const formatPercent = (value: number) => `${(value * 100).toFixed(1)}%`;
+
+  // Custom tooltip component
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const item = payload[0].payload;
+      return (
+        <div className="bg-white p-3 rounded-md shadow-md border border-gray-200">
+          <p className="font-bold">{item.name}</p>
+          <p className="text-sm">Tutar: {formatCurrency(item.revenue)}</p>
+          <p className="text-sm">İşlem Sayısı: {item.count}</p>
+          <p className="text-sm">Oran: {formatPercent(payload[0].percent)}</p>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
-    <Card>
+    <Card className="mb-6">
       <CardHeader>
-        <CardTitle>Gelir Kaynakları</CardTitle>
+        <CardTitle>İşlem Dağılımı</CardTitle>
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="flex justify-center items-center h-[300px]">
+          <div className="flex justify-center items-center h-[400px]">
             <Loader2 className="h-8 w-8 text-primary animate-spin" />
           </div>
         ) : data.length === 0 ? (
-          <div className="flex justify-center items-center h-[300px]">
+          <div className="flex justify-center items-center h-[400px]">
             <p className="text-muted-foreground">Bu aralıkta veri bulunamadı</p>
           </div>
         ) : (
-          <div className="h-[300px]">
+          <div className="h-[400px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -47,17 +66,59 @@ export function RevenueSourceChart({ data, isLoading }: RevenueSourceChartProps)
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  outerRadius={100}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={150}
+                  fill="#8884d8"
                 >
                   {data.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                <Legend />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend 
+                  layout="vertical" 
+                  verticalAlign="middle" 
+                  align="right"
+                  formatter={(value) => <span className="text-sm font-medium">{value}</span>}
+                />
               </PieChart>
             </ResponsiveContainer>
+          </div>
+        )}
+
+        {/* Data Table */}
+        {!isLoading && data.length > 0 && (
+          <div className="mt-6 overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="border-b">
+                  <th className="py-2 px-4 text-left">İşlem</th>
+                  <th className="py-2 px-4 text-right">İşlem Sayısı</th>
+                  <th className="py-2 px-4 text-right">Ciro</th>
+                  <th className="py-2 px-4 text-right">Oran</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.map((service, index) => (
+                  <tr key={index} className="border-b hover:bg-gray-50">
+                    <td className="py-2 px-4 text-left">
+                      <div className="flex items-center">
+                        <span 
+                          className="inline-block w-3 h-3 mr-2 rounded-full" 
+                          style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                        />
+                        {service.name}
+                      </div>
+                    </td>
+                    <td className="py-2 px-4 text-right">{service.count}</td>
+                    <td className="py-2 px-4 text-right">{formatCurrency(service.revenue)}</td>
+                    <td className="py-2 px-4 text-right">
+                      {service.percentage ? `${(service.percentage).toFixed(1)}%` : 
+                        formatPercent(service.revenue / data.reduce((sum, item) => sum + item.revenue, 0))}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </CardContent>

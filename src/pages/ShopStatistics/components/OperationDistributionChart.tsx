@@ -22,7 +22,7 @@ export function OperationDistributionChart({ data, isLoading = false }: Operatio
         <CardHeader>
           <CardTitle className="text-lg">İşlem Dağılımı</CardTitle>
         </CardHeader>
-        <CardContent className="h-[300px] flex items-center justify-center">
+        <CardContent className="h-[400px] flex items-center justify-center">
           <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
         </CardContent>
       </Card>
@@ -35,7 +35,7 @@ export function OperationDistributionChart({ data, isLoading = false }: Operatio
         <CardHeader>
           <CardTitle className="text-lg">İşlem Dağılımı</CardTitle>
         </CardHeader>
-        <CardContent className="h-[300px] flex items-center justify-center">
+        <CardContent className="h-[400px] flex items-center justify-center">
           <div className="text-gray-500 text-center">
             <p>İşlem verisi bulunamadı</p>
             <p className="text-sm mt-2">Lütfen işlem kayıtlarınızı güncel tutun.</p>
@@ -62,12 +62,12 @@ export function OperationDistributionChart({ data, isLoading = false }: Operatio
   };
   
   return (
-    <Card>
+    <Card className="mb-6">
       <CardHeader>
         <CardTitle className="text-lg">İşlem Dağılımı</CardTitle>
       </CardHeader>
       <CardContent className="p-0">
-        <ScrollArea className="h-[300px] w-full">
+        <ScrollArea className="h-[400px] w-full">
           <div className={`${data.length > 5 ? 'min-w-[800px]' : 'w-full'} h-full p-4`}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
@@ -93,6 +93,28 @@ export function OperationDistributionChart({ data, isLoading = false }: Operatio
             </ResponsiveContainer>
           </div>
         </ScrollArea>
+
+        {/* Data Table */}
+        <div className="p-4 overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="border-b">
+                <th className="py-2 px-4 text-left">İşlem</th>
+                <th className="py-2 px-4 text-right">İşlem Sayısı</th>
+                <th className="py-2 px-4 text-right">Ciro</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.map((operation, index) => (
+                <tr key={index} className="border-b hover:bg-gray-50">
+                  <td className="py-2 px-4 text-left">{operation.name}</td>
+                  <td className="py-2 px-4 text-right">{operation.count}</td>
+                  <td className="py-2 px-4 text-right">{formatCurrency(operation.revenue)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </CardContent>
     </Card>
   );

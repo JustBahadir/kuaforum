@@ -2,7 +2,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Line, ComposedChart } from "recharts";
 import { formatCurrency } from "@/lib/utils";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 interface ChartDataItem {
   name: string;
@@ -27,33 +27,51 @@ export function ServiceDistributionChart({
         <CardHeader>
           <CardTitle className="text-lg">{title}</CardTitle>
         </CardHeader>
-        <CardContent className="h-[300px] flex items-center justify-center">
+        <CardContent className="h-[400px] flex items-center justify-center">
           <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
         </CardContent>
       </Card>
     );
   }
 
+  // Custom tooltip
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white p-3 border rounded-md shadow-md">
+          <p className="font-semibold">{payload[0].payload.name}</p>
+          <p className="text-sm">İşlem Sayısı: <span className="font-medium">{payload[0].payload.islemSayisi}</span></p>
+          <p className="text-sm">Ciro: <span className="font-medium text-green-600">
+            {formatCurrency(payload[0].payload.ciro)}</span>
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
-    <Card>
+    <Card className="mb-6">
       <CardHeader>
         <CardTitle className="text-lg">{title}</CardTitle>
       </CardHeader>
-      <CardContent className="p-0">
-        <ScrollArea className="h-[300px] w-full">
-          <div className="min-w-[800px] h-full p-4">
+      <CardContent className="h-[400px]">
+        <ScrollArea className="w-full h-full">
+          <div className="min-w-[600px] h-[350px]">
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart
                 data={data}
-                margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                barGap={0}
               >
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis 
-                  dataKey="name" 
-                  tick={{ fontSize: 12 }}
-                  height={40}
+                  dataKey="name"
+                  tick={{ fontSize: 11 }}
                   interval={0}
-                  tickLine={false}
+                  angle={-45}
+                  textAnchor="end"
+                  height={80}
                 />
                 <YAxis 
                   yAxisId="left"
@@ -62,29 +80,24 @@ export function ServiceDistributionChart({
                 />
                 <YAxis 
                   yAxisId="right"
-                  orientation="right"
+                  orientation="right" 
                   allowDecimals={false}
                 />
-                <Tooltip 
-                  formatter={(value: any, name: string) => {
-                    if (name === 'ciro') return [formatCurrency(value as number), 'Ciro'];
-                    if (name === 'islemSayisi') return [value, 'İşlem Sayısı'];
-                    return [value, name];
-                  }}
-                />
+                <Tooltip content={<CustomTooltip />} />
                 <Legend />
                 <Bar 
                   yAxisId="left"
-                  dataKey="ciro"
-                  name="Ciro (₺)"
+                  dataKey="ciro" 
+                  name="Ciro (₺)" 
                   fill="#8884d8" 
-                  barSize={30}
+                  barSize={30} 
+                  radius={[4, 4, 0, 0]}
                 />
-                <Line
+                <Line 
                   yAxisId="right"
-                  type="monotone"
-                  dataKey="islemSayisi"
-                  name="İşlem Sayısı"
+                  type="monotone" 
+                  dataKey="islemSayisi" 
+                  name="İşlem Sayısı" 
                   stroke="#82ca9d"
                   strokeWidth={2}
                   dot={{ r: 4 }}
@@ -92,7 +105,30 @@ export function ServiceDistributionChart({
               </ComposedChart>
             </ResponsiveContainer>
           </div>
+          <ScrollBar orientation="horizontal" />
         </ScrollArea>
+
+        {/* Data Table */}
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="border-b">
+                <th className="py-2 px-4 text-left">Hizmet</th>
+                <th className="py-2 px-4 text-right">İşlem Sayısı</th>
+                <th className="py-2 px-4 text-right">Ciro</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.map((service, index) => (
+                <tr key={index} className="border-b hover:bg-gray-50">
+                  <td className="py-2 px-4 text-left">{service.name}</td>
+                  <td className="py-2 px-4 text-right">{service.islemSayisi}</td>
+                  <td className="py-2 px-4 text-right">{formatCurrency(service.ciro)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </CardContent>
     </Card>
   );
