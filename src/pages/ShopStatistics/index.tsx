@@ -1,7 +1,4 @@
 
-// Fixed type errors and aligned UI with your requested 5-part structure per tab ("kategori", "hizmet").
-// Removed invalid props and ensured data matches expected interface types exactly.
-
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { StaffLayout } from "@/components/ui/staff-layout";
@@ -165,18 +162,19 @@ export default function ShopStatistics() {
 
   // Build performance chart data: combined column (revenue) and line (operation count)
   // For performance chart, will use data grouped by service for hizmet, and by category for kategori
-  const performanceChartData: (CategoryDataItem | ServiceDataItem)[] = (() => {
+  // Fix the type to have explicit shape with revenue and count for each item
+  type PerformanceChartDataItem = { name: string; revenue: number; count: number };
+
+  const performanceChartData: PerformanceChartDataItem[] = (() => {
     if (!operations.length) return [];
 
     if (activeTab === "kategori") {
       // category data with revenue and count
-      return categoryData.map((item) => {
-        return {
-          name: item.name,
-          revenue: item.value,
-          count: item.count,
-        };
-      });
+      return categoryData.map((item) => ({
+        name: item.name,
+        revenue: item.value,
+        count: item.count,
+      }));
     } else {
       return serviceData.map((item) => ({
         name: item.name,
@@ -185,6 +183,14 @@ export default function ShopStatistics() {
       }));
     }
   })();
+
+  // Map serviceData to the shape needed by ServiceDistributionChart component
+  // Component expects items with keys: name, ciro, islemSayisi
+  const serviceChartData = serviceData.map((item) => ({
+    name: item.name,
+    ciro: item.revenue,
+    islemSayisi: item.count,
+  }));
 
   // AI Insight Generation Logic (show 4 most informative insights)
   useEffect(() => {
@@ -524,17 +530,17 @@ export default function ShopStatistics() {
             {/* Pie Chart and Legend side by side */}
             <Card className="mb-6 flex flex-col md:flex-row gap-4 p-4">
               <div className="w-full md:w-1/2 h-72">
-                <ServiceDistributionChart data={serviceData} isLoading={isLoading} />
+                <ServiceDistributionChart data={serviceChartData} isLoading={isLoading} />
               </div>
               <div className="w-full md:w-1/2 overflow-auto max-h-72 cursor-default">
                 <ul className="divide-y border rounded-md overflow-auto max-h-72">
-                  {serviceData.map((item, index) => (
+                  {serviceChartData.map((item, index) => (
                     <li
                       key={item.name}
                       className="flex items-center gap-4 px-4 py-2 hover:bg-muted"
-                      title={`İşlem Sayısı: ${item.count}, Ciro: ${formatCurrency(
-                        item.revenue
-                      )}, Yüzde: ${item.percentage?.toFixed(2)}%`}
+                      title={`İşlem Sayısı: ${item.islemSayisi}, Ciro: ${formatCurrency(
+                        item.ciro
+                      )}, Yüzde: ${(item.ciro / serviceData.reduce((acc, cur) => acc + cur.revenue, 0) * 100).toFixed(2)}%`}
                     >
                       <span
                         className="inline-block w-4 h-4 rounded"
@@ -543,14 +549,14 @@ export default function ShopStatistics() {
                       <div className="flex flex-col text-sm">
                         <span className="font-semibold">{item.name}</span>
                         <span className="text-muted-foreground">
-                          %{item.percentage?.toFixed(2)}
+                          %{(item.ciro / serviceData.reduce((acc, cur) => acc + cur.revenue, 0) * 100).toFixed(2)}
                         </span>
                       </div>
                       <div className="ml-auto text-xs text-muted-foreground min-w-[80px] text-right">
-                        {item.count} işlem
+                        {item.islemSayisi} işlem
                       </div>
                       <div className="ml-4 text-xs font-mono text-muted-foreground min-w-[100px] text-right">
-                        {formatCurrency(item.revenue)}
+                        {formatCurrency(item.ciro)}
                       </div>
                     </li>
                   ))}
