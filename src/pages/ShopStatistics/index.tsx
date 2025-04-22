@@ -2,29 +2,23 @@
 import { useState, useEffect } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
-import { DailyView } from "./components/DailyView";
-import { WeeklyView } from "./components/WeeklyView";
-import { MonthlyView } from "./components/MonthlyView";
-import { YearlyView } from "./components/YearlyView";
-import { PersonnelPerformance } from "./components/PersonnelPerformance";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
-import { useQuery } from "@tanstack/react-query";
-import { format, addMonths, setDate } from "date-fns";
-import { personelIslemleriServisi, personelServisi, islemServisi, kategoriServisi } from "@/lib/supabase";
-import { formatCurrency } from "@/lib/utils";
-import { AnalystBox } from "@/components/analyst/AnalystBox";
+import { CustomMonthCycleSelector } from "@/components/ui/custom-month-cycle-selector";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
-import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
-import { CustomMonthCycleSelector } from "@/components/ui/custom-month-cycle-selector";
-import { RevenueSourceChart } from "./components/RevenueSourceChart";
+import { useCustomerAuth } from "@/hooks/useCustomerAuth";
+import { formatCurrency } from "@/lib/utils";
+import { personelIslemleriServisi, personelServisi, islemServisi, kategoriServisi } from "@/lib/supabase";
+
 import { CategoryDistributionChart } from "./components/CategoryDistributionChart";
+import { RevenueSourceChart } from "./components/RevenueSourceChart";
 import { ServiceDistributionChart } from "./components/ServiceDistributionChart";
 import { OperationDistributionChart } from "./components/OperationDistributionChart";
+
+import { AnalystBox } from "@/components/analyst/AnalystBox";
 
 interface ServiceDataItem {
   name: string;
@@ -40,66 +34,27 @@ interface CategoryData {
   percentage?: number;
 }
 
-const COLORS = [
-  "#8884d8",
-  "#82ca9d",
-  "#ffc658",
-  "#ff8042",
-  "#0088FE",
-  "#00C49F",
-  "#FFBB28",
-  "#FF8042",
-  "#a4de6c",
-  "#d0ed57",
-];
-
 export default function ShopStatistics() {
-  const { dukkanId, userRole } = useCustomerAuth();
-  const [activeView, setActiveView] = useState("monthly");
+  const { userRole } = useCustomerAuth();
+
+  const [activeTab, setActiveTab] = useState<"category" | "service">("category");
+
   const [dateRange, setDateRange] = useState({
     from: new Date(new Date().setDate(new Date().getDate() - 30)),
     to: new Date(),
   });
-  const [activeTab, setActiveTab] = useState("category");
 
   const [monthCycleDay, setMonthCycleDay] = useState(1);
   const [useMonthCycle, setUseMonthCycle] = useState(false);
+
   const [insights, setInsights] = useState<string[]>([]);
   const [isInsightsLoading, setIsInsightsLoading] = useState(true);
 
+  // Data fetching for personnel, operations, services, categories
   const { data: personnel = [], isLoading: personnelLoading } = useQuery({
     queryKey: ["personnel-stats"],
     queryFn: personelServisi.hepsiniGetir,
   });
-
-  const handleDateRangeChange = ({from, to}: {from: Date, to: Date}) => {
-    setDateRange({from, to});
-    setUseMonthCycle(false);
-  };
-
-  const handleMonthCycleChange = (day: number, date: Date) => {
-    setMonthCycleDay(day);
-    
-    const currentDate = new Date();
-    const selectedDay = day;
-    
-    let fromDate = new Date();
-    
-    fromDate.setDate(selectedDay);
-    if (currentDate.getDate() < selectedDay) {
-      fromDate.setMonth(fromDate.getMonth() - 1);
-    }
-    
-    const toDate = new Date(fromDate);
-    toDate.setMonth(toDate.getMonth() + 1);
-    
-    setDateRange({
-      from: fromDate,
-      to: toDate
-    });
-    
-    setUseMonthCycle(true);
-  };
 
   const { data: operations = [], isLoading: operationsLoading } = useQuery({
     queryKey: ["operations-stats", dateRange.from, dateRange.to],
@@ -128,7 +83,11 @@ export default function ShopStatistics() {
     queryFn: () => kategoriServisi.hepsiniGetir(),
   });
 
-  const serviceData = useState(() => {
+  const isLoading =
+    operationsLoading || servicesLoading || personnelLoading || categoriesLoading;
+
+  // Build service data summary
+  const serviceData = (() => {
     if (!operations.length) return [];
 
     const serviceMap = new Map<string, ServiceDataItem>();
@@ -136,33 +95,25 @@ export default function ShopStatistics() {
 
     operations.forEach((op) => {
       const serviceName = op.islem?.islem_adi || op.aciklama || "Diğer";
-
       if (!serviceMap.has(serviceName)) {
-        serviceMap.set(serviceName, {
-          name: serviceName,
-          count: 0,
-          revenue: 0,
-        });
+        serviceMap.set(serviceName, { name: serviceName, count: 0, revenue: 0 });
       }
-
       const entry = serviceMap.get(serviceName)!;
       entry.count += 1;
       entry.revenue += op.tutar || 0;
-
       totalRevenue += op.tutar || 0;
     });
 
-    const result = Array.from(serviceMap.values())
+    return Array.from(serviceMap.values())
       .sort((a, b) => b.revenue - a.revenue)
       .map((item) => ({
         ...item,
         percentage: totalRevenue > 0 ? (item.revenue / totalRevenue) * 100 : 0,
       }));
+  })();
 
-    return result;
-  })[0];
-
-  const categoryData = useState(() => {
+  // Build category data summary
+  const categoryData = (() => {
     if (!operations.length) return [];
 
     const categoryMap = new Map<string, CategoryData>();
@@ -170,33 +121,26 @@ export default function ShopStatistics() {
 
     operations.forEach((op) => {
       const categoryId = op.islem?.kategori_id;
-      const category = categories.find(c => c.id === categoryId);
+      const category = categories.find((c) => c.id === categoryId);
       const categoryName = category ? category.kategori_adi : "Diğer";
 
       if (!categoryMap.has(categoryName)) {
-        categoryMap.set(categoryName, {
-          name: categoryName,
-          value: 0,
-          count: 0,
-        });
+        categoryMap.set(categoryName, { name: categoryName, value: 0, count: 0 });
       }
-
       const entry = categoryMap.get(categoryName)!;
       entry.value += op.tutar || 0;
       entry.count += 1;
-
       totalRevenue += op.tutar || 0;
     });
 
-    const result = Array.from(categoryMap.values()).map((item) => ({
+    return Array.from(categoryMap.values()).map((item) => ({
       ...item,
       percentage: totalRevenue > 0 ? (item.value / totalRevenue) * 100 : 0,
     }));
+  })();
 
-    return result;
-  })[0];
-
-  const stats = useState(() => {
+  // Statistics for upper cards
+  const stats = (() => {
     if (!operations.length)
       return { totalRevenue: 0, totalOperations: 0, averageRevenue: 0 };
 
@@ -205,8 +149,9 @@ export default function ShopStatistics() {
     const averageRevenue = totalRevenue / totalOperations;
 
     return { totalRevenue, totalOperations, averageRevenue };
-  })[0];
+  })();
 
+  // Insight generation logic
   useEffect(() => {
     const generateInsights = () => {
       setIsInsightsLoading(true);
@@ -218,20 +163,18 @@ export default function ShopStatistics() {
           return;
         }
 
-        const insights = [];
+        const insightsArray: string[] = [];
 
         if (serviceData.length > 0) {
           const topService = serviceData[0];
-          insights.push(
-            `En çok kazandıran hizmet: ${formatCurrency(
-              topService.revenue
-            )} ile ${topService.name}.`
+          insightsArray.push(
+            `En çok kazandıran hizmet: ${formatCurrency(topService.revenue)} ile ${topService.name}.`
           );
         }
 
         const sortedByCount = [...serviceData].sort((a, b) => b.count - a.count);
         if (sortedByCount.length > 0) {
-          insights.push(
+          insightsArray.push(
             `En çok tercih edilen hizmet: ${sortedByCount[0].count} işlem ile ${sortedByCount[0].name}.`
           );
         }
@@ -247,10 +190,8 @@ export default function ShopStatistics() {
 
         if (dayMap.size > 0) {
           const entries = Array.from(dayMap.entries());
-          const busiestDay = entries.reduce((a, b) =>
-            a[1] > b[1] ? a : b
-          );
-          insights.push(`En yoğun gün: ${busiestDay[1]} işlem ile ${busiestDay[0]}.`);
+          const busiestDay = entries.reduce((a, b) => (a[1] > b[1] ? a : b));
+          insightsArray.push(`En yoğun gün: ${busiestDay[1]} işlem ile ${busiestDay[0]}.`);
         }
 
         const personnelMap = new Map<string, { count: number; revenue: number }>();
@@ -271,41 +212,30 @@ export default function ShopStatistics() {
 
         if (personnelMap.size > 0) {
           const entries = Array.from(personnelMap.entries());
-          const topByRevenue = entries.sort(
-            (a, b) => b[1].revenue - a[1].revenue
-          )[0];
-          const topByCount = entries.sort(
-            (a, b) => b[1].count - a[1].count
-          )[0];
+          const topByRevenue = entries.sort((a, b) => b[1].revenue - a[1].revenue)[0];
+          const topByCount = entries.sort((a, b) => b[1].count - a[1].count)[0];
 
           if (topByRevenue) {
-            insights.push(
-              `En çok ciro yapan: ${formatCurrency(
-                topByRevenue[1].revenue
-              )} ile ${topByRevenue[0]}.`
+            insightsArray.push(
+              `En çok ciro yapan: ${formatCurrency(topByRevenue[1].revenue)} ile ${topByRevenue[0]}.`
             );
           }
 
-          if (
-            topByCount &&
-            topByCount[0] !== topByRevenue[0] &&
-            insights.length < 4
-          ) {
-            insights.push(
+          if (topByCount && topByCount[0] !== topByRevenue[0] && insightsArray.length < 4) {
+            insightsArray.push(
               `En çok işlem yapan: ${topByCount[1].count} işlem ile ${topByCount[0]}.`
             );
           }
         }
 
-        if (sortedByCount.length > 2 && insights.length < 4) {
-          const leastPopular =
-            sortedByCount[sortedByCount.length - 1];
-          insights.push(
+        if (sortedByCount.length > 2 && insightsArray.length < 4) {
+          const leastPopular = sortedByCount[sortedByCount.length - 1];
+          insightsArray.push(
             `En az tercih edilen hizmet: ${leastPopular.count} işlem ile ${leastPopular.name}.`
           );
         }
 
-        setInsights(insights.slice(0, 4));
+        setInsights(insightsArray.slice(0, 4));
       } catch (error) {
         console.error("Error generating insights:", error);
         setInsights(["Veri analizi sırasında bir hata oluştu."]);
@@ -319,6 +249,27 @@ export default function ShopStatistics() {
     }
   }, [operations, serviceData, personnel, operationsLoading, servicesLoading, categoriesLoading]);
 
+  const handleDateRangeChange = ({ from, to }: { from: Date; to: Date }) => {
+    setDateRange({ from, to });
+    setUseMonthCycle(false);
+  };
+
+  const handleMonthCycleChange = (day: number) => {
+    setMonthCycleDay(day);
+
+    const currentDate = new Date();
+    let fromDate = new Date();
+    fromDate.setDate(day);
+    if (currentDate.getDate() < day) {
+      fromDate.setMonth(fromDate.getMonth() - 1);
+    }
+    const toDate = new Date(fromDate);
+    toDate.setMonth(toDate.getMonth() + 1);
+
+    setDateRange({ from: fromDate, to: toDate });
+    setUseMonthCycle(true);
+  };
+
   const handleRefreshInsights = () => {
     setIsInsightsLoading(true);
     setTimeout(() => {
@@ -329,18 +280,14 @@ export default function ShopStatistics() {
     }, 600);
   };
 
-  const isLoading =
-    operationsLoading || servicesLoading || personnelLoading || categoriesLoading;
-  const hasEnoughData = operations.length > 0;
-
   if (userRole !== "admin") {
     return (
       <StaffLayout>
         <Alert variant="destructive" className="mb-4">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Bu sayfaya erişim yetkiniz bulunmamaktadır. Yalnızca yöneticiler
-            işletme istatistiklerini görüntüleyebilir.
+            Bu sayfaya erişim yetkiniz bulunmamaktadır. Yalnızca yöneticiler işletme
+            istatistiklerini görüntüleyebilir.
           </AlertDescription>
         </Alert>
       </StaffLayout>
@@ -349,29 +296,28 @@ export default function ShopStatistics() {
 
   return (
     <StaffLayout>
-      <div className="container mx-auto py-6">
+      <div className="container mx-auto py-6 px-4">
         <h1 className="text-2xl font-bold mb-6">İşletme İstatistikleri</h1>
 
+        {/* Akıllı Analiz */}
         <AnalystBox
-          title=""
+          title="Akıllı Analiz"
           insights={insights}
           isLoading={isInsightsLoading}
           onRefresh={handleRefreshInsights}
-          hasEnoughData={hasEnoughData}
+          hasEnoughData={operations.length > 0}
           className="mb-6"
         />
 
+        {/* Tarih Seçimi */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-          <Select value={activeView} onValueChange={setActiveView}>
+          <Select value={activeTab} onValueChange={setActiveTab}>
             <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Görünüm seç" />
+              <SelectValue placeholder="Rapor Seç" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="daily">Günlük</SelectItem>
-              <SelectItem value="weekly">Haftalık</SelectItem>
-              <SelectItem value="monthly">Aylık</SelectItem>
-              <SelectItem value="yearly">Yıllık</SelectItem>
-              <SelectItem value="custom">Özel Tarih</SelectItem>
+              <SelectItem value="category">Kategori İstatistikleri</SelectItem>
+              <SelectItem value="service">Hizmet İstatistikleri</SelectItem>
             </SelectContent>
           </Select>
 
@@ -383,8 +329,8 @@ export default function ShopStatistics() {
                 onSelect={handleDateRangeChange}
               />
             )}
-            
-            <CustomMonthCycleSelector 
+
+            <CustomMonthCycleSelector
               selectedDay={monthCycleDay}
               onChange={handleMonthCycleChange}
               active={useMonthCycle}
@@ -393,89 +339,234 @@ export default function ShopStatistics() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base font-medium">
-                Toplam İşlem
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{stats.totalOperations}</div>
-              <p className="text-sm text-muted-foreground">
-                Seçili tarih aralığında
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base font-medium">
-                Toplam Ciro
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-green-600">
-                {formatCurrency(stats.totalRevenue)}
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Seçili tarih aralığında
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base font-medium">
-                Ortalama İşlem
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-blue-600">
-                {formatCurrency(stats.averageRevenue)}
-              </div>
-              <p className="text-sm text-muted-foreground">İşlem başına</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Rapor Tabs */}
-        <Tabs defaultValue="category" value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="w-full border-b mb-8">
-            <TabsTrigger value="category" className="text-lg py-3 px-6">Kategori Raporu</TabsTrigger>
-            <TabsTrigger value="service" className="text-lg py-3 px-6">Hizmet Raporu</TabsTrigger>
+        {/* Sekmeler */}
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          defaultValue="category"
+          className="border rounded-md"
+        >
+          <TabsList className="bg-muted">
+            <TabsTrigger
+              value="category"
+              className={`flex-1 py-3 text-center font-semibold ${
+                activeTab === "category" ? "bg-background text-primary" : "text-muted-foreground"
+              }`}
+            >
+              Kategori İstatistikleri
+            </TabsTrigger>
+            <TabsTrigger
+              value="service"
+              className={`flex-1 py-3 text-center font-semibold ${
+                activeTab === "service" ? "bg-background text-primary" : "text-muted-foreground"
+              }`}
+            >
+              Hizmet İstatistikleri
+            </TabsTrigger>
           </TabsList>
-          
-          <TabsContent value="category">
-            <div className="space-y-8">
-              <CategoryDistributionChart data={categoryData} isLoading={isLoading} />
-              <RevenueSourceChart data={serviceData} isLoading={isLoading} />
-            </div>
+
+          {/* Kategori İstatistikleri */}
+          <TabsContent value="category" className="p-6 space-y-6">
+            {/* Çizgi-Sütun Grafiği Kategori için gösterilmedi istenirse eklenebilir */}
+
+            {/* Pie Chart ve Legend */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Ciro Dağılımı</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col md:flex-row gap-4">
+                <div className="w-full md:w-1/2 h-72">
+                  <CategoryDistributionChart data={categoryData} isLoading={isLoading} />
+                </div>
+                <div className="w-full md:w-1/2 overflow-auto max-h-72">
+                  {/* Renkli liste - legend */}
+                  <ul className="divide-y border rounded-md overflow-auto max-h-72">
+                    {categoryData.map((item, index) => (
+                      <li
+                        key={item.name}
+                        className="flex items-center gap-4 px-4 py-2 cursor-default hover:bg-muted"
+                      >
+                        <span
+                          className="inline-block w-4 h-4 rounded"
+                          style={{
+                            backgroundColor: `var(--color-${index})`,
+                            background: undefined,
+                          }}
+                        />
+                        <div className="flex flex-col text-sm">
+                          <span className="font-semibold">{item.name}</span>
+                          <span className="text-muted-foreground">
+                            {item.percentage?.toFixed(2)}%
+                          </span>
+                        </div>
+                        <div className="ml-auto text-xs text-muted-foreground min-w-[80px] text-right">
+                          {item.count} işlem
+                        </div>
+                        <div className="ml-4 text-xs font-mono text-muted-foreground min-w-[100px] text-right">
+                          {formatCurrency(item.value)}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Tablo */}
+            <Card className="overflow-auto">
+              <CardHeader>
+                <CardTitle>Kategori Detayları</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <table className="w-full table-auto border-collapse border border-border">
+                  <thead>
+                    <tr className="bg-muted text-muted-foreground">
+                      <th className="border border-border px-4 py-2 text-left">Kategori</th>
+                      <th className="border border-border px-4 py-2 text-right">İşlem Sayısı</th>
+                      <th className="border border-border px-4 py-2 text-right">Toplam Ciro</th>
+                      <th className="border border-border px-4 py-2 text-right">Yüzde</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {categoryData.map((cat) => (
+                      <tr key={cat.name} className="border-b border-border hover:bg-muted">
+                        <td className="border border-border px-4 py-2 font-semibold">{cat.name}</td>
+                        <td className="border border-border px-4 py-2 text-right">{cat.count}</td>
+                        <td className="border border-border px-4 py-2 text-right">
+                          {formatCurrency(cat.value)}
+                        </td>
+                        <td className="border border-border px-4 py-2 text-right">
+                          {cat.percentage?.toFixed(2)}%
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="font-semibold bg-muted">
+                      <td className="border border-border px-4 py-2">Toplam</td>
+                      <td className="border border-border px-4 py-2 text-right">
+                        {categoryData.reduce((acc, cur) => acc + cur.count, 0)}
+                      </td>
+                      <td className="border border-border px-4 py-2 text-right">
+                        {formatCurrency(categoryData.reduce((acc, cur) => acc + cur.value, 0))}
+                      </td>
+                      <td className="border border-border px-4 py-2 text-right">
+                        {categoryData.reduce((acc, cur) => acc + (cur.percentage || 0), 0).toFixed(2)}%
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </CardContent>
+            </Card>
           </TabsContent>
-          
-          <TabsContent value="service">
-            <div className="space-y-8">
-              <ServiceDistributionChart 
-                data={serviceData.map(item => ({
-                  name: item.name,
-                  ciro: item.revenue,
-                  islemSayisi: item.count
-                }))} 
-                isLoading={isLoading} 
-                title="Hizmet Performansı"
-              />
-              <OperationDistributionChart 
-                data={serviceData.map(item => ({
-                  name: item.name,
-                  count: item.count,
-                  revenue: item.revenue
-                }))} 
-                isLoading={isLoading}
-              />
-            </div>
+
+          {/* Hizmet İstatistikleri */}
+          <TabsContent value="service" className="p-6 space-y-6">
+            {/* Çizgi-Sütun Grafiği Hizmet için */}
+            <Card className="overflow-x-auto">
+              <CardHeader>
+                <CardTitle>Hizmet Performansı - Ciro & İşlem Sayısı</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div style={{ width: `${serviceData.length * 100}px`, minWidth: "100%" }}>
+                  <RevenueSourceChart data={serviceData} isLoading={isLoading} />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Pie Chart ve Legend Hizmet */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Ciro Dağılımı</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col md:flex-row gap-4">
+                <div className="w-full md:w-1/2 h-72">
+                  <ServiceDistributionChart data={serviceData} isLoading={isLoading} />
+                </div>
+                <div className="w-full md:w-1/2 overflow-auto max-h-72">
+                  {/* Renkli liste - legend */}
+                  <ul className="divide-y border rounded-md overflow-auto max-h-72">
+                    {serviceData.map((item, index) => (
+                      <li
+                        key={item.name}
+                        className="flex items-center gap-4 px-4 py-2 cursor-default hover:bg-muted"
+                      >
+                        <span
+                          className="inline-block w-4 h-4 rounded"
+                          style={{
+                            backgroundColor: `var(--color-${index})`,
+                            background: undefined,
+                          }}
+                        />
+                        <div className="flex flex-col text-sm">
+                          <span className="font-semibold">{item.name}</span>
+                          <span className="text-muted-foreground">
+                            {item.percentage?.toFixed(2)}%
+                          </span>
+                        </div>
+                        <div className="ml-auto text-xs text-muted-foreground min-w-[80px] text-right">
+                          {item.count} işlem
+                        </div>
+                        <div className="ml-4 text-xs font-mono text-muted-foreground min-w-[100px] text-right">
+                          {formatCurrency(item.revenue)}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Tablo Hizmet */}
+            <Card className="overflow-auto">
+              <CardHeader>
+                <CardTitle>Hizmet Detayları</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <table className="w-full table-auto border-collapse border border-border">
+                  <thead>
+                    <tr className="bg-muted text-muted-foreground">
+                      <th className="border border-border px-4 py-2 text-left">Hizmet</th>
+                      <th className="border border-border px-4 py-2 text-right">İşlem Sayısı</th>
+                      <th className="border border-border px-4 py-2 text-right">Toplam Ciro</th>
+                      <th className="border border-border px-4 py-2 text-right">Yüzde</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {serviceData.map((service) => (
+                      <tr key={service.name} className="border-b border-border hover:bg-muted">
+                        <td className="border border-border px-4 py-2 font-semibold">{service.name}</td>
+                        <td className="border border-border px-4 py-2 text-right">{service.count}</td>
+                        <td className="border border-border px-4 py-2 text-right">
+                          {formatCurrency(service.revenue)}
+                        </td>
+                        <td className="border border-border px-4 py-2 text-right">
+                          {service.percentage?.toFixed(2)}%
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="font-semibold bg-muted">
+                      <td className="border border-border px-4 py-2">Toplam</td>
+                      <td className="border border-border px-4 py-2 text-right">
+                        {serviceData.reduce((acc, cur) => acc + cur.count, 0)}
+                      </td>
+                      <td className="border border-border px-4 py-2 text-right">
+                        {formatCurrency(serviceData.reduce((acc, cur) => acc + cur.revenue, 0))}
+                      </td>
+                      <td className="border border-border px-4 py-2 text-right">
+                        {serviceData.reduce((acc, cur) => acc + (cur.percentage || 0), 0).toFixed(2)}%
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
     </StaffLayout>
   );
 }
+
