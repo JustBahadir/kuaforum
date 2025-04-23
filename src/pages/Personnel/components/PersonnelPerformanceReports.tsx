@@ -1,7 +1,272 @@
 
-import React, { useState } from "react";
-import { PersonnelPerformanceDetails } from "./PersonnelPerformanceDetails";
+import React, { useState, useEffect, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { personelIslemleriServisi } from "@/lib/supabase";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DateControlBar } from "@/components/ui/date-control-bar";
+import { AnalystBox } from "@/components/analyst/AnalystBox";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Line, Legend } from "recharts";
+import { PieChart, Pie } from "recharts";
+import { formatCurrency } from "@/lib/utils";
+import { useDebounce } from "use-debounce";
+
+function generateInsights(operations, personnel) {
+  if (operations.length === 0) return ["Seçili tarih aralığında veri bulunmamaktadır."];
+
+  const insights = [];
+  // Calculate revenue per personnel
+  const revenueByPersonnel = {};
+  operations.forEach(op => {
+    if (!op.personel_id) return;
+    revenueByPersonnel[op.personel_id] = (revenueByPersonnel[op.personel_id] || 0) + (op.tutar || 0);
+  });
+  const maxRevenuePersonelId = Object.entries(revenueByPersonnel).reduce((a, b) => (a[1] > b[1] ? a : b), [null, 0])[0];
+  const maxRevenuePersonelName = personnel.find(p => p.id === Number(maxRevenuePersonelId))?.ad_soyad || "Bilinmeyen";
+
+  insights.push(`En yüksek ciroyu ${maxRevenuePersonelName} elde etti (${formatCurrency(revenueByPersonnel[maxRevenuePersonelId])}).`);
+
+  // Most operation count
+  const countByPersonnel = {};
+  operations.forEach(op => {
+    if (!op.personel_id) return;
+    countByPersonnel[op.personel_id] = (countByPersonnel[op.personel_id] || 0) + 1;
+  });
+  const maxCountPersonelId = Object.entries(countByPersonnel).reduce((a, b) => (a[1] > b[1] ? a : b), [null, 0])[0];
+  const maxCountPersonelName = personnel.find(p => p.id === Number(maxCountPersonelId))?.ad_soyad || "Bilinmeyen";
+  insights.push(`En çok işlemi ${maxCountPersonelName} gerçekleştirdi (${countByPersonnel[maxCountPersonelId]} işlem).`);
+
+  // Most revenue service
+  const revenueByService = {};
+  operations.forEach(op => {
+    const serviceName = op.islem?.islem_adi || "Diğer";
+    revenueByService[serviceName] = (revenueByService[serviceName] || 0) + (op.tutar || 0);
+  });
+  const maxRevenueService = Object.entries(revenueByService).reduce((a, b) => (a[1] > b[1] ? a : b), [null, 0]);
+  if (maxRevenueService[0]) {
+    insights.push(`En yüksek gelir getiren hizmet: ${maxRevenueService[0]} (${formatCurrency(maxRevenueService[1])}).`);
+  }
+
+  return insights;
+}
 
 export function PersonnelPerformanceReports({ personnelId = null }: { personnelId?: number | null }) {
-  return <PersonnelPerformanceDetails personnelId={personnelId} />;
+  const [dateRange, setDateRange] = useState({
+    from: new Date(new Date().setDate(new Date().getDate() - 30)),
+    to: new Date()
+  });
+
+  const { data: personnel = [] } = useQuery({
+    queryKey: ['personnel'],
+    queryFn: () => import("@/lib/supabase").then(mod => mod.personelServisi.hepsiniGetir()),
+  });
+
+  const { data: operations = [], isLoading } = useQuery({
+    queryKey: ['personel-operations', personnelId, dateRange.from, dateRange.to],
+    queryFn: () => personnelId ? personelIslemleriServisi.personelIslemleriGetir(personnelId) : Promise.resolve([]),
+    enabled: personnelId != null,
+  });
+
+  // Filter operations by dateRange
+  const filteredOperations = useMemo(() => {
+    return operations.filter(op => {
+      if (!op.created_at) return false;
+      const opDate = new Date(op.created_at);
+      return opDate >= dateRange.from && opDate <= dateRange.to;
+    });
+  }, [operations, dateRange]);
+
+  // Metrics
+  const totalRevenue = useMemo(() => filteredOperations.reduce((sum, op) => sum + (op.tutar || 0), 0), [filteredOperations]);
+  const totalCommission = useMemo(() => filteredOperations.reduce((sum, op) => sum + (op.odenen || 0), 0), [filteredOperations]);
+  const operationCount = filteredOperations.length;
+
+  // Daily aggregation for bar + line chart
+  const dailyDataMap = useMemo(() => {
+    const map = new Map();
+    filteredOperations.forEach(op => {
+      if (!op.created_at) return;
+      const d = new Date(op.created_at);
+      const key = d.toLocaleDateString("tr-TR", { day: "2-digit", month: "2-digit" });
+      if (!map.has(key)) {
+        map.set(key, { date: key, revenue: 0, operations: 0 });
+      }
+      const entry = map.get(key);
+      entry.revenue += op.tutar || 0;
+      entry.operations += 1;
+    });
+    return Array.from(map.values());
+  }, [filteredOperations]);
+
+  // Service data aggregation for Pie chart
+  const serviceDataMap = useMemo(() => {
+    const map = new Map();
+    filteredOperations.forEach(op => {
+      if (!op.islem) return;
+      const serviceName = op.islem.islem_adi || "Diğer";
+      const entry = map.get(serviceName) || { name: serviceName, revenue: 0, count: 0 };
+      entry.revenue += op.tutar || 0;
+      entry.count += 1;
+      map.set(serviceName, entry);
+    });
+    return Array.from(map.values()).sort((a, b) => b.revenue - a.revenue);
+  }, [filteredOperations]);
+
+  // Table data
+  const tableData = filteredOperations.slice();
+
+  // Insights (debounced to not overwhelm)
+  const [debouncedOps] = useDebounce(filteredOperations, 500);
+  const [insights, setInsights] = useState<string[]>([]);
+  const [isInsightsLoading, setIsInsightsLoading] = useState(false);
+
+  useEffect(() => {
+    setIsInsightsLoading(true);
+    const generated = generateInsights(debouncedOps, personnel);
+    setInsights(generated);
+    setIsInsightsLoading(false);
+  }, [debouncedOps, personnel]);
+
+  return (
+    <div className="space-y-6">
+      {/* AI Analyst summary */}
+      <AnalystBox
+        title="Akıllı Analiz"
+        insights={insights}
+        isLoading={isInsightsLoading}
+        onRefresh={() => {
+          setIsInsightsLoading(true);
+          setTimeout(() => setIsInsightsLoading(false), 600);
+        }}
+        className="mb-6"
+      />
+
+      {/* DateControlBar */}
+      <DateControlBar
+        dateRange={dateRange}
+        onDateRangeChange={setDateRange}
+      />
+
+      {/* Performance Chart */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Performans Grafiği</CardTitle>
+          <p className="text-sm text-muted-foreground mt-1">
+            Seçilen tarih aralığındaki günlük işlem sayısı ve ciro
+          </p>
+        </CardHeader>
+        <CardContent style={{ overflowX: "auto" }}>
+          <div style={{ minWidth: `${dailyDataMap.length * 70}px`, height: 300 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={dailyDataMap}
+                margin={{ top: 20, right: 20, left: 20, bottom: 60 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="date" 
+                  angle={-45} 
+                  textAnchor="end" 
+                  height={70} 
+                  tick={{ fontSize: 12 }}
+                />
+                <YAxis yAxisId="left" tickFormatter={(v) => `₺${v}`} />
+                <YAxis yAxisId="right" orientation="right" />
+                <Tooltip 
+                  formatter={(value, name) => name === 'revenue' ? [formatCurrency(value), "Ciro"] : [value, "İşlem Sayısı"]}
+                />
+                <Legend />
+                <Bar yAxisId="left" dataKey="revenue" name="Ciro" fill="#8b5cf6" radius={[4,4,0,0]} barSize={30} />
+                <Line yAxisId="right" type="monotone" dataKey="operations" stroke="#a78bfa" name="İşlem Sayısı" strokeWidth={3} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Pie chart and legend */}
+      <Card className="md:flex md:flex-row md:gap-6 p-4">
+        <div className="md:w-1/2 h-72">
+          <PieChart width={380} height={280}>
+            <Pie
+              data={serviceDataMap}
+              dataKey="revenue"
+              nameKey="name"
+              cx="50%"
+              cy="50%"
+              outerRadius={100}
+              fill="#8b5cf6"
+              label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+            >
+              {serviceDataMap.map((entry, index) => {
+                const colors = ["#a78bfa", "#c4b5fd", "#d8b4fe", "#e9d5ff", "#f3e8ff"];
+                return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
+              })}
+            </Pie>
+          </PieChart>
+        </div>
+
+        <div className="md:w-1/2 flex flex-col justify-center p-4">
+          <h3 className="font-semibold mb-4">Hizmet Dağılımı</h3>
+          <ul className="space-y-2">
+            {serviceDataMap.map((service, idx) => {
+              const percent = ((service.revenue / totalRevenue) * 100).toFixed(1);
+              return (
+                <li key={idx} className="flex items-center gap-4 text-sm cursor-default select-none">
+                  <span 
+                    className="inline-block w-4 h-4" 
+                    style={{ backgroundColor: ["#a78bfa", "#c4b5fd", "#d8b4fe", "#e9d5ff", "#f3e8ff"][idx % 5] }} 
+                  />
+                  <span className="flex-grow">{service.name}</span>
+                  <span>%{percent}</span>
+                  <span>({service.count} işlem)</span>
+                  <span>{formatCurrency(service.revenue)}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      </Card>
+
+      {/* Data Table */}
+      <Card className="overflow-auto">
+        <CardHeader>
+          <CardTitle>Performans Detayları</CardTitle>
+        </CardHeader>
+        <div className="min-w-[900px]">
+          <table className="min-w-full divide-y divide-gray-200 border">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tarih</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Personel</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Müşteri</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlem</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tutar</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prim %</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ödenen</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {tableData.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="text-center py-6 text-gray-500">Veri bulunamadı.</td>
+                </tr>
+              ) : (
+                tableData.map(op => (
+                  <tr key={op.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-2 text-sm text-gray-900">{new Date(op.created_at).toLocaleDateString("tr-TR")}</td>
+                    <td className="px-4 py-2 text-sm text-gray-900">{op.personel?.ad_soyad || "Bilinmeyen"}</td>
+                    <td className="px-4 py-2 text-sm text-gray-900">{op.musteri?.first_name} {op.musteri?.last_name}</td>
+                    <td className="px-4 py-2 text-sm text-gray-900">{op.islem?.islem_adi || op.aciklama?.split(" hizmeti verildi")[0]}</td>
+                    <td className="px-4 py-2 text-sm text-gray-900">{formatCurrency(op.tutar)}</td>
+                    <td className="px-4 py-2 text-sm text-gray-900"> %{op.prim_yuzdesi} </td>
+                    <td className="px-4 py-2 text-sm text-gray-900">{formatCurrency(op.odenen)}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+    </div>
+  );
 }
