@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { personelIslemleriServisi } from "@/lib/supabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +8,6 @@ import { AnalystBox } from "@/components/analyst/AnalystBox";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Line, Legend } from "recharts";
 import { PieChart, Pie } from "recharts";
 import { formatCurrency } from "@/lib/utils";
-import { useDebounce } from "use-debounce";
 
 function generateInsights(operations, personnel) {
   if (operations.length === 0) return ["Seçili tarih aralığında veri bulunmamaktadır."];
@@ -18,7 +17,7 @@ function generateInsights(operations, personnel) {
   const revenueByPersonnel = {};
   operations.forEach(op => {
     if (!op.personel_id) return;
-    revenueByPersonnel[op.personel_id] = (revenueByPersonnel[op.personel_id] || 0) + (op.tutar || 0);
+    revenueByPersonnel[op.personel_id] = (revenueByPersonnel[op.personel_id] || 0) + (Number(op.tutar) || 0);
   });
   const maxRevenuePersonelId = Object.entries(revenueByPersonnel).reduce((a, b) => (a[1] > b[1] ? a : b), [null, 0])[0];
   const maxRevenuePersonelName = personnel.find(p => p.id === Number(maxRevenuePersonelId))?.ad_soyad || "Bilinmeyen";
@@ -39,7 +38,7 @@ function generateInsights(operations, personnel) {
   const revenueByService = {};
   operations.forEach(op => {
     const serviceName = op.islem?.islem_adi || "Diğer";
-    revenueByService[serviceName] = (revenueByService[serviceName] || 0) + (op.tutar || 0);
+    revenueByService[serviceName] = (revenueByService[serviceName] || 0) + (Number(op.tutar) || 0);
   });
   const maxRevenueService = Object.entries(revenueByService).reduce((a, b) => (a[1] > b[1] ? a : b), [null, 0]);
   if (maxRevenueService[0]) {
@@ -76,8 +75,8 @@ export function PersonnelPerformanceReports({ personnelId = null }: { personnelI
   }, [operations, dateRange]);
 
   // Metrics
-  const totalRevenue = useMemo(() => filteredOperations.reduce((sum, op) => sum + (op.tutar || 0), 0), [filteredOperations]);
-  const totalCommission = useMemo(() => filteredOperations.reduce((sum, op) => sum + (op.odenen || 0), 0), [filteredOperations]);
+  const totalRevenue = useMemo(() => filteredOperations.reduce((sum, op) => sum + (Number(op.tutar) || 0), 0), [filteredOperations]);
+  const totalCommission = useMemo(() => filteredOperations.reduce((sum, op) => sum + (Number(op.odenen) || 0), 0), [filteredOperations]);
   const operationCount = filteredOperations.length;
 
   // Daily aggregation for bar + line chart
@@ -91,7 +90,7 @@ export function PersonnelPerformanceReports({ personnelId = null }: { personnelI
         map.set(key, { date: key, revenue: 0, operations: 0 });
       }
       const entry = map.get(key);
-      entry.revenue += op.tutar || 0;
+      entry.revenue += Number(op.tutar) || 0;
       entry.operations += 1;
     });
     return Array.from(map.values());
@@ -104,7 +103,7 @@ export function PersonnelPerformanceReports({ personnelId = null }: { personnelI
       if (!op.islem) return;
       const serviceName = op.islem.islem_adi || "Diğer";
       const entry = map.get(serviceName) || { name: serviceName, revenue: 0, count: 0 };
-      entry.revenue += op.tutar || 0;
+      entry.revenue += Number(op.tutar) || 0;
       entry.count += 1;
       map.set(serviceName, entry);
     });
@@ -114,8 +113,18 @@ export function PersonnelPerformanceReports({ personnelId = null }: { personnelI
   // Table data
   const tableData = filteredOperations.slice();
 
-  // Insights (debounced to not overwhelm)
-  const [debouncedOps] = useDebounce(filteredOperations, 500);
+  // Debounce hook replacement: simple debounce using state and useEffect
+  const [debouncedOps, setDebouncedOps] = useState(filteredOperations);
+  const debounceTimeoutRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current);
+    debounceTimeoutRef.current = window.setTimeout(() => setDebouncedOps(filteredOperations), 500);
+    return () => {
+      if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current);
+    };
+  }, [filteredOperations]);
+
+  // Insights
   const [insights, setInsights] = useState<string[]>([]);
   const [isInsightsLoading, setIsInsightsLoading] = useState(false);
 
