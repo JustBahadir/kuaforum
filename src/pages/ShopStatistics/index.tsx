@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { StaffLayout } from "@/components/ui/staff-layout";
@@ -346,7 +345,6 @@ export default function ShopStatistics() {
       <div className="container mx-auto py-6 px-4">
         <h1 className="text-2xl font-bold mb-6">İşletme İstatistikleri</h1>
 
-        {/* Tabs to switch between categories and services */}
         <Tabs value={activeTab} onValueChange={onTabChange} className="border rounded-md">
           <TabsList className="bg-muted flex justify-center">
             <TabsTrigger
@@ -367,14 +365,12 @@ export default function ShopStatistics() {
             </TabsTrigger>
           </TabsList>
 
-          {/* AI Insights box on top for both tabs */}
           <div className="my-6">
             <AnalystBox
               title="Akıllı Analiz"
               insights={insights}
               isLoading={isInsightsLoading}
               onRefresh={() => {
-                // refresh by re-setting date range - just simulate reload
                 setIsInsightsLoading(true);
                 setTimeout(() => setIsInsightsLoading(false), 600);
               }}
@@ -383,9 +379,7 @@ export default function ShopStatistics() {
             />
           </div>
 
-          {/* Kategori Tab content */}
           <TabsContent value="kategori" className="p-0">
-            {/* Date range picker row */}
             <div className="mb-6">
               <DateRangePicker
                 from={dateRange.from}
@@ -394,7 +388,6 @@ export default function ShopStatistics() {
               />
             </div>
 
-            {/* Performance Chart (bar + line) */}
             <Card className="mb-6">
               <CardHeader>
                 <CardTitle>Performans Grafiği</CardTitle>
@@ -403,16 +396,14 @@ export default function ShopStatistics() {
                 <div style={{ overflowX: "auto" }}>
                   <div style={{ minWidth: `${categoryData.length * 100}px` }}>
                     <RevenueSourceChart
-                      data={performanceChartData}
-                      isLoading={isLoading}                      
-                      showVerticalScroll={false}
+                      data={performanceChartData as ServiceDataItem[]} // Explicit cast for correct type
+                      isLoading={isLoading}
                     />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Pie Chart and Legend side by side */}
             <Card className="mb-6 flex flex-col md:flex-row gap-4 p-4">
               <div className="w-full md:w-1/2 h-72">
                 <CategoryDistributionChart
@@ -452,7 +443,6 @@ export default function ShopStatistics() {
               </div>
             </Card>
 
-            {/* Table */}
             <Card className="overflow-auto">
               <CardHeader>
                 <CardTitle>Kategori Detayları</CardTitle>
@@ -496,9 +486,7 @@ export default function ShopStatistics() {
             </Card>
           </TabsContent>
 
-          {/* Hizmet Tab content */}
           <TabsContent value="hizmet" className="p-0">
-            {/* Date range picker row */}
             <div className="mb-6">
               <DateRangePicker
                 from={dateRange.from}
@@ -507,7 +495,6 @@ export default function ShopStatistics() {
               />
             </div>
 
-            {/* Performance Chart (bar + line) */}
             <Card className="mb-6">
               <CardHeader>
                 <CardTitle>Performans Grafiği</CardTitle>
@@ -516,16 +503,14 @@ export default function ShopStatistics() {
                 <div style={{ overflowX: "auto" }}>
                   <div style={{ minWidth: `${serviceData.length * 100}px` }}>
                     <RevenueSourceChart
-                      data={performanceChartData}
-                      isLoading={isLoading}                      
-                      showVerticalScroll={false}
+                      data={performanceChartData as ServiceDataItem[]} // Explicit cast for correct type
+                      isLoading={isLoading}
                     />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Pie Chart and Legend side by side */}
             <Card className="mb-6 flex flex-col md:flex-row gap-4 p-4">
               <div className="w-full md:w-1/2 h-72">
                 <ServiceDistributionChart data={serviceChartData} isLoading={isLoading} />
@@ -562,7 +547,6 @@ export default function ShopStatistics() {
               </div>
             </Card>
 
-            {/* Table */}
             <Card className="overflow-auto">
               <CardHeader>
                 <CardTitle>Hizmet Detayları</CardTitle>
@@ -610,4 +594,3 @@ export default function ShopStatistics() {
     </StaffLayout>
   );
 }
-
