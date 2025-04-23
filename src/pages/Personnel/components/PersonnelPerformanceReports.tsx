@@ -5,42 +5,73 @@ import { personelIslemleriServisi } from "@/lib/supabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DateControlBar } from "@/components/ui/date-control-bar";
 import { AnalystBox } from "@/components/analyst/AnalystBox";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Line, Legend } from "recharts";
+import { 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Line, Legend
+} from "recharts";
 import { PieChart, Pie } from "recharts";
 import { formatCurrency } from "@/lib/utils";
 
-function generateInsights(operations, personnel) {
+interface Operation {
+  id: number | string;
+  created_at: string | Date;
+  personel_id?: number | string;
+  personel?: { ad_soyad?: string };
+  musteri?: { first_name?: string; last_name?: string };
+  islem?: { islem_adi?: string };
+  aciklama?: string;
+  tutar?: unknown;
+  odenen?: unknown;
+  prim_yuzdesi?: number | string;
+}
+
+function generateInsights(operations: Operation[], personnel: { id: number; ad_soyad: string }[]) {
   if (operations.length === 0) return ["Seçili tarih aralığında veri bulunmamaktadır."];
 
-  const insights = [];
+  const insights: string[] = [];
+
   // Calculate revenue per personnel
-  const revenueByPersonnel = {};
+  const revenueByPersonnel: Record<string, number> = {};
   operations.forEach(op => {
     if (!op.personel_id) return;
-    revenueByPersonnel[op.personel_id] = (revenueByPersonnel[op.personel_id] || 0) + (Number(op.tutar) || 0);
+    const tutarValue = typeof op.tutar === "number" ? op.tutar : Number(op.tutar) || 0;
+    revenueByPersonnel[String(op.personel_id)] = (revenueByPersonnel[String(op.personel_id)] || 0) + tutarValue;
   });
-  const maxRevenuePersonelId = Object.entries(revenueByPersonnel).reduce((a, b) => (a[1] > b[1] ? a : b), [null, 0])[0];
-  const maxRevenuePersonelName = personnel.find(p => p.id === Number(maxRevenuePersonelId))?.ad_soyad || "Bilinmeyen";
+  const maxRevenuePersonelId = Object.entries(revenueByPersonnel).reduce(
+    (a, b) => (a[1] > b[1] ? a : b),
+    [null, 0]
+  )[0];
+  const maxRevenuePersonelName =
+    personnel.find(p => p.id === Number(maxRevenuePersonelId))?.ad_soyad || "Bilinmeyen";
 
-  insights.push(`En yüksek ciroyu ${maxRevenuePersonelName} elde etti (${formatCurrency(revenueByPersonnel[maxRevenuePersonelId])}).`);
+  insights.push(
+    `En yüksek ciroyu ${maxRevenuePersonelName} elde etti (${formatCurrency(revenueByPersonnel[maxRevenuePersonelId || ""] || 0)}).`
+  );
 
   // Most operation count
-  const countByPersonnel = {};
+  const countByPersonnel: Record<string, number> = {};
   operations.forEach(op => {
     if (!op.personel_id) return;
-    countByPersonnel[op.personel_id] = (countByPersonnel[op.personel_id] || 0) + 1;
+    countByPersonnel[String(op.personel_id)] = (countByPersonnel[String(op.personel_id)] || 0) + 1;
   });
-  const maxCountPersonelId = Object.entries(countByPersonnel).reduce((a, b) => (a[1] > b[1] ? a : b), [null, 0])[0];
-  const maxCountPersonelName = personnel.find(p => p.id === Number(maxCountPersonelId))?.ad_soyad || "Bilinmeyen";
-  insights.push(`En çok işlemi ${maxCountPersonelName} gerçekleştirdi (${countByPersonnel[maxCountPersonelId]} işlem).`);
+  const maxCountPersonelId = Object.entries(countByPersonnel).reduce(
+    (a, b) => (a[1] > b[1] ? a : b),
+    [null, 0]
+  )[0];
+  const maxCountPersonelName =
+    personnel.find(p => p.id === Number(maxCountPersonelId))?.ad_soyad || "Bilinmeyen";
+  insights.push(`En çok işlemi ${maxCountPersonelName} gerçekleştirdi (${countByPersonnel[maxCountPersonelId || ""] || 0} işlem).`);
 
   // Most revenue service
-  const revenueByService = {};
+  const revenueByService: Record<string, number> = {};
   operations.forEach(op => {
     const serviceName = op.islem?.islem_adi || "Diğer";
-    revenueByService[serviceName] = (revenueByService[serviceName] || 0) + (Number(op.tutar) || 0);
+    const tutarValue = typeof op.tutar === "number" ? op.tutar : Number(op.tutar) || 0;
+    revenueByService[serviceName] = (revenueByService[serviceName] || 0) + tutarValue;
   });
-  const maxRevenueService = Object.entries(revenueByService).reduce((a, b) => (a[1] > b[1] ? a : b), [null, 0]);
+  const maxRevenueService = Object.entries(revenueByService).reduce(
+    (a, b) => (a[1] > b[1] ? a : b),
+    [null, 0]
+  );
   if (maxRevenueService[0]) {
     insights.push(`En yüksek gelir getiren hizmet: ${maxRevenueService[0]} (${formatCurrency(maxRevenueService[1])}).`);
   }
@@ -75,13 +106,21 @@ export function PersonnelPerformanceReports({ personnelId = null }: { personnelI
   }, [operations, dateRange]);
 
   // Metrics
-  const totalRevenue = useMemo(() => filteredOperations.reduce((sum, op) => sum + (Number(op.tutar) || 0), 0), [filteredOperations]);
-  const totalCommission = useMemo(() => filteredOperations.reduce((sum, op) => sum + (Number(op.odenen) || 0), 0), [filteredOperations]);
+  const totalRevenue = useMemo(() => filteredOperations.reduce((sum, op) => {
+    const tutarVal = typeof op.tutar === "number" ? op.tutar : Number(op.tutar) || 0;
+    return sum + tutarVal;
+  }, 0), [filteredOperations]);
+
+  const totalCommission = useMemo(() => filteredOperations.reduce((sum, op) => {
+    const odenenVal = typeof op.odenen === "number" ? op.odenen : Number(op.odenen) || 0;
+    return sum + odenenVal;
+  }, 0), [filteredOperations]);
+
   const operationCount = filteredOperations.length;
 
   // Daily aggregation for bar + line chart
   const dailyDataMap = useMemo(() => {
-    const map = new Map();
+    const map = new Map<string, { date: string; revenue: number; operations: number }>();
     filteredOperations.forEach(op => {
       if (!op.created_at) return;
       const d = new Date(op.created_at);
@@ -89,8 +128,9 @@ export function PersonnelPerformanceReports({ personnelId = null }: { personnelI
       if (!map.has(key)) {
         map.set(key, { date: key, revenue: 0, operations: 0 });
       }
-      const entry = map.get(key);
-      entry.revenue += Number(op.tutar) || 0;
+      const entry = map.get(key)!;
+      const tutarVal = typeof op.tutar === "number" ? op.tutar : Number(op.tutar) || 0;
+      entry.revenue += tutarVal;
       entry.operations += 1;
     });
     return Array.from(map.values());
@@ -98,12 +138,13 @@ export function PersonnelPerformanceReports({ personnelId = null }: { personnelI
 
   // Service data aggregation for Pie chart
   const serviceDataMap = useMemo(() => {
-    const map = new Map();
+    const map = new Map<string, { name: string; revenue: number; count: number }>();
     filteredOperations.forEach(op => {
       if (!op.islem) return;
       const serviceName = op.islem.islem_adi || "Diğer";
       const entry = map.get(serviceName) || { name: serviceName, revenue: 0, count: 0 };
-      entry.revenue += Number(op.tutar) || 0;
+      const tutarVal = typeof op.tutar === "number" ? op.tutar : Number(op.tutar) || 0;
+      entry.revenue += tutarVal;
       entry.count += 1;
       map.set(serviceName, entry);
     });
@@ -181,7 +222,15 @@ export function PersonnelPerformanceReports({ personnelId = null }: { personnelI
                 <YAxis yAxisId="left" tickFormatter={(v) => `₺${v}`} />
                 <YAxis yAxisId="right" orientation="right" />
                 <Tooltip 
-                  formatter={(value, name) => name === 'revenue' ? [formatCurrency(value), "Ciro"] : [value, "İşlem Sayısı"]}
+                  formatter={(value: unknown, name: string) => {
+                    // Defensive check: try to convert value to number
+                    const numValue = typeof value === "number" ? value : Number(value);
+                    if (isNaN(numValue)) return [value, name];
+                    if (name === 'revenue') {
+                      return [formatCurrency(numValue), "Ciro"];
+                    }
+                    return [numValue, "İşlem Sayısı"];
+                  }}
                 />
                 <Legend />
                 <Bar yAxisId="left" dataKey="revenue" name="Ciro" fill="#8b5cf6" radius={[4,4,0,0]} barSize={30} />
@@ -204,7 +253,7 @@ export function PersonnelPerformanceReports({ personnelId = null }: { personnelI
               cy="50%"
               outerRadius={100}
               fill="#8b5cf6"
-              label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+              label={({ name, percent }: { name: string; percent: number }) => `${name} ${(percent * 100).toFixed(0)}%`}
             >
               {serviceDataMap.map((entry, index) => {
                 const colors = ["#a78bfa", "#c4b5fd", "#d8b4fe", "#e9d5ff", "#f3e8ff"];
@@ -218,7 +267,7 @@ export function PersonnelPerformanceReports({ personnelId = null }: { personnelI
           <h3 className="font-semibold mb-4">Hizmet Dağılımı</h3>
           <ul className="space-y-2">
             {serviceDataMap.map((service, idx) => {
-              const percent = ((service.revenue / totalRevenue) * 100).toFixed(1);
+              const percent = totalRevenue > 0 ? ((service.revenue / totalRevenue) * 100).toFixed(1) : "0.0";
               return (
                 <li key={idx} className="flex items-center gap-4 text-sm cursor-default select-none">
                   <span 
@@ -266,9 +315,9 @@ export function PersonnelPerformanceReports({ personnelId = null }: { personnelI
                     <td className="px-4 py-2 text-sm text-gray-900">{op.personel?.ad_soyad || "Bilinmeyen"}</td>
                     <td className="px-4 py-2 text-sm text-gray-900">{op.musteri?.first_name} {op.musteri?.last_name}</td>
                     <td className="px-4 py-2 text-sm text-gray-900">{op.islem?.islem_adi || op.aciklama?.split(" hizmeti verildi")[0]}</td>
-                    <td className="px-4 py-2 text-sm text-gray-900">{formatCurrency(op.tutar)}</td>
+                    <td className="px-4 py-2 text-sm text-gray-900">{formatCurrency(typeof op.tutar === "number" ? op.tutar : Number(op.tutar) || 0)}</td>
                     <td className="px-4 py-2 text-sm text-gray-900"> %{op.prim_yuzdesi} </td>
-                    <td className="px-4 py-2 text-sm text-gray-900">{formatCurrency(op.odenen)}</td>
+                    <td className="px-4 py-2 text-sm text-gray-900">{formatCurrency(typeof op.odenen === "number" ? op.odenen : Number(op.odenen) || 0)}</td>
                   </tr>
                 ))
               )}
@@ -279,3 +328,4 @@ export function PersonnelPerformanceReports({ personnelId = null }: { personnelI
     </div>
   );
 }
+
