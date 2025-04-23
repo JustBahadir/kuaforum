@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { personelIslemleriServisi } from "@/lib/supabase";
@@ -5,10 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DateControlBar } from "@/components/ui/date-control-bar";
 import { AnalystBox } from "@/components/analyst/AnalystBox";
 import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Line, Legend
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Line, Legend, TooltipProps
 } from "recharts";
 import { PieChart, Pie } from "recharts";
 import { formatCurrency } from "@/lib/utils";
+import { ValueType } from "recharts/types/component/DefaultTooltipContent";
 
 interface Operation {
   id: number | string;
@@ -18,8 +20,8 @@ interface Operation {
   musteri?: { first_name?: string; last_name?: string };
   islem?: { islem_adi?: string };
   aciklama?: string;
-  tutar?: unknown;
-  odenen?: unknown;
+  tutar?: number | string;
+  odenen?: number | string;
   prim_yuzdesi?: number | string;
 }
 
@@ -175,6 +177,15 @@ export function PersonnelPerformanceReports({ personnelId = null }: { personnelI
     setIsInsightsLoading(false);
   }, [debouncedOps, personnel]);
 
+  // Custom tooltip formatter for the chart
+  const customTooltipFormatter = (value: ValueType, name: string) => {
+    if (name === 'revenue') {
+      const numValue = Number(value);
+      return [formatCurrency(numValue), "Ciro"];
+    }
+    return [String(value), "İşlem Sayısı"];
+  };
+
   return (
     <div className="space-y-6">
       {/* AI Analyst summary */}
@@ -221,15 +232,7 @@ export function PersonnelPerformanceReports({ personnelId = null }: { personnelI
                 <YAxis yAxisId="left" tickFormatter={(v) => `₺${v}`} />
                 <YAxis yAxisId="right" orientation="right" />
                 <Tooltip 
-                  formatter={(value: unknown, name: string) => {
-                    // Defensive check: try to convert value to number
-                    const numValue = typeof value === "number" ? value : Number(value);
-                    if (isNaN(numValue)) return [value, name];
-                    if (name === 'revenue') {
-                      return [formatCurrency(numValue), "Ciro"];
-                    }
-                    return [numValue, "İşlem Sayısı"];
-                  }}
+                  formatter={customTooltipFormatter}
                 />
                 <Legend />
                 <Bar yAxisId="left" dataKey="revenue" name="Ciro" fill="#8b5cf6" radius={[4,4,0,0]} barSize={30} />
