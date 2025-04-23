@@ -177,13 +177,15 @@ export function PersonnelPerformanceReports({ personnelId = null }: { personnelI
     setIsInsightsLoading(false);
   }, [debouncedOps, personnel]);
 
-  // Custom tooltip formatter for the chart
-  const customTooltipFormatter = (value: ValueType, name: string) => {
+  // Custom tooltip formatter for the chart that properly labels each data type
+  const customTooltipFormatter = (value: ValueType, name: string, entry: any) => {
     if (name === 'revenue') {
       const numValue = Number(value);
-      return [formatCurrency(numValue), "Ciro"];
+      return [`${formatCurrency(numValue)}`, "Ciro"];
+    } else if (name === 'operations') {
+      return [`${value}`, "İşlem Sayısı"];
     }
-    return [String(value), "İşlem Sayısı"];
+    return [String(value), name];
   };
 
   return (
@@ -229,14 +231,41 @@ export function PersonnelPerformanceReports({ personnelId = null }: { personnelI
                   height={70} 
                   tick={{ fontSize: 12 }}
                 />
-                <YAxis yAxisId="left" tickFormatter={(v) => `₺${v}`} />
-                <YAxis yAxisId="right" orientation="right" />
+                <YAxis 
+                  yAxisId="left" 
+                  tickFormatter={(v) => `₺${v}`} 
+                  domain={[0, 'auto']}
+                  label={{ value: 'Ciro (₺)', angle: -90, position: 'insideLeft' }}
+                />
+                <YAxis 
+                  yAxisId="right" 
+                  orientation="right" 
+                  domain={[0, 'auto']}
+                  label={{ value: 'İşlem Sayısı', angle: 90, position: 'insideRight' }}
+                />
                 <Tooltip 
                   formatter={customTooltipFormatter}
+                  labelFormatter={(label) => `Tarih: ${label}`}
                 />
                 <Legend />
-                <Bar yAxisId="left" dataKey="revenue" name="Ciro" fill="#8b5cf6" radius={[4,4,0,0]} barSize={30} />
-                <Line yAxisId="right" type="monotone" dataKey="operations" stroke="#a78bfa" name="İşlem Sayısı" strokeWidth={3} />
+                <Bar 
+                  yAxisId="left" 
+                  dataKey="revenue" 
+                  name="Ciro" 
+                  fill="#8b5cf6" 
+                  radius={[4,4,0,0]} 
+                  barSize={30} 
+                />
+                <Line 
+                  yAxisId="right" 
+                  type="monotone" 
+                  dataKey="operations" 
+                  name="İşlem Sayısı" 
+                  stroke="#a78bfa" 
+                  strokeWidth={3}
+                  dot={{ r: 4 }}
+                  activeDot={{ r: 6 }}
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>
