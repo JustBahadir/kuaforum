@@ -404,8 +404,7 @@ export default function ShopStatistics() {
                   <div style={{ minWidth: `${categoryData.length * 100}px` }}>
                     <RevenueSourceChart
                       data={performanceChartData}
-                      isLoading={isLoading}
-                      angleXLabels={-45}
+                      isLoading={isLoading}                      
                       showVerticalScroll={false}
                     />
                   </div>
@@ -518,8 +517,7 @@ export default function ShopStatistics() {
                   <div style={{ minWidth: `${serviceData.length * 100}px` }}>
                     <RevenueSourceChart
                       data={performanceChartData}
-                      isLoading={isLoading}
-                      angleXLabels={-45}
+                      isLoading={isLoading}                      
                       showVerticalScroll={false}
                     />
                   </div>
