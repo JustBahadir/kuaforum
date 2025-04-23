@@ -22,25 +22,17 @@ export function PersonnelDetailsDialog({
   personnel,
   onUpdate = () => {}
 }: PersonnelDetailsDialogProps) {
-  const [activeTab, setActiveTab] = useState("personal-info");
+  const [activeTab, setActiveTab] = React.useState("personal-info");
   const dialogContentRef = useRef<HTMLDivElement>(null);
 
-  // Close on mobile back button press (popstate)
-  useEffect(() => {
+  React.useEffect(() => {
     const handlePopState = () => {
-      if (isOpen) {
-        onOpenChange(false);
-      }
+      if (isOpen) onOpenChange(false);
     };
-
     window.addEventListener("popstate", handlePopState);
-
-    return () => {
-      window.removeEventListener("popstate", handlePopState);
-    };
+    return () => window.removeEventListener("popstate", handlePopState);
   }, [isOpen, onOpenChange]);
 
-  // Fix for pointer down outside handler: use the correct CustomEvent type
   const handlePointerDownOutside = useCallback(
     (event: CustomEvent<{ originalEvent: PointerEvent }>) => {
       onOpenChange(false);
@@ -48,9 +40,7 @@ export function PersonnelDetailsDialog({
     [onOpenChange]
   );
 
-  if (!personnel) {
-    return null;
-  }
+  if (!personnel) return null;
 
   return (
     <DialogPrimitive.Root open={isOpen} onOpenChange={onOpenChange}>
@@ -64,7 +54,6 @@ export function PersonnelDetailsDialog({
           onPointerDownOutside={handlePointerDownOutside}
           className="fixed left-[50%] top-[50%] z-50 max-w-4xl max-h-[90vh] w-full overflow-y-auto rounded-lg bg-background p-6 shadow-lg transform -translate-x-1/2 -translate-y-1/2 focus:outline-none"
         >
-          {/* Close button top right */}
           <DialogPrimitive.Close
             aria-label="Kapat"
             className="absolute right-4 top-4 rounded-md p-1 text-gray-500 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:ring-offset-2"
