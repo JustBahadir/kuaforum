@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { personelIslemleriServisi } from "@/lib/supabase";
@@ -328,4 +327,3 @@ export function PersonnelPerformanceReports({ personnelId = null }: { personnelI
     </div>
   );
 }
-
