@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { personelIslemleriServisi } from "@/lib/supabase";
@@ -97,7 +96,6 @@ export function PersonnelPerformanceReports({ personnelId = null }: { personnelI
     enabled: personnelId != null,
   });
 
-  // Filter operations by dateRange
   const filteredOperations = useMemo(() => {
     return operations.filter(op => {
       if (!op.created_at) return false;
@@ -106,7 +104,6 @@ export function PersonnelPerformanceReports({ personnelId = null }: { personnelI
     });
   }, [operations, dateRange]);
 
-  // Metrics
   const totalRevenue = useMemo(() => filteredOperations.reduce((sum, op) => {
     const tutarVal = typeof op.tutar === "number" ? op.tutar : Number(op.tutar) || 0;
     return sum + tutarVal;
@@ -119,7 +116,6 @@ export function PersonnelPerformanceReports({ personnelId = null }: { personnelI
 
   const operationCount = filteredOperations.length;
 
-  // Daily aggregation for bar + line chart
   const dailyDataMap = useMemo(() => {
     const map = new Map<string, { date: string; revenue: number; operations: number }>();
     filteredOperations.forEach(op => {
@@ -137,7 +133,6 @@ export function PersonnelPerformanceReports({ personnelId = null }: { personnelI
     return Array.from(map.values());
   }, [filteredOperations]);
 
-  // Service data aggregation for Pie chart
   const serviceDataMap = useMemo(() => {
     const map = new Map<string, { name: string; revenue: number; count: number }>();
     filteredOperations.forEach(op => {
@@ -152,10 +147,8 @@ export function PersonnelPerformanceReports({ personnelId = null }: { personnelI
     return Array.from(map.values()).sort((a, b) => b.revenue - a.revenue);
   }, [filteredOperations]);
 
-  // Table data
   const tableData = filteredOperations.slice();
 
-  // Debounce hook replacement: simple debounce using state and useEffect
   const [debouncedOps, setDebouncedOps] = useState(filteredOperations);
   const debounceTimeoutRef = useRef<number | null>(null);
   useEffect(() => {
@@ -166,7 +159,6 @@ export function PersonnelPerformanceReports({ personnelId = null }: { personnelI
     };
   }, [filteredOperations]);
 
-  // Insights
   const [insights, setInsights] = useState<string[]>([]);
   const [isInsightsLoading, setIsInsightsLoading] = useState(false);
 
@@ -177,20 +169,18 @@ export function PersonnelPerformanceReports({ personnelId = null }: { personnelI
     setIsInsightsLoading(false);
   }, [debouncedOps, personnel]);
 
-  // Custom tooltip formatter for the chart that properly labels each data type
-  const customTooltipFormatter = (value: ValueType, name: string, entry: any) => {
+  const customTooltipFormatter = (value: ValueType, name: string) => {
     if (name === 'revenue') {
       const numValue = Number(value);
-      return [`${formatCurrency(numValue)}`, "Ciro"];
+      return [`Ciro: ${formatCurrency(numValue)}`, "Ciro"];
     } else if (name === 'operations') {
-      return [`${value}`, "İşlem Sayısı"];
+      return [`İşlem Sayısı: ${value}`, "İşlem Sayısı"];
     }
     return [String(value), name];
   };
 
   return (
     <div className="space-y-6">
-      {/* AI Analyst summary */}
       <AnalystBox
         title="Akıllı Analiz"
         insights={insights}
@@ -202,13 +192,11 @@ export function PersonnelPerformanceReports({ personnelId = null }: { personnelI
         className="mb-6"
       />
 
-      {/* DateControlBar */}
       <DateControlBar
         dateRange={dateRange}
         onDateRangeChange={setDateRange}
       />
 
-      {/* Performance Chart */}
       <Card>
         <CardHeader>
           <CardTitle>Performans Grafiği</CardTitle>
@@ -272,7 +260,6 @@ export function PersonnelPerformanceReports({ personnelId = null }: { personnelI
         </CardContent>
       </Card>
 
-      {/* Pie chart and legend */}
       <Card className="md:flex md:flex-row md:gap-6 p-4">
         <div className="md:w-1/2 h-72">
           <PieChart width={380} height={280}>
@@ -316,7 +303,6 @@ export function PersonnelPerformanceReports({ personnelId = null }: { personnelI
         </div>
       </Card>
 
-      {/* Data Table */}
       <Card className="overflow-auto">
         <CardHeader>
           <CardTitle>Performans Detayları</CardTitle>
