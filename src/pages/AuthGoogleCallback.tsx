@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
 
 export default function AuthGoogleCallback() {
@@ -99,7 +99,7 @@ export default function AuthGoogleCallback() {
             // Staff not assigned to any shop - redirect to unassigned-staff
             console.log("Staff not assigned to any shop, redirecting to unassigned-staff");
             toast.success("Giriş başarılı! Henüz bir işletmeye bağlı değilsiniz.");
-            navigate("/unassigned-staff");
+            navigate("/unassigned-staff", { replace: true });
           } else {
             // Staff assigned to a shop
             if (
@@ -112,7 +112,7 @@ export default function AuthGoogleCallback() {
               navigate("/profile-setup");
             } else {
               toast.success("Giriş başarılı!");
-              navigate("/staff-profile");
+              navigate("/shop-home", { replace: true });
             }
           }
         } else if (role === "customer") {

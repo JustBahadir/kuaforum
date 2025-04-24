@@ -13,7 +13,7 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
   const [checking, setChecking] = useState(true);
 
   // Public pages that don't require authentication
-  const publicPages = ["/", "/login", "/staff-login", "/services", "/appointments"];
+  const publicPages = ["/", "/login", "/staff-login", "/services", "/appointments", "/auth", "/auth-google-callback"];
 
   useEffect(() => {
     let isMounted = true;
@@ -90,11 +90,28 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
         }
         
         // Unassigned staff page is only accessible by staff or admin
-        if (location.pathname === '/unassigned-staff' && 
-            userRole !== 'staff' && 
-            userRole !== 'admin') {
-          navigate('/login');
-          return;
+        if (location.pathname === '/unassigned-staff') { 
+          if (userRole !== 'staff' && userRole !== 'admin') {
+            // Not staff or admin, redirect to login
+            navigate('/login');
+            return;
+          }
+          
+          if (userRole === 'staff') {
+            // Check if staff is already assigned to a shop
+            const { data: personelData } = await supabase
+              .from('personel')
+              .select('dukkan_id')
+              .eq('auth_id', session.user.id)
+              .maybeSingle();
+              
+            if (personelData?.dukkan_id) {
+              // Staff already connected to a shop, redirect to staff profile
+              console.log("Staff already connected to shop, redirecting to staff-profile");
+              navigate('/staff-profile');
+              return;
+            }
+          }
         }
         
         // Staff profile is only accessible by staff or admin
@@ -103,6 +120,22 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
             userRole !== 'admin') {
           navigate('/login');
           return;
+        }
+        
+        // If staff tries to access staff-profile, make sure they are assigned to a shop
+        if (location.pathname === '/staff-profile' && userRole === 'staff') {
+          const { data: personelData } = await supabase
+            .from('personel')
+            .select('dukkan_id')
+            .eq('auth_id', session.user.id)
+            .maybeSingle();
+            
+          if (!personelData?.dukkan_id) {
+            // Staff not connected to a shop, redirect to unassigned staff page
+            console.log("Staff not connected to shop, redirecting to unassigned-staff");
+            navigate('/unassigned-staff');
+            return;
+          }
         }
         
         // Customer routes are only for customers

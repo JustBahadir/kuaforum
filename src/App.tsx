@@ -1,5 +1,5 @@
 
-import React, { useEffect } from "react";
+import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
@@ -32,20 +32,18 @@ import AuthGoogleCallback from "./pages/AuthGoogleCallback";
 import UnassignedStaff from "./pages/UnassignedStaff";
 import StaffLogin from "./pages/StaffLogin";
 
+// Create a new QueryClient instance with no persistent caching
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 5 * 60 * 1000, // 5 minutes
       retry: 1,
+      cacheTime: 0, // Disable caching
     },
   },
 });
 
 function App() {
-  useEffect(() => {
-    // Set up any global listeners or config here
-  }, []);
-
   return (
     <ThemeProvider defaultTheme="light">
       <QueryClientProvider client={queryClient}>

@@ -10,6 +10,7 @@ import { Mail, Phone, MapPin, User, School, History, Briefcase, LogOut } from "l
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function UnassignedStaff() {
+  console.log("UnassignedStaff component rendered"); // Debug log
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("personal");
   const [loading, setLoading] = useState(true);
@@ -30,10 +31,13 @@ export default function UnassignedStaff() {
     yarismalar: "",
     cv: ""
   });
+  
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const checkUserType = async () => {
       try {
+        console.log("UnassignedStaff: Checking user type");
         const { data, error } = await supabase.auth.getSession();
         
         if (error || !data.session) {
@@ -43,6 +47,8 @@ export default function UnassignedStaff() {
         }
         
         const userRole = data.session.user.user_metadata?.role;
+        console.log("User role:", userRole);
+        
         if (userRole !== 'staff' && userRole !== 'admin') {
           console.error("Wrong user role:", userRole);
           navigate("/login");
@@ -50,6 +56,7 @@ export default function UnassignedStaff() {
         }
       } catch (error) {
         console.error("Auth check error:", error);
+        setError("Kullanıcı bilgisi doğrulanamadı. Lütfen tekrar giriş yapın.");
         navigate("/login");
       }
     };
@@ -65,6 +72,7 @@ export default function UnassignedStaff() {
       
       if (userError || !user) {
         console.error("Auth error:", userError);
+        setError("Kullanıcı bilgisi alınamadı. Lütfen tekrar giriş yapın.");
         navigate("/login");
         return;
       }
@@ -80,6 +88,7 @@ export default function UnassignedStaff() {
         
       if (staffError) {
         console.error("Staff data fetch error:", staffError);
+        setError("Personel bilgileri yüklenirken bir hata oluştu.");
       }
       
       // If staff is assigned to a shop, redirect to staff profile
@@ -87,6 +96,8 @@ export default function UnassignedStaff() {
         console.log("UnassignedStaff: User is connected to a shop, redirecting to staff profile");
         navigate('/staff-profile');
         return;
+      } else {
+        console.log("UnassignedStaff: User is not connected to a shop, staying on page");
       }
 
       const { data: profileData, error: profileError } = await supabase
@@ -97,7 +108,8 @@ export default function UnassignedStaff() {
 
       if (profileError) {
         console.error("Profile error:", profileError);
-        // Don't return early if profile fetch fails, try to continue
+        setError("Profil bilgileri yüklenirken bir hata oluştu.");
+        // Continue to load the page even if profile fetch fails
       }
 
       if (profileData) {
@@ -114,6 +126,7 @@ export default function UnassignedStaff() {
 
       if (eduError) {
         console.error("Education data error:", eduError);
+        setError("Eğitim bilgileri yüklenirken bir hata oluştu.");
       }
 
       if (educationData) {
@@ -130,6 +143,7 @@ export default function UnassignedStaff() {
 
       if (histError) {
         console.error("History data error:", histError);
+        setError("Geçmiş bilgileri yüklenirken bir hata oluştu.");
       }
 
       if (historyData) {
@@ -141,12 +155,14 @@ export default function UnassignedStaff() {
     } catch (error) {
       console.error("UnassignedStaff: Error loading user data:", error);
       toast.error("Kullanıcı bilgileri yüklenirken bir hata oluştu");
+      setError("Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.");
       setLoading(false);
     }
   };
 
   const handleLogout = async () => {
     try {
+      console.log("Logging out...");
       const { error } = await supabase.auth.signOut();
       if (error) {
         console.error("Logout error:", error);
@@ -201,9 +217,9 @@ export default function UnassignedStaff() {
       }
 
       toast.success("Bilgiler başarıyla kaydedildi");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving data:", error);
-      toast.error("Bilgiler kaydedilirken bir hata oluştu");
+      toast.error(error.message || "Bilgiler kaydedilirken bir hata oluştu");
     } finally {
       setLoading(false);
     }
@@ -213,6 +229,20 @@ export default function UnassignedStaff() {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+      </div>
+    );
+  }
+  
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen p-4">
+        <div className="bg-red-50 text-red-700 p-4 rounded-md mb-4">
+          <h3 className="font-bold">Hata</h3>
+          <p>{error}</p>
+        </div>
+        <Button variant="default" onClick={() => navigate("/login")}>
+          Giriş Sayfasına Dön
+        </Button>
       </div>
     );
   }
@@ -355,6 +385,8 @@ export default function UnassignedStaff() {
     </Card>
   );
 
+  console.log("Rendering UnassignedStaff with activeTab:", activeTab);
+  
   return (
     <div className="min-h-screen bg-gray-50">
       {renderMobileNavigation()}

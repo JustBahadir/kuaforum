@@ -14,65 +14,26 @@ export default function StaffLogin() {
   const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
-    // Sayfa yüklendiğinde mevcut oturum kontrolü
-    const checkSession = async () => {
+    // Clear any existing session when the login page is loaded
+    const clearSession = async () => {
       try {
-        console.log("StaffLogin: Checking session");
-        const { data } = await supabase.auth.getSession();
-        
-        if (data?.session) {
-          const role = data.session.user.user_metadata?.role;
-          console.log("StaffLogin: User role", role);
-          
-          if (role === 'staff' || role === 'admin') {
-            // Personel veya Admin rolündeki kullanıcıları kontrol edelim
-            const userId = data.session.user.id;
-            
-            // Personel bir dükkan ile ilişkilendirilmiş mi kontrol edelim
-            const { data: staffData } = await supabase
-              .from('personel')
-              .select('dukkan_id')
-              .eq('auth_id', userId)
-              .maybeSingle();
-              
-            console.log("StaffLogin: Staff shop data", staffData);
-            
-            if (role === 'staff' && (!staffData || !staffData.dukkan_id)) {
-              // Personel henüz bir dükkan ile ilişkilendirilmemiş
-              console.log("StaffLogin: Staff not assigned to shop, redirecting to unassigned-staff");
-              navigate("/unassigned-staff", { replace: true });
-              return;
-            }
-            
-            // Doğrudan navigasyon - bekleme olmadan
-            console.log("StaffLogin: Session active, redirecting to shop-home");
-            navigate("/shop-home", { replace: true });
-            return;
-          }
-        }
+        await supabase.auth.signOut();
+        console.log("Session cleared for fresh login");
       } catch (err) {
-        console.error("StaffLogin: Beklenmeyen hata:", err);
-        toast.error("Oturum kontrolü sırasında bir hata oluştu.");
+        console.error("Error clearing session:", err);
       } finally {
         setIsLoading(false);
       }
     };
     
-    checkSession();
-    
-    // Yükleme ekranında sonsuz kalması durumuna karşı bir güvenlik önlemi
-    const timeout = setTimeout(() => {
-      setIsLoading(false);
-    }, 2000);
-    
-    return () => clearTimeout(timeout);
-  }, [navigate]);
+    clearSession();
+  }, []);
   
   const handleLoginSuccess = () => {
     console.log("Login success detected");
-    // Başarılı girişten sonra doğrudan yönlendirme - bekleme olmadan
-    console.log("Hemen yönlendirme yapılıyor: /shop-home");
-    navigate("/shop-home", { replace: true });
+    
+    // Let the AuthGoogleCallback or other login handlers perform the redirection 
+    // based on user role and shop assignment status
   };
 
   const handleBackClick = () => {
