@@ -71,8 +71,8 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
                 .maybeSingle();
                 
               if (!personelData?.dukkan_id) {
-                // Staff not connected to any shop, redirect to staff profile
-                navigate('/staff-profile');
+                // Staff not connected to any shop, redirect to unassigned staff page
+                navigate('/unassigned-staff');
                 return;
               }
             } else {
@@ -81,6 +81,14 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
               return;
             }
           }
+        }
+        
+        // Unassigned staff page is only accessible by staff or admin
+        if (location.pathname === '/unassigned-staff' && 
+            userRole !== 'staff' && 
+            userRole !== 'admin') {
+          navigate('/login');
+          return;
         }
         
         // Staff profile is only accessible by staff or admin
