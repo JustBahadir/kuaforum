@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { BriefcaseIcon, PercentIcon, Banknote } from "lucide-react";
@@ -9,22 +10,21 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { personelServisi } from "@/lib/supabase";
+
 interface WorkInfoTabProps {
   personnel: any;
   onEdit?: () => void;
   canEdit?: boolean;
 }
-export function WorkInfoTab({
-  personnel,
-  onEdit,
-  canEdit = true
-}: WorkInfoTabProps) {
+
+export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabProps) {
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [workSystem, setWorkSystem] = useState(personnel.calisma_sistemi === 'komisyon' ? 'komisyonlu' : 'maasli');
   const [paymentPeriod, setPaymentPeriod] = useState(personnel.calisma_sistemi || 'aylik');
   const [salary, setSalary] = useState(personnel.maas && personnel.maas > 0 ? personnel.maas.toString() : '');
   const [commission, setCommission] = useState(personnel.prim_yuzdesi && personnel.prim_yuzdesi > 0 ? personnel.prim_yuzdesi.toString() : '');
+
   const updateMutation = useMutation({
     mutationFn: async (data: any) => {
       if (workSystem === 'komisyonlu') {
@@ -35,41 +35,38 @@ export function WorkInfoTab({
     },
     onSuccess: () => {
       toast.success("Personel bilgileri başarıyla güncellendi!");
-      queryClient.invalidateQueries({
-        queryKey: ["personeller"]
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["personel-list"]
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["personel"]
-      });
+      queryClient.invalidateQueries({ queryKey: ["personeller"] });
+      queryClient.invalidateQueries({ queryKey: ["personel-list"] });
+      queryClient.invalidateQueries({ queryKey: ["personel"] });
       setIsEditing(false);
       if (onEdit) onEdit();
     },
-    onError: error => {
+    onError: (error) => {
       console.error("Update error:", error);
       toast.error("Personel güncellenirken bir hata oluştu.");
-    }
+    },
   });
+
   const handleSave = () => {
     try {
       // Parse the string values to numbers, defaulting to 0 if empty
       const parsedSalary = salary ? parseInt(salary, 10) : 0;
       const parsedCommission = commission ? parseInt(commission, 10) : 0;
-
+      
       // Validate input values before submission
       if (workSystem === 'komisyonlu' && (parsedCommission < 0 || parsedCommission > 100)) {
         toast.error("Prim yüzdesi 0-100 arasında olmalıdır.");
         return;
       }
+      
       if (workSystem === 'maasli' && parsedSalary < 0) {
         toast.error("Maaş tutarı sıfırdan büyük olmalıdır.");
         return;
       }
-
+      
       // Prepare the data for submission
       const updateData: Record<string, any> = {};
+      
       if (workSystem === 'komisyonlu') {
         updateData.calisma_sistemi = 'komisyon';
         updateData.prim_yuzdesi = parsedCommission;
@@ -79,6 +76,7 @@ export function WorkInfoTab({
         updateData.maas = parsedSalary;
         updateData.prim_yuzdesi = 0; // Set commission to 0 for salaried workers
       }
+      
       console.log("Submitting update data:", updateData);
       updateMutation.mutate(updateData);
     } catch (error) {
@@ -86,10 +84,16 @@ export function WorkInfoTab({
       toast.error("İşlem sırasında bir hata oluştu. Lütfen tekrar deneyin.");
     }
   };
-  const EditableContent = () => <div className="space-y-6">
+
+  const EditableContent = () => (
+    <div className="space-y-6">
       <div className="space-y-4">
         <Label>Çalışma Sistemi</Label>
-        <RadioGroup value={workSystem} onValueChange={setWorkSystem} className="flex flex-col space-y-2">
+        <RadioGroup
+          value={workSystem}
+          onValueChange={setWorkSystem}
+          className="flex flex-col space-y-2"
+        >
           <div className="flex items-center space-x-2">
             <RadioGroupItem value="maasli" id="maasli" />
             <Label htmlFor="maasli">Maaşlı</Label>
@@ -101,9 +105,14 @@ export function WorkInfoTab({
         </RadioGroup>
       </div>
 
-      {workSystem === 'maasli' && <div className="space-y-4">
+      {workSystem === 'maasli' && (
+        <div className="space-y-4">
           <Label>Maaş Dönemi</Label>
-          <RadioGroup value={paymentPeriod} onValueChange={setPaymentPeriod} className="flex space-x-4">
+          <RadioGroup
+            value={paymentPeriod}
+            onValueChange={setPaymentPeriod}
+            className="flex space-x-4"
+          >
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="aylik" id="aylik" />
               <Label htmlFor="aylik">Aylık</Label>
@@ -120,22 +129,39 @@ export function WorkInfoTab({
 
           <div className="space-y-2">
             <Label>Maaş Tutarı</Label>
-            <Input value={salary} onChange={e => setSalary(e.target.value.replace(/\D/g, ''))} placeholder="Maaş tutarını girin (₺)" className="placeholder:text-muted-foreground" type="text" inputMode="numeric" />
+            <Input
+              value={salary}
+              onChange={(e) => setSalary(e.target.value.replace(/\D/g, ''))}
+              placeholder="Maaş tutarını girin (₺)"
+              className="placeholder:text-muted-foreground"
+              type="text"
+              inputMode="numeric"
+            />
           </div>
-        </div>}
+        </div>
+      )}
 
-      {workSystem === 'komisyonlu' && <div className="space-y-2">
+      {workSystem === 'komisyonlu' && (
+        <div className="space-y-2">
           <Label>Prim Yüzdesi (%)</Label>
-          <Input value={commission} onChange={e => {
-        const value = e.target.value.replace(/\D/g, '');
-        const num = parseInt(value, 10);
-        if (!value) {
-          setCommission('');
-        } else if (!isNaN(num) && num >= 0 && num <= 100) {
-          setCommission(num.toString());
-        }
-      }} placeholder="Prim yüzdesini girin (0-100)" type="text" inputMode="numeric" className="placeholder:text-muted-foreground rounded px-[10px] py-0 my-0 mx-0" />
-        </div>}
+          <Input
+            value={commission}
+            onChange={(e) => {
+              const value = e.target.value.replace(/\D/g, '');
+              const num = parseInt(value, 10);
+              if (!value) {
+                setCommission('');
+              } else if (!isNaN(num) && num >= 0 && num <= 100) {
+                setCommission(num.toString());
+              }
+            }}
+            placeholder="Prim yüzdesini girin (0-100)"
+            className="placeholder:text-muted-foreground"
+            type="text"
+            inputMode="numeric"
+          />
+        </div>
+      )}
 
       <div className="flex justify-end space-x-2">
         <Button variant="outline" onClick={() => setIsEditing(false)}>
@@ -145,12 +171,16 @@ export function WorkInfoTab({
           {updateMutation.isPending ? "Kaydediliyor..." : "Kaydet"}
         </Button>
       </div>
-    </div>;
+    </div>
+  );
+
   const DisplayContent = () => {
     // For display purposes, don't show zero values
     const displaySalary = salary !== '' && parseInt(salary, 10) > 0 ? parseInt(salary, 10) : null;
     const displayCommission = commission !== '' && parseInt(commission, 10) > 0 ? parseInt(commission, 10) : null;
-    return <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-4">
           <div>
             <p className="text-sm font-medium text-muted-foreground">Çalışma Sistemi</p>
@@ -162,35 +192,57 @@ export function WorkInfoTab({
             </div>
           </div>
           
-          {workSystem === 'maasli' && <div>
+          {workSystem === 'maasli' && (
+            <div>
               <p className="text-sm font-medium text-muted-foreground">Maaş</p>
               <div className="flex items-center mt-1">
                 <Banknote className="h-4 w-4 mr-2 text-muted-foreground" />
-                {displaySalary !== null ? <p className="text-base">{formatCurrency(displaySalary)}</p> : <p className="text-base text-muted-foreground">Belirtilmemiş</p>}
+                {displaySalary !== null ? (
+                  <p className="text-base">{formatCurrency(displaySalary)}</p>
+                ) : (
+                  <p className="text-base text-muted-foreground">Belirtilmemiş</p>
+                )}
               </div>
-            </div>}
+            </div>
+          )}
           
-          {workSystem === 'komisyonlu' && <div>
+          {workSystem === 'komisyonlu' && (
+            <div>
               <p className="text-sm font-medium text-muted-foreground">Prim Yüzdesi</p>
               <div className="flex items-center mt-1">
                 <PercentIcon className="h-4 w-4 mr-2 text-muted-foreground" />
-                {displayCommission !== null ? <p className="text-base">%{displayCommission}</p> : <p className="text-base text-muted-foreground">Belirtilmemiş</p>}
+                {displayCommission !== null ? (
+                  <p className="text-base">%{displayCommission}</p>
+                ) : (
+                  <p className="text-base text-muted-foreground">Belirtilmemiş</p>
+                )}
               </div>
-            </div>}
+            </div>
+          )}
         </div>
 
-        {canEdit && !isEditing && <div className="flex justify-end">
-            <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+        {canEdit && !isEditing && (
+          <div className="flex justify-end">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setIsEditing(true)}
+            >
               Düzenle
             </Button>
-          </div>}
-      </div>;
+          </div>
+        )}
+      </div>
+    );
   };
-  return <div className="space-y-6">
+
+  return (
+    <div className="space-y-6">
       <Card>
         <CardContent className="p-6">
           {isEditing ? <EditableContent /> : <DisplayContent />}
         </CardContent>
       </Card>
-    </div>;
+    </div>
+  );
 }
