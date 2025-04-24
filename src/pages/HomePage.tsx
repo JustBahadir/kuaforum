@@ -82,14 +82,15 @@ export default function HomePage() {
                 <Button 
                   className="flex-1 h-12" 
                   variant="outline"
-                  onClick={() => navigate("/login")}
+                  // Use onClick that launches dialog instead of navigation
+                  onClick={() => navigate("/")}
                 >
                   <User className="mr-2" />
                   Müşteri Girişi
                 </Button>
                 <Button 
                   className="flex-1 h-12"
-                  onClick={() => navigate("/login")}
+                  onClick={() => navigate("/staff-login")}
                 >
                   <Users className="mr-2" />
                   Kuaför Girişi
@@ -108,6 +109,7 @@ export default function HomePage() {
                     </div>
                   </div>
                   <Button className="w-full" onClick={() => {}}>
+                    <Search className="mr-2" />
                     Ara
                   </Button>
                 </div>
