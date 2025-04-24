@@ -14,6 +14,7 @@ export default function AuthGoogleCallback() {
       setLoading(true);
 
       try {
+        console.log("Processing Google auth callback");
         // Get session (no type args passed, to fix TS issues)
         const { data, error: sessionError } = await supabase.auth.getSession();
 
@@ -25,6 +26,8 @@ export default function AuthGoogleCallback() {
           navigate("/login");
           return;
         }
+
+        console.log("User authenticated, role:", user.user_metadata?.role);
 
         // Fetch user profile after login (maybeSingle to allow no profile yet)
         const { data: profileData, error: profileError } = await supabase
@@ -53,12 +56,14 @@ export default function AuthGoogleCallback() {
           }
         }
 
-        // Check if user is assigned to a shop
+        // Check if user is assigned to a shop - CRITICAL CHECK
         const { data: staffData } = await supabase
           .from('personel')
           .select('dukkan_id')
           .eq('auth_id', user.id)
           .maybeSingle();
+        
+        console.log("Staff shop assignment check:", staffData);
 
         // Get mode query param
         const mode = searchParams.get("mode");
@@ -89,11 +94,14 @@ export default function AuthGoogleCallback() {
           toast.success("Yönetici olarak giriş başarılı!");
           navigate("/shop-home");
         } else if (role === "staff") {
+          // CRITICAL: Check if staff is assigned to a shop first
           if (!staffData || !staffData.dukkan_id) {
-            // Staff not assigned to any shop
+            // Staff not assigned to any shop - redirect to unassigned-staff
+            console.log("Staff not assigned to any shop, redirecting to unassigned-staff");
+            toast.success("Giriş başarılı! Henüz bir işletmeye bağlı değilsiniz.");
             navigate("/unassigned-staff");
           } else {
-            // Staff 
+            // Staff assigned to a shop
             if (
               !profileData ||
               !profileData.first_name ||

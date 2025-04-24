@@ -32,13 +32,35 @@ export default function UnassignedStaff() {
   });
 
   useEffect(() => {
+    const checkUserType = async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        
+        if (error || !data.session) {
+          console.error("Auth error or no session:", error);
+          navigate("/login");
+          return;
+        }
+        
+        const userRole = data.session.user.user_metadata?.role;
+        if (userRole !== 'staff' && userRole !== 'admin') {
+          console.error("Wrong user role:", userRole);
+          navigate("/login");
+          return;
+        }
+      } catch (error) {
+        console.error("Auth check error:", error);
+        navigate("/login");
+      }
+    };
+    
+    checkUserType();
     checkUserAndLoadData();
-    console.log("Component loaded");
-  }, []);
+  }, [navigate]);
 
   const checkUserAndLoadData = async () => {
     try {
-      console.log("Checking user and loading data");
+      console.log("UnassignedStaff: Checking user and loading data");
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       
       if (userError || !user) {
@@ -47,7 +69,25 @@ export default function UnassignedStaff() {
         return;
       }
 
-      console.log("User found:", user.id);
+      console.log("UnassignedStaff: User found:", user.id);
+
+      // Check if user is already connected to a shop
+      const { data: staffData, error: staffError } = await supabase
+        .from('personel')
+        .select('dukkan_id')
+        .eq('auth_id', user.id)
+        .maybeSingle();
+        
+      if (staffError) {
+        console.error("Staff data fetch error:", staffError);
+      }
+      
+      // If staff is assigned to a shop, redirect to staff profile
+      if (staffData && staffData.dukkan_id) {
+        console.log("UnassignedStaff: User is connected to a shop, redirecting to staff profile");
+        navigate('/staff-profile');
+        return;
+      }
 
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
@@ -57,10 +97,11 @@ export default function UnassignedStaff() {
 
       if (profileError) {
         console.error("Profile error:", profileError);
+        // Don't return early if profile fetch fails, try to continue
       }
 
       if (profileData) {
-        console.log("Profile data loaded:", profileData);
+        console.log("UnassignedStaff: Profile data loaded:", profileData);
         setUserProfile(profileData);
       }
 
@@ -76,7 +117,7 @@ export default function UnassignedStaff() {
       }
 
       if (educationData) {
-        console.log("Education data loaded");
+        console.log("UnassignedStaff: Education data loaded");
         setEducationData(educationData);
       }
 
@@ -92,15 +133,14 @@ export default function UnassignedStaff() {
       }
 
       if (historyData) {
-        console.log("History data loaded");
+        console.log("UnassignedStaff: History data loaded");
         setHistoryData(historyData);
       }
 
+      setLoading(false);
     } catch (error) {
-      console.error("Error loading user data:", error);
+      console.error("UnassignedStaff: Error loading user data:", error);
       toast.error("Kullanıcı bilgileri yüklenirken bir hata oluştu");
-    } finally {
-      console.log("Loading finished");
       setLoading(false);
     }
   };

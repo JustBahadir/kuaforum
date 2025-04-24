@@ -13,7 +13,7 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
   const [checking, setChecking] = useState(true);
 
   // Public pages that don't require authentication
-  const publicPages = ["/", "/login", "/services", "/appointments"];
+  const publicPages = ["/", "/login", "/staff-login", "/services", "/appointments"];
 
   useEffect(() => {
     let isMounted = true;
@@ -21,6 +21,8 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
     
     const checkSession = async () => {
       try {
+        console.log("RouteProtection: Checking path", location.pathname);
+        
         // If it's a public page, no need for session check
         const isPublicPage = publicPages.some(page => 
           location.pathname === page || location.pathname.startsWith(`${page}/`)
@@ -28,6 +30,7 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
         
         if (isPublicPage) {
           if (isMounted) setChecking(false);
+          console.log("RouteProtection: Public page, no check needed");
           return;
         }
 
@@ -69,9 +72,12 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
                 .select('dukkan_id')
                 .eq('auth_id', session.user.id)
                 .maybeSingle();
+              
+              console.log("Staff shop check:", personelData);
                 
               if (!personelData?.dukkan_id) {
                 // Staff not connected to any shop, redirect to unassigned staff page
+                console.log("Staff not connected to shop, redirecting to unassigned-staff");
                 navigate('/unassigned-staff');
                 return;
               }
