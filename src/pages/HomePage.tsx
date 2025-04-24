@@ -1,14 +1,17 @@
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { Scissors, Search, User, Users } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Home } from "lucide-react";
 
 export default function HomePage() {
   const navigate = useNavigate();
   const { isAuthenticated, userRole, loading } = useCustomerAuth();
+  const [showCustomerDialog, setShowCustomerDialog] = useState(false);
 
   // Yönlendirme sadece loading tamamlandığında yapılır
   useEffect(() => {
@@ -36,6 +39,10 @@ export default function HomePage() {
       </div>
     );
   }
+
+  const handleCustomerLoginClick = () => {
+    setShowCustomerDialog(true);
+  };
 
   return (
     <div className="min-h-screen">
@@ -82,8 +89,7 @@ export default function HomePage() {
                 <Button 
                   className="flex-1 h-12" 
                   variant="outline"
-                  // Use onClick that launches dialog instead of navigation
-                  onClick={() => navigate("/")}
+                  onClick={handleCustomerLoginClick}
                 >
                   <User className="mr-2" />
                   Müşteri Girişi
@@ -118,6 +124,28 @@ export default function HomePage() {
           </div>
         </div>
       </div>
+
+      <Dialog open={showCustomerDialog} onOpenChange={setShowCustomerDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Bilgilendirme</DialogTitle>
+            <DialogDescription className="py-4">
+              Bu bölüm gelecek sürümlerde eklenecektir.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              onClick={() => {
+                setShowCustomerDialog(false);
+              }}
+              className="w-full"
+            >
+              <Home className="w-4 h-4 mr-2" />
+              Ana Sayfaya Dön
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
