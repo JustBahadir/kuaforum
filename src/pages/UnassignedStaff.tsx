@@ -33,46 +33,66 @@ export default function UnassignedStaff() {
 
   useEffect(() => {
     checkUserAndLoadData();
+    console.log("Component loaded");
   }, []);
 
   const checkUserAndLoadData = async () => {
     try {
+      console.log("Checking user and loading data");
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       
       if (userError || !user) {
+        console.error("Auth error:", userError);
         navigate("/login");
         return;
       }
 
-      const { data: profileData } = await supabase
+      console.log("User found:", user.id);
+
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single();
 
+      if (profileError) {
+        console.error("Profile error:", profileError);
+      }
+
       if (profileData) {
+        console.log("Profile data loaded:", profileData);
         setUserProfile(profileData);
       }
 
       // Load existing education data if any
-      const { data: educationData } = await supabase
+      const { data: educationData, error: eduError } = await supabase
         .from('staff_education')
         .select('*')
         .eq('personel_id', user.id)
         .maybeSingle();
 
+      if (eduError) {
+        console.error("Education data error:", eduError);
+      }
+
       if (educationData) {
+        console.log("Education data loaded");
         setEducationData(educationData);
       }
 
       // Load existing history data if any
-      const { data: historyData } = await supabase
+      const { data: historyData, error: histError } = await supabase
         .from('staff_history')
         .select('*')
         .eq('personel_id', user.id)
         .maybeSingle();
 
+      if (histError) {
+        console.error("History data error:", histError);
+      }
+
       if (historyData) {
+        console.log("History data loaded");
         setHistoryData(historyData);
       }
 
@@ -80,38 +100,65 @@ export default function UnassignedStaff() {
       console.error("Error loading user data:", error);
       toast.error("Kullanıcı bilgileri yüklenirken bir hata oluştu");
     } finally {
+      console.log("Loading finished");
       setLoading(false);
     }
   };
 
   const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      toast.error("Çıkış yapılırken bir hata oluştu");
-    } else {
-      navigate("/login");
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error("Logout error:", error);
+        toast.error("Çıkış yapılırken bir hata oluştu");
+      } else {
+        toast.success("Başarıyla çıkış yapıldı");
+        navigate("/login");
+      }
+    } catch (error) {
+      console.error("Unexpected error during logout:", error);
+      toast.error("Çıkış yapılırken beklenmeyen bir hata oluştu");
     }
   };
 
   const handleSave = async () => {
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Kullanıcı bulunamadı");
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (!user || userError) {
+        console.error("User not found:", userError);
+        throw new Error("Kullanıcı bulunamadı");
+      }
 
-      await supabase
+      console.log("Saving data for user:", user.id);
+
+      // Save education data
+      const { error: eduError } = await supabase
         .from('staff_education')
         .upsert({
           personel_id: user.id,
-          ...educationData
+          ...educationData,
+          updated_at: new Date().toISOString()
         });
 
-      await supabase
+      if (eduError) {
+        console.error("Education save error:", eduError);
+        throw new Error("Eğitim bilgileri kaydedilemedi");
+      }
+
+      // Save history data
+      const { error: histError } = await supabase
         .from('staff_history')
         .upsert({
           personel_id: user.id,
-          ...historyData
+          ...historyData,
+          updated_at: new Date().toISOString()
         });
+
+      if (histError) {
+        console.error("History save error:", histError);
+        throw new Error("Geçmiş bilgileri kaydedilemedi");
+      }
 
       toast.success("Bilgiler başarıyla kaydedildi");
     } catch (error) {
