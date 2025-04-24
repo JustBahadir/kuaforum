@@ -1,8 +1,10 @@
-
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { CityDistrictSelector } from "./CityDistrictSelector";
 import { City, District } from "@/hooks/useCityDistricts";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { useState } from "react";
+import { Home } from "lucide-react";
 
 interface CustomerSectionProps {
   selectedCity: string;
@@ -24,9 +26,10 @@ export const CustomerSection = ({
   handleFindSalons
 }: CustomerSectionProps) => {
   const navigate = useNavigate();
+  const [showDialog, setShowDialog] = useState(false);
 
-  const handleLoginClick = () => {
-    navigate("/login");
+  const handleCustomerLoginClick = () => {
+    setShowDialog(true);
   };
 
   return (
@@ -49,27 +52,22 @@ export const CustomerSection = ({
         
         <div className="mt-4 flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
           <Button 
-            onClick={() => {
-              if (selectedCity) {
-                handleLoginClick(); // Redirect to login before finding salons
-              }
-            }} 
-            className="w-full sm:w-auto" 
-            disabled={!selectedCity}
+            onClick={handleCustomerLoginClick} 
+            className="w-full sm:w-auto"
           >
-            Salonları Bul
+            Müşteri Girişi
           </Button>
           
           <Button 
-            onClick={handleLoginClick}
+            onClick={() => navigate("/staff-login")}
             variant="outline" 
             className="w-full sm:w-auto"
           >
-            Hesabıma Giriş Yap
+            Kuaför Girişi
           </Button>
         </div>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-blue-50 p-4 rounded-lg">
           <h3 className="font-semibold text-blue-800 mb-2">Kolay Randevu</h3>
@@ -91,6 +89,29 @@ export const CustomerSection = ({
           <p className="text-gray-600 text-sm">Otomatik hatırlatmalarla randevularınızı asla kaçırmayın.</p>
         </div>
       </div>
+
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Bilgilendirme</DialogTitle>
+            <DialogDescription className="py-4">
+              Bu bölüm gelecek sürümlerde eklenecektir.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              onClick={() => {
+                setShowDialog(false);
+                navigate("/");
+              }}
+              className="w-full"
+            >
+              <Home className="w-4 h-4 mr-2" />
+              Ana Sayfaya Dön
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
