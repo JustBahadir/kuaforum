@@ -257,9 +257,7 @@ export default function Login() {
                 <div className="absolute inset-0 flex items-center">
                   <span className="w-full border-t border-gray-300"></span>
                 </div>
-                <div className="relative flex justify-center text-xs uppercase text-muted-foreground bg-gray-50">
-                  veya
-                </div>
+                
               </div>
               <form onSubmit={handleRegister} className="space-y-4" noValidate>
                 {infoMessage && <div className="p-3 mb-2 bg-yellow-200 border border-yellow-400 rounded text-yellow-900 text-sm">
@@ -268,17 +266,9 @@ export default function Login() {
                       Giriş Yap sekmesine geç
                     </button>
                   </div>}
-                <div>
-                  <Label htmlFor="registerEmail">E-posta</Label>
-                  <Input id="registerEmail" type="email" value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" required />
-                </div>
-                <div>
-                  <Label htmlFor="registerPassword">Şifre</Label>
-                  <Input id="registerPassword" type="password" value={password} onChange={e => setPassword(e.target.value)} autoComplete="new-password" required />
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Kaydediliyor..." : "Kayıt Ol"}
-                </Button>
+                
+                
+                
               </form>
             </TabsContent>
           </Tabs>
