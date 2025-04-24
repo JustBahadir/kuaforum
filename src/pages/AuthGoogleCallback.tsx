@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -53,6 +52,13 @@ export default function AuthGoogleCallback() {
           }
         }
 
+        // Check if user is assigned to a shop
+        const { data: staffData } = await supabase
+          .from('personel')
+          .select('dukkan_id')
+          .eq('auth_id', user.id)
+          .maybeSingle();
+
         // Get mode query param
         const mode = searchParams.get("mode");
 
@@ -82,18 +88,23 @@ export default function AuthGoogleCallback() {
           toast.success("Yönetici olarak giriş başarılı!");
           navigate("/shop-home");
         } else if (role === "staff") {
-          // Staff 
-          if (
-            !profileData ||
-            !profileData.first_name ||
-            !profileData.last_name ||
-            !profileData.phone
-          ) {
-            toast.success("Profil bilgilerinizi tamamlayınız.");
-            navigate("/profile-setup");
+          if (!staffData || !staffData.dukkan_id) {
+            // Staff not assigned to any shop
+            navigate("/unassigned-staff");
           } else {
-            toast.success("Giriş başarılı!");
-            navigate("/staff-profile");
+            // Staff 
+            if (
+              !profileData ||
+              !profileData.first_name ||
+              !profileData.last_name ||
+              !profileData.phone
+            ) {
+              toast.success("Profil bilgilerinizi tamamlayınız.");
+              navigate("/profile-setup");
+            } else {
+              toast.success("Giriş başarılı!");
+              navigate("/staff-profile");
+            }
           }
         } else if (role === "customer") {
           // Customer 

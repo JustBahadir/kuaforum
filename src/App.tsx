@@ -28,6 +28,7 @@ import CustomerOperations from "./pages/operations/CustomerOperations";
 import StaffOperations from "./pages/operations/StaffOperations";
 import Profile from "./pages/Profile";
 import AuthGoogleCallback from "./pages/AuthGoogleCallback";
+import UnassignedStaff from "./pages/UnassignedStaff";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -72,6 +73,7 @@ function App() {
               <Route path="/operations-history" element={<OperationsHistory />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/staff-profile" element={<StaffProfile />} />
+              <Route path="/unassigned-staff" element={<UnassignedStaff />} />
               <Route path="/customers" element={<Customers />} />
               <Route path="/settings" element={<Settings />} />
               
