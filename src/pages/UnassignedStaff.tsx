@@ -2,10 +2,12 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/lib/supabase/client";
 import { StaffPreRegistrationTab } from "@/pages/Profile/StaffPreRegistrationTab";
-import { Avatar } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from "sonner";
+import { Mail, Phone, MapPin } from "lucide-react";
 
 export default function UnassignedStaff() {
   const navigate = useNavigate();
@@ -41,7 +43,6 @@ export default function UnassignedStaff() {
         return;
       }
 
-      // Get profile data
       const { data: profileData } = await supabase
         .from('profiles')
         .select('*')
@@ -131,50 +132,66 @@ export default function UnassignedStaff() {
   return (
     <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-4xl mx-auto space-y-6">
-        {/* Profile Header */}
-        <div className="bg-white p-6 rounded-lg shadow-sm flex items-center space-x-4">
-          <Avatar className="w-20 h-20">
-            <div className="bg-gray-100 w-full h-full flex items-center justify-center text-xl font-semibold text-gray-500">
-              {userProfile?.first_name?.[0] || 'P'}
+        <Card className="shadow-lg">
+          <CardContent className="p-6">
+            <div className="flex flex-col items-center space-y-4 mb-6">
+              <Avatar className="w-24 h-24">
+                <AvatarFallback className="text-2xl bg-purple-100 text-purple-700">
+                  {userProfile?.first_name?.[0] || 'P'}
+                </AvatarFallback>
+              </Avatar>
+              <div className="text-center">
+                <h1 className="text-2xl font-semibold">
+                  {userProfile?.first_name} {userProfile?.last_name}
+                </h1>
+                <p className="text-gray-500">Personel</p>
+              </div>
             </div>
-          </Avatar>
-          <div>
-            <h1 className="text-xl font-semibold">Personel</h1>
-            <p className="text-gray-500">{userProfile?.first_name} {userProfile?.last_name}</p>
-          </div>
-        </div>
 
-        {/* Main Content */}
-        <div className="bg-white p-6 rounded-lg shadow-sm">
-          <StaffPreRegistrationTab
-            educationData={educationData}
-            historyData={historyData}
-            onEducationChange={(field, value) => 
-              setEducationData(prev => ({ ...prev, [field]: value }))}
-            onHistoryChange={(field, value) => 
-              setHistoryData(prev => ({ ...prev, [field]: value }))}
-            onSave={handleSave}
-            isLoading={loading}
-          />
+            <div className="grid gap-4 md:grid-cols-2 mb-6">
+              <div className="flex items-center gap-2 text-gray-600">
+                <Mail className="w-4 h-4" />
+                <span>{userProfile?.email || '-'}</span>
+              </div>
+              <div className="flex items-center gap-2 text-gray-600">
+                <Phone className="w-4 h-4" />
+                <span>{userProfile?.phone || '-'}</span>
+              </div>
+              <div className="flex items-center gap-2 text-gray-600 md:col-span-2">
+                <MapPin className="w-4 h-4" />
+                <span>{userProfile?.address || '-'}</span>
+              </div>
+            </div>
 
-          {/* Action Buttons */}
-          <div className="mt-6 space-y-4">
-            <Button
-              onClick={() => navigate("/staff-join-request")}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              İşletmeye Katıl
-            </Button>
-            
-            <Button
-              onClick={handleLogout}
-              variant="destructive"
-              className="w-full"
-            >
-              Oturumu Kapat
-            </Button>
-          </div>
-        </div>
+            <StaffPreRegistrationTab
+              educationData={educationData}
+              historyData={historyData}
+              onEducationChange={(field, value) => 
+                setEducationData(prev => ({ ...prev, [field]: value }))}
+              onHistoryChange={(field, value) => 
+                setHistoryData(prev => ({ ...prev, [field]: value }))}
+              onSave={handleSave}
+              isLoading={loading}
+            />
+
+            <div className="mt-6 space-y-4">
+              <Button
+                onClick={() => navigate("/staff-join-request")}
+                className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+              >
+                İşletmeye Katıl
+              </Button>
+              
+              <Button
+                onClick={handleLogout}
+                variant="destructive"
+                className="w-full"
+              >
+                Oturumu Kapat
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
