@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
@@ -71,7 +72,7 @@ export function useUnassignedStaffData() {
           personel_id: personelId,
           ...educationData,
         }
-      ], { onConflict: ['personel_id'] });
+      ], { onConflict: 'personel_id' }); // <--- FIXED: onConflict should be string, not string[]
 
       // history
       await supabase.from("staff_history").upsert([
@@ -79,7 +80,7 @@ export function useUnassignedStaffData() {
           personel_id: personelId,
           ...historyData,
         }
-      ], { onConflict: ['personel_id'] });
+      ], { onConflict: 'personel_id' }); // <--- FIXED: onConflict should be string, not string[]
 
       toast.success("Bilgileriniz başarıyla kaydedildi.");
     } catch (err) {

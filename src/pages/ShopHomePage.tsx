@@ -10,7 +10,7 @@ import { ShopContactCard } from "@/components/shop/ShopContactCard";
 import { ShopWorkingHoursCard } from "@/components/shop/ShopWorkingHoursCard";
 import { ShopGalleryCard } from "@/components/shop/ShopGalleryCard";
 import { ShopPersonnelCard } from "@/components/shop/ShopPersonnelCard";
-import { useNavigate } from "react-router-dom";
+// Removed duplicate import of useNavigate
 
 export default function ShopHomePage() {
   const { userRole, dukkanId, userId, loading } = useCustomerAuth();
@@ -114,3 +114,4 @@ export default function ShopHomePage() {
     </StaffLayout>
   );
 }
+
