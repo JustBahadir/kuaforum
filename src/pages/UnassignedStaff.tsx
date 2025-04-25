@@ -55,15 +55,28 @@ export default function UnassignedStaff() {
         return;
       }
 
+      // Fetch corresponding personel by auth_id to get the numeric id
+      const { data: personel, error: personelError } = await supabase
+        .from("personel")
+        .select("id")
+        .eq("auth_id", user.id)
+        .maybeSingle();
+
+      if (!personel || personelError) {
+        toast.error("Personel kaydı bulunamadı. Lütfen profilinizi tamamlayın veya destekle iletişime geçin.");
+        setLoading(false);
+        return;
+      }
+
       // Eğitim bilgisi kaydet/güncelle (upsert)
       await supabase.from("staff_education").upsert({
-        personel_id: user.id,
+        personel_id: personel.id,
         ...educationData,
       }, { onConflict: ['personel_id'] });
 
       // Geçmiş bilgisi kaydet/güncelle (upsert)
       await supabase.from("staff_history").upsert({
-        personel_id: user.id,
+        personel_id: personel.id,
         ...historyData,
       }, { onConflict: ['personel_id'] });
 
