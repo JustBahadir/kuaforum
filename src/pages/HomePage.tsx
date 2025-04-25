@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -13,7 +12,6 @@ export default function HomePage() {
   const { isAuthenticated, userRole, loading } = useCustomerAuth();
   const [showCustomerDialog, setShowCustomerDialog] = useState(false);
 
-  // Yönlendirme sadece loading tamamlandığında yapılır
   useEffect(() => {
     if (!loading) {
       if (isAuthenticated) {
@@ -31,7 +29,6 @@ export default function HomePage() {
     }
   }, [isAuthenticated, userRole, loading, navigate]);
 
-  // loading durumunda spinner gösterilir
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" aria-label="Yükleniyor">
@@ -48,7 +45,6 @@ export default function HomePage() {
     <div className="min-h-screen">
       <div className="container mx-auto px-4 py-8">
         <div className="grid md:grid-cols-2 gap-8 items-center min-h-[calc(100vh-4rem)]">
-          {/* Sol Bölüm - Hizmet Açıklaması */}
           <div className="space-y-8">
             <h1 className="text-4xl font-bold">Güzellik Hizmetleriniz için Tek Adres</h1>
             <p className="text-lg text-muted-foreground">
@@ -82,23 +78,15 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Sağ Bölüm - Giriş ve Arama */}
           <div className="space-y-8">
             <div className="space-y-4">
               <div className="flex gap-4">
                 <Button 
                   className="flex-1 h-12" 
                   variant="outline"
-                  onClick={handleCustomerLoginClick}
+                  onClick={() => navigate("/login")}
                 >
                   <User className="mr-2" />
-                  Müşteri Girişi
-                </Button>
-                <Button 
-                  className="flex-1 h-12"
-                  onClick={() => navigate("/staff-login")}
-                >
-                  <Users className="mr-2" />
                   Kuaför Girişi
                 </Button>
               </div>

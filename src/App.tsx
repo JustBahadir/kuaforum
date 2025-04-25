@@ -1,4 +1,3 @@
-
 import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
@@ -55,7 +54,6 @@ function App() {
               
               {/* Auth Routes */}
               <Route path="/login" element={<Login />} />
-              <Route path="/staff-login" element={<StaffLogin />} />
               <Route path="/auth" element={<CustomerAuth />} />
               <Route path="/profile-setup" element={<ProfileSetup />} />
               <Route path="/auth-google-callback" element={<AuthGoogleCallback />} />
