@@ -33,6 +33,48 @@ export default function UnassignedStaff() {
   
   const [error, setError] = useState<string | null>(null);
 
+  // Çıkış yap fonksiyonu
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      toast.success("Başarıyla çıkış yaptınız.");
+      navigate("/login");
+    } catch (err) {
+      toast.error("Çıkış yapılırken bir hata oluştu.");
+    }
+  };
+
+  // Bilgi Kaydet fonksiyonu (hem eğitim hem geçmiş için kullanılıyor)
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Kullanıcı doğrulanamadı. Lütfen tekrar giriş yapın.");
+        navigate("/login");
+        return;
+      }
+
+      // Eğitim bilgisi kaydet/güncelle (upsert)
+      await supabase.from("staff_education").upsert({
+        personel_id: user.id,
+        ...educationData,
+      }, { onConflict: ['personel_id'] });
+
+      // Geçmiş bilgisi kaydet/güncelle (upsert)
+      await supabase.from("staff_history").upsert({
+        personel_id: user.id,
+        ...historyData,
+      }, { onConflict: ['personel_id'] });
+
+      toast.success("Bilgileriniz başarıyla kaydedildi.");
+    } catch (err) {
+      toast.error("Bilgiler kaydedilirken bir hata oluştu.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     const checkUserType = async () => {
       try {
