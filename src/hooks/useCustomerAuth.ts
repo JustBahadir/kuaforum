@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { toast } from 'sonner';
@@ -7,7 +6,7 @@ export function useCustomerAuth() {
   const [userName, setUserName] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<string>('dashboard');
-  const [userRole, setUserRole] = useState<string>('');
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [dukkanId, setDukkanId] = useState<number>(0);
   const [dukkanAdi, setDukkanAdi] = useState<string>('');
@@ -21,7 +20,7 @@ export function useCustomerAuth() {
         console.error('Auth session error:', error);
         setIsAuthenticated(false);
         setUserName('');
-        setUserRole('');
+        setUserRole(null);
         setDukkanId(0);
         setDukkanAdi('');
         setUserId('');
@@ -34,7 +33,7 @@ export function useCustomerAuth() {
         const metadata = data.session.user.user_metadata;
         if (metadata) {
           setUserName(`${metadata.first_name || ''} ${metadata.last_name || ''}`.trim());
-          setUserRole(metadata.role || '');
+          setUserRole(metadata.role || null);
 
           if (metadata.role === 'admin') {
             const { data: dukkanData, error: dukkanError } = await supabase
@@ -77,14 +76,14 @@ export function useCustomerAuth() {
           }
         } else {
           setUserName('');
-          setUserRole('');
+          setUserRole(null);
           setDukkanId(0);
           setDukkanAdi('');
         }
       } else {
         setIsAuthenticated(false);
         setUserName('');
-        setUserRole('');
+        setUserRole(null);
         setDukkanId(0);
         setDukkanAdi('');
         setUserId('');
@@ -93,7 +92,7 @@ export function useCustomerAuth() {
       console.error('Auth check error:', error);
       setIsAuthenticated(false);
       setUserName('');
-      setUserRole('');
+      setUserRole(null);
       setDukkanId(0);
       setDukkanAdi('');
       setUserId('');
@@ -113,7 +112,7 @@ export function useCustomerAuth() {
             setUserId(session.user.id);
 
             setUserName('');
-            setUserRole('');
+            setUserRole(null);
             setDukkanId(0);
             setDukkanAdi('');
 
@@ -123,7 +122,7 @@ export function useCustomerAuth() {
           } else {
             setIsAuthenticated(false);
             setUserName('');
-            setUserRole('');
+            setUserRole(null);
             setDukkanId(0);
             setDukkanAdi('');
             setUserId('');
@@ -131,7 +130,7 @@ export function useCustomerAuth() {
         } else if (event === 'SIGNED_OUT') {
           setIsAuthenticated(false);
           setUserName('');
-          setUserRole('');
+          setUserRole(null);
           setDukkanId(0);
           setDukkanAdi('');
           setUserId('');
@@ -154,7 +153,7 @@ export function useCustomerAuth() {
       if (error) throw error;
       setIsAuthenticated(false);
       setUserName('');
-      setUserRole('');
+      setUserRole(null);
       setDukkanId(0);
       setDukkanAdi('');
       setUserId('');
@@ -185,4 +184,3 @@ export function useCustomerAuth() {
     refreshProfile,
   };
 }
-

@@ -16,8 +16,9 @@ export default function ShopHomePage() {
   const queryClient = new QueryClient();
   const navigate = useNavigate();
 
-  // personel için işletme id yoksa personel profil sayfasına yönlendir
+  // Sadece role ve dukkanId netleştiğinde yönlendirme
   useEffect(() => {
+    if (userRole === undefined || userRole === null) return; // loading state
     if (userRole === "staff" && !dukkanId) {
       navigate("/staff-profile", { replace: true });
     }
@@ -109,4 +110,3 @@ export default function ShopHomePage() {
     </StaffLayout>
   );
 }
-

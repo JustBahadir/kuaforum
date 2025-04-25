@@ -55,7 +55,7 @@ export default function UnassignedStaff() {
         return;
       }
 
-      // Fetch corresponding personel by auth_id to get the numeric id
+      // Numeric personel id almalıyız, yoksa hata mesajı ve return
       const { data: personel, error: personelError } = await supabase
         .from("personel")
         .select("id")
@@ -63,18 +63,17 @@ export default function UnassignedStaff() {
         .maybeSingle();
 
       if (!personel || personelError) {
-        toast.error("Personel kaydı bulunamadı. Lütfen profilinizi tamamlayın veya destekle iletişime geçin.");
+        setError("Personel kaydı bulunamadı. Profilinizi tamamlayın veya destek ile iletişime geçin.");
         setLoading(false);
         return;
       }
 
-      // Eğitim bilgisi kaydet/güncelle (upsert)
+      // upsert'ler için numeric id kullanalım
       await supabase.from("staff_education").upsert({
         personel_id: personel.id,
         ...educationData,
       }, { onConflict: ['personel_id'] });
 
-      // Geçmiş bilgisi kaydet/güncelle (upsert)
       await supabase.from("staff_history").upsert({
         personel_id: personel.id,
         ...historyData,
@@ -82,6 +81,7 @@ export default function UnassignedStaff() {
 
       toast.success("Bilgileriniz başarıyla kaydedildi.");
     } catch (err) {
+      setError("Bilgiler kaydedilirken bir hata oluştu.");
       toast.error("Bilgiler kaydedilirken bir hata oluştu.");
     } finally {
       setLoading(false);
@@ -93,11 +93,13 @@ export default function UnassignedStaff() {
       try {
         const { data, error } = await supabase.auth.getSession();
         if (error || !data.session) {
+          setError("Oturum bulunamadı. Lütfen tekrar giriş yapın.");
           navigate("/login");
           return;
         }
         const userRole = data.session.user.user_metadata?.role;
         if (userRole !== 'staff' && userRole !== 'admin') {
+          setError("Yetkiniz yok veya profil tamamlanmamış. Lütfen giriş ekranına dönün.");
           navigate("/login");
           return;
         }
@@ -112,6 +114,9 @@ export default function UnassignedStaff() {
 
   const checkUserAndLoadData = async () => {
     try {
+      setLoading(true);
+      setError(null);
+
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) {
         setError("Kullanıcı bilgisi alınamadı. Lütfen tekrar giriş yapın.");
@@ -119,18 +124,24 @@ export default function UnassignedStaff() {
         return;
       }
 
-      // Check if user is already connected to a shop
-      const { data: staffData } = await supabase
+      // Numeric personel id için burada çekiyoruz
+      const { data: personel } = await supabase
         .from('personel')
-        .select('dukkan_id')
+        .select('id, dukkan_id')
         .eq('auth_id', user.id)
         .maybeSingle();
 
-      if (staffData && staffData.dukkan_id) {
+      if (!personel) {
+        setError("Personel kaydı bulunamadı. Lütfen profilinizi tamamlayın.");
+        setLoading(false);
+        return;
+      }
+      if (personel.dukkan_id) {
         navigate('/staff-profile');
         return;
       }
 
+      // Profil bilgisi
       const { data: profileData } = await supabase
         .from('profiles')
         .select('*')
@@ -141,30 +152,26 @@ export default function UnassignedStaff() {
         setUserProfile(profileData);
       }
 
-      // Eğitim bilgileri zorunlu değil, hata verse bile ilerle
-      const { data: educationData } = await supabase
+      // Eğitim bilgisi
+      const { data: educationDataLoaded } = await supabase
         .from('staff_education')
         .select('*')
-        .eq('personel_id', user.id)
+        .eq('personel_id', personel.id)
         .maybeSingle();
 
-      if (educationData) {
-        setEducationData(educationData);
-      }
+      if (educationDataLoaded) setEducationData(educationDataLoaded);
 
-      // Geçmiş bilgileri zorunlu değil, hata verse bile ilerle
-      const { data: historyData } = await supabase
+      // Geçmiş bilgisi
+      const { data: historyDataLoaded } = await supabase
         .from('staff_history')
         .select('*')
-        .eq('personel_id', user.id)
+        .eq('personel_id', personel.id)
         .maybeSingle();
 
-      if (historyData) {
-        setHistoryData(historyData);
-      }
+      if (historyDataLoaded) setHistoryData(historyDataLoaded);
 
       setLoading(false);
-    } catch (error) {
+    } catch (error: any) {
       setError("Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.");
       setLoading(false);
     }
