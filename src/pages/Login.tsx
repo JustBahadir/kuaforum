@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -44,10 +43,30 @@ export default function Login() {
         }
         setAdminError(null);
         toast.success("Giriş başarılı!");
-        if (adminEmail === "ergun@gmail.com") {
+
+        const { data: sessionData } = await supabase.auth.getSession();
+        const user = sessionData?.session?.user;
+        const role = user?.user_metadata?.role;
+
+        if (role === "staff") {
+          const { data: staffData } = await supabase
+            .from('personel')
+            .select('dukkan_id')
+            .eq('auth_id', user.id)
+            .maybeSingle();
+
+          if (!staffData || !staffData.dukkan_id) {
+            toast.success("Başarıyla giriş yapıldı. Henüz bir işletmeye bağlı değilsiniz.");
+            navigate("/unassigned-staff", { replace: true });
+          } else {
+            toast.success("Başarıyla giriş yapıldı.");
+            navigate("/shop-home", { replace: true });
+          }
+        } else if (role === "admin") {
+          toast.success("Yönetici olarak giriş başarılı!");
           navigate("/shop-home");
-        } else if (adminEmail === "nimet@gmail.com") {
-          navigate("/staff-profile");
+        } else {
+          setAdminError("Bu e-posta ile yönetici/işletmeci veya personel erişimi yok.");
         }
       } else {
         setAdminError("Bu e-posta ile giriş yapamazsınız. Lütfen Google ile giriş yapın.");

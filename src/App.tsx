@@ -1,3 +1,4 @@
+
 import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
@@ -29,9 +30,8 @@ import StaffOperations from "./pages/operations/StaffOperations";
 import Profile from "./pages/Profile";
 import AuthGoogleCallback from "./pages/AuthGoogleCallback";
 import UnassignedStaff from "./pages/UnassignedStaff";
-import StaffLogin from "./pages/StaffLogin";
+// StaffLogin kaldırıldı
 
-// Create a new QueryClient instance with no persistent caching
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

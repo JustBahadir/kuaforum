@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -37,190 +36,81 @@ export default function UnassignedStaff() {
   useEffect(() => {
     const checkUserType = async () => {
       try {
-        console.log("UnassignedStaff: Checking user type");
         const { data, error } = await supabase.auth.getSession();
-        
         if (error || !data.session) {
-          console.error("Auth error or no session:", error);
           navigate("/login");
           return;
         }
-        
         const userRole = data.session.user.user_metadata?.role;
-        console.log("User role:", userRole);
-        
         if (userRole !== 'staff' && userRole !== 'admin') {
-          console.error("Wrong user role:", userRole);
           navigate("/login");
           return;
         }
       } catch (error) {
-        console.error("Auth check error:", error);
         setError("Kullanıcı bilgisi doğrulanamadı. Lütfen tekrar giriş yapın.");
         navigate("/login");
       }
     };
-    
     checkUserType();
     checkUserAndLoadData();
   }, [navigate]);
 
   const checkUserAndLoadData = async () => {
     try {
-      console.log("UnassignedStaff: Checking user and loading data");
       const { data: { user }, error: userError } = await supabase.auth.getUser();
-      
       if (userError || !user) {
-        console.error("Auth error:", userError);
         setError("Kullanıcı bilgisi alınamadı. Lütfen tekrar giriş yapın.");
         navigate("/login");
         return;
       }
 
-      console.log("UnassignedStaff: User found:", user.id);
-
       // Check if user is already connected to a shop
-      const { data: staffData, error: staffError } = await supabase
+      const { data: staffData } = await supabase
         .from('personel')
         .select('dukkan_id')
         .eq('auth_id', user.id)
         .maybeSingle();
-        
-      if (staffError) {
-        console.error("Staff data fetch error:", staffError);
-        setError("Personel bilgileri yüklenirken bir hata oluştu.");
-      }
-      
-      // If staff is assigned to a shop, redirect to staff profile
+
       if (staffData && staffData.dukkan_id) {
-        console.log("UnassignedStaff: User is connected to a shop, redirecting to staff profile");
         navigate('/staff-profile');
         return;
-      } else {
-        console.log("UnassignedStaff: User is not connected to a shop, staying on page");
       }
 
-      const { data: profileData, error: profileError } = await supabase
+      const { data: profileData } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single();
 
-      if (profileError) {
-        console.error("Profile error:", profileError);
-        setError("Profil bilgileri yüklenirken bir hata oluştu.");
-        // Continue to load the page even if profile fetch fails
-      }
-
       if (profileData) {
-        console.log("UnassignedStaff: Profile data loaded:", profileData);
         setUserProfile(profileData);
       }
 
-      // Load existing education data if any
-      const { data: educationData, error: eduError } = await supabase
+      // Eğitim bilgileri zorunlu değil, hata verse bile ilerle
+      const { data: educationData } = await supabase
         .from('staff_education')
         .select('*')
         .eq('personel_id', user.id)
         .maybeSingle();
 
-      if (eduError) {
-        console.error("Education data error:", eduError);
-        setError("Eğitim bilgileri yüklenirken bir hata oluştu.");
-      }
-
       if (educationData) {
-        console.log("UnassignedStaff: Education data loaded");
         setEducationData(educationData);
       }
 
-      // Load existing history data if any
-      const { data: historyData, error: histError } = await supabase
+      // Geçmiş bilgileri zorunlu değil, hata verse bile ilerle
+      const { data: historyData } = await supabase
         .from('staff_history')
         .select('*')
         .eq('personel_id', user.id)
         .maybeSingle();
 
-      if (histError) {
-        console.error("History data error:", histError);
-        setError("Geçmiş bilgileri yüklenirken bir hata oluştu.");
-      }
-
       if (historyData) {
-        console.log("UnassignedStaff: History data loaded");
         setHistoryData(historyData);
       }
 
       setLoading(false);
     } catch (error) {
-      console.error("UnassignedStaff: Error loading user data:", error);
-      toast.error("Kullanıcı bilgileri yüklenirken bir hata oluştu");
       setError("Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.");
-      setLoading(false);
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      console.log("Logging out...");
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        console.error("Logout error:", error);
-        toast.error("Çıkış yapılırken bir hata oluştu");
-      } else {
-        toast.success("Başarıyla çıkış yapıldı");
-        navigate("/login");
-      }
-    } catch (error) {
-      console.error("Unexpected error during logout:", error);
-      toast.error("Çıkış yapılırken beklenmeyen bir hata oluştu");
-    }
-  };
-
-  const handleSave = async () => {
-    setLoading(true);
-    try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (!user || userError) {
-        console.error("User not found:", userError);
-        throw new Error("Kullanıcı bulunamadı");
-      }
-
-      console.log("Saving data for user:", user.id);
-
-      // Save education data
-      const { error: eduError } = await supabase
-        .from('staff_education')
-        .upsert({
-          personel_id: user.id,
-          ...educationData,
-          updated_at: new Date().toISOString()
-        });
-
-      if (eduError) {
-        console.error("Education save error:", eduError);
-        throw new Error("Eğitim bilgileri kaydedilemedi");
-      }
-
-      // Save history data
-      const { error: histError } = await supabase
-        .from('staff_history')
-        .upsert({
-          personel_id: user.id,
-          ...historyData,
-          updated_at: new Date().toISOString()
-        });
-
-      if (histError) {
-        console.error("History save error:", histError);
-        throw new Error("Geçmiş bilgileri kaydedilemedi");
-      }
-
-      toast.success("Bilgiler başarıyla kaydedildi");
-    } catch (error: any) {
-      console.error("Error saving data:", error);
-      toast.error(error.message || "Bilgiler kaydedilirken bir hata oluştu");
-    } finally {
       setLoading(false);
     }
   };
