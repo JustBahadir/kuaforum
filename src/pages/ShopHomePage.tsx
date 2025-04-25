@@ -2,6 +2,7 @@
 import React, { useEffect } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
+import { useNavigate } from "react-router-dom";
 import { QueryClient } from "@tanstack/react-query";
 import { useShopData } from "@/hooks/useShopData";
 import { ShopProfileHeader } from "@/components/shop/ShopProfileHeader";
@@ -12,28 +13,31 @@ import { ShopPersonnelCard } from "@/components/shop/ShopPersonnelCard";
 import { useNavigate } from "react-router-dom";
 
 export default function ShopHomePage() {
-  const { userRole, dukkanId, userId } = useCustomerAuth();
+  const { userRole, dukkanId, userId, loading } = useCustomerAuth();
   const queryClient = new QueryClient();
   const navigate = useNavigate();
 
-  // Sadece role ve dukkanId netleştiğinde yönlendirme
+  // Yükleme sürecini kontrol et! loading true ise hiçbir şey render etme
   useEffect(() => {
-    if (userRole === undefined || userRole === null) return; // loading state
+    if (loading) return;
+    if (userRole === undefined || userRole === null) return; // still waiting
     if (userRole === "staff" && !dukkanId) {
       navigate("/staff-profile", { replace: true });
     }
-  }, [userRole, dukkanId, navigate]);
+    if (!userRole) {
+      navigate("/login");
+    }
+  }, [userRole, dukkanId, navigate, loading]);
 
-  // İşletme verisini personel için de userId ile işletme alınacak
   const {
     isletmeData,
-    loading,
+    loading: shopLoading,
     error,
     personelListesi,
     calisma_saatleri,
   } = useShopData(dukkanId);
 
-  if (loading) {
+  if (loading || shopLoading) {
     return (
       <StaffLayout>
         <div className="flex items-center justify-center h-[80vh]">

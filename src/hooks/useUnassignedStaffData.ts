@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
@@ -96,6 +95,7 @@ export function useUnassignedStaffData() {
     setLoading(true);
     setError(null);
     try {
+      // KULLANICI AUTH
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) {
         setError("Kullanıcı bilgisi alınamadı.");
@@ -104,53 +104,50 @@ export function useUnassignedStaffData() {
         return;
       }
 
-      // Numeric personel id için
+      // PERSONEL KAYDI MUTLAKA OLMALI
       const { data: personel, error: perErr } = await supabase
         .from('personel')
         .select('id, dukkan_id')
         .eq('auth_id', user.id)
         .maybeSingle();
 
+      // YOKSA DAHA AYDINLATICI HATA
       if (!personel || perErr) {
-        setError("Personel kaydı bulunamadı.");
+        setError("Personel kaydı bulunamadı. Sistem yöneticisine başvurun.");
         setLoading(false);
         return;
       }
 
       setPersonelId(personel.id);
 
+      // ÇIKIŞ: DUKKAN ATAMASI VARSA HEMEN PROFİLE
       if (personel.dukkan_id) {
         navigate("/staff-profile", { replace: true });
         return;
       }
 
-      // Profil bilgisi
+      // PROFİL BİLGİSİ
       const { data: profileData } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single();
+      if (profileData) setUserProfile(profileData);
 
-      if (profileData) {
-        setUserProfile(profileData);
-      }
-
-      // Eğitim bilgisi
+      // EĞİTİM BİLGİSİ
       const { data: educationDataLoaded } = await supabase
         .from('staff_education')
         .select('*')
         .eq('personel_id', personel.id)
         .maybeSingle();
-
       if (educationDataLoaded) setEducationData(educationDataLoaded);
 
-      // Geçmiş bilgisi
+      // GEÇMİŞ
       const { data: historyDataLoaded } = await supabase
         .from('staff_history')
         .select('*')
         .eq('personel_id', personel.id)
         .maybeSingle();
-
       if (historyDataLoaded) setHistoryData(historyDataLoaded);
 
       setLoading(false);
