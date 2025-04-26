@@ -2,10 +2,11 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/lib/supabase/client";
-import { toast } from "sonner";
+import AccountNotFound from "@/components/auth/AccountNotFound";
 
 export default function AuthGoogleCallback() {
   const [loading, setLoading] = useState(true);
+  const [accountNotFound, setAccountNotFound] = useState(false);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
@@ -28,14 +29,15 @@ export default function AuthGoogleCallback() {
         const mode = searchParams.get("mode");
 
         if (mode === "register") {
-          // For registration, directly go to profile setup without any checks
+          // For registration, directly go to profile setup
           navigate("/profile-setup");
           return;
         }
 
         // For login mode - verify that the user has a profile
         if (!user) {
-          navigate("/login?error=account-not-found");
+          setAccountNotFound(true);
+          setLoading(false);
           return;
         }
 
@@ -47,9 +49,8 @@ export default function AuthGoogleCallback() {
           .maybeSingle();
           
         if (!profileData || profileError) {
-          // User doesn't exist - clear auth and redirect to login with error
-          await supabase.auth.signOut();
-          navigate("/login?error=account-not-found");
+          setAccountNotFound(true);
+          setLoading(false);
           return;
         }
 
@@ -61,12 +62,11 @@ export default function AuthGoogleCallback() {
         } else if (role === "staff") {
           navigate("/staff-profile");
         } else {
-          // Default to shop-home as we're removing customer-dashboard
           navigate("/shop-home");
         }
       } catch (error: any) {
         console.error("Auth callback error:", error);
-        navigate("/login?error=unexpected");
+        setAccountNotFound(true);
       } finally {
         setLoading(false);
       }
@@ -74,6 +74,10 @@ export default function AuthGoogleCallback() {
 
     handleOAuthCallback();
   }, [navigate, searchParams]);
+
+  if (accountNotFound) {
+    return <AccountNotFound />;
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">

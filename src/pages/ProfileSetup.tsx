@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,26 +9,26 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { Home } from "lucide-react";
+import { formatPhoneNumber } from "@/utils/phoneFormatter";
 
 export default function ProfileSetup() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
-  const [gender, setGender] = useState("");
+  const [gender, setGender] = useState<string>("");
   const [role, setRole] = useState("staff");
   const [shopCode, setShopCode] = useState("");
+  const [shopName, setShopName] = useState("");
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   
-  // Check if the user is authenticated on component mount
+  // Check if the user is authenticated
   useEffect(() => {
     const checkAuth = async () => {
       const { data } = await supabase.auth.getSession();
       if (!data.session) {
-        // If not authenticated, redirect to login
         navigate("/login");
         return;
       }
@@ -38,11 +38,33 @@ export default function ProfileSetup() {
     checkAuth();
   }, [navigate]);
   
+  const handleNameInput = (e: React.ChangeEvent<HTMLInputElement>, setter: (value: string) => void) => {
+    // Only allow letters and spaces
+    const value = e.target.value.replace(/[^a-zA-ZğüşıöçĞÜŞİÖÇ\s]/g, '');
+    setter(value);
+  };
+
+  const handlePhoneInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Only allow numbers
+    const numbers = e.target.value.replace(/\D/g, '').substring(0, 11);
+    setPhone(numbers);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!firstName || !lastName || !phone || !gender || !role) {
-      toast.error("Lütfen tüm zorunlu alanları doldurunuz.");
+    if (!firstName || !lastName || !phone || !role) {
+      toast.error("Lütfen zorunlu alanları doldurunuz.");
+      return;
+    }
+
+    if (phone.length !== 11) {
+      toast.error("Lütfen geçerli bir telefon numarası giriniz (11 haneli).");
+      return;
+    }
+
+    if (role === "admin" && !shopName) {
+      toast.error("İşletme adı zorunludur.");
       return;
     }
     
@@ -54,7 +76,7 @@ export default function ProfileSetup() {
         navigate("/login");
         return;
       }
-      
+
       // Update user metadata
       await supabase.auth.updateUser({
         data: {
@@ -64,7 +86,7 @@ export default function ProfileSetup() {
         }
       });
       
-      // Create or update profile record
+      // Create profile record
       const { error: profileError } = await supabase
         .from('profiles')
         .upsert({
@@ -72,7 +94,7 @@ export default function ProfileSetup() {
           first_name: firstName,
           last_name: lastName,
           phone,
-          gender,
+          gender: gender || null,
           role
         });
       
@@ -80,20 +102,23 @@ export default function ProfileSetup() {
         throw profileError;
       }
       
-      toast.success("Profiliniz başarıyla oluşturuldu!");
-      
-      // If staff role and has shop code, handle shop connection
-      if (role === 'staff' && shopCode) {
-        // TODO: Implement shop code verification
-      }
-      
-      // Redirect based on role
       if (role === 'admin') {
+        const shopData = {
+          ad: shopName,
+          sahibi_id: userId,
+          kod: Math.random().toString(36).substring(7).toUpperCase(),
+          active: true
+        };
+        
+        const { error: shopError } = await supabase
+          .from('dukkanlar')
+          .insert([shopData]);
+          
+        if (shopError) throw shopError;
+        
         navigate("/shop-home");
       } else if (role === 'staff') {
         navigate("/staff-profile");
-      } else {
-        navigate("/shop-home"); // Default redirect
       }
       
     } catch (error: any) {
@@ -102,10 +127,6 @@ export default function ProfileSetup() {
     } finally {
       setLoading(false);
     }
-  };
-  
-  const handleNavigateHome = () => {
-    navigate("/");
   };
 
   return (
@@ -124,7 +145,7 @@ export default function ProfileSetup() {
                 <Input
                   id="firstName"
                   value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
+                  onChange={(e) => handleNameInput(e, setFirstName)}
                   placeholder="Adınız"
                   required
                 />
@@ -135,7 +156,7 @@ export default function ProfileSetup() {
                 <Input
                   id="lastName"
                   value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
+                  onChange={(e) => handleNameInput(e, setLastName)}
                   placeholder="Soyadınız"
                   required
                 />
@@ -146,30 +167,29 @@ export default function ProfileSetup() {
               <Label htmlFor="phone">Telefon*</Label>
               <Input
                 id="phone"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="05XXXXXXXXX"
+                value={formatPhoneNumber(phone)}
+                onChange={handlePhoneInput}
+                placeholder="05XX XXX XX XX"
                 required
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="gender">Cinsiyet*</Label>
-              <Select value={gender} onValueChange={setGender} required>
+              <Label htmlFor="gender">Cinsiyet</Label>
+              <Select value={gender} onValueChange={setGender}>
                 <SelectTrigger>
                   <SelectValue placeholder="Cinsiyet seçiniz" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="erkek">Erkek</SelectItem>
                   <SelectItem value="kadın">Kadın</SelectItem>
-                  <SelectItem value="diğer">Diğer</SelectItem>
+                  <SelectItem value="erkek">Erkek</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             
             <div className="space-y-2">
               <Label htmlFor="role">Kayıt Türü*</Label>
-              <Select value={role} onValueChange={setRole} required>
+              <Select value={role} onValueChange={setRole}>
                 <SelectTrigger>
                   <SelectValue placeholder="Kayıt türü seçiniz" />
                 </SelectTrigger>
@@ -179,17 +199,35 @@ export default function ProfileSetup() {
                 </SelectContent>
               </Select>
             </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="shopCode">İşletme Kodu (Opsiyonel)</Label>
-              <Input
-                id="shopCode"
-                value={shopCode}
-                onChange={(e) => setShopCode(e.target.value)}
-                placeholder="Dükkan yöneticisinden alınan kod"
-              />
-              <p className="text-xs text-gray-500">Personel iseniz ve bir işletmeye bağlanmak istiyorsanız girin.</p>
-            </div>
+
+            {role === "staff" ? (
+              <div className="space-y-2">
+                <Label htmlFor="shopCode">İşletme Kodu (Opsiyonel)</Label>
+                <Input
+                  id="shopCode"
+                  value={shopCode}
+                  onChange={(e) => setShopCode(e.target.value)}
+                  placeholder="Dükkan yöneticisinden alınan kod"
+                />
+                <p className="text-xs text-gray-500">
+                  Personel iseniz ve bir işletmeye bağlanmak istiyorsanız girin.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="shopName">İşletme Adı*</Label>
+                <Input
+                  id="shopName"
+                  value={shopName}
+                  onChange={(e) => setShopName(e.target.value)}
+                  placeholder="İşletmenizin adını girin"
+                  required
+                />
+                <p className="text-xs text-gray-500">
+                  (İşletme adını daha sonra değiştirebilirsiniz.)
+                </p>
+              </div>
+            )}
             
             <Button 
               type="submit" 
@@ -201,7 +239,7 @@ export default function ProfileSetup() {
           </form>
         </CardContent>
         <CardFooter className="flex justify-center">
-          <Button variant="ghost" onClick={handleNavigateHome} className="flex items-center gap-2">
+          <Button variant="ghost" onClick={() => navigate("/")} className="flex items-center gap-2">
             <Home size={16} />
             Ana Sayfaya Dön
           </Button>
