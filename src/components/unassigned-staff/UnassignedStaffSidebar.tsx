@@ -1,8 +1,9 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { LogOut, User, BookOpen, History, Briefcase } from "lucide-react";
+import { JoinShopModal } from "./JoinShopModal";
 
 interface UnassignedStaffSidebarProps {
   userProfile: any;
@@ -10,6 +11,7 @@ interface UnassignedStaffSidebarProps {
   setActiveTab: (tab: string) => void;
   onLogout: () => void;
   onJoinToShop: () => void;
+  personelId: number | null;
 }
 
 export function UnassignedStaffSidebar({ 
@@ -17,8 +19,11 @@ export function UnassignedStaffSidebar({
   activeTab, 
   setActiveTab,
   onLogout,
-  onJoinToShop
+  onJoinToShop,
+  personelId
 }: UnassignedStaffSidebarProps) {
+  const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
+
   const getInitials = () => {
     if (userProfile?.firstName) {
       return userProfile.firstName[0].toUpperCase();
@@ -93,7 +98,7 @@ export function UnassignedStaffSidebar({
       {/* Aksiyonlar */}
       <div className="mt-auto space-y-2">
         <Button 
-          onClick={onJoinToShop}
+          onClick={() => setIsJoinModalOpen(true)}
           className="w-full bg-purple-600 hover:bg-purple-700"
         >
           <Briefcase size={18} className="mr-2" />
@@ -108,6 +113,12 @@ export function UnassignedStaffSidebar({
           Oturumu Kapat
         </Button>
       </div>
+
+      <JoinShopModal 
+        open={isJoinModalOpen} 
+        onOpenChange={setIsJoinModalOpen} 
+        personelId={personelId} 
+      />
     </div>
   );
 }

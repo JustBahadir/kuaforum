@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUnassignedStaffData } from "@/hooks/useUnassignedStaffData";
@@ -21,6 +22,7 @@ export default function UnassignedStaff() {
     handleLogout,
     handleSave,
     loadUserAndStaffData,
+    personelId
   } = useUnassignedStaffData();
 
   useEffect(() => {
@@ -35,7 +37,11 @@ export default function UnassignedStaff() {
         data: { avatar_url: url }
       });
 
-      await loadUserAndStaffData();
+      await handleSave({
+        ...userProfile,
+        avatarUrl: url
+      });
+
       toast.success("Profil fotoğrafı başarıyla güncellendi");
     } catch (error) {
       console.error("Avatar yükleme hatası:", error);
@@ -106,6 +112,7 @@ export default function UnassignedStaff() {
       loading={loading}
       isUploading={isUploading}
       navigate={navigate}
+      personelId={personelId}
     />
   );
 }

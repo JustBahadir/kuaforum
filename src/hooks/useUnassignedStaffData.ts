@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
@@ -55,7 +56,7 @@ export function useUnassignedStaffData() {
   }, [navigate]);
 
   const loadUserAndStaffData = useCallback(async () => {
-    if (isDataLoaded.current && userProfile) {
+    if (isDataLoaded.current && userProfile && personelId) {
       return;
     }
 
@@ -93,7 +94,7 @@ export function useUnassignedStaffData() {
 
       const { data: personel, error: perErr } = await supabase
         .from('personel')
-        .select('id, dukkan_id, ad_soyad, telefon, eposta, adres')
+        .select('id, dukkan_id, ad_soyad, telefon, eposta, adres, avatar_url')
         .eq('auth_id', user.id)
         .maybeSingle();
 
@@ -120,7 +121,8 @@ export function useUnassignedStaffData() {
               personel_no: `P${Date.now().toString().substring(8)}`,
               calisma_sistemi: 'Tam Zamanlı',
               maas: 0,
-              prim_yuzdesi: 0
+              prim_yuzdesi: 0,
+              avatar_url: profileData?.avatar_url || user.user_metadata?.avatar_url || ''
             }])
             .select('id');
 
@@ -129,6 +131,44 @@ export function useUnassignedStaffData() {
           } else if (newPersonel && newPersonel.length > 0) {
             setPersonelId(newPersonel[0].id);
             console.log("Created personel record with id:", newPersonel[0].id);
+            
+            // After creating a new personel record, load the education and history data
+            const personelId = newPersonel[0].id;
+            
+            const { data: educationDataLoaded } = await supabase
+              .from('staff_education')
+              .select('*')
+              .eq('personel_id', personelId)
+              .maybeSingle();
+              
+            if (educationDataLoaded) {
+              console.log("Education data loaded", educationDataLoaded);
+              setEducationData({
+                ortaokuldurumu: educationDataLoaded.ortaokuldurumu || '',
+                lisedurumu: educationDataLoaded.lisedurumu || '',
+                liseturu: educationDataLoaded.liseturu || '',
+                meslekibrans: educationDataLoaded.meslekibrans || '',
+                universitedurumu: educationDataLoaded.universitedurumu || '',
+                universitebolum: educationDataLoaded.universitebolum || ''
+              });
+            }
+
+            const { data: historyDataLoaded } = await supabase
+              .from('staff_history')
+              .select('*')
+              .eq('personel_id', personelId)
+              .maybeSingle();
+                
+            if (historyDataLoaded) {
+              console.log("History data loaded", historyDataLoaded);
+              setHistoryData({
+                isyerleri: historyDataLoaded.isyerleri || '',
+                gorevpozisyon: historyDataLoaded.gorevpozisyon || '',
+                belgeler: historyDataLoaded.belgeler || '',
+                yarismalar: historyDataLoaded.yarismalar || '',
+                cv: historyDataLoaded.cv || ''
+              });
+            }
           }
         } catch (err) {
           console.error("Unexpected error creating personel:", err);
@@ -137,7 +177,7 @@ export function useUnassignedStaffData() {
         console.log("Personel record found:", personel);
         setPersonelId(personel.id);
 
-        if (personel.ad_soyad || personel.telefon || personel.adres) {
+        if (personel.ad_soyad || personel.telefon || personel.adres || personel.avatar_url) {
           const currentProfile = { ...userProfile };
           if (!currentProfile.firstName && personel.ad_soyad) {
             const nameParts = personel.ad_soyad.split(' ');
@@ -150,6 +190,9 @@ export function useUnassignedStaffData() {
           if (!currentProfile.address && personel.adres) {
             currentProfile.address = personel.adres;
           }
+          if (!currentProfile.avatarUrl && personel.avatar_url) {
+            currentProfile.avatarUrl = personel.avatar_url;
+          }
           setUserProfile(currentProfile);
         }
         
@@ -158,41 +201,41 @@ export function useUnassignedStaffData() {
           navigate("/staff-profile", { replace: true });
           return;
         }
-      }
-
-      const { data: educationDataLoaded } = await supabase
-        .from('staff_education')
-        .select('*')
-        .eq('personel_id', personel?.id || personelId)
-        .maybeSingle();
         
-      if (educationDataLoaded) {
-        console.log("Education data loaded", educationDataLoaded);
-        setEducationData({
-          ortaokuldurumu: educationDataLoaded.ortaokuldurumu || '',
-          lisedurumu: educationDataLoaded.lisedurumu || '',
-          liseturu: educationDataLoaded.liseturu || '',
-          meslekibrans: educationDataLoaded.meslekibrans || '',
-          universitedurumu: educationDataLoaded.universitedurumu || '',
-          universitebolum: educationDataLoaded.universitebolum || ''
-        });
-      }
-
-      const { data: historyDataLoaded } = await supabase
-        .from('staff_history')
-        .select('*')
-        .eq('personel_id', personel?.id || personelId)
-        .maybeSingle();
+        const { data: educationDataLoaded } = await supabase
+          .from('staff_education')
+          .select('*')
+          .eq('personel_id', personel.id)
+          .maybeSingle();
           
-      if (historyDataLoaded) {
-        console.log("History data loaded", historyDataLoaded);
-        setHistoryData({
-          isyerleri: historyDataLoaded.isyerleri || '',
-          gorevpozisyon: historyDataLoaded.gorevpozisyon || '',
-          belgeler: historyDataLoaded.belgeler || '',
-          yarismalar: historyDataLoaded.yarismalar || '',
-          cv: historyDataLoaded.cv || ''
-        });
+        if (educationDataLoaded) {
+          console.log("Education data loaded", educationDataLoaded);
+          setEducationData({
+            ortaokuldurumu: educationDataLoaded.ortaokuldurumu || '',
+            lisedurumu: educationDataLoaded.lisedurumu || '',
+            liseturu: educationDataLoaded.liseturu || '',
+            meslekibrans: educationDataLoaded.meslekibrans || '',
+            universitedurumu: educationDataLoaded.universitedurumu || '',
+            universitebolum: educationDataLoaded.universitebolum || ''
+          });
+        }
+
+        const { data: historyDataLoaded } = await supabase
+          .from('staff_history')
+          .select('*')
+          .eq('personel_id', personel.id)
+          .maybeSingle();
+            
+        if (historyDataLoaded) {
+          console.log("History data loaded", historyDataLoaded);
+          setHistoryData({
+            isyerleri: historyDataLoaded.isyerleri || '',
+            gorevpozisyon: historyDataLoaded.gorevpozisyon || '',
+            belgeler: historyDataLoaded.belgeler || '',
+            yarismalar: historyDataLoaded.yarismalar || '',
+            cv: historyDataLoaded.cv || ''
+          });
+        }
       }
 
       isDataLoaded.current = true;
@@ -205,7 +248,7 @@ export function useUnassignedStaffData() {
       console.log("Data loading complete");
       setLoading(false);
     }
-  }, [navigate, personelId, userProfile]);
+  }, [navigate, userProfile]);
 
   const handleSave = useCallback(async (updatedData: any) => {
     setLoading(true);
@@ -217,7 +260,10 @@ export function useUnassignedStaffData() {
         throw new Error("User not authenticated");
       }
 
-      if (!personelId) {
+      let currentPersonelId = personelId;
+      
+      if (!currentPersonelId) {
+        console.log("No personel ID found, creating personel record");
         const { data: newPersonel, error: createError } = await supabase
           .from('personel')
           .insert([{
@@ -241,30 +287,43 @@ export function useUnassignedStaffData() {
         }
 
         if (newPersonel) {
+          currentPersonelId = newPersonel.id;
           setPersonelId(newPersonel.id);
+          console.log("Created new personel record with ID:", newPersonel.id);
+        } else {
+          throw new Error("Failed to create personel record");
         }
       }
 
       if ('ortaokuldurumu' in updatedData) {
+        console.log("Saving education data for personel ID:", currentPersonelId);
         const { error: eduError } = await supabase
           .from('staff_education')
           .upsert({
-            personel_id: personelId,
+            personel_id: currentPersonelId,
             ...updatedData,
             updated_at: new Date().toISOString()
           }, { onConflict: 'personel_id' });
 
-        if (eduError) throw eduError;
+        if (eduError) {
+          console.error("Education save error:", eduError);
+          throw eduError;
+        }
         
         setEducationData(updatedData);
         toast.success("Eğitim bilgileriniz başarıyla güncellendi");
       } 
       else if ('isyerleri' in updatedData) {
-        const { data: existingHistory } = await supabase
+        console.log("Saving history data for personel ID:", currentPersonelId);
+        const { data: existingHistory, error: checkError } = await supabase
           .from('staff_history')
           .select('*')
-          .eq('personel_id', personelId)
+          .eq('personel_id', currentPersonelId)
           .maybeSingle();
+
+        if (checkError && checkError.code !== 'PGRST116') {
+          console.error("Error checking existing history:", checkError);
+        }
 
         if (existingHistory) {
           const { error: updateError } = await supabase
@@ -277,7 +336,7 @@ export function useUnassignedStaffData() {
               cv: updatedData.cv || '',
               updated_at: new Date().toISOString()
             })
-            .eq('personel_id', personelId);
+            .eq('personel_id', currentPersonelId);
 
           if (updateError) {
             console.error("History update error:", updateError);
@@ -287,7 +346,7 @@ export function useUnassignedStaffData() {
           const { error: insertError } = await supabase
             .from('staff_history')
             .insert([{
-              personel_id: personelId,
+              personel_id: currentPersonelId,
               isyerleri: updatedData.isyerleri || '',
               gorevpozisyon: updatedData.gorevpozisyon || '',
               belgeler: updatedData.belgeler || '',
@@ -305,40 +364,61 @@ export function useUnassignedStaffData() {
         toast.success("Geçmiş bilgileriniz başarıyla güncellendi");
       }
       else {
-        await supabase.auth.updateUser({
+        // Update user profile
+        console.log("Updating user profile");
+        
+        // First update auth user metadata
+        const { error: authError } = await supabase.auth.updateUser({
           data: {
             first_name: updatedData.firstName,
             last_name: updatedData.lastName,
             gender: updatedData.gender,
             phone: updatedData.phone,
-            address: updatedData.address
+            address: updatedData.address,
+            avatar_url: updatedData.avatarUrl
           }
         });
 
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          await supabase
-            .from('profiles')
-            .update({
-              first_name: updatedData.firstName,
-              last_name: updatedData.lastName,
-              gender: updatedData.gender,
-              phone: updatedData.phone,
-              address: updatedData.address,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', user.id);
+        if (authError) {
+          console.error("Auth update error:", authError);
+          throw authError;
         }
 
-        if (personelId) {
-          await supabase
+        // Then update profiles table
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .upsert({
+            id: user.id,
+            first_name: updatedData.firstName,
+            last_name: updatedData.lastName,
+            gender: updatedData.gender,
+            phone: updatedData.phone,
+            address: updatedData.address,
+            avatar_url: updatedData.avatarUrl,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'id' });
+
+        if (profileError) {
+          console.error("Profile update error:", profileError);
+          throw profileError;
+        }
+
+        // Finally update personel table
+        if (currentPersonelId) {
+          const { error: personelError } = await supabase
             .from('personel')
             .update({
               ad_soyad: `${updatedData.firstName} ${updatedData.lastName}`.trim(),
               telefon: updatedData.phone || '-',
-              adres: updatedData.address || '-'
+              adres: updatedData.address || '-',
+              avatar_url: updatedData.avatarUrl
             })
-            .eq('id', personelId);
+            .eq('id', currentPersonelId);
+
+          if (personelError) {
+            console.error("Personel update error:", personelError);
+            throw personelError;
+          }
         }
 
         setUserProfile({
@@ -347,14 +427,15 @@ export function useUnassignedStaffData() {
           lastName: updatedData.lastName,
           gender: updatedData.gender,
           phone: updatedData.phone,
-          address: updatedData.address
+          address: updatedData.address,
+          avatarUrl: updatedData.avatarUrl
         });
         
         toast.success("Bilgileriniz başarıyla güncellendi");
       }
     } catch (err: any) {
       console.error("Save error:", err);
-      toast.error("Bir hata oluştu. Lütfen tekrar deneyiniz.");
+      toast.error(`Bir hata oluştu: ${err.message || 'Bilinmeyen hata'}`);
     } finally {
       setLoading(false);
     }
@@ -370,6 +451,7 @@ export function useUnassignedStaffData() {
     setHistoryData,
     handleLogout,
     handleSave,
-    loadUserAndStaffData
+    loadUserAndStaffData,
+    personelId
   };
 }

@@ -1,10 +1,10 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LoadingButton } from "@/components/ui/loading-button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { School, BookOpen, GraduationCap } from "lucide-react";
-import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 
@@ -155,7 +155,7 @@ const EducationTab: React.FC<EducationTabProps> = ({
                     <SelectValue placeholder="Lise durumu seçin" />
                   </SelectTrigger>
                   <SelectContent>
-                    {statusOptions.filter(option => option !== "Terk").map((option) => (
+                    {statusOptions.map((option) => (
                       <SelectItem key={`lise-${option}`} value={option}>
                         {option}
                       </SelectItem>
@@ -217,7 +217,7 @@ const EducationTab: React.FC<EducationTabProps> = ({
                     <SelectValue placeholder="Üniversite durumu seçin" />
                   </SelectTrigger>
                   <SelectContent>
-                    {statusOptions.filter(option => option !== "Terk").map((option) => (
+                    {statusOptions.map((option) => (
                       <SelectItem key={`uni-${option}`} value={option}>
                         {option}
                       </SelectItem>
@@ -239,7 +239,7 @@ const EducationTab: React.FC<EducationTabProps> = ({
                     <SelectValue placeholder="Bölüm seçin" />
                   </SelectTrigger>
                   <SelectContent>
-                    {["Saç Bakımı ve Güzellik Hizmetleri", "Diğer"].map((dept) => (
+                    {DEPARTMENTS.map((dept) => (
                       <SelectItem key={`dept-${dept}`} value={dept}>
                         {dept}
                       </SelectItem>

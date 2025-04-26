@@ -20,6 +20,7 @@ export default function UnassignedStaffMain({
   loading,
   isUploading,
   navigate,
+  personelId,
 }) {
   const renderActiveTabContent = () => {
     switch (activeTab) {
@@ -70,6 +71,7 @@ export default function UnassignedStaffMain({
           setActiveTab={setActiveTab}
           onLogout={handleLogout}
           onJoinToShop={() => navigate("/staff-join-request")}
+          personelId={personelId}
         />
         <div className="md:ml-64 w-full p-4">
           <div className="max-w-3xl mx-auto space-y-6">
