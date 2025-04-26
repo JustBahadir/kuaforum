@@ -285,7 +285,7 @@ const HistoryTab = ({
         <h3 className="font-semibold mb-1">İş Yerleri ve Görevler</h3>
         <div className="flex gap-2 mb-1">
           <input type="text" placeholder="İş yeri adı giriniz..." value={newIsYeri} onChange={e => setNewIsYeri(e.target.value)} disabled={isLoading} className="text-white placeholder:text-gray-400 rounded-md border border-gray-600 px-3 py-2 flex-grow bg-slate-50" />
-          <input type="text" placeholder="Görev / Pozisyon giriniz..." className="bg-black text-white placeholder:text-gray-400 rounded-md border border-gray-600 px-3 py-2 flex-grow" value={newGorevPozisyon} onChange={e => setNewGorevPozisyon(e.target.value)} disabled={isLoading} />
+          <input type="text" placeholder="Görev / Pozisyon giriniz..." value={newGorevPozisyon} onChange={e => setNewGorevPozisyon(e.target.value)} disabled={isLoading} className="text-white placeholder:text-gray-400 rounded-md border border-gray-600 px-3 py-2 flex-grow bg-slate-50" />
           <Button variant="default" size="sm" onClick={() => {
           handleAddWorkplace();
         }} disabled={isLoading} className="bg-purple-600 text-white hover:bg-purple-700">
@@ -309,7 +309,7 @@ const HistoryTab = ({
       <div>
         <h3 className="font-semibold mb-1">Belgeler</h3>
         <div className="flex gap-2 mb-1">
-          <input type="text" placeholder="Belge adını giriniz..." className="bg-black text-white placeholder:text-gray-400 rounded-md border border-gray-600 px-3 py-2 flex-grow" value={newDocument} onChange={e => setNewDocument(e.target.value)} disabled={isLoading} />
+          <input type="text" placeholder="Belge adını giriniz..." value={newDocument} onChange={e => setNewDocument(e.target.value)} disabled={isLoading} className="text-white placeholder:text-gray-400 rounded-md border border-gray-600 px-3 py-2 flex-grow bg-slate-50" />
           <Button variant="default" size="sm" onClick={() => {
           handleAddDocument();
         }} disabled={isLoading} className="bg-purple-600 text-white hover:bg-purple-700">
@@ -332,7 +332,7 @@ const HistoryTab = ({
       <div>
         <h3 className="font-semibold mb-1">Yarışmalar</h3>
         <div className="flex gap-2 mb-1">
-          <input type="text" placeholder="Yarışma adını giriniz..." className="bg-black text-white placeholder:text-gray-400 rounded-md border border-gray-600 px-3 py-2 flex-grow" value={newCompetition} onChange={e => setNewCompetition(e.target.value)} disabled={isLoading} />
+          <input type="text" placeholder="Yarışma adını giriniz..." value={newCompetition} onChange={e => setNewCompetition(e.target.value)} disabled={isLoading} className="text-white placeholder:text-gray-400 rounded-md border border-gray-600 px-3 py-2 flex-grow bg-slate-50" />
           <Button variant="default" size="sm" onClick={() => {
           handleAddCompetition();
         }} disabled={isLoading} className="bg-purple-600 text-white hover:bg-purple-700">
@@ -354,7 +354,7 @@ const HistoryTab = ({
       {/* CV */}
       <div>
         <label className="block font-medium mb-1">CV</label>
-        <textarea className="bg-black text-white rounded-md border border-gray-600 px-3 py-2 w-full min-h-[90px] placeholder:text-gray-400" value={cvText} onChange={handleCvChange} placeholder="Serbest metin" disabled={isLoading} />
+        <textarea value={cvText} onChange={handleCvChange} placeholder="Serbest metin" disabled={isLoading} className="text-white rounded-md border border-gray-600 px-3 py-2 w-full min-h-[90px] placeholder:text-gray-400 bg-slate-50" />
       </div>
 
       {/* Save and Cancel buttons */}
