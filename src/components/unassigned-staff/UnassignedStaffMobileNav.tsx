@@ -1,13 +1,13 @@
 
 import React from "react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, School, History } from "lucide-react";
+import { Menu, X } from "lucide-react";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
 
 interface UnassignedStaffMobileNavProps {
   userProfile: any;
   activeTab: string;
-  setActiveTab: (v: string) => void;
+  setActiveTab: (tab: string) => void;
 }
 
 export function UnassignedStaffMobileNav({
@@ -15,35 +15,55 @@ export function UnassignedStaffMobileNav({
   activeTab,
   setActiveTab,
 }: UnassignedStaffMobileNavProps) {
-  return (
-    <div className="md:hidden">
-      <div className="p-4 flex items-center justify-between border-b">
-        <div className="flex items-center">
-          <Avatar className="h-10 w-10 mr-3">
-            <AvatarFallback className="bg-purple-100 text-purple-700">
-              {userProfile?.first_name?.[0] || 'P'}
-            </AvatarFallback>
-          </Avatar>
-          <div>
-            <h3 className="font-semibold">{userProfile?.first_name} {userProfile?.last_name}</h3>
-            <p className="text-xs text-gray-500">Personel</p>
-          </div>
-        </div>
-      </div>
+  const [isOpen, setIsOpen] = React.useState(false);
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mb-4">
-        <TabsList className="w-full grid grid-cols-3">
-          <TabsTrigger value="personal" className="flex items-center">
-            <User size={16} className="mr-2" /> Kişisel
-          </TabsTrigger>
-          <TabsTrigger value="education" className="flex items-center">
-            <School size={16} className="mr-2" /> Eğitim
-          </TabsTrigger>
-          <TabsTrigger value="history" className="flex items-center">
-            <History size={16} className="mr-2" /> Geçmiş
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    setIsOpen(false);
+  };
+
+  return (
+    <div className="md:hidden fixed top-0 left-0 right-0 bg-white border-b p-4 z-50 flex justify-between items-center">
+      <div className="font-semibold">Personel Profili</div>
+      
+      <Sheet open={isOpen} onOpenChange={setIsOpen}>
+        <SheetTrigger asChild>
+          <Button variant="ghost" size="icon">
+            <Menu className="h-6 w-6" />
+          </Button>
+        </SheetTrigger>
+        <SheetContent side="top" className="pt-12">
+          <div className="flex justify-end">
+            <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)}>
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
+          
+          <nav className="flex flex-col gap-2 mt-4">
+            <Button
+              variant={activeTab === "personal" ? "default" : "ghost"}
+              className="justify-start"
+              onClick={() => handleTabChange("personal")}
+            >
+              Kişisel Bilgiler
+            </Button>
+            <Button
+              variant={activeTab === "education" ? "default" : "ghost"}
+              className="justify-start"
+              onClick={() => handleTabChange("education")}
+            >
+              Eğitim Bilgileri
+            </Button>
+            <Button
+              variant={activeTab === "history" ? "default" : "ghost"}
+              className="justify-start"
+              onClick={() => handleTabChange("history")}
+            >
+              Geçmiş Bilgileri
+            </Button>
+          </nav>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

@@ -72,7 +72,7 @@ export function useUnassignedStaffData() {
           personel_id: personelId,
           ...educationData,
         }
-      ], { onConflict: 'personel_id' }); // onConflict should be string, not string[]
+      ], { onConflict: 'personel_id' });
 
       // history
       await supabase.from("staff_history").upsert([
@@ -80,7 +80,7 @@ export function useUnassignedStaffData() {
           personel_id: personelId,
           ...historyData,
         }
-      ], { onConflict: 'personel_id' }); // onConflict should be string, not string[]
+      ], { onConflict: 'personel_id' });
 
       toast.success("Bilgileriniz başarıyla kaydedildi.");
     } catch (err) {
@@ -116,31 +116,43 @@ export function useUnassignedStaffData() {
       if (!personel) {
         console.log("Creating personel record for staff user", user.id);
         // Create basic personel record
-        const { data: newPersonel, error: createError } = await supabase
-          .from('personel')
-          .insert([{
-            auth_id: user.id,
-            ad_soyad: `${user.user_metadata?.first_name || ''} ${user.user_metadata?.last_name || ''}`.trim() || 'Personel',
-            telefon: user.user_metadata?.phone || '-',
-            eposta: user.email || '-',
-            adres: user.user_metadata?.address || '-',
-            personel_no: `P${Date.now().toString().substring(8)}`,
-            calisma_sistemi: 'Tam Zamanlı',
-            maas: 0,
-            prim_yuzdesi: 0
-          }])
-          .select('id')
-          .single();
+        try {
+          const { data: newPersonel, error: createError } = await supabase
+            .from('personel')
+            .insert([{
+              auth_id: user.id,
+              ad_soyad: `${user.user_metadata?.first_name || ''} ${user.user_metadata?.last_name || ''}`.trim() || 'Personel',
+              telefon: user.user_metadata?.phone || '-',
+              eposta: user.email || '-',
+              adres: user.user_metadata?.address || '-',
+              personel_no: `P${Date.now().toString().substring(8)}`,
+              calisma_sistemi: 'Tam Zamanlı',
+              maas: 0,
+              prim_yuzdesi: 0
+            }])
+            .select('id');
 
-        if (createError) {
-          console.error("Personel kaydı oluşturulamadı:", createError);
+          if (createError) {
+            console.error("Personel kaydı oluşturulamadı:", createError);
+            setError("Personel kaydı oluşturulamadı. Lütfen sistem yöneticisine başvurun.");
+            setLoading(false);
+            return;
+          }
+
+          if (newPersonel && newPersonel.length > 0) {
+            setPersonelId(newPersonel[0].id);
+            console.log("Created personel record with id:", newPersonel[0].id);
+          } else {
+            setError("Personel kaydı oluşturuldu ancak ID alınamadı.");
+            setLoading(false);
+            return;
+          }
+        } catch (err) {
+          console.error("Personel kaydı oluşturulurken beklenmeyen hata:", err);
           setError("Personel kaydı oluşturulamadı. Lütfen sistem yöneticisine başvurun.");
           setLoading(false);
           return;
         }
-
-        setPersonelId(newPersonel.id);
-        console.log("Created personel record with id:", newPersonel.id);
       } else {
         // Personel kaydı varsa ID'yi kullan
         setPersonelId(personel.id);

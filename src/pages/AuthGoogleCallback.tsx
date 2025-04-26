@@ -38,6 +38,7 @@ export default function AuthGoogleCallback() {
 
         // If no profile exists, create one from user metadata
         if (!profileData) {
+          console.log("Creating new profile for user:", user.id);
           const newProfileRes = await supabase
             .from("profiles")
             .insert([
@@ -70,24 +71,32 @@ export default function AuthGoogleCallback() {
           if (!staffData) {
             // Create a basic personel record if it doesn't exist
             console.log("Creating initial personel record for staff user");
-            const { error: insertError } = await supabase
-              .from('personel')
-              .insert([{
-                auth_id: user.id,
-                ad_soyad: `${user.user_metadata?.first_name || ''} ${user.user_metadata?.last_name || ''}`.trim() || 'Personel',
-                telefon: user.user_metadata?.phone || '-',
-                eposta: user.email || '-',
-                adres: user.user_metadata?.address || '-',
-                personel_no: `P${Date.now().toString().substring(8)}`,
-                calisma_sistemi: 'Tam Zamanlı',
-                maas: 0,
-                prim_yuzdesi: 0
-              }]);
-              
-            if (insertError) {
-              console.error("Personel kaydı oluşturulurken hata:", insertError);
-            } else {
-              console.log("Personel kaydı başarıyla oluşturuldu");
+            
+            try {
+              const { data: newPersonel, error: insertError } = await supabase
+                .from('personel')
+                .insert([{
+                  auth_id: user.id,
+                  ad_soyad: `${user.user_metadata?.first_name || ''} ${user.user_metadata?.last_name || ''}`.trim() || 'Personel',
+                  telefon: user.user_metadata?.phone || '-',
+                  eposta: user.email || '-',
+                  adres: user.user_metadata?.address || '-',
+                  personel_no: `P${Date.now().toString().substring(8)}`,
+                  calisma_sistemi: 'Tam Zamanlı',
+                  maas: 0,
+                  prim_yuzdesi: 0
+                }])
+                .select();
+                
+              if (insertError) {
+                console.error("Personel kaydı oluşturulurken hata:", insertError);
+                toast.error("Personel kaydı oluşturulamadı. Lütfen yöneticinize başvurun.");
+              } else {
+                console.log("Personel kaydı başarıyla oluşturuldu:", newPersonel);
+              }
+            } catch (err) {
+              console.error("Personel kaydı oluşturma işlemi başarısız:", err);
+              toast.error("Personel kaydı oluşturulamadı. Lütfen yöneticinize başvurun.");
             }
           }
         }

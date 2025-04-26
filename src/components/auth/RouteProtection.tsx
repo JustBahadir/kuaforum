@@ -58,7 +58,7 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
         const userRole = session.user.user_metadata?.role;
         console.log("Current user role:", userRole, "at pathname:", location.pathname);
         
-        // Admin route check - CRUCIAL FIX: Don't redirect shop-home if user is admin
+        // Admin route check - allow shop-home if user is admin
         if ((location.pathname === '/shop-home' || 
             location.pathname.startsWith('/shop-')) && 
             userRole === 'admin') {
@@ -158,7 +158,7 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
     // Set a maximum timeout to avoid infinite loading
     timeout = setTimeout(() => {
       if (isMounted) setChecking(false);
-    }, 1500);
+    }, 2000);
     
     return () => {
       isMounted = false;
