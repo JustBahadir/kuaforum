@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUnassignedStaffData } from "@/hooks/useUnassignedStaffData";
@@ -24,33 +23,16 @@ export default function UnassignedStaff() {
     loadUserAndStaffData,
   } = useUnassignedStaffData();
 
-  // Load user data when page loads
   useEffect(() => {
     loadUserAndStaffData();
   }, [loadUserAndStaffData]);
 
-  const handleAvatarUpload = async (file: File) => {
+  const handleAvatarUpload = async (url: string) => {
     try {
       setIsUploading(true);
       
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random()}.${fileExt}`;
-      const filePath = `${fileName}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file);
-
-      if (uploadError) {
-        throw uploadError;
-      }
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
-
       await supabase.auth.updateUser({
-        data: { avatar_url: publicUrl }
+        data: { avatar_url: url }
       });
 
       await loadUserAndStaffData();
@@ -63,7 +45,6 @@ export default function UnassignedStaff() {
     }
   };
 
-  // Show loading state - only on initial load, not on data updates
   if (loading && !userProfile) {
     return (
       <div className="flex items-center justify-center h-screen bg-white">
@@ -75,7 +56,6 @@ export default function UnassignedStaff() {
     );
   }
 
-  // Show error state
   if (error) {
     return (
       <div className="flex items-center justify-center h-screen bg-white">
@@ -94,7 +74,6 @@ export default function UnassignedStaff() {
     );
   }
 
-  // No data loaded yet
   if (!userProfile) {
     return (
       <div className="flex items-center justify-center h-screen bg-white">

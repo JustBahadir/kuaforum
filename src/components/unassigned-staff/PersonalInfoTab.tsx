@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -58,9 +57,8 @@ export const PersonalInfoTab = ({
     await onSave(formData);
   };
 
-  // This is the wrapper function that adapts the file upload to URL format
-  const handleFileUploadComplete = async (file: File) => {
-    await onAvatarUpload(file);
+  const handleFileUploadComplete = async (uploadedUrl: string) => {
+    await onAvatarUpload(uploadedUrl);
   };
 
   return (
@@ -68,7 +66,6 @@ export const PersonalInfoTab = ({
       <CardContent className="p-6">
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="flex flex-col md:flex-row md:items-center gap-6 mb-6">
-            {/* Avatar section */}
             <div className="flex flex-col items-center">
               <Avatar className="w-24 h-24">
                 {userProfile.avatarUrl ? (
@@ -90,7 +87,6 @@ export const PersonalInfoTab = ({
               </div>
             </div>
 
-            {/* Form fields */}
             <div className="flex-1 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
