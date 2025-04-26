@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,17 +10,27 @@ import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Home, InfoIcon } from "lucide-react";
+import { Home, InfoIcon, AlertTriangle } from "lucide-react";
 
 export default function Login() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
   // Admin login states
   const [adminEmail, setAdminEmail] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
   const [adminLoading, setAdminLoading] = useState(false);
   const [adminError, setAdminError] = useState<string | null>(null);
+
+  // Check for error parameters in URL
+  useEffect(() => {
+    const errorParam = searchParams.get("error");
+    if (errorParam === "account-not-found") {
+      setErrorMessage("Bu hesap bulunamadı. Lütfen kayıt olun veya farklı bir hesapla giriş yapın.");
+    }
+  }, [searchParams]);
 
   // Admin login handler (independent below tabs)
   const handleAdminLogin = async (e: React.FormEvent) => {
@@ -90,6 +101,15 @@ export default function Login() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {errorMessage && (
+            <Alert variant="destructive" className="border-red-500 bg-red-50">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription className="text-red-700">
+                {errorMessage}
+              </AlertDescription>
+            </Alert>
+          )}
+          
           <Tabs value={activeTab} onValueChange={v => setActiveTab(v as "login" | "register")} className="space-y-6">
             <TabsList className="grid w-full grid-cols-2 rounded-full bg-gray-200 p-1">
               <TabsTrigger value="login" className={`flex items-center justify-center gap-2 rounded-full text-sm font-semibold transition-colors ${activeTab === "login" ? "bg-white text-purple-700 shadow-md" : "text-gray-500"}`}>

@@ -3,9 +3,11 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 
 export default function AuthGoogleCallback() {
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
@@ -22,13 +24,37 @@ export default function AuthGoogleCallback() {
         const user = session?.user ?? null;
 
         if (sessionError || !session || !user) {
+          console.error("No session found:", sessionError);
           toast.error("Oturum alınamadı, lütfen tekrar deneyin.");
           navigate("/login");
           return;
         }
 
-        console.log("User authenticated, role:", user.user_metadata?.role);
+        console.log("User authenticated, checking if account exists");
 
+        // For login mode - verify that the user has a profile first
+        const mode = searchParams.get("mode");
+        if (mode === "login") {
+          // Check if user profile exists
+          const { data: profileData, error: profileError } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", user.id)
+            .maybeSingle();
+          
+          if (!profileData) {
+            console.error("User has no profile:", user.id);
+            
+            // Sign out the user since their account doesn't exist
+            await supabase.auth.signOut();
+            
+            // Set error message and redirect to login with error
+            navigate("/login?error=account-not-found");
+            return;
+          }
+        }
+
+        // Continue normal flow - create profile if in register mode
         // Fetch user profile after login (maybeSingle to allow no profile yet)
         const { data: profileData, error: profileError } = await supabase
           .from("profiles")
@@ -37,7 +63,7 @@ export default function AuthGoogleCallback() {
           .maybeSingle();
 
         // If no profile exists, create one from user metadata
-        if (!profileData) {
+        if (!profileData && mode === "register") {
           console.log("Creating new profile for user:", user.id);
           const newProfileRes = await supabase
             .from("profiles")
@@ -54,6 +80,8 @@ export default function AuthGoogleCallback() {
             ]);
           if (newProfileRes.error) {
             console.error("Profil oluşturulamadı:", newProfileRes.error);
+            setError("Profil oluşturulamadı");
+            return;
           }
         }
 
@@ -68,7 +96,7 @@ export default function AuthGoogleCallback() {
             .eq('auth_id', user.id)
             .maybeSingle();
             
-          if (!staffData) {
+          if (!staffData && mode === "register") {
             // Create a basic personel record if it doesn't exist
             console.log("Creating initial personel record for staff user");
             
@@ -109,28 +137,6 @@ export default function AuthGoogleCallback() {
           .maybeSingle();
         
         console.log("Staff shop assignment check:", staffData);
-
-        // Get mode query param
-        const mode = searchParams.get("mode");
-
-        // Check duplicate user for register mode (by id)
-        if (mode === "register") {
-          const checkUser = await supabase
-            .from("profiles")
-            .select("id")
-            .eq("id", user.id)
-            .maybeSingle();
-
-          if (checkUser.error && checkUser.error.code !== "PGRST116") {
-            console.error("Kullanıcı kontrolü sırasında hata:", checkUser.error);
-          }
-
-          if (checkUser.data) {
-            toast.error("Bu kullanıcı zaten kayıtlı. Lütfen Giriş Yap sekmesini kullanınız.");
-            navigate("/login");
-            return;
-          }
-        }
 
         // Redirect based on role and profile completeness
         if (role === "admin") {
@@ -197,6 +203,14 @@ export default function AuthGoogleCallback() {
             <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-purple-600 mx-auto mb-4"></div>
             <p>Giriş bilgileri doğrulanıyor...</p>
           </>
+        ) : error ? (
+          <div className="space-y-4">
+            <div className="bg-red-50 text-red-700 p-4 rounded-md">
+              <p className="font-bold">Hata</p>
+              <p>{error}</p>
+            </div>
+            <Button onClick={() => navigate("/login")}>Giriş Sayfasına Dön</Button>
+          </div>
         ) : (
           <p>Yönlendiriliyorsunuz...</p>
         )}
