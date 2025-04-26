@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { ProfileDisplay } from "@/components/customer-profile/ProfileDisplay";
 import { toast } from "sonner";
@@ -221,12 +222,13 @@ const Profile = () => {
         throw authError;
       }
 
-      const { error: profileError } = await profilServisi.guncelle({
+      // Fix here: profilServisi.guncelle() now returns a boolean or object, not an object with error property
+      const result = await profilServisi.guncelle({
         avatar_url: url
       });
 
-      if (profileError) {
-        throw profileError;
+      if (result === false) {
+        throw new Error("Profil güncellenemedi");
       }
 
       const { data: { user } } = await supabase.auth.getUser();
@@ -302,7 +304,8 @@ const Profile = () => {
         throw authError;
       }
 
-      const { error: profileError } = await profilServisi.guncelle({
+      // Fix here: profilServisi.guncelle() now returns a boolean or object, not an object with error property
+      const result = await profilServisi.guncelle({
         first_name: profile.firstName,
         last_name: profile.lastName,
         phone: phoneForSaving,
@@ -313,8 +316,8 @@ const Profile = () => {
         iban: profile.iban
       });
 
-      if (profileError) {
-        throw profileError;
+      if (result === false) {
+        throw new Error("Profil güncellenemedi");
       }
 
       const { data: { user } } = await supabase.auth.getUser();
