@@ -12,7 +12,16 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
   const navigate = useNavigate();
   const [checking, setChecking] = useState(true);
 
-  const publicPages = ["/", "/login", "/staff-login", "/services", "/appointments", "/auth", "/auth-google-callback"];
+  const publicPages = [
+    "/", 
+    "/login", 
+    "/staff-login", 
+    "/services", 
+    "/appointments", 
+    "/auth", 
+    "/auth-google-callback", 
+    "/profile-setup"
+  ];
 
   useEffect(() => {
     let isMounted = true;

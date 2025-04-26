@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/lib/supabase/client";
+import { toast } from "sonner";
 
 export default function AuthGoogleCallback() {
   const [loading, setLoading] = useState(true);
@@ -17,8 +18,9 @@ export default function AuthGoogleCallback() {
         const session = data?.session ?? null;
         const user = session?.user ?? null;
 
-        if (sessionError || !session || !user) {
-          navigate("/profile-setup");
+        if (sessionError) {
+          console.error("Session error:", sessionError);
+          navigate("/login");
           return;
         }
 
@@ -26,22 +28,28 @@ export default function AuthGoogleCallback() {
         const mode = searchParams.get("mode");
 
         if (mode === "register") {
-          // For registration, directly go to profile setup
+          // For registration, directly go to profile setup without any checks
           navigate("/profile-setup");
           return;
         }
 
         // For login mode - verify that the user has a profile
+        if (!user) {
+          navigate("/login?error=account-not-found");
+          return;
+        }
+
+        // Check if user profile exists
         const { data: profileData, error: profileError } = await supabase
           .from("profiles")
           .select("*")
           .eq("id", user.id)
           .maybeSingle();
           
-        if (!profileData) {
-          // User doesn't exist - clear auth and redirect to profile-setup
+        if (!profileData || profileError) {
+          // User doesn't exist - clear auth and redirect to login with error
           await supabase.auth.signOut();
-          navigate("/profile-setup");
+          navigate("/login?error=account-not-found");
           return;
         }
 
@@ -53,11 +61,12 @@ export default function AuthGoogleCallback() {
         } else if (role === "staff") {
           navigate("/staff-profile");
         } else {
-          navigate("/customer-dashboard");
+          // Default to shop-home as we're removing customer-dashboard
+          navigate("/shop-home");
         }
       } catch (error: any) {
         console.error("Auth callback error:", error);
-        navigate("/profile-setup");
+        navigate("/login?error=unexpected");
       } finally {
         setLoading(false);
       }

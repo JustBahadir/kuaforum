@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,14 @@ export default function Login() {
     if (tab === "register") {
       setActiveTab("register");
     }
+    
+    // Check for error parameters in URL
+    const errorParam = searchParams.get("error");
+    if (errorParam === "account-not-found") {
+      setErrorMessage("Bu hesap bulunamadı. Lütfen kayıt olun veya farklı bir hesapla giriş yapın.");
+    } else if (errorParam === "unexpected") {
+      setErrorMessage("Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.");
+    }
   }, [searchParams]);
 
   // Admin login states
@@ -30,14 +39,6 @@ export default function Login() {
   const [adminPassword, setAdminPassword] = useState("");
   const [adminLoading, setAdminLoading] = useState(false);
   const [adminError, setAdminError] = useState<string | null>(null);
-
-  // Check for error parameters in URL
-  useEffect(() => {
-    const errorParam = searchParams.get("error");
-    if (errorParam === "account-not-found") {
-      setErrorMessage("Bu hesap bulunamadı. Lütfen kayıt olun veya farklı bir hesapla giriş yapın.");
-    }
-  }, [searchParams]);
 
   // Admin login handler (independent below tabs)
   const handleAdminLogin = async (e: React.FormEvent) => {
@@ -94,6 +95,14 @@ export default function Login() {
     } finally {
       setAdminLoading(false);
     }
+  };
+
+  const handleRedirectToRegister = () => {
+    setActiveTab("register");
+    // Update URL without full page reload
+    const url = new URL(window.location.href);
+    url.searchParams.set("tab", "register");
+    window.history.pushState({}, "", url);
   };
 
   return (

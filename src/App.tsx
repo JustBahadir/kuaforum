@@ -16,7 +16,6 @@ import CreateShop from "./pages/CreateShop";
 import Services from "./pages/Services";
 import Personnel from "./pages/Personnel";
 import Appointments from "./pages/Appointments";
-import CustomerDashboard from "./pages/CustomerDashboard";
 import Customers from "./pages/Customers";
 import CustomerProfile from "./pages/CustomerProfile";
 import ShopHomePage from "./pages/ShopHomePage";
@@ -30,7 +29,6 @@ import StaffOperations from "./pages/operations/StaffOperations";
 import Profile from "./pages/Profile";
 import AuthGoogleCallback from "./pages/AuthGoogleCallback";
 import UnassignedStaff from "./pages/UnassignedStaff";
-// StaffLogin kaldırıldı
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -58,12 +56,6 @@ function App() {
               <Route path="/profile-setup" element={<ProfileSetup />} />
               <Route path="/auth-google-callback" element={<AuthGoogleCallback />} />
 
-              {/* Customer Routes */}
-              <Route path="/customer-dashboard/*" element={<CustomerDashboard />} />
-              <Route path="/customer-profile" element={<CustomerProfile />} />
-              <Route path="/customer-services" element={<CustomerOperations />} />
-              <Route path="/customer-appointments" element={<Appointments />} />
-              
               {/* Shop/Staff Routes */}
               <Route path="/personnel" element={<Personnel />} />
               <Route path="/shop-home" element={<ShopHomePage />} />
