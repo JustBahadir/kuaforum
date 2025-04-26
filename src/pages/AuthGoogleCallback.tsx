@@ -60,9 +60,18 @@ export default function AuthGoogleCallback() {
         if (role === "admin") {
           navigate("/shop-home");
         } else if (role === "staff") {
-          navigate("/staff-profile");
-        } else {
-          navigate("/shop-home");
+          // Check if staff has a dukkan_id
+          const { data: staffData } = await supabase
+            .from('personel')
+            .select('dukkan_id')
+            .eq('auth_id', user.id)
+            .maybeSingle();
+
+          if (!staffData?.dukkan_id) {
+            navigate("/unassigned-staff");
+          } else {
+            navigate("/staff-profile");
+          }
         }
       } catch (error: any) {
         console.error("Auth callback error:", error);

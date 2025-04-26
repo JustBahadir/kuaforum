@@ -118,7 +118,32 @@ export default function ProfileSetup() {
         
         navigate("/shop-home");
       } else if (role === 'staff') {
-        navigate("/staff-profile");
+        // For staff, check if shop code exists
+        if (shopCode) {
+          // Try to find shop with the provided code
+          const { data: shopData, error: shopError } = await supabase
+            .from('dukkanlar')
+            .select('id')
+            .eq('kod', shopCode)
+            .single();
+
+          if (shopError || !shopData) {
+            toast.error("Geçersiz işletme kodu.");
+            navigate("/unassigned-staff");
+            return;
+          }
+
+          // Update personel record with shop id
+          await supabase
+            .from('personel')
+            .update({ dukkan_id: shopData.id })
+            .eq('auth_id', userId);
+
+          navigate("/staff-profile");
+        } else {
+          // If no shop code provided, redirect to unassigned staff page
+          navigate("/unassigned-staff");
+        }
       }
       
     } catch (error: any) {
