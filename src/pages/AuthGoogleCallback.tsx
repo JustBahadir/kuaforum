@@ -56,6 +56,42 @@ export default function AuthGoogleCallback() {
           }
         }
 
+        // CRITICAL: For staff users, ensure a personel record exists
+        const role = user.user_metadata?.role || profileData?.role;
+        
+        if (role === "staff") {
+          // Check if staff record exists
+          const { data: staffData, error: staffError } = await supabase
+            .from('personel')
+            .select('id')
+            .eq('auth_id', user.id)
+            .maybeSingle();
+            
+          if (!staffData) {
+            // Create a basic personel record if it doesn't exist
+            console.log("Creating initial personel record for staff user");
+            const { error: insertError } = await supabase
+              .from('personel')
+              .insert([{
+                auth_id: user.id,
+                ad_soyad: `${user.user_metadata?.first_name || ''} ${user.user_metadata?.last_name || ''}`.trim() || 'Personel',
+                telefon: user.user_metadata?.phone || '-',
+                eposta: user.email || '-',
+                adres: user.user_metadata?.address || '-',
+                personel_no: `P${Date.now().toString().substring(8)}`,
+                calisma_sistemi: 'Tam Zamanlı',
+                maas: 0,
+                prim_yuzdesi: 0
+              }]);
+              
+            if (insertError) {
+              console.error("Personel kaydı oluşturulurken hata:", insertError);
+            } else {
+              console.log("Personel kaydı başarıyla oluşturuldu");
+            }
+          }
+        }
+
         // Check if user is assigned to a shop - CRITICAL CHECK
         const { data: staffData } = await supabase
           .from('personel')
@@ -88,11 +124,9 @@ export default function AuthGoogleCallback() {
         }
 
         // Redirect based on role and profile completeness
-        const role = user.user_metadata?.role;
-
         if (role === "admin") {
           toast.success("Yönetici olarak giriş başarılı!");
-          navigate("/shop-home");
+          navigate("/shop-home", { replace: true });
         } else if (role === "staff") {
           // CRITICAL: Check if staff is assigned to a shop first
           if (!staffData || !staffData.dukkan_id) {

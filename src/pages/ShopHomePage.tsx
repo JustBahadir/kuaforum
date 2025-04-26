@@ -13,19 +13,32 @@ import { ShopPersonnelCard } from "@/components/shop/ShopPersonnelCard";
 // Removed duplicate import of useNavigate
 
 export default function ShopHomePage() {
-  const { userRole, dukkanId, userId, loading } = useCustomerAuth();
+  const { userRole, dukkanId, userId, loading, refreshProfile } = useCustomerAuth();
   const queryClient = new QueryClient();
   const navigate = useNavigate();
+
+  // Ensure profile is fully loaded on initial render
+  useEffect(() => {
+    refreshProfile();
+  }, []);
 
   // Yükleme sürecini kontrol et! loading true ise hiçbir şey render etme
   useEffect(() => {
     if (loading) return;
-    if (userRole === undefined || userRole === null) return; // still waiting
-    if (userRole === "staff" && !dukkanId) {
-      navigate("/staff-profile", { replace: true });
-    }
+    
+    // Make sure user roles are synced
+    console.log("ShopHomePage checking role:", userRole, "dukkanId:", dukkanId);
+    
     if (!userRole) {
+      console.log("No user role, redirecting to login");
       navigate("/login");
+      return;
+    }
+    
+    if (userRole === "staff" && !dukkanId) {
+      console.log("Staff without shop assignment, redirecting to unassigned-staff");
+      navigate("/unassigned-staff", { replace: true });
+      return;
     }
   }, [userRole, dukkanId, navigate, loading]);
 
@@ -63,7 +76,7 @@ export default function ShopHomePage() {
   }
 
   if (!isletmeData) {
-    if (userRole !== "staff") {
+    if (userRole === "admin") {
       return (
         <StaffLayout>
           <div className="container mx-auto p-6">
@@ -71,6 +84,13 @@ export default function ShopHomePage() {
               <h2 className="text-2xl font-semibold mb-4">
                 Henüz bir işletme bulunamadı
               </h2>
+              <p>İşletme oluşturmak için işletme ayarları sayfasını kullanabilirsiniz.</p>
+              <button
+                onClick={() => navigate("/shop-settings")}
+                className="mt-4 bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
+              >
+                İşletme Oluştur
+              </button>
             </div>
           </div>
         </StaffLayout>
@@ -114,4 +134,3 @@ export default function ShopHomePage() {
     </StaffLayout>
   );
 }
-

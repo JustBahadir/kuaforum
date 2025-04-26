@@ -58,34 +58,34 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
         const userRole = session.user.user_metadata?.role;
         console.log("Current user role:", userRole, "at pathname:", location.pathname);
         
-        // Check admin routes access
-        if (location.pathname === '/shop-home' || 
-            location.pathname.startsWith('/shop-') || 
-            location.pathname.startsWith('/admin')) {
+        // Admin route check - CRUCIAL FIX: Don't redirect shop-home if user is admin
+        if ((location.pathname === '/shop-home' || 
+            location.pathname.startsWith('/shop-')) && 
+            userRole === 'admin') {
+          console.log("Admin accessing shop pages, allowing access");
+          if (isMounted) setChecking(false);
+          return;
+        }
             
-          // If user is not admin, check if they are connected to a shop as staff
-          if (userRole !== 'admin') {
-            if (userRole === 'staff') {
-              // For staff, check if they are connected to a shop
-              const { data: personelData } = await supabase
-                .from('personel')
-                .select('dukkan_id')
-                .eq('auth_id', session.user.id)
-                .maybeSingle();
-              
-              console.log("Staff shop check:", personelData);
-                
-              if (!personelData?.dukkan_id) {
-                // Staff not connected to any shop, redirect to unassigned staff page
-                console.log("Staff not connected to shop, redirecting to unassigned-staff");
-                navigate('/unassigned-staff');
-                return;
-              }
-            } else {
-              // Not admin or staff, redirect to login
-              navigate('/login');
-              return;
-            }
+        // If user is not admin, check if they are connected to a shop as staff
+        if ((location.pathname === '/shop-home' || 
+            location.pathname.startsWith('/shop-')) && 
+            userRole === 'staff') {
+          
+          // For staff, check if they are connected to a shop
+          const { data: personelData } = await supabase
+            .from('personel')
+            .select('dukkan_id')
+            .eq('auth_id', session.user.id)
+            .maybeSingle();
+          
+          console.log("Staff shop check:", personelData);
+            
+          if (!personelData?.dukkan_id) {
+            // Staff not connected to any shop, redirect to unassigned staff page
+            console.log("Staff not connected to shop, redirecting to unassigned-staff");
+            navigate('/unassigned-staff');
+            return;
           }
         }
         

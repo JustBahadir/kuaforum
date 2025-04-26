@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -72,7 +72,7 @@ export function useUnassignedStaffData() {
           personel_id: personelId,
           ...educationData,
         }
-      ], { onConflict: 'personel_id' }); // <--- FIXED: onConflict should be string, not string[]
+      ], { onConflict: 'personel_id' }); // onConflict should be string, not string[]
 
       // history
       await supabase.from("staff_history").upsert([
@@ -80,7 +80,7 @@ export function useUnassignedStaffData() {
           personel_id: personelId,
           ...historyData,
         }
-      ], { onConflict: 'personel_id' }); // <--- FIXED: onConflict should be string, not string[]
+      ], { onConflict: 'personel_id' }); // onConflict should be string, not string[]
 
       toast.success("Bilgileriniz başarıyla kaydedildi.");
     } catch (err) {
@@ -105,26 +105,51 @@ export function useUnassignedStaffData() {
         return;
       }
 
-      // PERSONEL KAYDI MUTLAKA OLMALI
+      // PERSONEL KAYDI KONTROL ET
       const { data: personel, error: perErr } = await supabase
         .from('personel')
         .select('id, dukkan_id')
         .eq('auth_id', user.id)
         .maybeSingle();
 
-      // YOKSA DAHA AYDINLATICI HATA
-      if (!personel || perErr) {
-        setError("Personel kaydı bulunamadı. Sistem yöneticisine başvurun.");
-        setLoading(false);
-        return;
-      }
+      // Personel kaydı yoksa oluştur - FIX: Eğer personel yoksa otomatik oluştur
+      if (!personel) {
+        console.log("Creating personel record for staff user", user.id);
+        // Create basic personel record
+        const { data: newPersonel, error: createError } = await supabase
+          .from('personel')
+          .insert([{
+            auth_id: user.id,
+            ad_soyad: `${user.user_metadata?.first_name || ''} ${user.user_metadata?.last_name || ''}`.trim() || 'Personel',
+            telefon: user.user_metadata?.phone || '-',
+            eposta: user.email || '-',
+            adres: user.user_metadata?.address || '-',
+            personel_no: `P${Date.now().toString().substring(8)}`,
+            calisma_sistemi: 'Tam Zamanlı',
+            maas: 0,
+            prim_yuzdesi: 0
+          }])
+          .select('id')
+          .single();
 
-      setPersonelId(personel.id);
+        if (createError) {
+          console.error("Personel kaydı oluşturulamadı:", createError);
+          setError("Personel kaydı oluşturulamadı. Lütfen sistem yöneticisine başvurun.");
+          setLoading(false);
+          return;
+        }
 
-      // ÇIKIŞ: DUKKAN ATAMASI VARSA HEMEN PROFİLE
-      if (personel.dukkan_id) {
-        navigate("/staff-profile", { replace: true });
-        return;
+        setPersonelId(newPersonel.id);
+        console.log("Created personel record with id:", newPersonel.id);
+      } else {
+        // Personel kaydı varsa ID'yi kullan
+        setPersonelId(personel.id);
+        
+        // ÇIKIŞ: DUKKAN ATAMASI VARSA HEMEN PROFİLE
+        if (personel.dukkan_id) {
+          navigate("/staff-profile", { replace: true });
+          return;
+        }
       }
 
       // PROFİL BİLGİSİ
@@ -135,28 +160,38 @@ export function useUnassignedStaffData() {
         .single();
       if (profileData) setUserProfile(profileData);
 
-      // EĞİTİM BİLGİSİ
-      const { data: educationDataLoaded } = await supabase
-        .from('staff_education')
-        .select('*')
-        .eq('personel_id', personel.id)
-        .maybeSingle();
-      if (educationDataLoaded) setEducationData(educationDataLoaded);
+      // EĞİTİM BİLGİSİ - personel ID ile alınmalı
+      if (personel || personelId) {
+        const personelIdValue = personel?.id || personelId;
+        
+        const { data: educationDataLoaded } = await supabase
+          .from('staff_education')
+          .select('*')
+          .eq('personel_id', personelIdValue)
+          .maybeSingle();
+        if (educationDataLoaded) setEducationData(educationDataLoaded);
 
-      // GEÇMİŞ
-      const { data: historyDataLoaded } = await supabase
-        .from('staff_history')
-        .select('*')
-        .eq('personel_id', personel.id)
-        .maybeSingle();
-      if (historyDataLoaded) setHistoryData(historyDataLoaded);
+        // GEÇMİŞ
+        const { data: historyDataLoaded } = await supabase
+          .from('staff_history')
+          .select('*')
+          .eq('personel_id', personelIdValue)
+          .maybeSingle();
+        if (historyDataLoaded) setHistoryData(historyDataLoaded);
+      }
 
       setLoading(false);
     } catch (error: any) {
+      console.error("Unexpected error:", error);
       setError("Beklenmeyen bir hata oluştu.");
       setLoading(false);
     }
   }, [navigate]);
+
+  // Initial load
+  useEffect(() => {
+    loadUserAndStaffData();
+  }, [loadUserAndStaffData]);
 
   return {
     loading,
