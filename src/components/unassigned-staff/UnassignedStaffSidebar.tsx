@@ -19,29 +19,37 @@ export function UnassignedStaffSidebar({
   onLogout,
   onJoinToShop
 }: UnassignedStaffSidebarProps) {
-  // Extract first letter of first name for avatar fallback
   const getInitials = () => {
-    if (userProfile?.first_name) {
-      return userProfile.first_name[0];
+    if (userProfile?.firstName) {
+      return userProfile.firstName[0].toUpperCase();
     }
     return 'P';
   };
 
+  const getTitle = () => {
+    if (!userProfile?.firstName) return '';
+    
+    const name = userProfile.firstName;
+    if (userProfile.gender === 'erkek') return `${name} Bey`;
+    if (userProfile.gender === 'kadın') return `${name} Hanım`;
+    return `${name} ${userProfile.lastName || ''}`.trim();
+  };
+
   return (
     <div className="hidden md:flex flex-col fixed left-0 top-0 h-screen bg-gray-900 text-white w-64 p-6">
-      {/* Profil Alanı */}
       <div className="flex flex-col items-center mb-8 text-center">
         <Avatar className="w-16 h-16 mb-2">
-          {userProfile?.avatar_url ? (
-            <AvatarImage src={userProfile.avatar_url} alt={userProfile?.first_name || 'User'} />
+          {userProfile?.avatarUrl ? (
+            <AvatarImage src={userProfile.avatarUrl} alt={userProfile?.firstName || 'User'} />
           ) : (
             <AvatarFallback className="text-2xl bg-purple-100 text-purple-700">
               {getInitials()}
             </AvatarFallback>
           )}
         </Avatar>
+        <p className="text-sm text-purple-300 mb-1">Hoşgeldiniz</p>
         <h2 className="font-semibold text-lg">
-          {userProfile?.first_name || ''} {userProfile?.last_name || ''}
+          {getTitle()}
         </h2>
         <p className="text-purple-300 text-sm">Personel</p>
       </div>

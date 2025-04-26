@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { School, BookOpen, GraduationCap } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
 
 interface EducationData {
   ortaokuldurumu: string;
@@ -48,39 +48,36 @@ const EducationTab: React.FC<EducationTabProps> = ({
   educationData,
   onEducationChange,
   onSave,
-  isLoading,
+  isLoading
 }) => {
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [localData, setLocalData] = useState<EducationData>(educationData);
   const [savingData, setSavingData] = useState(false);
   
-  // Initialize step based on existing data
   useEffect(() => {
     let step = 1;
-    
-    if (educationData.ortaokuldurumu === "Mezun") {
-      step = 2;
-    }
-    
-    if (educationData.lisedurumu === "Mezun") {
-      step = 3;
-    }
-    
-    if (educationData.liseturu && ["Çok Programlı Anadolu Lisesi", "Mesleki ve Teknik Anadolu Lisesi"].includes(educationData.liseturu)) {
-      step = 4;
-    }
-    
-    if (educationData.universitedurumu && ["Mezun", "Devam Ediyor"].includes(educationData.universitedurumu)) {
-      step = 5;
-    }
+    if (educationData.ortaokuldurumu === "Mezun") step = 2;
+    if (educationData.lisedurumu === "Mezun") step = 3;
+    if (educationData.liseturu && ["Çok Programlı Anadolu Lisesi", "Mesleki ve Teknik Anadolu Lisesi"].includes(educationData.liseturu)) step = 4;
+    if (educationData.universitedurumu && ["Mezun", "Devam Ediyor"].includes(educationData.universitedurumu)) step = 5;
     
     setCurrentStep(step);
     setLocalData(educationData);
   }, [educationData]);
-  
+
   const handleChange = async (field: keyof EducationData, value: string) => {
-    const updatedData = { ...localData, [field]: value };
-    setLocalData(updatedData);
+    let newData = { ...localData, [field]: value };
+    
+    if (field === 'liseturu' && !["Çok Programlı Anadolu Lisesi", "Mesleki ve Teknik Anadolu Lisesi"].includes(value)) {
+      newData.meslekibrans = "";
+    }
+    
+    if (field === 'meslekibrans') {
+      // Only allow letters and spaces
+      if (!/^[A-Za-zğüşıöçĞÜŞİÖÇ\s]*$/.test(value)) return;
+    }
+    
+    setLocalData(newData);
     
     // Handle step progression
     if (field === 'ortaokuldurumu' && value === 'Mezun') {
@@ -94,104 +91,20 @@ const EducationTab: React.FC<EducationTabProps> = ({
       setCurrentStep(Math.max(currentStep, 5));
     }
     
-    // Save data to database directly
-    await saveEducationData(updatedData);
-  };
-
-  const saveEducationData = async (data: EducationData) => {
-    setSavingData(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (user) {
-        const { data: personelData } = await supabase
-          .from('personel')
-          .select('id')
-          .eq('auth_id', user.id)
-          .maybeSingle();
-          
-        if (personelData) {
-          await supabase
-            .from('staff_education')
-            .upsert(
-              {
-                personel_id: personelData.id,
-                ...data,
-                updated_at: new Date().toISOString(),
-              },
-              { onConflict: 'personel_id' }
-            );
-            
-          // Update local state
-          onEducationChange(data);
-          toast.success("Eğitim bilgileri kaydedildi");
-        } else {
-          await createPersonelRecord(user.id, data);
-        }
-      }
-    } catch (error) {
-      console.error("Save error:", error);
-      toast.error("Eğitim bilgileri kaydedilirken bir hata oluştu");
-    } finally {
-      setSavingData(false);
-    }
-  };
-  
-  // Helper function to create personel record if it doesn't exist
-  const createPersonelRecord = async (authId: string, data: EducationData) => {
-    try {
-      // Get profile data for new personel record
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('first_name, last_name, phone, address, avatar_url')
-        .eq('id', authId)
-        .single();
-      
-      // Create basic personel record
-      const { data: newPersonel, error: createError } = await supabase
-        .from('personel')
-        .insert([{
-          auth_id: authId,
-          ad_soyad: profileData ? `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() : 'Çalışan',
-          telefon: profileData?.phone || '-',
-          eposta: '-',
-          adres: profileData?.address || '-',
-          personel_no: `P${Date.now().toString().substring(8)}`,
-          calisma_sistemi: 'Tam Zamanlı',
-          maas: 0,
-          prim_yuzdesi: 0,
-          avatar_url: profileData?.avatar_url || null
-        }])
-        .select('id');
-
-      if (createError) {
-        throw createError;
-      }
-      
-      if (newPersonel && newPersonel.length > 0) {
-        // Now insert education with the new personel ID
-        await supabase
-          .from('staff_education')
-          .insert([{
-            personel_id: newPersonel[0].id,
-            ...data
-          }]);
-          
-        toast.success("Eğitim bilgileri kaydedildi");
-      }
-    } catch (error) {
-      console.error("Error creating personel record:", error);
-      toast.error("Bilgiler kaydedilirken bir hata oluştu");
-    }
+    onEducationChange(newData);
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
-      await saveEducationData(localData);
+      setSavingData(true);
+      await onSave(localData);
+      toast.success("Eğitim bilgileriniz başarıyla kaydedildi");
     } catch (error) {
       console.error("Save error:", error);
-      toast.error("Eğitim bilgileri kaydedilirken bir hata oluştu");
+      toast.error("Bilgiler kaydedilirken bir hata oluştu");
+    } finally {
+      setSavingData(false);
     }
   };
 
@@ -275,28 +188,19 @@ const EducationTab: React.FC<EducationTabProps> = ({
             )}
             
             {/* Step 4: Mesleki Branş (only for specific high school types) */}
-            {currentStep >= 4 && (
+            {currentStep >= 4 && 
               ['Çok Programlı Anadolu Lisesi', 'Mesleki ve Teknik Anadolu Lisesi']
                 .includes(localData.liseturu) && (
               <div className="grid gap-2">
                 <label className="text-sm font-medium">Mesleki Branş</label>
-                <Select
+                <Input
                   value={localData.meslekibrans}
-                  onValueChange={(value) => handleChange("meslekibrans", value)}
-                >
-                  <SelectTrigger className="text-gray-900">
-                    <SelectValue placeholder="Branş seçin" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {["Saç Bakımı ve Güzellik Hizmetleri", "Diğer"].map((branch) => (
-                      <SelectItem key={`branch-${branch}`} value={branch}>
-                        {branch}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  onChange={(e) => handleChange("meslekibrans", e.target.value)}
+                  placeholder="Kuaförlük, Berberlik, Güzellik Uzmanı..."
+                  className="text-gray-900"
+                />
               </div>
-            ))}
+            )}
             
             {/* Step 5: Üniversite Durumu */}
             {currentStep >= 3 && (
@@ -361,7 +265,7 @@ const EducationTab: React.FC<EducationTabProps> = ({
                 };
                 setLocalData(resetData);
                 setCurrentStep(1);
-                await saveEducationData(resetData);
+                await onSave(resetData);
               }}
             >
               Temizle
