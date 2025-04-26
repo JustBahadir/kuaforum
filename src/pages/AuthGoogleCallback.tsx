@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/lib/supabase/client";
+import { toast } from "sonner";
 import AccountNotFound from "@/components/auth/AccountNotFound";
 
 export default function AuthGoogleCallback() {

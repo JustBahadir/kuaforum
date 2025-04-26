@@ -84,7 +84,7 @@ export function useUnassignedStaffData() {
 
       toast.success("Bilgileriniz başarıyla kaydedildi.");
     } catch (err) {
-      setError("Bilgiler kaydedilirken bir hata oluştu.");
+      console.error("Save error:", err);
       toast.error("Bilgiler kaydedilirken bir hata oluştu.");
     } finally {
       setLoading(false);
@@ -99,7 +99,7 @@ export function useUnassignedStaffData() {
       // KULLANICI AUTH
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) {
-        setError("Kullanıcı bilgisi alınamadı.");
+        console.error("User data error:", userError);
         navigate("/login");
         setLoading(false);
         return;
@@ -112,7 +112,7 @@ export function useUnassignedStaffData() {
         .eq('auth_id', user.id)
         .maybeSingle();
 
-      // Personel kaydı yoksa oluştur - FIX: Eğer personel yoksa otomatik oluştur
+      // Personel kaydı yoksa oluştur
       if (!personel) {
         console.log("Creating personel record for staff user", user.id);
         // Create basic personel record
@@ -133,8 +133,7 @@ export function useUnassignedStaffData() {
             .select('id');
 
           if (createError) {
-            console.error("Personel kaydı oluşturulamadı:", createError);
-            setError("Personel kaydı oluşturulamadı. Lütfen sistem yöneticisine başvurun.");
+            console.error("Personel record creation error:", createError);
             setLoading(false);
             return;
           }
@@ -142,14 +141,9 @@ export function useUnassignedStaffData() {
           if (newPersonel && newPersonel.length > 0) {
             setPersonelId(newPersonel[0].id);
             console.log("Created personel record with id:", newPersonel[0].id);
-          } else {
-            setError("Personel kaydı oluşturuldu ancak ID alınamadı.");
-            setLoading(false);
-            return;
           }
         } catch (err) {
-          console.error("Personel kaydı oluşturulurken beklenmeyen hata:", err);
-          setError("Personel kaydı oluşturulamadı. Lütfen sistem yöneticisine başvurun.");
+          console.error("Unexpected error creating personel:", err);
           setLoading(false);
           return;
         }
@@ -192,10 +186,9 @@ export function useUnassignedStaffData() {
         if (historyDataLoaded) setHistoryData(historyDataLoaded);
       }
 
-      setLoading(false);
     } catch (error: any) {
-      console.error("Unexpected error:", error);
-      setError("Beklenmeyen bir hata oluştu.");
+      console.error("Unexpected error in loadUserAndStaffData:", error);
+    } finally {
       setLoading(false);
     }
   }, [navigate]);
