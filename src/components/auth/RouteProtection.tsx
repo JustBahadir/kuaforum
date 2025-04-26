@@ -12,7 +12,6 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
   const navigate = useNavigate();
   const [checking, setChecking] = useState(true);
 
-  // Public pages that don't require authentication
   const publicPages = ["/", "/login", "/staff-login", "/services", "/appointments", "/auth", "/auth-google-callback"];
 
   useEffect(() => {
@@ -21,129 +20,50 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
     
     const checkSession = async () => {
       try {
-        console.log("RouteProtection: Checking path", location.pathname);
-        
-        // If it's a public page, no need for session check
         const isPublicPage = publicPages.some(page => 
           location.pathname === page || location.pathname.startsWith(`${page}/`)
         );
         
         if (isPublicPage) {
           if (isMounted) setChecking(false);
-          console.log("RouteProtection: Public page, no check needed");
           return;
         }
 
-        // Special case for profile setup
-        if (location.pathname === "/profile-setup") {
-          const { data } = await supabase.auth.getSession();
-          if (!data.session) {
-            navigate('/login');
-          } else {
-            setChecking(false);
-          }
-          return;
-        }
+        const { data: { session } } = await supabase.auth.getSession();
         
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error || !session) {
+        if (!session) {
           if (isMounted) {
-            console.log("No session, redirecting to login");
             navigate('/login');
           }
           return;
         }
         
         const userRole = session.user.user_metadata?.role;
-        console.log("Current user role:", userRole, "at pathname:", location.pathname);
         
         // Admin route check - allow shop-home if user is admin
-        if ((location.pathname === '/shop-home' || 
-            location.pathname.startsWith('/shop-')) && 
-            userRole === 'admin') {
-          console.log("Admin accessing shop pages, allowing access");
-          if (isMounted) setChecking(false);
-          return;
+        if (userRole === 'admin') {
+          if (location.pathname === '/login' || location.pathname === '/staff-login') {
+            navigate('/shop-home');
+            return;
+          }
         }
             
-        // If user is not admin, check if they are connected to a shop as staff
-        if ((location.pathname === '/shop-home' || 
-            location.pathname.startsWith('/shop-')) && 
-            userRole === 'staff') {
-          
-          // For staff, check if they are connected to a shop
+        if (userRole === 'staff') {
           const { data: personelData } = await supabase
             .from('personel')
             .select('dukkan_id')
             .eq('auth_id', session.user.id)
             .maybeSingle();
           
-          console.log("Staff shop check:", personelData);
-            
           if (!personelData?.dukkan_id) {
-            // Staff not connected to any shop, redirect to unassigned staff page
-            console.log("Staff not connected to shop, redirecting to unassigned-staff");
-            navigate('/unassigned-staff');
-            return;
-          }
-        }
-        
-        // Unassigned staff page is only accessible by staff or admin
-        if (location.pathname === '/unassigned-staff') { 
-          if (userRole !== 'staff' && userRole !== 'admin') {
-            // Not staff or admin, redirect to login
-            navigate('/login');
-            return;
-          }
-          
-          if (userRole === 'staff') {
-            // Check if staff is already assigned to a shop
-            const { data: personelData } = await supabase
-              .from('personel')
-              .select('dukkan_id')
-              .eq('auth_id', session.user.id)
-              .maybeSingle();
-              
-            if (personelData?.dukkan_id) {
-              // Staff already connected to a shop, redirect to staff profile
-              console.log("Staff already connected to shop, redirecting to staff-profile");
-              navigate('/staff-profile');
+            if (location.pathname !== '/unassigned-staff') {
+              navigate('/unassigned-staff');
               return;
             }
-          }
-        }
-        
-        // Staff profile is only accessible by staff or admin
-        if (location.pathname === '/staff-profile' && 
-            userRole !== 'staff' && 
-            userRole !== 'admin') {
-          navigate('/login');
-          return;
-        }
-        
-        // If staff tries to access staff-profile, make sure they are assigned to a shop
-        if (location.pathname === '/staff-profile' && userRole === 'staff') {
-          const { data: personelData } = await supabase
-            .from('personel')
-            .select('dukkan_id')
-            .eq('auth_id', session.user.id)
-            .maybeSingle();
-            
-          if (!personelData?.dukkan_id) {
-            // Staff not connected to a shop, redirect to unassigned staff page
-            console.log("Staff not connected to shop, redirecting to unassigned-staff");
-            navigate('/unassigned-staff');
+          } else if (location.pathname === '/unassigned-staff') {
+            navigate('/shop-home');
             return;
           }
-        }
-        
-        // Customer routes are only for customers
-        if ((location.pathname.startsWith('/customer-') || 
-             location.pathname === '/customer-dashboard') && 
-            userRole !== 'customer') {
-          navigate('/login');
-          return;
         }
         
         if (isMounted) setChecking(false);
@@ -155,7 +75,6 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
     
     checkSession();
     
-    // Set a maximum timeout to avoid infinite loading
     timeout = setTimeout(() => {
       if (isMounted) setChecking(false);
     }, 2000);

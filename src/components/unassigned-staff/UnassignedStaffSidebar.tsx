@@ -2,12 +2,12 @@
 import React from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Briefcase, History, LogOut, School, User } from "lucide-react";
+import { Briefcase, School, History, LogOut, User } from "lucide-react";
 
 interface UnassignedStaffSidebarProps {
   userProfile: any;
   activeTab: string;
-  setActiveTab: (v: string) => void;
+  setActiveTab: (tab: string) => void;
   onLogout: () => void;
   onJoinToShop: () => void;
 }
@@ -36,46 +36,50 @@ export function UnassignedStaffSidebar({
       </div>
 
       <nav className="p-4 space-y-2">
-        <button
+        <Button
           onClick={() => setActiveTab("personal")}
-          className={`flex items-center w-full px-4 py-2 text-left rounded-md ${activeTab === "personal" ? "bg-purple-100 text-purple-700" : "text-gray-600 hover:bg-gray-100"}`}
+          variant="ghost"
+          className={`w-full justify-start ${activeTab === "personal" ? "bg-purple-100 text-purple-700" : ""}`}
         >
-          <User size={18} className="mr-3" />
+          <User className="mr-2 h-4 w-4" />
           Kişisel Bilgiler
-        </button>
+        </Button>
 
-        <button
+        <Button
           onClick={() => setActiveTab("education")}
-          className={`flex items-center w-full px-4 py-2 text-left rounded-md ${activeTab === "education" ? "bg-purple-100 text-purple-700" : "text-gray-600 hover:bg-gray-100"}`}
+          variant="ghost"
+          className={`w-full justify-start ${activeTab === "education" ? "bg-purple-100 text-purple-700" : ""}`}
         >
-          <School size={18} className="mr-3" />
+          <School className="mr-2 h-4 w-4" />
           Eğitim Bilgileri
-        </button>
+        </Button>
 
-        <button
+        <Button
           onClick={() => setActiveTab("history")}
-          className={`flex items-center w-full px-4 py-2 text-left rounded-md ${activeTab === "history" ? "bg-purple-100 text-purple-700" : "text-gray-600 hover:bg-gray-100"}`}
+          variant="ghost"
+          className={`w-full justify-start ${activeTab === "history" ? "bg-purple-100 text-purple-700" : ""}`}
         >
-          <History size={18} className="mr-3" />
+          <History className="mr-2 h-4 w-4" />
           Geçmiş Bilgileri
-        </button>
+        </Button>
 
-        <button
+        <Button
           onClick={onJoinToShop}
-          className={`flex items-center w-full px-4 py-2 text-left rounded-md text-gray-600 hover:bg-gray-100`}
+          variant="default"
+          className="w-full mt-4 bg-purple-600 hover:bg-purple-700"
         >
-          <Briefcase size={18} className="mr-3" />
+          <Briefcase className="mr-2 h-4 w-4" />
           İşletmeye Katıl
-        </button>
+        </Button>
       </nav>
 
       <div className="absolute bottom-0 left-0 right-0 p-4 border-t">
         <Button
           onClick={onLogout}
           variant="destructive"
-          className="w-full flex items-center justify-center"
+          className="w-full"
         >
-          <LogOut size={18} className="mr-2" />
+          <LogOut className="mr-2 h-4 w-4" />
           Oturumu Kapat
         </Button>
       </div>

@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useUnassignedStaffData } from "@/hooks/useUnassignedStaffData";
 import UnassignedStaffMain from "@/components/unassigned-staff/UnassignedStaffMain";
@@ -24,24 +24,20 @@ export default function UnassignedStaff() {
 
   useEffect(() => {
     loadUserAndStaffData();
-    // eslint-disable-next-line
-  }, []);
+  }, [loadUserAndStaffData]);
 
-  // HATA DURUMUNU DAHA ANLAŞILIR GÖSTER (Personel kaydı bulunamadı ise)
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center h-screen p-4">
-        <div className="bg-red-50 text-red-700 p-4 rounded-md mb-4 text-center w-full max-w-xs">
+        <div className="bg-red-50 text-red-700 p-4 rounded-md mb-4 text-center w-full max-w-md">
           <h3 className="font-bold">Hata</h3>
-          <div>{error}</div>
-          <div className="mt-2 text-sm text-gray-500">
+          <p>{error}</p>
+          <p className="mt-2 text-sm text-gray-500">
             Eğer kayıt olurken personel emaili ile girdiyseniz, sistemde personel tablosunda kaydınız açılmadıysa bu hatayı alırsınız.<br/>
             Lütfen yöneticiye başvurun!
-          </div>
+          </p>
         </div>
-        <Button variant="default" onClick={() => navigate("/login")}>
-          Giriş Sayfasına Dön
-        </Button>
+        <Button onClick={() => navigate("/login")}>Giriş Sayfasına Dön</Button>
       </div>
     );
   }
