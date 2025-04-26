@@ -19,6 +19,14 @@ export function UnassignedStaffSidebar({
   onLogout,
   onJoinToShop
 }: UnassignedStaffSidebarProps) {
+  // Extract first letter of first name for avatar fallback
+  const getInitials = () => {
+    if (userProfile?.first_name) {
+      return userProfile.first_name[0];
+    }
+    return 'P';
+  };
+
   return (
     <div className="hidden md:flex flex-col fixed left-0 top-0 h-screen bg-gray-900 text-white w-64 p-6">
       {/* Profil Alanı */}
@@ -28,11 +36,13 @@ export function UnassignedStaffSidebar({
             <AvatarImage src={userProfile.avatar_url} alt={userProfile?.first_name || 'User'} />
           ) : (
             <AvatarFallback className="text-2xl bg-purple-100 text-purple-700">
-              {userProfile?.first_name?.[0] || 'P'}
+              {getInitials()}
             </AvatarFallback>
           )}
         </Avatar>
-        <h2 className="font-semibold text-lg">{userProfile?.first_name} {userProfile?.last_name}</h2>
+        <h2 className="font-semibold text-lg">
+          {userProfile?.first_name || ''} {userProfile?.last_name || ''}
+        </h2>
         <p className="text-purple-300 text-sm">Personel</p>
       </div>
 

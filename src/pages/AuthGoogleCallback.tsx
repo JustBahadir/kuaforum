@@ -16,12 +16,14 @@ export default function AuthGoogleCallback() {
       setLoading(true);
 
       try {
+        // Get the current session
         const { data, error: sessionError } = await supabase.auth.getSession();
         const session = data?.session ?? null;
         const user = session?.user ?? null;
 
         if (sessionError) {
           console.error("Session error:", sessionError);
+          toast.error("Giriş sırasında bir hata oluştu.");
           navigate("/login");
           return;
         }
@@ -35,8 +37,9 @@ export default function AuthGoogleCallback() {
           return;
         }
 
-        // For login mode - verify that the user has a profile
+        // For login mode - if no user or session, show account not found
         if (!user) {
+          console.log("No user found in the session");
           setAccountNotFound(true);
           setLoading(false);
           return;
@@ -50,6 +53,7 @@ export default function AuthGoogleCallback() {
           .maybeSingle();
           
         if (!profileData || profileError) {
+          console.log("No profile found for user:", user.id);
           setAccountNotFound(true);
           setLoading(false);
           return;
@@ -73,10 +77,15 @@ export default function AuthGoogleCallback() {
           } else {
             navigate("/staff-profile");
           }
+        } else {
+          // Default redirection for other roles
+          navigate("/");
         }
       } catch (error: any) {
         console.error("Auth callback error:", error);
-        setAccountNotFound(true);
+        toast.error("Bir hata oluştu. Lütfen tekrar deneyin.");
+        setLoading(false);
+        navigate("/login");
       } finally {
         setLoading(false);
       }
@@ -89,18 +98,16 @@ export default function AuthGoogleCallback() {
     return <AccountNotFound />;
   }
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="text-center p-6 bg-white rounded-md shadow-md">
-        {loading ? (
-          <>
-            <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-purple-600 mx-auto mb-4"></div>
-            <p>Giriş bilgileri doğrulanıyor...</p>
-          </>
-        ) : (
-          <p>Yönlendiriliyorsunuz...</p>
-        )}
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center p-6 bg-white rounded-md shadow-md">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-purple-600 mx-auto mb-4"></div>
+          <p>Giriş bilgileri doğrulanıyor...</p>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  return null;
 }
