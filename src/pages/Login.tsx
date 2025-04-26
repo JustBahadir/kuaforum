@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -18,6 +17,14 @@ export default function Login() {
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
+  // Set initial active tab based on URL parameter
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab === "register") {
+      setActiveTab("register");
+    }
+  }, [searchParams]);
+
   // Admin login states
   const [adminEmail, setAdminEmail] = useState("");
   const [adminPassword, setAdminPassword] = useState("");

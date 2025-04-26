@@ -1,14 +1,13 @@
 
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
-import { supabase } from "@/lib/supabase/client";
+import React from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Home } from "lucide-react";
 
 export default function ProfileSetup() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const handleRedirectToLogin = () => {
     // Navigate to login page with register tab selected
