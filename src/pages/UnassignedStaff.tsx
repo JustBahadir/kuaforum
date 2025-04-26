@@ -23,6 +23,7 @@ export default function UnassignedStaff() {
 
   // Load user data when page loads
   useEffect(() => {
+    console.log("UnassignedStaff component mounted, loading data...");
     const initialLoad = async () => {
       await loadUserAndStaffData();
     };
@@ -78,6 +79,8 @@ export default function UnassignedStaff() {
       </div>
     );
   }
+
+  console.log("Rendering UnassignedStaffMain with profile:", userProfile);
 
   return (
     <UnassignedStaffMain

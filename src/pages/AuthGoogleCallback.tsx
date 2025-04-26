@@ -31,6 +31,9 @@ export default function AuthGoogleCallback() {
         // Get the auth mode (login/register)
         const mode = searchParams.get("mode");
 
+        console.log("Auth callback mode:", mode);
+        console.log("User exists:", !!user);
+
         // For login mode - if no user or session, show account not found
         if (!user && mode === "login") {
           console.log("No user found in the session, showing account not found");

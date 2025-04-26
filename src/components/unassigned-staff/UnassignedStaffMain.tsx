@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -167,15 +168,10 @@ export default function UnassignedStaffMain({
         />
         <div className="md:ml-64 w-full p-4">
           <div className="max-w-3xl mx-auto space-y-6">
-            <TabsContent value="personal" className="mt-0">
-              {renderPersonalInfo()}
-            </TabsContent>
-            <TabsContent value="education" className="mt-0">
-              {renderEducationInfo()}
-            </TabsContent>
-            <TabsContent value="history" className="mt-0">
-              {renderHistoryInfo()}
-            </TabsContent>
+            {activeTab === "personal" && renderPersonalInfo()}
+            {activeTab === "education" && renderEducationInfo()}
+            {activeTab === "history" && renderHistoryInfo()}
+            
             {/* Butonlar - mobil */}
             <div className="md:hidden p-4">
               <div className="grid grid-cols-1 gap-4">

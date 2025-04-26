@@ -66,6 +66,8 @@ export function useUnassignedStaffData() {
         setLoading(false);
         return;
       }
+      
+      console.log("Saving education data for personel:", personelId, educationData);
       // education
       await supabase.from("staff_education").upsert([
         {
@@ -74,6 +76,7 @@ export function useUnassignedStaffData() {
         }
       ], { onConflict: 'personel_id' });
 
+      console.log("Saving history data for personel:", personelId, historyData);
       // history
       await supabase.from("staff_history").upsert([
         {
@@ -150,7 +153,7 @@ export function useUnassignedStaffData() {
       // PERSONEL KAYDI KONTROL ET
       const { data: personel, error: perErr } = await supabase
         .from('personel')
-        .select('id, dukkan_id')
+        .select('id, dukkan_id, ad_soyad, telefon, eposta, adres')
         .eq('auth_id', user.id)
         .maybeSingle();
 
@@ -198,6 +201,23 @@ export function useUnassignedStaffData() {
         console.log("Personel record found:", personel);
         // Personel kaydı varsa ID'yi kullan
         setPersonelId(personel.id);
+
+        // Update user profile with personel data if missing
+        if (personel.ad_soyad || personel.telefon || personel.adres) {
+          const currentProfile = { ...userProfile };
+          if (!currentProfile.first_name && personel.ad_soyad) {
+            const nameParts = personel.ad_soyad.split(' ');
+            currentProfile.first_name = nameParts[0];
+            currentProfile.last_name = nameParts.slice(1).join(' ');
+          }
+          if (!currentProfile.phone && personel.telefon) {
+            currentProfile.phone = personel.telefon;
+          }
+          if (!currentProfile.address && personel.adres) {
+            currentProfile.address = personel.adres;
+          }
+          setUserProfile(currentProfile);
+        }
         
         // ÇIKIŞ: DUKKAN ATAMASI VARSA HEMEN PROFİLE
         if (personel.dukkan_id) {
@@ -219,8 +239,15 @@ export function useUnassignedStaffData() {
           .maybeSingle();
           
         if (educationDataLoaded) {
-          console.log("Education data loaded");
-          setEducationData(educationDataLoaded);
+          console.log("Education data loaded", educationDataLoaded);
+          setEducationData({
+            ortaokuldurumu: educationDataLoaded.ortaokuldurumu || '',
+            lisedurumu: educationDataLoaded.lisedurumu || '',
+            liseturu: educationDataLoaded.liseturu || '',
+            meslekibrans: educationDataLoaded.meslekibrans || '',
+            universitedurumu: educationDataLoaded.universitedurumu || '',
+            universitebolum: educationDataLoaded.universitebolum || ''
+          });
         }
 
         // GEÇMİŞ
@@ -231,19 +258,25 @@ export function useUnassignedStaffData() {
           .maybeSingle();
           
         if (historyDataLoaded) {
-          console.log("History data loaded");
-          setHistoryData(historyDataLoaded);
+          console.log("History data loaded", historyDataLoaded);
+          setHistoryData({
+            isyerleri: historyDataLoaded.isyerleri || '',
+            gorevpozisyon: historyDataLoaded.gorevpozisyon || '',
+            belgeler: historyDataLoaded.belgeler || '',
+            yarismalar: historyDataLoaded.yarismalar || '',
+            cv: historyDataLoaded.cv || ''
+          });
         }
       }
 
     } catch (error: any) {
       console.error("Unexpected error in loadUserAndStaffData:", error);
-      // Bu hata mesajını göster ama yine de sayfanın çalışmasını engelleme
+      setError("Veri yüklenirken beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.");
     } finally {
       console.log("Data loading complete");
       setLoading(false);
     }
-  }, [navigate, personelId]);
+  }, [navigate, personelId, userProfile]);
 
   return {
     loading,
