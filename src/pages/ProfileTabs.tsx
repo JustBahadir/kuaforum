@@ -70,7 +70,7 @@ const ProfileTabs = ({
       onEducationChange(updatedEducationData);
       // Save to database
       await onSaveEducationHistory();
-      return true;
+      // No need to return anything here
     } catch (error) {
       console.error("Error saving education data:", error);
       toast.error("Eğitim bilgileri kaydedilirken bir hata oluştu");
@@ -85,7 +85,7 @@ const ProfileTabs = ({
       onHistoryChange(updatedHistoryData);
       // Save to database
       await onSaveEducationHistory();
-      return true;
+      // No need to return anything here
     } catch (error) {
       console.error("Error saving history data:", error);
       toast.error("Geçmiş bilgileri kaydedilirken bir hata oluştu");
