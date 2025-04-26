@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { FileInput } from "@/components/ui/file-upload";
+import { FileUpload } from "@/components/ui/file-upload";
 import { LoadingButton } from "@/components/ui/loading-button";
 
 interface PersonalInfoTabProps {
@@ -75,11 +75,12 @@ export const PersonalInfoTab = ({
                 )}
               </Avatar>
               <div className="mt-2">
-                <FileInput
-                  onFileSelect={onAvatarUpload}
-                  isLoading={isUploading}
-                  accept="image/*"
-                  buttonText="Profil Fotoğrafı Yükle"
+                <FileUpload
+                  onUploadComplete={onAvatarUpload}
+                  isUploading={isUploading}
+                  acceptedFileTypes="image/*"
+                  label="Profil Fotoğrafı Yükle"
+                  currentImageUrl={userProfile.avatarUrl}
                 />
               </div>
             </div>

@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
@@ -47,61 +48,7 @@ export function useUnassignedStaffData() {
   // Veri yüklendi mi kontrolü için bir ref
   const isDataLoaded = useRef(false);
 
-  // Çıkış yapma fonksiyonu
-  const handleLogout = useCallback(async () => {
-    try {
-      await supabase.auth.signOut();
-      toast.success("Başarıyla çıkış yaptınız.");
-      navigate("/login");
-    } catch (err) {
-      toast.error("Çıkış yapılırken bir hata oluştu.");
-    }
-  }, [navigate]);
-
-  // Bilgileri kaydetme fonksiyonu
-  const handleSave = useCallback(async (updatedData: any) => {
-    setLoading(true);
-    try {
-      // Update auth user metadata
-      await supabase.auth.updateUser({
-        data: {
-          first_name: updatedData.firstName,
-          last_name: updatedData.lastName,
-          gender: updatedData.gender,
-          phone: updatedData.phone,
-          address: updatedData.address
-        }
-      });
-
-      // Update profiles table
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await supabase
-          .from('profiles')
-          .update({
-            first_name: updatedData.firstName,
-            last_name: updatedData.lastName,
-            gender: updatedData.gender,
-            phone: updatedData.phone,
-            address: updatedData.address,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', user.id);
-      }
-
-      // Reload user data
-      await loadUserAndStaffData();
-      
-      toast.success("Bilgileriniz başarıyla güncellendi");
-    } catch (err) {
-      console.error("Kayıt hatası:", err);
-      toast.error("Bilgiler kaydedilirken bir hata oluştu");
-    } finally {
-      setLoading(false);
-    }
-  }, [loadUserAndStaffData]);
-
-  // Kullanıcı ve personel verilerini yükle
+  // Define loadUserAndStaffData function first before using it
   const loadUserAndStaffData = useCallback(async () => {
     if (isDataLoaded.current && userProfile) {
       return;
@@ -272,6 +219,65 @@ export function useUnassignedStaffData() {
       setLoading(false);
     }
   }, [navigate, personelId, userProfile]);
+
+  // Çıkış yapma fonksiyonu
+  const handleLogout = useCallback(async () => {
+    try {
+      await supabase.auth.signOut();
+      toast.success("Başarıyla çıkış yaptınız.");
+      navigate("/login");
+    } catch (err) {
+      toast.error("Çıkış yapılırken bir hata oluştu.");
+    }
+  }, [navigate]);
+
+  // Bilgileri kaydetme fonksiyonu
+  const handleSave = useCallback(async (updatedData: any) => {
+    setLoading(true);
+    try {
+      // Update auth user metadata
+      await supabase.auth.updateUser({
+        data: {
+          first_name: updatedData.firstName,
+          last_name: updatedData.lastName,
+          gender: updatedData.gender,
+          phone: updatedData.phone,
+          address: updatedData.address
+        }
+      });
+
+      // Update profiles table
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase
+          .from('profiles')
+          .update({
+            first_name: updatedData.firstName,
+            last_name: updatedData.lastName,
+            gender: updatedData.gender,
+            phone: updatedData.phone,
+            address: updatedData.address,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', user.id);
+      }
+
+      // Reload user data
+      await loadUserAndStaffData();
+      
+      toast.success("Bilgileriniz başarıyla güncellendi");
+    } catch (err) {
+      console.error("Kayıt hatası:", err);
+      toast.error("Bilgiler kaydedilirken bir hata oluştu");
+    } finally {
+      setLoading(false);
+    }
+  }, [loadUserAndStaffData]);
+
+  // Load user data when hook initializes
+  useEffect(() => {
+    loadUserAndStaffData();
+  }, [loadUserAndStaffData]);
 
   return {
     loading,
