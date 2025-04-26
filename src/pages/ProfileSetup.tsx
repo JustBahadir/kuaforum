@@ -115,68 +115,66 @@ export default function ProfileSetup() {
           .insert([shopData]);
           
         if (shopError) throw shopError;
-        
+
+        toast.success("İşletme kaydınız oluşturuldu!");
         navigate("/shop-home");
       } else if (role === 'staff') {
-        // For staff, check if shop code exists
-        if (shopCode) {
-          // Try to find shop with the provided code
-          const { data: shopData, error: shopError } = await supabase
-            .from('dukkanlar')
-            .select('id')
-            .eq('kod', shopCode)
-            .maybeSingle();
-
-          if (shopError || !shopData) {
-            toast.error("Geçersiz işletme kodu.");
+        // For staff, try to create a personel record whether or not there's a shop code
+        try {
+          let dukkanId = null;
+          
+          // Check if shop code exists, if provided
+          if (shopCode) {
+            const { data: shopData } = await supabase
+              .from('dukkanlar')
+              .select('id')
+              .eq('kod', shopCode)
+              .maybeSingle();
             
-            // Create personel record without dukkan_id
-            await supabase.from('personel').upsert([{
-              auth_id: userId,
-              ad_soyad: `${firstName} ${lastName}`,
-              telefon: phone,
-              eposta: '',
-              adres: '',
-              personel_no: '',
-              calisma_sistemi: '',
-              maas: 0,
-              prim_yuzdesi: 0
-            }]);
-            
-            navigate("/unassigned-staff");
-            return;
+            if (shopData) {
+              dukkanId = shopData.id;
+            }
           }
-
-          // Create personel record with shop id
-          await supabase.from('personel').upsert([{
+          
+          // Create personel record
+          const personelData = {
             auth_id: userId,
             ad_soyad: `${firstName} ${lastName}`,
             telefon: phone,
             eposta: '',
             adres: '',
-            personel_no: '',
-            calisma_sistemi: '',
-            maas: 0,
-            prim_yuzdesi: 0,
-            dukkan_id: shopData.id
-          }]);
-
-          navigate("/staff-profile");
-        } else {
-          // Create personel record without dukkan_id
-          await supabase.from('personel').upsert([{
-            auth_id: userId,
-            ad_soyad: `${firstName} ${lastName}`,
-            telefon: phone,
-            eposta: '',
-            adres: '',
-            personel_no: '',
-            calisma_sistemi: '',
+            personel_no: `P${Date.now().toString().substring(8)}`,
+            calisma_sistemi: 'Tam Zamanlı',
             maas: 0,
             prim_yuzdesi: 0
-          }]);
+          };
           
-          // If no shop code provided, redirect to unassigned staff page
+          // Add dukkanId if it exists
+          if (dukkanId) {
+            Object.assign(personelData, { dukkan_id: dukkanId });
+          }
+          
+          const { error: personelError } = await supabase
+            .from('personel')
+            .insert([personelData]);
+          
+          if (personelError) {
+            console.error("Personel kaydı oluşturma hatası:", personelError);
+            // Even with error, continue to redirect
+          }
+          
+          if (dukkanId) {
+            // With shop id, redirect to staff profile
+            toast.success("İşletmeye başarıyla kaydoldunuz!");
+            navigate("/staff-profile");
+          } else {
+            // Without shop id, redirect to unassigned staff
+            toast.success("Profiliniz oluşturuldu!");
+            navigate("/unassigned-staff");
+          }
+        } catch (err) {
+          console.error("Personel kaydı oluşturma hatası:", err);
+          toast.success("Profiliniz oluşturuldu, ancak personel kaydınız tam olarak tamamlanamadı.");
           navigate("/unassigned-staff");
         }
       }

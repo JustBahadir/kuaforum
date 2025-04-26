@@ -31,61 +31,67 @@ export default function AuthGoogleCallback() {
         // Get the auth mode (login/register)
         const mode = searchParams.get("mode");
 
+        // For login mode - if no user or session, show account not found
+        if (!user && mode === "login") {
+          console.log("No user found in the session, showing account not found");
+          setAccountNotFound(true);
+          setLoading(false);
+          return;
+        }
+        
         if (mode === "register") {
           // For registration, directly go to profile setup
           navigate("/profile-setup");
           return;
         }
 
-        // For login mode - if no user or session, show account not found
-        if (!user) {
-          console.log("No user found in the session");
-          setAccountNotFound(true);
-          setLoading(false);
-          return;
-        }
-
         // Check if user profile exists
-        const { data: profileData, error: profileError } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", user.id)
-          .maybeSingle();
-          
-        if (!profileData || profileError) {
-          console.log("No profile found for user:", user.id);
-          setAccountNotFound(true);
-          setLoading(false);
-          return;
-        }
-
-        // User exists and logged in successfully
-        const role = profileData.role;
-        
-        if (role === "admin") {
-          navigate("/shop-home");
-        } else if (role === "staff") {
-          // Check if staff has a dukkan_id
-          const { data: staffData } = await supabase
-            .from('personel')
-            .select('dukkan_id')
-            .eq('auth_id', user.id)
+        if (user) {
+          const { data: profileData, error: profileError } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", user.id)
             .maybeSingle();
+            
+          if (!profileData || profileError) {
+            console.log("No profile found for user:", user.id);
+            setAccountNotFound(true);
+            setLoading(false);
+            return;
+          }
+          
+          // User exists and logged in successfully
+          const role = profileData.role;
+          
+          if (role === "admin") {
+            navigate("/shop-home");
+          } else if (role === "staff") {
+            // Check if staff has a dukkan_id
+            const { data: staffData } = await supabase
+              .from('personel')
+              .select('dukkan_id')
+              .eq('auth_id', user.id)
+              .maybeSingle();
 
-          if (!staffData?.dukkan_id) {
-            navigate("/unassigned-staff");
+            if (!staffData?.dukkan_id) {
+              console.log("Staff has no dukkan_id, redirecting to unassigned-staff");
+              navigate("/unassigned-staff");
+            } else {
+              navigate("/staff-profile");
+            }
           } else {
-            navigate("/staff-profile");
+            // Default redirection for other roles
+            navigate("/");
           }
         } else {
-          // Default redirection for other roles
-          navigate("/");
+          // No user found - show account not found screen
+          setAccountNotFound(true);
         }
       } catch (error: any) {
         console.error("Auth callback error:", error);
         toast.error("Bir hata oluştu. Lütfen tekrar deneyin.");
         setLoading(false);
-        navigate("/login");
+        // Don't navigate away on error, stay on page and show the error
       } finally {
         setLoading(false);
       }

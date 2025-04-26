@@ -8,6 +8,7 @@ export default function AccountNotFound() {
   const navigate = useNavigate();
 
   const handleRegister = () => {
+    // Redirect to login page with register tab active
     navigate("/login?tab=register");
   };
 

@@ -117,6 +117,36 @@ export function useUnassignedStaffData() {
 
       console.log("User found:", user.id);
 
+      // PROFİL BİLGİSİ - Önce profil bilgilerini alalım
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+        
+      if (profileError) {
+        console.error("Profile fetch error:", profileError);
+        // Profile error, bu sayfanın çalışmasını engellemeyecek
+      }
+      
+      if (profileData) {
+        console.log("Profile data loaded:", profileData);
+        setUserProfile(profileData);
+      } else {
+        // Profil yoksa user metadata kullan
+        console.log("Using user metadata as profile fallback");
+        setUserProfile({
+          id: user.id,
+          first_name: user.user_metadata?.first_name || user.user_metadata?.name?.split(' ')[0] || '',
+          last_name: user.user_metadata?.last_name || 
+            (user.user_metadata?.name?.split(' ').length > 1 ? 
+              user.user_metadata?.name?.split(' ').slice(1).join(' ') : 
+              ''),
+          email: user.email,
+          role: user.user_metadata?.role || 'staff'
+        });
+      }
+
       // PERSONEL KAYDI KONTROL ET
       const { data: personel, error: perErr } = await supabase
         .from('personel')
@@ -133,21 +163,16 @@ export function useUnassignedStaffData() {
         console.log("No personel record found, creating one");
         
         try {
-          // PROFİL BİLGİSİ
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', user.id)
-            .single();
-            
-          // Create basic personel record using profile data
+          // Create basic personel record using profile data or user metadata
+          const name = profileData ? 
+            `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() : 
+            user.user_metadata?.name || user.email?.split('@')[0] || 'Personel';
+          
           const { data: newPersonel, error: createError } = await supabase
             .from('personel')
             .insert([{
               auth_id: user.id,
-              ad_soyad: profileData ? 
-                `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() : 
-                user.user_metadata?.name || 'Personel',
+              ad_soyad: name,
               telefon: profileData?.phone || user.user_metadata?.phone || '-',
               eposta: user.email || '-',
               adres: profileData?.address || user.user_metadata?.address || '-',
@@ -160,18 +185,14 @@ export function useUnassignedStaffData() {
 
           if (createError) {
             console.error("Personel record creation error:", createError);
-            setError("Personel kaydı oluşturulamadı.");
-            return;
-          }
-
-          if (newPersonel && newPersonel.length > 0) {
+            // Personel kaydı hatası olsa bile devam et
+          } else if (newPersonel && newPersonel.length > 0) {
             setPersonelId(newPersonel[0].id);
             console.log("Created personel record with id:", newPersonel[0].id);
           }
         } catch (err) {
           console.error("Unexpected error creating personel:", err);
-          setError("Beklenmeyen bir hata oluştu.");
-          return;
+          // Hata olsa bile devam et, sayfanın çalışmasını engelleme
         }
       } else {
         console.log("Personel record found:", personel);
@@ -184,36 +205,6 @@ export function useUnassignedStaffData() {
           navigate("/staff-profile", { replace: true });
           return;
         }
-      }
-
-      // PROFİL BİLGİSİ
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-        
-      if (profileError) {
-        console.error("Profile fetch error:", profileError);
-        // Even if profile fetch fails, don't block the page from loading
-      }
-      
-      if (profileData) {
-        console.log("Profile data loaded:", profileData);
-        setUserProfile(profileData);
-      } else {
-        // If no profile data, use user metadata as fallback
-        console.log("Using user metadata as profile fallback");
-        setUserProfile({
-          id: user.id,
-          first_name: user.user_metadata?.first_name || user.user_metadata?.name?.split(' ')[0] || '',
-          last_name: user.user_metadata?.last_name || 
-            (user.user_metadata?.name?.split(' ').length > 1 ? 
-              user.user_metadata?.name?.split(' ').slice(1).join(' ') : 
-              ''),
-          email: user.email,
-          role: user.user_metadata?.role || 'staff'
-        });
       }
 
       // EĞİTİM BİLGİSİ - personel ID ile alınmalı
@@ -247,7 +238,7 @@ export function useUnassignedStaffData() {
 
     } catch (error: any) {
       console.error("Unexpected error in loadUserAndStaffData:", error);
-      setError("Bir hata oluştu. Lütfen daha sonra tekrar deneyin.");
+      // Bu hata mesajını göster ama yine de sayfanın çalışmasını engelleme
     } finally {
       console.log("Data loading complete");
       setLoading(false);

@@ -2,7 +2,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LogOut, Settings, User, BookOpen, History, Briefcase } from "lucide-react";
+import { LogOut, User, BookOpen, History, Briefcase } from "lucide-react";
 
 interface UnassignedStaffSidebarProps {
   userProfile: any;
