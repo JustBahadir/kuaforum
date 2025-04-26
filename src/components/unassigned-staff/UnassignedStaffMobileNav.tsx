@@ -1,74 +1,106 @@
 
-import React from "react";
-import { Menu, X } from "lucide-react";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import React, { useState } from "react";
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { Menu } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { formatNameWithTitle } from "@/utils/userNameFormatter";
 
 interface UnassignedStaffMobileNavProps {
-  userProfile: any;
+  userProfile: {
+    firstName: string;
+    lastName: string;
+    gender: "erkek" | "kadın" | null;
+    avatarUrl?: string;
+  };
   activeTab: string;
   setActiveTab: (tab: string) => void;
 }
 
-export function UnassignedStaffMobileNav({
+export const UnassignedStaffMobileNav: React.FC<UnassignedStaffMobileNavProps> = ({
   userProfile,
   activeTab,
   setActiveTab,
-}: UnassignedStaffMobileNavProps) {
-  const [isOpen, setIsOpen] = React.useState(false);
+}) => {
+  const [open, setOpen] = useState(false);
 
-  const handleTabChange = (tab: string) => {
-    setActiveTab(tab);
-    setIsOpen(false);
+  const initials = (userProfile.firstName?.[0] || "") + (userProfile.lastName?.[0] || "");
+  const fullName = formatNameWithTitle(userProfile.firstName || '', userProfile.lastName || '', userProfile.gender);
+
+  const tabs = [
+    { id: "personal", label: "Kişisel Bilgiler" },
+    { id: "education", label: "Eğitim Bilgileri" },
+    { id: "history", label: "Geçmiş Bilgileri" }
+  ];
+
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId);
+    setOpen(false);
   };
 
   return (
-    <div className="md:hidden fixed top-0 left-0 right-0 bg-white border-b p-4 z-50 flex justify-between items-center">
-      <div className="font-semibold">
-        {userProfile?.first_name 
-          ? `${userProfile.first_name} ${userProfile.last_name || ''}`
-          : 'Personel Profili'
-        }
+    <div className="sticky top-0 z-30 w-full bg-white border-b border-gray-200 md:hidden">
+      <div className="flex justify-between items-center h-16 px-4">
+        <Sheet open={open} onOpenChange={setOpen}>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon">
+              <Menu className="h-6 w-6" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-64 p-0">
+            <div className="p-6 flex flex-col items-center space-y-2 border-b border-gray-200">
+              <Avatar className="w-16 h-16">
+                {userProfile.avatarUrl ? (
+                  <AvatarImage src={userProfile.avatarUrl} alt={fullName} />
+                ) : (
+                  <AvatarFallback className="text-xl bg-purple-100 text-purple-700">
+                    {initials || "U"}
+                  </AvatarFallback>
+                )}
+              </Avatar>
+              <div className="text-center">
+                <p className="text-gray-500 text-sm">Hoşgeldiniz</p>
+                <h3 className="font-medium mt-1">{fullName}</h3>
+                <p className="text-purple-600 text-sm mt-1">Personel</p>
+              </div>
+            </div>
+            <div className="p-4">
+              <div className="space-y-2">
+                {tabs.map((tab) => (
+                  <Button
+                    key={tab.id}
+                    variant={activeTab === tab.id ? "secondary" : "ghost"}
+                    className={`w-full justify-start ${
+                      activeTab === tab.id
+                        ? "bg-purple-50 text-purple-700"
+                        : "text-gray-600"
+                    }`}
+                    onClick={() => handleTabChange(tab.id)}
+                  >
+                    {tab.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </SheetContent>
+        </Sheet>
+        <h1 className="text-lg font-semibold">
+          {tabs.find((tab) => tab.id === activeTab)?.label || "Profil"}
+        </h1>
+        <Avatar className="w-8 h-8">
+          {userProfile.avatarUrl ? (
+            <AvatarImage src={userProfile.avatarUrl} alt={fullName} />
+          ) : (
+            <AvatarFallback className="text-sm bg-purple-100 text-purple-700">
+              {initials || "U"}
+            </AvatarFallback>
+          )}
+        </Avatar>
       </div>
-      
-      <Sheet open={isOpen} onOpenChange={setIsOpen}>
-        <SheetTrigger asChild>
-          <Button variant="ghost" size="icon">
-            <Menu className="h-6 w-6" />
-          </Button>
-        </SheetTrigger>
-        <SheetContent side="top" className="pt-12">
-          <div className="flex justify-end">
-            <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)}>
-              <X className="h-5 w-5" />
-            </Button>
-          </div>
-          
-          <nav className="flex flex-col gap-2 mt-4">
-            <Button
-              variant={activeTab === "personal" ? "default" : "ghost"}
-              className="justify-start"
-              onClick={() => handleTabChange("personal")}
-            >
-              Kişisel Bilgiler
-            </Button>
-            <Button
-              variant={activeTab === "education" ? "default" : "ghost"}
-              className="justify-start"
-              onClick={() => handleTabChange("education")}
-            >
-              Eğitim Bilgileri
-            </Button>
-            <Button
-              variant={activeTab === "history" ? "default" : "ghost"}
-              className="justify-start"
-              onClick={() => handleTabChange("history")}
-            >
-              Geçmiş Bilgileri
-            </Button>
-          </nav>
-        </SheetContent>
-      </Sheet>
     </div>
   );
-}
+};

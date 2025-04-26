@@ -56,7 +56,7 @@ export function JoinShopModal({ open, onOpenChange, personelId }: JoinShopModalP
         // Get the current user
         const { data: { user }, error: userError } = await supabase.auth.getUser();
         if (userError || !user) {
-          toast.error("Kullanıcı bilgisi alınamadı. Lütfen tekrar giriş yapınız.");
+          toast.error("Oturum bilgileri alınamadı. Lütfen tekrar giriş yapınız.");
           setIsLoading(false);
           return;
         }
@@ -93,7 +93,7 @@ export function JoinShopModal({ open, onOpenChange, personelId }: JoinShopModalP
 
           if (createError) {
             console.error("Error creating personel record:", createError);
-            toast.error("Profil bilginiz oluşturulamadı. Lütfen tekrar deneyiniz.");
+            toast.error("Profil oluşturulamadı. Lütfen tekrar deneyiniz.");
             setIsLoading(false);
             return;
           }
@@ -103,14 +103,14 @@ export function JoinShopModal({ open, onOpenChange, personelId }: JoinShopModalP
           currentPersonelId = personelData.id;
         } else if (personelError) {
           console.error("Error fetching personel:", personelError);
-          toast.error("Profil bilginiz alınamadı. Lütfen tekrar deneyiniz.");
+          toast.error("Profil bilgisi alınamadı. Lütfen tekrar deneyiniz.");
           setIsLoading(false);
           return;
         }
       }
       
       if (!currentPersonelId) {
-        toast.error("Profil bilginiz bulunamadı. Lütfen tekrar deneyiniz.");
+        toast.error("Personel bilgisi bulunamadı. Lütfen tekrar deneyiniz.");
         setIsLoading(false);
         return;
       }

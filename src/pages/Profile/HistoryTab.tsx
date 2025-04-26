@@ -48,6 +48,9 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
   const [newCompetition, setNewCompetition] = useState("");
   const [cvText, setCvText] = useState(historyData.cv || "");
   const [savingCv, setSavingCv] = useState(false);
+  const [savingExperience, setSavingExperience] = useState(false);
+  const [savingCertificate, setSavingCertificate] = useState(false);
+  const [savingCompetition, setSavingCompetition] = useState(false);
   
   // State for edited items
   const [editCertificateIndex, setEditCertificateIndex] = useState<number | null>(null);
@@ -107,6 +110,7 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
       return;
     }
     
+    setSavingExperience(true);
     let updatedExperiences: WorkExperience[];
     
     if (editExperienceIndex !== null) {
@@ -138,10 +142,13 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
       
       // Reset form
       setNewWorkplace({ workplace: "", position: "", duration: "" });
+      toast.success("İş deneyimi başarıyla kaydedildi");
       
     } catch (error) {
       console.error("Error saving experience:", error);
       toast.error("İş deneyimi kaydedilirken bir hata oluştu");
+    } finally {
+      setSavingExperience(false);
     }
   };
 
@@ -152,6 +159,7 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
       return;
     }
     
+    setSavingCertificate(true);
     let updatedCertificates: string[];
     
     if (editCertificateIndex !== null) {
@@ -178,10 +186,13 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
       
       // Reset form
       setNewCertificate("");
+      toast.success("Belge başarıyla kaydedildi");
       
     } catch (error) {
       console.error("Error saving certificate:", error);
       toast.error("Belge kaydedilirken bir hata oluştu");
+    } finally {
+      setSavingCertificate(false);
     }
   };
 
@@ -192,6 +203,7 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
       return;
     }
     
+    setSavingCompetition(true);
     let updatedCompetitions: string[];
     
     if (editCompetitionIndex !== null) {
@@ -218,10 +230,13 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
       
       // Reset form
       setNewCompetition("");
+      toast.success("Yarışma başarıyla kaydedildi");
       
     } catch (error) {
       console.error("Error saving competition:", error);
       toast.error("Yarışma kaydedilirken bir hata oluştu");
+    } finally {
+      setSavingCompetition(false);
     }
   };
 
@@ -367,12 +382,12 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
           <div className="flex justify-end">
             <LoadingButton
               onClick={addExperience}
-              loading={isLoading}
-              disabled={isLoading || !newWorkplace.workplace || !newWorkplace.position || !newWorkplace.duration}
+              loading={savingExperience}
+              disabled={savingExperience || !newWorkplace.workplace || !newWorkplace.position || !newWorkplace.duration}
               className="flex items-center gap-1"
             >
               <Plus size={16} />
-              {editExperienceIndex !== null ? 'Güncelle' : 'Ekle'}
+              {editExperienceIndex !== null ? 'Güncelle' : 'Tecrübe Ekle'}
             </LoadingButton>
           </div>
           
@@ -401,12 +416,12 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
             />
             <LoadingButton
               onClick={addCertificate}
-              loading={isLoading}
-              disabled={isLoading || !newCertificate}
+              loading={savingCertificate}
+              disabled={savingCertificate || !newCertificate}
               className="flex items-center gap-1"
             >
               <Plus size={16} />
-              {editCertificateIndex !== null ? 'Güncelle' : 'Ekle'}
+              {editCertificateIndex !== null ? 'Güncelle' : 'Belge Ekle'}
             </LoadingButton>
           </div>
           
@@ -435,12 +450,12 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
             />
             <LoadingButton
               onClick={addCompetition}
-              loading={isLoading}
-              disabled={isLoading || !newCompetition}
+              loading={savingCompetition}
+              disabled={savingCompetition || !newCompetition}
               className="flex items-center gap-1"
             >
               <Plus size={16} />
-              {editCompetitionIndex !== null ? 'Güncelle' : 'Ekle'}
+              {editCompetitionIndex !== null ? 'Güncelle' : 'Yarışma Ekle'}
             </LoadingButton>
           </div>
           
@@ -469,7 +484,7 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
             <LoadingButton
               onClick={handleSaveCv}
               loading={savingCv}
-              disabled={savingCv || isLoading}
+              disabled={savingCv}
               className="bg-purple-600 text-white hover:bg-purple-700"
             >
               Özgeçmiş Kaydet

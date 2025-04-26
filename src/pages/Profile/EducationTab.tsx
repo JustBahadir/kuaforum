@@ -53,6 +53,7 @@ const EducationTab: React.FC<EducationTabProps> = ({
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [localData, setLocalData] = useState<EducationData>(educationData);
   const [savingData, setSavingData] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
   
   useEffect(() => {
     let step = 1;
@@ -63,6 +64,7 @@ const EducationTab: React.FC<EducationTabProps> = ({
     
     setCurrentStep(step);
     setLocalData(educationData);
+    setIsDirty(false);
   }, [educationData]);
 
   const handleChange = async (field: keyof EducationData, value: string) => {
@@ -78,6 +80,7 @@ const EducationTab: React.FC<EducationTabProps> = ({
     }
     
     setLocalData(newData);
+    setIsDirty(true);
     
     // Handle step progression
     if (field === 'ortaokuldurumu' && value === 'Mezun') {
@@ -90,8 +93,6 @@ const EducationTab: React.FC<EducationTabProps> = ({
     } else if (field === 'universitedurumu' && (value === 'Mezun' || value === 'Devam Ediyor')) {
       setCurrentStep(Math.max(currentStep, 5));
     }
-    
-    onEducationChange(newData);
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -100,6 +101,7 @@ const EducationTab: React.FC<EducationTabProps> = ({
       setSavingData(true);
       await onSave(localData);
       toast.success("Eğitim bilgileriniz başarıyla kaydedildi");
+      setIsDirty(false);
     } catch (error) {
       console.error("Save error:", error);
       toast.error("Bilgiler kaydedilirken bir hata oluştu");
@@ -141,7 +143,7 @@ const EducationTab: React.FC<EducationTabProps> = ({
             </div>
             
             {/* Step 2: Lise Durumu */}
-            {currentStep >= 2 && (
+            {localData.ortaokuldurumu && (
               <div className="grid gap-2 pt-4 border-t border-gray-100">
                 <label className="text-sm font-medium flex items-center gap-2">
                   <BookOpen size={16} />
@@ -166,7 +168,7 @@ const EducationTab: React.FC<EducationTabProps> = ({
             )}
             
             {/* Step 3: Lise Türü */}
-            {currentStep >= 3 && (
+            {localData.lisedurumu && (
               <div className="grid gap-2 pt-4 border-t border-gray-100">
                 <label className="text-sm font-medium">Lise Türü</label>
                 <Select
@@ -188,7 +190,7 @@ const EducationTab: React.FC<EducationTabProps> = ({
             )}
             
             {/* Step 4: Mesleki Branş (only for specific high school types) */}
-            {currentStep >= 4 && 
+            {localData.liseturu && 
               ['Çok Programlı Anadolu Lisesi', 'Mesleki ve Teknik Anadolu Lisesi']
                 .includes(localData.liseturu) && (
               <div className="grid gap-2">
@@ -196,14 +198,14 @@ const EducationTab: React.FC<EducationTabProps> = ({
                 <Input
                   value={localData.meslekibrans}
                   onChange={(e) => handleChange("meslekibrans", e.target.value)}
-                  placeholder="Kuaförlük, Berberlik, Güzellik Uzmanı..."
+                  placeholder="Örneğin: Kuaförlük, Berberlik, Güzellik Uzmanlığı..."
                   className="text-gray-900"
                 />
               </div>
             )}
             
             {/* Step 5: Üniversite Durumu */}
-            {currentStep >= 3 && (
+            {localData.lisedurumu && (
               <div className="grid gap-2 pt-4 border-t border-gray-100">
                 <label className="text-sm font-medium flex items-center gap-2">
                   <GraduationCap size={16} />
@@ -228,7 +230,7 @@ const EducationTab: React.FC<EducationTabProps> = ({
             )}
             
             {/* Step 6: Üniversite Bölümü */}
-            {currentStep >= 3 && ['Mezun', 'Devam Ediyor'].includes(localData.universitedurumu) && (
+            {localData.universitedurumu && ['Mezun', 'Devam Ediyor'].includes(localData.universitedurumu) && (
               <div className="grid gap-2 pt-4 border-t border-gray-100">
                 <label className="text-sm font-medium">Üniversite Bölümü</label>
                 <Select
@@ -265,15 +267,16 @@ const EducationTab: React.FC<EducationTabProps> = ({
                 };
                 setLocalData(resetData);
                 setCurrentStep(1);
-                await onSave(resetData);
+                onEducationChange(resetData);
+                setIsDirty(true);
               }}
             >
               Temizle
             </Button>
             <LoadingButton
               type="submit"
-              loading={savingData || isLoading}
-              disabled={savingData || isLoading}
+              loading={savingData}
+              disabled={!isDirty || savingData}
               className="bg-purple-600 text-white hover:bg-purple-700"
             >
               Kaydet

@@ -1,9 +1,10 @@
 
 import React, { useState } from "react";
-import { ProfileDisplay } from "@/components/customer-profile/ProfileDisplay";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import StaffPersonalInfoTab from "@/pages/Profile/StaffPersonalInfoTab";
 import EducationTab from "@/pages/Profile/EducationTab";
 import HistoryTab from "@/pages/Profile/HistoryTab";
+import { toast } from "sonner";
 
 interface ProfileTabsProps {
   profile: {
@@ -20,7 +21,7 @@ interface ProfileTabsProps {
   };
   handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
   handleSelectChange: (name: string, value: string) => void;
-  handleAvatarUpload: (url: string) => void;
+  handleAvatarUpload: (url: string) => Promise<void>;
   handleSave: () => Promise<void>;
   isSaving: boolean;
   isUploading: boolean;
@@ -39,8 +40,8 @@ interface ProfileTabsProps {
     yarismalar: string;
     cv: string;
   };
-  onEducationChange: (data: ProfileTabsProps["educationData"]) => void;
-  onHistoryChange: (data: ProfileTabsProps["historyData"]) => void;
+  onEducationChange: (data: any) => void;
+  onHistoryChange: (data: any) => void;
   onSaveEducationHistory: () => Promise<void>;
   isLoadingEducationHistory: boolean;
 }
@@ -60,116 +61,76 @@ const ProfileTabs = ({
   onSaveEducationHistory,
   isLoadingEducationHistory
 }: ProfileTabsProps) => {
-  // Ana view: "personalInfo" veya "educationHistory"
-  const [mainView, setMainView] = useState<"personalInfo" | "educationHistory">("personalInfo");
+  const [activeTab, setActiveTab] = useState("personal");
 
-  // Alt sekme: sadece eğitim veya geçmiş gösterilecek
-  const [subTab, setSubTab] = useState<"education" | "history">("education");
+  // Handle saving education and history data
+  const handleSaveEducationData = async (updatedEducationData: any) => {
+    try {
+      // Update local state
+      onEducationChange(updatedEducationData);
+      // Save to database
+      await onSaveEducationHistory();
+      return true;
+    } catch (error) {
+      console.error("Error saving education data:", error);
+      toast.error("Eğitim bilgileri kaydedilirken bir hata oluştu");
+      throw error;
+    }
+  };
+
+  // Handle saving history data
+  const handleSaveHistoryData = async (updatedHistoryData: any) => {
+    try {
+      // Update local state
+      onHistoryChange(updatedHistoryData);
+      // Save to database
+      await onSaveEducationHistory();
+      return true;
+    } catch (error) {
+      console.error("Error saving history data:", error);
+      toast.error("Geçmiş bilgileri kaydedilirken bir hata oluştu");
+      throw error;
+    }
+  };
 
   return (
-    <div className="max-w-4xl mx-auto px-4">
-      {/* Mevcut Bilgiler bölümü, sayfa doğal akışında, scrolla bağlı */}
-      <div className="mb-6 bg-white rounded-md shadow-sm border border-gray-200 p-6">
-        <ProfileDisplay {...profile} />
-      </div>
-
-      {/* Ana butonlar */}
-      <div className="mb-6 flex border border-gray-300 rounded-md overflow-hidden shadow-sm select-none">
-        <button
-          className={`flex-1 py-3 text-center font-semibold transition-colors duration-200 ${
-            mainView === "personalInfo"
-              ? "bg-purple-600 text-white"
-              : "bg-gray-50 text-gray-600 hover:bg-gray-100"
-          }`}
-          onClick={() => setMainView("personalInfo")}
-          type="button"
-          aria-label="Kişisel Bilgiler"
-        >
-          Kişisel Bilgiler
-        </button>
-        <button
-          className={`flex-1 py-3 text-center font-semibold transition-colors duration-200 ${
-            mainView === "educationHistory"
-              ? "bg-purple-600 text-white"
-              : "bg-gray-50 text-gray-600 hover:bg-gray-100"
-          }`}
-          onClick={() => {
-            setMainView("educationHistory");
-            setSubTab("education");
-          }}
-          type="button"
-          aria-label="Eğitim ve Geçmiş"
-        >
-          Eğitim ve Geçmiş
-        </button>
-      </div>
-
-      {/* İçerik alanı */}
-      <div>
-        {mainView === "personalInfo" && (
-          <StaffPersonalInfoTab
-            profile={profile}
-            handleChange={handleChange}
-            handleSelectChange={handleSelectChange}
-            handleAvatarUpload={handleAvatarUpload}
-            handleSave={handleSave}
-            isSaving={isSaving}
-            isUploading={isUploading}
-          />
-        )}
-
-        {mainView === "educationHistory" && (
-          <div>
-            {/* Alt sekmeler */}
-            <nav className="flex border-b border-gray-300 mb-4">
-              <button
-                onClick={() => setSubTab("education")}
-                className={`flex-1 py-2 font-semibold text-center transition-colors duration-150 ${
-                  subTab === "education"
-                    ? "border-b-2 border-purple-600 text-purple-600"
-                    : "text-gray-600 hover:text-purple-600"
-                }`}
-                type="button"
-                aria-label="Eğitim Bilgileri"
-              >
-                Eğitim Bilgileri
-              </button>
-              <button
-                onClick={() => setSubTab("history")}
-                className={`flex-1 py-2 font-semibold text-center transition-colors duration-150 ${
-                  subTab === "history"
-                    ? "border-b-2 border-purple-600 text-purple-600"
-                    : "text-gray-600 hover:text-purple-600"
-                }`}
-                type="button"
-                aria-label="Geçmiş Bilgileri"
-              >
-                Geçmiş Bilgileri
-              </button>
-            </nav>
-
-            {/* Alt sekme içerikleri */}
-            {subTab === "education" && (
-              <EducationTab
-                educationData={educationData}
-                onEducationChange={onEducationChange}
-                onSave={onSaveEducationHistory}
-                isLoading={isLoadingEducationHistory}
-              />
-            )}
-
-            {subTab === "history" && (
-              <HistoryTab
-                historyData={historyData}
-                onHistoryChange={onHistoryChange}
-                onSave={onSaveEducationHistory}
-                isLoading={isLoadingEducationHistory}
-              />
-            )}
-          </div>
-        )}
-      </div>
-    </div>
+    <Tabs defaultValue="personal" value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <TabsList className="grid grid-cols-3 w-full max-w-md mb-4">
+        <TabsTrigger value="personal">Kişisel</TabsTrigger>
+        <TabsTrigger value="education">Eğitim</TabsTrigger>
+        <TabsTrigger value="history">Geçmiş</TabsTrigger>
+      </TabsList>
+      
+      <TabsContent value="personal">
+        <StaffPersonalInfoTab
+          profile={profile}
+          handleChange={handleChange}
+          handleSelectChange={handleSelectChange}
+          handleAvatarUpload={handleAvatarUpload}
+          handleSave={handleSave}
+          isSaving={isSaving}
+          isUploading={isUploading}
+        />
+      </TabsContent>
+      
+      <TabsContent value="education">
+        <EducationTab
+          educationData={educationData}
+          onEducationChange={onEducationChange}
+          onSave={handleSaveEducationData}
+          isLoading={isLoadingEducationHistory}
+        />
+      </TabsContent>
+      
+      <TabsContent value="history">
+        <HistoryTab
+          historyData={historyData}
+          onHistoryChange={onHistoryChange}
+          onSave={handleSaveHistoryData}
+          isLoading={isLoadingEducationHistory}
+        />
+      </TabsContent>
+    </Tabs>
   );
 };
 

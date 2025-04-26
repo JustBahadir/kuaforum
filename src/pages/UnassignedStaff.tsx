@@ -26,17 +26,47 @@ export default function UnassignedStaff() {
   } = useUnassignedStaffData();
 
   useEffect(() => {
-    loadUserAndStaffData();
-  }, [loadUserAndStaffData]);
+    const loadData = async () => {
+      try {
+        await loadUserAndStaffData();
+      } catch (error) {
+        console.error("Failed to load user data:", error);
+      }
+    };
+    loadData();
+  }, []);
 
   const handleAvatarUpload = async (url: string) => {
+    if (!url) {
+      toast.error("Avatar URL is empty");
+      return;
+    }
+    
     try {
       setIsUploading(true);
       
-      await supabase.auth.updateUser({
+      // Update supabase auth user metadata
+      const { error: authUpdateError } = await supabase.auth.updateUser({
         data: { avatar_url: url }
       });
 
+      if (authUpdateError) {
+        throw authUpdateError;
+      }
+
+      // Update the profile in our DB
+      if (personelId) {
+        const { error: profileUpdateError } = await supabase
+          .from('personel')
+          .update({ avatar_url: url })
+          .eq('id', personelId);
+          
+        if (profileUpdateError) {
+          throw profileUpdateError;
+        }
+      }
+
+      // Update local state
       await handleSave({
         ...userProfile,
         avatarUrl: url

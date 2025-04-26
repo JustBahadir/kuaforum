@@ -57,10 +57,6 @@ export function useUnassignedStaffData() {
   }, [navigate]);
 
   const loadUserAndStaffData = useCallback(async () => {
-    if (isDataLoaded.current && userProfile && personelId) {
-      return;
-    }
-
     setLoading(true);
     setError(null);
     
@@ -83,6 +79,7 @@ export function useUnassignedStaffData() {
         console.error("Profile fetch error:", profileError);
       }
 
+      // Set user profile data with all available data sources
       setUserProfile({
         firstName: profileData?.first_name || user.user_metadata?.first_name || '',
         lastName: profileData?.last_name || user.user_metadata?.last_name || '',
@@ -175,6 +172,7 @@ export function useUnassignedStaffData() {
         staffId = personel.id;
         setPersonelId(personel.id);
 
+        // Update userProfile with additional personel data if available
         if (personel.ad_soyad || personel.telefon || personel.adres || personel.avatar_url) {
           const currentProfile = { ...userProfile };
           if (!currentProfile.firstName && personel.ad_soyad) {
@@ -311,6 +309,27 @@ export function useUnassignedStaffData() {
         throw new Error("User not authenticated");
       }
 
+      // Update user metadata
+      const userUpdateData: any = {};
+      if ('firstName' in updatedData) userUpdateData.first_name = updatedData.firstName;
+      if ('lastName' in updatedData) userUpdateData.last_name = updatedData.lastName;
+      if ('phone' in updatedData) userUpdateData.phone = updatedData.phone;
+      if ('gender' in updatedData) userUpdateData.gender = updatedData.gender;
+      if ('address' in updatedData) userUpdateData.address = updatedData.address;
+      if ('avatarUrl' in updatedData) userUpdateData.avatar_url = updatedData.avatarUrl;
+
+      // Update auth user if we have metadata changes
+      if (Object.keys(userUpdateData).length > 0) {
+        const { error: updateUserError } = await supabase.auth.updateUser({
+          data: userUpdateData
+        });
+        
+        if (updateUserError) {
+          console.error("Error updating user metadata:", updateUserError);
+          throw updateUserError;
+        }
+      }
+
       let currentPersonelId = personelId;
       
       // If we don't have a personel ID, create a new personel record
@@ -321,15 +340,15 @@ export function useUnassignedStaffData() {
           .from('personel')
           .insert([{
             auth_id: user.id,
-            ad_soyad: `${userProfile?.firstName || ''} ${userProfile?.lastName || ''}`.trim() || 'Personel',
-            telefon: userProfile?.phone || '-',
+            ad_soyad: `${updatedData.firstName || ''} ${updatedData.lastName || ''}`.trim() || 'Personel',
+            telefon: updatedData.phone || '-',
             eposta: user.email || '-',
-            adres: userProfile?.address || '-',
+            adres: updatedData.address || '-',
             personel_no: `P${Date.now().toString().substring(8)}`,
             calisma_sistemi: 'Tam Zamanlı',
             maas: 0,
             prim_yuzdesi: 0,
-            avatar_url: userProfile?.avatarUrl
+            avatar_url: updatedData.avatarUrl
           }])
           .select('id')
           .single();
@@ -369,6 +388,22 @@ export function useUnassignedStaffData() {
             });
         } else {
           throw new Error("Failed to create personel record");
+        }
+      } else if ('firstName' in updatedData || 'lastName' in updatedData || 'phone' in updatedData || 'address' in updatedData || 'avatarUrl' in updatedData) {
+        // Update the personel record if it exists and we have personal info updates
+        const { error: updatePersonelError } = await supabase
+          .from('personel')
+          .update({
+            ad_soyad: `${updatedData.firstName || ''} ${updatedData.lastName || ''}`.trim() || 'Personel',
+            telefon: updatedData.phone || '-',
+            adres: updatedData.address || '-',
+            avatar_url: updatedData.avatarUrl || null
+          })
+          .eq('id', currentPersonelId);
+        
+        if (updatePersonelError) {
+          console.error("Error updating personel:", updatePersonelError);
+          throw updatePersonelError;
         }
       }
 
@@ -427,151 +462,90 @@ export function useUnassignedStaffData() {
           }
         }
         
-        setEducationData(updatedData);
+        // Update local state
+        setEducationData({
+          ortaokuldurumu: updatedData.ortaokuldurumu || '',
+          lisedurumu: updatedData.lisedurumu || '',
+          liseturu: updatedData.liseturu || '',
+          meslekibrans: updatedData.meslekibrans || '',
+          universitedurumu: updatedData.universitedurumu || '',
+          universitebolum: updatedData.universitebolum || ''
+        });
         toast.success("Eğitim bilgileriniz başarıyla güncellendi");
       } 
       else if ('isyerleri' in updatedData || 'belgeler' in updatedData || 'yarismalar' in updatedData || 'cv' in updatedData) {
         console.log("Saving history data for personel ID:", currentPersonelId);
         
-        // Build the update object - only include fields that are in the updatedData
-        let updateObject: any = { updated_at: new Date().toISOString() };
-        
-        if ('isyerleri' in updatedData) updateObject.isyerleri = updatedData.isyerleri || '';
-        if ('gorevpozisyon' in updatedData) updateObject.gorevpozisyon = updatedData.gorevpozisyon || '';
-        if ('belgeler' in updatedData) updateObject.belgeler = updatedData.belgeler || '';
-        if ('yarismalar' in updatedData) updateObject.yarismalar = updatedData.yarismalar || '';
-        if ('cv' in updatedData) updateObject.cv = updatedData.cv || '';
-        
         // Check if history record exists
-        const { data: existingHistory, error: checkError } = await supabase
+        const { data: existingHist, error: checkHistError } = await supabase
           .from('staff_history')
           .select('*')
           .eq('personel_id', currentPersonelId)
           .maybeSingle();
-
-        if (checkError && checkError.code !== 'PGRST116') {
-          console.error("Error checking existing history:", checkError);
-          throw checkError;
+        
+        if (checkHistError && checkHistError.code !== 'PGRST116') {
+          console.error("Error checking history record:", checkHistError);
+          throw checkHistError;
         }
-
-        if (existingHistory) {
+        
+        // Build the update/insert object - combine existing data with updates
+        const historyUpdateData = { ...historyData };
+        if ('isyerleri' in updatedData) historyUpdateData.isyerleri = updatedData.isyerleri;
+        if ('gorevpozisyon' in updatedData) historyUpdateData.gorevpozisyon = updatedData.gorevpozisyon;
+        if ('belgeler' in updatedData) historyUpdateData.belgeler = updatedData.belgeler;
+        if ('yarismalar' in updatedData) historyUpdateData.yarismalar = updatedData.yarismalar;
+        if ('cv' in updatedData) historyUpdateData.cv = updatedData.cv;
+        
+        if (existingHist) {
           // Update existing record
-          const { error: updateError } = await supabase
+          const { error: histError } = await supabase
             .from('staff_history')
-            .update(updateObject)
+            .update({
+              ...historyUpdateData,
+              updated_at: new Date().toISOString()
+            })
             .eq('personel_id', currentPersonelId);
 
-          if (updateError) {
-            console.error("History update error:", updateError);
-            throw updateError;
+          if (histError) {
+            console.error("History update error:", histError);
+            throw histError;
           }
         } else {
-          // Insert new record with all fields
-          const fullData = {
-            personel_id: currentPersonelId,
-            isyerleri: updateObject.isyerleri !== undefined ? updateObject.isyerleri : '',
-            gorevpozisyon: updateObject.gorevpozisyon !== undefined ? updateObject.gorevpozisyon : '',
-            belgeler: updateObject.belgeler !== undefined ? updateObject.belgeler : '',
-            yarismalar: updateObject.yarismalar !== undefined ? updateObject.yarismalar : '',
-            cv: updateObject.cv !== undefined ? updateObject.cv : ''
-          };
-          
-          const { error: insertError } = await supabase
+          // Insert new record
+          const { error: histError } = await supabase
             .from('staff_history')
-            .insert([fullData]);
+            .insert({
+              personel_id: currentPersonelId,
+              ...historyUpdateData
+            });
 
-          if (insertError) {
-            console.error("History insert error:", insertError);
-            throw insertError;
+          if (histError) {
+            console.error("History insert error:", histError);
+            throw histError;
           }
         }
-
-        // Update the state with merged data
-        setHistoryData(prevData => ({
-          ...prevData,
-          ...updatedData
-        }));
         
+        // Update local state
+        setHistoryData(historyUpdateData);
         toast.success("Geçmiş bilgileriniz başarıyla güncellendi");
       }
       else {
-        // Update user profile
-        console.log("Updating user profile");
-        
-        // First update auth user metadata
-        const { error: authError } = await supabase.auth.updateUser({
-          data: {
-            first_name: updatedData.firstName,
-            last_name: updatedData.lastName,
-            gender: updatedData.gender,
-            phone: updatedData.phone,
-            address: updatedData.address,
-            avatar_url: updatedData.avatarUrl
-          }
-        });
-
-        if (authError) {
-          console.error("Auth update error:", authError);
-          throw authError;
-        }
-
-        // Then update profiles table
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .upsert({
-            id: user.id,
-            first_name: updatedData.firstName,
-            last_name: updatedData.lastName,
-            gender: updatedData.gender,
-            phone: updatedData.phone,
-            address: updatedData.address,
-            avatar_url: updatedData.avatarUrl,
-            updated_at: new Date().toISOString()
-          }, { onConflict: 'id' });
-
-        if (profileError) {
-          console.error("Profile update error:", profileError);
-          throw profileError;
-        }
-
-        // Finally update personel table
-        if (currentPersonelId) {
-          const { error: personelError } = await supabase
-            .from('personel')
-            .update({
-              ad_soyad: `${updatedData.firstName} ${updatedData.lastName}`.trim(),
-              telefon: updatedData.phone || '-',
-              adres: updatedData.address || '-',
-              avatar_url: updatedData.avatarUrl
-            })
-            .eq('id', currentPersonelId);
-
-          if (personelError) {
-            console.error("Personel update error:", personelError);
-            throw personelError;
-          }
-        }
-
+        // Just personal info updates, already handled above
         setUserProfile({
           ...userProfile,
-          firstName: updatedData.firstName,
-          lastName: updatedData.lastName,
-          gender: updatedData.gender,
-          phone: updatedData.phone,
-          address: updatedData.address,
-          avatarUrl: updatedData.avatarUrl
+          ...updatedData
         });
-        
-        toast.success("Bilgileriniz başarıyla güncellendi");
+        toast.success("Kişisel bilgileriniz başarıyla güncellendi");
       }
-    } catch (err: any) {
-      console.error("Save error:", err);
-      toast.error(`Bilgiler kaydedilirken bir hata oluştu: ${err.message || 'Bilinmeyen hata'}`);
+    } catch (error) {
+      console.error("Error in handleSave:", error);
+      toast.error("Bilgileriniz kaydedilirken bir hata oluştu. Lütfen tekrar deneyin.");
+      throw error;
     } finally {
-      setLoading(false);
       isUserSaving.current = false;
+      setLoading(false);
     }
-  }, [personelId, userProfile]);
+  }, [historyData, personelId, userProfile]);
 
   return {
     loading,
@@ -581,9 +555,9 @@ export function useUnassignedStaffData() {
     setEducationData,
     historyData,
     setHistoryData,
+    personelId,
     handleLogout,
     handleSave,
-    loadUserAndStaffData,
-    personelId
+    loadUserAndStaffData
   };
 }

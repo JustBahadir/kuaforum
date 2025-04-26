@@ -41,6 +41,7 @@ export const PersonalInfoTab = ({
   });
   
   const [isDirty, setIsDirty] = useState(false);
+  const [localLoading, setLocalLoading] = useState(false);
 
   useEffect(() => {
     // Update form data when userProfile changes
@@ -74,8 +75,13 @@ export const PersonalInfoTab = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await onSave(formData);
-    setIsDirty(false);
+    setLocalLoading(true);
+    try {
+      await onSave(formData);
+      setIsDirty(false);
+    } finally {
+      setLocalLoading(false);
+    }
   };
 
   // This function correctly passes the URL string from FileUpload to onAvatarUpload
@@ -208,8 +214,8 @@ export const PersonalInfoTab = ({
           <div className="flex justify-end">
             <LoadingButton 
               type="submit"
-              loading={isLoading}
-              disabled={isLoading || !isDirty}
+              loading={localLoading}
+              disabled={localLoading || !isDirty}
               className="bg-purple-600 text-white hover:bg-purple-700"
             >
               Bilgileri Kaydet
