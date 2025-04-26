@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUnassignedStaffData } from "@/hooks/useUnassignedStaffData";
 import UnassignedStaffMain from "@/components/unassigned-staff/UnassignedStaffMain";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function UnassignedStaff() {
   const [activeTab, setActiveTab] = useState("personal");
@@ -24,15 +25,11 @@ export default function UnassignedStaff() {
   // Load user data when page loads
   useEffect(() => {
     console.log("UnassignedStaff component mounted, loading data...");
-    const initialLoad = async () => {
-      await loadUserAndStaffData();
-    };
-    
-    initialLoad();
+    loadUserAndStaffData();
   }, [loadUserAndStaffData]);
 
-  // Show loading state
-  if (loading) {
+  // Show loading state - only on initial load, not on data updates
+  if (loading && !userProfile) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-50">
         <div className="text-center">

@@ -3,10 +3,11 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { LogOut, Briefcase } from "lucide-react";
-import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { UnassignedStaffSidebar } from "./UnassignedStaffSidebar";
 import { UnassignedStaffMobileNav } from "./UnassignedStaffMobileNav";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { LoadingButton } from "@/components/ui/loading-button";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function UnassignedStaffMain({
   activeTab,
@@ -21,7 +22,7 @@ export default function UnassignedStaffMain({
   loading,
   navigate,
 }) {
-  // İçerik bileşenleri (kısa tutuldu, eski koddan taşındı)
+  // İçerik bileşenleri
   const renderPersonalInfo = () => (
     <Card className="shadow-sm">
       <CardContent className="p-6">
@@ -99,13 +100,13 @@ export default function UnassignedStaffMain({
               />
             </div>
           ))}
-          <Button
+          <LoadingButton
             onClick={handleSave}
             className="w-full mt-4 bg-purple-600 hover:bg-purple-700"
-            disabled={loading}
+            loading={loading}
           >
-            {loading ? "Kaydediliyor..." : "Bilgileri Kaydet"}
-          </Button>
+            Bilgileri Kaydet
+          </LoadingButton>
         </div>
       </CardContent>
     </Card>
@@ -143,20 +144,29 @@ export default function UnassignedStaffMain({
               />
             </div>
           ))}
-          <Button
+          <LoadingButton
             onClick={handleSave}
             className="w-full mt-4 bg-purple-600 hover:bg-purple-700"
-            disabled={loading}
+            loading={loading}
           >
-            {loading ? "Kaydediliyor..." : "Bilgileri Kaydet"}
-          </Button>
+            Bilgileri Kaydet
+          </LoadingButton>
         </div>
       </CardContent>
     </Card>
   );
 
+  const renderActiveTabContent = () => {
+    // Eğer sayfa yüklenmişse içeriği göster
+    if (activeTab === "personal") return renderPersonalInfo();
+    if (activeTab === "education") return renderEducationInfo();
+    if (activeTab === "history") return renderHistoryInfo();
+    
+    return null;
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 mt-16 md:mt-0">
       <UnassignedStaffMobileNav userProfile={userProfile} activeTab={activeTab} setActiveTab={setActiveTab} />
       <div className="flex">
         <UnassignedStaffSidebar
@@ -168,9 +178,7 @@ export default function UnassignedStaffMain({
         />
         <div className="md:ml-64 w-full p-4">
           <div className="max-w-3xl mx-auto space-y-6">
-            {activeTab === "personal" && renderPersonalInfo()}
-            {activeTab === "education" && renderEducationInfo()}
-            {activeTab === "history" && renderHistoryInfo()}
+            {renderActiveTabContent()}
             
             {/* Butonlar - mobil */}
             <div className="md:hidden p-4">

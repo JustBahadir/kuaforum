@@ -24,7 +24,12 @@ export function UnassignedStaffMobileNav({
 
   return (
     <div className="md:hidden fixed top-0 left-0 right-0 bg-white border-b p-4 z-50 flex justify-between items-center">
-      <div className="font-semibold">Personel Profili</div>
+      <div className="font-semibold">
+        {userProfile?.first_name 
+          ? `${userProfile.first_name} ${userProfile.last_name || ''}`
+          : 'Personel Profili'
+        }
+      </div>
       
       <Sheet open={isOpen} onOpenChange={setIsOpen}>
         <SheetTrigger asChild>

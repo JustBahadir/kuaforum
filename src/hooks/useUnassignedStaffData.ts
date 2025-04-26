@@ -1,5 +1,5 @@
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -41,9 +41,12 @@ export function useUnassignedStaffData() {
     yarismalar: "",
     cv: ""
   });
-
+  
   // Numeric personel id state
   const [personelId, setPersonelId] = useState<number | null>(null);
+  
+  // Veri yüklendi mi kontrolü için bir ref
+  const isDataLoaded = useRef(false);
 
   // Çıkış yapma fonksiyonu
   const handleLogout = useCallback(async () => {
@@ -96,6 +99,12 @@ export function useUnassignedStaffData() {
 
   // Kullanıcı, personel ve diğer dataları yükle
   const loadUserAndStaffData = useCallback(async () => {
+    // Eğer veriler zaten yüklendiyse, yeniden yükleme yapmayacağız
+    if (isDataLoaded.current && userProfile) {
+      console.log("Data already loaded, skipping load");
+      return;
+    }
+    
     console.log("Loading user and staff data...");
     setLoading(true);
     setError(null);
@@ -269,9 +278,13 @@ export function useUnassignedStaffData() {
         }
       }
 
+      // Veriler yüklendi olarak işaretle
+      isDataLoaded.current = true;
+
     } catch (error: any) {
       console.error("Unexpected error in loadUserAndStaffData:", error);
       setError("Veri yüklenirken beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.");
+      isDataLoaded.current = false;
     } finally {
       console.log("Data loading complete");
       setLoading(false);
