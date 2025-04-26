@@ -15,7 +15,8 @@ interface FileUploadProps {
   folderPath?: string;
   acceptedFileTypes?: string;
   maxFileSize?: number; // In bytes
-  useCamera?: boolean; // Added useCamera prop
+  useCamera?: boolean;
+  isUploading?: boolean; // Added isUploading prop
 }
 
 export function FileUpload({
@@ -27,10 +28,14 @@ export function FileUpload({
   folderPath = "avatars",
   acceptedFileTypes = "image/*",
   maxFileSize = 20 * 1024 * 1024, // Default to 20MB
-  useCamera = false // Default to false
+  useCamera = false,
+  isUploading = false // Default to false
 }: FileUploadProps) {
-  const [isUploading, setIsUploading] = useState(false);
+  const [isUploadingLocal, setIsUploadingLocal] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(currentImageUrl || null);
+
+  // Use either the prop value or local state for uploading status
+  const uploadingStatus = isUploading || isUploadingLocal;
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -44,7 +49,7 @@ export function FileUpload({
     }
     
     try {
-      setIsUploading(true);
+      setIsUploadingLocal(true);
       
       // Generate a unique filename
       const fileExt = file.name.split('.').pop();
@@ -78,7 +83,7 @@ export function FileUpload({
       console.error("Yükleme hatası:", error);
       toast.error(`Yükleme hatası: ${error.message || "Bilinmeyen bir hata oluştu"}`);
     } finally {
-      setIsUploading(false);
+      setIsUploadingLocal(false);
     }
   };
 
@@ -131,19 +136,19 @@ export function FileUpload({
           onChange={handleFileChange}
           className="hidden"
           id={inputId}
-          disabled={isUploading}
+          disabled={uploadingStatus}
           {...inputProps}
         />
         <label htmlFor={inputId} className="flex-1">
           <Button 
             type="button" 
             className="w-full" 
-            disabled={isUploading}
+            disabled={uploadingStatus}
             variant={previewUrl ? "outline" : "default"}
             asChild
           >
             <span>
-              {isUploading ? (
+              {uploadingStatus ? (
                 <>
                   <Upload className="h-4 w-4 mr-2 animate-spin" />
                   Yükleniyor...

@@ -16,7 +16,7 @@ interface EducationData {
 
 interface EducationTabProps {
   educationData: EducationData;
-  onEducationChange: (data: EducationData) => void;
+  onEducationChange: ((data: EducationData) => void) | ((field: keyof EducationData, value: string) => void);
   onSave: (data: EducationData) => Promise<void>;
   isLoading: boolean;
 }
@@ -29,10 +29,21 @@ const EducationTab: React.FC<EducationTabProps> = ({
 }) => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    onEducationChange({
-      ...educationData,
-      [name]: value,
-    });
+    
+    // Check if onEducationChange accepts a complete data object or field-value pair
+    if (onEducationChange.length === 1) {
+      // It accepts the whole object
+      (onEducationChange as (data: EducationData) => void)({
+        ...educationData,
+        [name]: value,
+      });
+    } else {
+      // It accepts field-value pair
+      (onEducationChange as (field: keyof EducationData, value: string) => void)(
+        name as keyof EducationData, 
+        value
+      );
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -132,14 +143,36 @@ const EducationTab: React.FC<EducationTabProps> = ({
             <Button
               type="button" 
               variant="outline"
-              onClick={() => onEducationChange({
-                ortaokuldurumu: "",
-                lisedurumu: "",
-                liseturu: "",
-                meslekibrans: "",
-                universitedurumu: "",
-                universitebolum: ""
-              })}
+              onClick={() => {
+                // Handle reset based on which type of onEducationChange we have
+                if (onEducationChange.length === 1) {
+                  (onEducationChange as (data: EducationData) => void)({
+                    ortaokuldurumu: "",
+                    lisedurumu: "",
+                    liseturu: "",
+                    meslekibrans: "",
+                    universitedurumu: "",
+                    universitebolum: ""
+                  });
+                } else {
+                  // Reset each field individually
+                  const emptyData: EducationData = {
+                    ortaokuldurumu: "",
+                    lisedurumu: "",
+                    liseturu: "",
+                    meslekibrans: "",
+                    universitedurumu: "",
+                    universitebolum: ""
+                  };
+                  
+                  Object.entries(emptyData).forEach(([key, value]) => {
+                    (onEducationChange as (field: keyof EducationData, value: string) => void)(
+                      key as keyof EducationData,
+                      value
+                    );
+                  });
+                }
+              }}
             >
               İptal
             </Button>

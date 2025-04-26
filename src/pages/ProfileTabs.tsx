@@ -39,8 +39,8 @@ interface ProfileTabsProps {
     yarismalar: string;
     cv: string;
   };
-  onEducationChange: (field: keyof ProfileTabsProps["educationData"], value: string) => void;
-  onHistoryChange: (field: keyof ProfileTabsProps["historyData"], value: string) => void;
+  onEducationChange: (data: ProfileTabsProps["educationData"]) => void;
+  onHistoryChange: (data: ProfileTabsProps["historyData"]) => void;
   onSaveEducationHistory: () => Promise<void>;
   isLoadingEducationHistory: boolean;
 }
@@ -65,6 +65,21 @@ const ProfileTabs = ({
 
   // Alt sekme: sadece eğitim veya geçmiş gösterilecek
   const [subTab, setSubTab] = useState<"education" | "history">("education");
+
+  // Create wrapper functions that properly handle our specific implementation
+  const handleEducationChange = (field: keyof ProfileTabsProps["educationData"], value: string) => {
+    onEducationChange({
+      ...educationData,
+      [field]: value
+    });
+  };
+
+  const handleHistoryChange = (field: keyof ProfileTabsProps["historyData"], value: string) => {
+    onHistoryChange({
+      ...historyData,
+      [field]: value
+    });
+  };
 
   return (
     <div className="max-w-4xl mx-auto px-4">
@@ -152,7 +167,7 @@ const ProfileTabs = ({
             {subTab === "education" && (
               <EducationTab
                 educationData={educationData}
-                onEducationChange={onEducationChange}
+                onEducationChange={handleEducationChange}
                 onSave={onSaveEducationHistory}
                 isLoading={isLoadingEducationHistory}
               />
@@ -161,7 +176,7 @@ const ProfileTabs = ({
             {subTab === "history" && (
               <HistoryTab
                 historyData={historyData}
-                onHistoryChange={onHistoryChange}
+                onHistoryChange={handleHistoryChange}
                 onSave={onSaveEducationHistory}
                 isLoading={isLoadingEducationHistory}
               />

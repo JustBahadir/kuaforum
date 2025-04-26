@@ -16,7 +16,7 @@ interface HistoryData {
 
 interface HistoryTabProps {
   historyData: HistoryData;
-  onHistoryChange: (data: HistoryData) => void;
+  onHistoryChange: ((data: HistoryData) => void) | ((field: keyof HistoryData, value: string) => void);
   onSave: (data: HistoryData) => Promise<void>;
   isLoading: boolean;
 }
@@ -31,10 +31,21 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    onHistoryChange({
-      ...historyData,
-      [name]: value,
-    });
+    
+    // Check if onHistoryChange accepts a complete data object or field-value pair
+    if (onHistoryChange.length === 1) {
+      // It accepts the whole object
+      (onHistoryChange as (data: HistoryData) => void)({
+        ...historyData,
+        [name]: value,
+      });
+    } else {
+      // It accepts field-value pair
+      (onHistoryChange as (field: keyof HistoryData, value: string) => void)(
+        name as keyof HistoryData, 
+        value
+      );
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -123,13 +134,34 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
             <Button
               type="button" 
               variant="outline"
-              onClick={() => onHistoryChange({
-                isyerleri: "",
-                gorevpozisyon: "",
-                belgeler: "",
-                yarismalar: "",
-                cv: ""
-              })}
+              onClick={() => {
+                // Handle reset based on which type of onHistoryChange we have
+                if (onHistoryChange.length === 1) {
+                  (onHistoryChange as (data: HistoryData) => void)({
+                    isyerleri: "",
+                    gorevpozisyon: "",
+                    belgeler: "",
+                    yarismalar: "",
+                    cv: ""
+                  });
+                } else {
+                  // Reset each field individually
+                  const emptyData: HistoryData = {
+                    isyerleri: "",
+                    gorevpozisyon: "",
+                    belgeler: "",
+                    yarismalar: "",
+                    cv: ""
+                  };
+                  
+                  Object.entries(emptyData).forEach(([key, value]) => {
+                    (onHistoryChange as (field: keyof HistoryData, value: string) => void)(
+                      key as keyof HistoryData,
+                      value
+                    );
+                  });
+                }
+              }}
             >
               İptal
             </Button>
