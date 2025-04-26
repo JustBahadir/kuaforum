@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,7 +20,7 @@ interface PersonalInfoTabProps {
   };
   onSave: (updatedData: any) => Promise<void>;
   isLoading: boolean;
-  onAvatarUpload: (file: File) => Promise<void>;
+  onAvatarUpload: (url: string) => Promise<void>;
   isUploading: boolean;
 }
 
@@ -57,8 +58,9 @@ export const PersonalInfoTab = ({
     await onSave(formData);
   };
 
-  const handleFileUploadComplete = async (uploadedUrl: string) => {
-    await onAvatarUpload(uploadedUrl);
+  // This function correctly passes the URL string from FileUpload to onAvatarUpload
+  const handleFileUploadComplete = (uploadedUrl: string) => {
+    onAvatarUpload(uploadedUrl);
   };
 
   return (
@@ -79,10 +81,11 @@ export const PersonalInfoTab = ({
               <div className="mt-2">
                 <FileUpload
                   onUploadComplete={handleFileUploadComplete}
-                  isUploading={isUploading}
                   acceptedFileTypes="image/*"
                   label="Profil Fotoğrafı Yükle"
                   currentImageUrl={userProfile.avatarUrl}
+                  useCamera={false}
+                  isUploading={isUploading}
                 />
               </div>
             </div>

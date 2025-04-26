@@ -1,226 +1,161 @@
 
 import React from "react";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { LoadingButton } from "@/components/ui/loading-button";
 
-export interface EducationTabProps {
-  educationData: {
-    ortaokuldurumu: string;
-    lisedurumu: string;
-    liseturu: string;
-    meslekibrans: string;
-    universitedurumu: string;
-    universitebolum: string;
-  };
-  onEducationChange: (
-    field: keyof EducationTabProps["educationData"],
-    value: string
-  ) => void;
-  onSave: () => Promise<void>;
+interface EducationData {
+  ortaokuldurumu: string;
+  lisedurumu: string;
+  liseturu: string;
+  meslekibrans: string;
+  universitedurumu: string;
+  universitebolum: string;
+}
+
+interface EducationTabProps {
+  educationData: EducationData;
+  onEducationChange: (data: EducationData) => void;
+  onSave: (data: EducationData) => Promise<void>;
   isLoading: boolean;
 }
 
-const liseOptions = [
-  "Fen Lisesi",
-  "Sosyal Bilimler Lisesi",
-  "Anadolu Lisesi",
-  "Güzel Sanatlar Lisesi",
-  "Spor Lisesi",
-  "Anadolu İmam Hatip Lisesi",
-  "Çok Programlı Anadolu Lisesi",
-  "Mesleki ve Teknik Anadolu Lisesi",
-  "Akşam Lisesi",
-  "Açık Öğretim Lisesi",
-];
-
-const universiteBolumOptions = [
-  "Saç Bakımı ve Güzellik Hizmetleri",
-  "Diğer",
-];
-
-const EducationTab = ({
+const EducationTab: React.FC<EducationTabProps> = ({
   educationData,
   onEducationChange,
   onSave,
   isLoading,
-}: EducationTabProps) => {
-  // Determine visibility based on selection
-  const ortaokulBitirdi =
-    educationData.ortaokuldurumu.toLowerCase().includes("mezun") ||
-    educationData.ortaokuldurumu.toLowerCase().includes("bitiriyor") ||
-    educationData.ortaokuldurumu.toLowerCase().includes("devam ediyor");
+}) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    onEducationChange({
+      ...educationData,
+      [name]: value,
+    });
+  };
 
-  const liseBitirdi =
-    educationData.lisedurumu.toLowerCase().includes("mezun") ||
-    educationData.lisedurumu.toLowerCase().includes("bitiriyor") ||
-    educationData.lisedurumu.toLowerCase().includes("devam ediyor");
-
-  const showUniversite = liseBitirdi;
-
-  const showMeslekBrans = ["Çok Programlı Anadolu Lisesi", "Mesleki ve Teknik Anadolu Lisesi"].includes(
-    educationData.liseturu
-  );
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    await onSave(educationData);
+  };
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-lg font-semibold border-b pb-2">Eğitim Bilgileri</h2>
+    <Card>
+      <CardContent className="p-6">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium">Eğitim Bilgileri</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Ortaokul Durumu
+                </label>
+                <Input
+                  name="ortaokuldurumu"
+                  value={educationData.ortaokuldurumu}
+                  onChange={handleChange}
+                  placeholder="Ortaokul bilgisi"
+                  className="text-gray-900"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Lise Durumu
+                </label>
+                <Input
+                  name="lisedurumu"
+                  value={educationData.lisedurumu}
+                  onChange={handleChange}
+                  placeholder="Lise bilgisi"
+                  className="text-gray-900"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Lise Türü
+                </label>
+                <Input
+                  name="liseturu"
+                  value={educationData.liseturu}
+                  onChange={handleChange}
+                  placeholder="Lise türü"
+                  className="text-gray-900"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Mesleki Branş
+                </label>
+                <Input
+                  name="meslekibrans"
+                  value={educationData.meslekibrans}
+                  onChange={handleChange}
+                  placeholder="Mesleki branşınız"
+                  className="text-gray-900"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Üniversite Durumu
+                </label>
+                <Input
+                  name="universitedurumu"
+                  value={educationData.universitedurumu}
+                  onChange={handleChange}
+                  placeholder="Üniversite bilgisi"
+                  className="text-gray-900"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Üniversite Bölüm
+                </label>
+                <Input
+                  name="universitebolum"
+                  value={educationData.universitebolum}
+                  onChange={handleChange}
+                  placeholder="Bölümünüz"
+                  className="text-gray-900"
+                />
+              </div>
+            </div>
+          </div>
 
-      {/* Ortaokul Durumu */}
-      <div>
-        <label className="block font-medium mb-1">Ortaokul Durumu</label>
-        <Select
-          onValueChange={(value) => onEducationChange("ortaokuldurumu", value)}
-          value={educationData.ortaokuldurumu || ""}
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Seçiniz..." />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              <SelectItem value="Mezun">Mezun</SelectItem>
-              <SelectItem value="Devam Ediyor">Devam Ediyor</SelectItem>
-              <SelectItem value="Bitirmedi">Bitirmedi</SelectItem>
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-        <p className="text-xs text-gray-500 mt-1">Ortaokul mezuniyet durumunu seçiniz.</p>
-      </div>
-
-      {/* Lise Durumu */}
-      {ortaokulBitirdi && (
-        <div>
-          <label className="block font-medium mb-1">Lise Durumu</label>
-          <Select
-            onValueChange={(value) => onEducationChange("lisedurumu", value)}
-            value={educationData.lisedurumu || ""}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Seçiniz..." />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem value="Mezun">Mezun</SelectItem>
-                <SelectItem value="Devam Ediyor">Devam Ediyor</SelectItem>
-                <SelectItem value="Bitirmedi">Bitirmedi</SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-gray-500 mt-1">Lise mezuniyet durumunu seçiniz.</p>
-        </div>
-      )}
-
-      {/* Lise Türü */}
-      {ortaokulBitirdi && liseBitirdi && (
-        <div>
-          <label className="block font-medium mb-1">Lise Türü</label>
-          <Select
-            onValueChange={(value) => onEducationChange("liseturu", value)}
-            value={educationData.liseturu || ""}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Seçiniz..." />
-            </SelectTrigger>
-            <SelectContent className="max-h-60 overflow-y-auto">
-              <SelectGroup>
-                {liseOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {option}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-gray-500 mt-1">Lise türünü seçiniz.</p>
-        </div>
-      )}
-
-      {/* Mesleki Branş */}
-      {showMeslekBrans && (
-        <div>
-          <label className="block font-medium mb-1">Mesleki Branş</label>
-          <input
-            type="text"
-            className="input-primary w-full"
-            value={educationData.meslekibrans}
-            onChange={(e) => onEducationChange("meslekibrans", e.target.value)}
-            placeholder="Ör: Kuaförlük, Estetik..."
-          />
-          <p className="text-xs text-gray-500 mt-1">
-            Çok Programlı Anadolu Lisesi veya Mesleki ve Teknik Anadolu Lisesi için mesleki branşı giriniz.
-          </p>
-        </div>
-      )}
-
-      {/* Üniversite Durumu */}
-      {showUniversite && (
-        <div>
-          <label className="block font-medium mb-1">Üniversite Durumu</label>
-          <Select
-            onValueChange={(value) => onEducationChange("universitedurumu", value)}
-            value={educationData.universitedurumu || "Yok"}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Seçiniz..." />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem value="Mezun">Mezun</SelectItem>
-                <SelectItem value="Devam Ediyor">Devam Ediyor</SelectItem>
-                <SelectItem value="Bitirmedi">Bitirmedi</SelectItem>
-                <SelectItem value="Yok">Yok</SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-gray-500 mt-1">Üniversite mezuniyet durumunu seçiniz.</p>
-        </div>
-      )}
-
-      {/* Üniversite Bölüm */}
-      {(educationData.universitedurumu === "Mezun" ||
-        educationData.universitedurumu === "Devam Ediyor") && (
-        <div>
-          <label className="block font-medium mb-1">Üniversite Bölüm</label>
-          <Select
-            onValueChange={(value) => onEducationChange("universitebolum", value)}
-            value={educationData.universitebolum || ""}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Seçiniz..." />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                {universiteBolumOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {option}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-gray-500 mt-1">Üniversite bölümünü seçiniz.</p>
-        </div>
-      )}
-
-      <div className="mt-6 flex justify-end">
-        <button
-          className="btn btn-primary px-6 py-2 rounded"
-          onClick={onSave}
-          disabled={isLoading}
-          type="button"
-        >
-          {isLoading ? "Kaydediliyor..." : "Bilgileri Kaydet"}
-        </button>
-      </div>
-    </div>
+          <div className="flex justify-end space-x-2">
+            <Button
+              type="button" 
+              variant="outline"
+              onClick={() => onEducationChange({
+                ortaokuldurumu: "",
+                lisedurumu: "",
+                liseturu: "",
+                meslekibrans: "",
+                universitedurumu: "",
+                universitebolum: ""
+              })}
+            >
+              İptal
+            </Button>
+            <LoadingButton
+              type="submit"
+              loading={isLoading}
+              disabled={isLoading}
+              className="bg-purple-600 text-white hover:bg-purple-700"
+            >
+              Kaydet
+            </LoadingButton>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
   );
 };
 
 export default EducationTab;
-

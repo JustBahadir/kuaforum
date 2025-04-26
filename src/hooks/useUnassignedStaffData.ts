@@ -1,5 +1,5 @@
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -48,7 +48,18 @@ export function useUnassignedStaffData() {
   // Veri yüklendi mi kontrolü için bir ref
   const isDataLoaded = useRef(false);
 
-  // Define loadUserAndStaffData function first before using it
+  // Çıkış yapma fonksiyonu
+  const handleLogout = useCallback(async () => {
+    try {
+      await supabase.auth.signOut();
+      toast.success("Başarıyla çıkış yaptınız.");
+      navigate("/login");
+    } catch (err) {
+      toast.error("Çıkış yapılırken bir hata oluştu.");
+    }
+  }, [navigate]);
+
+  // Load user and staff data function
   const loadUserAndStaffData = useCallback(async () => {
     if (isDataLoaded.current && userProfile) {
       return;
@@ -220,64 +231,182 @@ export function useUnassignedStaffData() {
     }
   }, [navigate, personelId, userProfile]);
 
-  // Çıkış yapma fonksiyonu
-  const handleLogout = useCallback(async () => {
-    try {
-      await supabase.auth.signOut();
-      toast.success("Başarıyla çıkış yaptınız.");
-      navigate("/login");
-    } catch (err) {
-      toast.error("Çıkış yapılırken bir hata oluştu.");
-    }
-  }, [navigate]);
-
   // Bilgileri kaydetme fonksiyonu
   const handleSave = useCallback(async (updatedData: any) => {
     setLoading(true);
     try {
-      // Update auth user metadata
-      await supabase.auth.updateUser({
-        data: {
-          first_name: updatedData.firstName,
-          last_name: updatedData.lastName,
-          gender: updatedData.gender,
-          phone: updatedData.phone,
-          address: updatedData.address
-        }
-      });
+      console.log("Saving data:", updatedData);
 
-      // Update profiles table
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await supabase
-          .from('profiles')
-          .update({
+      // Check if we're updating education data
+      if ('ortaokuldurumu' in updatedData) {
+        if (!personelId) {
+          throw new Error("Personel kaydınız bulunamadı. Lütfen tekrar giriş yapınız.");
+        }
+
+        // Check if education record exists
+        const { data: existingEducation } = await supabase
+          .from('staff_education')
+          .select('*')
+          .eq('personel_id', personelId)
+          .maybeSingle();
+
+        if (existingEducation) {
+          // Update existing education record
+          const { error: updateError } = await supabase
+            .from('staff_education')
+            .update({
+              ortaokuldurumu: updatedData.ortaokuldurumu || '',
+              lisedurumu: updatedData.lisedurumu || '',
+              liseturu: updatedData.liseturu || '',
+              meslekibrans: updatedData.meslekibrans || '',
+              universitedurumu: updatedData.universitedurumu || '',
+              universitebolum: updatedData.universitebolum || '',
+              updated_at: new Date().toISOString()
+            })
+            .eq('personel_id', personelId);
+
+          if (updateError) {
+            console.error("Education update error:", updateError);
+            throw updateError;
+          }
+        } else {
+          // Create new education record
+          const { error: insertError } = await supabase
+            .from('staff_education')
+            .insert([{
+              personel_id: personelId,
+              ortaokuldurumu: updatedData.ortaokuldurumu || '',
+              lisedurumu: updatedData.lisedurumu || '',
+              liseturu: updatedData.liseturu || '',
+              meslekibrans: updatedData.meslekibrans || '',
+              universitedurumu: updatedData.universitedurumu || '',
+              universitebolum: updatedData.universitebolum || ''
+            }]);
+
+          if (insertError) {
+            console.error("Education insert error:", insertError);
+            throw insertError;
+          }
+        }
+
+        // Update state after saving
+        setEducationData(updatedData);
+        toast.success("Eğitim bilgileriniz başarıyla güncellendi");
+      } 
+      // Check if we're updating history data
+      else if ('isyerleri' in updatedData) {
+        if (!personelId) {
+          throw new Error("Personel kaydınız bulunamadı. Lütfen tekrar giriş yapınız.");
+        }
+
+        // Check if history record exists
+        const { data: existingHistory } = await supabase
+          .from('staff_history')
+          .select('*')
+          .eq('personel_id', personelId)
+          .maybeSingle();
+
+        if (existingHistory) {
+          // Update existing history record
+          const { error: updateError } = await supabase
+            .from('staff_history')
+            .update({
+              isyerleri: updatedData.isyerleri || '',
+              gorevpozisyon: updatedData.gorevpozisyon || '',
+              belgeler: updatedData.belgeler || '',
+              yarismalar: updatedData.yarismalar || '',
+              cv: updatedData.cv || '',
+              updated_at: new Date().toISOString()
+            })
+            .eq('personel_id', personelId);
+
+          if (updateError) {
+            console.error("History update error:", updateError);
+            throw updateError;
+          }
+        } else {
+          // Create new history record
+          const { error: insertError } = await supabase
+            .from('staff_history')
+            .insert([{
+              personel_id: personelId,
+              isyerleri: updatedData.isyerleri || '',
+              gorevpozisyon: updatedData.gorevpozisyon || '',
+              belgeler: updatedData.belgeler || '',
+              yarismalar: updatedData.yarismalar || '',
+              cv: updatedData.cv || ''
+            }]);
+
+          if (insertError) {
+            console.error("History insert error:", insertError);
+            throw insertError;
+          }
+        }
+
+        // Update state after saving
+        setHistoryData(updatedData);
+        toast.success("Geçmiş bilgileriniz başarıyla güncellendi");
+      }
+      // If neither, assume we're updating personal info
+      else {
+        // Update auth user metadata
+        await supabase.auth.updateUser({
+          data: {
             first_name: updatedData.firstName,
             last_name: updatedData.lastName,
             gender: updatedData.gender,
             phone: updatedData.phone,
-            address: updatedData.address,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', user.id);
-      }
+            address: updatedData.address
+          }
+        });
 
-      // Reload user data
-      await loadUserAndStaffData();
-      
-      toast.success("Bilgileriniz başarıyla güncellendi");
-    } catch (err) {
+        // Update profiles table
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase
+            .from('profiles')
+            .update({
+              first_name: updatedData.firstName,
+              last_name: updatedData.lastName,
+              gender: updatedData.gender,
+              phone: updatedData.phone,
+              address: updatedData.address,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', user.id);
+        }
+
+        // Update personel record if exists
+        if (personelId) {
+          await supabase
+            .from('personel')
+            .update({
+              ad_soyad: `${updatedData.firstName} ${updatedData.lastName}`.trim(),
+              telefon: updatedData.phone || '-',
+              adres: updatedData.address || '-'
+            })
+            .eq('id', personelId);
+        }
+
+        // Update state
+        setUserProfile({
+          ...userProfile,
+          firstName: updatedData.firstName,
+          lastName: updatedData.lastName,
+          gender: updatedData.gender,
+          phone: updatedData.phone,
+          address: updatedData.address
+        });
+        
+        toast.success("Bilgileriniz başarıyla güncellendi");
+      }
+    } catch (err: any) {
       console.error("Kayıt hatası:", err);
-      toast.error("Bilgiler kaydedilirken bir hata oluştu");
+      toast.error(`Bilgiler kaydedilirken bir hata oluştu: ${err.message}`);
     } finally {
       setLoading(false);
     }
-  }, [loadUserAndStaffData]);
-
-  // Load user data when hook initializes
-  useEffect(() => {
-    loadUserAndStaffData();
-  }, [loadUserAndStaffData]);
+  }, [personelId, userProfile]);
 
   return {
     loading,
