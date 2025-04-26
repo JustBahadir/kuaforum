@@ -58,6 +58,11 @@ export const PersonalInfoTab = ({
     await onSave(formData);
   };
 
+  // This is the wrapper function that adapts the file upload to URL format
+  const handleFileUploadComplete = async (file: File) => {
+    await onAvatarUpload(file);
+  };
+
   return (
     <Card>
       <CardContent className="p-6">
@@ -76,7 +81,7 @@ export const PersonalInfoTab = ({
               </Avatar>
               <div className="mt-2">
                 <FileUpload
-                  onUploadComplete={onAvatarUpload}
+                  onUploadComplete={handleFileUploadComplete}
                   isUploading={isUploading}
                   acceptedFileTypes="image/*"
                   label="Profil Fotoğrafı Yükle"
