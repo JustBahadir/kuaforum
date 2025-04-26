@@ -26,22 +26,6 @@ export default function UnassignedStaff() {
     loadUserAndStaffData();
   }, [loadUserAndStaffData]);
 
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center h-screen p-4">
-        <div className="bg-red-50 text-red-700 p-4 rounded-md mb-4 text-center w-full max-w-md">
-          <h3 className="font-bold">Hata</h3>
-          <p>{error}</p>
-          <p className="mt-2 text-sm text-gray-500">
-            Eğer kayıt olurken personel emaili ile girdiyseniz, sistemde personel tablosunda kaydınız açılmadıysa bu hatayı alırsınız.<br/>
-            Lütfen yöneticiye başvurun!
-          </p>
-        </div>
-        <Button onClick={() => navigate("/login")}>Giriş Sayfasına Dön</Button>
-      </div>
-    );
-  }
-
   if (loading || !userProfile) {
     return (
       <div className="flex items-center justify-center h-screen">

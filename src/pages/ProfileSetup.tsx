@@ -125,22 +125,57 @@ export default function ProfileSetup() {
             .from('dukkanlar')
             .select('id')
             .eq('kod', shopCode)
-            .single();
+            .maybeSingle();
 
           if (shopError || !shopData) {
             toast.error("Geçersiz işletme kodu.");
+            
+            // Create personel record without dukkan_id
+            await supabase.from('personel').upsert([{
+              auth_id: userId,
+              ad_soyad: `${firstName} ${lastName}`,
+              telefon: phone,
+              eposta: '',
+              adres: '',
+              personel_no: '',
+              calisma_sistemi: '',
+              maas: 0,
+              prim_yuzdesi: 0
+            }]);
+            
             navigate("/unassigned-staff");
             return;
           }
 
-          // Update personel record with shop id
-          await supabase
-            .from('personel')
-            .update({ dukkan_id: shopData.id })
-            .eq('auth_id', userId);
+          // Create personel record with shop id
+          await supabase.from('personel').upsert([{
+            auth_id: userId,
+            ad_soyad: `${firstName} ${lastName}`,
+            telefon: phone,
+            eposta: '',
+            adres: '',
+            personel_no: '',
+            calisma_sistemi: '',
+            maas: 0,
+            prim_yuzdesi: 0,
+            dukkan_id: shopData.id
+          }]);
 
           navigate("/staff-profile");
         } else {
+          // Create personel record without dukkan_id
+          await supabase.from('personel').upsert([{
+            auth_id: userId,
+            ad_soyad: `${firstName} ${lastName}`,
+            telefon: phone,
+            eposta: '',
+            adres: '',
+            personel_no: '',
+            calisma_sistemi: '',
+            maas: 0,
+            prim_yuzdesi: 0
+          }]);
+          
           // If no shop code provided, redirect to unassigned staff page
           navigate("/unassigned-staff");
         }
