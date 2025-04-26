@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { ProfileDisplay } from "@/components/customer-profile/ProfileDisplay";
 import { toast } from "sonner";
@@ -86,6 +87,7 @@ const Profile = () => {
           }));
         }
       } catch {
+        // Handle error silently
       }
 
       setLoadingEduHist(true);
@@ -223,12 +225,14 @@ const Profile = () => {
     }
   };
 
-  const handleEducationChange = (field: keyof typeof educationData, value: string) => {
-    setEducationData(prev => ({ ...prev, [field]: value }));
+  const handleEducationChange = (newData: typeof educationData) => {
+    setEducationData(newData);
   };
-  const handleHistoryChange = (field: keyof typeof historyData, value: string) => {
-    setHistoryData(prev => ({ ...prev, [field]: value }));
+  
+  const handleHistoryChange = (newData: typeof historyData) => {
+    setHistoryData(newData);
   };
+
   const handleSaveEducationHistory = async () => {
     setLoadingEduHist(true);
     try {
@@ -242,45 +246,128 @@ const Profile = () => {
         return;
       }
 
-      const idNumber = Number(user.id);
-      if (isNaN(idNumber)) {
-        toast.error("Geçersiz kullanıcı kimliği");
+      const { data: personelData, error: personelError } = await supabase
+        .from('personel')
+        .select('id')
+        .eq('auth_id', user.id)
+        .maybeSingle();
+
+      if (personelError) {
+        console.error("Error fetching personel:", personelError);
+        toast.error("Personel bilgisi alınamadı");
         setLoadingEduHist(false);
         return;
       }
 
-      const upsertEducationPromise = supabase
-        .from("staff_education")
-        .upsert(
-          {
-            personel_id: idNumber,
-            ...educationData,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "personel_id" }
-        );
+      if (!personelData) {
+        console.log("No personel record found, creating one");
+        
+        try {
+          // Create basic personel record using profile data
+          const { data: newPersonel, error: createError } = await supabase
+            .from('personel')
+            .insert([{
+              auth_id: user.id,
+              ad_soyad: `${profile.firstName || ''} ${profile.lastName || ''}`.trim(),
+              telefon: profile.phone || '-',
+              eposta: user.email || '-',
+              adres: profile.address || '-',
+              personel_no: `P${Date.now().toString().substring(8)}`,
+              calisma_sistemi: 'Tam Zamanlı',
+              maas: 0,
+              prim_yuzdesi: 0
+            }])
+            .select('id');
 
-      const upsertHistoryPromise = supabase
-        .from("staff_history")
-        .upsert(
-          {
-            personel_id: idNumber,
-            ...historyData,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "personel_id" }
-        );
+          if (createError) {
+            console.error("Personel record creation error:", createError);
+            toast.error("Personel kaydı oluşturulamadı");
+            setLoadingEduHist(false);
+            return;
+          } 
+          
+          if (!newPersonel || newPersonel.length === 0) {
+            toast.error("Personel kaydı oluşturulamadı");
+            setLoadingEduHist(false);
+            return;
+          }
+          
+          const personelId = newPersonel[0].id;
+          
+          const upsertEducationPromise = supabase
+            .from("staff_education")
+            .upsert(
+              {
+                personel_id: personelId,
+                ...educationData,
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: "personel_id" }
+            );
 
-      const [eduResult, histResult] = await Promise.all([
-        upsertEducationPromise,
-        upsertHistoryPromise,
-      ]);
+          const upsertHistoryPromise = supabase
+            .from("staff_history")
+            .upsert(
+              {
+                personel_id: personelId,
+                ...historyData,
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: "personel_id" }
+            );
 
-      if (eduResult.error || histResult.error) {
-        console.error("Error saving education/history:", eduResult.error || histResult.error);
-        toast.error("Eğitim ve geçmiş bilgileri kaydedilemedi");
+          const [eduResult, histResult] = await Promise.all([
+            upsertEducationPromise,
+            upsertHistoryPromise,
+          ]);
+
+          if (eduResult.error || histResult.error) {
+            console.error("Error saving education/history:", eduResult.error || histResult.error);
+            toast.error("Eğitim ve geçmiş bilgileri kaydedilemedi");
+          } else {
+            toast.success("Eğitim ve geçmiş bilgileri başarıyla kaydedildi");
+          }
+        } catch (err) {
+          console.error("Error creating personel record:", err);
+          toast.error("İşlem sırasında bir hata oluştu");
+        }
       } else {
-        toast.success("Eğitim ve geçmiş bilgileri başarıyla kaydedildi");
+        // Personel record already exists, update education and history
+        const personelId = personelData.id;
+        
+        const upsertEducationPromise = supabase
+          .from("staff_education")
+          .upsert(
+            {
+              personel_id: personelId,
+              ...educationData,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "personel_id" }
+          );
+
+        const upsertHistoryPromise = supabase
+          .from("staff_history")
+          .upsert(
+            {
+              personel_id: personelId,
+              ...historyData,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "personel_id" }
+          );
+
+        const [eduResult, histResult] = await Promise.all([
+          upsertEducationPromise,
+          upsertHistoryPromise,
+        ]);
+
+        if (eduResult.error || histResult.error) {
+          console.error("Error saving education/history:", eduResult.error || histResult.error);
+          toast.error("Eğitim ve geçmiş bilgileri kaydedilemedi");
+        } else {
+          toast.success("Eğitim ve geçmiş bilgileri başarıyla kaydedildi");
+        }
       }
     } catch (error) {
       console.error("Error saving education/history:", error);
