@@ -10,7 +10,6 @@ import { StaffExperienceTable } from "@/components/staff-profile/history/StaffEx
 import { StaffCertificatesTable } from "@/components/staff-profile/history/StaffCertificatesTable";
 import { StaffCompetitionsTable } from "@/components/staff-profile/history/StaffCompetitionsTable";
 import { toast } from "sonner";
-import { supabase } from "@/lib/supabase/client";
 
 interface WorkExperience {
   workplace: string;
@@ -69,6 +68,7 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
         const parsedExperiences: WorkExperience[] = [];
         
         expLines.forEach(line => {
+          if (!line.trim()) return;
           // Format: workplace | position | duration
           const parts = line.split('|').map(part => part.trim());
           if (parts.length >= 3) {
@@ -127,49 +127,22 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
     ).join('\n');
     
     try {
-      // Save to database
-      const { data: { user } } = await supabase.auth.getUser();
+      // Update the historyData state with new experiences
+      const updatedHistoryData = {
+        ...historyData,
+        isyerleri: formattedExperiences
+      };
       
-      if (user) {
-        const { data: personelData } = await supabase
-          .from('personel')
-          .select('id')
-          .eq('auth_id', user.id)
-          .maybeSingle();
-          
-        if (personelData) {
-          await supabase
-            .from('staff_history')
-            .upsert({
-              personel_id: personelData.id,
-              isyerleri: formattedExperiences,
-              gorevpozisyon: historyData.gorevpozisyon,
-              belgeler: historyData.belgeler,
-              yarismalar: historyData.yarismalar,
-              cv: historyData.cv,
-              updated_at: new Date().toISOString()
-            }, { onConflict: 'personel_id' });
-            
-          // Update local state
-          onHistoryChange({
-            ...historyData,
-            isyerleri: formattedExperiences
-          });
-          
-          toast.success(editExperienceIndex !== null ? "İş deneyimi güncellendi" : "İş deneyimi eklendi");
-        } else {
-          createPersonelRecord(user.id, {
-            ...historyData,
-            isyerleri: formattedExperiences
-          });
-        }
-      }
+      // Save to database using the onSave callback
+      await onSave(updatedHistoryData);
+      
+      // Reset form
+      setNewWorkplace({ workplace: "", position: "", duration: "" });
+      
     } catch (error) {
       console.error("Error saving experience:", error);
       toast.error("İş deneyimi kaydedilirken bir hata oluştu");
     }
-    
-    setNewWorkplace({ workplace: "", position: "", duration: "" });
   };
 
   // Handle certificate form submission
@@ -193,53 +166,23 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
     
     setCertificates(updatedCertificates);
     
-    // Format certificates for storage
-    const formattedCertificates = updatedCertificates.join('\n');
-    
     try {
-      // Save to database
-      const { data: { user } } = await supabase.auth.getUser();
+      // Update the historyData state with new certificates
+      const updatedHistoryData = {
+        ...historyData,
+        belgeler: updatedCertificates.join('\n')
+      };
       
-      if (user) {
-        const { data: personelData } = await supabase
-          .from('personel')
-          .select('id')
-          .eq('auth_id', user.id)
-          .maybeSingle();
-          
-        if (personelData) {
-          await supabase
-            .from('staff_history')
-            .upsert({
-              personel_id: personelData.id,
-              isyerleri: historyData.isyerleri,
-              gorevpozisyon: historyData.gorevpozisyon,
-              belgeler: formattedCertificates,
-              yarismalar: historyData.yarismalar,
-              cv: historyData.cv,
-              updated_at: new Date().toISOString()
-            }, { onConflict: 'personel_id' });
-            
-          // Update local state
-          onHistoryChange({
-            ...historyData,
-            belgeler: formattedCertificates
-          });
-          
-          toast.success(editCertificateIndex !== null ? "Belge güncellendi" : "Belge eklendi");
-        } else {
-          createPersonelRecord(user.id, {
-            ...historyData,
-            belgeler: formattedCertificates
-          });
-        }
-      }
+      // Save to database using the onSave callback
+      await onSave(updatedHistoryData);
+      
+      // Reset form
+      setNewCertificate("");
+      
     } catch (error) {
       console.error("Error saving certificate:", error);
       toast.error("Belge kaydedilirken bir hata oluştu");
     }
-    
-    setNewCertificate("");
   };
 
   // Handle competition form submission
@@ -263,100 +206,39 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
     
     setCompetitions(updatedCompetitions);
     
-    // Format competitions for storage
-    const formattedCompetitions = updatedCompetitions.join('\n');
-    
     try {
-      // Save to database
-      const { data: { user } } = await supabase.auth.getUser();
+      // Update the historyData state with new competitions
+      const updatedHistoryData = {
+        ...historyData,
+        yarismalar: updatedCompetitions.join('\n')
+      };
       
-      if (user) {
-        const { data: personelData } = await supabase
-          .from('personel')
-          .select('id')
-          .eq('auth_id', user.id)
-          .maybeSingle();
-          
-        if (personelData) {
-          await supabase
-            .from('staff_history')
-            .upsert({
-              personel_id: personelData.id,
-              isyerleri: historyData.isyerleri,
-              gorevpozisyon: historyData.gorevpozisyon,
-              belgeler: historyData.belgeler,
-              yarismalar: formattedCompetitions,
-              cv: historyData.cv,
-              updated_at: new Date().toISOString()
-            }, { onConflict: 'personel_id' });
-            
-          // Update local state
-          onHistoryChange({
-            ...historyData,
-            yarismalar: formattedCompetitions
-          });
-          
-          toast.success(editCompetitionIndex !== null ? "Yarışma güncellendi" : "Yarışma eklendi");
-        } else {
-          createPersonelRecord(user.id, {
-            ...historyData,
-            yarismalar: formattedCompetitions
-          });
-        }
-      }
+      // Save to database using the onSave callback
+      await onSave(updatedHistoryData);
+      
+      // Reset form
+      setNewCompetition("");
+      
     } catch (error) {
       console.error("Error saving competition:", error);
       toast.error("Yarışma kaydedilirken bir hata oluştu");
     }
-    
-    setNewCompetition("");
   };
 
-  // Handle CV text change and save
-  const handleCvChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setCvText(e.target.value);
-  };
-  
-  const saveCv = async () => {
+  // Handle CV save
+  const handleSaveCv = async () => {
     setSavingCv(true);
     try {
-      // Save to database
-      const { data: { user } } = await supabase.auth.getUser();
+      // Update the historyData state with new CV
+      const updatedHistoryData = {
+        ...historyData,
+        cv: cvText
+      };
       
-      if (user) {
-        const { data: personelData } = await supabase
-          .from('personel')
-          .select('id')
-          .eq('auth_id', user.id)
-          .maybeSingle();
-          
-        if (personelData) {
-          await supabase
-            .from('staff_history')
-            .upsert({
-              personel_id: personelData.id,
-              isyerleri: historyData.isyerleri,
-              gorevpozisyon: historyData.gorevpozisyon,
-              belgeler: historyData.belgeler,
-              yarismalar: historyData.yarismalar,
-              cv: cvText,
-              updated_at: new Date().toISOString()
-            }, { onConflict: 'personel_id' });
-            
-          // Update local state
-          onHistoryChange({
-            ...historyData,
-            cv: cvText
-          });
-          
-          toast.success("Özgeçmiş kaydedildi");
-        } else {
-          createPersonelRecord(user.id, {
-            ...historyData,
-            cv: cvText
-          });
-        }
-      }
+      // Save to database using the onSave callback
+      await onSave(updatedHistoryData);
+      toast.success("Özgeçmiş başarıyla kaydedildi");
+      
     } catch (error) {
       console.error("Error saving CV:", error);
       toast.error("Özgeçmiş kaydedilirken bir hata oluştu");
@@ -364,199 +246,90 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
       setSavingCv(false);
     }
   };
-  
-  // Helper function to create personel record if it doesn't exist
-  const createPersonelRecord = async (authId: string, updatedHistoryData: HistoryData) => {
-    try {
-      // Get profile data for new personel record
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('first_name, last_name, phone, address, avatar_url')
-        .eq('id', authId)
-        .single();
-      
-      // Create basic personel record
-      const { data: newPersonel, error: createError } = await supabase
-        .from('personel')
-        .insert([{
-          auth_id: authId,
-          ad_soyad: profileData ? `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() : 'Çalışan',
-          telefon: profileData?.phone || '-',
-          eposta: '-',
-          adres: profileData?.address || '-',
-          personel_no: `P${Date.now().toString().substring(8)}`,
-          calisma_sistemi: 'Tam Zamanlı',
-          maas: 0,
-          prim_yuzdesi: 0,
-          avatar_url: profileData?.avatar_url || null
-        }])
-        .select('id');
 
-      if (createError) {
-        throw createError;
-      }
-      
-      if (newPersonel && newPersonel.length > 0) {
-        // Now insert history with the new personel ID
-        await supabase
-          .from('staff_history')
-          .insert([{
-            personel_id: newPersonel[0].id,
-            isyerleri: updatedHistoryData.isyerleri || '',
-            gorevpozisyon: updatedHistoryData.gorevpozisyon || '',
-            belgeler: updatedHistoryData.belgeler || '',
-            yarismalar: updatedHistoryData.yarismalar || '',
-            cv: updatedHistoryData.cv || ''
-          }]);
-          
-        toast.success("Bilgiler kaydedildi");
-      }
-    } catch (error) {
-      console.error("Error creating personel record:", error);
-      toast.error("Bilgiler kaydedilirken bir hata oluştu");
-    }
+  // Handle experience edit
+  const handleEditExperience = (index: number) => {
+    setEditExperienceIndex(index);
+    setNewWorkplace(experiences[index]);
   };
-  
-  // Handle delete actions
+
+  // Handle experience delete
   const handleDeleteExperience = async (index: number) => {
     const updatedExperiences = [...experiences];
     updatedExperiences.splice(index, 1);
     setExperiences(updatedExperiences);
     
+    // Format experiences for storage
     const formattedExperiences = updatedExperiences.map(exp => 
       `${exp.workplace} | ${exp.position} | ${exp.duration}`
     ).join('\n');
     
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      // Update the historyData state with new experiences
+      const updatedHistoryData = {
+        ...historyData,
+        isyerleri: formattedExperiences
+      };
       
-      if (user) {
-        const { data: personelData } = await supabase
-          .from('personel')
-          .select('id')
-          .eq('auth_id', user.id)
-          .maybeSingle();
-          
-        if (personelData) {
-          await supabase
-            .from('staff_history')
-            .update({ 
-              isyerleri: formattedExperiences,
-              updated_at: new Date().toISOString() 
-            })
-            .eq('personel_id', personelData.id);
-            
-          onHistoryChange({
-            ...historyData,
-            isyerleri: formattedExperiences
-          });
-          
-          toast.success("İş deneyimi silindi");
-        }
-      }
+      // Save to database using the onSave callback
+      await onSave(updatedHistoryData);
+      
     } catch (error) {
       console.error("Error deleting experience:", error);
       toast.error("İş deneyimi silinirken bir hata oluştu");
     }
   };
 
-  // Handle edit actions
-  const handleEditExperience = (index: number) => {
-    const experience = experiences[index];
-    setNewWorkplace({
-      workplace: experience.workplace,
-      position: experience.position,
-      duration: experience.duration
-    });
-    setEditExperienceIndex(index);
-  };
-  
+  // Handle certificate edit
   const handleEditCertificate = (index: number) => {
-    setNewCertificate(certificates[index]);
     setEditCertificateIndex(index);
+    setNewCertificate(certificates[index]);
   };
-  
-  const handleEditCompetition = (index: number) => {
-    setNewCompetition(competitions[index]);
-    setEditCompetitionIndex(index);
-  };
-  
-  // Handle delete certificate
+
+  // Handle certificate delete
   const handleDeleteCertificate = async (index: number) => {
     const updatedCertificates = [...certificates];
     updatedCertificates.splice(index, 1);
     setCertificates(updatedCertificates);
     
-    const formattedCertificates = updatedCertificates.join('\n');
-    
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      // Update the historyData state with new certificates
+      const updatedHistoryData = {
+        ...historyData,
+        belgeler: updatedCertificates.join('\n')
+      };
       
-      if (user) {
-        const { data: personelData } = await supabase
-          .from('personel')
-          .select('id')
-          .eq('auth_id', user.id)
-          .maybeSingle();
-          
-        if (personelData) {
-          await supabase
-            .from('staff_history')
-            .update({ 
-              belgeler: formattedCertificates,
-              updated_at: new Date().toISOString() 
-            })
-            .eq('personel_id', personelData.id);
-            
-          onHistoryChange({
-            ...historyData,
-            belgeler: formattedCertificates
-          });
-          
-          toast.success("Belge silindi");
-        }
-      }
+      // Save to database using the onSave callback
+      await onSave(updatedHistoryData);
+      
     } catch (error) {
       console.error("Error deleting certificate:", error);
       toast.error("Belge silinirken bir hata oluştu");
     }
   };
-  
-  // Handle delete competition
+
+  // Handle competition edit
+  const handleEditCompetition = (index: number) => {
+    setEditCompetitionIndex(index);
+    setNewCompetition(competitions[index]);
+  };
+
+  // Handle competition delete
   const handleDeleteCompetition = async (index: number) => {
     const updatedCompetitions = [...competitions];
     updatedCompetitions.splice(index, 1);
     setCompetitions(updatedCompetitions);
     
-    const formattedCompetitions = updatedCompetitions.join('\n');
-    
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      // Update the historyData state with new competitions
+      const updatedHistoryData = {
+        ...historyData,
+        yarismalar: updatedCompetitions.join('\n')
+      };
       
-      if (user) {
-        const { data: personelData } = await supabase
-          .from('personel')
-          .select('id')
-          .eq('auth_id', user.id)
-          .maybeSingle();
-          
-        if (personelData) {
-          await supabase
-            .from('staff_history')
-            .update({ 
-              yarismalar: formattedCompetitions,
-              updated_at: new Date().toISOString() 
-            })
-            .eq('personel_id', personelData.id);
-            
-          onHistoryChange({
-            ...historyData,
-            yarismalar: formattedCompetitions
-          });
-          
-          toast.success("Yarışma silindi");
-        }
-      }
+      // Save to database using the onSave callback
+      await onSave(updatedHistoryData);
+      
     } catch (error) {
       console.error("Error deleting competition:", error);
       toast.error("Yarışma silinirken bir hata oluştu");
@@ -565,141 +338,142 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
 
   return (
     <Card>
-      <CardContent className="p-6">
-        <div className="space-y-6">
-          {/* İş Tecrübeleri */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium flex items-center gap-2">
-              <Briefcase size={18} />
-              İş Yerleri ve Görevler
-            </h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Input
-                placeholder="İş Yeri"
-                value={newWorkplace.workplace}
-                onChange={(e) => setNewWorkplace({...newWorkplace, workplace: e.target.value})}
-                className="text-gray-900"
-              />
-              <Input
-                placeholder="Görev / Pozisyon"
-                value={newWorkplace.position}
-                onChange={(e) => setNewWorkplace({...newWorkplace, position: e.target.value})}
-                className="text-gray-900"
-              />
-              <Input
-                placeholder="Çalışma Süresi"
-                value={newWorkplace.duration}
-                onChange={(e) => setNewWorkplace({...newWorkplace, duration: e.target.value})}
-                className="text-gray-900"
-              />
-            </div>
-            
-            <div className="flex justify-end">
-              <Button 
-                type="button"
-                onClick={addExperience}
-                className="bg-green-600 hover:bg-green-700 text-white"
-                size="sm"
-              >
-                <Plus size={16} className="mr-1" /> 
-                {editExperienceIndex !== null ? "Güncelle" : "Tecrübe Ekle"}
-              </Button>
-            </div>
-            
-            <StaffExperienceTable
-              experiences={experiences}
-              onDelete={handleDeleteExperience}
-              onEdit={handleEditExperience}
+      <CardContent className="p-6 space-y-8">
+        {/* İş Yerleri / Görevler */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-medium flex items-center gap-2">
+            <Briefcase size={18} />
+            İş Yerleri / Görevler
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Input
+              placeholder="İşyeri adı"
+              value={newWorkplace.workplace}
+              onChange={(e) => setNewWorkplace({ ...newWorkplace, workplace: e.target.value })}
+            />
+            <Input
+              placeholder="Görev / Pozisyon"
+              value={newWorkplace.position}
+              onChange={(e) => setNewWorkplace({ ...newWorkplace, position: e.target.value })}
+            />
+            <Input
+              placeholder="Çalışma Süresi"
+              value={newWorkplace.duration}
+              onChange={(e) => setNewWorkplace({ ...newWorkplace, duration: e.target.value })}
             />
           </div>
-
-          {/* Belgeler */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium flex items-center gap-2">
-              <FileText size={18} />
-              Belgeler
-            </h3>
-            
-            <div className="flex gap-2">
-              <Input
-                placeholder="Belge adını giriniz..."
-                value={newCertificate}
-                onChange={(e) => setNewCertificate(e.target.value)}
-                className="text-gray-900"
-              />
-              <Button 
-                type="button" 
-                onClick={addCertificate}
-                className="bg-green-600 hover:bg-green-700 text-white whitespace-nowrap"
-                size="sm"
-              >
-                <Plus size={16} className="mr-1" /> 
-                {editCertificateIndex !== null ? "Güncelle" : "Belge Ekle"}
-              </Button>
-            </div>
-            
-            <StaffCertificatesTable
-              certificates={certificates}
-              onDelete={handleDeleteCertificate}
-              onEdit={handleEditCertificate}
-            />
+          
+          <div className="flex justify-end">
+            <LoadingButton
+              onClick={addExperience}
+              loading={isLoading}
+              disabled={isLoading || !newWorkplace.workplace || !newWorkplace.position || !newWorkplace.duration}
+              className="flex items-center gap-1"
+            >
+              <Plus size={16} />
+              {editExperienceIndex !== null ? 'Güncelle' : 'Ekle'}
+            </LoadingButton>
           </div>
-
-          {/* Yarışmalar */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium flex items-center gap-2">
-              <Award size={18} />
-              Yarışmalar
-            </h3>
-            
-            <div className="flex gap-2">
-              <Input
-                placeholder="Yarışma adını giriniz..."
-                value={newCompetition}
-                onChange={(e) => setNewCompetition(e.target.value)}
-                className="text-gray-900"
-              />
-              <Button 
-                type="button" 
-                onClick={addCompetition}
-                className="bg-green-600 hover:bg-green-700 text-white whitespace-nowrap"
-                size="sm"
-              >
-                <Plus size={16} className="mr-1" /> 
-                {editCompetitionIndex !== null ? "Güncelle" : "Yarışma Ekle"}
-              </Button>
-            </div>
-            
-            <StaffCompetitionsTable
-              competitions={competitions}
-              onDelete={handleDeleteCompetition}
-              onEdit={handleEditCompetition}
+          
+          {experiences.length > 0 && (
+            <StaffExperienceTable 
+              experiences={experiences} 
+              onEdit={handleEditExperience} 
+              onDelete={handleDeleteExperience} 
             />
+          )}
+        </div>
+        
+        {/* Belgeler / Sertifikalar */}
+        <div className="space-y-4 pt-4 border-t border-gray-100">
+          <h3 className="text-lg font-medium flex items-center gap-2">
+            <FileText size={18} />
+            Belgeler / Sertifikalar
+          </h3>
+          
+          <div className="flex gap-4">
+            <Input
+              placeholder="Belge / Sertifika adı"
+              value={newCertificate}
+              onChange={(e) => setNewCertificate(e.target.value)}
+              className="flex-grow"
+            />
+            <LoadingButton
+              onClick={addCertificate}
+              loading={isLoading}
+              disabled={isLoading || !newCertificate}
+              className="flex items-center gap-1"
+            >
+              <Plus size={16} />
+              {editCertificateIndex !== null ? 'Güncelle' : 'Ekle'}
+            </LoadingButton>
           </div>
-
-          {/* Özgeçmiş */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Özgeçmiş</h3>
-            <div>
-              <Textarea
-                value={cvText}
-                onChange={handleCvChange}
-                placeholder="Kendiniz hakkında belirtmek istedikleriniz, hedefleriniz, kariyer planlarınız ve hayallerinizi yazabilirsiniz."
-                rows={6}
-                className="text-gray-900"
-              />
-            </div>
-            <div className="flex justify-end">
-              <LoadingButton
-                onClick={saveCv}
-                loading={savingCv}
-                className="bg-purple-600 text-white hover:bg-purple-700"
-                size="sm"
-              >
-                Kaydet
-              </LoadingButton>
-            </div>
+          
+          {certificates.length > 0 && (
+            <StaffCertificatesTable 
+              certificates={certificates} 
+              onEdit={handleEditCertificate} 
+              onDelete={handleDeleteCertificate} 
+            />
+          )}
+        </div>
+        
+        {/* Yarışmalar */}
+        <div className="space-y-4 pt-4 border-t border-gray-100">
+          <h3 className="text-lg font-medium flex items-center gap-2">
+            <Award size={18} />
+            Yarışmalar
+          </h3>
+          
+          <div className="flex gap-4">
+            <Input
+              placeholder="Yarışma adı / Derece"
+              value={newCompetition}
+              onChange={(e) => setNewCompetition(e.target.value)}
+              className="flex-grow"
+            />
+            <LoadingButton
+              onClick={addCompetition}
+              loading={isLoading}
+              disabled={isLoading || !newCompetition}
+              className="flex items-center gap-1"
+            >
+              <Plus size={16} />
+              {editCompetitionIndex !== null ? 'Güncelle' : 'Ekle'}
+            </LoadingButton>
+          </div>
+          
+          {competitions.length > 0 && (
+            <StaffCompetitionsTable 
+              competitions={competitions} 
+              onEdit={handleEditCompetition} 
+              onDelete={handleDeleteCompetition} 
+            />
+          )}
+        </div>
+        
+        {/* Özgeçmiş */}
+        <div className="space-y-4 pt-4 border-t border-gray-100">
+          <h3 className="text-lg font-medium">Özgeçmiş</h3>
+          
+          <Textarea
+            placeholder="Özgeçmiş bilgilerinizi buraya yazınız..."
+            value={cvText}
+            onChange={(e) => setCvText(e.target.value)}
+            rows={6}
+            className="resize-none"
+          />
+          
+          <div className="flex justify-end">
+            <LoadingButton
+              onClick={handleSaveCv}
+              loading={savingCv}
+              disabled={savingCv || isLoading}
+              className="bg-purple-600 text-white hover:bg-purple-700"
+            >
+              Özgeçmiş Kaydet
+            </LoadingButton>
           </div>
         </div>
       </CardContent>

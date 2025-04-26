@@ -44,6 +44,7 @@ export function useUnassignedStaffData() {
   
   const [personelId, setPersonelId] = useState<number | null>(null);
   const isDataLoaded = useRef(false);
+  const isUserSaving = useRef(false);
 
   const handleLogout = useCallback(async () => {
     try {
@@ -92,6 +93,7 @@ export function useUnassignedStaffData() {
         avatarUrl: profileData?.avatar_url || user.user_metadata?.avatar_url || ''
       });
 
+      let staffId = null;
       const { data: personel, error: perErr } = await supabase
         .from('personel')
         .select('id, dukkan_id, ad_soyad, telefon, eposta, adres, avatar_url')
@@ -129,45 +131,40 @@ export function useUnassignedStaffData() {
           if (createError) {
             console.error("Personel record creation error:", createError);
           } else if (newPersonel && newPersonel.length > 0) {
+            staffId = newPersonel[0].id;
             setPersonelId(newPersonel[0].id);
             console.log("Created personel record with id:", newPersonel[0].id);
             
-            // After creating a new personel record, load the education and history data
-            const personelId = newPersonel[0].id;
-            
-            const { data: educationDataLoaded } = await supabase
+            // After creating a new personel record, create empty education and history records
+            const { error: eduInitError } = await supabase
               .from('staff_education')
-              .select('*')
-              .eq('personel_id', personelId)
-              .maybeSingle();
-              
-            if (educationDataLoaded) {
-              console.log("Education data loaded", educationDataLoaded);
-              setEducationData({
-                ortaokuldurumu: educationDataLoaded.ortaokuldurumu || '',
-                lisedurumu: educationDataLoaded.lisedurumu || '',
-                liseturu: educationDataLoaded.liseturu || '',
-                meslekibrans: educationDataLoaded.meslekibrans || '',
-                universitedurumu: educationDataLoaded.universitedurumu || '',
-                universitebolum: educationDataLoaded.universitebolum || ''
+              .insert({
+                personel_id: staffId,
+                ortaokuldurumu: '',
+                lisedurumu: '',
+                liseturu: '',
+                meslekibrans: '',
+                universitedurumu: '',
+                universitebolum: ''
               });
+            
+            if (eduInitError) {
+              console.error("Error creating initial education record:", eduInitError);
             }
-
-            const { data: historyDataLoaded } = await supabase
+            
+            const { error: histInitError } = await supabase
               .from('staff_history')
-              .select('*')
-              .eq('personel_id', personelId)
-              .maybeSingle();
-                
-            if (historyDataLoaded) {
-              console.log("History data loaded", historyDataLoaded);
-              setHistoryData({
-                isyerleri: historyDataLoaded.isyerleri || '',
-                gorevpozisyon: historyDataLoaded.gorevpozisyon || '',
-                belgeler: historyDataLoaded.belgeler || '',
-                yarismalar: historyDataLoaded.yarismalar || '',
-                cv: historyDataLoaded.cv || ''
+              .insert({
+                personel_id: staffId,
+                isyerleri: '',
+                gorevpozisyon: '',
+                belgeler: '',
+                yarismalar: '',
+                cv: ''
               });
+              
+            if (histInitError) {
+              console.error("Error creating initial history record:", histInitError);
             }
           }
         } catch (err) {
@@ -175,6 +172,7 @@ export function useUnassignedStaffData() {
         }
       } else {
         console.log("Personel record found:", personel);
+        staffId = personel.id;
         setPersonelId(personel.id);
 
         if (personel.ad_soyad || personel.telefon || personel.adres || personel.avatar_url) {
@@ -184,10 +182,10 @@ export function useUnassignedStaffData() {
             currentProfile.firstName = nameParts[0];
             currentProfile.lastName = nameParts.slice(1).join(' ');
           }
-          if (!currentProfile.phone && personel.telefon) {
+          if (!currentProfile.phone && personel.telefon && personel.telefon !== '-') {
             currentProfile.phone = personel.telefon;
           }
-          if (!currentProfile.address && personel.adres) {
+          if (!currentProfile.address && personel.adres && personel.adres !== '-') {
             currentProfile.address = personel.adres;
           }
           if (!currentProfile.avatarUrl && personel.avatar_url) {
@@ -201,14 +199,39 @@ export function useUnassignedStaffData() {
           navigate("/staff-profile", { replace: true });
           return;
         }
-        
-        const { data: educationDataLoaded } = await supabase
+      }
+      
+      // If we have a personel ID, load education and history data
+      if (staffId) {
+        // Load education data
+        const { data: educationDataLoaded, error: eduError } = await supabase
           .from('staff_education')
           .select('*')
-          .eq('personel_id', personel.id)
+          .eq('personel_id', staffId)
           .maybeSingle();
+        
+        if (eduError) {
+          console.error("Error loading education data:", eduError);
           
-        if (educationDataLoaded) {
+          // If there was an error loading education data, try to create it
+          if (eduError.code === 'PGRST116') {
+            const { error: createEduError } = await supabase
+              .from('staff_education')
+              .insert({
+                personel_id: staffId,
+                ortaokuldurumu: '',
+                lisedurumu: '',
+                liseturu: '',
+                meslekibrans: '',
+                universitedurumu: '',
+                universitebolum: ''
+              });
+            
+            if (createEduError) {
+              console.error("Error creating education data:", createEduError);
+            }
+          }
+        } else if (educationDataLoaded) {
           console.log("Education data loaded", educationDataLoaded);
           setEducationData({
             ortaokuldurumu: educationDataLoaded.ortaokuldurumu || '',
@@ -220,13 +243,34 @@ export function useUnassignedStaffData() {
           });
         }
 
-        const { data: historyDataLoaded } = await supabase
+        // Load history data
+        const { data: historyDataLoaded, error: histError } = await supabase
           .from('staff_history')
           .select('*')
-          .eq('personel_id', personel.id)
+          .eq('personel_id', staffId)
           .maybeSingle();
+        
+        if (histError) {
+          console.error("Error loading history data:", histError);
+          
+          // If there was an error loading history data, try to create it
+          if (histError.code === 'PGRST116') {
+            const { error: createHistError } = await supabase
+              .from('staff_history')
+              .insert({
+                personel_id: staffId,
+                isyerleri: '',
+                gorevpozisyon: '',
+                belgeler: '',
+                yarismalar: '',
+                cv: ''
+              });
             
-        if (historyDataLoaded) {
+            if (createHistError) {
+              console.error("Error creating history data:", createHistError);
+            }
+          }
+        } else if (historyDataLoaded) {
           console.log("History data loaded", historyDataLoaded);
           setHistoryData({
             isyerleri: historyDataLoaded.isyerleri || '',
@@ -251,19 +295,28 @@ export function useUnassignedStaffData() {
   }, [navigate, userProfile]);
 
   const handleSave = useCallback(async (updatedData: any) => {
+    // Prevent multiple simultaneous save operations
+    if (isUserSaving.current) {
+      return;
+    }
+    
+    isUserSaving.current = true;
     setLoading(true);
+    
     try {
       console.log("Saving data:", updatedData);
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
       
-      if (!user) {
+      if (userError || !user) {
         throw new Error("User not authenticated");
       }
 
       let currentPersonelId = personelId;
       
+      // If we don't have a personel ID, create a new personel record
       if (!currentPersonelId) {
         console.log("No personel ID found, creating personel record");
+        
         const { data: newPersonel, error: createError } = await supabase
           .from('personel')
           .insert([{
@@ -290,31 +343,106 @@ export function useUnassignedStaffData() {
           currentPersonelId = newPersonel.id;
           setPersonelId(newPersonel.id);
           console.log("Created new personel record with ID:", newPersonel.id);
+          
+          // Create initial empty records for education and history
+          await supabase
+            .from('staff_education')
+            .insert({
+              personel_id: currentPersonelId,
+              ortaokuldurumu: '',
+              lisedurumu: '',
+              liseturu: '',
+              meslekibrans: '',
+              universitedurumu: '',
+              universitebolum: ''
+            });
+          
+          await supabase
+            .from('staff_history')
+            .insert({
+              personel_id: currentPersonelId,
+              isyerleri: '',
+              gorevpozisyon: '',
+              belgeler: '',
+              yarismalar: '',
+              cv: ''
+            });
         } else {
           throw new Error("Failed to create personel record");
         }
       }
 
+      // Check what type of data we're saving and update the appropriate table
       if ('ortaokuldurumu' in updatedData) {
         console.log("Saving education data for personel ID:", currentPersonelId);
-        const { error: eduError } = await supabase
+        
+        // Check if education record exists
+        const { data: existingEdu, error: checkEduError } = await supabase
           .from('staff_education')
-          .upsert({
-            personel_id: currentPersonelId,
-            ...updatedData,
-            updated_at: new Date().toISOString()
-          }, { onConflict: 'personel_id' });
+          .select('*')
+          .eq('personel_id', currentPersonelId)
+          .maybeSingle();
+        
+        if (checkEduError && checkEduError.code !== 'PGRST116') {
+          console.error("Error checking education record:", checkEduError);
+          throw checkEduError;
+        }
+        
+        if (existingEdu) {
+          // Update existing record
+          const { error: eduError } = await supabase
+            .from('staff_education')
+            .update({
+              ortaokuldurumu: updatedData.ortaokuldurumu || '',
+              lisedurumu: updatedData.lisedurumu || '',
+              liseturu: updatedData.liseturu || '',
+              meslekibrans: updatedData.meslekibrans || '',
+              universitedurumu: updatedData.universitedurumu || '',
+              universitebolum: updatedData.universitebolum || '',
+              updated_at: new Date().toISOString()
+            })
+            .eq('personel_id', currentPersonelId);
 
-        if (eduError) {
-          console.error("Education save error:", eduError);
-          throw eduError;
+          if (eduError) {
+            console.error("Education update error:", eduError);
+            throw eduError;
+          }
+        } else {
+          // Insert new record
+          const { error: eduError } = await supabase
+            .from('staff_education')
+            .insert({
+              personel_id: currentPersonelId,
+              ortaokuldurumu: updatedData.ortaokuldurumu || '',
+              lisedurumu: updatedData.lisedurumu || '',
+              liseturu: updatedData.liseturu || '',
+              meslekibrans: updatedData.meslekibrans || '',
+              universitedurumu: updatedData.universitedurumu || '',
+              universitebolum: updatedData.universitebolum || ''
+            });
+
+          if (eduError) {
+            console.error("Education insert error:", eduError);
+            throw eduError;
+          }
         }
         
         setEducationData(updatedData);
         toast.success("Eğitim bilgileriniz başarıyla güncellendi");
       } 
-      else if ('isyerleri' in updatedData) {
+      else if ('isyerleri' in updatedData || 'belgeler' in updatedData || 'yarismalar' in updatedData || 'cv' in updatedData) {
         console.log("Saving history data for personel ID:", currentPersonelId);
+        
+        // Build the update object - only include fields that are in the updatedData
+        let updateObject: any = { updated_at: new Date().toISOString() };
+        
+        if ('isyerleri' in updatedData) updateObject.isyerleri = updatedData.isyerleri || '';
+        if ('gorevpozisyon' in updatedData) updateObject.gorevpozisyon = updatedData.gorevpozisyon || '';
+        if ('belgeler' in updatedData) updateObject.belgeler = updatedData.belgeler || '';
+        if ('yarismalar' in updatedData) updateObject.yarismalar = updatedData.yarismalar || '';
+        if ('cv' in updatedData) updateObject.cv = updatedData.cv || '';
+        
+        // Check if history record exists
         const { data: existingHistory, error: checkError } = await supabase
           .from('staff_history')
           .select('*')
@@ -323,19 +451,14 @@ export function useUnassignedStaffData() {
 
         if (checkError && checkError.code !== 'PGRST116') {
           console.error("Error checking existing history:", checkError);
+          throw checkError;
         }
 
         if (existingHistory) {
+          // Update existing record
           const { error: updateError } = await supabase
             .from('staff_history')
-            .update({
-              isyerleri: updatedData.isyerleri || '',
-              gorevpozisyon: updatedData.gorevpozisyon || '',
-              belgeler: updatedData.belgeler || '',
-              yarismalar: updatedData.yarismalar || '',
-              cv: updatedData.cv || '',
-              updated_at: new Date().toISOString()
-            })
+            .update(updateObject)
             .eq('personel_id', currentPersonelId);
 
           if (updateError) {
@@ -343,16 +466,19 @@ export function useUnassignedStaffData() {
             throw updateError;
           }
         } else {
+          // Insert new record with all fields
+          const fullData = {
+            personel_id: currentPersonelId,
+            isyerleri: updateObject.isyerleri !== undefined ? updateObject.isyerleri : '',
+            gorevpozisyon: updateObject.gorevpozisyon !== undefined ? updateObject.gorevpozisyon : '',
+            belgeler: updateObject.belgeler !== undefined ? updateObject.belgeler : '',
+            yarismalar: updateObject.yarismalar !== undefined ? updateObject.yarismalar : '',
+            cv: updateObject.cv !== undefined ? updateObject.cv : ''
+          };
+          
           const { error: insertError } = await supabase
             .from('staff_history')
-            .insert([{
-              personel_id: currentPersonelId,
-              isyerleri: updatedData.isyerleri || '',
-              gorevpozisyon: updatedData.gorevpozisyon || '',
-              belgeler: updatedData.belgeler || '',
-              yarismalar: updatedData.yarismalar || '',
-              cv: updatedData.cv || ''
-            }]);
+            .insert([fullData]);
 
           if (insertError) {
             console.error("History insert error:", insertError);
@@ -360,7 +486,12 @@ export function useUnassignedStaffData() {
           }
         }
 
-        setHistoryData(updatedData);
+        // Update the state with merged data
+        setHistoryData(prevData => ({
+          ...prevData,
+          ...updatedData
+        }));
+        
         toast.success("Geçmiş bilgileriniz başarıyla güncellendi");
       }
       else {
@@ -435,9 +566,10 @@ export function useUnassignedStaffData() {
       }
     } catch (err: any) {
       console.error("Save error:", err);
-      toast.error(`Bir hata oluştu: ${err.message || 'Bilinmeyen hata'}`);
+      toast.error(`Bilgiler kaydedilirken bir hata oluştu: ${err.message || 'Bilinmeyen hata'}`);
     } finally {
       setLoading(false);
+      isUserSaving.current = false;
     }
   }, [personelId, userProfile]);
 

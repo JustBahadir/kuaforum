@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -37,13 +37,31 @@ export const PersonalInfoTab = ({
     phone: userProfile.phone || "",
     address: userProfile.address || "",
     gender: userProfile.gender || null,
+    avatarUrl: userProfile.avatarUrl || "",
   });
+  
+  const [isDirty, setIsDirty] = useState(false);
+
+  useEffect(() => {
+    // Update form data when userProfile changes
+    setFormData({
+      firstName: userProfile.firstName || "",
+      lastName: userProfile.lastName || "",
+      phone: userProfile.phone || "",
+      address: userProfile.address || "",
+      gender: userProfile.gender || null,
+      avatarUrl: userProfile.avatarUrl || "",
+    });
+    setIsDirty(false);
+  }, [userProfile]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [e.target.name]: e.target.value
+      [name]: value
     }));
+    setIsDirty(true);
   };
 
   const handleGenderChange = (value: "erkek" | "kadın") => {
@@ -51,16 +69,31 @@ export const PersonalInfoTab = ({
       ...prev,
       gender: value
     }));
+    setIsDirty(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     await onSave(formData);
+    setIsDirty(false);
   };
 
   // This function correctly passes the URL string from FileUpload to onAvatarUpload
-  const handleFileUploadComplete = (uploadedUrl: string) => {
-    onAvatarUpload(uploadedUrl);
+  const handleFileUploadComplete = async (uploadedUrl: string) => {
+    try {
+      // Update the form data state with the new avatar URL
+      setFormData(prev => ({
+        ...prev,
+        avatarUrl: uploadedUrl
+      }));
+      
+      // Call the onAvatarUpload function to save the new URL
+      await onAvatarUpload(uploadedUrl);
+      
+      setIsDirty(false);
+    } catch (error) {
+      console.error("Error updating avatar:", error);
+    }
   };
 
   return (
@@ -70,11 +103,11 @@ export const PersonalInfoTab = ({
           <div className="flex flex-col md:flex-row md:items-center gap-6 mb-6">
             <div className="flex flex-col items-center">
               <Avatar className="w-24 h-24">
-                {userProfile.avatarUrl ? (
-                  <AvatarImage src={userProfile.avatarUrl} alt={userProfile.firstName || 'User'} />
+                {formData.avatarUrl ? (
+                  <AvatarImage src={formData.avatarUrl} alt={formData.firstName || 'User'} />
                 ) : (
                   <AvatarFallback className="text-2xl bg-purple-100 text-purple-700">
-                    {userProfile.firstName?.[0] || 'U'}
+                    {formData.firstName?.[0] || 'U'}
                   </AvatarFallback>
                 )}
               </Avatar>
@@ -83,7 +116,7 @@ export const PersonalInfoTab = ({
                   onUploadComplete={handleFileUploadComplete}
                   acceptedFileTypes="image/*"
                   label="Profil Fotoğrafı Yükle"
-                  currentImageUrl={userProfile.avatarUrl}
+                  currentImageUrl={formData.avatarUrl}
                   useCamera={false}
                   isUploading={isUploading}
                 />
@@ -176,7 +209,7 @@ export const PersonalInfoTab = ({
             <LoadingButton 
               type="submit"
               loading={isLoading}
-              disabled={isLoading}
+              disabled={isLoading || !isDirty}
               className="bg-purple-600 text-white hover:bg-purple-700"
             >
               Bilgileri Kaydet
