@@ -3,11 +3,13 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUnassignedStaffData } from "@/hooks/useUnassignedStaffData";
 import UnassignedStaffMain from "@/components/unassigned-staff/UnassignedStaffMain";
-import { Skeleton } from "@/components/ui/skeleton";
+import { supabase } from "@/lib/supabase/client";
+import { toast } from "sonner";
 
 export default function UnassignedStaff() {
   const [activeTab, setActiveTab] = useState("personal");
   const navigate = useNavigate();
+  const [isUploading, setIsUploading] = useState(false);
   
   const {
     loading,
@@ -24,14 +26,47 @@ export default function UnassignedStaff() {
 
   // Load user data when page loads
   useEffect(() => {
-    console.log("UnassignedStaff component mounted, loading data...");
     loadUserAndStaffData();
   }, [loadUserAndStaffData]);
+
+  const handleAvatarUpload = async (file: File) => {
+    try {
+      setIsUploading(true);
+      
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `${fileName}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      await supabase.auth.updateUser({
+        data: { avatar_url: publicUrl }
+      });
+
+      await loadUserAndStaffData();
+      toast.success("Profil fotoğrafı başarıyla güncellendi");
+    } catch (error) {
+      console.error("Avatar yükleme hatası:", error);
+      toast.error("Profil fotoğrafı yüklenirken bir hata oluştu");
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   // Show loading state - only on initial load, not on data updates
   if (loading && !userProfile) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-50">
+      <div className="flex items-center justify-center h-screen bg-white">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500 mx-auto mb-4"></div>
           <p className="text-gray-600">Bilgileriniz yükleniyor...</p>
@@ -43,7 +78,7 @@ export default function UnassignedStaff() {
   // Show error state
   if (error) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-50">
+      <div className="flex items-center justify-center h-screen bg-white">
         <div className="text-center p-6 bg-white rounded-lg shadow-md max-w-md">
           <div className="text-red-500 text-5xl mb-4">⚠️</div>
           <h2 className="text-xl font-semibold mb-2">Bir hata oluştu</h2>
@@ -62,7 +97,7 @@ export default function UnassignedStaff() {
   // No data loaded yet
   if (!userProfile) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-50">
+      <div className="flex items-center justify-center h-screen bg-white">
         <div className="text-center p-6 bg-white rounded-lg shadow-md max-w-md">
           <h2 className="text-xl font-semibold mb-2">Profil bulunamadı</h2>
           <p className="text-gray-600 mb-4">Profil bilgileriniz bulunamadı. Lütfen tekrar giriş yapın.</p>
@@ -77,8 +112,6 @@ export default function UnassignedStaff() {
     );
   }
 
-  console.log("Rendering UnassignedStaffMain with profile:", userProfile);
-
   return (
     <UnassignedStaffMain
       activeTab={activeTab}
@@ -90,7 +123,9 @@ export default function UnassignedStaff() {
       setHistoryData={setHistoryData}
       handleLogout={handleLogout}
       handleSave={handleSave}
+      handleAvatarUpload={handleAvatarUpload}
       loading={loading}
+      isUploading={isUploading}
       navigate={navigate}
     />
   );

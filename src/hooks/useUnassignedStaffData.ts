@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
@@ -60,104 +59,87 @@ export function useUnassignedStaffData() {
   }, [navigate]);
 
   // Bilgileri kaydetme fonksiyonu
-  const handleSave = useCallback(async () => {
+  const handleSave = useCallback(async (updatedData: any) => {
     setLoading(true);
     try {
-      // numeric id lazım
-      if (!personelId) {
-        toast.error("Personel kaydı bulunamadı.");
-        setLoading(false);
-        return;
+      // Update auth user metadata
+      await supabase.auth.updateUser({
+        data: {
+          first_name: updatedData.firstName,
+          last_name: updatedData.lastName,
+          gender: updatedData.gender,
+          phone: updatedData.phone,
+          address: updatedData.address
+        }
+      });
+
+      // Update profiles table
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase
+          .from('profiles')
+          .update({
+            first_name: updatedData.firstName,
+            last_name: updatedData.lastName,
+            gender: updatedData.gender,
+            phone: updatedData.phone,
+            address: updatedData.address,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', user.id);
       }
+
+      // Reload user data
+      await loadUserAndStaffData();
       
-      console.log("Saving education data for personel:", personelId, educationData);
-      // education
-      await supabase.from("staff_education").upsert([
-        {
-          personel_id: personelId,
-          ...educationData,
-        }
-      ], { onConflict: 'personel_id' });
-
-      console.log("Saving history data for personel:", personelId, historyData);
-      // history
-      await supabase.from("staff_history").upsert([
-        {
-          personel_id: personelId,
-          ...historyData,
-        }
-      ], { onConflict: 'personel_id' });
-
-      toast.success("Bilgileriniz başarıyla kaydedildi.");
+      toast.success("Bilgileriniz başarıyla güncellendi");
     } catch (err) {
-      console.error("Save error:", err);
-      toast.error("Bilgiler kaydedilirken bir hata oluştu.");
+      console.error("Kayıt hatası:", err);
+      toast.error("Bilgiler kaydedilirken bir hata oluştu");
     } finally {
       setLoading(false);
     }
-  }, [personelId, educationData, historyData]);
+  }, [loadUserAndStaffData]);
 
-  // Kullanıcı, personel ve diğer dataları yükle
+  // Kullanıcı ve personel verilerini yükle
   const loadUserAndStaffData = useCallback(async () => {
-    // Eğer veriler zaten yüklendiyse, yeniden yükleme yapmayacağız
     if (isDataLoaded.current && userProfile) {
-      console.log("Data already loaded, skipping load");
       return;
     }
-    
-    console.log("Loading user and staff data...");
+
     setLoading(true);
     setError(null);
     
     try {
-      // KULLANICI AUTH
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       
-      if (userError) {
-        console.error("User data error:", userError);
+      if (userError || !user) {
         setError("Kullanıcı bilgileri alınamadı. Lütfen tekrar giriş yapın.");
         navigate("/login");
         return;
       }
-      
-      if (!user) {
-        console.error("No user found in session");
-        setError("Oturum bulunamadı. Lütfen tekrar giriş yapın.");
-        navigate("/login");
-        return;
-      }
 
-      console.log("User found:", user.id);
-
-      // PROFİL BİLGİSİ - Önce profil bilgilerini alalım
+      // Get profile data
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single();
         
-      if (profileError) {
+      if (profileError && profileError.code !== 'PGRST116') {
         console.error("Profile fetch error:", profileError);
-        // Profile error, bu sayfanın çalışmasını engellemeyecek
       }
-      
-      if (profileData) {
-        console.log("Profile data loaded:", profileData);
-        setUserProfile(profileData);
-      } else {
-        // Profil yoksa user metadata kullan
-        console.log("Using user metadata as profile fallback");
-        setUserProfile({
-          id: user.id,
-          first_name: user.user_metadata?.first_name || user.user_metadata?.name?.split(' ')[0] || '',
-          last_name: user.user_metadata?.last_name || 
-            (user.user_metadata?.name?.split(' ').length > 1 ? 
-              user.user_metadata?.name?.split(' ').slice(1).join(' ') : 
-              ''),
-          email: user.email,
-          role: user.user_metadata?.role || 'staff'
-        });
-      }
+
+      // Set user profile combining auth and profile data
+      setUserProfile({
+        firstName: profileData?.first_name || user.user_metadata?.first_name || '',
+        lastName: profileData?.last_name || user.user_metadata?.last_name || '',
+        email: user.email || '',
+        phone: profileData?.phone || user.user_metadata?.phone || '',
+        gender: profileData?.gender || user.user_metadata?.gender || null,
+        address: profileData?.address || user.user_metadata?.address || '',
+        avatarUrl: profileData?.avatar_url || user.user_metadata?.avatar_url || ''
+      });
 
       // PERSONEL KAYDI KONTROL ET
       const { data: personel, error: perErr } = await supabase
@@ -214,10 +196,10 @@ export function useUnassignedStaffData() {
         // Update user profile with personel data if missing
         if (personel.ad_soyad || personel.telefon || personel.adres) {
           const currentProfile = { ...userProfile };
-          if (!currentProfile.first_name && personel.ad_soyad) {
+          if (!currentProfile.firstName && personel.ad_soyad) {
             const nameParts = personel.ad_soyad.split(' ');
-            currentProfile.first_name = nameParts[0];
-            currentProfile.last_name = nameParts.slice(1).join(' ');
+            currentProfile.firstName = nameParts[0];
+            currentProfile.lastName = nameParts.slice(1).join(' ');
           }
           if (!currentProfile.phone && personel.telefon) {
             currentProfile.phone = personel.telefon;
