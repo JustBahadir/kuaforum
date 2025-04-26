@@ -2,7 +2,6 @@
 import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { LoadingButton } from "@/components/ui/loading-button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { School, BookOpen, GraduationCap } from "lucide-react";
@@ -18,10 +17,30 @@ interface EducationData {
 
 interface EducationTabProps {
   educationData: EducationData;
-  onEducationChange: ((data: EducationData) => void) | ((field: keyof EducationData, value: string) => void);
+  onEducationChange: (data: EducationData) => void;
   onSave: (data: EducationData) => Promise<void>;
   isLoading: boolean;
 }
+
+const HIGH_SCHOOL_TYPES = [
+  "Fen Lisesi",
+  "Sosyal Bilimler Lisesi",
+  "Anadolu Lisesi",
+  "Güzel Sanatlar Lisesi",
+  "Spor Lisesi",
+  "Anadolu İmam Hatip Lisesi",
+  "Çok Programlı Anadolu Lisesi",
+  "Mesleki ve Teknik Anadolu Lisesi",
+  "Akşam Lisesi",
+  "Açık Öğretim Lisesi"
+];
+
+const DEPARTMENTS = [
+  "Saç Bakımı ve Güzellik Hizmetleri",
+  "Diğer"
+];
+
+const statusOptions = ["Mezun", "Devam Ediyor", "Terk", "Tamamlanmadı"];
 
 const EducationTab: React.FC<EducationTabProps> = ({
   educationData,
@@ -32,34 +51,19 @@ const EducationTab: React.FC<EducationTabProps> = ({
   const [currentStep, setCurrentStep] = useState<number>(1);
   
   const handleChange = (field: keyof EducationData, value: string) => {
-    // Check if onEducationChange accepts a complete data object or field-value pair
-    if (typeof onEducationChange === 'function') {
-      if (onEducationChange.length === 1) {
-        // It accepts the whole object
-        (onEducationChange as (data: EducationData) => void)({
-          ...educationData,
-          [field]: value,
-        });
-      } else {
-        // It accepts field-value pair
-        (onEducationChange as (field: keyof EducationData, value: string) => void)(
-          field, 
-          value
-        );
-      }
-    }
+    const newData = { ...educationData, [field]: value };
+    onEducationChange(newData);
     
-    // Handle step progression based on selection
+    // Handle step progression
     if (field === 'ortaokuldurumu' && value === 'Mezun') {
-      setCurrentStep(2); // Show Lise Durumu
+      setCurrentStep(Math.max(currentStep, 2));
     } else if (field === 'lisedurumu' && value === 'Mezun') {
-      setCurrentStep(4); // Show Lise Türü and Mesleki Branş
-    } else if (field === 'liseturu' || field === 'meslekibrans') {
-      if (educationData.liseturu && educationData.meslekibrans) {
-        setCurrentStep(5); // Show Üniversite Durumu
-      }
-    } else if (field === 'universitedurumu' && value === 'Mezun') {
-      setCurrentStep(6); // Show Üniversite Bölümü
+      setCurrentStep(Math.max(currentStep, 3));
+    } else if (field === 'liseturu' && 
+      (value === 'Çok Programlı Anadolu Lisesi' || value === 'Mesleki ve Teknik Anadolu Lisesi')) {
+      setCurrentStep(Math.max(currentStep, 4));
+    } else if (field === 'universitedurumu' && (value === 'Mezun' || value === 'Devam Ediyor')) {
+      setCurrentStep(Math.max(currentStep, 5));
     }
   };
 
@@ -71,37 +75,6 @@ const EducationTab: React.FC<EducationTabProps> = ({
       console.error("Save error:", error);
     }
   };
-
-  const statusOptions = ["Mezun", "Devam Ediyor", "Terk", "Tamamlanmadı"];
-
-  const highSchoolTypes = [
-    "Anadolu Lisesi",
-    "Fen Lisesi",
-    "Meslek Lisesi",
-    "İmam Hatip Lisesi",
-    "Özel Lise",
-    "Açık Öğretim",
-    "Diğer"
-  ];
-
-  const vocationalBranches = [
-    "Kuaförlük",
-    "Estetisyenlik",
-    "Makyaj Uzmanlığı",
-    "Cilt Bakımı",
-    "Manikür/Pedikür",
-    "Saç Bakımı",
-    "Diğer"
-  ];
-
-  const universityOptions = [
-    "Mezun",
-    "Devam Ediyor",
-    "Terk",
-    "Tamamlanmadı",
-    "Yüksek Lisans",
-    "Doktora"
-  ];
 
   return (
     <Card>
@@ -135,7 +108,7 @@ const EducationTab: React.FC<EducationTabProps> = ({
               </div>
             </div>
             
-            {/* Step 2: Lise Durumu (Only shown if ortaokul is Mezun) */}
+            {/* Step 2: Lise Durumu */}
             {currentStep >= 2 && (
               <div className="grid gap-2 pt-4 border-t border-gray-100">
                 <label className="text-sm font-medium flex items-center gap-2">
@@ -160,50 +133,51 @@ const EducationTab: React.FC<EducationTabProps> = ({
               </div>
             )}
             
-            {/* Step 3 & 4: Lise Türü and Mesleki Branş (Only shown if lise is Mezun) */}
-            {currentStep >= 4 && (
-              <div className="grid gap-4 pt-4 border-t border-gray-100">
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="grid gap-2">
-                    <label className="text-sm font-medium">Lise Türü</label>
-                    <Select
-                      value={educationData.liseturu}
-                      onValueChange={(value) => handleChange("liseturu", value)}
-                    >
-                      <SelectTrigger className="text-gray-900">
-                        <SelectValue placeholder="Lise türü seçin" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {highSchoolTypes.map((type) => (
-                          <SelectItem key={`type-${type}`} value={type}>
-                            {type}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="grid gap-2">
-                    <label className="text-sm font-medium">Mesleki Branş</label>
-                    <Select
-                      value={educationData.meslekibrans}
-                      onValueChange={(value) => handleChange("meslekibrans", value)}
-                    >
-                      <SelectTrigger className="text-gray-900">
-                        <SelectValue placeholder="Branş seçin" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {vocationalBranches.map((branch) => (
-                          <SelectItem key={`branch-${branch}`} value={branch}>
-                            {branch}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+            {/* Step 3: Lise Türü */}
+            {currentStep >= 3 && (
+              <div className="grid gap-2 pt-4 border-t border-gray-100">
+                <label className="text-sm font-medium">Lise Türü</label>
+                <Select
+                  value={educationData.liseturu}
+                  onValueChange={(value) => handleChange("liseturu", value)}
+                >
+                  <SelectTrigger className="text-gray-900">
+                    <SelectValue placeholder="Lise türü seçin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {HIGH_SCHOOL_TYPES.map((type) => (
+                      <SelectItem key={`type-${type}`} value={type}>
+                        {type}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
+            
+            {/* Step 4: Mesleki Branş (only for specific high school types) */}
+            {currentStep >= 4 && (
+              ['Çok Programlı Anadolu Lisesi', 'Mesleki ve Teknik Anadolu Lisesi']
+                .includes(educationData.liseturu) && (
+              <div className="grid gap-2">
+                <label className="text-sm font-medium">Mesleki Branş</label>
+                <Select
+                  value={educationData.meslekibrans}
+                  onValueChange={(value) => handleChange("meslekibrans", value)}
+                >
+                  <SelectTrigger className="text-gray-900">
+                    <SelectValue placeholder="Branş seçin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DEPARTMENTS.map((branch) => (
+                      <SelectItem key={`branch-${branch}`} value={branch}>
+                        {branch}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ))}
             
             {/* Step 5: Üniversite Durumu */}
             {currentStep >= 5 && (
@@ -220,7 +194,7 @@ const EducationTab: React.FC<EducationTabProps> = ({
                     <SelectValue placeholder="Üniversite durumu seçin" />
                   </SelectTrigger>
                   <SelectContent>
-                    {universityOptions.map((option) => (
+                    {statusOptions.map((option) => (
                       <SelectItem key={`uni-${option}`} value={option}>
                         {option}
                       </SelectItem>
@@ -230,16 +204,25 @@ const EducationTab: React.FC<EducationTabProps> = ({
               </div>
             )}
             
-            {/* Step 6: Üniversite Bölümü (Only shown if üniversite is Mezun) */}
-            {currentStep >= 6 && (
+            {/* Step 6: Üniversite Bölümü */}
+            {currentStep >= 5 && ['Mezun', 'Devam Ediyor'].includes(educationData.universitedurumu) && (
               <div className="grid gap-2 pt-4 border-t border-gray-100">
                 <label className="text-sm font-medium">Üniversite Bölümü</label>
-                <Input
+                <Select
                   value={educationData.universitebolum}
-                  onChange={(e) => handleChange("universitebolum", e.target.value)}
-                  placeholder="Bölümünüz"
-                  className="text-gray-900"
-                />
+                  onValueChange={(value) => handleChange("universitebolum", value)}
+                >
+                  <SelectTrigger className="text-gray-900">
+                    <SelectValue placeholder="Bölüm seçin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DEPARTMENTS.map((dept) => (
+                      <SelectItem key={`dept-${dept}`} value={dept}>
+                        {dept}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
           </div>
@@ -249,39 +232,15 @@ const EducationTab: React.FC<EducationTabProps> = ({
               type="button" 
               variant="outline"
               onClick={() => {
-                // Reset form and steps
                 setCurrentStep(1);
-                
-                // Handle reset based on which type of onEducationChange we have
-                if (typeof onEducationChange === 'function') {
-                  if (onEducationChange.length === 1) {
-                    (onEducationChange as (data: EducationData) => void)({
-                      ortaokuldurumu: "",
-                      lisedurumu: "",
-                      liseturu: "",
-                      meslekibrans: "",
-                      universitedurumu: "",
-                      universitebolum: ""
-                    });
-                  } else {
-                    // Reset each field individually
-                    const emptyData: EducationData = {
-                      ortaokuldurumu: "",
-                      lisedurumu: "",
-                      liseturu: "",
-                      meslekibrans: "",
-                      universitedurumu: "",
-                      universitebolum: ""
-                    };
-                    
-                    Object.entries(emptyData).forEach(([key, value]) => {
-                      (onEducationChange as (field: keyof EducationData, value: string) => void)(
-                        key as keyof EducationData,
-                        value
-                      );
-                    });
-                  }
-                }
+                onEducationChange({
+                  ortaokuldurumu: "",
+                  lisedurumu: "",
+                  liseturu: "",
+                  meslekibrans: "",
+                  universitedurumu: "",
+                  universitebolum: ""
+                });
               }}
             >
               İptal
