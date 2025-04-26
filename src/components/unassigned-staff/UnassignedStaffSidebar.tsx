@@ -66,7 +66,7 @@ export const UnassignedStaffSidebar: React.FC<UnassignedStaffSidebarProps> = ({
 
   const initials = (userProfile.firstName?.[0] || '') + (userProfile.lastName?.[0] || '');
   const fullName = formatNameWithTitle(userProfile.firstName || '', userProfile.lastName || '', userProfile.gender);
-  const userRole = 'Personel';
+  const userRole = getUserRoleText('staff');
 
   return (
     <>

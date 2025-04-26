@@ -1,21 +1,18 @@
 
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { LoadingButton } from "@/components/ui/loading-button";
+import { Store } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
-import { shopService } from "@/lib/auth/services/shopService";
-import { LoadingButton } from "@/components/ui/loading-button";
 
 interface JoinShopModalProps {
   open: boolean;
@@ -25,188 +22,111 @@ interface JoinShopModalProps {
 
 export function JoinShopModal({ open, onOpenChange, personelId }: JoinShopModalProps) {
   const [shopCode, setShopCode] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [isValidating, setIsValidating] = useState(false);
-  const navigate = useNavigate();
-  
-  const handleJoinShop = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!shopCode.trim()) {
-      toast.error("İşletme kodu giriniz");
+  const [isJoining, setIsJoining] = useState(false);
+
+  const handleJoinShop = async () => {
+    if (!shopCode) {
+      toast.error("Lütfen işletme kodunu giriniz");
       return;
     }
 
+    if (!personelId) {
+      toast.error("Personel bilgileriniz bulunamadı. Lütfen tekrar giriş yapınız.");
+      return;
+    }
+
+    setIsJoining(true);
     try {
-      // First validate the shop code
-      setIsValidating(true);
-      const shop = await shopService.verifyShopCode(shopCode.trim());
-      setIsValidating(false);
-      
-      if (!shop) {
+      // First, check if the shop code exists
+      const { data: shopData, error: shopError } = await supabase
+        .from("dukkanlar")
+        .select("id")
+        .eq("kod", shopCode)
+        .single();
+
+      if (shopError) {
+        console.error("Error fetching shop:", shopError);
         toast.error("Girilen işletme kodu bulunamadı. Lütfen doğru kodu kullandığınızdan emin olun.");
         return;
       }
-      
-      // If we don't have personelId yet, let's try to get it first
-      let currentPersonelId = personelId;
-      if (!currentPersonelId) {
-        setIsLoading(true);
+
+      if (!shopData) {
+        toast.error("Girilen işletme kodu bulunamadı. Lütfen doğru kodu kullandığınızdan emin olun.");
+        return;
+      }
+
+      // Create a join request
+      const { error: requestError } = await supabase
+        .from("staff_join_requests")
+        .insert({
+          personel_id: personelId,
+          dukkan_id: shopData.id,
+          durum: "pending"
+        });
+
+      if (requestError) {
+        console.error("Error creating join request:", requestError);
         
-        // Get the current user
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        if (userError || !user) {
-          toast.error("Oturum bilgileri alınamadı. Lütfen tekrar giriş yapınız.");
-          setIsLoading(false);
-          return;
+        // Check if it's a duplicate request
+        if (requestError.code === "23505") {
+          toast.error("Bu işletmeye zaten katılım isteği gönderdiniz.");
+        } else {
+          toast.error("İşletmeye katılım isteği gönderilirken bir hata oluştu.");
         }
-        
-        // Try to find personel record
-        const { data: personelData, error: personelError } = await supabase
-          .from('personel')
-          .select('id')
-          .eq('auth_id', user.id)
-          .maybeSingle();
-        
-        // If no personel record, create one
-        if (!personelData && !personelError) {
-          const name = user.user_metadata?.first_name ? 
-            `${user.user_metadata.first_name} ${user.user_metadata.last_name || ''}`.trim() : 
-            user.email?.split('@')[0] || 'Personel';
-          
-          const { data: newPersonel, error: createError } = await supabase
-            .from('personel')
-            .insert([{
-              auth_id: user.id,
-              ad_soyad: name,
-              telefon: user.user_metadata?.phone || '-',
-              eposta: user.email || '-',
-              adres: user.user_metadata?.address || '-',
-              personel_no: `P${Date.now().toString().substring(8)}`,
-              calisma_sistemi: 'Tam Zamanlı',
-              maas: 0,
-              prim_yuzdesi: 0,
-              avatar_url: user.user_metadata?.avatar_url || ''
-            }])
-            .select('id')
-            .single();
-
-          if (createError) {
-            console.error("Error creating personel record:", createError);
-            toast.error("Profil oluşturulamadı. Lütfen tekrar deneyiniz.");
-            setIsLoading(false);
-            return;
-          }
-          
-          currentPersonelId = newPersonel.id;
-        } else if (personelData) {
-          currentPersonelId = personelData.id;
-        } else if (personelError) {
-          console.error("Error fetching personel:", personelError);
-          toast.error("Profil bilgisi alınamadı. Lütfen tekrar deneyiniz.");
-          setIsLoading(false);
-          return;
-        }
-      }
-      
-      if (!currentPersonelId) {
-        toast.error("Personel bilgisi bulunamadı. Lütfen tekrar deneyiniz.");
-        setIsLoading(false);
         return;
       }
 
-      setIsLoading(true);
-      
-      // Check if there is already a pending request
-      const { data: existingRequests, error: checkError } = await supabase
-        .from('staff_join_requests')
-        .select('*')
-        .eq('personel_id', currentPersonelId)
-        .eq('durum', 'pending');
-
-      if (checkError) {
-        console.error("Error checking existing requests:", checkError);
-        toast.error("İşlem sırasında bir hata oluştu");
-        setIsLoading(false);
-        return;
-      }
-
-      if (existingRequests && existingRequests.length > 0) {
-        toast.warning("Zaten bekleyen bir katılım talebiniz bulunuyor. İşletme yöneticisinin onayını bekleyiniz.");
-        onOpenChange(false);
-        setIsLoading(false);
-        return;
-      }
-
-      // Create join request
-      const { error: joinError } = await supabase
-        .from('staff_join_requests')
-        .insert([{
-          personel_id: currentPersonelId,
-          dukkan_id: shop.id,
-          durum: 'pending'
-        }]);
-
-      if (joinError) {
-        console.error("Error creating join request:", joinError);
-        toast.error("İşletmeye katılım talebi oluşturulurken bir hata oluştu");
-      } else {
-        toast.success(`"${shop.ad}" işletmesine katılım talebiniz oluşturuldu. Yönetici onayı bekleniyor.`);
-        setTimeout(() => {
-          onOpenChange(false);
-        }, 2000);
-      }
-    } catch (error: any) {
+      toast.success("İşletmeye katılım talebiniz başarıyla gönderildi. Yönetici onayı bekleniyor.");
+      onOpenChange(false);
+      setShopCode("");
+    } catch (error) {
       console.error("Error joining shop:", error);
-      toast.error(error.message || "İşletmeye katılım sırasında bir hata oluştu");
+      toast.error("İşletmeye katılırken bir hata oluştu.");
     } finally {
-      setIsLoading(false);
+      setIsJoining(false);
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>İşletmeye Katıl</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Store className="h-5 w-5" />
+            İşletmeye Katıl
+          </DialogTitle>
           <DialogDescription>
-            Bağlanmak istediğiniz işletmenin yöneticisinden aldığınız kodu giriniz. 
-            Kodun doğruluğunu kontrol ediniz.
+            İşletme yöneticisinden aldığınız kodu girerek bir işletmeye personel olarak katılın.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleJoinShop}>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="shopCode" className="text-right col-span-1">
-                İşletme Kodu
-              </Label>
-              <Input
-                id="shopCode"
-                placeholder="İşletme kodunu buraya giriniz..."
-                value={shopCode}
-                onChange={(e) => {
-                  // Only allow alphanumeric characters
-                  const alphanumericValue = e.target.value.replace(/[^a-zA-Z0-9-]/g, '');
-                  setShopCode(alphanumericValue);
-                }}
-                className="col-span-3"
-                disabled={isValidating || isLoading}
-              />
-            </div>
+
+        <div className="grid gap-4 py-4">
+          <div className="grid gap-2">
+            <label htmlFor="shopCode" className="text-sm font-medium">
+              İşletme Kodu
+            </label>
+            <Input
+              id="shopCode"
+              value={shopCode}
+              onChange={(e) => setShopCode(e.target.value)}
+              placeholder="Örn: ABCDE123"
+              className="col-span-3"
+            />
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isValidating || isLoading}>
-              İptal
-            </Button>
-            <LoadingButton 
-              type="submit" 
-              className="bg-purple-600 hover:bg-purple-700 text-white"
-              loading={isValidating || isLoading}
-            >
-              İşletmeye Katıl
-            </LoadingButton>
-          </DialogFooter>
-        </form>
+        </div>
+
+        <div className="flex justify-end gap-3">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Vazgeç
+          </Button>
+          <LoadingButton
+            onClick={handleJoinShop}
+            loading={isJoining}
+            disabled={!shopCode || isJoining}
+          >
+            Katılım Talebi Gönder
+          </LoadingButton>
+        </div>
       </DialogContent>
     </Dialog>
   );

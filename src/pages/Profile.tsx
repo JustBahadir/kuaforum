@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { ProfileDisplay } from "@/components/customer-profile/ProfileDisplay";
 import { toast } from "sonner";
@@ -86,7 +85,8 @@ const Profile = () => {
             iban: profileData.iban || prev.iban
           }));
         }
-      } catch {
+      } catch (error) {
+        console.error("Profile data fetch error:", error);
         // Handle error silently
       }
 
@@ -97,37 +97,102 @@ const Profile = () => {
           return;
         }
 
-        const { data: eduData, error: eduError } = await supabase
-          .from("staff_education")
-          .select("*")
-          .eq("personel_id", user.id)
-          .single();
+        const { data: personelData, error: personelError } = await supabase
+          .from("personel")
+          .select("id")
+          .eq("auth_id", user.id)
+          .maybeSingle();
 
-        if (!eduError && eduData) {
-          setEducationData({
-            ortaokuldurumu: eduData.ortaokuldurumu || "",
-            lisedurumu: eduData.lisedurumu || "",
-            liseturu: eduData.liseturu || "",
-            meslekibrans: eduData.meslekibrans || "",
-            universitedurumu: eduData.universitedurumu || "",
-            universitebolum: eduData.universitebolum || ""
-          });
+        let personelId = personelData?.id;
+        if (!personelId) {
+          const { data: newPersonel, error: createError } = await supabase
+            .from("personel")
+            .insert([{
+              auth_id: user.id,
+              ad_soyad: `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || 'Personel',
+              telefon: profile.phone?.replace(/\s/g, "") || '-',
+              eposta: user.email || '-',
+              adres: profile.address || '-',
+              personel_no: `P${Date.now().toString().substring(8)}`,
+              calisma_sistemi: 'Tam Zamanlı',
+              maas: 0,
+              prim_yuzdesi: 0
+            }])
+            .select("id");
+
+          if (createError) {
+            console.error("Error creating personel record:", createError);
+            toast.error("Personel kaydı oluşturulamadı");
+          } else if (newPersonel && newPersonel.length > 0) {
+            personelId = newPersonel[0].id;
+            console.log("Created new personel record with ID:", personelId);
+          }
         }
 
-        const { data: histData, error: histError } = await supabase
-          .from("staff_history")
-          .select("*")
-          .eq("personel_id", user.id)
-          .single();
+        if (personelId) {
+          const { data: eduData, error: eduError } = await supabase
+            .from("staff_education")
+            .select("*")
+            .eq("personel_id", personelId)
+            .maybeSingle();
 
-        if (!histError && histData) {
-          setHistoryData({
-            isyerleri: histData.isyerleri || "",
-            gorevpozisyon: histData.gorevpozisyon || "",
-            belgeler: histData.belgeler || "",
-            yarismalar: histData.yarismalar || "",
-            cv: histData.cv || ""
-          });
+          if (!eduError && eduData) {
+            setEducationData({
+              ortaokuldurumu: eduData.ortaokuldurumu || "",
+              lisedurumu: eduData.lisedurumu || "",
+              liseturu: eduData.liseturu || "",
+              meslekibrans: eduData.meslekibrans || "",
+              universitedurumu: eduData.universitedurumu || "",
+              universitebolum: eduData.universitebolum || ""
+            });
+          } else {
+            const { error: createEduError } = await supabase
+              .from("staff_education")
+              .insert({
+                personel_id: personelId,
+                ortaokuldurumu: "",
+                lisedurumu: "",
+                liseturu: "",
+                meslekibrans: "",
+                universitedurumu: "",
+                universitebolum: ""
+              });
+            
+            if (createEduError && createEduError.code !== '23505') {
+              console.error("Error creating initial education record:", createEduError);
+            }
+          }
+
+          const { data: histData, error: histError } = await supabase
+            .from("staff_history")
+            .select("*")
+            .eq("personel_id", personelId)
+            .maybeSingle();
+
+          if (!histError && histData) {
+            setHistoryData({
+              isyerleri: histData.isyerleri || "",
+              gorevpozisyon: histData.gorevpozisyon || "",
+              belgeler: histData.belgeler || "",
+              yarismalar: histData.yarismalar || "",
+              cv: histData.cv || ""
+            });
+          } else {
+            const { error: createHistError } = await supabase
+              .from("staff_history")
+              .insert({
+                personel_id: personelId,
+                isyerleri: "",
+                gorevpozisyon: "",
+                belgeler: "",
+                yarismalar: "",
+                cv: ""
+              });
+            
+            if (createHistError && createHistError.code !== '23505') {
+              console.error("Error creating initial history record:", createHistError);
+            }
+          }
         }
       } catch (error) {
         console.error("Staff education/history fetch error:", error);
@@ -148,13 +213,41 @@ const Profile = () => {
       setIsUploading(true);
       setProfile(prev => ({ ...prev, avatarUrl: url }));
 
-      await supabase.auth.updateUser({
+      const { error: authError } = await supabase.auth.updateUser({
         data: { avatar_url: url }
       });
 
-      await profilServisi.guncelle({
+      if (authError) {
+        throw authError;
+      }
+
+      const { error: profileError } = await profilServisi.guncelle({
         avatar_url: url
       });
+
+      if (profileError) {
+        throw profileError;
+      }
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: personelData } = await supabase
+          .from("personel")
+          .select("id")
+          .eq("auth_id", user.id)
+          .maybeSingle();
+
+        if (personelData?.id) {
+          const { error: personelUpdateError } = await supabase
+            .from("personel")
+            .update({ avatar_url: url })
+            .eq("id", personelData.id);
+
+          if (personelUpdateError) {
+            console.error("Error updating personel avatar:", personelUpdateError);
+          }
+        }
+      }
 
       toast.success("Profil fotoğrafı başarıyla güncellendi");
     } catch (error) {
@@ -192,7 +285,7 @@ const Profile = () => {
 
       const phoneForSaving = profile.phone.replace(/\s/g, "");
 
-      await supabase.auth.updateUser({
+      const { error: authError } = await supabase.auth.updateUser({
         data: {
           first_name: profile.firstName,
           last_name: profile.lastName,
@@ -205,7 +298,11 @@ const Profile = () => {
         }
       });
 
-      await profilServisi.guncelle({
+      if (authError) {
+        throw authError;
+      }
+
+      const { error: profileError } = await profilServisi.guncelle({
         first_name: profile.firstName,
         last_name: profile.lastName,
         phone: phoneForSaving,
@@ -215,6 +312,35 @@ const Profile = () => {
         address: profile.address,
         iban: profile.iban
       });
+
+      if (profileError) {
+        throw profileError;
+      }
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: personelData } = await supabase
+          .from("personel")
+          .select("id")
+          .eq("auth_id", user.id)
+          .maybeSingle();
+
+        if (personelData?.id) {
+          const { error: personelUpdateError } = await supabase
+            .from("personel")
+            .update({
+              ad_soyad: `${profile.firstName} ${profile.lastName}`.trim(),
+              telefon: phoneForSaving,
+              adres: profile.address || '-',
+              avatar_url: profile.avatarUrl
+            })
+            .eq("id", personelData.id);
+
+          if (personelUpdateError) {
+            console.error("Error updating personel record:", personelUpdateError);
+          }
+        }
+      }
 
       toast.success("Profil bilgileriniz başarıyla güncellendi");
     } catch (error) {
@@ -236,16 +362,13 @@ const Profile = () => {
   const handleSaveEducationHistory = async () => {
     setLoadingEduHist(true);
     try {
-      const {
-        data: { user },
-        error: userErr,
-      } = await supabase.auth.getUser();
+      const { data: { user }, error: userErr } = await supabase.auth.getUser();
       if (userErr || !user) {
         toast.error("Kullanıcı bilgisi alınamadı");
-        setLoadingEduHist(false);
         return;
       }
 
+      let personelId;
       const { data: personelData, error: personelError } = await supabase
         .from('personel')
         .select('id')
@@ -255,123 +378,101 @@ const Profile = () => {
       if (personelError) {
         console.error("Error fetching personel:", personelError);
         toast.error("Personel bilgisi alınamadı");
-        setLoadingEduHist(false);
         return;
       }
 
       if (!personelData) {
-        console.log("No personel record found, creating one");
+        const { data: newPersonel, error: createError } = await supabase
+          .from('personel')
+          .insert([{
+            auth_id: user.id,
+            ad_soyad: `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || 'Personel',
+            telefon: profile.phone?.replace(/\s/g, "") || '-',
+            eposta: user.email || '-',
+            adres: profile.address || '-',
+            personel_no: `P${Date.now().toString().substring(8)}`,
+            calisma_sistemi: 'Tam Zamanlı',
+            maas: 0,
+            prim_yuzdesi: 0,
+            avatar_url: profile.avatarUrl || ''
+          }])
+          .select('id');
+
+        if (createError) {
+          console.error("Personel record creation error:", createError);
+          toast.error("Personel kaydı oluşturulamadı");
+          return;
+        } 
         
-        try {
-          // Create basic personel record using profile data
-          const { data: newPersonel, error: createError } = await supabase
-            .from('personel')
-            .insert([{
-              auth_id: user.id,
-              ad_soyad: `${profile.firstName || ''} ${profile.lastName || ''}`.trim(),
-              telefon: profile.phone || '-',
-              eposta: user.email || '-',
-              adres: profile.address || '-',
-              personel_no: `P${Date.now().toString().substring(8)}`,
-              calisma_sistemi: 'Tam Zamanlı',
-              maas: 0,
-              prim_yuzdesi: 0
-            }])
-            .select('id');
-
-          if (createError) {
-            console.error("Personel record creation error:", createError);
-            toast.error("Personel kaydı oluşturulamadı");
-            setLoadingEduHist(false);
-            return;
-          } 
-          
-          if (!newPersonel || newPersonel.length === 0) {
-            toast.error("Personel kaydı oluşturulamadı");
-            setLoadingEduHist(false);
-            return;
-          }
-          
-          const personelId = newPersonel[0].id;
-          
-          const upsertEducationPromise = supabase
-            .from("staff_education")
-            .upsert(
-              {
-                personel_id: personelId,
-                ...educationData,
-                updated_at: new Date().toISOString(),
-              },
-              { onConflict: "personel_id" }
-            );
-
-          const upsertHistoryPromise = supabase
-            .from("staff_history")
-            .upsert(
-              {
-                personel_id: personelId,
-                ...historyData,
-                updated_at: new Date().toISOString(),
-              },
-              { onConflict: "personel_id" }
-            );
-
-          const [eduResult, histResult] = await Promise.all([
-            upsertEducationPromise,
-            upsertHistoryPromise,
-          ]);
-
-          if (eduResult.error || histResult.error) {
-            console.error("Error saving education/history:", eduResult.error || histResult.error);
-            toast.error("Eğitim ve geçmiş bilgileri kaydedilemedi");
-          } else {
-            toast.success("Eğitim ve geçmiş bilgileri başarıyla kaydedildi");
-          }
-        } catch (err) {
-          console.error("Error creating personel record:", err);
-          toast.error("İşlem sırasında bir hata oluştu");
+        if (!newPersonel || newPersonel.length === 0) {
+          toast.error("Personel kaydı oluşturulamadı");
+          return;
         }
+        
+        personelId = newPersonel[0].id;
       } else {
-        // Personel record already exists, update education and history
-        const personelId = personelData.id;
-        
-        const upsertEducationPromise = supabase
+        personelId = personelData.id;
+      }
+
+      const { data: existingEdu, error: checkEduError } = await supabase
+        .from("staff_education")
+        .select("personel_id")
+        .eq("personel_id", personelId)
+        .maybeSingle();
+      
+      let eduUpsertResult;
+      if (!existingEdu) {
+        eduUpsertResult = await supabase
           .from("staff_education")
-          .upsert(
-            {
-              personel_id: personelId,
-              ...educationData,
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: "personel_id" }
-          );
+          .insert({
+            personel_id: personelId,
+            ...educationData,
+            updated_at: new Date().toISOString(),
+          });
+      } else {
+        eduUpsertResult = await supabase
+          .from("staff_education")
+          .update({
+            ...educationData,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("personel_id", personelId);
+      }
 
-        const upsertHistoryPromise = supabase
+      const { data: existingHist, error: checkHistError } = await supabase
+        .from("staff_history")
+        .select("personel_id")
+        .eq("personel_id", personelId)
+        .maybeSingle();
+      
+      let histUpsertResult;
+      if (!existingHist) {
+        histUpsertResult = await supabase
           .from("staff_history")
-          .upsert(
-            {
-              personel_id: personelId,
-              ...historyData,
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: "personel_id" }
-          );
+          .insert({
+            personel_id: personelId,
+            ...historyData,
+            updated_at: new Date().toISOString(),
+          });
+      } else {
+        histUpsertResult = await supabase
+          .from("staff_history")
+          .update({
+            ...historyData,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("personel_id", personelId);
+      }
 
-        const [eduResult, histResult] = await Promise.all([
-          upsertEducationPromise,
-          upsertHistoryPromise,
-        ]);
-
-        if (eduResult.error || histResult.error) {
-          console.error("Error saving education/history:", eduResult.error || histResult.error);
-          toast.error("Eğitim ve geçmiş bilgileri kaydedilemedi");
-        } else {
-          toast.success("Eğitim ve geçmiş bilgileri başarıyla kaydedildi");
-        }
+      if (eduUpsertResult.error || histUpsertResult.error) {
+        console.error("Error saving education/history:", eduUpsertResult.error || histUpsertResult.error);
+        toast.error("Bilgiler kaydedilirken bir hata oluştu");
+      } else {
+        toast.success("Bilgiler başarıyla kaydedildi");
       }
     } catch (error) {
       console.error("Error saving education/history:", error);
-      toast.error("Eğitim ve geçmiş bilgileri kaydedilirken hata oluştu");
+      toast.error("Bilgiler kaydedilirken bir hata oluştu");
     } finally {
       setLoadingEduHist(false);
     }

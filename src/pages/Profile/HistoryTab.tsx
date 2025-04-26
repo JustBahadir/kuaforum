@@ -288,6 +288,7 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
       
       // Save to database using the onSave callback
       await onSave(updatedHistoryData);
+      toast.success("Kayıt başarıyla silindi");
       
     } catch (error) {
       console.error("Error deleting experience:", error);
@@ -316,6 +317,7 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
       
       // Save to database using the onSave callback
       await onSave(updatedHistoryData);
+      toast.success("Kayıt başarıyla silindi");
       
     } catch (error) {
       console.error("Error deleting certificate:", error);
@@ -344,6 +346,7 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
       
       // Save to database using the onSave callback
       await onSave(updatedHistoryData);
+      toast.success("Kayıt başarıyla silindi");
       
     } catch (error) {
       console.error("Error deleting competition:", error);
