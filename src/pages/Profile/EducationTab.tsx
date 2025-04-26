@@ -1,10 +1,12 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LoadingButton } from "@/components/ui/loading-button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { School, BookOpen, GraduationCap } from "lucide-react";
+import { supabase } from "@/lib/supabase/client";
+import { toast } from "sonner";
 
 interface EducationData {
   ortaokuldurumu: string;
@@ -40,7 +42,7 @@ const DEPARTMENTS = [
   "Diğer"
 ];
 
-const statusOptions = ["Mezun", "Devam Ediyor", "Terk", "Tamamlanmadı"];
+const statusOptions = ["Mezun", "Devam Ediyor", "Tamamlanmadı"];
 
 const EducationTab: React.FC<EducationTabProps> = ({
   educationData,
@@ -49,10 +51,36 @@ const EducationTab: React.FC<EducationTabProps> = ({
   isLoading,
 }) => {
   const [currentStep, setCurrentStep] = useState<number>(1);
+  const [localData, setLocalData] = useState<EducationData>(educationData);
+  const [savingData, setSavingData] = useState(false);
   
-  const handleChange = (field: keyof EducationData, value: string) => {
-    const newData = { ...educationData, [field]: value };
-    onEducationChange(newData);
+  // Initialize step based on existing data
+  useEffect(() => {
+    let step = 1;
+    
+    if (educationData.ortaokuldurumu === "Mezun") {
+      step = 2;
+    }
+    
+    if (educationData.lisedurumu === "Mezun") {
+      step = 3;
+    }
+    
+    if (educationData.liseturu && ["Çok Programlı Anadolu Lisesi", "Mesleki ve Teknik Anadolu Lisesi"].includes(educationData.liseturu)) {
+      step = 4;
+    }
+    
+    if (educationData.universitedurumu && ["Mezun", "Devam Ediyor"].includes(educationData.universitedurumu)) {
+      step = 5;
+    }
+    
+    setCurrentStep(step);
+    setLocalData(educationData);
+  }, [educationData]);
+  
+  const handleChange = async (field: keyof EducationData, value: string) => {
+    const updatedData = { ...localData, [field]: value };
+    setLocalData(updatedData);
     
     // Handle step progression
     if (field === 'ortaokuldurumu' && value === 'Mezun') {
@@ -65,14 +93,105 @@ const EducationTab: React.FC<EducationTabProps> = ({
     } else if (field === 'universitedurumu' && (value === 'Mezun' || value === 'Devam Ediyor')) {
       setCurrentStep(Math.max(currentStep, 5));
     }
+    
+    // Save data to database directly
+    await saveEducationData(updatedData);
+  };
+
+  const saveEducationData = async (data: EducationData) => {
+    setSavingData(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        const { data: personelData } = await supabase
+          .from('personel')
+          .select('id')
+          .eq('auth_id', user.id)
+          .maybeSingle();
+          
+        if (personelData) {
+          await supabase
+            .from('staff_education')
+            .upsert(
+              {
+                personel_id: personelData.id,
+                ...data,
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: 'personel_id' }
+            );
+            
+          // Update local state
+          onEducationChange(data);
+          toast.success("Eğitim bilgileri kaydedildi");
+        } else {
+          await createPersonelRecord(user.id, data);
+        }
+      }
+    } catch (error) {
+      console.error("Save error:", error);
+      toast.error("Eğitim bilgileri kaydedilirken bir hata oluştu");
+    } finally {
+      setSavingData(false);
+    }
+  };
+  
+  // Helper function to create personel record if it doesn't exist
+  const createPersonelRecord = async (authId: string, data: EducationData) => {
+    try {
+      // Get profile data for new personel record
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('first_name, last_name, phone, address, avatar_url')
+        .eq('id', authId)
+        .single();
+      
+      // Create basic personel record
+      const { data: newPersonel, error: createError } = await supabase
+        .from('personel')
+        .insert([{
+          auth_id: authId,
+          ad_soyad: profileData ? `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() : 'Çalışan',
+          telefon: profileData?.phone || '-',
+          eposta: '-',
+          adres: profileData?.address || '-',
+          personel_no: `P${Date.now().toString().substring(8)}`,
+          calisma_sistemi: 'Tam Zamanlı',
+          maas: 0,
+          prim_yuzdesi: 0,
+          avatar_url: profileData?.avatar_url || null
+        }])
+        .select('id');
+
+      if (createError) {
+        throw createError;
+      }
+      
+      if (newPersonel && newPersonel.length > 0) {
+        // Now insert education with the new personel ID
+        await supabase
+          .from('staff_education')
+          .insert([{
+            personel_id: newPersonel[0].id,
+            ...data
+          }]);
+          
+        toast.success("Eğitim bilgileri kaydedildi");
+      }
+    } catch (error) {
+      console.error("Error creating personel record:", error);
+      toast.error("Bilgiler kaydedilirken bir hata oluştu");
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
-      await onSave(educationData);
+      await saveEducationData(localData);
     } catch (error) {
       console.error("Save error:", error);
+      toast.error("Eğitim bilgileri kaydedilirken bir hata oluştu");
     }
   };
 
@@ -91,7 +210,7 @@ const EducationTab: React.FC<EducationTabProps> = ({
               <div className="grid gap-2">
                 <label className="text-sm font-medium">Ortaokul Durumu</label>
                 <Select
-                  value={educationData.ortaokuldurumu}
+                  value={localData.ortaokuldurumu}
                   onValueChange={(value) => handleChange("ortaokuldurumu", value)}
                 >
                   <SelectTrigger className="text-gray-900">
@@ -116,14 +235,14 @@ const EducationTab: React.FC<EducationTabProps> = ({
                   Lise Durumu
                 </label>
                 <Select
-                  value={educationData.lisedurumu}
+                  value={localData.lisedurumu}
                   onValueChange={(value) => handleChange("lisedurumu", value)}
                 >
                   <SelectTrigger className="text-gray-900">
                     <SelectValue placeholder="Lise durumu seçin" />
                   </SelectTrigger>
                   <SelectContent>
-                    {statusOptions.map((option) => (
+                    {statusOptions.filter(option => option !== "Terk").map((option) => (
                       <SelectItem key={`lise-${option}`} value={option}>
                         {option}
                       </SelectItem>
@@ -138,7 +257,7 @@ const EducationTab: React.FC<EducationTabProps> = ({
               <div className="grid gap-2 pt-4 border-t border-gray-100">
                 <label className="text-sm font-medium">Lise Türü</label>
                 <Select
-                  value={educationData.liseturu}
+                  value={localData.liseturu}
                   onValueChange={(value) => handleChange("liseturu", value)}
                 >
                   <SelectTrigger className="text-gray-900">
@@ -158,18 +277,18 @@ const EducationTab: React.FC<EducationTabProps> = ({
             {/* Step 4: Mesleki Branş (only for specific high school types) */}
             {currentStep >= 4 && (
               ['Çok Programlı Anadolu Lisesi', 'Mesleki ve Teknik Anadolu Lisesi']
-                .includes(educationData.liseturu) && (
+                .includes(localData.liseturu) && (
               <div className="grid gap-2">
                 <label className="text-sm font-medium">Mesleki Branş</label>
                 <Select
-                  value={educationData.meslekibrans}
+                  value={localData.meslekibrans}
                   onValueChange={(value) => handleChange("meslekibrans", value)}
                 >
                   <SelectTrigger className="text-gray-900">
                     <SelectValue placeholder="Branş seçin" />
                   </SelectTrigger>
                   <SelectContent>
-                    {DEPARTMENTS.map((branch) => (
+                    {["Saç Bakımı ve Güzellik Hizmetleri", "Diğer"].map((branch) => (
                       <SelectItem key={`branch-${branch}`} value={branch}>
                         {branch}
                       </SelectItem>
@@ -180,21 +299,21 @@ const EducationTab: React.FC<EducationTabProps> = ({
             ))}
             
             {/* Step 5: Üniversite Durumu */}
-            {currentStep >= 5 && (
+            {currentStep >= 3 && (
               <div className="grid gap-2 pt-4 border-t border-gray-100">
                 <label className="text-sm font-medium flex items-center gap-2">
                   <GraduationCap size={16} />
                   Üniversite Durumu
                 </label>
                 <Select
-                  value={educationData.universitedurumu}
+                  value={localData.universitedurumu}
                   onValueChange={(value) => handleChange("universitedurumu", value)}
                 >
                   <SelectTrigger className="text-gray-900">
                     <SelectValue placeholder="Üniversite durumu seçin" />
                   </SelectTrigger>
                   <SelectContent>
-                    {statusOptions.map((option) => (
+                    {statusOptions.filter(option => option !== "Terk").map((option) => (
                       <SelectItem key={`uni-${option}`} value={option}>
                         {option}
                       </SelectItem>
@@ -205,18 +324,18 @@ const EducationTab: React.FC<EducationTabProps> = ({
             )}
             
             {/* Step 6: Üniversite Bölümü */}
-            {currentStep >= 5 && ['Mezun', 'Devam Ediyor'].includes(educationData.universitedurumu) && (
+            {currentStep >= 3 && ['Mezun', 'Devam Ediyor'].includes(localData.universitedurumu) && (
               <div className="grid gap-2 pt-4 border-t border-gray-100">
                 <label className="text-sm font-medium">Üniversite Bölümü</label>
                 <Select
-                  value={educationData.universitebolum}
+                  value={localData.universitebolum}
                   onValueChange={(value) => handleChange("universitebolum", value)}
                 >
                   <SelectTrigger className="text-gray-900">
                     <SelectValue placeholder="Bölüm seçin" />
                   </SelectTrigger>
                   <SelectContent>
-                    {DEPARTMENTS.map((dept) => (
+                    {["Saç Bakımı ve Güzellik Hizmetleri", "Diğer"].map((dept) => (
                       <SelectItem key={`dept-${dept}`} value={dept}>
                         {dept}
                       </SelectItem>
@@ -231,24 +350,26 @@ const EducationTab: React.FC<EducationTabProps> = ({
             <Button
               type="button" 
               variant="outline"
-              onClick={() => {
-                setCurrentStep(1);
-                onEducationChange({
+              onClick={async () => {
+                const resetData = {
                   ortaokuldurumu: "",
                   lisedurumu: "",
                   liseturu: "",
                   meslekibrans: "",
                   universitedurumu: "",
                   universitebolum: ""
-                });
+                };
+                setLocalData(resetData);
+                setCurrentStep(1);
+                await saveEducationData(resetData);
               }}
             >
-              İptal
+              Temizle
             </Button>
             <LoadingButton
               type="submit"
-              loading={isLoading}
-              disabled={isLoading}
+              loading={savingData || isLoading}
+              disabled={savingData || isLoading}
               className="bg-purple-600 text-white hover:bg-purple-700"
             >
               Kaydet

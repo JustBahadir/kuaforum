@@ -1,6 +1,7 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/ui/loading-button";
 
 interface CvSectionProps {
   cv: string;
@@ -26,20 +27,28 @@ export default function CvSection({
   setCvEditMode,
 }: CvSectionProps) {
   const [localCv, setLocalCv] = React.useState(cv);
+  const [loading, setLoading] = React.useState(false);
 
   React.useEffect(() => {
     setLocalCv(cv);
   }, [cv]);
 
   const handleSave = async () => {
-    setCv(localCv);
-    await saveHistoryDataWithParams([], [], [], [], localCv);
-    setCvEditMode(false);
+    setLoading(true);
+    try {
+      setCv(localCv);
+      await saveHistoryDataWithParams([], [], [], [], localCv);
+      setCvEditMode(false);
+    } catch (error) {
+      console.error("Error saving CV:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div>
-      <h2 className="text-lg font-semibold mb-2">CV</h2>
+      <h2 className="text-lg font-semibold mb-2">Özgeçmiş</h2>
       {!cvEditMode ? (
         <div className="whitespace-pre-wrap border border-gray-300 rounded p-3">
           {cv || "Henüz CV eklenmemiş."}
@@ -50,6 +59,7 @@ export default function CvSection({
           rows={10}
           value={localCv}
           onChange={(e) => setLocalCv(e.target.value)}
+          placeholder="Kendiniz hakkında belirtmek istedikleriniz, hedefleriniz, kariyer planlarınız ve hayallerinizi yazabilirsiniz."
         />
       )}
       <div className="mt-2">
@@ -58,9 +68,9 @@ export default function CvSection({
             Düzenle
           </Button>
         ) : (
-          <Button size="sm" onClick={handleSave}>
+          <LoadingButton size="sm" onClick={handleSave} loading={loading}>
             Kaydet
-          </Button>
+          </LoadingButton>
         )}
       </div>
     </div>
