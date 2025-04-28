@@ -11,7 +11,8 @@ import Personnel from "@/pages/Personnel"; // Fixed import path
 import PendingStaffRequests from "@/pages/Personnel/PendingStaffRequests";
 import AuthGoogleCallback from "@/pages/AuthGoogleCallback";
 import Auth from "@/pages/Auth";
-import { toast, Toaster } from "sonner";
+import ShopHome from "@/pages/ShopHome";
+import { Toaster } from "sonner";
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/auth-google-callback" element={<AuthGoogleCallback />} />
         <Route path="/auth" element={<Auth />} />
+        <Route path="/shop-home" element={<ShopHome />} />
         <Route path="/customer-dashboard/*" element={<CustomerDashboard />} />
         <Route path="/unassigned-staff" element={<UnassignedStaff />} />
         <Route path="/staff-join-request" element={<StaffJoinRequest />} />
