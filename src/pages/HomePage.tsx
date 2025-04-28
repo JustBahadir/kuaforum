@@ -46,7 +46,7 @@ export default function HomePage() {
       <div className="container mx-auto px-4 py-8">
         <div className="grid md:grid-cols-2 gap-8 items-center min-h-[calc(100vh-4rem)]">
           <div className="space-y-8">
-            <h1 className="text-4xl font-bold text-center">Güzellik Merkeziniz İçin 
+            <h1 className="text-4xl font-bold text-center">Güzellik Merkeziniz İçin
 Tek Adres</h1>
             <p className="text-lg text-muted-foreground">
               Online randevu sistemi ile güzellik hizmetlerinizi kolayca yönetin
