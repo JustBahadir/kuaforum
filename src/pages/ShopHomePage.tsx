@@ -9,11 +9,12 @@ import { ShopContactCard } from "@/components/shop/ShopContactCard";
 import { ShopWorkingHoursCard } from "@/components/shop/ShopWorkingHoursCard";
 import { ShopGalleryCard } from "@/components/shop/ShopGalleryCard";
 import { ShopPersonnelCard } from "@/components/shop/ShopPersonnelCard";
-// Removed duplicate import of useNavigate
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function ShopHomePage() {
   const { userRole, dukkanId, userId, loading, refreshProfile } = useCustomerAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   // Ensure profile is fully loaded on initial render
   useEffect(() => {
@@ -119,6 +120,7 @@ export default function ShopHomePage() {
             <ShopGalleryCard
               isletmeId={isletmeData.id}
               userRole={userRole}
+              queryClient={queryClient}
             />
             <ShopPersonnelCard
               personelListesi={personelListesi}

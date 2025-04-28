@@ -39,4 +39,3 @@ export function ShopGalleryCard({ isletmeId, userRole, queryClient }: ShopGaller
     </Card>
   );
 }
-
