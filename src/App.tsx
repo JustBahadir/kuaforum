@@ -7,7 +7,7 @@ import CustomerDashboard from "@/pages/CustomerDashboard";
 import UnassignedStaff from "@/pages/UnassignedStaff";
 import StaffJoinRequest from "@/pages/StaffJoinRequest";
 import Profile from "@/pages/Profile";
-import Personnel from "@/pages/Personnel/PersonnelPage";
+import Personnel from "@/pages/Personnel"; // Fixed import path
 import PendingStaffRequests from "@/pages/Personnel/PendingStaffRequests";
 import AuthGoogleCallback from "@/pages/AuthGoogleCallback";
 import Auth from "@/pages/Auth";
