@@ -29,6 +29,8 @@ import StaffOperations from "./pages/operations/StaffOperations";
 import Profile from "./pages/Profile";
 import AuthGoogleCallback from "./pages/AuthGoogleCallback";
 import UnassignedStaff from "./pages/UnassignedStaff";
+import StaffJoinRequest from "./pages/StaffJoinRequest";
+import PendingStaffRequests from "./pages/Personnel/PendingStaffRequests";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -58,6 +60,7 @@ function App() {
 
               {/* Shop/Staff Routes */}
               <Route path="/personnel" element={<Personnel />} />
+              <Route path="/personnel/pending-requests" element={<PendingStaffRequests />} />
               <Route path="/shop-home" element={<ShopHomePage />} />
               <Route path="/shop-settings" element={<ShopSettings />} />
               <Route path="/shop-statistics" element={<ShopStatistics />} />
@@ -65,6 +68,7 @@ function App() {
               <Route path="/profile" element={<Profile />} />
               <Route path="/staff-profile" element={<StaffProfile />} />
               <Route path="/unassigned-staff" element={<UnassignedStaff />} />
+              <Route path="/staff-join-request" element={<StaffJoinRequest />} />
               <Route path="/customers" element={<Customers />} />
               <Route path="/settings" element={<Settings />} />
               

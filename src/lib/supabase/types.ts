@@ -154,4 +154,5 @@ export interface Notification {
   read: boolean;
   created_at: string;
   related_appointment_id?: number;
+  related_staff_id?: number; // New field
 }
