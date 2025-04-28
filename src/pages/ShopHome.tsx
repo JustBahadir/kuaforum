@@ -13,13 +13,13 @@ import { ShopCodeSection } from "@/components/shop/ShopCodeSection";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, RefreshCw } from "lucide-react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function ShopHome() {
   const { userRole, dukkanId, userId, loading, refreshProfile } = useCustomerAuth();
   const [retryCounter, setRetryCounter] = useState(0);
   const navigate = useNavigate();
-  const queryClient = new QueryClient();
+  const queryClient = useQueryClient();
 
   // Shop data hook
   const {
@@ -129,46 +129,44 @@ export default function ShopHome() {
 
   // Main render with business information
   return (
-    <QueryClientProvider client={queryClient}>
-      <StaffLayout>
-        <div className="container mx-auto px-4 py-6 space-y-6">
-          <ShopProfileHeader
-            isletmeData={isletmeData}
-            userRole={userRole}
-            queryClient={queryClient}
-          />
+    <StaffLayout>
+      <div className="container mx-auto px-4 py-6 space-y-6">
+        <ShopProfileHeader
+          isletmeData={isletmeData}
+          userRole={userRole}
+          queryClient={queryClient}
+        />
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <div className="lg:col-span-4 space-y-6">
-              <ShopContactCard isletmeData={isletmeData} />
-              <ShopWorkingHoursCard
-                calisma_saatleri={calisma_saatleri}
-                userRole={userRole}
-                dukkanId={dukkanId}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-4 space-y-6">
+            <ShopContactCard isletmeData={isletmeData} />
+            <ShopWorkingHoursCard
+              calisma_saatleri={calisma_saatleri}
+              userRole={userRole}
+              dukkanId={dukkanId}
+            />
+            
+            {userRole === "admin" && (
+              <ShopCodeSection 
+                shopId={isletmeData.id} 
+                shopName={isletmeData.ad} 
               />
-              
-              {userRole === "admin" && (
-                <ShopCodeSection 
-                  shopId={isletmeData.id} 
-                  shopName={isletmeData.ad} 
-                />
-              )}
-            </div>
+            )}
+          </div>
 
-            <div className="lg:col-span-8 space-y-6">
-              <ShopGalleryCard
-                isletmeId={isletmeData.id}
-                userRole={userRole}
-                queryClient={queryClient}
-              />
-              <ShopPersonnelCard
-                personelListesi={personelListesi}
-                userRole={userRole}
-              />
-            </div>
+          <div className="lg:col-span-8 space-y-6">
+            <ShopGalleryCard
+              isletmeId={isletmeData.id}
+              userRole={userRole}
+              queryClient={queryClient}
+            />
+            <ShopPersonnelCard
+              personelListesi={personelListesi}
+              userRole={userRole}
+            />
           </div>
         </div>
-      </StaffLayout>
-    </QueryClientProvider>
+      </div>
+    </StaffLayout>
   );
 }
