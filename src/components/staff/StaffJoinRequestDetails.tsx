@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -17,6 +16,7 @@ interface StaffProfile {
   avatar_url?: string;
   birth_date?: string;
   gender?: 'erkek' | 'kadın' | null;
+  auth_id?: string;
 }
 
 interface StaffEducation {
