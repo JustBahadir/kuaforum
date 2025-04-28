@@ -1,24 +1,24 @@
 
-
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2, ImagePlus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { QueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useState } from "react";
 import { ShopProfilePhotoUpload } from "@/components/shop/ShopProfilePhotoUpload";
+
 interface ShopProfileHeaderProps {
   isletmeData: any;
   userRole: string;
-  queryClient: QueryClient;
 }
+
 export function ShopProfileHeader({
   isletmeData,
   userRole
 }: ShopProfileHeaderProps) {
   const navigate = useNavigate();
   const [removing, setRemoving] = useState(false);
+  
   const handleRemovePhoto = async () => {
     if (!isletmeData?.id || !isletmeData?.logo_url) return;
     try {
@@ -54,28 +54,52 @@ export function ShopProfileHeader({
       setRemoving(false);
     }
   };
-  return <div className="bg-gradient-to-r from-pink-50 to-purple-50 p-8 rounded-lg shadow-sm">
+  
+  return (
+    <div className="bg-gradient-to-r from-pink-50 to-purple-50 p-8 rounded-lg shadow-sm">
       <div className="flex flex-col md:flex-row items-start gap-8">
         {/* Logo section with larger size and better button placement */}
         <div className="flex flex-col items-center gap-4">
           <div className="w-28 h-28 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center border-2 border-purple-200">
-            {isletmeData?.logo_url ? <img src={isletmeData.logo_url} alt={isletmeData.isletme_adi || "İşletme Adı Girilmemiş"} className="w-full h-full object-cover" /> : <div className="text-3xl font-bold text-purple-500">
+            {isletmeData?.logo_url ? (
+              <img 
+                src={isletmeData.logo_url} 
+                alt={isletmeData.isletme_adi || "İşletme Adı Girilmemiş"} 
+                className="w-full h-full object-cover" 
+              />
+            ) : (
+              <div className="text-3xl font-bold text-purple-500">
                 {isletmeData?.isletme_adi ? isletmeData.isletme_adi[0].toUpperCase() : '?'}
-              </div>}
+              </div>
+            )}
           </div>
           
-          {userRole === 'admin' && <div className="flex gap-2">
-              <ShopProfilePhotoUpload dukkanId={isletmeData?.id} onSuccess={() => window.location.reload()} acceptVideoFiles={false} galleryMode={false}>
+          {userRole === 'admin' && (
+            <div className="flex gap-2">
+              <ShopProfilePhotoUpload 
+                dukkanId={isletmeData?.id} 
+                onSuccess={() => window.location.reload()} 
+                acceptVideoFiles={false} 
+                galleryMode={false}
+              >
                 <Button size="sm" variant="secondary" className="whitespace-nowrap">
                   <ImagePlus className="h-4 w-4 mr-1" />
                   {isletmeData?.logo_url ? 'Logoyu Değiştir' : 'Logo Ekle'}
                 </Button>
               </ShopProfilePhotoUpload>
 
-              {isletmeData?.logo_url && <Button variant="destructive" size="sm" onClick={handleRemovePhoto} disabled={removing}>
+              {isletmeData?.logo_url && (
+                <Button 
+                  variant="destructive" 
+                  size="sm" 
+                  onClick={handleRemovePhoto} 
+                  disabled={removing}
+                >
                   <Trash2 className="h-4 w-4" />
-                </Button>}
-            </div>}
+                </Button>
+              )}
+            </div>
+          )}
         </div>
         
         {/* Info section */}
@@ -85,22 +109,34 @@ export function ShopProfileHeader({
               <h1 className="font-bold text-gray-800 text-3xl text-center">
                 {isletmeData?.isletme_adi || "İşletme Adı Girilmemiş"}
               </h1>
-              {isletmeData?.adres && <p className="text-muted-foreground text-center text-xl">{isletmeData.adres}</p>}
+              {isletmeData?.adres && (
+                <p className="text-muted-foreground text-center text-xl">{isletmeData.adres}</p>
+              )}
             </div>
             
             <div className="flex flex-col sm:flex-row gap-2">
-              <Button size="lg" onClick={() => navigate("/appointments")} className="bg-purple-600 hover:bg-purple-700 text-white px-[4px] py-[12px]">
+              <Button 
+                size="lg" 
+                onClick={() => navigate("/appointments")} 
+                className="bg-purple-600 hover:bg-purple-700 text-white px-[4px] py-[12px]"
+              >
                 Hemen Randevu Al
               </Button>
               
-              {userRole === 'admin' && <Button variant="outline" onClick={() => navigate("/shop-settings")} className="px-0 py-[14px]">
+              {userRole === 'admin' && (
+                <Button 
+                  variant="outline" 
+                  onClick={() => navigate("/shop-settings")} 
+                  className="px-0 py-[14px]"
+                >
                   <Edit className="mr-2 h-4 w-4" />
                   İşletme Bilgilerini Düzenle
-                </Button>}
+                </Button>
+              )}
             </div>
           </div>
         </div>
       </div>
-    </div>;
+    </div>
+  );
 }
-

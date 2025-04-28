@@ -3,7 +3,6 @@ import React, { useEffect } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { useNavigate } from "react-router-dom";
-import { QueryClient } from "@tanstack/react-query";
 import { useShopData } from "@/hooks/useShopData";
 import { ShopProfileHeader } from "@/components/shop/ShopProfileHeader";
 import { ShopContactCard } from "@/components/shop/ShopContactCard";
@@ -14,7 +13,6 @@ import { ShopPersonnelCard } from "@/components/shop/ShopPersonnelCard";
 
 export default function ShopHomePage() {
   const { userRole, dukkanId, userId, loading, refreshProfile } = useCustomerAuth();
-  const queryClient = new QueryClient();
   const navigate = useNavigate();
 
   // Ensure profile is fully loaded on initial render
@@ -105,7 +103,6 @@ export default function ShopHomePage() {
         <ShopProfileHeader
           isletmeData={isletmeData}
           userRole={userRole}
-          queryClient={queryClient}
         />
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -122,7 +119,6 @@ export default function ShopHomePage() {
             <ShopGalleryCard
               isletmeId={isletmeData.id}
               userRole={userRole}
-              queryClient={queryClient}
             />
             <ShopPersonnelCard
               personelListesi={personelListesi}
