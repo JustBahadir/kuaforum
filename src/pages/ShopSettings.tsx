@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { isletmeServisi } from "@/lib/supabase";
@@ -322,26 +321,16 @@ export default function ShopSettings() {
                   </div>
                   
                   <div className="text-sm text-muted-foreground mb-4">
-                    Otomatik olarak oluşturulan işletme kodunuz, işletme adı ve il bilgilerinize göre oluşturulur.
+                    İşletme kodunuz, işletme adınız ve il bilgilerinize göre otomatik olarak oluşturulmuştur ve kalıcıdır. 
+                    Personelleriniz bu kodu kullanarak işletmenize kayıt olabilirler.
                   </div>
                   
-                  <Button 
-                    onClick={handleRegenerateKod}
-                    disabled={isKodGenerating || !shopName || !selectedCity}
-                    variant="outline"
-                    className="w-full"
-                  >
-                    {isKodGenerating ? "Kod Oluşturuluyor..." : "İşletme Kodunu Yeniden Oluştur"}
-                  </Button>
-                  
-                  {(!shopName || !selectedCity) && (
-                    <Alert className="bg-amber-50 border-amber-200 mt-2">
-                      <AlertCircle className="h-4 w-4 text-amber-500" />
-                      <AlertDescription className="text-amber-700">
-                        İşletme kodu oluşturmak için önce işletme adınızı ve ilinizi girmeniz gerekir.
-                      </AlertDescription>
-                    </Alert>
-                  )}
+                  <Alert className="bg-blue-50 border-blue-200">
+                    <AlertCircle className="h-4 w-4 text-blue-500" />
+                    <AlertDescription className="text-blue-700">
+                      İşletme kodu bir kez oluşturulduktan sonra değiştirilemez. Lütfen bu kodu güvenli bir şekilde paylaşın.
+                    </AlertDescription>
+                  </Alert>
                 </div>
               </CardContent>
             </Card>
