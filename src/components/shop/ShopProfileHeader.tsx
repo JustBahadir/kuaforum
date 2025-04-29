@@ -64,12 +64,12 @@ export function ShopProfileHeader({
             {isletmeData?.logo_url ? (
               <img 
                 src={isletmeData.logo_url} 
-                alt={isletmeData.isletme_adi || "İşletme Adı Girilmemiş"} 
+                alt={isletmeData.ad || "İşletme Adı Girilmemiş"} 
                 className="w-full h-full object-cover" 
               />
             ) : (
               <div className="text-3xl font-bold text-purple-500">
-                {isletmeData?.isletme_adi ? isletmeData.isletme_adi[0].toUpperCase() : '?'}
+                {isletmeData?.ad ? isletmeData.ad[0].toUpperCase() : '?'}
               </div>
             )}
           </div>
@@ -107,7 +107,7 @@ export function ShopProfileHeader({
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <h1 className="font-bold text-gray-800 text-3xl text-center">
-                {isletmeData?.isletme_adi || "İşletme Adı Girilmemiş"}
+                {isletmeData?.ad || "İşletme Adı Girilmemiş"}
               </h1>
               {isletmeData?.adres && (
                 <p className="text-muted-foreground text-center text-xl">{isletmeData.adres}</p>

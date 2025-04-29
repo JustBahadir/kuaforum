@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { isletmeServisi } from "@/lib/supabase";
@@ -23,13 +24,12 @@ export default function ShopSettings() {
   const [fullAddress, setFullAddress] = useState("");
   const [shopName, setShopName] = useState("");
   const [selectedCity, setSelectedCity] = useState("");
-  const [isKodGenerating, setIsKodGenerating] = useState(false);
   const queryClient = useQueryClient();
   
   // List of Turkish cities from CityISOCodes
   const cities = Object.keys(CityISOCodes).map(city => ({
     value: city,
-    label: city.charAt(0).toUpperCase() + city.slice(1).toLowerCase()
+    label: city
   })).sort((a, b) => a.label.localeCompare(b.label));
 
   const { data: isletme, isLoading, error } = useQuery({
@@ -71,7 +71,7 @@ export default function ShopSettings() {
   };
 
   const updateShopAddress = useMutation({
-    mutationFn: async (updates: { acik_adres?: string; adres?: string; ad?: string }) => {
+    mutationFn: async (updates: { acik_adres?: string; adres?: string; ad?: string; kod?: string }) => {
       if (!dukkanId) {
         throw new Error("İşletme ID bulunamadı");
       }
@@ -92,6 +92,11 @@ export default function ShopSettings() {
       queryClient.invalidateQueries({ queryKey: ['dukkan', dukkanId] });
       toast.success("İşletme bilgileri güncellendi");
       setFullAddress(data.acik_adres || "");
+      
+      // Update isletmeKodu if it was set
+      if (data.kod && data.kod !== isletmeKodu) {
+        setIsletmeKodu(data.kod);
+      }
     },
     onError: (error) => {
       console.error("İşletme bilgileri güncelleme hatası:", error);
@@ -112,14 +117,35 @@ export default function ShopSettings() {
     updateShopAddress.mutate({ ad: shopName });
   };
   
-  const handleCityUpdate = () => {
+  const handleCityUpdate = async () => {
     if (!selectedCity) {
       toast.error("Lütfen bir il seçin");
       return;
     }
     
-    const cityName = selectedCity.charAt(0).toUpperCase() + selectedCity.slice(1).toLowerCase();
-    updateShopAddress.mutate({ adres: cityName });
+    const cityName = selectedCity;
+    
+    // If shop doesn't have a code yet, generate one
+    if (!isletmeKodu && shopName) {
+      try {
+        const cityCode = CityISOCodes[selectedCity];
+        const newKod = await shopService.generateShopCode(shopName, cityCode);
+        
+        // Update both the city and code
+        updateShopAddress.mutate({ 
+          adres: cityName,
+          kod: newKod 
+        });
+      } catch (error) {
+        console.error("Kod oluşturma hatası:", error);
+        toast.error("İşletme kodu oluşturulurken bir hata oluştu");
+        // Still update the city if code generation fails
+        updateShopAddress.mutate({ adres: cityName });
+      }
+    } else {
+      // Just update the city
+      updateShopAddress.mutate({ adres: cityName });
+    }
   };
 
   const openInMaps = () => {
@@ -130,34 +156,6 @@ export default function ShopSettings() {
     
     const encodedAddress = encodeURIComponent(fullAddress);
     window.open(`https://www.google.com/maps/search/?api=1&query=${encodedAddress}`, '_blank');
-  };
-  
-  const handleRegenerateKod = async () => {
-    if (!isletme || !shopName || !selectedCity) {
-      toast.error("İşletme kodu oluşturmak için önce işletme adınızı ve ilinizi girmeniz gerekir.");
-      return;
-    }
-    
-    setIsKodGenerating(true);
-    try {
-      // Generate a new code using the shop service
-      const cityCode = CityISOCodes[selectedCity];
-      const newKod = await shopService.generateShopCode(shopName, cityCode);
-      
-      // Update in database
-      const result = await isletmeServisi.guncelle(dukkanId!, { kod: newKod });
-      
-      if (result) {
-        setIsletmeKodu(newKod);
-        toast.success("İşletme kodu yeniden oluşturuldu");
-        queryClient.invalidateQueries({ queryKey: ['dukkan', dukkanId] });
-      }
-    } catch (error) {
-      console.error("Kod oluşturma hatası:", error);
-      toast.error("İşletme kodu oluşturulurken bir hata oluştu");
-    } finally {
-      setIsKodGenerating(false);
-    }
   };
 
   if (!userRole) {

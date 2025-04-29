@@ -7,10 +7,10 @@ import { CityISOCodes } from "@/utils/cityISOCodes";
  */
 export const shopService = {
   /**
-   * Create a unique shop code based on shop name
+   * Create a unique shop code based on shop name and location
    */
   generateShopCode: async (shopName: string, cityCode?: string) => {
-    // 1. Convert Turkish characters to Latin
+    // 1. Convert Turkish characters to Latin for the name part
     const turkishToLatin = (text: string) => {
       return text
         .replace(/ğ/g, 'g')
@@ -45,25 +45,33 @@ export const shopService = {
     // Get city code (3 letters) or use provided cityCode or default
     const finalCityCode = cityCode || "XXX";
 
-    // 4. Generate a random number (4 digits)
-    const randomNum = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    // 4. Get the next branch number
+    const branchNumber = await shopService.getNextBranchNumber();
+    const formattedBranchNumber = branchNumber.toString().padStart(3, '0');
     
-    // 5. Combine all parts to create the shop code
-    const shopCode = `${namePrefix}-${countryCode}${finalCityCode}-${randomNum}`;
+    // 5. Generate a random 3-character alphanumeric code
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let randomCode = '';
+    for (let i = 0; i < 3; i++) {
+      randomCode += characters.charAt(Math.floor(Math.random() * characters.length));
+    }
+    
+    // 6. Combine all parts to create the shop code
+    const shopCode = `${namePrefix}-${countryCode}${finalCityCode}-${formattedBranchNumber}-${randomCode}`;
     
     return shopCode;
   },
   
   /**
-   * Get the next branch number for a shop
+   * Get the next branch number for shops
    */
-  getNextBranchNumber: async (namePrefix: string, locationPrefix: string) => {
+  getNextBranchNumber: async () => {
     try {
-      // Query existing shops with similar codes
+      // Query existing shops
       const { data } = await supabase
         .from('dukkanlar')
         .select('kod')
-        .ilike('kod', `${namePrefix}%${locationPrefix}%`);
+        .not('kod', 'is', null);
       
       // If no existing shops, return 1
       if (!data || data.length === 0) {
@@ -72,8 +80,14 @@ export const shopService = {
       
       // Extract branch numbers and find the max
       const branchNumbers = data.map(shop => {
-        const matches = shop.kod.match(/\d+$/);
-        return matches ? parseInt(matches[0], 10) : 0;
+        if (!shop.kod) return 0;
+        
+        // Extract the branch number part (after second dash, before third dash)
+        const matches = shop.kod.split('-');
+        if (matches.length >= 3) {
+          return parseInt(matches[2], 10) || 0;
+        }
+        return 0;
       });
       
       const maxBranch = Math.max(...branchNumbers);
