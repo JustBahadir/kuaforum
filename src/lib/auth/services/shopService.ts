@@ -45,99 +45,42 @@ export const shopService = {
     // Get city code (3 letters) or use provided cityCode or default
     const finalCityCode = cityCode || "XXX";
 
-    // 4. Get current branch number for this shop name
-    const branchNumber = await shopService.getNextBranchNumber(namePrefix, countryCode + finalCityCode);
-
-    // 5. Generate a random alphanumeric code (3 characters)
-    const randomChars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Removed confusing chars like 0/O, 1/I
-    let randomCode = "";
-    for (let i = 0; i < 3; i++) {
-      const randomIndex = Math.floor(Math.random() * randomChars.length);
-      randomCode += randomChars[randomIndex];
-    }
-
-    // 6. Combine all parts
-    const shopCode = `${namePrefix}-${countryCode}${finalCityCode}-${branchNumber}-${randomCode}`;
+    // 4. Generate a random number (4 digits)
+    const randomNum = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
     
-    // 7. Verify that code is unique (recursive check)
-    const isUnique = await shopService.isShopCodeUnique(shopCode);
-    if (!isUnique) {
-      // If not unique, try again with different random code
-      return shopService.generateShopCode(shopName, cityCode);
-    }
+    // 5. Combine all parts to create the shop code
+    const shopCode = `${namePrefix}-${countryCode}${finalCityCode}-${randomNum}`;
     
     return shopCode;
   },
-
+  
   /**
-   * Get the next branch number for this shop name prefix
+   * Get the next branch number for a shop
    */
-  getNextBranchNumber: async (namePrefix: string, regionCode: string) => {
+  getNextBranchNumber: async (namePrefix: string, locationPrefix: string) => {
     try {
-      // Find all shops with the same name prefix and region
-      const { data, error } = await supabase
+      // Query existing shops with similar codes
+      const { data } = await supabase
         .from('dukkanlar')
         .select('kod')
-        .like('kod', `${namePrefix}-${regionCode}-%`);
+        .ilike('kod', `${namePrefix}%${locationPrefix}%`);
       
-      if (error) throw error;
-      
+      // If no existing shops, return 1
       if (!data || data.length === 0) {
-        return '001'; // First branch
+        return 1;
       }
       
-      // Extract branch numbers from existing codes
-      const branchNumbers = data
-        .map(shop => {
-          const match = shop.kod.match(/-(\d{3})-/);
-          return match ? parseInt(match[1]) : 0;
-        })
-        .filter(num => !isNaN(num));
+      // Extract branch numbers and find the max
+      const branchNumbers = data.map(shop => {
+        const matches = shop.kod.match(/\d+$/);
+        return matches ? parseInt(matches[0], 10) : 0;
+      });
       
-      // Get the highest branch number and increment
-      const highestBranch = Math.max(...branchNumbers, 0);
-      const nextBranch = highestBranch + 1;
-      
-      // Format with leading zeros
-      return nextBranch.toString().padStart(3, '0');
+      const maxBranch = Math.max(...branchNumbers);
+      return maxBranch + 1;
     } catch (error) {
-      console.error("Error getting next branch number:", error);
-      return '001'; // Fallback to 001 if there's an error
+      console.error("Failed to get next branch number:", error);
+      return 1; // Default to 1 on error
     }
-  },
-
-  /**
-   * Check if a shop code is already in use
-   */
-  isShopCodeUnique: async (shopCode: string) => {
-    const { data, error } = await supabase
-      .from('dukkanlar')
-      .select('id')
-      .eq('kod', shopCode)
-      .maybeSingle();
-    
-    if (error) {
-      console.error("Error checking shop code uniqueness:", error);
-      return false;
-    }
-    
-    return data === null; // If no data found, code is unique
-  },
-
-  /**
-   * Verify if a shop code exists
-   */
-  verifyShopCode: async (shopCode: string) => {
-    const { data, error } = await supabase
-      .from('dukkanlar')
-      .select('id, ad')
-      .eq('kod', shopCode)
-      .single();
-    
-    if (error || !data) {
-      return null;
-    }
-    
-    return data;
-  },
+  }
 };

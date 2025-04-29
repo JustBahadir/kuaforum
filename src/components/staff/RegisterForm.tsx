@@ -480,7 +480,7 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
           
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="city">İl <span className="text-red-500">*</span></Label>
+              <Label htmlFor="city">İşletmenin Olduğu İl <span className="text-red-500">*</span></Label>
               <Select
                 value={city}
                 onValueChange={setCity}

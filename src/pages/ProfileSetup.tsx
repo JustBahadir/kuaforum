@@ -10,6 +10,7 @@ import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { Home } from "lucide-react";
 import { formatPhoneNumber } from "@/utils/phoneFormatter";
+import { CityISOCodes } from "@/utils/cityISOCodes";
 
 export default function ProfileSetup() {
   const navigate = useNavigate();
@@ -21,8 +22,22 @@ export default function ProfileSetup() {
   const [role, setRole] = useState("staff");
   const [shopCode, setShopCode] = useState("");
   const [shopName, setShopName] = useState("");
+  const [shopCity, setShopCity] = useState("");
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [cities, setCities] = useState<{name: string, value: string}[]>([]);
+  
+  // Prepare cities list from CityISOCodes
+  useEffect(() => {
+    const cityList = Object.keys(CityISOCodes).map(cityCode => ({
+      name: cityCode.charAt(0) + cityCode.slice(1).toLowerCase(),
+      value: cityCode
+    }));
+    
+    // Sort cities alphabetically
+    cityList.sort((a, b) => a.name.localeCompare(b.name));
+    setCities(cityList);
+  }, []);
   
   // Check if the user is authenticated
   useEffect(() => {
@@ -63,9 +78,16 @@ export default function ProfileSetup() {
       return;
     }
 
-    if (role === "admin" && !shopName) {
-      toast.error("İşletme adı zorunludur.");
-      return;
+    if (role === "admin") {
+      if (!shopName) {
+        toast.error("İşletme adı zorunludur.");
+        return;
+      }
+      
+      if (!shopCity) {
+        toast.error("İşletmenin olduğu il seçimi zorunludur.");
+        return;
+      }
     }
     
     setLoading(true);
@@ -107,7 +129,8 @@ export default function ProfileSetup() {
           ad: shopName,
           sahibi_id: userId,
           kod: Math.random().toString(36).substring(7).toUpperCase(),
-          active: true
+          active: true,
+          adres: shopCity // Store the city in the adres field
         };
         
         const { error: shopError } = await supabase
@@ -272,19 +295,34 @@ export default function ProfileSetup() {
                 </p>
               </div>
             ) : (
-              <div className="space-y-2">
-                <Label htmlFor="shopName">İşletme Adı*</Label>
-                <Input
-                  id="shopName"
-                  value={shopName}
-                  onChange={(e) => setShopName(e.target.value)}
-                  placeholder="İşletmenizin adını girin"
-                  required
-                />
-                <p className="text-xs text-gray-500">
-                  (İşletme adını daha sonra değiştirebilirsiniz.)
-                </p>
-              </div>
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="shopName">İşletme Adı*</Label>
+                  <Input
+                    id="shopName"
+                    value={shopName}
+                    onChange={(e) => setShopName(e.target.value)}
+                    placeholder="İşletmenizin adını girin"
+                    required
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="shopCity">İşletmenin Olduğu İl*</Label>
+                  <Select value={shopCity} onValueChange={setShopCity} required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="İl seçiniz" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {cities.map((city) => (
+                        <SelectItem key={city.value} value={city.value}>
+                          {city.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
             )}
             
             <Button 
