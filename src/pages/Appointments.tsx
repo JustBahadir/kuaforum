@@ -1,182 +1,125 @@
-import { useState, useEffect } from "react";
-import { StaffLayout } from "@/components/ui/staff-layout";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
+import React, { useState } from 'react';
+import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useCustomerAuth } from "@/hooks/useCustomerAuth";
-import { AppointmentForm } from "@/components/appointments/AppointmentForm";
-import { StaffAppointmentForm } from "@/components/appointments/StaffAppointmentForm";
-import { Randevu } from "@/lib/supabase/types";
-import { Plus } from "lucide-react";
-import { useAppointments } from "@/hooks/useAppointments";
-import { AppointmentDayView } from "@/components/appointments/AppointmentDayView";
-import { AppointmentWeekView } from "@/components/appointments/AppointmentWeekView";
-import { AppointmentCalendarView } from "@/components/appointments/AppointmentCalendarView";
-import { 
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { useLocation } from "react-router-dom";
+import { useAppointments } from '@/hooks/useAppointments';
+import { AppointmentDayView } from '@/components/appointments/AppointmentDayView';
+import { AppointmentWeekView } from '@/components/appointments/AppointmentWeekView';
+import { AppointmentCalendarView } from '@/components/appointments/AppointmentCalendarView';
+import { AppointmentsList } from '@/components/appointments/AppointmentsList';
+import { AppointmentStatusFilter } from '@/components/appointments/AppointmentStatusFilter';
+import { CalendarDatePicker } from '@/components/appointments/CalendarDatePicker';
+import { PageHeader } from '@/components/common/PageHeader';
+import { RandevuDurumu } from '@/lib/supabase/types';
+
+type ViewMode = 'day' | 'week' | 'calendar' | 'list';
 
 export default function Appointments() {
-  const { dukkanId, userRole } = useCustomerAuth();
-  const location = useLocation();
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [initialSelectedCustomerId, setInitialSelectedCustomerId] = useState<number | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>('day');
   
-  useEffect(() => {
-    const searchParams = new URLSearchParams(location.search);
-    const newAppointment = searchParams.get("newAppointment") === "true";
-    const customerIdParam = searchParams.get("customerId");
-    if (newAppointment && customerIdParam) {
-      setAddDialogOpen(true);
-      setInitialSelectedCustomerId(Number(customerIdParam));
-    }
-  }, [location]);
+  const { 
+    appointments, 
+    loading, 
+    error, 
+    status, 
+    selectedDate, 
+    setDate,
+    setAppointmentStatus, 
+    updateStatus,
+    currentPersonelId
+  } = useAppointments();
 
-  const {
-    appointments,
-    isLoading,
-    isError,
-    error,
-    selectedDate,
-    setSelectedDate,
-    currentPersonelId,
-    confirmDialogOpen,
-    setConfirmDialogOpen,
-    cancelDialogOpen,
-    setCancelDialogOpen,
-    selectedAppointment,
-    handleAppointmentComplete,
-    handleAppointmentCancel,
-    handleCompleteClick,
-    handleCancelClick,
-    refetch
-  } = useAppointments(dukkanId);
-  
-  const handleAppointmentCreated = () => {
-    refetch();
-    setAddDialogOpen(false);
-    setInitialSelectedCustomerId(null);
+  const handleDateChange = (date: Date | null) => {
+    setDate(date);
   };
-  
-  const AppointmentFormComponent = userRole === 'staff' || userRole === 'admin' 
-    ? StaffAppointmentForm 
-    : AppointmentForm;
+
+  const handleStatusChange = (status: RandevuDurumu) => {
+    setAppointmentStatus(status);
+  };
 
   return (
-    <StaffLayout>
-      <div className="container mx-auto py-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold">Randevular</h1>
-          <Button onClick={() => setAddDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Yeni Randevu
-          </Button>
+    <div className="container px-4 py-8 mx-auto max-w-7xl">
+      <PageHeader
+        title="Randevular"
+        subtitle="Randevuları görüntüleyin, düzenleyin ve yönetin"
+        button={{ label: "Yeni Randevu", href: "/new-appointment" }}
+      />
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4 mb-4">
+        <div className="md:col-span-3">
+          <AppointmentStatusFilter value={status} onChange={handleStatusChange} />
         </div>
-        
-        <Tabs defaultValue="day" className="w-full">
-          <TabsList className="mb-4">
-            <TabsTrigger value="day">Günlük Görünüm</TabsTrigger>
-            <TabsTrigger value="week">Haftalık Görünüm</TabsTrigger>
+        <div>
+          <CalendarDatePicker date={selectedDate} onSelect={handleDateChange} />
+        </div>
+      </div>
+
+      <Card>
+        <Tabs defaultValue={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="day">Günlük</TabsTrigger>
+            <TabsTrigger value="week">Haftalık</TabsTrigger>
             <TabsTrigger value="calendar">Takvim</TabsTrigger>
+            <TabsTrigger value="list">Liste</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="day">
-            <AppointmentDayView
-              selectedDate={selectedDate}
-              appointments={appointments}
-              isLoading={isLoading}
-              isError={isError}
-              error={error}
-              currentPersonelId={currentPersonelId}
-              onCompleteClick={handleCompleteClick}
-              onCancelClick={handleCancelClick}
-              onDateChange={setSelectedDate}
-            />
-          </TabsContent>
-          
-          <TabsContent value="week">
-            <AppointmentWeekView
-              selectedDate={selectedDate}
-              appointments={appointments}
-              isLoading={isLoading}
-              currentPersonelId={currentPersonelId}
-              onDateChange={setSelectedDate}
-            />
-          </TabsContent>
-          
-          <TabsContent value="calendar">
-            <AppointmentCalendarView
-              selectedDate={selectedDate}
-              appointments={appointments}
-              isLoading={isLoading}
-              isError={isError}
-              error={error}
-              currentPersonelId={currentPersonelId}
-              onCompleteClick={handleCompleteClick}
-              onCancelClick={handleCancelClick}
-              onDateChange={setSelectedDate}
-            />
-          </TabsContent>
+          <CardContent className="pt-4 pb-0">
+            {loading ? (
+              <div className="flex items-center justify-center h-96">
+                <div className="w-16 h-16 border-4 border-t-blue-500 border-blue-200 rounded-full animate-spin"></div>
+              </div>
+            ) : error ? (
+              <div className="flex items-center justify-center h-96">
+                <div className="text-center">
+                  <h3 className="text-xl font-medium text-gray-900">Bir hata oluştu</h3>
+                  <p className="mt-2 text-gray-500">{error.message}</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <TabsContent value="day">
+                  <AppointmentDayView
+                    selectedDate={selectedDate || new Date()}
+                    appointments={appointments}
+                    isLoading={loading}
+                    onUpdateStatus={updateStatus}
+                    currentPersonelId={currentPersonelId}
+                  />
+                </TabsContent>
+                
+                <TabsContent value="week">
+                  <AppointmentWeekView
+                    selectedDate={selectedDate || new Date()}
+                    appointments={appointments}
+                    isLoading={loading}
+                    onDateChange={handleDateChange}
+                    currentPersonelId={currentPersonelId}
+                  />
+                </TabsContent>
+                
+                <TabsContent value="calendar">
+                  <AppointmentCalendarView
+                    appointments={appointments}
+                    isLoading={loading}
+                    onDateChange={handleDateChange}
+                    onUpdateStatus={updateStatus}
+                    currentPersonelId={currentPersonelId}
+                  />
+                </TabsContent>
+                
+                <TabsContent value="list">
+                  <AppointmentsList
+                    appointments={appointments}
+                    isLoading={loading}
+                    onUpdateStatus={updateStatus}
+                    currentPersonelId={currentPersonelId}
+                  />
+                </TabsContent>
+              </>
+            )}
+          </CardContent>
         </Tabs>
-        
-        <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Yeni Randevu Oluştur</DialogTitle>
-            </DialogHeader>
-            <AppointmentFormComponent 
-              onAppointmentCreated={handleAppointmentCreated}
-              shopId={dukkanId || 0} // add shopId prop required by AppointmentFormComponent
-              // Remove initialCustomerId because StaffAppointmentForm does not support it
-            />
-          </DialogContent>
-        </Dialog>
-        
-        <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>İşlemi Onayla</AlertDialogTitle>
-              <AlertDialogDescription>
-                Bu işlemi tamamlandı olarak işaretleyeceksiniz. Bu işlem müşterinin işlem geçmişine kaydedilecek ve istatistiklere eklenecektir.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>İptal</AlertDialogCancel>
-              <AlertDialogAction onClick={handleAppointmentComplete}>
-                Tamamlandı Olarak İşaretle
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-        
-        <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Randevuyu İptal Et</AlertDialogTitle>
-              <AlertDialogDescription>
-                Bu randevuyu iptal etmek istediğinize emin misiniz? İptal edilen randevular geri alınamaz.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Vazgeç</AlertDialogCancel>
-              <AlertDialogAction 
-                onClick={handleAppointmentCancel}
-                className="bg-red-600 hover:bg-red-700"
-              >
-                Randevuyu İptal Et
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </div>
-    </StaffLayout>
+      </Card>
+    </div>
   );
 }

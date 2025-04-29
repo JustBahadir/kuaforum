@@ -1,163 +1,119 @@
 
-import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { personelIslemleriServisi } from "@/lib/supabase/services/personelIslemleriServisi";
-import { customerOperationsService } from "@/lib/supabase/services/customerOperationsService";
-import { PersonelIslemi } from "@/lib/supabase/types";
-import { toast } from "sonner";
-import { supabase } from "@/lib/supabase/client";
+import { useState, useEffect } from 'react';
+import { personelIslemleriServisi } from '@/lib/supabase';
+import { useQuery } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
-// Define the Supabase URL for API calls
-const SUPABASE_URL = "https://xkbjjcizncwkrouvoujw.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhrYmpqY2l6bmN3a3JvdXZvdWp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzk5Njg0NzksImV4cCI6MjA1NTU0NDQ3OX0.RyaC2G1JPHUGQetAcvMgjsTp_nqBB2rZe3U-inU2osw";
-
-interface OperationTotals {
-  totalAmount: number;
-  totalPoints: number;
-  totalPaid: number;
-  showPoints?: boolean; // Add this to the interface
+interface UseCustomerOperationsProps {
+  customerId?: number;
+  startDate?: string;
+  endDate?: string;
 }
 
-export function useCustomerOperations(customerId?: number) {
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [dateRange, setDateRange] = useState({
-    from: new Date(new Date().setDate(new Date().getDate() - 90)), // Default to last 90 days
-    to: new Date()
-  });
-  const queryClient = useQueryClient();
-  
-  const { 
-    data: operations = [], 
-    isLoading,
-    refetch,
+export const useCustomerOperations = ({ 
+  customerId,
+  startDate,
+  endDate
+}: UseCustomerOperationsProps) => {
+  const [loading, setLoading] = useState(false);
+  const [operations, setOperations] = useState([]);
+  const [error, setError] = useState<Error | null>(null);
+
+  // Use React Query for data fetching
+  const {
+    data: fetchedOperations = [],
+    isLoading: isQueryLoading,
     isError,
-    error
+    refetch
   } = useQuery({
-    queryKey: ['customerOperations', customerId, dateRange.from, dateRange.to],
+    queryKey: ['customerOperations', customerId, startDate, endDate],
     queryFn: async () => {
       if (!customerId) return [];
       
-      console.log("Fetching operations for customer ID:", customerId);
-      
       try {
-        // First try to get operations directly using our improved service
-        const operations = await customerOperationsService.getCustomerOperations(customerId);
+        // Get all operations and filter by customer ID
+        let allOperations = await personelIslemleriServisi.hepsiniGetir();
         
-        // Filter by date range
-        const filteredOperations = operations.filter(op => {
-          if (!op.date) return false;
-          const opDate = new Date(op.date);
-          return opDate >= dateRange.from && opDate <= dateRange.to;
-        });
+        // Filter by customer ID
+        let filtered = allOperations.filter(op => op.musteri_id === customerId);
         
-        // If no operations found, trigger recovery automatically
-        if (filteredOperations.length === 0) {
-          console.log("No operations found, attempting automatic recovery...");
-          await handleForceRecover();
-          // Re-fetch after recovery
-          const recoveredOperations = await customerOperationsService.getCustomerOperations(customerId);
-          return recoveredOperations.filter(op => {
-            if (!op.date) return false;
-            const opDate = new Date(op.date);
-            return opDate >= dateRange.from && opDate <= dateRange.to;
+        // Further filter by date range if provided
+        if (startDate && endDate) {
+          filtered = filtered.filter(op => {
+            const opDate = new Date(op.created_at);
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            return opDate >= start && opDate <= end;
           });
         }
         
-        return filteredOperations;
-      } catch (error) {
+        return filtered;
+      } catch (error: any) {
         console.error("Error fetching customer operations:", error);
-        
-        // Automatic recovery
-        try {
-          await handleForceRecover();
-          // Re-fetch after recovery
-          const recoveredOperations = await customerOperationsService.getCustomerOperations(customerId);
-          return recoveredOperations.filter(op => {
-            if (!op.date) return false;
-            const opDate = new Date(op.date);
-            return opDate >= dateRange.from && opDate <= dateRange.to;
-          });
-        } catch (recoveryError) {
-          console.error("Recovery failed:", recoveryError);
-          toast.error("Müşteri işlemleri yüklenirken bir hata oluştu");
-          return [];
-        }
+        throw new Error(error.message || "Failed to load operations");
       }
     },
     enabled: !!customerId,
-    staleTime: 1000, // Keep data fresh for 1 second so it refreshes more frequently
-    refetchInterval: 10000 // Refetch every 10 seconds to catch new operations
   });
-  
-  const handleForceRecover = async () => {
-    if (!customerId) {
-      toast.error("Müşteri ID bulunamadı");
-      return;
+
+  // Update local state when query data changes
+  useEffect(() => {
+    if (fetchedOperations) {
+      setOperations(fetchedOperations);
     }
+  }, [fetchedOperations]);
+
+  // Handle query states
+  useEffect(() => {
+    setLoading(isQueryLoading);
+    if (isError) {
+      setError(new Error("Failed to fetch customer operations"));
+    } else {
+      setError(null);
+    }
+  }, [isQueryLoading, isError]);
+
+  // Method to add a new operation
+  const addOperation = async (operationData: any) => {
+    setLoading(true);
+    setError(null);
     
     try {
-      toast.info("Tamamlanan randevular işleniyor...");
+      // Ensure customer ID is set
+      const dataToSend = {
+        ...operationData,
+        musteri_id: customerId
+      };
       
-      // Call the edge function directly with the URL constants
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/recover_customer_operations`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-        },
-        body: JSON.stringify({ customer_id: customerId })
-      });
+      const result = await personelIslemleriServisi.ekle(dataToSend);
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Error from edge function:", errorText);
-        throw new Error("İşlem geçmişi yenilenirken bir hata oluştu");
+      if (result) {
+        toast.success("İşlem başarıyla eklendi");
+        // Refresh the data
+        await refetch();
+        
+        // Note: We're not using updateShopStatistics since it doesn't exist
+        // but we'll handle shop statistics updates elsewhere
+        
+        return result;
+      } else {
+        throw new Error("İşlem eklenemedi");
       }
-      
-      const result = await response.json();
-      
-      // Update shop statistics
-      await personelIslemleriServisi.updateShopStatistics();
-      
-      // Manually invalidate relevant queries to force refetch
-      queryClient.invalidateQueries({ queryKey: ['customerOperations'] });
-      queryClient.invalidateQueries({ queryKey: ['personelIslemleri'] });
-      
-      // Refetch operations
-      await refetch();
-      
-      toast.success(`İşlem geçmişi yenilendi (${result.count || 0} işlem)`);
-      return result;
-    } catch (error) {
-      console.error("Error recovering operations:", error);
-      toast.error("İşlem geçmişi yenilenirken bir hata oluştu");
+    } catch (err: any) {
+      console.error("Error adding operation:", err);
+      setError(err);
+      toast.error(err.message || "İşlem eklenirken bir hata oluştu");
+      return null;
+    } finally {
+      setLoading(false);
     }
   };
-  
-  // Calculate totals with the showPoints property
-  const totals: OperationTotals | undefined = operations?.length > 0 ? operations.reduce((acc, op) => {
-    acc.totalAmount += (op.amount || 0);
-    acc.totalPoints += (op.points || 0);
-    acc.totalPaid += 0; // This needs to be fixed if we have paid data
-    return acc;
-  }, { totalAmount: 0, totalPoints: 0, totalPaid: 0, showPoints: false } as OperationTotals) : undefined;
 
-  // Set showPoints to true if we have any operations with points
-  if (totals && totals.totalPoints > 0) {
-    totals.showPoints = true;
-  }
-
-  return { 
+  return {
     operations,
-    isLoading,
-    isError,
+    loading,
     error,
-    selectedDate,
-    setSelectedDate,
-    dateRange,
-    setDateRange,
-    handleForceRecover,
-    refetch,
-    totals
+    addOperation,
+    refetch
   };
-}
+};

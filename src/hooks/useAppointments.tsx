@@ -1,7 +1,8 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { randevuServisi, personelServisi } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
-import { useAuth } from './useAuth';
+import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { Randevu, RandevuDurumu } from '@/lib/supabase/types';
 
@@ -11,7 +12,7 @@ interface UseAppointmentsProps {
 }
 
 export const useAppointments = ({ initialStatus = 'beklemede', initialDate = null }: UseAppointmentsProps = {}) => {
-  const [status, setStatus] = useState<RandevuDurumu>(initialStatus);
+  const [status, setStatus] = useState<RandevuDurumu | 'all'>(initialStatus);
   const [selectedDate, setSelectedDate] = useState<Date | null>(initialDate);
   const [appointments, setAppointments] = useState<Randevu[]>([]);
   const [loading, setLoading] = useState(false);
@@ -29,10 +30,10 @@ export const useAppointments = ({ initialStatus = 'beklemede', initialDate = nul
       let fetchedAppointments: Randevu[] = [];
 
       if (user.user_metadata?.role === 'admin') {
-        fetchedAppointments = await randevuServisi.tumRandevulariGetir();
+        fetchedAppointments = await randevuServisi.hepsiniGetir();
       } else if (user.user_metadata?.role === 'staff') {
         if (personelId) {
-          fetchedAppointments = await randevuServisi.personelRandevulariniGetir(personelId);
+          fetchedAppointments = await randevuServisi.dukkanRandevulariniGetir(personelId);
         } else {
           console.warn("Personel ID is not available yet.");
           setLoading(false);
@@ -68,7 +69,7 @@ export const useAppointments = ({ initialStatus = 'beklemede', initialDate = nul
     if (user && user.user_metadata?.role === 'staff') {
       const fetchPersonelId = async () => {
         try {
-          const personel = await personelServisi.personelAuthIdGetir(user.id);
+          const personel = await personelServisi.getirByAuthId(user.id);
           setPersonelId(personel?.id || null);
         } catch (error) {
           console.error("Error fetching personel ID:", error);
@@ -93,7 +94,8 @@ export const useAppointments = ({ initialStatus = 'beklemede', initialDate = nul
 
   const updateStatus = async (id: number, status: RandevuDurumu) => {
     try {
-      const updatedAppointment = await randevuServisi.randevuDurumGuncelle(id, status);
+      // Use guncelle instead of randevuDurumGuncelle
+      const updatedAppointment = await randevuServisi.guncelle(id, { durum: status });
       if (updatedAppointment) {
         setAppointments((prevAppointments) =>
           prevAppointments.map((appointment) =>
@@ -122,5 +124,6 @@ export const useAppointments = ({ initialStatus = 'beklemede', initialDate = nul
     setDate,
     setAppointmentStatus,
     updateStatus,
+    currentPersonelId: personelId,
   };
 };

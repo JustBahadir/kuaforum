@@ -1,3 +1,4 @@
+
 import { supabase } from '../client';
 import { Randevu } from '../types';
 import { toast } from 'sonner';
@@ -10,9 +11,17 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 export const randevuServisi = {
   async hepsiniGetir() {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const dukkan_id = user?.user_metadata?.dukkan_id;
+      
       const { data, error } = await supabase
         .from('randevular')
-        .select('*')
+        .select(`
+          *,
+          musteri:musteri_id(*),
+          personel:personel_id(*)
+        `)
+        .eq('dukkan_id', dukkan_id)
         .order('tarih', { ascending: true })
         .order('saat', { ascending: true });
 
@@ -38,7 +47,15 @@ export const randevuServisi = {
       console.log(`Dükkan ID ${dukkanId} için randevular getiriliyor...`);
       
       const { data, error } = await supabase
-        .rpc('get_appointments_by_dukkan', { p_dukkan_id: dukkanId });
+        .from('randevular')
+        .select(`
+          *,
+          musteri:musteri_id(*),
+          personel:personel_id(*)
+        `)
+        .eq('dukkan_id', dukkanId)
+        .order('tarih', { ascending: true })
+        .order('saat', { ascending: true });
         
       if (error) {
         console.error("Dükkan randevuları getirme hatası:", error);
@@ -63,7 +80,15 @@ export const randevuServisi = {
       console.log(`Customer ID ${user.id} için randevular getiriliyor...`);
       
       const { data, error } = await supabase
-        .rpc('get_customer_appointments', { p_customer_id: user.id });
+        .from('randevular')
+        .select(`
+          *,
+          musteri:musteri_id(*),
+          personel:personel_id(*)
+        `)
+        .eq('customer_id', user.id)
+        .order('tarih', { ascending: true })
+        .order('saat', { ascending: true });
         
       if (error) {
         console.error("Kendi randevularını getirme hatası:", error);
@@ -158,10 +183,14 @@ export const randevuServisi = {
       
       if (randevu.durum && Object.keys(randevu).length === 1) {
         const { data, error } = await supabase
-          .rpc('update_appointment_status', { 
-            appointment_id: id, 
-            new_status: randevu.durum 
-          });
+          .from('randevular')
+          .update({ durum: randevu.durum })
+          .eq('id', id)
+          .select(`
+            *,
+            musteri:musteri_id(*),
+            personel:personel_id(*)
+          `);
           
         if (error) {
           console.error("Randevu durumu güncelleme hatası:", error);
@@ -170,13 +199,23 @@ export const randevuServisi = {
         
         console.log("Randevu güncelleme başarılı:", data);
         
-        return data;
+        try {
+          await personelIslemleriServisi.updateShopStatistics();
+        } catch (statsError) {
+          console.error("İstatistik güncelleme hatası:", statsError);
+        }
+        
+        return data && data.length > 0 ? data[0] : null;
       } else {
         const { data, error } = await supabase
           .from('randevular')
           .update(randevu)
           .eq('id', id)
-          .select('*');
+          .select(`
+            *,
+            musteri:musteri_id(*),
+            personel:personel_id(*)
+          `);
 
         if (error) {
           console.error("Randevu güncelleme hatası:", error);
