@@ -1,142 +1,103 @@
 
-import React, { useState } from 'react';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { format } from 'date-fns';
-import { tr } from 'date-fns/locale';
-import { AlertCircle, FileText, MoreHorizontal } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
+import React from 'react';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { useCustomerOperations } from '@/hooks/useCustomerOperations';
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { formatDate } from '@/utils/dateUtils';
+import { CustomerOperation } from '@/lib/supabase/services/customerOperationsService';
 
 interface CustomerOperationsTableProps {
-  customerId?: number;
-  limit?: number;
-  showHeader?: boolean;
+  operations: CustomerOperation[];
+  loading: boolean;
 }
 
-export function CustomerOperationsTable({ customerId, limit, showHeader = true }: CustomerOperationsTableProps) {
-  const {
-    operations,
-    loading,
-    error,
-    addOperation,
-    refetch
-  } = useCustomerOperations(customerId ? { customerId } : undefined);
-  
-  // For the build errors, we'll create states for the missing properties
-  const [dateRange, setDateRange] = useState({ from: new Date(), to: new Date() });
-  const totals = { totalAmount: 0, totalPaid: 0, totalUnpaid: 0, averageServiceValue: 0 };
-  
-  const handleForceRecover = async () => {
-    console.log("Force recover operations");
-  };
-
-  // Limit operations if needed
-  const displayedOperations = limit ? operations.slice(0, limit) : operations;
-
+const CustomerOperationsTable: React.FC<CustomerOperationsTableProps> = ({
+  operations,
+  loading,
+}) => {
   if (loading) {
     return (
-      <div className="space-y-4">
-        <Skeleton className="h-8 w-full" />
-        <Skeleton className="h-20 w-full" />
-        <Skeleton className="h-20 w-full" />
+      <div className="flex justify-center items-center p-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
       </div>
     );
   }
 
-  if (error) {
+  if (!operations || operations.length === 0) {
     return (
-      <Card className="border-red-200">
-        <CardContent className="pt-6">
-          <div className="flex items-center gap-2 text-red-500 mb-2">
-            <AlertCircle className="h-5 w-5" />
-            <span className="font-medium">Hata</span>
-          </div>
-          <p className="text-sm text-muted-foreground">{error.message}</p>
-        </CardContent>
-      </Card>
+      <div className="text-center p-8 text-gray-500">
+        Müşteriye ait işlem geçmişi bulunmamaktadır.
+      </div>
     );
   }
 
+  const formatPrice = (price?: number) => {
+    if (!price && price !== 0) return "—";
+    return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(price);
+  };
+
+  const getPaymentStatusBadge = (status?: string) => {
+    if (!status) return null;
+    
+    if (status === 'paid') {
+      return <Badge className="bg-green-100 text-green-800 hover:bg-green-200">Ödendi</Badge>;
+    }
+    else if (status === 'partial') {
+      return <Badge variant="outline" className="border-orange-500 text-orange-500">Kısmi</Badge>;
+    }
+    else if (status === 'pending') {
+      return <Badge variant="outline" className="border-red-500 text-red-500">Ödenmedi</Badge>;
+    }
+    
+    return <Badge variant="outline">{status}</Badge>;
+  };
+
   return (
-    <Card>
-      {showHeader && (
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>İşlem Geçmişi</CardTitle>
-          <Button variant="outline" size="sm" onClick={() => refetch()}>
-            <FileText className="h-4 w-4 mr-2" />
-            Yenile
-          </Button>
-        </CardHeader>
-      )}
-      <CardContent>
-        {displayedOperations.length > 0 ? (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Tarih</TableHead>
-                  <TableHead>İşlem</TableHead>
-                  <TableHead>Personel</TableHead>
-                  <TableHead className="text-right">Tutar</TableHead>
-                  <TableHead className="text-right">Ödenen</TableHead>
-                  <TableHead className="text-right">Durum</TableHead>
-                  <TableHead className="w-[50px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {displayedOperations.map((operation) => (
-                  <TableRow key={operation.id}>
-                    <TableCell className="font-medium">
-                      {operation.created_at ? 
-                        format(new Date(operation.created_at), 'dd MMM yyyy', {locale: tr}) : 
-                        'N/A'
-                      }
-                    </TableCell>
-                    <TableCell>{operation.islem?.islem_adi || operation.aciklama}</TableCell>
-                    <TableCell>{operation.personel?.ad_soyad || 'N/A'}</TableCell>
-                    <TableCell className="text-right">{operation.tutar} ₺</TableCell>
-                    <TableCell className="text-right">{operation.odenen} ₺</TableCell>
-                    <TableCell className="text-right">
-                      {operation.tutar <= operation.odenen ? (
-                        <Badge variant="success">Ödendi</Badge>
-                      ) : (
-                        <Badge variant="destructive">Ödenmedi</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                            <span className="sr-only">Menü aç</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem>İşlem detayları</DropdownMenuItem>
-                          <DropdownMenuItem>Ödeme al</DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        ) : (
-          <div className="py-8 text-center text-muted-foreground">
-            <p>Bu müşteri için herhangi bir işlem kaydı bulunamadı.</p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Tarih</TableHead>
+            <TableHead>İşlem</TableHead>
+            <TableHead>Personel</TableHead>
+            <TableHead>Tutar</TableHead>
+            <TableHead>Ödeme</TableHead>
+            <TableHead>Not</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {operations.map((operation) => (
+            <TableRow key={operation.id}>
+              <TableCell className="font-medium">
+                {formatDate(new Date(operation.operation_date))}
+              </TableCell>
+              <TableCell>
+                {operation.operation_type || (operation.service as any)?.name || '—'}
+              </TableCell>
+              <TableCell>
+                {(operation.staff as any)?.name || '—'}
+              </TableCell>
+              <TableCell>
+                {formatPrice(operation.price || (operation.service as any)?.price)}
+              </TableCell>
+              <TableCell>
+                {getPaymentStatusBadge(operation.payment_status)}
+              </TableCell>
+              <TableCell className="max-w-xs truncate">
+                {operation.notes || '—'}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
-}
+};
+
+export default CustomerOperationsTable;

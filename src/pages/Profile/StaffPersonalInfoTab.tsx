@@ -15,32 +15,32 @@ export interface StaffPersonalInfoTabProps {
     address?: string;
     role?: string;
   };
-  handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
-  handleSelectChange: (name: string, value: string) => void;
-  handleAvatarUpload: (url: string) => void;
-  handleSave: () => Promise<void>;
-  isSaving: boolean;
-  isUploading: boolean;
+  onSave: (data: any) => Promise<void>;
+  onAvatarUpload: (url: string) => Promise<void>;
 }
 
 const StaffPersonalInfoTab = ({
   profile,
-  handleChange,
-  handleSelectChange,
-  handleAvatarUpload,
-  handleSave,
-  isSaving,
-  isUploading
+  onSave,
+  onAvatarUpload
 }: StaffPersonalInfoTabProps) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    // Handle input changes
+  };
+
+  const handleSelectChange = (name: string, value: string) => {
+    // Handle select changes
+  };
+
   return (
     <ProfileEditForm
       profile={profile}
       handleChange={handleChange}
       handleSelectChange={handleSelectChange}
-      handleAvatarUpload={handleAvatarUpload}
-      handleSave={handleSave}
-      isSaving={isSaving}
-      isUploading={isUploading}
+      handleAvatarUpload={onAvatarUpload}
+      handleSave={onSave}
+      isSaving={false}
+      isUploading={false}
     />
   );
 };

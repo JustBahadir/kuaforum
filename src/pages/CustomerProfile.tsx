@@ -1,20 +1,100 @@
 
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProfileDisplay } from "@/components/customer-profile/ProfileDisplay";
 import { ProfileEditForm } from "@/components/customer-profile/ProfileEditForm";
-import { useProfileManagement } from '@/hooks/useProfileManagement';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/lib/supabase/client";
+import { toast } from "sonner";
 
 export default function CustomerProfile() {
   const { user } = useAuth();
-  const { profile, loading, updateProfile, uploadAvatar } = useProfileManagement(user?.id);
+  const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const navigate = useNavigate();
+  const { id } = useParams();
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        setLoading(true);
+        // Fetch customer profile from your backend
+        const { data, error } = await supabase
+          .from('customers')
+          .select('*')
+          .eq('id', id || user?.id)
+          .single();
+
+        if (error) throw error;
+        setProfile(data);
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+        toast.error('Profil bilgileri yüklenirken bir hata oluştu');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [id, user?.id]);
+
+  const updateProfile = async (data: any) => {
+    try {
+      setLoading(true);
+      const { error } = await supabase
+        .from('customers')
+        .update(data)
+        .eq('id', id || user?.id);
+
+      if (error) throw error;
+      setProfile(prev => ({ ...prev, ...data }));
+      toast.success('Profil başarıyla güncellendi');
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast.error('Profil güncellenirken bir hata oluştu');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const uploadAvatar = async (file: any) => {
+    try {
+      setLoading(true);
+      const userId = id || user?.id;
+      if (!userId) throw new Error('User ID not found');
+      
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${userId}-${Date.now()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+
+      // Upload file
+      const { error: uploadError } = await supabase.storage
+        .from('profiles')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data } = supabase.storage
+        .from('profiles')
+        .getPublicUrl(filePath);
+
+      // Update profile
+      await updateProfile({ avatar_url: data.publicUrl });
+      return data.publicUrl;
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      toast.error('Profil resmi yüklenirken bir hata oluştu');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -24,9 +104,8 @@ export default function CustomerProfile() {
     );
   }
 
-  const handleSaveProfile = async (data) => {
+  const handleSaveProfile = async (data: any) => {
     await updateProfile(data);
-    setIsEditing(false);
   };
 
   return (
@@ -84,8 +163,12 @@ export default function CustomerProfile() {
               {isEditing ? (
                 <ProfileEditForm 
                   profile={profile}
-                  onSubmit={handleSaveProfile}
-                  onAvatarUpload={uploadAvatar}
+                  handleChange={() => {}}
+                  handleSelectChange={() => {}}
+                  handleAvatarUpload={uploadAvatar}
+                  handleSave={handleSaveProfile}
+                  isSaving={loading}
+                  isUploading={loading}
                 />
               ) : (
                 <ProfileDisplay profile={profile} />

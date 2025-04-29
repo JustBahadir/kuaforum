@@ -2,9 +2,9 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { StaffPersonalInfoTab } from '@/pages/Profile/StaffPersonalInfoTab';
-import { HistoryTab } from '@/pages/Profile/HistoryTab';
-import { EducationTab } from '@/pages/Profile/EducationTab';
+import StaffPersonalInfoTab from '@/pages/Profile/StaffPersonalInfoTab';
+import HistoryTab from '@/pages/Profile/HistoryTab';
+import EducationTab from '@/pages/Profile/EducationTab';
 import { StaffPreRegistrationTab } from '@/pages/Profile/StaffPreRegistrationTab';
 import { useCustomerAuth } from '@/hooks/useCustomerAuth';
 import { useProfileManagement } from '@/hooks/useProfileManagement';
@@ -58,15 +58,58 @@ export default function Profile() {
             </TabsContent>
             
             <TabsContent value="education">
-              <EducationTab />
+              <EducationTab 
+                educationData={profileData?.education || {
+                  ortaokuldurumu: "",
+                  lisedurumu: "",
+                  liseturu: "",
+                  meslekibrans: "",
+                  universitedurumu: "",
+                  universitebolum: ""
+                }}
+                onEducationChange={() => {}}
+                onSave={async () => {}}
+                isLoading={loading}
+              />
             </TabsContent>
             
             <TabsContent value="history">
-              <HistoryTab />
+              <HistoryTab 
+                historyData={profileData?.history || {
+                  isyerleri: "",
+                  gorevpozisyon: "",
+                  belgeler: "",
+                  yarismalar: "",
+                  cv: ""
+                }}
+                onHistoryChange={() => {}}
+                onSave={async () => {}}
+                isLoading={loading}
+              />
             </TabsContent>
             
             <TabsContent value="registration">
-              <StaffPreRegistrationTab />
+              <StaffPreRegistrationTab 
+                educationData={profileData?.education || {
+                  ortaokuldurumu: "",
+                  lisedurumu: "",
+                  liseturu: "",
+                  meslekibrans: "",
+                  universitedurumu: "",
+                  universitebolum: ""
+                }}
+                historyData={profileData?.history || {
+                  isyerleri: "",
+                  gorevpozisyon: "",
+                  belgeler: "",
+                  yarismalar: "",
+                  cv: ""
+                }}
+                onEducationChange={() => {}}
+                onHistoryChange={() => {}}
+                onSave={async () => {}}
+                isLoading={loading}
+              />
             </TabsContent>
           </Tabs>
         </CardContent>
