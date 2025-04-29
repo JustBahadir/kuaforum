@@ -1,11 +1,12 @@
 
 /**
  * ISO-style 3-letter codes for Turkish cities
+ * Preserving all Turkish characters correctly
  */
 export const CityISOCodes: Record<string, string> = {
   "ADANA": "ADA",
   "ADIYAMAN": "ADI",
-  "AFYONKARAHISAR": "AFY",
+  "AFYONKARAHİSAR": "AFY",
   "AĞRI": "AGR",
   "AKSARAY": "AKS",
   "AMASYA": "AMS",

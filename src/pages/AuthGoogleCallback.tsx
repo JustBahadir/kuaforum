@@ -2,7 +2,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/lib/supabase/client";
-import { toast } from "sonner";
 import AccountNotFound from "@/components/auth/AccountNotFound";
 
 export default function AuthGoogleCallback() {
@@ -23,8 +22,8 @@ export default function AuthGoogleCallback() {
 
         if (sessionError) {
           console.error("Session error:", sessionError);
-          toast.error("Giriş sırasında bir hata oluştu.");
-          navigate("/login");
+          setAccountNotFound(true);
+          setLoading(false);
           return;
         }
 

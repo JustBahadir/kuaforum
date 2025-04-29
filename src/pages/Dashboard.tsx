@@ -107,7 +107,7 @@ export default function Dashboard() {
     );
   }
 
-  // Convert arrays to appropriate values for ProfitAnalysis component - fixing the type issue
+  // Convert arrays to appropriate values for ProfitAnalysis component
   // The ProfitAnalysis component expects numbers, not arrays
   const operationsData = operations.length || 0;
   const expensesData = fixedExpenses.length || 0;

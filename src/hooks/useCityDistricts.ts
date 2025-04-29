@@ -26,8 +26,7 @@ export const useCityDistricts = () => {
   useEffect(() => {
     const fetchCitiesData = async () => {
       try {
-        // Mock data for now - will be replaced with API call
-        // Ensure proper Turkish characters are used in city names
+        // Mock data with proper Turkish characters
         const mockCities: City[] = [
           { id: 1, name: "İstanbul", value: "istanbul", districts: [] },
           { id: 2, name: "Ankara", value: "ankara", districts: [] },
@@ -39,10 +38,16 @@ export const useCityDistricts = () => {
           { id: 8, name: "Gaziantep", value: "gaziantep", districts: [] },
           { id: 9, name: "Giresun", value: "giresun", districts: [] },
           { id: 10, name: "Gümüşhane", value: "gumushane", districts: [] },
-          { id: 11, name: "Hakkari", value: "hakkari", districts: [] },
+          { id: 11, name: "Hakkâri", value: "hakkari", districts: [] },
           { id: 12, name: "Hatay", value: "hatay", districts: [] },
-          { id: 13, name: "Iğdır", value: "igdir", districts: [] },
+          { id: 13, name: "Iğdır", value: "igdir", districts: [] }, // Ensure correct Turkish "I" without dot
           { id: 14, name: "Isparta", value: "isparta", districts: [] },
+          { id: 15, name: "Aydın", value: "aydin", districts: [] }, // Ensure correct Turkish "ı"
+          { id: 16, name: "Balıkesir", value: "balikesir", districts: [] },
+          { id: 17, name: "Bartın", value: "bartin", districts: [] },
+          { id: 18, name: "Şırnak", value: "sirnak", districts: [] }, // Added for testing
+          { id: 19, name: "Çorum", value: "corum", districts: [] }, // Added for testing
+          { id: 20, name: "Elazığ", value: "elazig", districts: [] }, // Added for testing
         ];
         
         setCities(mockCities);
@@ -100,6 +105,13 @@ export const useCityDistricts = () => {
               { id: 14, name: "Muratpaşa", value: "muratpasa", city_id: 5 },
               { id: 15, name: "Konyaaltı", value: "konyaalti", city_id: 5 },
               { id: 16, name: "Kepez", value: "kepez", city_id: 5 }
+            ];
+            break;
+          case "aydin":
+            mockDistricts = [
+              { id: 17, name: "Efeler", value: "efeler", city_id: 15 },
+              { id: 18, name: "Didim", value: "didim", city_id: 15 },
+              { id: 19, name: "Kuşadası", value: "kusadasi", city_id: 15 }
             ];
             break;
         }
@@ -170,6 +182,13 @@ export const useCityDistricts = () => {
                 { id: 14, name: "Muratpaşa", value: "muratpasa", city_id: 5 },
                 { id: 15, name: "Konyaaltı", value: "konyaalti", city_id: 5 },
                 { id: 16, name: "Kepez", value: "kepez", city_id: 5 }
+              ];
+              break;
+            case "aydin":
+              mockDistricts = [
+                { id: 17, name: "Efeler", value: "efeler", city_id: 15 },
+                { id: 18, name: "Didim", value: "didim", city_id: 15 },
+                { id: 19, name: "Kuşadası", value: "kusadasi", city_id: 15 }
               ];
               break;
           }
