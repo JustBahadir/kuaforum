@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +12,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { isletmeServisi } from "@/lib/supabase/services/dukkanServisi";
 import { personelServisi } from "@/lib/supabase/services/personelServisi";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { shopService } from "@/lib/auth/services/shopService";
+import { CityISOCodes } from "@/utils/cityISOCodes";
 
 interface RegisterFormProps {
   onSuccess: () => void;
@@ -40,6 +43,12 @@ const staffSchema = z.object({
   shopPhone: z.string().optional(),
   city: z.string().optional(),
   district: z.string().optional(),
+});
+
+// Additional validation for admin role
+const adminSchema = staffSchema.extend({
+  shopName: z.string().min(2, "Dükkan adı en az 2 karakter olmalıdır"),
+  city: z.string().min(1, "İl seçimi zorunludur"),
 });
 
 export function RegisterForm({ onSuccess }: RegisterFormProps) {
@@ -88,38 +97,19 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
         setCities(formattedCities);
       } catch (error) {
         console.error('Error fetching cities data:', error);
-        // Fallback with some major cities
-        setCities([
-          {
-            name: "İstanbul",
-            value: "istanbul",
-            districts: [
-              { name: "Kadıköy", value: "kadikoy" },
-              { name: "Beşiktaş", value: "besiktas" },
-              { name: "Şişli", value: "sisli" },
-              { name: "Üsküdar", value: "uskudar" },
-              { name: "Maltepe", value: "maltepe" }
-            ]
-          },
-          {
-            name: "Ankara",
-            value: "ankara",
-            districts: [
-              { name: "Çankaya", value: "cankaya" },
-              { name: "Keçiören", value: "kecioren" },
-              { name: "Yenimahalle", value: "yenimahalle" }
-            ]
-          },
-          {
-            name: "İzmir",
-            value: "izmir",
-            districts: [
-              { name: "Konak", value: "konak" },
-              { name: "Karşıyaka", value: "karsiyaka" },
-              { name: "Bornova", value: "bornova" }
-            ]
-          }
-        ]);
+        // Fallback with Turkish cities based on our ISO codes
+        const fallbackCities = Object.keys(CityISOCodes).map(cityName => {
+          return {
+            name: cityName.charAt(0) + cityName.slice(1).toLowerCase(),
+            value: cityName,
+            districts: [] // Empty districts for fallback
+          };
+        });
+        
+        // Sort cities alphabetically
+        fallbackCities.sort((a, b) => a.name.localeCompare(b.name));
+        
+        setCities(fallbackCities);
       }
     };
 
@@ -145,19 +135,32 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
   const validateForm = () => {
     setGlobalError(null);
     try {
-      staffSchema.parse({
-        firstName,
-        lastName,
-        email,
-        phone,
-        password,
-        role,
-        shopName: role === "admin" ? shopName : undefined,
-        shopAddress: role === "admin" ? shopAddress : undefined,
-        shopPhone: role === "admin" ? shopPhone : undefined,
-        city: role === "admin" ? city : undefined,
-        district: role === "admin" ? district : undefined,
-      });
+      if (role === "admin") {
+        // Use the admin schema for validation
+        adminSchema.parse({
+          firstName,
+          lastName,
+          email,
+          phone,
+          password,
+          role,
+          shopName,
+          city,
+          district,
+          shopAddress,
+          shopPhone
+        });
+      } else {
+        // Use the regular staff schema
+        staffSchema.parse({
+          firstName,
+          lastName,
+          email,
+          phone,
+          password,
+          role,
+        });
+      }
       setErrors({});
       return true;
     } catch (error) {
@@ -198,17 +201,8 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
       return;
     }
 
-    if (role === "admin") {
-      if (!shopName) {
-        setErrors({ shopName: "Dükkan adı gereklidir" });
-        return;
-      }
-      
-      if (!city) {
-        setErrors({ city: "İl seçimi gereklidir" });
-        return;
-      }
-    } else if (role === "staff" && !dukkanKodu) {
+    // Additional validation for staff role
+    if (role === "staff" && !dukkanKodu) {
       setErrors({ dukkanKodu: "Dükkan kodu gereklidir" });
       return;
     }
@@ -224,7 +218,9 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
       let dukkanId: number | null = null;
       
       if (role === "admin") {
-        shopCode = authService.generateShopCode(shopName);
+        // Use the selected city to generate shop code
+        const cityCode = city ? CityISOCodes[city.toUpperCase()] || "XXX" : "XXX";
+        shopCode = await shopService.generateShopCode(shopName, cityCode);
       }
       
       // Register user with Supabase Auth
@@ -259,14 +255,14 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
           
           const shopAddress = districtInfo && cityInfo
             ? `${districtInfo.name}, ${cityInfo.name}`
-            : city;
+            : cityInfo ? cityInfo.name : city;
           
           const dukkan = await isletmeServisi.ekle({
             ad: shopName,
             adres: shopAddress || "",
             telefon: shopPhone || phone,
             sahibi_id: user.id,
-            kod: shopCode || authService.generateShopCode(shopName),
+            kod: shopCode || await shopService.generateShopCode(shopName, city ? CityISOCodes[city.toUpperCase()] : undefined),
             active: true
           } as any); // Using type assertion to bypass type checking for now
           
@@ -275,7 +271,7 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
           // Dükkan sahibini aynı zamanda personel olarak da ekleyelim
           await personelServisi.ekle({
             ad_soyad: `${firstName} ${lastName}`,
-            personel_no: authService.generateShopCode(`${firstName}${lastName}`),
+            personel_no: await shopService.generateShopCode(`${firstName}${lastName}`),
             telefon: phone,
             eposta: email,
             adres: shopAddress || "",
@@ -304,7 +300,7 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
           // Personeli dükkan ile ilişkilendir
           await personelServisi.ekle({
             ad_soyad: `${firstName} ${lastName}`,
-            personel_no: authService.generateShopCode(`${firstName}${lastName}`),
+            personel_no: await shopService.generateShopCode(`${firstName}${lastName}`),
             telefon: phone,
             eposta: email,
             adres: "",
@@ -354,6 +350,7 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
           value={role}
           onValueChange={(value: "staff" | "admin") => {
             setRole(value);
+            setErrors({});  // Clear errors when changing role
           }}
         >
           <SelectTrigger className="w-full">
@@ -463,7 +460,7 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
       {role === "admin" && (
         <>
           <div className="space-y-2">
-            <Label htmlFor="shopName">Dükkan Adı</Label>
+            <Label htmlFor="shopName">Dükkan Adı <span className="text-red-500">*</span></Label>
             <div className="relative">
               <Store className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
               <Input
@@ -483,10 +480,11 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
           
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="city">İl</Label>
+              <Label htmlFor="city">İl <span className="text-red-500">*</span></Label>
               <Select
                 value={city}
                 onValueChange={setCity}
+                required
               >
                 <SelectTrigger id="city">
                   <SelectValue placeholder="İl seçin" />
@@ -509,10 +507,10 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
               <Select
                 value={district}
                 onValueChange={setDistrict}
-                disabled={!city}
+                disabled={!city || districts.length === 0}
               >
                 <SelectTrigger id="district">
-                  <SelectValue placeholder={city ? "İlçe seçin" : "Önce il seçin"} />
+                  <SelectValue placeholder={!city ? "Önce il seçin" : districts.length === 0 ? "İlçe bilgisi yok" : "İlçe seçin"} />
                 </SelectTrigger>
                 <SelectContent>
                   {districts.map((districtItem) => (

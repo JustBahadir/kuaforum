@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { isletmeServisi } from "@/lib/supabase";
@@ -11,6 +12,9 @@ import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CityISOCodes } from "@/utils/cityISOCodes";
+import { shopService } from "@/lib/auth/services/shopService";
 
 export default function ShopSettings() {
   const { userRole, dukkanId } = useCustomerAuth();
@@ -18,7 +22,16 @@ export default function ShopSettings() {
   const [copied, setCopied] = useState(false);
   const [address, setAddress] = useState("");
   const [fullAddress, setFullAddress] = useState("");
+  const [shopName, setShopName] = useState("");
+  const [selectedCity, setSelectedCity] = useState("");
+  const [isKodGenerating, setIsKodGenerating] = useState(false);
   const queryClient = useQueryClient();
+  
+  // List of Turkish cities from CityISOCodes
+  const cities = Object.keys(CityISOCodes).map(city => ({
+    value: city,
+    label: city.charAt(0).toUpperCase() + city.slice(1).toLowerCase()
+  })).sort((a, b) => a.label.localeCompare(b.label));
 
   const { data: isletme, isLoading, error } = useQuery({
     queryKey: ['dukkan', dukkanId],
@@ -31,6 +44,18 @@ export default function ShopSettings() {
       setIsletmeKodu(isletme.kod);
       setAddress(isletme.adres || "");
       setFullAddress(isletme.acik_adres || "");
+      setShopName(isletme.ad || "");
+      
+      // Try to extract city from address or set it to empty
+      if (isletme.adres) {
+        const parts = isletme.adres.split(',');
+        if (parts.length > 0) {
+          const cityPart = parts[parts.length - 1].trim().toUpperCase();
+          if (CityISOCodes[cityPart]) {
+            setSelectedCity(cityPart);
+          }
+        }
+      }
     }
   }, [isletme]);
 
@@ -47,38 +72,55 @@ export default function ShopSettings() {
   };
 
   const updateShopAddress = useMutation({
-    mutationFn: async (newFullAddress: string) => {
+    mutationFn: async (updates: { acik_adres?: string; adres?: string; ad?: string }) => {
       if (!dukkanId) {
         throw new Error("İşletme ID bulunamadı");
       }
       
       try {
-        console.log("Açık adres güncelleniyor:", newFullAddress);
+        console.log("İşletme bilgileri güncelleniyor:", updates);
         
-        const result = await isletmeServisi.guncelle(dukkanId, {
-          acik_adres: newFullAddress
-        });
+        const result = await isletmeServisi.guncelle(dukkanId, updates);
         
         console.log("Güncelleme sonucu:", result);
         return result;
       } catch (err) {
-        console.error("Adres güncelleme mutasyon hatası:", err);
+        console.error("İşletme bilgileri güncelleme mutasyon hatası:", err);
         throw err;
       }
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['dukkan', dukkanId] });
-      toast.success("İşletme açık adresi güncellendi");
+      toast.success("İşletme bilgileri güncellendi");
       setFullAddress(data.acik_adres || "");
     },
     onError: (error) => {
-      console.error("Açık adres güncelleme hatası:", error);
-      toast.error(`Açık adres güncellenirken bir hata oluştu: ${error instanceof Error ? error.message : "Bilinmeyen hata"}`);
+      console.error("İşletme bilgileri güncelleme hatası:", error);
+      toast.error(`İşletme bilgileri güncellenirken bir hata oluştu: ${error instanceof Error ? error.message : "Bilinmeyen hata"}`);
     }
   });
 
   const handleAddressUpdate = () => {
-    updateShopAddress.mutate(fullAddress);
+    updateShopAddress.mutate({ acik_adres: fullAddress });
+  };
+  
+  const handleShopNameUpdate = () => {
+    if (!shopName || shopName.trim().length < 2) {
+      toast.error("İşletme adı en az 2 karakter olmalıdır");
+      return;
+    }
+    
+    updateShopAddress.mutate({ ad: shopName });
+  };
+  
+  const handleCityUpdate = () => {
+    if (!selectedCity) {
+      toast.error("Lütfen bir il seçin");
+      return;
+    }
+    
+    const cityName = selectedCity.charAt(0).toUpperCase() + selectedCity.slice(1).toLowerCase();
+    updateShopAddress.mutate({ adres: cityName });
   };
 
   const openInMaps = () => {
@@ -89,6 +131,34 @@ export default function ShopSettings() {
     
     const encodedAddress = encodeURIComponent(fullAddress);
     window.open(`https://www.google.com/maps/search/?api=1&query=${encodedAddress}`, '_blank');
+  };
+  
+  const handleRegenerateKod = async () => {
+    if (!isletme || !shopName || !selectedCity) {
+      toast.error("İşletme kodu oluşturmak için önce işletme adınızı ve ilinizi girmeniz gerekir.");
+      return;
+    }
+    
+    setIsKodGenerating(true);
+    try {
+      // Generate a new code using the shop service
+      const cityCode = CityISOCodes[selectedCity];
+      const newKod = await shopService.generateShopCode(shopName, cityCode);
+      
+      // Update in database
+      const result = await isletmeServisi.guncelle(dukkanId!, { kod: newKod });
+      
+      if (result) {
+        setIsletmeKodu(newKod);
+        toast.success("İşletme kodu yeniden oluşturuldu");
+        queryClient.invalidateQueries({ queryKey: ['dukkan', dukkanId] });
+      }
+    } catch (error) {
+      console.error("Kod oluşturma hatası:", error);
+      toast.error("İşletme kodu oluşturulurken bir hata oluştu");
+    } finally {
+      setIsKodGenerating(false);
+    }
   };
 
   if (!userRole) {
@@ -143,18 +213,49 @@ export default function ShopSettings() {
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="shopName">İşletme Adı</Label>
-                    <Input id="shopName" value={isletme.ad} readOnly />
+                    <Input 
+                      id="shopName" 
+                      value={shopName} 
+                      onChange={(e) => setShopName(e.target.value)}
+                      placeholder="İşletmenizin adını giriniz"
+                    />
+                    <div className="flex justify-end">
+                      <Button 
+                        onClick={handleShopNameUpdate}
+                        size="sm"
+                        variant="outline"
+                        disabled={updateShopAddress.isPending || !shopName || shopName === isletme.ad}
+                      >
+                        İşletme Adını Güncelle
+                      </Button>
+                    </div>
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="shopAddress">İl/İlçe Bilgisi</Label>
-                    <Input 
-                      id="shopAddress" 
-                      value={address} 
-                      readOnly
-                      className="bg-gray-50"
-                    />
-                    <p className="text-xs text-gray-500">Bu bilgi kayıt esnasında alınmıştır ve değiştirilemez.</p>
+                    <Label htmlFor="shopCity">İl</Label>
+                    <Select
+                      value={selectedCity}
+                      onValueChange={setSelectedCity}
+                    >
+                      <SelectTrigger id="shopCity">
+                        <SelectValue placeholder="İl seçin" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {cities.map((city) => (
+                          <SelectItem key={city.value} value={city.value}>{city.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <div className="flex justify-end">
+                      <Button 
+                        onClick={handleCityUpdate}
+                        size="sm"
+                        variant="outline"
+                        disabled={updateShopAddress.isPending || !selectedCity || (isletme.adres && isletme.adres.toUpperCase().includes(selectedCity))}
+                      >
+                        İl Bilgisini Güncelle
+                      </Button>
+                    </div>
                   </div>
                   
                   <div className="space-y-2">
@@ -220,10 +321,27 @@ export default function ShopSettings() {
                     </Button>
                   </div>
                   
-                  <div className="text-sm text-muted-foreground">
-                    Not: Bu kod işletmenize özeldir ve değiştirilemez. Personellerinizin
-                    sisteme kaydolabilmesi için bu kodu kullanmaları gerekir.
+                  <div className="text-sm text-muted-foreground mb-4">
+                    Otomatik olarak oluşturulan işletme kodunuz, işletme adı ve il bilgilerinize göre oluşturulur.
                   </div>
+                  
+                  <Button 
+                    onClick={handleRegenerateKod}
+                    disabled={isKodGenerating || !shopName || !selectedCity}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    {isKodGenerating ? "Kod Oluşturuluyor..." : "İşletme Kodunu Yeniden Oluştur"}
+                  </Button>
+                  
+                  {(!shopName || !selectedCity) && (
+                    <Alert className="bg-amber-50 border-amber-200 mt-2">
+                      <AlertCircle className="h-4 w-4 text-amber-500" />
+                      <AlertDescription className="text-amber-700">
+                        İşletme kodu oluşturmak için önce işletme adınızı ve ilinizi girmeniz gerekir.
+                      </AlertDescription>
+                    </Alert>
+                  )}
                 </div>
               </CardContent>
             </Card>

@@ -9,7 +9,7 @@ export const shopService = {
   /**
    * Create a unique shop code based on shop name
    */
-  generateShopCode: async (shopName: string, city?: string) => {
+  generateShopCode: async (shopName: string, cityCode?: string) => {
     // 1. Convert Turkish characters to Latin
     const turkishToLatin = (text: string) => {
       return text
@@ -42,13 +42,11 @@ export const shopService = {
     // 3. Country code + City code
     const countryCode = "TR"; // Default to Turkey
     
-    // Get city code (3 letters) or use a default
-    const cityCode = city ? 
-      CityISOCodes[city.toUpperCase()] || "XXX" : 
-      "XXX";
+    // Get city code (3 letters) or use provided cityCode or default
+    const finalCityCode = cityCode || "XXX";
 
     // 4. Get current branch number for this shop name
-    const branchNumber = await shopService.getNextBranchNumber(namePrefix, countryCode + cityCode);
+    const branchNumber = await shopService.getNextBranchNumber(namePrefix, countryCode + finalCityCode);
 
     // 5. Generate a random alphanumeric code (3 characters)
     const randomChars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Removed confusing chars like 0/O, 1/I
@@ -59,13 +57,13 @@ export const shopService = {
     }
 
     // 6. Combine all parts
-    const shopCode = `${namePrefix}-${countryCode}${cityCode}-${branchNumber}-${randomCode}`;
+    const shopCode = `${namePrefix}-${countryCode}${finalCityCode}-${branchNumber}-${randomCode}`;
     
     // 7. Verify that code is unique (recursive check)
     const isUnique = await shopService.isShopCodeUnique(shopCode);
     if (!isUnique) {
       // If not unique, try again with different random code
-      return shopService.generateShopCode(shopName, city);
+      return shopService.generateShopCode(shopName, cityCode);
     }
     
     return shopCode;
