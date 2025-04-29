@@ -1,16 +1,76 @@
 
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Home, UserPlus } from "lucide-react";
+import { Home, UserPlus, LogIn } from "lucide-react";
+import { useEffect, useState } from "react";
 
 export default function AccountNotFound() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const [isExistingAccount, setIsExistingAccount] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
+  
+  useEffect(() => {
+    const accountExists = searchParams.get("accountExists") === "true";
+    if (accountExists) {
+      setIsExistingAccount(true);
+      setRedirecting(true);
+      
+      // Automatically redirect to login after 2 seconds
+      const timer = setTimeout(() => {
+        navigate("/login?error=account-exists");
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams, navigate]);
 
   const handleRegister = () => {
     // Redirect to login page with register tab active
     navigate("/login?tab=register");
   };
+
+  const handleLogin = () => {
+    // Redirect to login page
+    navigate("/login");
+  };
+
+  if (isExistingAccount) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md shadow-lg border border-blue-100">
+          <CardHeader className="text-center">
+            <CardTitle className="text-center bg-gradient-to-r from-blue-500 to-purple-500 text-white p-4 rounded-t-lg">
+              Hesap Durumu
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6 p-6">
+            <div className="flex items-center justify-center">
+              <div className="rounded-full bg-blue-100 p-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-500">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                  <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+              </div>
+            </div>
+            <p className="text-center text-blue-500 font-medium text-lg">
+              Bu e-posta zaten sistemimizde kayıtlı. Giriş sayfasına yönlendiriliyorsunuz...
+            </p>
+            <div className="flex justify-center">
+              <div className="w-8 h-8 border-4 border-t-blue-500 border-blue-200 rounded-full animate-spin"></div>
+            </div>
+          </CardContent>
+          <CardFooter className="flex justify-center">
+            <Button variant="ghost" onClick={() => navigate("/")} className="flex items-center gap-2">
+              <Home size={16} />
+              Ana Sayfaya Dön
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -33,13 +93,23 @@ export default function AccountNotFound() {
           <p className="text-center text-red-500 font-medium text-lg">
             Bu Gmail'e kayıtlı bir hesap bulunmamaktadır.
           </p>
-          <Button 
-            onClick={handleRegister}
-            className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 h-12 text-lg"
-          >
-            <UserPlus className="mr-2 h-5 w-5" />
-            Kayıt olmak için tıklayın
-          </Button>
+          <div className="flex flex-col gap-4">
+            <Button 
+              onClick={handleRegister}
+              className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 h-12 text-lg"
+            >
+              <UserPlus className="mr-2 h-5 w-5" />
+              Kayıt olmak için tıklayın
+            </Button>
+            <Button 
+              onClick={handleLogin}
+              variant="outline"
+              className="w-full h-12 text-lg"
+            >
+              <LogIn className="mr-2 h-5 w-5" />
+              Giriş yapmak için tıklayın
+            </Button>
+          </div>
         </CardContent>
         <CardFooter className="flex justify-center">
           <Button variant="ghost" onClick={() => navigate("/")} className="flex items-center gap-2">

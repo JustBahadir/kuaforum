@@ -48,7 +48,7 @@ export const useAppointments = ({ initialStatus = 'beklemede', initialDate = nul
       if (selectedDate) {
         const formattedDate = selectedDate.toISOString().split('T')[0];
         filteredAppointments = filteredAppointments.filter(
-          (appointment) => appointment.tarih.split('T')[0] === formattedDate
+          (appointment) => appointment.tarih && appointment.tarih.split('T')[0] === formattedDate
         );
       }
 
@@ -59,6 +59,7 @@ export const useAppointments = ({ initialStatus = 'beklemede', initialDate = nul
       setAppointments(filteredAppointments);
     } catch (err: any) {
       setError(err);
+      console.error("Randevu fetch hatası:", err);
       toast.error("Randevular yüklenirken bir hata oluştu");
     } finally {
       setLoading(false);
@@ -70,7 +71,11 @@ export const useAppointments = ({ initialStatus = 'beklemede', initialDate = nul
       const fetchPersonelId = async () => {
         try {
           const personel = await personelServisi.getirByAuthId(user.id);
-          setPersonelId(personel?.id || null);
+          if (personel?.id) {
+            setPersonelId(personel.id);
+          } else {
+            console.warn("Personel bilgisi bulunamadı");
+          }
         } catch (error) {
           console.error("Error fetching personel ID:", error);
           toast.error("Personel bilgileri alınırken bir hata oluştu");
@@ -93,8 +98,13 @@ export const useAppointments = ({ initialStatus = 'beklemede', initialDate = nul
   };
 
   const updateStatus = async (id: number, status: RandevuDurumu) => {
+    if (!id) {
+      console.error("Cannot update appointment without valid ID");
+      toast.error("Geçersiz randevu kimliği");
+      return null;
+    }
+    
     try {
-      // Use guncelle instead of randevuDurumGuncelle
       const updatedAppointment = await randevuServisi.guncelle(id, { durum: status });
       if (updatedAppointment) {
         setAppointments((prevAppointments) =>

@@ -17,6 +17,7 @@ export default function Login() {
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [redirecting, setRedirecting] = useState(false);
   
   // Set initial active tab based on URL parameter
   useEffect(() => {
@@ -31,8 +32,15 @@ export default function Login() {
       setErrorMessage("Bu hesap bulunamadı. Lütfen kayıt olun veya farklı bir hesapla giriş yapın.");
     } else if (errorParam === "unexpected") {
       setErrorMessage("Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.");
+    } else if (errorParam === "account-exists") {
+      setErrorMessage("Bu hesap zaten kayıtlı. Otomatik giriş yapılıyor...");
+      setRedirecting(true);
+      // Redirect to auth page after 2 seconds
+      setTimeout(() => {
+        navigate("/auth-google-callback?mode=login");
+      }, 2000);
     }
-  }, [searchParams]);
+  }, [searchParams, navigate]);
 
   // Admin login states
   const [adminEmail, setAdminEmail] = useState("");
@@ -118,9 +126,9 @@ export default function Login() {
         </CardHeader>
         <CardContent className="space-y-6">
           {errorMessage && (
-            <Alert variant="destructive" className="border-red-500 bg-red-50">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription className="text-red-700">
+            <Alert variant={redirecting ? "default" : "destructive"} className={redirecting ? "border-blue-500 bg-blue-50" : "border-red-500 bg-red-50"}>
+              {redirecting ? <InfoIcon className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+              <AlertDescription className={redirecting ? "text-blue-700" : "text-red-700"}>
                 {errorMessage}
               </AlertDescription>
             </Alert>
