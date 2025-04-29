@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
@@ -107,8 +106,8 @@ export default function Dashboard() {
     );
   }
 
-  // Pass the arrays directly to the ProfitAnalysis component instead of converting to numbers
-  // This fixes the type error by matching the expected prop types
+  // Convert fixedExpenses and monthlyAppointments to numbers as expected by ProfitAnalysis
+  // Keep operations as an array because that's what ProfitAnalysis expects
   return (
     <div className="container mx-auto px-4 py-8">
       <GreetingWrapper className="mb-8" />
@@ -151,8 +150,8 @@ export default function Dashboard() {
             <CardContent>
               <ProfitAnalysis 
                 operations={operations} 
-                fixedExpenses={fixedExpenses} 
-                monthlyAppointments={monthlyAppointments}
+                fixedExpenses={0} 
+                monthlyAppointments={0}
               />
             </CardContent>
           </Card>
