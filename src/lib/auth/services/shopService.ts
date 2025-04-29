@@ -11,7 +11,7 @@ export const shopService = {
    * Format: [İşletmeAdıKısaltması]-[ÜlkeKodu+ŞehirKodu]-[ŞubeNumarası]-[RandomKısaKod]
    */
   generateShopCode: async (shopName: string, cityCode?: string) => {
-    // 1. Convert Turkish characters to Latin for the name part and get first 5 letters
+    // 1. Convert Turkish characters to Latin for the name part
     const turkishToLatin = (text: string) => {
       return text
         .replace(/ğ/g, 'g')
@@ -28,7 +28,7 @@ export const shopService = {
         .replace(/Ç/g, 'C');
     };
 
-    // 2. Normalize and get first 5 letters from shop name in uppercase
+    // 2. Part 1: Extract first 5 letters from shop name, convert to uppercase
     const cleanName = turkishToLatin(shopName)
       .toUpperCase()
       .replace(/[^\w]/g, ''); // Remove non-alphanumeric chars
@@ -40,24 +40,25 @@ export const shopService = {
       namePrefix += 'X';
     }
 
-    // 3. Country code (always TR) + City code (3 chars)
+    // 3. Part 2: Country code (always TR) + City code (3 chars)
     const countryCode = "TR";
     
     // Get city code (3 letters) or use provided cityCode or default "XXX"
     const finalCityCode = cityCode || "XXX";
 
-    // 4. Get the next branch number
+    // 4. Part 3: Get the next branch number (3-digit format)
     const branchNumber = await shopService.getNextBranchNumber();
     const formattedBranchNumber = branchNumber.toString().padStart(3, '0');
     
-    // 5. Generate a random 3-character alphanumeric code
+    // 5. Part 4: Generate a random 3-character alphanumeric code (A-Z, 0-9)
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let randomCode = '';
     for (let i = 0; i < 3; i++) {
       randomCode += characters.charAt(Math.floor(Math.random() * characters.length));
     }
     
-    // 6. Combine all parts to create the shop code
+    // 6. Combine all parts with hyphens to create the shop code in the exact format:
+    // [İşletmeAdıKısaltması]-[ÜlkeKodu+ŞehirKodu]-[ŞubeNumarası]-[RandomKısaKod]
     const shopCode = `${namePrefix}-${countryCode}${finalCityCode}-${formattedBranchNumber}-${randomCode}`;
     
     return shopCode;
@@ -79,11 +80,11 @@ export const shopService = {
         return 1;
       }
       
-      // Extract branch numbers and find the max
+      // Extract branch numbers from the formatted code
       const branchNumbers = data.map(shop => {
         if (!shop.kod) return 0;
         
-        // Extract the branch number part (after second dash, before third dash)
+        // Extract the branch number part (after second hyphen, before third hyphen)
         const matches = shop.kod.split('-');
         if (matches.length >= 3) {
           return parseInt(matches[2], 10) || 0;

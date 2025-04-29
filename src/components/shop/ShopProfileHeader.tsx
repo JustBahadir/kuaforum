@@ -111,11 +111,11 @@ export function ShopProfileHeader({
         <div className="flex-1">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h1 className="font-bold text-gray-800 text-3xl text-center">
+              <h1 className="font-bold text-gray-800 text-3xl text-center md:text-left">
                 {businessName}
               </h1>
               {isletmeData?.adres && (
-                <p className="text-muted-foreground text-center text-xl">{isletmeData.adres}</p>
+                <p className="text-muted-foreground text-center md:text-left text-xl">{isletmeData.adres}</p>
               )}
             </div>
             
