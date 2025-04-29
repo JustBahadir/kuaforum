@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+
+import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,6 +7,7 @@ import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { Scissors, Search, User, Users } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Home } from "lucide-react";
+
 export default function HomePage() {
   const navigate = useNavigate();
   const {
@@ -13,8 +15,9 @@ export default function HomePage() {
     userRole,
     loading
   } = useCustomerAuth();
-  const [showCustomerDialog, setShowCustomerDialog] = useState(false);
-  useEffect(() => {
+  const [showCustomerDialog, setShowCustomerDialog] = React.useState(false);
+
+  React.useEffect(() => {
     if (!loading) {
       if (isAuthenticated) {
         if (userRole === 'admin' || userRole === 'staff') {
@@ -34,14 +37,17 @@ export default function HomePage() {
       }
     }
   }, [isAuthenticated, userRole, loading, navigate]);
+
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center" aria-label="Yükleniyor">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500" />
       </div>;
   }
+
   const handleCustomerLoginClick = () => {
     setShowCustomerDialog(true);
   };
+
   return <div className="min-h-screen">
       <div className="container mx-auto px-4 py-8">
         <div className="grid md:grid-cols-2 gap-8 items-center min-h-[calc(100vh-4rem)]">

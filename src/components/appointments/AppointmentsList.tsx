@@ -1,74 +1,71 @@
 
-import { useState } from "react";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
+import React from 'react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { CheckSquare, XSquare } from "lucide-react";
-import { format, parseISO } from "date-fns";
-import { tr } from "date-fns/locale";
-import { Randevu, RandevuDurumu } from "@/lib/supabase/types";
+import { Button } from "@/components/ui/button";
+import { format } from 'date-fns';
+import { tr } from 'date-fns/locale';
+import { Randevu, RandevuDurumu } from '@/lib/supabase/types';
+import { MoreHorizontal, AlertCircle } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface AppointmentsListProps {
   appointments: Randevu[];
   isLoading: boolean;
-  currentPersonelId?: number | null;
-  onUpdateStatus: (id: number, status: RandevuDurumu) => Promise<any>;
+  onUpdateStatus: (id: number, status: RandevuDurumu) => Promise<Randevu | null>;
+  currentPersonelId: number | null;
 }
 
-export function AppointmentsList({
-  appointments,
-  isLoading,
-  currentPersonelId,
-  onUpdateStatus
+export function AppointmentsList({ 
+  appointments, 
+  isLoading, 
+  onUpdateStatus,
+  currentPersonelId
 }: AppointmentsListProps) {
-  const [expandedId, setExpandedId] = useState<number | null>(null);
-
-  const toggleExpand = (id: number) => {
-    setExpandedId(expandedId === id ? null : id);
-  };
-
+  
   const getStatusBadge = (status: RandevuDurumu) => {
-    switch (status) {
-      case "beklemede":
-        return <Badge variant="outline" className="bg-yellow-100 text-yellow-800">Beklemede</Badge>;
-      case "onaylandi":
-        return <Badge className="bg-blue-100 text-blue-800">Onaylandı</Badge>;
-      case "iptal":
-      case "iptal_edildi":
-        return <Badge variant="destructive">İptal Edildi</Badge>;
-      case "tamamlandi":
-        return <Badge variant="outline" className="bg-green-100 text-green-800">Tamamlandı</Badge>;
+    switch(status) {
+      case 'beklemede':
+        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 hover:bg-yellow-100">Beklemede</Badge>;
+      case 'onaylandi':
+        return <Badge variant="outline" className="bg-blue-50 text-blue-700 hover:bg-blue-100">Onaylandı</Badge>;
+      case 'tamamlandi':
+        return <Badge variant="outline" className="bg-green-50 text-green-700 hover:bg-green-100">Tamamlandı</Badge>;
+      case 'iptal_edildi':
+        return <Badge variant="outline" className="bg-red-50 text-red-700 hover:bg-red-100">İptal Edildi</Badge>;
+      case 'iptal':
+        return <Badge variant="outline" className="bg-red-50 text-red-700 hover:bg-red-100">İptal</Badge>;
       default:
         return <Badge variant="outline">Bilinmiyor</Badge>;
     }
   };
 
-  const formatDate = (dateStr: string) => {
-    return format(parseISO(dateStr), "d MMMM yyyy", { locale: tr });
+  const handleStatusChange = async (id: number, status: RandevuDurumu) => {
+    try {
+      await onUpdateStatus(id, status);
+    } catch (error) {
+      console.error("Error updating appointment status:", error);
+    }
   };
 
   if (isLoading) {
-    return (
-      <div className="py-8 text-center">
-        <div className="inline-block w-8 h-8 border-4 border-t-blue-500 border-blue-200 rounded-full animate-spin"></div>
-        <p className="mt-2 text-muted-foreground">Randevular yükleniyor...</p>
-      </div>
-    );
+    return <div className="flex justify-center items-center h-64">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500" />
+    </div>;
   }
 
   if (appointments.length === 0) {
-    return (
-      <div className="py-8 text-center">
-        <p className="text-muted-foreground">Randevu bulunmamaktadır.</p>
-      </div>
-    );
+    return <div className="text-center p-8 text-gray-500">
+      <AlertCircle className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+      <h3 className="text-lg font-medium">Randevu bulunamadı</h3>
+      <p className="mt-2">Seçilen tarih ve filtre için randevu bulunmamaktadır.</p>
+    </div>;
   }
 
   return (
@@ -76,67 +73,100 @@ export function AppointmentsList({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Tarih</TableHead>
-            <TableHead>Saat</TableHead>
+            <TableHead>Tarih & Saat</TableHead>
             <TableHead>Müşteri</TableHead>
             <TableHead>Personel</TableHead>
+            <TableHead>İşlemler</TableHead>
             <TableHead>Durum</TableHead>
             <TableHead className="text-right">İşlemler</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {appointments.sort((a, b) => {
-            // Sort by date (recent first) and then by time
-            const dateA = new Date(`${a.tarih}T${a.saat}`);
-            const dateB = new Date(`${b.tarih}T${b.saat}`);
-            return dateB.getTime() - dateA.getTime();
-          }).map((appointment) => (
-            <TableRow 
-              key={appointment.id} 
-              className={expandedId === appointment.id ? "bg-muted/50" : ""}
-            >
-              <TableCell>{formatDate(appointment.tarih)}</TableCell>
-              <TableCell>{appointment.saat.substring(0, 5)}</TableCell>
-              <TableCell>
-                {appointment.musteri ? 
-                  `${appointment.musteri.first_name} ${appointment.musteri.last_name || ''}` : 
-                  'Belirtilmemiş'
-                }
-              </TableCell>
-              <TableCell>{appointment.personel?.ad_soyad || 'Atanmamış'}</TableCell>
-              <TableCell>{getStatusBadge(appointment.durum)}</TableCell>
-              <TableCell className="text-right space-x-2">
-                {appointment.durum === "onaylandi" && (
-                  <>
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      className="ml-2"
-                      onClick={() => onUpdateStatus(appointment.id, "tamamlandi")}
-                    >
-                      <CheckSquare className="h-4 w-4 mr-1" /> Tamamlandı
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="destructive"
-                      className="ml-2"
-                      onClick={() => onUpdateStatus(appointment.id, "iptal_edildi")}
-                    >
-                      <XSquare className="h-4 w-4 mr-1" /> İptal
-                    </Button>
-                  </>
-                )}
-                <Button 
-                  size="sm" 
-                  variant="ghost"
-                  className="ml-2"
-                  onClick={() => toggleExpand(appointment.id)}
-                >
-                  {expandedId === appointment.id ? "Gizle" : "Detaylar"}
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
+          {appointments.map((appointment) => {
+            // Combine date and time
+            const appointmentDateTime = `${appointment.tarih}T${appointment.saat}`;
+            const formattedDate = format(new Date(appointmentDateTime), 'dd MMMM yyyy', { locale: tr });
+            const formattedTime = format(new Date(appointmentDateTime), 'HH:mm', { locale: tr });
+            
+            // Check if the current staff can manage this appointment
+            const canManage = currentPersonelId === null || 
+                             currentPersonelId === appointment.personel_id ||
+                             appointment.personel_id === null;
+
+            return (
+              <TableRow key={appointment.id}>
+                <TableCell>
+                  <div className="font-medium">{formattedDate}</div>
+                  <div className="text-sm text-muted-foreground">{formattedTime}</div>
+                </TableCell>
+                <TableCell>
+                  {appointment.musteri ? (
+                    <div>
+                      <div className="font-medium">{`${appointment.musteri.first_name} ${appointment.musteri.last_name || ''}`}</div>
+                      <div className="text-sm text-muted-foreground">{appointment.musteri.phone || 'Telefon yok'}</div>
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground">Müşteri bilgisi yok</span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {appointment.personel ? (
+                    appointment.personel.ad_soyad
+                  ) : (
+                    <span className="text-muted-foreground">Atanmamış</span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {Array.isArray(appointment.islemler) && appointment.islemler.length > 0 ? (
+                    <ul className="list-disc list-inside space-y-1">
+                      {appointment.islemler.map((islem: any, index: number) => (
+                        <li key={index} className="text-sm">
+                          {islem.islem_adi || 'İsimsiz işlem'}
+                          {islem.fiyat && <span className="text-muted-foreground ml-1">({islem.fiyat} TL)</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <span className="text-muted-foreground">İşlem bilgisi yok</span>
+                  )}
+                </TableCell>
+                <TableCell>{getStatusBadge(appointment.durum)}</TableCell>
+                <TableCell className="text-right">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild disabled={!canManage}>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <span className="sr-only">Menü aç</span>
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem>Randevu Detayları</DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onSelect={() => handleStatusChange(appointment.id, 'onaylandi')}
+                        disabled={appointment.durum === 'onaylandi'}
+                      >
+                        Onayla
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onSelect={() => handleStatusChange(appointment.id, 'tamamlandi')}
+                        disabled={appointment.durum === 'tamamlandi'}
+                      >
+                        Tamamlandı
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onSelect={() => handleStatusChange(appointment.id, 'iptal_edildi')}
+                        disabled={appointment.durum === 'iptal_edildi'}
+                        className="text-red-600"
+                      >
+                        İptal Et
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </div>

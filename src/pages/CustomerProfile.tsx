@@ -1,168 +1,111 @@
 
-import { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
-import { profilServisi } from "@/lib/supabase/services/profilServisi";
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
-import { User, UserRound, Phone } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ProfileDisplay } from "@/components/customer-profile/ProfileDisplay";
+import { ProfileEditForm } from "@/components/customer-profile/ProfileEditForm";
+import { useProfileManagement } from '@/hooks/useProfileManagement';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useAuth } from "@/hooks/useAuth";
 
-interface CustomerProfileProps {
-  isNewUser?: boolean;
-}
-
-export default function CustomerProfile({ isNewUser = false }: CustomerProfileProps) {
+export default function CustomerProfile() {
+  const { user } = useAuth();
+  const { profile, loading, updateProfile, uploadAvatar } = useProfileManagement(user?.id);
+  const [isEditing, setIsEditing] = useState(false);
   const navigate = useNavigate();
 
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
-
-  useEffect(() => {
-    const loadProfile = async () => {
-      try {
-        const profile = await profilServisi.getir();
-        if (profile) {
-          setFirstName(profile.first_name || "");
-          setLastName(profile.last_name || "");
-          setPhone(profile.phone || "");
-        }
-      } catch (error) {
-        console.error("Profil bilgileri yüklenirken hata:", error);
-        toast.error("Profil bilgileri yüklenirken bir hata oluştu.");
-      } finally {
-        setInitialLoading(false);
-      }
-    };
-
-    loadProfile();
-  }, []);
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      if (!firstName || !lastName || !phone) {
-        toast.error("Lütfen tüm zorunlu alanları doldurunuz.");
-        setLoading(false);
-        return;
-      }
-
-      const updatedProfile = await profilServisi.guncelle({
-        first_name: firstName,
-        last_name: lastName,
-        phone,
-      });
-
-      console.log("Profil güncellendi:", updatedProfile);
-      toast.success("Bilgileriniz başarıyla kaydedildi.");
-
-      if (isNewUser) {
-        navigate("/appointments");
-      }
-    } catch (error: any) {
-      console.error("Profil güncelleme hatası:", error);
-
-      toast.error("Bilgileriniz kaydedilirken bir hata oluştu: " + (error.message || "Bilinmeyen hata"));
-
-      if (isNewUser) {
-        setTimeout(() => {
-          navigate("/appointments");
-        }, 2000);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (initialLoading) {
+  if (loading) {
     return (
-      <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
-        <p>Profil bilgileri yükleniyor...</p>
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
       </div>
     );
   }
 
+  const handleSaveProfile = async (data) => {
+    await updateProfile(data);
+    setIsEditing(false);
+  };
+
   return (
-    <div className="container mx-auto p-6">
-      <div className="max-w-3xl mx-auto">
-        <h1 className="text-2xl font-bold mb-6">
-          {isNewUser ? "Müşteri Bilgilerinizi Tamamlayın" : "Profil Bilgilerim"}
-        </h1>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Kişisel Bilgiler</CardTitle>
-          </CardHeader>
-
-          <CardContent>
-            <form id="profileForm" onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="firstName" className="flex items-center gap-2">
-                  <User size={16} />
-                  Adınız *
-                </Label>
-                <Input
-                  id="firstName"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  placeholder="Adınız"
-                  className="max-w-md"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="lastName" className="flex items-center gap-2">
-                  <UserRound size={16} />
-                  Soyadınız *
-                </Label>
-                <Input
-                  id="lastName"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  placeholder="Soyadınız"
-                  className="max-w-md"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="phone" className="flex items-center gap-2">
-                  <Phone size={16} />
-                  Telefon Numaranız *
-                </Label>
-                <Input
-                  id="phone"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="05XX XXX XX XX"
-                  className="max-w-md"
-                  required
-                />
-                <p className="text-xs text-gray-500">* Zorunlu alanlar</p>
-              </div>
-            </form>
-          </CardContent>
-
-          <CardFooter className="flex flex-col sm:flex-row gap-2 sm:justify-end">
-            <Button type="submit" form="profileForm" disabled={loading}>
-              {loading ? "Kaydediliyor..." : "Bilgilerimi Kaydet"}
-            </Button>
-
-            {isNewUser && (
-              <Button type="button" variant="outline" onClick={() => navigate("/appointments")}>
-                Şimdilik Atla
-              </Button>
-            )}
-          </CardFooter>
-        </Card>
+    <div className="container mx-auto p-4 max-w-4xl">
+      <div className="mb-8 flex items-center justify-between">
+        <h2 className="text-2xl font-bold">Müşteri Profili</h2>
+        <Button variant="outline" onClick={() => navigate(-1)}>
+          Geri Dön
+        </Button>
       </div>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-4">
+            <Avatar className="h-16 w-16">
+              {profile?.avatar_url ? (
+                <AvatarImage src={profile.avatar_url} alt={`${profile.first_name} ${profile.last_name}`} />
+              ) : (
+                <AvatarFallback>{profile?.first_name?.[0]}{profile?.last_name?.[0]}</AvatarFallback>
+              )}
+            </Avatar>
+            <div>
+              <CardTitle>{profile?.first_name} {profile?.last_name}</CardTitle>
+              <p className="text-muted-foreground">{profile?.email}</p>
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent>
+          <Tabs defaultValue="profile">
+            <TabsList className="mb-4">
+              <TabsTrigger value="profile">Profil</TabsTrigger>
+              <TabsTrigger value="history">İşlem Geçmişi</TabsTrigger>
+              <TabsTrigger value="appointments">Randevular</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="profile" className="space-y-4">
+              <div className="flex justify-end">
+                {!isEditing ? (
+                  <Button variant="outline" onClick={() => setIsEditing(true)}>
+                    Düzenle
+                  </Button>
+                ) : (
+                  <div className="space-x-2">
+                    <Button variant="outline" onClick={() => setIsEditing(false)}>
+                      İptal
+                    </Button>
+                    <Button form="profile-form" type="submit">
+                      Kaydet
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {isEditing ? (
+                <ProfileEditForm 
+                  profile={profile}
+                  onSubmit={handleSaveProfile}
+                  onAvatarUpload={uploadAvatar}
+                />
+              ) : (
+                <ProfileDisplay profile={profile} />
+              )}
+            </TabsContent>
+
+            <TabsContent value="history">
+              <p className="text-center text-muted-foreground py-8">
+                İşlem geçmişi burada gösterilecektir.
+              </p>
+            </TabsContent>
+
+            <TabsContent value="appointments">
+              <p className="text-center text-muted-foreground py-8">
+                Randevular burada gösterilecektir.
+              </p>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
     </div>
   );
 }
