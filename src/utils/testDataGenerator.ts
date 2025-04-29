@@ -12,6 +12,8 @@ const generatePersonel = (count: number): Personel[] => {
     maas: 5000 + i * 100,
     prim_yuzdesi: 5 + i,
     calisma_sistemi: "aylik_maas",
+    created_at: new Date().toISOString(),
+    dukkan_id: 1 // Default dukkan_id
   }));
 };
 
@@ -22,16 +24,19 @@ const generateIslemler = (count: number): Islem[] => {
     kategori_id: 1,
     fiyat: 50 + i * 10,
     puan: 10 + i,
+    sira: i,
+    created_at: new Date().toISOString(),
+    dukkan_id: 1 // Default dukkan_id
   }));
 };
 
-// Update categories generation to use IslemKategori
 const generateCategories = (count: number): IslemKategori[] => {
   return Array.from({ length: count }, (_, i) => ({
     id: i + 1,
     kategori_adi: `Kategori ${i + 1}`,
     sira: i,
-    created_at: new Date().toISOString()
+    created_at: new Date().toISOString(),
+    dukkan_id: 1 // Default dukkan_id
   }));
 };
 

@@ -1,45 +1,8 @@
 
-export interface ProfileUpdateData {
-  first_name?: string;
-  last_name?: string;
-  phone?: string;
-  role?: 'admin' | 'staff' | 'customer';
-  gender?: "erkek" | "kadın" | null;
-  birthdate?: string;
-  avatar_url?: string;
-  address?: string;
-  iban?: string;
-}
+import { Profil } from '../../types';
 
-export interface ProfileServiceError {
-  message: string;
-  original?: any;
-}
+export type ProfileRole = 'admin' | 'staff' | 'customer';
 
-export interface ProfileCreationParams {
-  first_name?: string;
-  last_name?: string;
-  role?: 'admin' | 'staff' | 'customer';
-  phone?: string;
-  gender?: "erkek" | "kadın" | null;
-  birthdate?: string;
-  avatar_url?: string;
-  address?: string;
-  iban?: string;
-  // Fields used by RPC functions
-  user_id?: string;
-  user_first_name?: string;
-  user_last_name?: string;
-  user_phone?: string;
-  user_role?: string;
-}
-
-export function getGenderTitle(gender?: string | null): string {
-  if (!gender) return "";
-  
-  switch(gender) {
-    case "erkek": return "Bey";
-    case "kadın": return "Hanım";
-    default: return "";
-  }
+export interface ProfileWithRole extends Profil {
+  role: ProfileRole;
 }

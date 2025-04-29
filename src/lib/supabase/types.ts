@@ -76,9 +76,14 @@ export interface PersonelIslemi {
   notlar?: string;
   photos?: string[];
   dukkan_id: number;
+  
+  // Add these properties for related data that's joined in queries
+  musteri?: Musteri;
+  islem?: Islem;
+  personel?: Personel;
 }
 
-export type RandevuDurumu = 'beklemede' | 'onaylandi' | 'iptal' | 'tamamlandi';
+export type RandevuDurumu = 'beklemede' | 'onaylandi' | 'iptal' | 'tamamlandi' | 'iptal_edildi';
 
 export interface Randevu {
   id: number;
@@ -92,6 +97,10 @@ export interface Randevu {
   created_at: string;
   customer_id?: string;
   dukkan_id: number;
+  
+  // Add these properties for related data that's joined in queries
+  musteri?: Musteri;
+  personel?: Personel;
 }
 
 export interface CalismaSaati {
@@ -103,4 +112,21 @@ export interface CalismaSaati {
   kapanis?: string;
   kapali?: boolean;
   created_at?: string;
+}
+
+// Add the Profile type for profileService
+export interface Profil {
+  id: string;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  phone?: string;
+  birthdate?: string;
+  gender?: string;
+  role?: string;
+  dukkan_id?: number;
+  created_at?: string;
+  updated_at?: string;
+  address?: string;
+  avatar_url?: string;
 }

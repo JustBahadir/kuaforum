@@ -1,4 +1,3 @@
-
 import { supabase } from '../client';
 import { Personel } from '../types';
 
@@ -99,6 +98,27 @@ export const personelServisi = {
       return data;
     } catch (error) {
       console.error("Personel getirme hatası:", error);
+      return null;
+    }
+  },
+
+  async getirByAuthId(authId: string) {
+    try {
+      // Get the user's auth_id and find corresponding personnel
+      const { data, error } = await supabase
+        .from('personel')
+        .select('*')
+        .eq('auth_id', authId)
+        .maybeSingle();
+      
+      if (error) {
+        console.error("Personel auth_id ile getirme hatası:", error);
+        return null;
+      }
+      
+      return data;
+    } catch (error) {
+      console.error("Personel auth_id ile getirme sırasında hata:", error);
       return null;
     }
   },

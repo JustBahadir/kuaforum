@@ -1,71 +1,56 @@
+
 import { supabase } from "../../client";
 import { Profil } from "../../types";
 
-/**
- * Syncs a staff profile with the personel table
- */
-export async function handleStaffRecordSync(userId: string, profile: Profil): Promise<void> {
+export const syncStaffProfileWithPersonel = async (
+  userId: string,
+  personelId: number
+): Promise<boolean> => {
   try {
-    // Check if there's already a personel record with this auth_id
-    const { data: existingPersonel } = await supabase
-      .from('personel')
-      .select('*')
-      .eq('auth_id', userId)
+    // Get the personnel data
+    const { data: personelData, error: personelError } = await supabase
+      .from("personel")
+      .select("*")
+      .eq("id", personelId)
       .maybeSingle();
-        
-    // Get user email
-    let userEmail = '';
-    try {
-      // Use auth.getUser API
-      const { data: userData } = await supabase.auth.getUser();
-      if (userData?.user?.id === userId) {
-        userEmail = userData.user.email || '';
-      }
-    } catch (error) {
-      console.error("Error getting user email:", error);
+
+    if (personelError || !personelData) {
+      console.error("Error fetching personel data:", personelError);
+      return false;
     }
-        
-    if (!existingPersonel) {
-      // Create a new personel record
-      const fullName = `${profile.first_name} ${profile.last_name}`.trim() || 'Personel';
-        
-      const { error: insertError } = await supabase
-        .from('personel')
-        .insert({
-          auth_id: userId,
-          ad_soyad: fullName,
-          telefon: profile.phone || '',
-          eposta: userEmail || '',
-          adres: '',
-          personel_no: `S${Math.floor(Math.random() * 9000) + 1000}`,
-          maas: 0,
-          calisma_sistemi: 'aylik',
-          prim_yuzdesi: 0
-        });
-          
-      if (insertError) {
-        console.error("Error creating personnel record:", insertError);
-      }
-    } else {
-      // Update the existing personel record with the latest name and phone
-      const fullName = `${profile.first_name} ${profile.last_name}`.trim();
-        
-      if (fullName) {
-        const { error: updateError } = await supabase
-          .from('personel')
-          .update({
-            ad_soyad: fullName,
-            telefon: profile.phone || '',
-            eposta: userEmail || existingPersonel.eposta
-          })
-          .eq('auth_id', userId);
-            
-        if (updateError) {
-          console.error("Error updating personnel record:", updateError);
-        }
-      }
+
+    // Update the profile
+    const { error: updateError } = await supabase
+      .from("profiles")
+      .update({
+        first_name: personelData.ad_soyad.split(" ")[0],
+        last_name: personelData.ad_soyad.split(" ").slice(1).join(" "),
+        phone: personelData.telefon,
+        address: personelData.adres,
+        role: "staff",
+        dukkan_id: personelData.dukkan_id
+      })
+      .eq("id", userId);
+
+    if (updateError) {
+      console.error("Error updating profile:", updateError);
+      return false;
     }
-  } catch (staffErr) {
-    console.error("Error handling staff record:", staffErr);
+
+    // Link the personnel to the auth user
+    const { error: linkError } = await supabase
+      .from("personel")
+      .update({ auth_id: userId })
+      .eq("id", personelId);
+
+    if (linkError) {
+      console.error("Error linking personel to auth user:", linkError);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Error syncing staff profile with personel:", error);
+    return false;
   }
-}
+};

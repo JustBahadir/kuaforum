@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { randevuServisi } from "@/lib/supabase/services/randevuServisi";
@@ -184,7 +183,7 @@ export function useAppointments(dukkanId?: number) {
   const { mutate: cancelAppointment, isPending: isCancelingAppointment } = useMutation({
     mutationFn: async (appointmentId: number) => {
       return randevuServisi.guncelle(appointmentId, {
-        durum: "iptal_edildi"
+        durum: "iptal_edildi" as RandevuDurumu
       });
     },
     onSuccess: () => {
