@@ -82,5 +82,27 @@ export const shopService = {
       console.error("Failed to get next branch number:", error);
       return 1; // Default to 1 on error
     }
+  },
+
+  /**
+   * Verify a shop code exists
+   */
+  verifyShopCode: async (shopCode: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('dukkanlar')
+        .select('id, ad')
+        .eq('kod', shopCode)
+        .single();
+        
+      if (error || !data) {
+        return null;
+      }
+      
+      return data;
+    } catch (error) {
+      console.error("Failed to verify shop code:", error);
+      return null;
+    }
   }
 };

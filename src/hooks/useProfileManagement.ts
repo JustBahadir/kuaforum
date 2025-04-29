@@ -7,12 +7,14 @@ import { toast } from "sonner";
 import { profilServisi } from "@/lib/supabase/services/profilServisi";
 import { supabase } from "@/lib/supabase/client";
 
+type GenderType = "erkek" | "kadın" | null;
+
 type ProfileData = {
   firstName?: string;
   lastName?: string;
   email?: string;
   phone?: string;
-  gender?: "erkek" | "kadın" | null;
+  gender?: GenderType;
   birthdate?: string;
   avatarUrl?: string;
   iban?: string;
@@ -69,8 +71,10 @@ export function useProfileManagement(userId?: string) {
           .eq('personel_id', userId)
           .single();
 
-        setProfileData({
+        // Cast gender to the correct type
+        const typedProfile: ProfileData = {
           ...profile,
+          gender: (profile.gender as GenderType) || null,
           education: educationData || {
             ortaokuldurumu: "",
             lisedurumu: "",
@@ -86,7 +90,9 @@ export function useProfileManagement(userId?: string) {
             yarismalar: "",
             cv: "",
           }
-        });
+        };
+        
+        setProfileData(typedProfile);
       } catch (error) {
         console.error("Error fetching profile:", error);
       } finally {
@@ -162,8 +168,13 @@ export function useProfileManagement(userId?: string) {
         avatarUrl
       });
       
-      // Update profile data in state
-      setProfileData(prev => prev ? { ...prev, avatarUrl } : { avatarUrl });
+      // Update profile data in state with type casting
+      setProfileData(prev => {
+        if (prev) {
+          return { ...prev, avatarUrl };
+        }
+        return { avatarUrl };
+      });
       
       toast.success("Profil fotoğrafı güncellendi");
       return avatarUrl;
@@ -192,7 +203,12 @@ export function useProfileManagement(userId?: string) {
 
       // Fetch profile data
       const profile = await profilServisi.getir(user.id);
-      setProfileData(profile);
+      
+      // Cast gender to the correct type
+      setProfileData({
+        ...profile,
+        gender: (profile.gender as GenderType) || null
+      });
 
       // Get role from user metadata for reliable role checking
       const role = user.user_metadata?.role || (await profileService.getUserRole());

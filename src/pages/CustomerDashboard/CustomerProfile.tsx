@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -13,7 +13,7 @@ import { supabase } from '@/lib/supabase/client';
 
 export default function CustomerProfile() {
   const { userId } = useCustomerAuth();
-  const { profile, loading, updateProfile, uploadAvatar } = useProfileManagement(userId);
+  const { profileData, loading, updateProfile, uploadAvatar } = useProfileManagement(userId);
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState('personal');
 
@@ -23,12 +23,12 @@ export default function CustomerProfile() {
     </div>;
   }
 
-  const handleSaveProfile = async (formData) => {
+  const handleSaveProfile = async (formData: any) => {
     await updateProfile(formData);
     setIsEditing(false);
   };
 
-  const handleAvatarUpload = async (file) => {
+  const handleAvatarUpload = async (file: File) => {
     if (file) {
       await uploadAvatar(file);
     }
@@ -48,15 +48,15 @@ export default function CustomerProfile() {
             <CardHeader className="bg-gradient-to-r from-purple-600 to-blue-600 text-white">
               <div className="flex flex-col items-center">
                 <Avatar className="w-24 h-24 border-4 border-white mb-4">
-                  {profile?.avatar_url ? (
-                    <AvatarImage src={profile.avatar_url} />
+                  {profileData?.avatarUrl ? (
+                    <AvatarImage src={profileData.avatarUrl} />
                   ) : (
                     <AvatarFallback className="bg-purple-200 text-purple-800 text-2xl">
-                      {profile?.first_name?.[0]}{profile?.last_name?.[0]}
+                      {profileData?.firstName?.[0]}{profileData?.lastName?.[0]}
                     </AvatarFallback>
                   )}
                 </Avatar>
-                <CardTitle className="text-xl">{profile?.first_name} {profile?.last_name}</CardTitle>
+                <CardTitle className="text-xl">{profileData?.firstName} {profileData?.lastName}</CardTitle>
               </div>
             </CardHeader>
             <CardContent className="p-0">
@@ -133,12 +133,16 @@ export default function CustomerProfile() {
                 <TabsContent value="personal">
                   {isEditing ? (
                     <ProfileEditForm 
-                      profile={profile} 
-                      onSubmit={handleSaveProfile} 
-                      onAvatarUpload={handleAvatarUpload}
+                      profile={profileData || {}} 
+                      handleChange={() => {}}
+                      handleSelectChange={() => {}}
+                      handleAvatarUpload={handleAvatarUpload}
+                      handleSave={handleSaveProfile}
+                      isSaving={false}
+                      isUploading={false}
                     />
                   ) : (
-                    <ProfileDisplay profile={profile} />
+                    <ProfileDisplay profile={profileData || {}} />
                   )}
                 </TabsContent>
                 <TabsContent value="appointments">

@@ -63,7 +63,7 @@ export default function CustomerProfile() {
     }
   };
 
-  const uploadAvatar = async (file: any) => {
+  const uploadAvatar = async (file: File) => {
     try {
       setLoading(true);
       const userId = id || user?.id;
@@ -91,6 +91,7 @@ export default function CustomerProfile() {
     } catch (error) {
       console.error('Error uploading avatar:', error);
       toast.error('Profil resmi yüklenirken bir hata oluştu');
+      throw error;
     } finally {
       setLoading(false);
     }
@@ -162,7 +163,7 @@ export default function CustomerProfile() {
 
               {isEditing ? (
                 <ProfileEditForm 
-                  profile={profile}
+                  profile={profile || {}}
                   handleChange={() => {}}
                   handleSelectChange={() => {}}
                   handleAvatarUpload={uploadAvatar}
@@ -171,7 +172,7 @@ export default function CustomerProfile() {
                   isUploading={loading}
                 />
               ) : (
-                <ProfileDisplay profile={profile} />
+                <ProfileDisplay profile={profile || {}} />
               )}
             </TabsContent>
 
