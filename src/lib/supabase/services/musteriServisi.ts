@@ -1,18 +1,41 @@
+
 import { supabase } from '../client';
 import { Musteri } from '../types';
 
 export const musteriServisi = {
+  // Helper function to get the current user's dukkan_id
+  async _getCurrentUserDukkanId() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+    
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('dukkan_id')
+      .eq('id', user.id)
+      .maybeSingle();
+    
+    const { data: personelData } = await supabase
+      .from('personel')
+      .select('dukkan_id')
+      .eq('auth_id', user.id)
+      .maybeSingle();
+    
+    return profileData?.dukkan_id || personelData?.dukkan_id;
+  },
+  
   async hepsiniGetir(dukkanId?: number) {
     try {
-      let query = supabase
-        .from('musteriler')
-        .select('*');
-      
-      if (dukkanId) {
-        query = query.eq('dukkan_id', dukkanId);
+      const userDukkanId = dukkanId || await this._getCurrentUserDukkanId();
+      if (!userDukkanId) {
+        console.error("Kullanıcının işletme bilgisi bulunamadı");
+        return [];
       }
       
-      const { data, error } = await query.order('created_at', { ascending: false });
+      const { data, error } = await supabase
+        .from('musteriler')
+        .select('*')
+        .eq('dukkan_id', userDukkanId)
+        .order('created_at', { ascending: false });
       
       if (error) {
         console.error("Müşteriler getirme hatası:", error);
@@ -29,13 +52,20 @@ export const musteriServisi = {
   
   async getirById(id: number): Promise<Musteri | null> {
     try {
+      const dukkanId = await this._getCurrentUserDukkanId();
+      if (!dukkanId) {
+        console.error("Kullanıcının işletme bilgisi bulunamadı");
+        return null;
+      }
+      
       console.log(`Müşteri ID ${id} getiriliyor`);
       
-      // First get the basic customer data
+      // Get the customer data
       const { data, error } = await supabase
         .from('musteriler')
         .select('*')
         .eq('id', id)
+        .eq('dukkan_id', dukkanId) // Filter by dukkan_id
         .single();
       
       if (error) {
@@ -67,15 +97,23 @@ export const musteriServisi = {
   
   async ekle(musteri: Omit<Musteri, 'id' | 'created_at'>) {
     try {
+      const dukkanId = await this._getCurrentUserDukkanId();
+      if (!dukkanId) {
+        throw new Error("Kullanıcının işletme bilgisi bulunamadı");
+      }
+      
       console.log("Eklenecek müşteri verileri:", musteri);
 
+      // Set the correct dukkan_id
+      musteri.dukkan_id = dukkanId;
+      
       // Explicitly set optional fields to null if undefined to ensure DB has values
       const dataForInsert = {
         first_name: musteri.first_name,
         last_name: musteri.last_name || null,
         phone: musteri.phone || null,
         birthdate: musteri.birthdate || null,
-        dukkan_id: musteri.dukkan_id || null,
+        dukkan_id: dukkanId,
         adres: (musteri as any).adres || null,
         not: (musteri as any).not || null,
       };
@@ -100,10 +138,30 @@ export const musteriServisi = {
   
   async guncelle(id: number, updates: Partial<Musteri>) {
     try {
+      const dukkanId = await this._getCurrentUserDukkanId();
+      if (!dukkanId) {
+        throw new Error("Kullanıcının işletme bilgisi bulunamadı");
+      }
+      
+      // First verify this customer belongs to our business
+      const { data: customerData } = await supabase
+        .from('musteriler')
+        .select('dukkan_id')
+        .eq('id', id)
+        .single();
+        
+      if (customerData?.dukkan_id !== dukkanId) {
+        throw new Error("Bu müşteri sizin işletmenize ait değil");
+      }
+      
+      // Don't allow changing dukkan_id
+      delete updates.dukkan_id;
+      
       const { data, error } = await supabase
         .from('musteriler')
         .update(updates)
         .eq('id', id)
+        .eq('dukkan_id', dukkanId) // Additional safety filter
         .select();
       
       if (error) {
@@ -120,10 +178,27 @@ export const musteriServisi = {
   
   async sil(id: number) {
     try {
+      const dukkanId = await this._getCurrentUserDukkanId();
+      if (!dukkanId) {
+        throw new Error("Kullanıcının işletme bilgisi bulunamadı");
+      }
+      
+      // First verify this customer belongs to our business
+      const { data: customerData } = await supabase
+        .from('musteriler')
+        .select('dukkan_id')
+        .eq('id', id)
+        .single();
+        
+      if (customerData?.dukkan_id !== dukkanId) {
+        throw new Error("Bu müşteri sizin işletmenize ait değil");
+      }
+      
       const { error } = await supabase
         .from('musteriler')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('dukkan_id', dukkanId); // Additional safety filter
       
       if (error) {
         console.error("Müşteri silme hatası:", error);
