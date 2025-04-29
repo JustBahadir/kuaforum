@@ -108,9 +108,9 @@ export default function Dashboard() {
   }
 
   // Convert arrays to numbers for ProfitAnalysis component
-  const operationsData = (operations && Array.isArray(operations)) ? operations.length : 0;
-  const expensesData = (fixedExpenses && Array.isArray(fixedExpenses)) ? fixedExpenses.length : 0;
-  const appointmentsData = (monthlyAppointments && Array.isArray(monthlyAppointments)) ? monthlyAppointments.length : 0;
+  const operationsData = operations.length || 0;
+  const expensesData = fixedExpenses.length || 0;
+  const appointmentsData = monthlyAppointments.length || 0;
 
   return (
     <div className="container mx-auto px-4 py-8">
