@@ -14,6 +14,9 @@ export type CustomerOperation = {
   created_at: string;
   updated_at?: string;
   photos?: string[];
+  // These are joined fields from other tables
+  service?: { id: number; name: string; price: number };
+  staff?: { id: number; name: string };
 };
 
 export const customerOperationsService = {

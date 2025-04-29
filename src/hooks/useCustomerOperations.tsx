@@ -1,10 +1,10 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { customerOperationsService } from '@/lib/supabase/services/customerOperationsService';
+import { customerOperationsService, CustomerOperation } from '@/lib/supabase/services/customerOperationsService';
 
 interface UseCustomerOperationsProps {
-  customerId?: number;
+  customerId?: number | string;
   limit?: number;
 }
 
@@ -25,9 +25,9 @@ export const useCustomerOperations = (props?: UseCustomerOperationsProps) => {
   });
 
   // Add a new operation
-  const addOperation = async (operationData: any) => {
+  const addOperation = async (operationData: Partial<CustomerOperation>) => {
     try {
-      const result = await customerOperationsService.addCustomerOperation(operationData);
+      const result = await customerOperationsService.addCustomerOperation(operationData as any);
       // Refetch operations after adding a new one
       refetch();
       return result;

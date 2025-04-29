@@ -9,7 +9,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { formatDate } from '@/utils/dateUtils';
+import { formatDate } from '@/lib/utils'; // Updated import source
 import { CustomerOperation } from '@/lib/supabase/services/customerOperationsService';
 
 interface CustomerOperationsTableProps {
@@ -75,16 +75,16 @@ const CustomerOperationsTable: React.FC<CustomerOperationsTableProps> = ({
           {operations.map((operation) => (
             <TableRow key={operation.id}>
               <TableCell className="font-medium">
-                {formatDate(new Date(operation.operation_date))}
+                {formatDate(operation.operation_date)}
               </TableCell>
               <TableCell>
-                {operation.operation_type || (operation.service as any)?.name || '—'}
+                {operation.operation_type || (operation.service_id ? (operation as any).service?.name : '—')}
               </TableCell>
               <TableCell>
-                {(operation.staff as any)?.name || '—'}
+                {(operation.staff_id ? (operation as any).staff?.name : '—')}
               </TableCell>
               <TableCell>
-                {formatPrice(operation.price || (operation.service as any)?.price)}
+                {formatPrice(operation.price || (operation.service_id ? (operation as any).service?.price : undefined))}
               </TableCell>
               <TableCell>
                 {getPaymentStatusBadge(operation.payment_status)}

@@ -1,21 +1,8 @@
-
-import React from "react";
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { CustomerAppointmentsTable } from "./CustomerAppointmentsTable";
-import { CustomerOperationsTable } from "./CustomerOperationsTable";
-import { CustomerLoyaltyCard } from "./CustomerLoyaltyCard";
-import { CustomerProfile } from "./CustomerProfile";
-import { useQuery } from "@tanstack/react-query";
-import { musteriServisi, islemServisi } from "@/lib/supabase";
-import { useParams, useNavigate } from "react-router-dom";
-import { CustomerPersonalData } from "./CustomerPersonalData";
-import { CustomerPhotoGallery } from "./CustomerPhotoGallery";
-import { customerPersonalDataService } from "@/lib/supabase/services/customerPersonalDataService";
-import { PhoneInputField } from "./FormFields/PhoneInputField";
-import { toast } from "sonner";
+import { Card } from "@/components/ui/card";
+import { useCustomerOperations } from '@/hooks/useCustomerOperations';
+import CustomerOperationsTable from './CustomerOperationsTable'; 
 
 interface CustomerDetailsProps {
   customerId?: number;
@@ -366,5 +353,3 @@ export function CustomerDetails(props: any) {
     </div>
   );
 }
-
-
