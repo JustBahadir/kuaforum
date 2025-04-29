@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { useCustomerOperations, CustomerOperation } from '@/hooks/useCustomerOperations';
-import { formatPrice } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils';
 
 export interface CustomerOperationsTableProps {
   customerId: number | string;
@@ -54,9 +54,9 @@ export default function CustomerOperationsTable({ customerId }: CustomerOperatio
               <TableCell className="font-medium">
                 {new Date(operation.created_at).toLocaleDateString('tr-TR')}
               </TableCell>
-              <TableCell>{operation.aciklama || 'Bilinmiyor'}</TableCell>
-              <TableCell>{operation.personel_name || 'Bilinmiyor'}</TableCell>
-              <TableCell className="text-right">{formatPrice(operation.tutar || 0)}</TableCell>
+              <TableCell>{operation.description || 'Bilinmiyor'}</TableCell>
+              <TableCell>{operation.staff_name || 'Bilinmiyor'}</TableCell>
+              <TableCell className="text-right">{formatCurrency(operation.amount || 0)}</TableCell>
               <TableCell className="text-center">
                 <Button variant="ghost" size="sm">
                   Görüntüle

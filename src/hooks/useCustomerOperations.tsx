@@ -1,70 +1,76 @@
 
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase/client';
 
-// Define interface for customer operation
 export interface CustomerOperation {
-  id: number | string;
+  id: number;
+  customer_id: number;
+  service_id: number;
+  staff_id: number;
+  amount: number;
+  description: string;
+  staff_name: string;
   created_at: string;
-  aciklama?: string;
-  personel_name?: string;
-  tutar?: number;
-  // Add other fields as needed
+  updated_at: string;
+  status: 'completed' | 'cancelled' | 'pending';
 }
-
-// Mock service until the real one is implemented
-const customerOperationsService = {
-  getCustomerOperations: async (customerId: number | string): Promise<CustomerOperation[]> => {
-    // This would be replaced with actual API call
-    console.log(`Fetching operations for customer ${customerId}`);
-    return [];
-  },
-  
-  addCustomerOperation: async (data: Partial<CustomerOperation>) => {
-    console.log('Adding operation:', data);
-    return { id: 'new-id', ...data };
-  }
-};
 
 interface UseCustomerOperationsProps {
-  customerId?: number | string;
-  limit?: number;
+  customerId: number | string;
 }
 
-export const useCustomerOperations = (props?: UseCustomerOperationsProps) => {
-  const { customerId, limit } = props || {};
+export const useCustomerOperations = ({ customerId }: UseCustomerOperationsProps) => {
+  const [operations, setOperations] = useState<CustomerOperation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
-  // Fetch operations for a customer
-  const { data: operations = [], isLoading: loading, error, refetch } = useQuery({
-    queryKey: ['customerOperations', customerId],
-    queryFn: async () => {
-      if (customerId) {
-        const data = await customerOperationsService.getCustomerOperations(customerId);
-        return limit ? data.slice(0, limit) : data;
+  useEffect(() => {
+    const fetchCustomerOperations = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Fetch customer operations from Supabase
+        const { data, error } = await supabase
+          .from('customer_operations')
+          .select(`
+            id, 
+            customer_id, 
+            service_id, 
+            staff_id,
+            amount, 
+            description, 
+            created_at, 
+            updated_at, 
+            status,
+            staff:staff_id (name, first_name, last_name)
+          `)
+          .eq('customer_id', customerId)
+          .order('created_at', { ascending: false });
+
+        if (error) throw new Error(error.message);
+
+        // Process the fetched data to include staff names
+        const processedData = data.map((op) => ({
+          ...op,
+          staff_name: op.staff ? 
+            `${op.staff.first_name || ''} ${op.staff.last_name || ''}` : 
+            op.staff?.name || 'Bilinmiyor'
+        }));
+
+        setOperations(processedData);
+      } catch (err) {
+        console.error('Error fetching customer operations:', err);
+        setError(err instanceof Error ? err : new Error('Unknown error occurred'));
+      } finally {
+        setLoading(false);
       }
-      return [];
-    },
-    enabled: !!customerId,
-  });
+    };
 
-  // Add a new operation
-  const addOperation = async (operationData: Partial<CustomerOperation>) => {
-    try {
-      const result = await customerOperationsService.addCustomerOperation(operationData);
-      // Refetch operations after adding a new one
-      refetch();
-      return result;
-    } catch (error) {
-      console.error("Error adding operation:", error);
-      throw error;
+    if (customerId) {
+      fetchCustomerOperations();
     }
-  };
+  }, [customerId]);
 
-  return {
-    operations,
-    loading,
-    error,
-    addOperation,
-    refetch,
-  };
+  return { operations, loading, error };
 };

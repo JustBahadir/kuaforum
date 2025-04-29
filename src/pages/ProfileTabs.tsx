@@ -105,6 +105,18 @@ const ProfileTabs = ({
     }
   };
 
+  // Wrapper for the save function to pass the profile data
+  const handleSaveProfile = async (data: any): Promise<void> => {
+    try {
+      // Here we would typically update local state with the new data
+      // For now, just call the save function
+      await handleSave();
+    } catch (error) {
+      console.error("Error saving profile data:", error);
+      throw error;
+    }
+  };
+
   return (
     <Tabs defaultValue="personal" value={activeTab} onValueChange={setActiveTab} className="w-full">
       <TabsList className="grid grid-cols-3 w-full max-w-md mb-4">
@@ -116,9 +128,7 @@ const ProfileTabs = ({
       <TabsContent value="personal">
         <StaffPersonalInfoTab
           profile={profile}
-          onSave={async (data) => {
-            await handleSave();
-          }}
+          onSave={handleSaveProfile}
           onAvatarUpload={handleFileUpload}
           handleChange={handleChange}
           handleSelectChange={handleSelectChange}

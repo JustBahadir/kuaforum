@@ -11,8 +11,21 @@ import { ProfitAnalysis } from '@/components/dashboard/ProfitAnalysis';
 import { BusinessReports } from '@/components/dashboard/BusinessReports';
 import { TestDataButton } from '@/pages/Dashboard/components/TestDataButton';
 
+// Create interfaces for the wrapper components
+interface GreetingWrapperProps {
+  className?: string;
+}
+
+interface MainMenuWrapperProps {
+  setActiveTab: React.Dispatch<React.SetStateAction<string>>;
+}
+
+interface TestDataButtonWrapperProps {
+  onSuccess: () => void;
+}
+
 // Create a custom Greeting component that takes className
-const GreetingWrapper: React.FC<{className?: string}> = ({className}) => {
+const GreetingWrapper: React.FC<GreetingWrapperProps> = ({className}) => {
   const { user, loading } = useAuth();
   
   return (
@@ -26,14 +39,19 @@ const GreetingWrapper: React.FC<{className?: string}> = ({className}) => {
 };
 
 // Create a wrapper for MainMenuOptions to handle the setActiveTab prop
-const MainMenuWrapper: React.FC<{setActiveTab: React.Dispatch<React.SetStateAction<string>>}> = ({
+const MainMenuWrapper: React.FC<MainMenuWrapperProps> = ({
   setActiveTab
 }) => {
-  return <MainMenuOptions onMenuSelect={(tab) => setActiveTab(tab)} />;
+  // Only add onMenuSelect if MainMenuOptions supports it
+  const handleMenuSelect = (tab: string) => {
+    setActiveTab(tab);
+  };
+  
+  return <MainMenuOptions onMenuSelect={handleMenuSelect} />;
 };
 
 // Create a wrapper for TestDataButton to handle the onSuccess prop
-const TestDataButtonWrapper: React.FC<{onSuccess: () => void}> = ({onSuccess}) => {
+const TestDataButtonWrapper: React.FC<TestDataButtonWrapperProps> = ({onSuccess}) => {
   return <TestDataButton onGenerateSuccess={onSuccess} />;
 };
 
@@ -89,10 +107,10 @@ export default function Dashboard() {
     );
   }
 
-  // Convert to proper numeric types for ProfitAnalysis component
-  const operationsData = operations ? (Array.isArray(operations) ? operations : []) : [];
-  const expensesData = fixedExpenses ? (Array.isArray(fixedExpenses) ? fixedExpenses : []) : [];
-  const appointmentsData = monthlyAppointments ? (Array.isArray(monthlyAppointments) ? monthlyAppointments : []) : [];
+  // Convert arrays to numbers for ProfitAnalysis component
+  const operationsData = (operations && Array.isArray(operations)) ? operations.length : 0;
+  const expensesData = (fixedExpenses && Array.isArray(fixedExpenses)) ? fixedExpenses.length : 0;
+  const appointmentsData = (monthlyAppointments && Array.isArray(monthlyAppointments)) ? monthlyAppointments.length : 0;
 
   return (
     <div className="container mx-auto px-4 py-8">

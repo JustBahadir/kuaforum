@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { 
   Card, 
@@ -318,7 +319,7 @@ export function ProfileEditForm({
       </CardContent>
       <CardFooter className="justify-end">
         <Button 
-          onClick={handleSave} 
+          onClick={() => handleSave(profile)}
           disabled={isSaving || isUploading}
           className="bg-purple-600 hover:bg-purple-700"
         >

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +7,7 @@ import { supabase } from "@/lib/supabase/client";
 
 interface FileUploadProps {
   id?: string;
-  onUploadComplete: (url: string) => void;
+  onUploadComplete: (file: File | string) => void | Promise<void> | Promise<string>;
   currentImageUrl?: string;
   label?: string;
   bucketName?: string;
@@ -75,8 +74,8 @@ export function FileUpload({
       // Update preview
       setPreviewUrl(publicUrl);
       
-      // Call callback with the URL
-      onUploadComplete(publicUrl);
+      // Call callback with the file - allowing for various return types
+      await onUploadComplete(file);
       
       toast.success("Dosya başarıyla yüklendi");
     } catch (error: any) {

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -60,6 +59,17 @@ export default function CustomerProfile() {
       toast.error('Profil güncellenirken bir hata oluştu');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Wrapper function to adapt file upload function
+  const handleFileUpload = async (file: File): Promise<void> => {
+    try {
+      await uploadAvatar(file);
+      return;
+    } catch (error) {
+      console.error("Error in file upload:", error);
+      throw error;
     }
   };
 
@@ -178,7 +188,7 @@ export default function CustomerProfile() {
                   profile={formattedProfile} 
                   handleChange={() => {}}
                   handleSelectChange={() => {}}
-                  handleAvatarUpload={uploadAvatar}
+                  handleAvatarUpload={handleFileUpload}
                   handleSave={handleSaveProfile}
                   isSaving={loading}
                   isUploading={loading}
