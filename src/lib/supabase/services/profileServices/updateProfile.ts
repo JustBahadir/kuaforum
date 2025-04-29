@@ -1,10 +1,9 @@
 
-// Fix type comparison issue and add runtime checking for "isletmeci" role from possibly unknown input
-import { ProfileUpdateData } from "./profileTypes";
-import { supabase } from "@/lib/supabase/client";
+import { supabase } from "../../client";
 import { toast } from "sonner";
+import { ProfileUpdateData } from "./profileTypes";
 
-export async function updateProfile(data: ProfileUpdateData & { id?: string }) {
+export async function updateProfile(data: ProfileUpdateData) {
   try {
     let role = data.role as string | undefined;
 
@@ -25,8 +24,12 @@ export async function updateProfile(data: ProfileUpdateData & { id?: string }) {
         last_name: data.last_name,
         phone: data.phone,
         gender: data.gender,
-        shopname: (data as any).shopname, // cast since shopname might not be in ProfileUpdateData
+        shopname: data.shopname,
         role: role,
+        birthdate: data.birthdate,
+        avatar_url: data.avatar_url,
+        address: data.address,
+        iban: data.iban
       })
       .eq("id", idToUse);
 

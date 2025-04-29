@@ -1,4 +1,3 @@
-
 export interface Dukkan {
   id: number;
   kod: string;
@@ -129,4 +128,5 @@ export interface Profil {
   updated_at?: string;
   address?: string;
   avatar_url?: string;
+  iban?: string;
 }

@@ -45,5 +45,53 @@ export const profileService = {
       console.error("Error in updateProfile:", error);
       return null;
     }
+  },
+  
+  // Add missing functions to match imports in other files
+  async getUserRole(): Promise<string | null> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+      
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle();
+        
+      if (error) throw error;
+      return data?.role || null;
+    } catch (error) {
+      console.error("Error fetching user role:", error);
+      return null;
+    }
+  },
+  
+  async getUserNameWithTitle(): Promise<string> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return "Değerli Müşterimiz";
+      
+      const { data } = await supabase
+        .from("profiles")
+        .select("first_name, last_name, gender")
+        .eq("id", user.id)
+        .maybeSingle();
+      
+      if (!data) return "Değerli Müşterimiz";
+      
+      const title = data.gender === 'erkek' ? 'Bay' : 
+                    data.gender === 'kadın' ? 'Bayan' : '';
+      
+      const firstName = data.first_name || '';
+      const lastName = data.last_name || '';
+      
+      if (!firstName && !lastName) return "Değerli Müşterimiz";
+      
+      return `${title} ${firstName} ${lastName}`.trim();
+    } catch (error) {
+      console.error("Error getting user name with title:", error);
+      return "Değerli Müşterimiz";
+    }
   }
 };

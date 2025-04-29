@@ -1,5 +1,5 @@
 
-import { getProfile, getUserRole } from './profileServices/fetchProfile';
+import { fetchProfile, getUserRole, getUserNameWithTitle } from './profileServices/fetchProfile';
 import { updateProfile } from './profileServices/updateProfile';
 import { createProfile } from './profileServices/createProfile';
 
@@ -62,7 +62,7 @@ const validateIBAN = (iban: string) => {
 };
 
 export const profilServisi = {
-  getir: getProfile,
+  getir: fetchProfile,
   guncelle: (data: any) => {
     if (data.iban) {
       data.iban = cleanIBANForStorage(data.iban);
@@ -70,11 +70,12 @@ export const profilServisi = {
     return updateProfile(data);
   },
   getUserRole,
+  getUserNameWithTitle,
   createProfile: (userId: string, data: any) => {
     if (data.iban) {
       data.iban = cleanIBANForStorage(data.iban);
     }
-    return createProfile(userId, data);
+    return createProfile({ ...data, id: userId });
   },
   formatIBAN,
   cleanIBANForStorage,
