@@ -63,7 +63,7 @@ export default function CustomerProfile() {
     }
   };
 
-  const uploadAvatar = async (file: File) => {
+  const uploadAvatar = async (file: File): Promise<void> => {
     try {
       setLoading(true);
       const userId = id || user?.id;
@@ -87,7 +87,9 @@ export default function CustomerProfile() {
 
       // Update profile
       await updateProfile({ avatar_url: data.publicUrl });
-      return data.publicUrl;
+      
+      // Modified to return void instead of string
+      return;
     } catch (error) {
       console.error('Error uploading avatar:', error);
       toast.error('Profil resmi yüklenirken bir hata oluştu');
@@ -107,6 +109,16 @@ export default function CustomerProfile() {
 
   const handleSaveProfile = async (data: any) => {
     await updateProfile(data);
+  };
+
+  const formattedProfile = {
+    firstName: profile?.first_name || "",
+    lastName: profile?.last_name || "",
+    email: profile?.email || "",
+    phone: profile?.phone || "",
+    birthdate: profile?.birthdate || "",
+    avatarUrl: profile?.avatar_url || "",
+    gender: profile?.gender || null
   };
 
   return (
@@ -163,15 +175,7 @@ export default function CustomerProfile() {
 
               {isEditing ? (
                 <ProfileEditForm 
-                  profile={{
-                    firstName: profile?.first_name,
-                    lastName: profile?.last_name,
-                    email: profile?.email,
-                    phone: profile?.phone,
-                    birthdate: profile?.birthdate,
-                    avatarUrl: profile?.avatar_url,
-                    gender: profile?.gender
-                  }} 
+                  profile={formattedProfile} 
                   handleChange={() => {}}
                   handleSelectChange={() => {}}
                   handleAvatarUpload={uploadAvatar}
@@ -180,17 +184,37 @@ export default function CustomerProfile() {
                   isUploading={loading}
                 />
               ) : (
-                <ProfileDisplay 
-                  profile={{
-                    firstName: profile?.first_name,
-                    lastName: profile?.last_name,
-                    email: profile?.email,
-                    phone: profile?.phone,
-                    birthdate: profile?.birthdate,
-                    avatarUrl: profile?.avatar_url,
-                    gender: profile?.gender
-                  }}
-                />
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-medium mb-1">Kişisel Bilgiler</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-gray-500">Ad</p>
+                        <p>{profile?.first_name || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">Soyad</p>
+                        <p>{profile?.last_name || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">E-posta</p>
+                        <p>{profile?.email || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">Telefon</p>
+                        <p>{profile?.phone || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">Cinsiyet</p>
+                        <p>{profile?.gender === 'erkek' ? 'Erkek' : profile?.gender === 'kadın' ? 'Kadın' : '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">Doğum Tarihi</p>
+                        <p>{profile?.birthdate || '-'}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               )}
             </TabsContent>
 

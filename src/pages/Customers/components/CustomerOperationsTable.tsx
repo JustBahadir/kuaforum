@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { useCustomerOperations } from '@/hooks/useCustomerOperations';
+import { useCustomerOperations, CustomerOperation } from '@/hooks/useCustomerOperations';
 import { formatPrice } from '@/lib/utils';
 
 export interface CustomerOperationsTableProps {
@@ -49,7 +49,7 @@ export default function CustomerOperationsTable({ customerId }: CustomerOperatio
           </TableRow>
         </TableHeader>
         <TableBody>
-          {operations.map((operation: any) => (
+          {operations.map((operation: CustomerOperation) => (
             <TableRow key={operation.id}>
               <TableCell className="font-medium">
                 {new Date(operation.created_at).toLocaleDateString('tr-TR')}

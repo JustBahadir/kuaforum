@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -28,6 +29,17 @@ export default function Profile() {
     setActiveTab(value);
   };
 
+  // Wrapper for avatar upload to convert Promise<string> to Promise<void>
+  const handleAvatarUpload = async (file: File): Promise<void> => {
+    try {
+      await uploadAvatar(file);
+      return;
+    } catch (error) {
+      console.error("Error uploading avatar:", error);
+      throw error;
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-6">
@@ -50,9 +62,20 @@ export default function Profile() {
 
             <TabsContent value="personal">
               <StaffPersonalInfoTab 
-                profile={profileData || {}}
+                profile={{
+                  firstName: profileData?.firstName || "",
+                  lastName: profileData?.lastName || "",
+                  phone: profileData?.phone || "",
+                  email: profileData?.email || "",
+                  gender: profileData?.gender || null,
+                  birthdate: profileData?.birthdate || "",
+                  avatarUrl: profileData?.avatarUrl,
+                  iban: profileData?.iban,
+                  address: profileData?.address,
+                  role: profileData?.role,
+                }}
                 onSave={async (data) => await updateProfile(data)}
-                onAvatarUpload={async (file) => await uploadAvatar(file)}
+                onAvatarUpload={handleAvatarUpload}
               />
             </TabsContent>
             

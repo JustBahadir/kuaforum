@@ -8,9 +8,34 @@ import { MainMenuOptions } from '@/pages/Dashboard/components/MainMenuOptions';
 import { CustomerMenu } from '@/pages/Dashboard/components/CustomerMenu';
 import { PersonnelMenu } from '@/pages/Dashboard/components/PersonnelMenu';
 import { ProfitAnalysis } from '@/components/dashboard/ProfitAnalysis';
-import { Greeting } from '@/components/ui/greeting';
 import { BusinessReports } from '@/components/dashboard/BusinessReports';
 import { TestDataButton } from '@/pages/Dashboard/components/TestDataButton';
+
+// Create a custom Greeting component that takes className
+const GreetingWrapper: React.FC<{className?: string}> = ({className}) => {
+  const { user, loading } = useAuth();
+  
+  return (
+    <div className={className || ""}>
+      <h1 className="text-4xl font-bold">Hoş Geldiniz</h1>
+      <p className="text-muted-foreground mt-1">
+        {user?.user_metadata?.firstName ? `${user.user_metadata.firstName}` : "Sayın Kullanıcı"}
+      </p>
+    </div>
+  );
+};
+
+// Create a wrapper for MainMenuOptions to handle the setActiveTab prop
+const MainMenuWrapper: React.FC<{setActiveTab: React.Dispatch<React.SetStateAction<string>>}> = ({
+  setActiveTab
+}) => {
+  return <MainMenuOptions onMenuSelect={(tab) => setActiveTab(tab)} />;
+};
+
+// Create a wrapper for TestDataButton to handle the onSuccess prop
+const TestDataButtonWrapper: React.FC<{onSuccess: () => void}> = ({onSuccess}) => {
+  return <TestDataButton onGenerateSuccess={onSuccess} />;
+};
 
 export default function Dashboard() {
   const { user, loading } = useAuth();
@@ -64,9 +89,14 @@ export default function Dashboard() {
     );
   }
 
+  // Convert to proper numeric types for ProfitAnalysis component
+  const operationsData = operations ? (Array.isArray(operations) ? operations : []) : [];
+  const expensesData = fixedExpenses ? (Array.isArray(fixedExpenses) ? fixedExpenses : []) : [];
+  const appointmentsData = monthlyAppointments ? (Array.isArray(monthlyAppointments) ? monthlyAppointments : []) : [];
+
   return (
     <div className="container mx-auto px-4 py-8">
-      <Greeting className="mb-8" />
+      <GreetingWrapper className="mb-8" />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">
         <TabsList className="w-full max-w-md mb-4 grid grid-cols-3">
@@ -76,7 +106,7 @@ export default function Dashboard() {
         </TabsList>
 
         <TabsContent value="main">
-          <MainMenuOptions setActiveTab={setActiveTab} />
+          <MainMenuWrapper setActiveTab={setActiveTab} />
         </TabsContent>
 
         <TabsContent value="personnel">
@@ -105,9 +135,9 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <ProfitAnalysis 
-                operations={operations} 
-                fixedExpenses={fixedExpenses} 
-                monthlyAppointments={monthlyAppointments}
+                operations={operationsData} 
+                fixedExpenses={expensesData} 
+                monthlyAppointments={appointmentsData}
               />
             </CardContent>
           </Card>
@@ -116,7 +146,7 @@ export default function Dashboard() {
 
       {showTestDataButton && userRole === 'admin' && (
         <div className="mt-8">
-          <TestDataButton onSuccess={() => setShowTestDataButton(false)} />
+          <TestDataButtonWrapper onSuccess={() => setShowTestDataButton(false)} />
         </div>
       )}
     </div>

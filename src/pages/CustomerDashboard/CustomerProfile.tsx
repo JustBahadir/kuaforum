@@ -28,10 +28,24 @@ export default function CustomerProfile() {
     setIsEditing(false);
   };
 
-  const handleAvatarUpload = async (file: File) => {
-    if (file) {
-      await uploadAvatar(file);
-    }
+  // Wrapper function to handle File upload
+  const handleAvatarUpload = async (file: File): Promise<void> => {
+    await uploadAvatar(file);
+    return;
+  };
+
+  // Format profile data to match expected props
+  const formattedProfile = {
+    firstName: profileData?.firstName || "",
+    lastName: profileData?.lastName || "",
+    email: profileData?.email || "",
+    phone: profileData?.phone || "",
+    gender: profileData?.gender || null,
+    birthdate: profileData?.birthdate || "",
+    avatarUrl: profileData?.avatarUrl || "",
+    iban: profileData?.iban || "",
+    address: profileData?.address || "",
+    role: profileData?.role || ""
   };
 
   return (
@@ -133,7 +147,7 @@ export default function CustomerProfile() {
                 <TabsContent value="personal">
                   {isEditing ? (
                     <ProfileEditForm 
-                      profile={profileData || {}} 
+                      profile={formattedProfile} 
                       handleChange={() => {}}
                       handleSelectChange={() => {}}
                       handleAvatarUpload={handleAvatarUpload}
@@ -142,7 +156,37 @@ export default function CustomerProfile() {
                       isUploading={false}
                     />
                   ) : (
-                    <ProfileDisplay profile={profileData || {}} />
+                    <div className="space-y-6">
+                      <div>
+                        <h3 className="text-lg font-medium mb-1">Kişisel Bilgiler</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <p className="text-sm text-gray-500">Ad</p>
+                            <p>{profileData?.firstName || '-'}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-500">Soyad</p>
+                            <p>{profileData?.lastName || '-'}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-500">E-posta</p>
+                            <p>{profileData?.email || '-'}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-500">Telefon</p>
+                            <p>{profileData?.phone || '-'}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-500">Cinsiyet</p>
+                            <p>{profileData?.gender === 'erkek' ? 'Erkek' : profileData?.gender === 'kadın' ? 'Kadın' : '-'}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-500">Doğum Tarihi</p>
+                            <p>{profileData?.birthdate || '-'}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </TabsContent>
                 <TabsContent value="appointments">

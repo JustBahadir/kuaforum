@@ -17,20 +17,30 @@ export interface StaffPersonalInfoTabProps {
   };
   onSave: (data: any) => Promise<void>;
   onAvatarUpload: (file: File) => Promise<void>;
+  handleChange?: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
+  handleSelectChange?: (name: string, value: string) => void;
+  isSaving?: boolean;
+  isUploading?: boolean;
 }
 
 const StaffPersonalInfoTab = ({
   profile,
   onSave,
-  onAvatarUpload
+  onAvatarUpload,
+  handleChange: propHandleChange,
+  handleSelectChange: propHandleSelectChange,
+  isSaving = false,
+  isUploading = false
 }: StaffPersonalInfoTabProps) => {
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    // Handle input changes
-  };
+  const handleChange = propHandleChange || ((e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    // Default implementation
+    console.log("Change event:", e.target.name, e.target.value);
+  });
 
-  const handleSelectChange = (name: string, value: string) => {
-    // Handle select changes
-  };
+  const handleSelectChange = propHandleSelectChange || ((name: string, value: string) => {
+    // Default implementation
+    console.log("Select change:", name, value);
+  });
 
   return (
     <ProfileEditForm
@@ -39,8 +49,8 @@ const StaffPersonalInfoTab = ({
       handleSelectChange={handleSelectChange}
       handleAvatarUpload={onAvatarUpload}
       handleSave={onSave}
-      isSaving={false}
-      isUploading={false}
+      isSaving={isSaving}
+      isUploading={isUploading}
     />
   );
 };

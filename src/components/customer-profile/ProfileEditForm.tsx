@@ -35,7 +35,7 @@ export interface ProfileEditFormProps {
   };
   handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
   handleSelectChange: (name: string, value: string) => void;
-  handleAvatarUpload: (file: File) => Promise<void>;
+  handleAvatarUpload: (file: File) => Promise<void | string>; // Updated to support both void and string returns
   handleSave: (formData: any) => Promise<void>;
   isSaving: boolean;
   isUploading: boolean;
@@ -129,6 +129,16 @@ export function ProfileEditForm({
     handleChange(syntheticEvent);
   };
 
+  // Update the FileUpload component wrapper to handle both Promise<void> and Promise<string> return types
+  const handleFileUploadWrapper = async (file: File) => {
+    try {
+      await handleAvatarUpload(file);
+    } catch (error) {
+      console.error("Error uploading avatar:", error);
+      throw error;
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -154,7 +164,7 @@ export function ProfileEditForm({
           <div className="w-32 h-32 flex-shrink-0 relative rounded-full overflow-hidden border order-1 md:order-2">
             <FileUpload
               id="profile-avatar-upload-trigger"
-              onUploadComplete={handleAvatarUpload}
+              onUploadComplete={handleFileUploadWrapper}
               currentImageUrl={profile.avatarUrl}
               label=""
               bucketName="photos"

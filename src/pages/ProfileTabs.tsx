@@ -93,6 +93,18 @@ const ProfileTabs = ({
     }
   };
 
+  // Wrapper function to adapt file upload function
+  const handleFileUpload = async (file: File): Promise<void> => {
+    try {
+      // Convert File to string URL (mock implementation)
+      const fileUrl = URL.createObjectURL(file);
+      await handleAvatarUpload(fileUrl);
+    } catch (error) {
+      console.error("Error in file upload:", error);
+      throw error;
+    }
+  };
+
   return (
     <Tabs defaultValue="personal" value={activeTab} onValueChange={setActiveTab} className="w-full">
       <TabsList className="grid grid-cols-3 w-full max-w-md mb-4">
@@ -104,10 +116,12 @@ const ProfileTabs = ({
       <TabsContent value="personal">
         <StaffPersonalInfoTab
           profile={profile}
+          onSave={async (data) => {
+            await handleSave();
+          }}
+          onAvatarUpload={handleFileUpload}
           handleChange={handleChange}
           handleSelectChange={handleSelectChange}
-          handleAvatarUpload={handleAvatarUpload}
-          handleSave={handleSave}
           isSaving={isSaving}
           isUploading={isUploading}
         />
