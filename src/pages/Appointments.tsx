@@ -33,7 +33,7 @@ export default function Appointments() {
     setDate(date);
   };
 
-  const handleStatusChange = (status: RandevuDurumu) => {
+  const handleStatusChange = (status: RandevuDurumu | 'all') => {
     setAppointmentStatus(status);
   };
 
@@ -82,6 +82,7 @@ export default function Appointments() {
                     selectedDate={selectedDate || new Date()}
                     appointments={appointments}
                     isLoading={loading}
+                    onDateChange={handleDateChange}
                     onUpdateStatus={updateStatus}
                     currentPersonelId={currentPersonelId}
                   />

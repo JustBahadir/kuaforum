@@ -4,7 +4,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Randevu } from "@/lib/supabase/types";
+import { Randevu, RandevuDurumu } from "@/lib/supabase/types";
 import { format, isSameDay, parseISO } from "date-fns";
 import { tr } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,29 +13,26 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/lib/supabase/client";
 
 interface AppointmentCalendarViewProps {
-  selectedDate: Date;
   appointments: Randevu[];
   isLoading: boolean;
   isError?: boolean;
   error?: any;
-  currentPersonelId?: number;
+  currentPersonelId?: number | null;
   onDateChange: (date: Date) => void;
-  onCompleteClick: (appointment: Randevu) => void;
-  onCancelClick: (appointment: Randevu) => void;
+  onUpdateStatus?: (id: number, status: RandevuDurumu) => Promise<any>;
 }
 
 export function AppointmentCalendarView({
-  selectedDate,
   appointments,
   isLoading,
   isError,
   error,
   currentPersonelId,
   onDateChange,
-  onCompleteClick,
-  onCancelClick
+  onUpdateStatus
 }: AppointmentCalendarViewProps) {
   const [serviceNames, setServiceNames] = useState<Record<number, string>>({});
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   
   // Get service names
   useEffect(() => {
@@ -70,6 +67,28 @@ export function AppointmentCalendarView({
     fetchServiceNames();
   }, [appointments]);
   
+  // Handle date selection
+  const handleDateSelect = (date: Date | undefined) => {
+    if (date) {
+      setSelectedDate(date);
+      onDateChange(date);
+    }
+  };
+  
+  // Complete appointment
+  const handleCompleteClick = (appointment: Randevu) => {
+    if (onUpdateStatus) {
+      onUpdateStatus(appointment.id, "tamamlandi");
+    }
+  };
+  
+  // Cancel appointment
+  const handleCancelClick = (appointment: Randevu) => {
+    if (onUpdateStatus) {
+      onUpdateStatus(appointment.id, "iptal_edildi");
+    }
+  };
+  
   // Generate a map of dates with appointment counts
   const appointmentDates = appointments.reduce((acc, appointment) => {
     // Handle both Date objects and ISO strings
@@ -98,7 +117,7 @@ export function AppointmentCalendarView({
         <Calendar
           mode="single"
           selected={selectedDate}
-          onSelect={(date) => date && onDateChange(date)}
+          onSelect={handleDateSelect}
           locale={tr}
           className="rounded-md border shadow p-3 pointer-events-auto"
           modifiers={{
@@ -187,13 +206,13 @@ export function AppointmentCalendarView({
                     </div>
                   )}
                   
-                  {appointment.durum === "onaylandi" && (
+                  {appointment.durum === "onaylandi" && onUpdateStatus && (
                     <div className="mt-4 flex space-x-2">
                       <Button 
                         size="sm" 
                         variant="outline" 
                         className="flex items-center gap-1"
-                        onClick={() => onCompleteClick(appointment)}
+                        onClick={() => handleCompleteClick(appointment)}
                       >
                         <CheckSquare className="h-4 w-4" /> Tamamlandı
                       </Button>
@@ -201,7 +220,7 @@ export function AppointmentCalendarView({
                         size="sm" 
                         variant="destructive" 
                         className="flex items-center gap-1"
-                        onClick={() => onCancelClick(appointment)}
+                        onClick={() => handleCancelClick(appointment)}
                       >
                         <XSquare className="h-4 w-4" /> İptal
                       </Button>

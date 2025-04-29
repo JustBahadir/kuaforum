@@ -5,7 +5,7 @@ import { tr } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ChevronLeft, ChevronRight, CheckSquare, XSquare, Info, Undo } from "lucide-react";
-import { Randevu } from "@/lib/supabase/types";
+import { Randevu, RandevuDurumu } from "@/lib/supabase/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge"; 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -20,11 +20,9 @@ interface AppointmentDayViewProps {
   isLoading: boolean;
   isError?: boolean;
   error?: any;
-  currentPersonelId?: number;
-  onDateChange: (date: Date) => void;
-  onCompleteClick: (appointment: Randevu) => void;
-  onCancelClick: (appointment: Randevu) => void;
-  onUndoCancelClick?: (appointment: Randevu) => void;
+  currentPersonelId?: number | null;
+  onDateChange?: (date: Date) => void; // Made optional
+  onUpdateStatus?: (id: number, status: RandevuDurumu) => Promise<any>; // Changed to onUpdateStatus
 }
 
 type AppointmentWithExtras = Randevu & {
@@ -39,9 +37,7 @@ export function AppointmentDayView({
   error,
   currentPersonelId,
   onDateChange,
-  onCompleteClick,
-  onCancelClick,
-  onUndoCancelClick
+  onUpdateStatus
 }: AppointmentDayViewProps) {
   const [serviceNames, setServiceNames] = useState<Record<number, string>>({});
   const [showCalendar, setShowCalendar] = useState(false);
@@ -78,15 +74,15 @@ export function AppointmentDayView({
   }, [appointments]);
 
   const handlePrevDay = () => {
-    onDateChange(subDays(selectedDate, 1));
+    if (onDateChange) onDateChange(subDays(selectedDate, 1));
   };
 
   const handleNextDay = () => {
-    onDateChange(addDays(selectedDate, 1));
+    if (onDateChange) onDateChange(addDays(selectedDate, 1));
   };
 
   const handleToday = () => {
-    onDateChange(new Date());
+    if (onDateChange) onDateChange(new Date());
   };
 
   const getDayLabel = (date: Date) => {
@@ -98,6 +94,25 @@ export function AppointmentDayView({
       return "Yarın";
     }
     return "";
+  };
+
+  // Helper methods to handle status updates
+  const handleCompleteClick = (appointment: Randevu) => {
+    if (onUpdateStatus) {
+      onUpdateStatus(appointment.id, "tamamlandi");
+    }
+  };
+
+  const handleCancelClick = (appointment: Randevu) => {
+    if (onUpdateStatus) {
+      onUpdateStatus(appointment.id, "iptal_edildi");
+    }
+  };
+
+  const handleUndoCancelClick = (appointment: Randevu) => {
+    if (onUpdateStatus) {
+      onUpdateStatus(appointment.id, "onaylandi");
+    }
   };
 
   const filteredAppointments = appointments.filter(appointment => {
@@ -144,7 +159,7 @@ export function AppointmentDayView({
               mode="single"
               selected={selectedDate}
               onSelect={(date) => {
-                if (date) {
+                if (date && onDateChange) {
                   onDateChange(date);
                   setShowCalendar(false);
                 }
@@ -231,7 +246,7 @@ export function AppointmentDayView({
                             size="sm" 
                             variant="outline"
                             className="flex items-center gap-1" 
-                            onClick={() => onCompleteClick(appointment)}
+                            onClick={() => handleCompleteClick(appointment)}
                           >
                             <CheckSquare className="h-4 w-4" /> Tamamlandı
                           </Button>
@@ -239,7 +254,7 @@ export function AppointmentDayView({
                             size="sm" 
                             variant="destructive"
                             className="flex items-center gap-1" 
-                            onClick={() => onCancelClick(appointment)}
+                            onClick={() => handleCancelClick(appointment)}
                           >
                             <XSquare className="h-4 w-4" /> İptal
                           </Button>
@@ -264,7 +279,7 @@ export function AppointmentDayView({
                             size="sm" 
                             variant="outline" 
                             className="flex items-center gap-1"
-                            onClick={() => onUndoCancelClick && onUndoCancelClick(appointment)}
+                            onClick={() => handleUndoCancelClick(appointment)}
                           >
                             <Undo className="h-4 w-4" /> Geri Al
                           </Button>

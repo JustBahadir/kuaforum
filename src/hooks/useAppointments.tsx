@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { Randevu, RandevuDurumu } from '@/lib/supabase/types';
 
 interface UseAppointmentsProps {
-  initialStatus?: RandevuDurumu;
+  initialStatus?: RandevuDurumu | 'all';
   initialDate?: Date | null;
 }
 
@@ -88,7 +88,7 @@ export const useAppointments = ({ initialStatus = 'beklemede', initialDate = nul
     setSelectedDate(date);
   };
 
-  const setAppointmentStatus = (newStatus: RandevuDurumu) => {
+  const setAppointmentStatus = (newStatus: RandevuDurumu | 'all') => {
     setStatus(newStatus);
   };
 

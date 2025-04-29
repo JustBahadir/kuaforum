@@ -11,7 +11,7 @@ interface AppointmentWeekViewProps {
   selectedDate: Date;
   appointments: Randevu[];
   isLoading: boolean;
-  currentPersonelId?: number;
+  currentPersonelId?: number | null;
   onDateChange: (date: Date) => void;
 }
 

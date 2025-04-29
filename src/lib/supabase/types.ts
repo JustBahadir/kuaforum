@@ -134,7 +134,7 @@ export interface Dukkan {
   created_at: string;
 }
 
-export interface CalismaGunu {
+export interface CalismaSaati {
   id: number;
   dukkan_id?: number;
   gun: string;
