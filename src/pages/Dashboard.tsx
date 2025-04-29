@@ -107,12 +107,8 @@ export default function Dashboard() {
     );
   }
 
-  // Convert arrays to appropriate values for ProfitAnalysis component
-  // The ProfitAnalysis component expects numbers, not arrays
-  const operationsData = operations.length || 0;
-  const expensesData = fixedExpenses.length || 0;
-  const appointmentsData = monthlyAppointments.length || 0;
-
+  // Pass the arrays directly to the ProfitAnalysis component instead of converting to numbers
+  // This fixes the type error by matching the expected prop types
   return (
     <div className="container mx-auto px-4 py-8">
       <GreetingWrapper className="mb-8" />
@@ -154,9 +150,9 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <ProfitAnalysis 
-                operations={operationsData} 
-                fixedExpenses={expensesData} 
-                monthlyAppointments={appointmentsData}
+                operations={operations} 
+                fixedExpenses={fixedExpenses} 
+                monthlyAppointments={monthlyAppointments}
               />
             </CardContent>
           </Card>
