@@ -8,9 +8,10 @@ import { CityISOCodes } from "@/utils/cityISOCodes";
 export const shopService = {
   /**
    * Create a unique shop code based on shop name and location
+   * Format: [İşletmeAdıKısaltması]-[ÜlkeKodu+ŞehirKodu]-[ŞubeNumarası]-[RandomKısaKod]
    */
   generateShopCode: async (shopName: string, cityCode?: string) => {
-    // 1. Convert Turkish characters to Latin for the name part
+    // 1. Convert Turkish characters to Latin for the name part and get first 5 letters
     const turkishToLatin = (text: string) => {
       return text
         .replace(/ğ/g, 'g')
@@ -39,10 +40,10 @@ export const shopService = {
       namePrefix += 'X';
     }
 
-    // 3. Country code + City code
-    const countryCode = "TR"; // Default to Turkey
+    // 3. Country code (always TR) + City code (3 chars)
+    const countryCode = "TR";
     
-    // Get city code (3 letters) or use provided cityCode or default
+    // Get city code (3 letters) or use provided cityCode or default "XXX"
     const finalCityCode = cityCode || "XXX";
 
     // 4. Get the next branch number

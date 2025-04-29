@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -7,6 +8,9 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { CalismaSaati } from '@/lib/supabase/types';
+import { shopService } from '@/lib/auth/services/shopService';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CityISOCodes } from '@/utils/cityISOCodes';
 
 export default function CreateShop() {
   const navigate = useNavigate();
@@ -14,11 +18,16 @@ export default function CreateShop() {
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     isletmeAdi: '',
-    isletmeAdresi: '',
+    isletmeIl: '',
     isletmeAcikAdres: '',
     isletmeTelefon: '',
-    isletmeKodu: '',
   });
+
+  // List of Turkish cities from CityISOCodes
+  const cities = Object.keys(CityISOCodes).map(city => ({
+    value: city,
+    label: city
+  })).sort((a, b) => a.label.localeCompare(b.label));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,6 +45,10 @@ export default function CreateShop() {
         throw new Error('Kullanıcı oturumu bulunamadı.');
       }
 
+      // Generate shop code based on name and city
+      const cityCode = formData.isletmeIl ? CityISOCodes[formData.isletmeIl] : undefined;
+      const shopCode = await shopService.generateShopCode(formData.isletmeAdi, cityCode);
+
       const ownerId = authData.session.user.id;
 
       // Create isletme record
@@ -44,10 +57,10 @@ export default function CreateShop() {
         .insert([
           {
             ad: formData.isletmeAdi,
-            adres: formData.isletmeAdresi,
+            adres: formData.isletmeIl,
             acik_adres: formData.isletmeAcikAdres,
             telefon: formData.isletmeTelefon,
-            kod: formData.isletmeKodu,
+            kod: shopCode,
             sahibi_id: ownerId,
             active: true
           }
@@ -117,13 +130,20 @@ export default function CreateShop() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="isletmeAdresi">İşletme Adresi</Label>
-              <Input
-                id="isletmeAdresi"
-                value={formData.isletmeAdresi}
-                onChange={(e) => setFormData({ ...formData, isletmeAdresi: e.target.value })}
-                required
-              />
+              <Label htmlFor="isletmeIl">İl</Label>
+              <Select
+                value={formData.isletmeIl}
+                onValueChange={(value) => setFormData({ ...formData, isletmeIl: value })}
+              >
+                <SelectTrigger id="isletmeIl">
+                  <SelectValue placeholder="İl seçin" />
+                </SelectTrigger>
+                <SelectContent>
+                  {cities.map((city) => (
+                    <SelectItem key={city.value} value={city.value}>{city.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="isletmeAcikAdres">Açık Adres</Label>
@@ -140,15 +160,6 @@ export default function CreateShop() {
                 id="isletmeTelefon"
                 value={formData.isletmeTelefon}
                 onChange={(e) => setFormData({ ...formData, isletmeTelefon: e.target.value })}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="isletmeKodu">İşletme Kodu</Label>
-              <Input
-                id="isletmeKodu"
-                value={formData.isletmeKodu}
-                onChange={(e) => setFormData({ ...formData, isletmeKodu: e.target.value })}
                 required
               />
             </div>

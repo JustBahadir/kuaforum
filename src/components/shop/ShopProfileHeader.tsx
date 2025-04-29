@@ -55,6 +55,11 @@ export function ShopProfileHeader({
     }
   };
   
+  // Determine business name display
+  const businessName = isletmeData?.ad && isletmeData.ad.trim() !== "" 
+    ? isletmeData.ad 
+    : "İşletme Adı Girilmemiş";
+  
   return (
     <div className="bg-gradient-to-r from-pink-50 to-purple-50 p-8 rounded-lg shadow-sm">
       <div className="flex flex-col md:flex-row items-start gap-8">
@@ -64,12 +69,12 @@ export function ShopProfileHeader({
             {isletmeData?.logo_url ? (
               <img 
                 src={isletmeData.logo_url} 
-                alt={isletmeData.ad || "İşletme Adı Girilmemiş"} 
+                alt={businessName} 
                 className="w-full h-full object-cover" 
               />
             ) : (
               <div className="text-3xl font-bold text-purple-500">
-                {isletmeData?.ad ? isletmeData.ad[0].toUpperCase() : '?'}
+                {businessName[0].toUpperCase()}
               </div>
             )}
           </div>
@@ -107,7 +112,7 @@ export function ShopProfileHeader({
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <h1 className="font-bold text-gray-800 text-3xl text-center">
-                {isletmeData?.ad || "İşletme Adı Girilmemiş"}
+                {businessName}
               </h1>
               {isletmeData?.adres && (
                 <p className="text-muted-foreground text-center text-xl">{isletmeData.adres}</p>
