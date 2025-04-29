@@ -92,9 +92,8 @@ export default function AuthGoogleCallback() {
         }
       } catch (error: any) {
         console.error("Auth callback error:", error);
-        toast.error("Bir hata oluştu. Lütfen tekrar deneyin.");
+        setAccountNotFound(true); // Show the account not found screen on error instead of toast
         setLoading(false);
-        // Don't navigate away on error, stay on page and show the error
       } finally {
         setLoading(false);
       }

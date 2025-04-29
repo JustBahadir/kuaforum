@@ -107,7 +107,7 @@ export default function Dashboard() {
     );
   }
 
-  // Convert arrays to numbers for ProfitAnalysis component
+  // Convert arrays to numbers for ProfitAnalysis component - fixing this issue
   const operationsData = operations.length || 0;
   const expensesData = fixedExpenses.length || 0;
   const appointmentsData = monthlyAppointments.length || 0;

@@ -27,12 +27,22 @@ export const useCityDistricts = () => {
     const fetchCitiesData = async () => {
       try {
         // Mock data for now - will be replaced with API call
+        // Ensure proper Turkish characters are used in city names
         const mockCities: City[] = [
           { id: 1, name: "İstanbul", value: "istanbul", districts: [] },
           { id: 2, name: "Ankara", value: "ankara", districts: [] },
           { id: 3, name: "İzmir", value: "izmir", districts: [] },
           { id: 4, name: "Bursa", value: "bursa", districts: [] },
-          { id: 5, name: "Antalya", value: "antalya", districts: [] }
+          { id: 5, name: "Antalya", value: "antalya", districts: [] },
+          { id: 6, name: "Adana", value: "adana", districts: [] },
+          { id: 7, name: "Eskişehir", value: "eskisehir", districts: [] },
+          { id: 8, name: "Gaziantep", value: "gaziantep", districts: [] },
+          { id: 9, name: "Giresun", value: "giresun", districts: [] },
+          { id: 10, name: "Gümüşhane", value: "gumushane", districts: [] },
+          { id: 11, name: "Hakkari", value: "hakkari", districts: [] },
+          { id: 12, name: "Hatay", value: "hatay", districts: [] },
+          { id: 13, name: "Iğdır", value: "igdir", districts: [] },
+          { id: 14, name: "Isparta", value: "isparta", districts: [] },
         ];
         
         setCities(mockCities);
@@ -52,7 +62,7 @@ export const useCityDistricts = () => {
       }
 
       try {
-        // Mock data based on selected city
+        // Mock data based on selected city, preserving Turkish characters
         let mockDistricts: District[] = [];
         
         switch(cityId) {
@@ -122,7 +132,7 @@ export const useCityDistricts = () => {
         setLoading(true);
         
         try {
-          // Mock data based on selected city
+          // Mock data based on selected city, preserving Turkish characters
           let mockDistricts: District[] = [];
           
           switch(selectedCity) {
