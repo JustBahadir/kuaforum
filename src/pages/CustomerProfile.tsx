@@ -163,7 +163,15 @@ export default function CustomerProfile() {
 
               {isEditing ? (
                 <ProfileEditForm 
-                  profile={profile || {}}
+                  profile={{
+                    firstName: profile?.first_name,
+                    lastName: profile?.last_name,
+                    email: profile?.email,
+                    phone: profile?.phone,
+                    birthdate: profile?.birthdate,
+                    avatarUrl: profile?.avatar_url,
+                    gender: profile?.gender
+                  }} 
                   handleChange={() => {}}
                   handleSelectChange={() => {}}
                   handleAvatarUpload={uploadAvatar}
@@ -172,7 +180,17 @@ export default function CustomerProfile() {
                   isUploading={loading}
                 />
               ) : (
-                <ProfileDisplay profile={profile || {}} />
+                <ProfileDisplay 
+                  profile={{
+                    firstName: profile?.first_name,
+                    lastName: profile?.last_name,
+                    email: profile?.email,
+                    phone: profile?.phone,
+                    birthdate: profile?.birthdate,
+                    avatarUrl: profile?.avatar_url,
+                    gender: profile?.gender
+                  }}
+                />
               )}
             </TabsContent>
 

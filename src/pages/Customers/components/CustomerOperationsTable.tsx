@@ -49,14 +49,14 @@ export default function CustomerOperationsTable({ customerId }: CustomerOperatio
           </TableRow>
         </TableHeader>
         <TableBody>
-          {operations.map((operation) => (
+          {operations.map((operation: any) => (
             <TableRow key={operation.id}>
               <TableCell className="font-medium">
                 {new Date(operation.created_at).toLocaleDateString('tr-TR')}
               </TableCell>
-              <TableCell>{operation.aciklama}</TableCell>
+              <TableCell>{operation.aciklama || 'Bilinmiyor'}</TableCell>
               <TableCell>{operation.personel_name || 'Bilinmiyor'}</TableCell>
-              <TableCell className="text-right">{formatPrice(operation.tutar)}</TableCell>
+              <TableCell className="text-right">{formatPrice(operation.tutar || 0)}</TableCell>
               <TableCell className="text-center">
                 <Button variant="ghost" size="sm">
                   Görüntüle

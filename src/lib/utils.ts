@@ -1,4 +1,3 @@
-
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { format, parseISO } from "date-fns";
@@ -8,13 +7,23 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/**
+ * Formats a number as Turkish Lira currency
+ */
 export function formatCurrency(value: number): string {
   return new Intl.NumberFormat('tr-TR', {
     style: 'currency',
     currency: 'TRY',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
   }).format(value);
+}
+
+/**
+ * Formats a price (alias for formatCurrency for backward compatibility)
+ */
+export function formatPrice(value: number): string {
+  return formatCurrency(value);
 }
 
 export function formatDate(date: string | Date): string {

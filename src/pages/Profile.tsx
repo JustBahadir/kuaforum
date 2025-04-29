@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -51,9 +50,9 @@ export default function Profile() {
 
             <TabsContent value="personal">
               <StaffPersonalInfoTab 
-                profile={profileData}
-                onSave={updateProfile}
-                onAvatarUpload={uploadAvatar}
+                profile={profileData || {}}
+                onSave={async (data) => await updateProfile(data)}
+                onAvatarUpload={async (file) => await uploadAvatar(file)}
               />
             </TabsContent>
             

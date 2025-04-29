@@ -6,28 +6,32 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { MapPin } from "lucide-react";
 
 export interface ProfileDisplayProps {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  gender?: "erkek" | "kadın" | null;
-  birthdate?: string;
-  avatarUrl?: string;
-  address?: string;
-  iban?: string;
+  profile: {
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    phone?: string;
+    gender?: "erkek" | "kadın" | null;
+    birthdate?: string;
+    avatarUrl?: string;
+    address?: string;
+    iban?: string;
+    role?: string;
+  };
 }
 
-export function ProfileDisplay({ 
-  firstName, 
-  lastName, 
-  email, 
-  phone, 
-  gender, 
-  birthdate,
-  avatarUrl,
-  address,
-  iban
-}: ProfileDisplayProps) {
+export function ProfileDisplay({ profile }: ProfileDisplayProps) {
+  const {
+    firstName = '',
+    lastName = '',
+    email = '',
+    phone = '',
+    gender,
+    birthdate,
+    avatarUrl,
+    address,
+    iban
+  } = profile;
   
   // Format gender for display
   const formatGender = (gender?: string | null) => {

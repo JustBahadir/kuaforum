@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { 
   Card, 
@@ -23,12 +22,12 @@ import { toast } from "sonner";
 
 export interface ProfileEditFormProps {
   profile: {
-    firstName: string;
-    lastName: string;
-    phone: string;
-    email: string;
-    gender: "erkek" | "kadın" | null;
-    birthdate: string;
+    firstName?: string;
+    lastName?: string;
+    phone?: string;
+    email?: string;
+    gender?: "erkek" | "kadın" | null;
+    birthdate?: string;
     avatarUrl?: string;
     iban?: string;
     address?: string;
@@ -36,8 +35,8 @@ export interface ProfileEditFormProps {
   };
   handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
   handleSelectChange: (name: string, value: string) => void;
-  handleAvatarUpload: (url: string) => void;
-  handleSave: () => Promise<void>;
+  handleAvatarUpload: (file: File) => Promise<void>;
+  handleSave: (formData: any) => Promise<void>;
   isSaving: boolean;
   isUploading: boolean;
 }
