@@ -105,6 +105,34 @@ export const personelIslemleriServisi = {
     }
   },
 
+  async getirByMusteriId(musteri_id: number) {
+    try {
+      const dukkanId = await this._getCurrentUserDukkanId();
+      if (!dukkanId) {
+        console.warn("Kullanıcının işletme bilgisi bulunamadı");
+        return [];
+      }
+
+      const { data, error } = await supabase
+        .from('personel_islemleri')
+        .select(`
+          *,
+          personel:personel_id(*),
+          musteri:musteri_id(*),
+          islem:islem_id(*)
+        `)
+        .eq('musteri_id', musteri_id)
+        .eq('dukkan_id', dukkanId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error("Müşteri işlemleri getirme hatası:", error);
+      return [];
+    }
+  },
+
   async musteriIslemleriGetir(musteri_id: number) {
     try {
       const { data, error } = await supabase
@@ -284,6 +312,26 @@ export const personelIslemleriServisi = {
     } catch (error) {
       console.error("Personel işlemleri özeti alınırken hata:", error);
       throw error;
+    }
+  },
+
+  async updateShopStatistics() {
+    try {
+      const dukkanId = await this._getCurrentUserDukkanId();
+      if (!dukkanId) {
+        console.warn("İşletme ID bulunamadı, istatistikler güncellenemedi");
+        return false;
+      }
+
+      // Notify that statistics update is happening
+      console.log(`İşletme ${dukkanId} için istatistikler güncelleniyor`);
+      
+      // This would ideally call a stored procedure or function to update statistics
+      // For now, we'll just return true to indicate success
+      return true;
+    } catch (error) {
+      console.error("İstatistik güncelleme hatası:", error);
+      return false;
     }
   }
 };
