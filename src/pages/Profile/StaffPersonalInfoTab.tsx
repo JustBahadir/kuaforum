@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { ProfileEditForm } from "@/components/customer-profile/ProfileEditForm";
 
 export interface StaffPersonalInfoTabProps {
@@ -32,19 +32,34 @@ const StaffPersonalInfoTab = ({
   isSaving = false,
   isUploading = false
 }: StaffPersonalInfoTabProps) => {
-  const handleChange = propHandleChange || ((e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    // Default implementation
-    console.log("Change event:", e.target.name, e.target.value);
-  });
+  const [formData, setFormData] = useState({...profile});
 
-  const handleSelectChange = propHandleSelectChange || ((name: string, value: string) => {
-    // Default implementation
-    console.log("Select change:", name, value);
-  });
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    if (propHandleChange) {
+      propHandleChange(e);
+    }
+  };
+
+  const handleSelectChange = (name: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    if (propHandleSelectChange) {
+      propHandleSelectChange(name, value);
+    }
+  };
 
   return (
     <ProfileEditForm
-      profile={profile}
+      profile={formData}
       handleChange={handleChange}
       handleSelectChange={handleSelectChange}
       handleAvatarUpload={onAvatarUpload}

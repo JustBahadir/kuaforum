@@ -1,5 +1,5 @@
-
-import { Personel, Islem, IslemKategori } from "@/lib/supabase/types";
+import { supabase } from "@/lib/supabase/client";
+import { KategoriDto, IslemDto, PersonelIslemi } from "@/lib/supabase/types";
 
 const generatePersonel = (count: number): Personel[] => {
   return Array.from({ length: count }, (_, i) => ({

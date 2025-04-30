@@ -1,87 +1,76 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { musteriServisi, personelIslemleriServisi } from "@/lib/supabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Pencil, Trash2, AlertCircle } from "lucide-react";
-import { CustomerPersonalInfo } from "./CustomerPersonalInfo";
-import CustomerOperationsTable from "./CustomerOperationsTable";
+import { musteriServisi, personelIslemleriServisi, randevuServisi } from "@/lib/supabase";
+import { format } from "date-fns";
+import { tr } from "date-fns/locale";
+import { formatPhoneNumber } from "@/utils/phoneFormatter";
 import { Skeleton } from "@/components/ui/skeleton";
-import { EditCustomerForm } from "./EditCustomerForm";
-import { toast } from "sonner";
-import { 
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { useCustomerAuth } from "@/hooks/useCustomerAuth";
+import { Calendar, Phone, Clock, CheckCircle2, XCircle } from "lucide-react";
 
 interface CustomerDetailsProps {
   customerId: number;
-  onUpdate?: () => void;
-  onDelete?: () => void;
 }
 
-export function CustomerDetails({ customerId, onUpdate, onDelete }: CustomerDetailsProps) {
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const { userRole } = useCustomerAuth();
-  
-  const { data: customer, isLoading, error } = useQuery({
+export function CustomerDetails({ customerId }: CustomerDetailsProps) {
+  const { data: customer, isLoading: isCustomerLoading } = useQuery({
     queryKey: ['customer', customerId],
     queryFn: () => musteriServisi.getirById(customerId),
     enabled: !!customerId,
   });
 
-  const { data: operations = [] } = useQuery({
-    queryKey: ['customer-operations', customerId],
-    queryFn: async () => {
-      try {
-        return await personelIslemleriServisi.getirByMusteriId(customerId);
-      } catch (error) {
-        console.error("Müşteri işlemleri getirilirken hata:", error);
-        return [];
-      }
-    },
-    enabled: !!customerId
+  const { data: appointments = [], isLoading: isAppointmentsLoading } = useQuery({
+    queryKey: ['customerAppointments', customerId],
+    queryFn: () => randevuServisi.musteriRandevulari(customerId),
+    enabled: !!customerId,
   });
 
-  const handleDelete = async () => {
-    if (!customerId) return;
-    
+  const { data: services = [], isLoading: isServicesLoading } = useQuery({
+    queryKey: ['customerServices', customerId],
+    queryFn: () => personelIslemleriServisi.getirByMusteriId(customerId),
+    enabled: !!customerId,
+  });
+
+  // Format date
+  const formatDate = (date: string | null | undefined) => {
+    if (!date) return "-";
     try {
-      await musteriServisi.sil(customerId);
-      toast.success("Müşteri başarıyla silindi");
-      setIsDeleteDialogOpen(false);
-      if (onDelete) onDelete();
-    } catch (error) {
-      console.error("Müşteri silinirken hata:", error);
-      toast.error("Müşteri silinirken bir hata oluştu");
+      return format(new Date(date), "dd MMMM yyyy", { locale: tr });
+    } catch (e) {
+      return "-";
     }
   };
 
-  const handleCustomerUpdated = () => {
-    if (onUpdate) onUpdate();
+  // Format appointment status
+  const formatStatus = (status: string) => {
+    switch (status) {
+      case "onaylandi":
+        return <span className="text-green-600 flex items-center"><CheckCircle2 className="h-4 w-4 mr-1" /> Onaylandı</span>;
+      case "beklemede":
+        return <span className="text-yellow-600 flex items-center"><Clock className="h-4 w-4 mr-1" /> Beklemede</span>;
+      case "tamamlandi":
+        return <span className="text-green-700 flex items-center"><CheckCircle2 className="h-4 w-4 mr-1" /> Tamamlandı</span>;
+      case "iptal_edildi":
+      case "iptal":
+        return <span className="text-red-600 flex items-center"><XCircle className="h-4 w-4 mr-1" /> İptal Edildi</span>;
+      default:
+        return status;
+    }
   };
 
-  if (isLoading) {
+  if (isCustomerLoading) {
     return (
       <div className="space-y-4">
         <Card>
           <CardHeader>
-            <Skeleton className="h-8 w-1/3" />
+            <Skeleton className="h-8 w-[200px]" />
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-2/3" />
-              <Skeleton className="h-4 w-1/2" />
+            <div className="space-y-3">
+              <Skeleton className="h-4 w-[300px]" />
+              <Skeleton className="h-4 w-[250px]" />
+              <Skeleton className="h-4 w-[200px]" />
             </div>
           </CardContent>
         </Card>
@@ -89,17 +78,14 @@ export function CustomerDetails({ customerId, onUpdate, onDelete }: CustomerDeta
     );
   }
 
-  if (error || !customer) {
+  if (!customer) {
     return (
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center gap-2 text-destructive mb-2">
-            <AlertCircle className="h-4 w-4" />
-            <p className="font-semibold">Müşteri bilgileri yüklenemedi</p>
+        <CardContent className="p-6">
+          <div className="text-center py-8">
+            <h3 className="text-lg font-medium">Müşteri bulunamadı</h3>
+            <p className="text-muted-foreground mt-2">Bu ID ile eşleşen müşteri kaydı bulunmamaktadır.</p>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Müşteri bilgileri getirilirken bir hata oluştu. Lütfen daha sonra tekrar deneyin.
-          </p>
         </CardContent>
       </Card>
     );
@@ -107,68 +93,111 @@ export function CustomerDetails({ customerId, onUpdate, onDelete }: CustomerDeta
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">
-          {customer.first_name} {customer.last_name}
-        </h2>
-        <div className="flex gap-2">
-          <Button 
-            size="sm" 
-            variant="outline" 
-            onClick={() => setIsEditDialogOpen(true)}
-          >
-            <Pencil className="h-4 w-4 mr-1" />
-            Düzenle
-          </Button>
-          
-          {userRole === 'admin' && (
-            <Button 
-              size="sm" 
-              variant="destructive" 
-              onClick={() => setIsDeleteDialogOpen(true)}
-            >
-              <Trash2 className="h-4 w-4 mr-1" />
-              Sil
-            </Button>
-          )}
-        </div>
-      </div>
-
-      <CustomerPersonalInfo customer={customer} customerId={customer.id} />
-      
       <Card>
         <CardHeader>
-          <CardTitle>İşlem Geçmişi</CardTitle>
+          <CardTitle className="text-xl">
+            {customer.first_name} {customer.last_name || ""}
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <CustomerOperationsTable customerId={customer.id} />
+          <div className="space-y-4">
+            {customer.phone && (
+              <div className="flex items-center">
+                <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
+                <span>{formatPhoneNumber(customer.phone)}</span>
+              </div>
+            )}
+            {customer.birthdate && (
+              <div className="flex items-center">
+                <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
+                <span>Doğum Tarihi: {formatDate(customer.birthdate)}</span>
+              </div>
+            )}
+            <div>
+              <p className="text-sm text-muted-foreground">Kayıt Tarihi</p>
+              <p>{formatDate(customer.created_at)}</p>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
-      <EditCustomerForm 
-        customer={customer}
-        open={isEditDialogOpen}
-        onOpenChange={setIsEditDialogOpen}
-        onSuccess={handleCustomerUpdated}
-      />
+      <Card>
+        <CardHeader>
+          <CardTitle>Son Randevular</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isAppointmentsLoading ? (
+            <div className="space-y-3">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+          ) : appointments.length > 0 ? (
+            <div className="space-y-4">
+              {appointments.slice(0, 5).map((appointment: any) => (
+                <div 
+                  key={appointment.id} 
+                  className="border-b pb-3 last:border-0 last:pb-0"
+                >
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-medium">
+                        {format(new Date(appointment.tarih), "dd MMMM yyyy", { locale: tr })}
+                        {" "}
+                        {appointment.saat ? appointment.saat.substring(0, 5) : ""}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {appointment.personel?.ad_soyad || "Personel seçilmedi"}
+                      </p>
+                    </div>
+                    <div>
+                      {formatStatus(appointment.durum)}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-muted-foreground py-2">Henüz randevu kaydı bulunmamaktadır.</p>
+          )}
+        </CardContent>
+      </Card>
 
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Müşteriyi Sil</AlertDialogTitle>
-            <AlertDialogDescription>
-              Bu müşteriyi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz ve 
-              müşteriye ait tüm veriler kalıcı olarak silinecektir.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Vazgeç</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
-              Sil
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <Card>
+        <CardHeader>
+          <CardTitle>Yapılan İşlemler</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isServicesLoading ? (
+            <div className="space-y-3">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+          ) : services.length > 0 ? (
+            <div className="space-y-4">
+              {services.slice(0, 5).map((service: any) => (
+                <div 
+                  key={service.id} 
+                  className="border-b pb-3 last:border-0 last:pb-0"
+                >
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-medium">{service.aciklama}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {format(new Date(service.created_at), "dd MMMM yyyy", { locale: tr })}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="font-medium">{service.tutar} ₺</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-muted-foreground py-2">Henüz işlem kaydı bulunmamaktadır.</p>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

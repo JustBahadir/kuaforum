@@ -2,7 +2,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
-import './globals.css'
+import './index.css'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from './components/ui/theme-provider.tsx'
 import { setupStorageBuckets } from './lib/supabase/setupStorage.ts'

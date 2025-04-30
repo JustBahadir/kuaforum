@@ -15,6 +15,7 @@ export async function setupStorageBuckets() {
     }
     
     const existingBuckets = buckets?.map(b => b.name) || [];
+    console.log("Existing buckets:", existingBuckets);
     
     // Create profile-photos bucket if it doesn't exist
     if (!existingBuckets.includes('profile-photos')) {

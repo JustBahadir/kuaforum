@@ -83,6 +83,8 @@ export default function Profile() {
                   }}
                   onSave={async (data) => await updateProfile(data)}
                   onAvatarUpload={handleAvatarUpload}
+                  isUploading={false}
+                  isSaving={false}
                 />
               </TabsContent>
               

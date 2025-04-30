@@ -1,7 +1,9 @@
-import { supabase } from '../client';
-import { PersonelIslemi } from '../types';
+
+import { supabase } from "../client";
+import { isletmeServisi } from "./dukkanServisi";
 
 export const personelIslemleriServisi = {
+  // Helper function to get the current user's dukkan_id
   async _getCurrentUserDukkanId() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -43,326 +45,260 @@ export const personelIslemleriServisi = {
     }
   },
   
-  async hepsiniGetir() {
+  async hepsiniGetir(personelId = null) {
     try {
       const dukkanId = await this._getCurrentUserDukkanId();
       if (!dukkanId) {
-        console.warn("Kullanıcının işletme bilgisi bulunamadı");
+        console.error("Kullanıcının işletme bilgisi bulunamadı");
         return [];
       }
-
-      const { data, error } = await supabase
+      
+      // Build the query
+      let query = supabase
         .from('personel_islemleri')
         .select(`
           *,
-          personel:personel_id(*),
-          musteri:musteri_id(*),
-          islem:islem_id(*)
+          personel:personel_id (ad_soyad),
+          islem:islem_id (islem_adi, fiyat),
+          musteri:musteri_id (first_name, last_name, phone)
         `)
         .eq('dukkan_id', dukkanId)
         .order('created_at', { ascending: false });
-
-      if (error) throw error;
+      
+      // Add personel filter if provided
+      if (personelId) {
+        query = query.eq('personel_id', personelId);
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) {
+        console.error("Error fetching personel islemleri:", error);
+        throw error;
+      }
+      
       return data || [];
     } catch (error) {
-      console.error("Personel işlemleri getirme hatası:", error);
+      console.error("Error in personelIslemleri.hepsiniGetir:", error);
       return [];
     }
   },
-
-  async getir(id: number) {
+  
+  async getir(id) {
     try {
       const dukkanId = await this._getCurrentUserDukkanId();
       if (!dukkanId) {
-        throw new Error("Kullanıcının işletme bilgisi bulunamadı");
+        console.error("Kullanıcının işletme bilgisi bulunamadı");
+        return null;
       }
       
       const { data, error } = await supabase
         .from('personel_islemleri')
         .select(`
           *,
-          personel:personel_id(*),
-          musteri:musteri_id(*),
-          islem:islem_id(*)
+          personel:personel_id (ad_soyad),
+          islem:islem_id (islem_adi, fiyat),
+          musteri:musteri_id (first_name, last_name, phone)
         `)
         .eq('id', id)
         .eq('dukkan_id', dukkanId)
         .single();
-
-      if (error) throw error;
+      
+      if (error) {
+        console.error("Error fetching personel islemi:", error);
+        throw error;
+      }
+      
       return data;
     } catch (error) {
-      console.error("Personel işlemi getirme hatası:", error);
-      throw error;
+      console.error("Error in personelIslemleri.getir:", error);
+      return null;
     }
   },
-
-  async personelIslemleriGetir(personel_id: number) {
+  
+  async personelIslemleriGetir(personel_id) {
     try {
-      const dukkanId = await this._getCurrentUserDukkanId();
-      if (!dukkanId) {
-        console.warn("Kullanıcının işletme bilgisi bulunamadı");
-        return [];
-      }
-
       const { data, error } = await supabase
         .from('personel_islemleri')
-        .select(`
-          *,
-          personel:personel_id(*),
-          musteri:musteri_id(*),
-          islem:islem_id(*)
-        `)
+        .select('*')
         .eq('personel_id', personel_id)
-        .eq('dukkan_id', dukkanId)
         .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error("Personel işlemleri getirme hatası:", error);
-      return [];
-    }
-  },
-
-  async getirByMusteriId(musteri_id: number) {
-    try {
-      const dukkanId = await this._getCurrentUserDukkanId();
-      if (!dukkanId) {
-        console.warn("Kullanıcının işletme bilgisi bulunamadı");
-        return [];
+      
+      if (error) {
+        console.error("Error fetching personel islemleri:", error);
+        throw error;
       }
-
-      const { data, error } = await supabase
-        .from('personel_islemleri')
-        .select(`
-          *,
-          personel:personel_id(*),
-          musteri:musteri_id(*),
-          islem:islem_id(*)
-        `)
-        .eq('musteri_id', musteri_id)
-        .eq('dukkan_id', dukkanId)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
+      
       return data || [];
     } catch (error) {
-      console.error("Müşteri işlemleri getirme hatası:", error);
+      console.error("Error in personelIslemleri.personelIslemleriGetir:", error);
       return [];
     }
   },
-
-  async musteriIslemleriGetir(musteri_id: number) {
+  
+  async ekle(islem) {
     try {
       const dukkanId = await this._getCurrentUserDukkanId();
       if (!dukkanId) {
-        console.warn("Kullanıcının işletme bilgisi bulunamadı");
-        return [];
+        console.error("Kullanıcının işletme bilgisi bulunamadı");
+        throw new Error("İşletme bilgisi bulunamadı");
       }
       
       const { data, error } = await supabase
         .from('personel_islemleri')
-        .select(`
-          *,
-          personel:personel_id(*),
-          musteri:musteri_id(*),
-          islem:islem_id(*)
-        `)
-        .eq('musteri_id', musteri_id)
-        .eq('dukkan_id', dukkanId)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error("Müşteri işlemleri getirme hatası:", error);
-      return [];
-    }
-  },
-
-  async randevuIslemleriGetir(randevu_id: number) {
-    try {
-      const dukkanId = await this._getCurrentUserDukkanId();
-      if (!dukkanId) {
-        console.warn("Kullanıcının işletme bilgisi bulunamadı");
-        return [];
+        .insert([{ ...islem, dukkan_id: dukkanId }])
+        .select();
+      
+      if (error) {
+        console.error("Error adding personel islemi:", error);
+        throw error;
       }
       
-      const { data, error } = await supabase
-        .from('personel_islemleri')
-        .select(`
-          *,
-          personel:personel_id(*),
-          musteri:musteri_id(*),
-          islem:islem_id(*)
-        `)
-        .eq('randevu_id', randevu_id)
-        .eq('dukkan_id', dukkanId)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error("Randevu işlemleri getirme hatası:", error);
-      return [];
-    }
-  },
-
-  async ekle(islem: Omit<PersonelIslemi, 'id' | 'created_at'>) {
-    try {
-      const dukkanId = await this._getCurrentUserDukkanId();
-      if (!dukkanId) {
-        throw new Error("Kullanıcının işletme bilgisi bulunamadı");
-      }
+      // Update shop statistics
+      await this.updateShopStatistics(dukkanId);
       
-      // Add dukkan_id to the islem
-      const islemToInsert = {
-        ...islem,
-        dukkan_id: dukkanId
-      };
-      
-      const { data, error } = await supabase
-        .from('personel_islemleri')
-        .insert(islemToInsert)
-        .select(`
-          *,
-          personel:personel_id(*),
-          musteri:musteri_id(*),
-          islem:islem_id(*)
-        `);
-
-      if (error) throw error;
       return data[0];
     } catch (error) {
-      console.error("Personel işlemi eklenirken hata:", error);
+      console.error("Error in personelIslemleri.ekle:", error);
       throw error;
     }
   },
-
-  async guncelle(id: number, islem: Partial<PersonelIslemi>) {
+  
+  async sil(id) {
     try {
       const dukkanId = await this._getCurrentUserDukkanId();
       if (!dukkanId) {
-        throw new Error("Kullanıcının işletme bilgisi bulunamadı");
+        console.error("Kullanıcının işletme bilgisi bulunamadı");
+        throw new Error("İşletme bilgisi bulunamadı");
       }
       
-      // Ensure we're only updating islemler for this shop
-      const { data, error } = await supabase
+      // First verify this operation belongs to our business
+      const { data: islemData } = await supabase
         .from('personel_islemleri')
-        .update(islem)
+        .select('dukkan_id')
         .eq('id', id)
-        .eq('dukkan_id', dukkanId)
-        .select(`
-          *,
-          personel:personel_id(*),
-          musteri:musteri_id(*),
-          islem:islem_id(*)
-        `);
-
-      if (error) throw error;
-      return data[0];
-    } catch (error) {
-      console.error("Personel işlemi güncellenirken hata:", error);
-      throw error;
-    }
-  },
-
-  async sil(id: number) {
-    try {
-      const dukkanId = await this._getCurrentUserDukkanId();
-      if (!dukkanId) {
-        throw new Error("Kullanıcının işletme bilgisi bulunamadı");
+        .single();
+        
+      if (islemData?.dukkan_id !== dukkanId) {
+        throw new Error("Bu işlem sizin işletmenize ait değil");
       }
       
-      // Ensure we're only deleting islemler for this shop
       const { error } = await supabase
         .from('personel_islemleri')
         .delete()
         .eq('id', id)
         .eq('dukkan_id', dukkanId);
-
-      if (error) throw error;
+      
+      if (error) {
+        console.error("Error deleting personel islemi:", error);
+        throw error;
+      }
+      
+      // Update shop statistics
+      await this.updateShopStatistics(dukkanId);
+      
       return true;
     } catch (error) {
-      console.error("Personel işlemi silinirken hata:", error);
+      console.error("Error in personelIslemleri.sil:", error);
       throw error;
     }
   },
   
-  async personelIslemleriOzeti(personelId: number, baslangicTarihi: string, bitisTarihi: string) {
-    try {
-      const userDukkanId = await this._getCurrentUserDukkanId();
-      if (!userDukkanId) {
-        throw new Error("Kullanıcının işletme bilgisi bulunamadı");
-      }
-      
-      // Get all operations for this staff member in the date range
-      const { data: allOperations, error } = await supabase
-        .from('personel_islemleri')
-        .select(`
-          *,
-          personel:personel_id(*)
-        `)
-        .eq('personel_id', personelId)
-        .gte('created_at', baslangicTarihi)
-        .lte('created_at', bitisTarihi)
-        .order('created_at', { ascending: false });
-      
-      if (error) {
-        throw error;
-      }
-      
-      // Filter for records with matching dukkan_id
-      const dukkanOperations = allOperations.filter(op => {
-        if (!op.personel) return false;
-        if (!op.dukkan_id) return false;
-        return op.dukkan_id === userDukkanId;
-      });
-      
-      // Calculate totals
-      let toplamTutar = 0;
-      let toplamPrim = 0;
-      let toplamPuan = 0;
-      let islemSayisi = dukkanOperations.length;
-      
-      dukkanOperations.forEach(islem => {
-        toplamTutar += islem.tutar || 0;
-        toplamPrim += (islem.tutar || 0) * (islem.prim_yuzdesi || 0) / 100;
-        toplamPuan += islem.puan || 0;
-      });
-      
-      return {
-        islemler: dukkanOperations,
-        ozet: {
-          toplamTutar,
-          toplamPrim,
-          toplamPuan,
-          islemSayisi
-        }
-      };
-    } catch (error) {
-      console.error("Personel işlemleri özeti alınırken hata:", error);
-      throw error;
-    }
-  },
-
-  async updateShopStatistics() {
+  async personelIslemleriOzeti(personelId, baslangicTarihi, bitisTarihi) {
     try {
       const dukkanId = await this._getCurrentUserDukkanId();
       if (!dukkanId) {
-        console.warn("İşletme ID bulunamadı, istatistikler güncellenemedi");
+        console.error("Kullanıcının işletme bilgisi bulunamadı");
+        return {
+          toplamIslem: 0,
+          toplamCiro: 0,
+          toplamPrim: 0
+        };
+      }
+      
+      const { data, error } = await supabase
+        .from('personel_islemleri')
+        .select('*')
+        .eq('personel_id', personelId)
+        .eq('dukkan_id', dukkanId)
+        .gte('created_at', baslangicTarihi)
+        .lte('created_at', bitisTarihi);
+      
+      if (error) {
+        console.error("Error fetching personel islemleri ozeti:", error);
+        throw error;
+      }
+      
+      // Calculate summary
+      const toplamCiro = data.reduce((sum, item) => sum + Number(item.tutar), 0);
+      const toplamPrim = data.reduce((sum, item) => {
+        const primOrani = item.prim_yuzdesi || 0;
+        return sum + (Number(item.tutar) * primOrani / 100);
+      }, 0);
+      
+      return {
+        toplamIslem: data.length,
+        toplamCiro,
+        toplamPrim
+      };
+    } catch (error) {
+      console.error("Error in personelIslemleri.personelIslemleriOzeti:", error);
+      return {
+        toplamIslem: 0,
+        toplamCiro: 0,
+        toplamPrim: 0
+      };
+    }
+  },
+  
+  // Add missing method to get operations by customer ID
+  async getirByMusteriId(musteriId) {
+    try {
+      const dukkanId = await this._getCurrentUserDukkanId();
+      if (!dukkanId) {
+        console.error("Kullanıcının işletme bilgisi bulunamadı");
+        return [];
+      }
+      
+      const { data, error } = await supabase
+        .from('personel_islemleri')
+        .select(`
+          *,
+          personel:personel_id (ad_soyad),
+          islem:islem_id (islem_adi, fiyat)
+        `)
+        .eq('musteri_id', musteriId)
+        .eq('dukkan_id', dukkanId)
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error("Error fetching customer operations:", error);
+        throw error;
+      }
+      
+      return data || [];
+    } catch (error) {
+      console.error("Error in personelIslemleri.getirByMusteriId:", error);
+      return [];
+    }
+  },
+  
+  // Add the missing shop statistics update method
+  async updateShopStatistics(dukkanId) {
+    try {
+      if (!dukkanId) {
+        console.error("Dükkan ID bulunamadı");
         return false;
       }
-
-      // Notify that statistics update is happening
-      console.log(`İşletme ${dukkanId} için istatistikler güncelleniyor`);
       
-      // This would ideally call a stored procedure or function to update statistics
-      // For now, we'll just return true to indicate success
+      console.log("Updating shop statistics for dukkan ID:", dukkanId);
+      
+      // You can implement shop statistics update logic here
+      // For example: recalculate total revenue, customer count, etc.
+      
       return true;
     } catch (error) {
-      console.error("İstatistik güncelleme hatası:", error);
+      console.error("Error updating shop statistics:", error);
       return false;
     }
   }
