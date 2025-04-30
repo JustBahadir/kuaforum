@@ -1,4 +1,3 @@
-
 import { supabase } from "@/lib/supabase/client";
 import { PersonelIslemi } from "../types";
 
@@ -56,8 +55,8 @@ export const personelIslemleriServisi = {
 
       // Additional filter to ensure only operations from this shop are shown
       const filteredData = data.filter(item => 
-        item.personel?.dukkan_id === dukkanId && 
-        item.musteri?.dukkan_id === dukkanId
+        (item.personel?.dukkan_id === dukkanId) && 
+        (!item.musteri || item.musteri?.dukkan_id === dukkanId)
       );
 
       return filteredData || [];
@@ -143,7 +142,7 @@ export const personelIslemleriServisi = {
 
       // Additional filter to ensure only operations from this shop are shown
       const filteredData = data.filter(item => 
-        item.personel?.dukkan_id === dukkanId && 
+        (item.personel?.dukkan_id === dukkanId) && 
         (!item.musteri || item.musteri?.dukkan_id === dukkanId)
       );
 
@@ -194,7 +193,7 @@ export const personelIslemleriServisi = {
       // Additional filter to ensure only operations from this shop are shown
       const filteredData = data.filter(item => 
         (!item.personel || item.personel?.dukkan_id === dukkanId) && 
-        item.musteri?.dukkan_id === dukkanId
+        (item.musteri?.dukkan_id === dukkanId)
       );
 
       return filteredData || [];

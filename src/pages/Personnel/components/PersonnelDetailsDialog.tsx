@@ -9,29 +9,29 @@ import { OperationsHistoryTab } from "./personnel-detail-tabs/OperationsHistoryT
 import { PerformanceTab } from "./personnel-detail-tabs/PerformanceTab";
 import { cn } from "@/lib/utils";
 
-interface PersonnelDetailsDialogProps {
-  isOpen: boolean;
-  onOpenChange: (open: boolean) => void;
+export interface PersonnelDetailsDialogProps {
   personnel: any;
-  onUpdate?: () => void;
+  open: boolean; // Added for compatibility
+  onOpenChange: (open: boolean) => void;
+  onRefresh?: () => void;
 }
 
 export function PersonnelDetailsDialog({
-  isOpen,
+  open,
   onOpenChange,
   personnel,
-  onUpdate = () => {}
+  onRefresh = () => {}
 }: PersonnelDetailsDialogProps) {
   const [activeTab, setActiveTab] = React.useState("personal-info");
   const dialogContentRef = useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     const handlePopState = () => {
-      if (isOpen) onOpenChange(false);
+      if (open) onOpenChange(false);
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [isOpen, onOpenChange]);
+  }, [open, onOpenChange]);
 
   const handlePointerDownOutside = useCallback(
     (event: CustomEvent<{ originalEvent: PointerEvent }>) => {
@@ -43,7 +43,7 @@ export function PersonnelDetailsDialog({
   if (!personnel) return null;
 
   return (
-    <DialogPrimitive.Root open={isOpen} onOpenChange={onOpenChange}>
+    <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay
           className="fixed inset-0 bg-black/50"
@@ -77,11 +77,11 @@ export function PersonnelDetailsDialog({
             </TabsList>
 
             <TabsContent value="personal-info" className="mt-4">
-              <PersonalInfoTab personnel={personnel} onEdit={onUpdate} />
+              <PersonalInfoTab personnel={personnel} onEdit={onRefresh} />
             </TabsContent>
 
             <TabsContent value="work-info" className="mt-4">
-              <WorkInfoTab personnel={personnel} onEdit={onUpdate} />
+              <WorkInfoTab personnel={personnel} onEdit={onRefresh} />
             </TabsContent>
 
             <TabsContent value="operations-history" className="mt-4">
@@ -97,4 +97,3 @@ export function PersonnelDetailsDialog({
     </DialogPrimitive.Root>
   );
 }
-

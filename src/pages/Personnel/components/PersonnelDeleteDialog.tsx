@@ -5,21 +5,23 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { personelServisi } from "@/lib/supabase";
 import { toast } from "sonner";
 
-interface PersonnelDeleteDialogProps {
-  isOpen: boolean;
+export interface PersonnelDeleteDialogProps {
+  open: boolean;
   onOpenChange: (open: boolean) => void;
-  personnelId: number | null;
-  personnelName: string;
+  personnel: any; // Changed from personnelId to personnel for compatibility
+  onSuccess?: () => void;
 }
 
 export function PersonnelDeleteDialog({
-  isOpen,
+  open,
   onOpenChange,
-  personnelId,
-  personnelName
+  personnel,
+  onSuccess
 }: PersonnelDeleteDialogProps) {
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
+  const personnelId = personnel?.id;
+  const personnelName = personnel?.ad_soyad || 'Personel';
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
@@ -34,6 +36,7 @@ export function PersonnelDeleteDialog({
       queryClient.invalidateQueries({ queryKey: ["personel"] });
       onOpenChange(false);
       setIsLoading(false);
+      if (onSuccess) onSuccess();
     },
     onError: (error) => {
       console.error(error);
@@ -47,7 +50,7 @@ export function PersonnelDeleteDialog({
   };
 
   return (
-    <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Personeli silmek istediğinize emin misiniz?</AlertDialogTitle>

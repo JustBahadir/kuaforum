@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { PersonelIslemi as PersonelIslemiType, islemServisi, personelIslemleriServisi, personelServisi } from "@/lib/supabase";
@@ -84,6 +85,10 @@ export default function Personnel() {
     setDateRange({ from, to });
   };
 
+  const handleRefreshPersonnel = () => {
+    // Refresh the personnel list
+  };
+
   if (userRole === 'staff') {
     return <Navigate to="/shop-home" replace />;
   } else if (userRole === 'customer') {
@@ -129,7 +134,12 @@ export default function Personnel() {
           </TabsList>
 
           <TabsContent value="personel">
-            <PersonnelList onPersonnelSelect={setSelectedPersonnelId} />
+            <PersonnelList 
+              personel={personeller} 
+              onRefresh={handleRefreshPersonnel}
+              isLoading={false}
+              onPersonnelSelect={setSelectedPersonnelId} 
+            />
           </TabsContent>
 
           <TabsContent value="islemler">

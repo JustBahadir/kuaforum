@@ -1,10 +1,12 @@
+
 import React from "react";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Phone, Mail } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
-interface PersonnelCardProps {
+
+export interface PersonnelCardProps {
   personnel: {
     id: number;
     ad_soyad: string;
@@ -18,10 +20,13 @@ interface PersonnelCardProps {
     toplam_ciro?: number;
   };
   onClick?: () => void;
+  actions?: React.ReactNode[]; // Added for compatibility
 }
+
 export function PersonnelCard({
   personnel,
-  onClick
+  onClick,
+  actions
 }: PersonnelCardProps) {
   const getWorkingSystemLabel = (system: string) => {
     switch (system) {
@@ -38,13 +43,17 @@ export function PersonnelCard({
         return system;
     }
   };
+  
   const getInitials = (fullName: string) => {
     return fullName.split(" ").map(n => n[0]).join("").toUpperCase().substring(0, 2);
   };
-  return <Card className="h-full flex flex-col transition-all hover:shadow-md cursor-pointer" onClick={onClick}>
+  
+  return (
+    <Card 
+      className="h-full flex flex-col transition-all hover:shadow-md cursor-pointer" 
+      onClick={onClick}
+    >
       <div className="p-4 flex flex-col items-center space-y-3">
-        
-
         <Avatar className="h-20 w-20">
           <AvatarImage src={personnel.avatar_url} alt={personnel.ad_soyad} />
           <AvatarFallback className="bg-purple-100 text-purple-600 text-lg">
@@ -82,5 +91,12 @@ export function PersonnelCard({
           </div>
         </div>
       </div>
-    </Card>;
+      
+      {actions && actions.length > 0 && (
+        <div className="p-2 border-t flex justify-end space-x-1">
+          {actions}
+        </div>
+      )}
+    </Card>
+  );
 }

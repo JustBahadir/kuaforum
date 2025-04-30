@@ -9,7 +9,7 @@ import { PersonnelDetailsDialog } from "./PersonnelDetailsDialog";
 import { PersonnelDeleteDialog } from "./PersonnelDeleteDialog";
 import { useCustomerAuth } from '@/hooks/useCustomerAuth';
 
-interface PersonnelListProps {
+export interface PersonnelListProps {
   personel: any[];
   onRefresh: () => void;
   isLoading?: boolean;
@@ -78,12 +78,16 @@ export function PersonnelList({ personel, onRefresh, isLoading = false, onPerson
           <PersonnelCard
             key={p.id}
             personnel={p}
+            onClick={() => handleViewDetails(p)}
             actions={[
               <Button
                 key="view"
                 size="icon"
                 variant="ghost"
-                onClick={() => handleViewDetails(p)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleViewDetails(p);
+                }}
               >
                 <Eye className="w-4 h-4" />
               </Button>,
@@ -91,7 +95,10 @@ export function PersonnelList({ personel, onRefresh, isLoading = false, onPerson
                 key="message"
                 size="icon"
                 variant="ghost"
-                onClick={() => { /* Handle messaging functionality */ }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  /* Handle messaging functionality */
+                }}
               >
                 <MessageSquare className="w-4 h-4" />
               </Button>,
@@ -99,7 +106,10 @@ export function PersonnelList({ personel, onRefresh, isLoading = false, onPerson
                 key="call"
                 size="icon"
                 variant="ghost"
-                onClick={() => { /* Handle call functionality */ }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  /* Handle call functionality */
+                }}
               >
                 <Phone className="w-4 h-4" />
               </Button>,
@@ -109,7 +119,10 @@ export function PersonnelList({ personel, onRefresh, isLoading = false, onPerson
                   size="icon"
                   variant="ghost"
                   className="text-destructive hover:text-destructive"
-                  onClick={() => handleDeletePersonel(p)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeletePersonel(p);
+                  }}
                 >
                   <Trash className="w-4 h-4" />
                 </Button>
@@ -144,12 +157,14 @@ export function PersonnelList({ personel, onRefresh, isLoading = false, onPerson
         />
       )}
 
-      <PersonnelDeleteDialog
-        personnel={selectedPersonel}
-        open={isDeleteDialogOpen}
-        onOpenChange={setIsDeleteDialogOpen}
-        onSuccess={handleDeleteSuccess}
-      />
+      {selectedPersonel && (
+        <PersonnelDeleteDialog
+          personnel={selectedPersonel}
+          open={isDeleteDialogOpen}
+          onOpenChange={setIsDeleteDialogOpen}
+          onSuccess={handleDeleteSuccess}
+        />
+      )}
     </>
   );
 }
