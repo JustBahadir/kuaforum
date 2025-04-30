@@ -59,12 +59,20 @@ export const kategoriServisi = {
   
   async hepsiniGetir() {
     try {
+      const dukkanId = await this._getCurrentUserDukkanId();
+      if (!dukkanId) {
+        console.warn("No dukkanId found, returning empty categories list");
+        return [];
+      }
+
       const { data, error } = await supabase
         .from('islem_kategorileri')
         .select('*')
+        .eq('dukkan_id', dukkanId)
         .order('sira', { ascending: true });
 
       if (error) throw error;
+      console.log("Retrieved categories for shop ID:", dukkanId, "count:", data?.length);
       return data || [];
     } catch (error) {
       console.error("Kategori getirme hatası:", error);
@@ -90,11 +98,21 @@ export const kategoriServisi = {
 
   async ekle(kategori: Omit<KategoriDto, 'id'>) {
     try {
-      // We don't need dukkan_id for categories anymore, as categories
-      // are shared across all shops
+      // Get current shop ID
+      const dukkanId = await this._getCurrentUserDukkanId();
+      if (!dukkanId) {
+        throw new Error("Kullanıcının işletme bilgisi bulunamadı");
+      }
+
+      // Add dukkan_id to the category
+      const categoryToInsert = {
+        ...kategori,
+        dukkan_id: dukkanId
+      };
+
       const { data, error } = await supabase
         .from('islem_kategorileri')
-        .insert(kategori)
+        .insert(categoryToInsert)
         .select()
         .single();
 
@@ -108,10 +126,17 @@ export const kategoriServisi = {
 
   async guncelle(id: number, kategori: Partial<KategoriDto>) {
     try {
+      const dukkanId = await this._getCurrentUserDukkanId();
+      if (!dukkanId) {
+        throw new Error("Kullanıcının işletme bilgisi bulunamadı");
+      }
+
+      // Ensure we're only updating categories for this shop
       const { data, error } = await supabase
         .from('islem_kategorileri')
         .update(kategori)
         .eq('id', id)
+        .eq('dukkan_id', dukkanId)
         .select()
         .single();
 
@@ -125,10 +150,17 @@ export const kategoriServisi = {
 
   async sil(id: number) {
     try {
+      const dukkanId = await this._getCurrentUserDukkanId();
+      if (!dukkanId) {
+        throw new Error("Kullanıcının işletme bilgisi bulunamadı");
+      }
+
+      // Ensure we're only deleting categories for this shop
       const { error } = await supabase
         .from('islem_kategorileri')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('dukkan_id', dukkanId);
 
       if (error) throw error;
       return true;

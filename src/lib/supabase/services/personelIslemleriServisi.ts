@@ -1,698 +1,288 @@
-import { supabase } from "@/lib/supabase/client";
-import { PersonelIslemi } from "../types";
+import { supabase } from '../client';
+import { PersonelIslemi } from '../types';
 
 export const personelIslemleriServisi = {
   async _getCurrentUserDukkanId() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return null;
-    
-    // Try to get dukkan_id from user metadata first
-    const dukkanIdFromMeta = user.user_metadata?.dukkan_id;
-    if (dukkanIdFromMeta) return dukkanIdFromMeta;
-    
-    // If not in metadata, try profiles table
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('dukkan_id')
-      .eq('id', user.id)
-      .maybeSingle();
-    
-    if (profileData?.dukkan_id) return profileData.dukkan_id;
-    
-    // Finally try personel table
-    const { data: personelData } = await supabase
-      .from('personel')
-      .select('dukkan_id')
-      .eq('auth_id', user.id)
-      .maybeSingle();
-    
-    return personelData?.dukkan_id;
-  },
-
-  hepsiniGetir: async () => {
     try {
-      // Get current user's dukkan_id
-      const dukkanId = await personelIslemleriServisi._getCurrentUserDukkanId();
-      if (!dukkanId) {
-        console.error('Kullanıcının işletme bilgisi bulunamadı');
-        return [];
-      }
-
-      const { data, error } = await supabase
-        .from('personel_islemleri')
-        .select(`
-          *,
-          personel:personel_id (id, ad_soyad, dukkan_id),
-          musteri:musteri_id (id, first_name, last_name, phone, dukkan_id),
-          islem:islem_id (id, islem_adi, fiyat, kategori_id)
-        `)
-        .eq('personel.dukkan_id', dukkanId); // Filter by shop
-
-      if (error) {
-        console.error('Personel işlemleri getirme hatası:', error);
-        throw error;
-      }
-
-      // Process operations for other shops
-      interface PersonelData {
-        dukkan_id?: number;
-      }
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
       
-      interface MusteriData {
-        dukkan_id?: number;
-      }
+      // Try to get dukkan_id from user metadata first
+      const dukkanIdFromMeta = user?.user_metadata?.dukkan_id;
+      if (dukkanIdFromMeta) return dukkanIdFromMeta;
       
-      // Fix TypeScript errors by properly casting the array items
-      const filteredData = data.filter(item => {
-        const personel = item.personel as PersonelData | null;
-        const musteri = item.musteri as MusteriData | null;
-        
-        return (personel && personel.dukkan_id === dukkanId) && 
-               (!musteri || (musteri && musteri.dukkan_id === dukkanId));
-      });
-
-      return filteredData || [];
-    } catch (err) {
-      console.error('Personel işlemleri getirme hatası:', err);
-      return [];
-    }
-  },
-
-  getir: async (id: number) => {
-    try {
-      // Get current user's dukkan_id
-      const dukkanId = await personelIslemleriServisi._getCurrentUserDukkanId();
-      if (!dukkanId) {
-        console.error('Kullanıcının işletme bilgisi bulunamadı');
-        throw new Error('İşletme bilgisi bulunamadı');
-      }
-
-      const { data, error } = await supabase
-        .from('personel_islemleri')
-        .select(`
-          *,
-          personel:personel_id (id, ad_soyad, dukkan_id),
-          musteri:musteri_id (id, first_name, last_name, phone, dukkan_id),
-          islem:islem_id (id, islem_adi, fiyat, kategori_id)
-        `)
-        .eq('id', id)
-        .single();
-
-      if (error) {
-        console.error('Personel işlemi getirme hatası:', error);
-        throw error;
-      }
-
-      // Ensure the operation belongs to current shop
-      interface PersonelData {
-        dukkan_id?: number;
-      }
+      // If not in metadata, try profiles table
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('dukkan_id')
+        .eq('id', user.id)
+        .maybeSingle();
       
-      interface MusteriData {
-        dukkan_id?: number;
-      }
+      if (profileData?.dukkan_id) return profileData.dukkan_id;
       
-      const personel = data.personel as PersonelData | null;
-      const musteri = data.musteri as MusteriData | null;
-
-      if ((personel && personel.dukkan_id !== dukkanId) || 
-          (musteri && musteri.dukkan_id !== dukkanId)) {
-        throw new Error('Bu işlem sizin işletmenize ait değil');
-      }
-
-      return data;
-    } catch (err) {
-      console.error('Personel işlemi getirme hatası:', err);
-      throw err;
-    }
-  },
-
-  personelIslemleriGetir: async (personelId: number) => {
-    try {
-      // Get current user's dukkan_id
-      const dukkanId = await personelIslemleriServisi._getCurrentUserDukkanId();
-      if (!dukkanId) {
-        console.error('Kullanıcının işletme bilgisi bulunamadı');
-        return [];
-      }
-
-      // First verify this personnel belongs to our business
-      const { data: personnelData, error: personnelError } = await supabase
+      // Try personel table
+      const { data: personelData } = await supabase
         .from('personel')
         .select('dukkan_id')
-        .eq('id', personelId)
-        .single();
-
-      if (personnelError || (personnelData && personnelData.dukkan_id !== dukkanId)) {
-        console.error('Bu personel sizin işletmenize ait değil');
-        return [];
-      }
-
+        .eq('auth_id', user.id)
+        .maybeSingle();
+      
+      if (personelData?.dukkan_id) return personelData.dukkan_id;
+      
+      // As fallback, try to get shop ID where user is owner
+      const { data: shopData } = await supabase
+        .from('dukkanlar')
+        .select('id')
+        .eq('sahibi_id', user.id)
+        .maybeSingle();
+      
+      return shopData?.id || null;
+    } catch (error) {
+      console.error("Error getting dukkan_id:", error);
+      return null;
+    }
+  },
+  
+  async hepsiniGetir() {
+    try {
       const { data, error } = await supabase
         .from('personel_islemleri')
         .select(`
           *,
-          personel:personel_id (id, ad_soyad, dukkan_id),
-          musteri:musteri_id (id, first_name, last_name, phone, dukkan_id),
-          islem:islem_id (id, islem_adi, fiyat, kategori_id)
+          personel:personel_id(*),
+          musteri:musteri_id(*),
+          islem:islem_id(*)
         `)
-        .eq('personel_id', personelId)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Personel işlemleri getirme hatası:', error);
-        throw error;
-      }
-
-      // Additional filter to ensure only operations from this shop are shown
-      interface PersonelData {
-        dukkan_id?: number;
-      }
-      
-      interface MusteriData {
-        dukkan_id?: number;
-      }
-      
-      // Fix TypeScript errors by properly casting the array items
-      const filteredData = data.filter(item => {
-        const personel = item.personel as PersonelData | null;
-        const musteri = item.musteri as MusteriData | null;
-        
-        return (personel && personel.dukkan_id === dukkanId) && 
-               (!musteri || (musteri && musteri.dukkan_id === dukkanId));
-      });
-
-      return filteredData || [];
-    } catch (err) {
-      console.error('Personel işlemleri getirme hatası:', err);
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error("Personel işlemleri getirme hatası:", error);
       return [];
     }
   },
 
-  getirByMusteriId: async (musteriId: number) => {
+  async getir(id: number) {
     try {
-      // Get current user's dukkan_id
-      const dukkanId = await personelIslemleriServisi._getCurrentUserDukkanId();
-      if (!dukkanId) {
-        console.error('Kullanıcının işletme bilgisi bulunamadı');
-        return [];
-      }
-
-      // First verify this customer belongs to our business
-      const { data: customerData, error: customerError } = await supabase
-        .from('musteriler')
-        .select('dukkan_id')
-        .eq('id', musteriId)
-        .single();
-
-      if (customerError || (customerData && customerData.dukkan_id !== dukkanId)) {
-        console.error('Bu müşteri sizin işletmenize ait değil');
-        return [];
-      }
-
       const { data, error } = await supabase
         .from('personel_islemleri')
         .select(`
           *,
-          personel:personel_id (id, ad_soyad, dukkan_id),
-          musteri:musteri_id (id, first_name, last_name, phone, dukkan_id),
-          islem:islem_id (id, islem_adi, fiyat, kategori_id)
+          personel:personel_id(*),
+          musteri:musteri_id(*),
+          islem:islem_id(*)
         `)
-        .eq('musteri_id', musteriId)
+        .eq('id', id)
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error("Personel işlemi getirme hatası:", error);
+      throw error;
+    }
+  },
+
+  async personelIslemleriGetir(personel_id: number) {
+    try {
+      const { data, error } = await supabase
+        .from('personel_islemleri')
+        .select(`
+          *,
+          personel:personel_id(*),
+          musteri:musteri_id(*),
+          islem:islem_id(*)
+        `)
+        .eq('personel_id', personel_id)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Müşteri işlemleri getirme hatası:', error);
-        throw error;
-      }
-
-      // Additional filter to ensure only operations from this shop are shown
-      interface PersonelData {
-        dukkan_id?: number;
-      }
-      
-      interface MusteriData {
-        dukkan_id?: number;
-      }
-      
-      // Fix TypeScript errors by ensuring proper type casting for each item
-      const filteredData = data.filter(item => {
-        const personel = item.personel as PersonelData | null;
-        const musteri = item.musteri as MusteriData | null;
-        
-        return (!personel || (personel && personel.dukkan_id === dukkanId)) && 
-               (musteri && musteri.dukkan_id === dukkanId);
-      });
-
-      return filteredData || [];
-    } catch (err) {
-      console.error('Müşteri işlemleri getirme hatası:', err);
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error("Personel işlemleri getirme hatası:", error);
       return [];
     }
   },
 
-  ekle: async (data: any) => {
+  async musteriIslemleriGetir(musteri_id: number) {
     try {
-      // Get current user's dukkan_id
-      const dukkanId = await personelIslemleriServisi._getCurrentUserDukkanId();
-      if (!dukkanId) {
-        console.error('Kullanıcının işletme bilgisi bulunamadı');
-        throw new Error('İşletme bilgisi bulunamadı');
-      }
-
-      // Verify personnel belongs to this shop
-      if (data.personel_id) {
-        const { data: personnelData, error: personnelError } = await supabase
-          .from('personel')
-          .select('dukkan_id')
-          .eq('id', data.personel_id)
-          .single();
-
-        if (personnelError || personnelData?.dukkan_id !== dukkanId) {
-          throw new Error('Bu personel sizin işletmenize ait değil');
-        }
-      }
-
-      // Verify customer belongs to this shop
-      if (data.musteri_id) {
-        const { data: customerData, error: customerError } = await supabase
-          .from('musteriler')
-          .select('dukkan_id')
-          .eq('id', data.musteri_id)
-          .single();
-
-        if (customerError || customerData?.dukkan_id !== dukkanId) {
-          throw new Error('Bu müşteri sizin işletmenize ait değil');
-        }
-      }
-
-      const { data: result, error } = await supabase
+      const { data, error } = await supabase
         .from('personel_islemleri')
-        .insert(data)
-        .select()
-        .single();
+        .select(`
+          *,
+          personel:personel_id(*),
+          musteri:musteri_id(*),
+          islem:islem_id(*)
+        `)
+        .eq('musteri_id', musteri_id)
+        .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Personel işlemi ekleme hatası:', error);
-        throw error;
-      }
-
-      await personelIslemleriServisi.updateShopStatistics();
-
-      return result;
+      if (error) throw error;
+      return data || [];
     } catch (error) {
-      console.error('Personel işlemi ekleme hatası:', error);
+      console.error("Müşteri işlemleri getirme hatası:", error);
+      return [];
+    }
+  },
+
+  async randevuIslemleriGetir(randevu_id: number) {
+    try {
+      const { data, error } = await supabase
+        .from('personel_islemleri')
+        .select(`
+          *,
+          personel:personel_id(*),
+          musteri:musteri_id(*),
+          islem:islem_id(*)
+        `)
+        .eq('randevu_id', randevu_id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error("Randevu işlemleri getirme hatası:", error);
+      return [];
+    }
+  },
+
+  async ekle(islem: Omit<PersonelIslemi, 'id' | 'created_at'>) {
+    try {
+      const dukkanId = await this._getCurrentUserDukkanId();
+      if (!dukkanId) {
+        throw new Error("Kullanıcının işletme bilgisi bulunamadı");
+      }
+      
+      // Add dukkan_id to the islem
+      const islemToInsert = {
+        ...islem,
+        dukkan_id: dukkanId
+      };
+      
+      const { data, error } = await supabase
+        .from('personel_islemleri')
+        .insert(islemToInsert)
+        .select(`
+          *,
+          personel:personel_id(*),
+          musteri:musteri_id(*),
+          islem:islem_id(*)
+        `);
+
+      if (error) throw error;
+      return data[0];
+    } catch (error) {
+      console.error("Personel işlemi eklenirken hata:", error);
       throw error;
     }
   },
 
-  guncelle: async (id: number, data: any) => {
+  async guncelle(id: number, islem: Partial<PersonelIslemi>) {
     try {
-      // Get current user's dukkan_id
-      const dukkanId = await personelIslemleriServisi._getCurrentUserDukkanId();
+      const dukkanId = await this._getCurrentUserDukkanId();
       if (!dukkanId) {
-        console.error('Kullanıcının işletme bilgisi bulunamadı');
-        throw new Error('İşletme bilgisi bulunamadı');
+        throw new Error("Kullanıcının işletme bilgisi bulunamadı");
       }
-
-      // Get the operation and verify it belongs to this shop
-      const { data: operationData, error: operationError } = await supabase
+      
+      // Ensure we're only updating islemler for this shop
+      const { data, error } = await supabase
         .from('personel_islemleri')
+        .update(islem)
+        .eq('id', id)
+        .eq('dukkan_id', dukkanId)
         .select(`
-          personel_id,
-          musteri_id,
-          personel:personel_id (dukkan_id),
-          musteri:musteri_id (dukkan_id)
-        `)
-        .eq('id', id)
-        .single();
+          *,
+          personel:personel_id(*),
+          musteri:musteri_id(*),
+          islem:islem_id(*)
+        `);
 
-      if (operationError || 
-          operationData.personel?.dukkan_id !== dukkanId || 
-          operationData.musteri?.dukkan_id !== dukkanId) {
-        throw new Error('Bu işlem sizin işletmenize ait değil');
-      }
-
-      // Verify new personnel belongs to this shop if changing
-      if (data.personel_id && data.personel_id !== operationData.personel_id) {
-        const { data: personnelData, error: personnelError } = await supabase
-          .from('personel')
-          .select('dukkan_id')
-          .eq('id', data.personel_id)
-          .single();
-
-        if (personnelError || personnelData?.dukkan_id !== dukkanId) {
-          throw new Error('Bu personel sizin işletmenize ait değil');
-        }
-      }
-
-      // Verify new customer belongs to this shop if changing
-      if (data.musteri_id && data.musteri_id !== operationData.musteri_id) {
-        const { data: customerData, error: customerError } = await supabase
-          .from('musteriler')
-          .select('dukkan_id')
-          .eq('id', data.musteri_id)
-          .single();
-
-        if (customerError || customerData?.dukkan_id !== dukkanId) {
-          throw new Error('Bu müşteri sizin işletmenize ait değil');
-        }
-      }
-
-      const { data: result, error } = await supabase
-        .from('personel_islemleri')
-        .update(data)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Personel işlemi güncelleme hatası:', error);
-        throw error;
-      }
-
-      await personelIslemleriServisi.updateShopStatistics();
-
-      return result;
+      if (error) throw error;
+      return data[0];
     } catch (error) {
-      console.error('Personel işlemi güncelleme hatası:', error);
+      console.error("Personel işlemi güncellenirken hata:", error);
       throw error;
     }
   },
 
-  sil: async (id: number) => {
+  async sil(id: number) {
     try {
-      // Get current user's dukkan_id
-      const dukkanId = await personelIslemleriServisi._getCurrentUserDukkanId();
+      const dukkanId = await this._getCurrentUserDukkanId();
       if (!dukkanId) {
-        console.error('Kullanıcının işletme bilgisi bulunamadı');
-        throw new Error('İşletme bilgisi bulunamadı');
-      }
-
-      // Get the operation and verify it belongs to this shop
-      const { data: operationData, error: operationError } = await supabase
-        .from('personel_islemleri')
-        .select(`
-          personel:personel_id (dukkan_id),
-          musteri:musteri_id (dukkan_id)
-        `)
-        .eq('id', id)
-        .single();
-
-      if (operationError) {
-        throw operationError;
+        throw new Error("Kullanıcının işletme bilgisi bulunamadı");
       }
       
-      // Fix the type issues by properly casting the nested objects
-      const personel = operationData.personel as { dukkan_id?: number } | null;
-      const musteri = operationData.musteri as { dukkan_id?: number } | null;
-      
-      if ((personel && personel.dukkan_id !== dukkanId) || 
-          (musteri && musteri.dukkan_id !== dukkanId)) {
-        throw new Error('Bu işlem sizin işletmenize ait değil');
-      }
-
+      // Ensure we're only deleting islemler for this shop
       const { error } = await supabase
         .from('personel_islemleri')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('dukkan_id', dukkanId);
 
-      if (error) {
-        console.error('Personel işlemi silme hatası:', error);
-        throw error;
-      }
-
-      await personelIslemleriServisi.updateShopStatistics();
-
+      if (error) throw error;
       return true;
     } catch (error) {
-      console.error('Personel işlemi silme hatası:', error);
+      console.error("Personel işlemi silinirken hata:", error);
       throw error;
     }
   },
-
-  personelPerformansRaporu: async (personelId: number, startDate: string, endDate: string) => {
+  
+  async personelIslemleriOzeti(personelId: number, baslangicTarihi: string, bitisTarihi: string) {
     try {
-      // Get current user's dukkan_id
-      const dukkanId = await personelIslemleriServisi._getCurrentUserDukkanId();
-      if (!dukkanId) {
-        console.error('Kullanıcının işletme bilgisi bulunamadı');
-        throw new Error('İşletme bilgisi bulunamadı');
-      }
-
-      // Verify personnel belongs to this shop
-      const { data: personnelData, error: personnelError } = await supabase
-        .from('personel')
-        .select('dukkan_id')
-        .eq('id', personelId)
-        .single();
-
-      if (personnelError || personnelData?.dukkan_id !== dukkanId) {
-        throw new Error('Bu personel sizin işletmenize ait değil');
-      }
-
-      const { data, error } = await supabase
-        .rpc('personel_performans_raporu', { 
-          p_personel_id: personelId,
-          p_start_date: startDate,
-          p_end_date: endDate
-        });
-
-      if (error) {
-        console.error('Personel performans raporu hatası:', error);
-        throw error;
-      }
-
-      return data || [];
-    } catch (error) {
-      console.error('Personel performans raporu hatası:', error);
-      throw error;
-    }
-  },
-
-  updateShopStatistics: async () => {
-    try {
-      // Get current user's shop ID
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        console.error("Authenticated user not found");
-        return null;
+      const userDukkanId = await this._getCurrentUserDukkanId();
+      if (!userDukkanId) {
+        throw new Error("Kullanıcının işletme bilgisi bulunamadı");
       }
       
-      // Fetch the shop ID from user's metadata
-      let dukkanId: number | null = null;
-      
-      if (user.user_metadata?.role === 'admin') {
-        const { data: shopData } = await supabase
-          .from('dukkanlar')
-          .select('id')
-          .eq('sahibi_id', user.id)
-          .single();
-          
-        if (shopData) {
-          dukkanId = shopData.id;
-        }
-      } else if (user.user_metadata?.role === 'staff') {
-        const { data: staffData } = await supabase
-          .from('personel')
-          .select('dukkan_id')
-          .eq('auth_id', user.id)
-          .single();
-          
-        if (staffData) {
-          dukkanId = staffData.dukkan_id;
-        }
-      }
-      
-      if (!dukkanId) {
-        console.warn("No shop ID found for user");
-        return null;
-      }
-      
-      // Fetch all staff for the shop
-      const { data: personelData } = await supabase
-        .from('personel')
-        .select('id, ad_soyad, calisma_sistemi, maas, prim_yuzdesi')
-        .eq('dukkan_id', dukkanId);
-        
-      if (!personelData || personelData.length === 0) {
-        console.warn("No personnel found for shop");
-        return null;
-      }
-      
-      // Create a mapping of personnel IDs to their names and other details
-      const personelMap = personelData.reduce((acc, p) => {
-        acc[p.id] = {
-          ad_soyad: p.ad_soyad,
-          calisma_sistemi: p.calisma_sistemi,
-          maas: p.maas,
-          prim_yuzdesi: p.prim_yuzdesi
-        };
-        return acc;
-      }, {} as Record<string, any>);
-      
-      // Calculate statistics for each staff member
-      for (const personel of personelData) {
-        const personelId = personel.id;
-        
-        // Get operations for this staff member
-        const { data: islemler } = await supabase
-          .from('personel_islemleri')
-          .select('*')
-          .eq('personel_id', personelId);
-          
-        if (!islemler || islemler.length === 0) {
-          continue;
-        }
-        
-        const islemSayisi = islemler.length;
-        const toplamCiro = islemler.reduce((sum, islem) => sum + (islem.tutar || 0), 0);
-        const toplamOdenen = islemler.reduce((sum, islem) => sum + (islem.odenen || 0), 0);
-        const ciroYuzdesi = (toplamOdenen / toplamCiro) * 100;
-        const toplamPuan = islemler.reduce((sum, islem) => sum + (islem.puan || 0), 0);
-        const ortalamaPuan = islemSayisi > 0 ? (toplamPuan / islemSayisi) : 0;
-        
-        // Update or insert the performance record
-        const { error } = await supabase
-          .from('personel_performans')
-          .upsert({
-            id: personelId,
-            ad_soyad: personel.ad_soyad,
-            islem_sayisi: islemSayisi,
-            toplam_ciro: toplamCiro,
-            toplam_odenen: toplamOdenen,
-            ciro_yuzdesi: ciroYuzdesi,
-            ortalama_puan: ortalamaPuan
-          });
-          
-        if (error) {
-          console.error("Error updating staff performance:", error);
-        }
-      }
-      
-      return { success: true };
-    } catch (error) {
-      console.error("Error updating shop statistics:", error);
-      return { success: false, error };
-    }
-  },
-
-  async getShopStatistics(dukkanId: number) {
-    if (!dukkanId) {
-      throw new Error("Shop ID is required");
-    }
-    
-    try {
-      // Get personnel for this shop
-      const { data: personelData, error: personelError } = await supabase
-        .from('personel')
-        .select('id, ad_soyad, dukkan_id')
-        .eq('dukkan_id', dukkanId);
-        
-      if (personelError) throw personelError;
-      
-      if (!personelData || personelData.length === 0) {
-        return {
-          totalRevenue: 0,
-          totalOperations: 0,
-          averageOperationValue: 0,
-          topStaff: [],
-          recentOperations: []
-        };
-      }
-      
-      const personelIds = personelData.map(p => p.id);
-      
-      // Get all operations for this shop's personnel
-      const { data: allOperations, error: opsError } = await supabase
+      // Get all operations for this staff member in the date range
+      const { data: allOperations, error } = await supabase
         .from('personel_islemleri')
         .select(`
-          id, tutar, odenen, personel_id, created_at, 
-          personel:personel_id (ad_soyad, dukkan_id),
-          musteri:musteri_id (first_name, last_name)
+          *,
+          personel:personel_id(*)
         `)
-        .in('personel_id', personelIds)
+        .eq('personel_id', personelId)
+        .gte('created_at', baslangicTarihi)
+        .lte('created_at', bitisTarihi)
         .order('created_at', { ascending: false });
-        
-      if (opsError) throw opsError;
       
-      if (!allOperations || allOperations.length === 0) {
-        return {
-          totalRevenue: 0,
-          totalOperations: 0,
-          averageOperationValue: 0,
-          topStaff: [],
-          recentOperations: []
-        };
+      if (error) {
+        throw error;
       }
       
-      // Filter out operations for other shops - fixing TypeScript errors
+      // Filter out operations for other shops
       const dukkanOperations = allOperations.filter(op => {
-        // Fix: Cast to the correct type and check each personel object individually
-        const personel = op.personel as { dukkan_id?: number } | null;
-        return personel && personel.dukkan_id === dukkanId;
+        // Check if personel exists and has dukkan_id
+        if (!op.personel) return false;
+        // Type assertion to access dukkan_id safely
+        const personelObj = op.personel as { dukkan_id?: number };
+        return personelObj.dukkan_id === userDukkanId;
       });
       
-      // Calculate statistics
-      const totalRevenue = dukkanOperations.reduce((sum, op) => sum + (op.tutar || 0), 0);
-      const totalOperations = dukkanOperations.length;
-      const averageOperationValue = totalOperations > 0 ? (totalRevenue / totalOperations) : 0;
+      // Calculate totals
+      let toplamTutar = 0;
+      let toplamPrim = 0;
+      let toplamPuan = 0;
+      let islemSayisi = dukkanOperations.length;
       
-      // Get top staff by revenue
-      const staffStats = personelIds.map(pid => {
-        const staffOps = dukkanOperations.filter(op => op.personel_id === pid);
-        const staffRevenue = staffOps.reduce((sum, op) => sum + (op.tutar || 0), 0);
-        const staffOperations = staffOps.length;
-        const staffMember = personelData.find(p => p.id === pid);
-        
-        return {
-          id: pid,
-          name: staffMember?.ad_soyad || 'Unknown',
-          revenue: staffRevenue,
-          operations: staffOperations,
-          averageValue: staffOperations > 0 ? (staffRevenue / staffOperations) : 0
-        };
+      dukkanOperations.forEach(islem => {
+        toplamTutar += islem.tutar || 0;
+        toplamPrim += (islem.tutar || 0) * (islem.prim_yuzdesi || 0) / 100;
+        toplamPuan += islem.puan || 0;
       });
-      
-      const topStaff = staffStats
-        .filter(staff => staff.operations > 0)
-        .sort((a, b) => b.revenue - a.revenue)
-        .slice(0, 5);
-      
-      // Get recent operations
-      interface MusteriData {
-        first_name?: string;
-        last_name?: string;
-      }
-      
-      const recentOperations = dukkanOperations
-        .slice(0, 5)
-        .map(op => {
-          const personel = op.personel as { ad_soyad?: string } | null;
-          const musteri = op.musteri as MusteriData | null;
-          
-          return {
-            id: op.id,
-            amount: op.tutar || 0,
-            staffId: op.personel_id,
-            staffName: personel ? personel.ad_soyad || 'Unknown' : 'Unknown',
-            customerName: musteri 
-              ? `${musteri.first_name || ''} ${musteri.last_name || ''}`
-              : 'Unknown Customer',
-            date: op.created_at
-          };
-        });
       
       return {
-        totalRevenue,
-        totalOperations,
-        averageOperationValue,
-        topStaff,
-        recentOperations
+        islemler: dukkanOperations,
+        ozet: {
+          toplamTutar,
+          toplamPrim,
+          toplamPuan,
+          islemSayisi
+        }
       };
     } catch (error) {
-      console.error("Error getting shop statistics:", error);
+      console.error("Personel işlemleri özeti alınırken hata:", error);
       throw error;
     }
   }

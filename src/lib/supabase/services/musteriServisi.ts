@@ -1,3 +1,4 @@
+
 import { supabase } from '../client';
 import { Musteri } from '../types';
 
@@ -148,14 +149,16 @@ export const musteriServisi = {
       musteri.dukkan_id = dukkanId;
       
       // Explicitly set optional fields to null if undefined to ensure DB has values
+      // Remove the adres field which is not in the schema
       const dataForInsert = {
         first_name: musteri.first_name,
         last_name: musteri.last_name || null,
         phone: musteri.phone || null,
         birthdate: musteri.birthdate || null,
         dukkan_id: dukkanId,
-        adres: (musteri as any).adres || null,
-        not: (musteri as any).not || null,
+        // Remove these fields that don't exist in the musteriler table
+        // adres: (musteri as any).adres || null,
+        // not: (musteri as any).not || null,
       };
 
       const { data, error } = await supabase
