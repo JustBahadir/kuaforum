@@ -385,9 +385,16 @@ export const personelIslemleriServisi = {
         .eq('id', id)
         .single();
 
-      if (operationError || 
-          operationData.personel?.dukkan_id !== dukkanId || 
-          operationData.musteri?.dukkan_id !== dukkanId) {
+      if (operationError) {
+        throw operationError;
+      }
+      
+      // Fix the type issues by properly casting the nested objects
+      const personel = operationData.personel as { dukkan_id?: number } | null;
+      const musteri = operationData.musteri as { dukkan_id?: number } | null;
+      
+      if ((personel && personel.dukkan_id !== dukkanId) || 
+          (musteri && musteri.dukkan_id !== dukkanId)) {
         throw new Error('Bu işlem sizin işletmenize ait değil');
       }
 
@@ -607,13 +614,8 @@ export const personelIslemleriServisi = {
       }
       
       // Filter out operations for other shops
-      interface PersonelData {
-        ad_soyad?: string;
-        dukkan_id?: number;
-      }
-      
       const dukkanOperations = allOperations.filter(op => {
-        const personel = op.personel as PersonelData | null;
+        const personel = op.personel as { dukkan_id?: number } | null;
         return personel && personel.dukkan_id === dukkanId;
       });
       
@@ -652,7 +654,7 @@ export const personelIslemleriServisi = {
       const recentOperations = dukkanOperations
         .slice(0, 5)
         .map(op => {
-          const personel = op.personel as PersonelData | null;
+          const personel = op.personel as { ad_soyad?: string } | null;
           const musteri = op.musteri as MusteriData | null;
           
           return {
