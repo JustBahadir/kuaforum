@@ -7,7 +7,7 @@ interface PageHeaderProps {
   subtitle?: string;
   button?: {
     label: string;
-    href: string;
+    href?: string;
     onClick?: () => void;
   };
 }
@@ -26,7 +26,7 @@ export function PageHeader({ title, subtitle, button }: PageHeaderProps) {
           </Button>
         ) : (
           <Button asChild className="mt-4 md:mt-0">
-            <Link to={button.href}>{button.label}</Link>
+            <Link to={button.href || "#"}>{button.label}</Link>
           </Button>
         )
       )}

@@ -164,10 +164,21 @@ export const personelIslemleriServisi = {
       }
 
       // Additional filter to ensure only operations from this shop are shown
-      const filteredData = data.filter(item => 
-        (item.personel && item.personel.dukkan_id === dukkanId) && 
-        (!item.musteri || (item.musteri && item.musteri.dukkan_id === dukkanId))
-      );
+      interface PersonelData {
+        dukkan_id?: number;
+      }
+      
+      interface MusteriData {
+        dukkan_id?: number;
+      }
+      
+      const filteredData = data.filter(item => {
+        const personel = item.personel as PersonelData | null;
+        const musteri = item.musteri as MusteriData | null;
+        
+        return (personel && personel.dukkan_id === dukkanId) && 
+               (!musteri || (musteri && musteri.dukkan_id === dukkanId));
+      });
 
       return filteredData || [];
     } catch (err) {

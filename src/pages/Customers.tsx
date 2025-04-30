@@ -86,15 +86,6 @@ export default function Customers() {
     setSelectedCustomer(null);
   };
 
-  const handleCustomerUpdated = async () => {
-    await refetch();
-  };
-
-  const handleCustomerDeleted = async () => {
-    await refetch();
-    setSelectedCustomer(null);
-  };
-
   return (
     <StaffLayout>
       <Toaster position="bottom-right" richColors />
@@ -142,11 +133,6 @@ export default function Customers() {
                     <span>Yeni Müşteri</span>
                   </Button>
                 </div>
-                {!isletmeData?.id && (
-                  <p className="text-sm text-red-500 mt-2">
-                    Müşteri eklemek için işletme bilgilerinizin tamamlanmış olması gerekmektedir.
-                  </p>
-                )}
               </CardContent>
             </Card>
             
