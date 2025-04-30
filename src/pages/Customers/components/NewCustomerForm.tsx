@@ -50,7 +50,7 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFo
       setLastNameError("");
     }
     
-    // Validate phone (allow empty, but if provided must be numeric)
+    // Validate phone (allow empty, but if provided must be numeric and minimum length)
     if (phone) {
       if (phone.length < 10) {
         setPhoneError("Telefon numarası en az 10 haneli olmalıdır");
@@ -62,7 +62,7 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFo
       setPhoneError("");
     }
     
-    // Validate birth date using the dateIsValid state that comes from the DateInputField
+    // Validate birth date using the dateIsValid state from DateInputField
     if (birthDate && !dateIsValid) {
       setDateError("Geçerli bir tarih formatı giriniz (gg.aa.yyyy)");
       valid = false;

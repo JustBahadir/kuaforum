@@ -5,8 +5,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, Copy } from "lucide-react";
+import { Alert, AlertDescription, AlertCircle } from "@/components/ui/alert";
+import { Copy } from "lucide-react";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -35,9 +35,13 @@ export function PersonnelDialog({ open, onOpenChange }: PersonnelDialogProps) {
     if (!isletmeData?.id) return;
     
     try {
-      const dukkanData = await isletmeServisi.getir(isletmeData.id);
-      if (dukkanData?.kod) {
-        setBusinessCode(dukkanData.kod);
+      if (isletmeData?.kod) {
+        setBusinessCode(isletmeData.kod);
+      } else {
+        const dukkanData = await isletmeServisi.getir(isletmeData.id);
+        if (dukkanData?.kod) {
+          setBusinessCode(dukkanData.kod);
+        }
       }
     } catch (error) {
       console.error("İşletme kodu alınırken hata:", error);

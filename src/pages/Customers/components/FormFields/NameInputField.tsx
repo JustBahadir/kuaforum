@@ -24,7 +24,8 @@ export function NameInputField({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (disabled) return;
     
-    // Only allow letters, spaces, and some special characters used in names
+    // Only allow alphabetical characters, spaces, and some special characters used in Turkish names
+    // Removed digits and most special characters
     const filteredValue = e.target.value.replace(/[^a-zA-ZçÇğĞıİöÖşŞüÜ\s.'"-]/g, '');
     
     onChange(filteredValue);

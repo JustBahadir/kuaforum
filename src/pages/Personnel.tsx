@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Search, UserPlus } from "lucide-react";
 import { PersonnelList } from "./Personnel/components/PersonnelList";
+import { PersonnelDialog } from "./Personnel/components/PersonnelDialog";
 import { personelServisi } from "@/lib/supabase";
 import { toast } from "sonner";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
@@ -16,6 +17,7 @@ export default function Personnel() {
   const [personnel, setPersonnel] = useState<any[]>([]);
   const [selectedPersonnelId, setSelectedPersonnelId] = useState<number>(0);
   const { userRole } = useCustomerAuth();
+  const [isNewPersonnelModalOpen, setIsNewPersonnelModalOpen] = useState(false);
 
   useEffect(() => {
     fetchPersonnel();
@@ -42,6 +44,10 @@ export default function Personnel() {
       )
     : personnel;
 
+  const handleOpenNewPersonnelModal = () => {
+    setIsNewPersonnelModalOpen(true);
+  };
+
   return (
     <StaffLayout>
       <div className="container mx-auto p-4">
@@ -65,9 +71,7 @@ export default function Personnel() {
               </div>
               {userRole === 'admin' && (
                 <Button
-                  onClick={() => {
-                    /* Handle add personnel action */
-                  }}
+                  onClick={handleOpenNewPersonnelModal}
                   className="gap-1"
                 >
                   <UserPlus className="h-4 w-4" />
@@ -83,6 +87,11 @@ export default function Personnel() {
           isLoading={loading}
           onRefresh={fetchPersonnel}
           onPersonnelSelect={setSelectedPersonnelId}
+        />
+
+        <PersonnelDialog 
+          open={isNewPersonnelModalOpen}
+          onOpenChange={setIsNewPersonnelModalOpen}
         />
       </div>
     </StaffLayout>

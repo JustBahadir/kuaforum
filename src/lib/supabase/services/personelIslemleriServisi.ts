@@ -235,6 +235,7 @@ export const personelIslemleriServisi = {
         dukkan_id?: number;
       }
       
+      // Fix TypeScript errors by ensuring proper type casting for each item
       const filteredData = data.filter(item => {
         const personel = item.personel as PersonelData | null;
         const musteri = item.musteri as MusteriData | null;

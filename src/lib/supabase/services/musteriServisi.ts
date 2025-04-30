@@ -1,34 +1,47 @@
-
 import { supabase } from '../client';
 import { Musteri } from '../types';
 
 export const musteriServisi = {
   // Helper function to get the current user's dukkan_id
   async _getCurrentUserDukkanId() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return null;
-    
-    // Try to get dukkan_id from user metadata first
-    const dukkanIdFromMeta = user.user_metadata?.dukkan_id;
-    if (dukkanIdFromMeta) return dukkanIdFromMeta;
-    
-    // If not in metadata, try profiles table
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('dukkan_id')
-      .eq('id', user.id)
-      .maybeSingle();
-    
-    if (profileData?.dukkan_id) return profileData.dukkan_id;
-    
-    // Finally try personel table
-    const { data: personelData } = await supabase
-      .from('personel')
-      .select('dukkan_id')
-      .eq('auth_id', user.id)
-      .maybeSingle();
-    
-    return personelData?.dukkan_id;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+      
+      // Try to get dukkan_id from user metadata first
+      const dukkanIdFromMeta = user?.user_metadata?.dukkan_id;
+      if (dukkanIdFromMeta) return dukkanIdFromMeta;
+      
+      // If not in metadata, try profiles table
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('dukkan_id')
+        .eq('id', user.id)
+        .maybeSingle();
+      
+      if (profileData?.dukkan_id) return profileData.dukkan_id;
+      
+      // Try personel table
+      const { data: personelData } = await supabase
+        .from('personel')
+        .select('dukkan_id')
+        .eq('auth_id', user.id)
+        .maybeSingle();
+      
+      if (personelData?.dukkan_id) return personelData.dukkan_id;
+      
+      // As fallback, try to get shop ID where user is owner
+      const { data: shopData } = await supabase
+        .from('dukkanlar')
+        .select('id')
+        .eq('sahibi_id', user.id)
+        .maybeSingle();
+      
+      return shopData?.id || null;
+    } catch (error) {
+      console.error("Error getting dukkan_id:", error);
+      return null;
+    }
   },
   
   async hepsiniGetir(dukkanId?: number) {
@@ -103,7 +116,30 @@ export const musteriServisi = {
   
   async ekle(musteri: Omit<Musteri, 'id' | 'created_at'>) {
     try {
-      const dukkanId = await this._getCurrentUserDukkanId();
+      // Try to get the user's dukkan_id
+      let dukkanId = await this._getCurrentUserDukkanId();
+      
+      // If we still don't have a dukkan_id, try from provided data
+      if (!dukkanId && musteri.dukkan_id) {
+        dukkanId = musteri.dukkan_id;
+      }
+      
+      // Last resort - try getting the shop ID directly
+      if (!dukkanId) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: shopData } = await supabase
+            .from('dukkanlar')
+            .select('id')
+            .eq('sahibi_id', user.id)
+            .maybeSingle();
+            
+          if (shopData?.id) {
+            dukkanId = shopData.id;
+          }
+        }
+      }
+      
       if (!dukkanId) {
         throw new Error("Kullanıcının işletme bilgisi bulunamadı");
       }

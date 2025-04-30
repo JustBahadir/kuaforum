@@ -1,26 +1,47 @@
-
 import { supabase } from "../client";
 import { IslemKategori } from "../types";
 
 export const kategoriServisi = {
   // Helper function to get the current user's dukkan_id
   async _getCurrentUserDukkanId() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return null;
-    
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('dukkan_id')
-      .eq('id', user.id)
-      .maybeSingle();
-    
-    const { data: personelData } = await supabase
-      .from('personel')
-      .select('dukkan_id')
-      .eq('auth_id', user.id)
-      .maybeSingle();
-    
-    return profileData?.dukkan_id || personelData?.dukkan_id;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+      
+      // Try to get dukkan_id from user metadata first
+      const dukkanIdFromMeta = user?.user_metadata?.dukkan_id;
+      if (dukkanIdFromMeta) return dukkanIdFromMeta;
+      
+      // If not in metadata, try profiles table
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('dukkan_id')
+        .eq('id', user.id)
+        .maybeSingle();
+      
+      if (profileData?.dukkan_id) return profileData.dukkan_id;
+      
+      // Finally try personel table
+      const { data: personelData } = await supabase
+        .from('personel')
+        .select('dukkan_id')
+        .eq('auth_id', user.id)
+        .maybeSingle();
+      
+      if (personelData?.dukkan_id) return personelData.dukkan_id;
+      
+      // As fallback, try to get shop ID where user is owner
+      const { data: shopData } = await supabase
+        .from('dukkanlar')
+        .select('id')
+        .eq('sahibi_id', user.id)
+        .maybeSingle();
+      
+      return shopData?.id || null;
+    } catch (error) {
+      console.error("Error getting dukkan_id:", error);
+      return null;
+    }
   },
   
   async hepsiniGetir(): Promise<IslemKategori[]> {
@@ -61,6 +82,38 @@ export const kategoriServisi = {
     try {
       const dukkanId = await this._getCurrentUserDukkanId();
       if (!dukkanId) {
+        // Fallback to user's shop if they're an admin
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: shopData } = await supabase
+            .from('dukkanlar')
+            .select('id')
+            .eq('sahibi_id', user.id)
+            .maybeSingle();
+            
+          if (shopData?.id) {
+            // Get the max sira value
+            const { data: maxSiraData } = await supabase
+              .from('islem_kategorileri')
+              .select('sira')
+              .order('sira', { ascending: false })
+              .limit(1);
+            
+            const maxSira = maxSiraData && maxSiraData.length > 0 ? maxSiraData[0].sira || 0 : 0;
+            
+            const { data, error } = await supabase
+              .from('islem_kategorileri')
+              .insert([{
+                ...kategori,
+                dukkan_id: shopData.id,
+                sira: maxSira + 1
+              }])
+              .select();
+              
+            if (error) throw error;
+            return data[0];
+          }
+        }
         throw new Error("Kullanıcının işletme bilgisi bulunamadı");
       }
       
@@ -68,7 +121,7 @@ export const kategoriServisi = {
       const { data: maxSiraData, error: maxSiraError } = await supabase
         .from('islem_kategorileri')
         .select('sira')
-        .eq('dukkan_id', dukkanId) // Filter by dukkan_id
+        .eq('dukkan_id', dukkanId)
         .order('sira', { ascending: false })
         .limit(1);
       
@@ -80,7 +133,7 @@ export const kategoriServisi = {
         .from('islem_kategorileri')
         .insert([{
           ...kategori,
-          dukkan_id: dukkanId, // Set the correct dukkan_id
+          dukkan_id: dukkanId,
           sira: maxSira + 1
         }])
         .select();
