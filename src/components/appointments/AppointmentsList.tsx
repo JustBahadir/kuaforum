@@ -32,15 +32,13 @@ export function AppointmentsList({
   const getStatusBadge = (status: RandevuDurumu) => {
     switch(status) {
       case 'beklemede':
-        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 hover:bg-yellow-100 flex items-center gap-1"><Clock className="h-3 w-3" /> Beklemede</Badge>;
       case 'onaylandi':
-        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 hover:bg-yellow-100 flex items-center gap-1"><Clock className="h-3 w-3" /> Onaylandı</Badge>;
+        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 hover:bg-yellow-100 flex items-center gap-1"><Clock className="h-3 w-3" /> {status === 'beklemede' ? 'Beklemede' : 'Onaylandı'}</Badge>;
       case 'tamamlandi':
         return <Badge variant="outline" className="bg-green-50 text-green-700 hover:bg-green-100 flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Tamamlandı</Badge>;
       case 'iptal_edildi':
-        return <Badge variant="outline" className="bg-red-50 text-red-700 hover:bg-red-100 flex items-center gap-1"><XCircle className="h-3 w-3" /> İptal Edildi</Badge>;
       case 'iptal':
-        return <Badge variant="outline" className="bg-red-50 text-red-700 hover:bg-red-100 flex items-center gap-1"><XCircle className="h-3 w-3" /> İptal</Badge>;
+        return <Badge variant="outline" className="bg-red-50 text-red-700 hover:bg-red-100 flex items-center gap-1"><XCircle className="h-3 w-3" /> İptal Edildi</Badge>;
       default:
         return <Badge variant="outline">Bilinmiyor</Badge>;
     }

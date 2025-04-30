@@ -50,7 +50,6 @@ export const useCustomerOperations = ({ customerId, limit = 10 }: UseCustomerOpe
             personel:personel_id (ad_soyad)
           `)
           .eq('musteri_id', customerId)
-          .eq('personel.dukkan_id', dukkanId)  // Add shop isolation
           .order('created_at', { ascending: false })
           .limit(limit);
 
@@ -66,7 +65,7 @@ export const useCustomerOperations = ({ customerId, limit = 10 }: UseCustomerOpe
               description: operation.aciklama,
               created_at: operation.created_at,
               staff_id: operation.personel_id,
-              staff_name: operation.personel ? operation.personel.ad_soyad || 'Bilinmiyor' : 'Bilinmiyor',
+              staff_name: operation.personel?.ad_soyad || 'Bilinmiyor',
               status: 'tamamlandı',
               payment_method: operation.odeme_yontemi || 'nakit',
               notes: operation.notlar

@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { Randevu, RandevuDurumu } from '@/lib/supabase/types';
 import { useCustomerAuth } from '@/hooks/useCustomerAuth';
-import { supabase } from '@/lib/supabase/client';  // Add the missing supabase import
+import { supabase } from '@/lib/supabase/client';
 
 interface UseAppointmentsProps {
   initialStatus?: RandevuDurumu | 'all';
@@ -65,8 +65,17 @@ export const useAppointments = ({ initialStatus = 'all', initialDate = new Date(
         );
       }
 
+      // Proper filtering based on status - "beklemede" should include both "beklemede" and "onaylandi" statuses
       if (status !== 'all') {
-        filteredAppointments = filteredAppointments.filter((appointment) => appointment.durum === status);
+        if (status === 'beklemede') {
+          filteredAppointments = filteredAppointments.filter(
+            (appointment) => appointment.durum === 'beklemede' || appointment.durum === 'onaylandi'
+          );
+        } else {
+          filteredAppointments = filteredAppointments.filter(
+            (appointment) => appointment.durum === status
+          );
+        }
       }
 
       setAppointments(filteredAppointments);
