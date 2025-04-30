@@ -1,11 +1,11 @@
 
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { isletmeServisi, personelServisi } from "@/lib/supabase";
+import { dukkanServisi, personelServisi } from "@/lib/supabase";
 import { calismaSaatleriServisi } from "@/lib/supabase/services/calismaSaatleriServisi";
 import { toast } from "sonner";
 
-export const useShopData = (dukkanId?: number) => {
+export const useShopData = (dukkanId?: number | null) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isletmeData, setIsletmeData] = useState<any>(null);
@@ -14,7 +14,7 @@ export const useShopData = (dukkanId?: number) => {
 
   const { data: dukkan, isLoading: dukkanLoading, error: dukkanError } = useQuery({
     queryKey: ["dukkan", dukkanId],
-    queryFn: () => (dukkanId ? isletmeServisi.getirById(dukkanId) : null),
+    queryFn: () => (dukkanId ? dukkanServisi.getirById(dukkanId) : null),
     enabled: !!dukkanId,
   });
 

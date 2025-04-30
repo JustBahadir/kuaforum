@@ -46,7 +46,7 @@ export default function Customers() {
     }
     
     // If no shop ID yet, try to get it directly from musteriServisi
-    return await musteriServisi._getCurrentUserDukkanId();
+    return await musteriServisi.getCurrentUserDukkanId();
   };
   
   const { 
@@ -76,7 +76,7 @@ export default function Customers() {
       }
     },
     refetchOnWindowFocus: false,
-    staleTime: 1000, // Reduce stale time to refresh more often
+    staleTime: 0, // Always fetch fresh data
     retry: 2
   });
 

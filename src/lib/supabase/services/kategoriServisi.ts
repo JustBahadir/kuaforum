@@ -4,8 +4,61 @@ import { KategoriDto } from '../types';
 
 // This export name must be 'kategorilerServisi' to match imports
 export const kategorilerServisi = {
-  async hepsiniGetir(dukkanId: number) {
+  async hepsiniGetir(dukkanId?: number) {
     try {
+      // If no dukkan_id provided, get the current user's dukkan_id
+      if (!dukkanId) {
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) throw new Error("Kullanıcı bilgisi bulunamadı");
+          
+          // Try to get dukkan_id from user metadata
+          dukkanId = user.user_metadata?.dukkan_id;
+          
+          if (!dukkanId) {
+            // Try to get from profiles
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('dukkan_id')
+              .eq('id', user.id)
+              .maybeSingle();
+              
+            if (profile?.dukkan_id) {
+              dukkanId = profile.dukkan_id;
+            } else {
+              // Try to get from personel
+              const { data: personel } = await supabase
+                .from('personel')
+                .select('dukkan_id')
+                .eq('auth_id', user.id)
+                .maybeSingle();
+                
+              if (personel?.dukkan_id) {
+                dukkanId = personel.dukkan_id;
+              } else {
+                // Check if user is a shop owner
+                const { data: shop } = await supabase
+                  .from('dukkanlar')
+                  .select('id')
+                  .eq('sahibi_id', user.id)
+                  .maybeSingle();
+                  
+                if (shop?.id) {
+                  dukkanId = shop.id;
+                }
+              }
+            }
+          }
+        } catch (err) {
+          console.error("Kullanıcı dükkan bilgisi alınamadı:", err);
+          throw new Error("Dükkan bilgisi bulunamadı");
+        }
+      }
+      
+      if (!dukkanId) {
+        throw new Error("Dükkan bilgisi bulunamadı");
+      }
+      
       const { data, error } = await supabase
         .from('islem_kategorileri')
         .select('*')
@@ -26,6 +79,61 @@ export const kategorilerServisi = {
   
   async ekle(kategori: Omit<KategoriDto, 'id'>) {
     try {
+      // If dukkan_id is not provided, get the current user's dukkan_id
+      if (!kategori.dukkan_id) {
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) throw new Error("Kullanıcı bilgisi bulunamadı");
+          
+          // Try to get dukkan_id from user metadata
+          kategori.dukkan_id = user.user_metadata?.dukkan_id;
+          
+          if (!kategori.dukkan_id) {
+            // Try to get from profiles
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('dukkan_id')
+              .eq('id', user.id)
+              .maybeSingle();
+              
+            if (profile?.dukkan_id) {
+              kategori.dukkan_id = profile.dukkan_id;
+            } else {
+              // Try to get from personel
+              const { data: personel } = await supabase
+                .from('personel')
+                .select('dukkan_id')
+                .eq('auth_id', user.id)
+                .maybeSingle();
+                
+              if (personel?.dukkan_id) {
+                kategori.dukkan_id = personel.dukkan_id;
+              } else {
+                // Check if user is a shop owner
+                const { data: shop } = await supabase
+                  .from('dukkanlar')
+                  .select('id')
+                  .eq('sahibi_id', user.id)
+                  .maybeSingle();
+                  
+                if (shop?.id) {
+                  kategori.dukkan_id = shop.id;
+                }
+              }
+            }
+          }
+        } catch (err) {
+          console.error("Kullanıcı dükkan bilgisi alınamadı:", err);
+          throw new Error("Dükkan bilgisi bulunamadı");
+        }
+      }
+      
+      if (!kategori.dukkan_id) {
+        throw new Error("Dükkan bilgisi bulunamadı");
+      }
+      
+      console.log("Eklenecek kategori:", kategori);
+      
       const { data, error } = await supabase
         .from('islem_kategorileri')
         .insert([kategori])

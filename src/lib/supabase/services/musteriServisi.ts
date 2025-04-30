@@ -46,7 +46,11 @@ export const musteriServisi = {
     }
   },
   
-  async hepsiniGetir(dukkanId?: number) {
+  async getCurrentUserDukkanId() {
+    return this._getCurrentUserDukkanId();
+  },
+  
+  async hepsiniGetir(dukkanId?: number | null) {
     try {
       // Get the current user's dukkanId if one isn't provided
       const userDukkanId = dukkanId || await this._getCurrentUserDukkanId();
@@ -61,14 +65,14 @@ export const musteriServisi = {
         .from('musteriler')
         .select('*')
         .eq('dukkan_id', userDukkanId)
-        .order('created_at', { ascending: false });
+        .order('first_name', { ascending: true });
       
       if (error) {
         console.error("Müşteriler getirme hatası:", error);
         throw error;
       }
       
-      console.log(`${data.length} müşteri başarıyla getirildi:`, data);
+      console.log(`${data?.length || 0} müşteri başarıyla getirildi:`, data);
       return data || [];
     } catch (err) {
       console.error("Müşteriler getirme sırasında hata:", err);
@@ -119,6 +123,8 @@ export const musteriServisi = {
   
   async ekle(musteriData: any) {
     try {
+      console.log("Müşteri ekleme başladı, gelen veriler:", musteriData);
+
       // Try to get the user's dukkan_id
       let dukkanId = musteriData.dukkan_id;
       
@@ -158,8 +164,8 @@ export const musteriServisi = {
         throw error;
       }
       
-      console.log("Eklenen müşteri:", data[0]);
-      return data[0];
+      console.log("Eklenen müşteri:", data?.[0]);
+      return data?.[0];
     } catch (err) {
       console.error("Müşteri eklenirken hata:", err);
       toast.error("Müşteri eklenirken bir hata oluştu: " + (err instanceof Error ? err.message : "Bilinmeyen hata"));
@@ -200,7 +206,7 @@ export const musteriServisi = {
         throw error;
       }
       
-      return data[0];
+      return data?.[0];
     } catch (err) {
       console.error(`ID ${id} müşteri güncellenirken hata:`, err);
       throw err;

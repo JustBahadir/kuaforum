@@ -1,152 +1,108 @@
 
 import { supabase } from '../client';
-import { Dukkan } from '../types';
 
-export const isletmeServisi = {
-  async kullanicininIsletmesi(userId: string) {
-    const { data, error } = await supabase
-      .from('dukkanlar')
-      .select('*')
-      .eq('sahibi_id', userId)
-      .single();
-    
-    if (error) {
-      console.error("İşletme getirme hatası:", error);
-      return null;
+export const dukkanServisi = {
+  async getirById(id: number) {
+    try {
+      const { data, error } = await supabase
+        .from('dukkanlar')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
+      
+      if (error) {
+        console.error(`ID ${id} dükkan getirme hatası:`, error);
+        throw error;
+      }
+      
+      return data;
+    } catch (err) {
+      console.error(`ID ${id} dükkan getirme sırasında hata:`, err);
+      throw err;
     }
-    
-    return data;
-  },
-  
-  async personelAuthIdIsletmesi(authId: string) {
-    // First get the personnel record with this auth_id
-    const { data: personel, error: personelError } = await supabase
-      .from('personel')
-      .select('dukkan_id')
-      .eq('auth_id', authId)
-      .single();
-    
-    if (personelError || !personel?.dukkan_id) {
-      console.error("Personel işletme bilgisi hatası:", personelError);
-      return null;
-    }
-    
-    // Now get the shop with this id
-    const { data: isletme, error } = await supabase
-      .from('dukkanlar')
-      .select('*')
-      .eq('id', personel.dukkan_id)
-      .single();
-    
-    if (error) {
-      console.error("İşletme getirme hatası:", error);
-      return null;
-    }
-    
-    return isletme;
-  },
-
-  async getirById(isletmeId: number) {
-    const { data, error } = await supabase
-      .from('dukkanlar')
-      .select('*')
-      .eq('id', isletmeId)
-      .single();
-    
-    if (error) {
-      throw error;
-    }
-    
-    return data;
-  },
-  
-  // Add alias for getirById to be accessible as getir
-  async getir(isletmeId: number) {
-    return this.getirById(isletmeId);
   },
   
   async getirByKod(kod: string) {
-    const { data, error } = await supabase
-      .from('dukkanlar')
-      .select('*')
-      .eq('kod', kod)
-      .eq('active', true)
-      .single();
-    
-    if (error) {
-      console.error("İşletme kodu ile getirme hatası:", error);
+    try {
+      const { data, error } = await supabase
+        .from('dukkanlar')
+        .select('*')
+        .eq('kod', kod)
+        .maybeSingle();
+      
+      if (error) {
+        console.error(`Kod ${kod} dükkan getirme hatası:`, error);
+        throw error;
+      }
+      
+      return data;
+    } catch (err) {
+      console.error(`Kod ${kod} dükkan getirme sırasında hata:`, err);
+      throw err;
+    }
+  },
+  
+  async kullaniciDukkaniniGetir() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+      
+      // Check if user is an owner
+      const { data: dukkanData, error: dukkanError } = await supabase
+        .from('dukkanlar')
+        .select('*')
+        .eq('sahibi_id', user.id)
+        .maybeSingle();
+      
+      if (dukkanData) return dukkanData;
+      
+      // If not an owner, check if user is staff
+      const { data: personelData, error: personelError } = await supabase
+        .from('personel')
+        .select('dukkan_id')
+        .eq('auth_id', user.id)
+        .maybeSingle();
+      
+      if (personelData?.dukkan_id) {
+        const { data: dukkan } = await this.getirById(personelData.dukkan_id);
+        return dukkan;
+      }
+      
+      // Check profiles table
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('dukkan_id')
+        .eq('id', user.id)
+        .maybeSingle();
+      
+      if (profileData?.dukkan_id) {
+        const { data: dukkan } = await this.getirById(profileData.dukkan_id);
+        return dukkan;
+      }
+      
+      return null;
+    } catch (err) {
+      console.error("Kullanıcı dükkan bilgisi getirme hatası:", err);
       return null;
     }
-    
-    return data;
   },
   
   async hepsiniGetir() {
-    const { data, error } = await supabase
-      .from('dukkanlar')
-      .select('*')
-      .eq('active', true)
-      .order('ad');
-    
-    if (error) {
-      throw error;
+    try {
+      const { data, error } = await supabase
+        .from('dukkanlar')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error("Dükkanları getirme hatası:", error);
+        throw error;
+      }
+      
+      return data || [];
+    } catch (err) {
+      console.error("Dükkanları getirme sırasında hata:", err);
+      return [];
     }
-    
-    return data || [];
-  },
-  
-  async isletmeEkle(isletme: Omit<Dukkan, 'id' | 'created_at'>) {
-    const { data, error } = await supabase
-      .from('dukkanlar')
-      .insert([isletme])
-      .select()
-      .single();
-    
-    if (error) {
-      throw error;
-    }
-    
-    return data;
-  },
-  
-  async ekle(isletme: Omit<Dukkan, 'id' | 'created_at'>) {
-    return this.isletmeEkle(isletme);
-  },
-
-  async isletmeyiGuncelle(isletmeId: number, guncellemeler: Partial<Dukkan>) {
-    const { data, error } = await supabase
-      .from('dukkanlar')
-      .update(guncellemeler)
-      .eq('id', isletmeId)
-      .select()
-      .single();
-    
-    if (error) {
-      throw error;
-    }
-    
-    return data;
-  },
-  
-  // Add alias for isletmeyiGuncelle to be accessible as guncelle
-  async guncelle(isletmeId: number, guncellemeler: Partial<Dukkan>) {
-    return this.isletmeyiGuncelle(isletmeId, guncellemeler);
-  },
-  
-  async isletmeSil(isletmeId: number) {
-    // Instead of deleting, just mark it as inactive
-    const { data, error } = await supabase
-      .from('dukkanlar')
-      .update({ active: false })
-      .eq('id', isletmeId)
-      .select()
-      .single();
-    
-    if (error) {
-      throw error;
-    }
-    
-    return data;
   }
 };
-

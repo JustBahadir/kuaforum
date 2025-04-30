@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from './useAuth';
-import { randevuServisi } from '@/lib/supabase/services/randevuServisi';
+import { randevuServisi } from '@/lib/supabase';
 import { toast } from 'sonner';
 
 export type AppointmentFilters = {

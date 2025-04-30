@@ -20,6 +20,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useShopData } from "@/hooks/useShopData";
 import { useAvailableTimeSlots } from "@/hooks/useAvailableTimeSlots";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+import { useCustomerAuth } from "@/hooks/useCustomerAuth";
+import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { calismaSaatleriServisi } from "@/lib/supabase/services/calismaSaatleriServisi";
 
 interface StaffAppointmentFormProps {
   onAppointmentCreated: () => void;
