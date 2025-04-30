@@ -8,6 +8,7 @@ interface PageHeaderProps {
   button?: {
     label: string;
     href: string;
+    onClick?: () => void;
   };
 }
 
@@ -19,9 +20,15 @@ export function PageHeader({ title, subtitle, button }: PageHeaderProps) {
         {subtitle && <p className="text-muted-foreground mt-1">{subtitle}</p>}
       </div>
       {button && (
-        <Button asChild className="mt-4 md:mt-0">
-          <Link to={button.href}>{button.label}</Link>
-        </Button>
+        button.onClick ? (
+          <Button className="mt-4 md:mt-0" onClick={button.onClick}>
+            {button.label}
+          </Button>
+        ) : (
+          <Button asChild className="mt-4 md:mt-0">
+            <Link to={button.href}>{button.label}</Link>
+          </Button>
+        )
       )}
     </div>
   );

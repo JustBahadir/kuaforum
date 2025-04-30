@@ -1,4 +1,3 @@
-
 import { supabase } from "@/lib/supabase/client";
 import { PersonelIslemi } from "../types";
 
@@ -54,7 +53,7 @@ export const personelIslemleriServisi = {
         throw error;
       }
 
-      // Additional filter to ensure only operations from this shop are shown
+      // Process operations for other shops
       interface PersonelData {
         dukkan_id?: number;
       }

@@ -88,6 +88,7 @@ export default function Appointments() {
           subtitle="Randevuları görüntüleyin, düzenleyin ve yönetin"
           button={{ 
             label: "Yeni Randevu", 
+            href: "#",
             onClick: () => setDialogOpen(true)
           }}
         />
