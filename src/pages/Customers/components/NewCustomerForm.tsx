@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { NameInputField } from "./FormFields/NameInputField";
 import { PhoneInputField } from "./FormFields/PhoneInputField";
 import { DateInputField } from "./FormFields/DateInputField";
+import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 
 type NewCustomerFormProps = {
   onSuccess: () => void;
@@ -16,6 +17,7 @@ type NewCustomerFormProps = {
 };
 
 export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFormProps) {
+  const { dukkanId: contextDukkanId } = useCustomerAuth();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
@@ -27,6 +29,9 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFo
   const [formValid, setFormValid] = useState(false);
   const [dateIsValid, setDateIsValid] = useState(true);
   
+  // Use either passed dukkanId or get it from context
+  const shopId = dukkanId || contextDukkanId;
+
   useEffect(() => {
     validateForm();
   }, [firstName, lastName, phone, birthDate, dateIsValid]);
@@ -80,7 +85,10 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFo
   };
 
   const { mutate, isPending } = useMutation({
-    mutationFn: (customerData: any) => musteriServisi.ekle(customerData),
+    mutationFn: (customerData: any) => {
+      console.log("Adding customer with shop ID:", shopId);
+      return musteriServisi.ekle(customerData);
+    },
     onSuccess: () => {
       toast.success("Müşteri başarıyla eklendi");
       onSuccess();
@@ -95,6 +103,11 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFo
     e.preventDefault();
     
     if (!validateForm()) {
+      return;
+    }
+
+    if (!shopId) {
+      toast.error("İşletme bilgisi bulunamadı");
       return;
     }
     
@@ -112,9 +125,10 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFo
       last_name: lastName.trim() || null,
       phone: phone.trim() || null,
       birthdate: formattedDate,
-      dukkan_id: dukkanId,
+      dukkan_id: shopId,
     };
     
+    console.log("Customer data to save:", customerData);
     mutate(customerData);
   };
 

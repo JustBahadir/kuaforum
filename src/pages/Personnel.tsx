@@ -27,6 +27,7 @@ export default function Personnel() {
     setLoading(true);
     try {
       const data = await personelServisi.hepsiniGetir();
+      console.log("Fetched personnel:", data);
       setPersonnel(data);
     } catch (error) {
       console.error("Personel yüklenirken hata:", error);

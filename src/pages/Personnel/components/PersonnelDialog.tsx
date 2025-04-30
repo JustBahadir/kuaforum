@@ -85,7 +85,7 @@ export function PersonnelDialog({ open, onOpenChange }: PersonnelDialogProps) {
               <div className="text-sm font-medium mb-1">İşletme Kodu</div>
               <div className="flex items-center gap-2">
                 <div className="flex-1 border rounded-md p-2 bg-muted">
-                  <code className="text-sm">{businessCode || "Kod yüklenemedi"}</code>
+                  <code className="text-sm">{businessCode || "Yükleniyor..."}</code>
                 </div>
                 <Button 
                   variant="outline" 

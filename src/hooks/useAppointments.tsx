@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { randevuServisi, personelServisi } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
@@ -65,11 +64,11 @@ export const useAppointments = ({ initialStatus = 'all', initialDate = new Date(
         );
       }
 
-      // Proper filtering based on status - "beklemede" should include both "beklemede" and "onaylandi" statuses
+      // Updated filtering for "beklemede" to include both "beklemede" and "onaylandi" statuses
       if (status !== 'all') {
         if (status === 'beklemede') {
           filteredAppointments = filteredAppointments.filter(
-            (appointment) => appointment.durum === 'beklemede' || appointment.durum === 'onaylandi'
+            (appointment) => appointment.durum !== 'tamamlandi' && appointment.durum !== 'iptal_edildi' && appointment.durum !== 'iptal'
           );
         } else {
           filteredAppointments = filteredAppointments.filter(
@@ -165,7 +164,7 @@ export const useAppointments = ({ initialStatus = 'all', initialDate = new Date(
     error,
     status,
     selectedDate,
-    setDate,
+    setDate: (date: Date | null) => setSelectedDate(date || new Date()),
     setAppointmentStatus,
     updateStatus,
     currentPersonelId: personelId,

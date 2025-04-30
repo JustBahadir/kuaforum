@@ -1,256 +1,140 @@
-import { supabase } from "../client";
-import { IslemKategori } from "../types";
+
+import { supabase } from '../client';
+import { KategoriDto } from '../types';
 
 export const kategoriServisi = {
-  // Helper function to get the current user's dukkan_id
   async _getCurrentUserDukkanId() {
     try {
+      // Get the current user auth data
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
       
-      // Try to get dukkan_id from user metadata first
-      const dukkanIdFromMeta = user?.user_metadata?.dukkan_id;
-      if (dukkanIdFromMeta) return dukkanIdFromMeta;
+      // First try to get it from user metadata
+      if (user.user_metadata?.dukkan_id) {
+        return user.user_metadata.dukkan_id;
+      }
       
-      // If not in metadata, try profiles table
-      const { data: profileData } = await supabase
+      // Try to get it from profiles
+      const { data: profile } = await supabase
         .from('profiles')
         .select('dukkan_id')
         .eq('id', user.id)
         .maybeSingle();
+        
+      if (profile?.dukkan_id) {
+        return profile.dukkan_id;
+      }
       
-      if (profileData?.dukkan_id) return profileData.dukkan_id;
-      
-      // Finally try personel table
-      const { data: personelData } = await supabase
+      // Try to get it from personel table
+      const { data: personel } = await supabase
         .from('personel')
         .select('dukkan_id')
         .eq('auth_id', user.id)
         .maybeSingle();
+        
+      if (personel?.dukkan_id) {
+        return personel.dukkan_id;
+      }
       
-      if (personelData?.dukkan_id) return personelData.dukkan_id;
+      // If admin, try to get the shop they own
+      if (user.user_metadata?.role === 'admin') {
+        const { data: dukkan } = await supabase
+          .from('dukkanlar')
+          .select('id')
+          .eq('sahibi_id', user.id)
+          .maybeSingle();
+          
+        if (dukkan?.id) {
+          return dukkan.id;
+        }
+      }
       
-      // As fallback, try to get shop ID where user is owner
-      const { data: shopData } = await supabase
-        .from('dukkanlar')
-        .select('id')
-        .eq('sahibi_id', user.id)
-        .maybeSingle();
-      
-      return shopData?.id || null;
+      console.warn("Could not determine dukkan_id for current user");
+      return null;
     } catch (error) {
-      console.error("Error getting dukkan_id:", error);
+      console.error("Error getting current user's dukkan_id:", error);
       return null;
     }
   },
   
-  async hepsiniGetir(): Promise<IslemKategori[]> {
-    const dukkanId = await this._getCurrentUserDukkanId();
-    if (!dukkanId) {
-      console.error("Kullanıcının işletme bilgisi bulunamadı");
-      return [];
-    }
-    
-    const { data, error } = await supabase
-      .from('islem_kategorileri')
-      .select('*')
-      .eq('dukkan_id', dukkanId) // Filter by dukkan_id
-      .order('sira');
-      
-    if (error) throw error;
-    return data || [];
-  },
-  
-  async getir(id: number): Promise<IslemKategori> {
-    const dukkanId = await this._getCurrentUserDukkanId();
-    if (!dukkanId) {
-      throw new Error("Kullanıcının işletme bilgisi bulunamadı");
-    }
-    
-    const { data, error } = await supabase
-      .from('islem_kategorileri')
-      .select('*')
-      .eq('id', id)
-      .eq('dukkan_id', dukkanId) // Filter by dukkan_id
-      .single();
-      
-    if (error) throw error;
-    return data;
-  },
-  
-  async ekle(kategori: Partial<IslemKategori>): Promise<IslemKategori> {
+  async hepsiniGetir() {
     try {
-      const dukkanId = await this._getCurrentUserDukkanId();
-      if (!dukkanId) {
-        // Fallback to user's shop if they're an admin
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: shopData } = await supabase
-            .from('dukkanlar')
-            .select('id')
-            .eq('sahibi_id', user.id)
-            .maybeSingle();
-            
-          if (shopData?.id) {
-            // Get the max sira value
-            const { data: maxSiraData } = await supabase
-              .from('islem_kategorileri')
-              .select('sira')
-              .order('sira', { ascending: false })
-              .limit(1);
-            
-            const maxSira = maxSiraData && maxSiraData.length > 0 ? maxSiraData[0].sira || 0 : 0;
-            
-            const { data, error } = await supabase
-              .from('islem_kategorileri')
-              .insert([{
-                ...kategori,
-                dukkan_id: shopData.id,
-                sira: maxSira + 1
-              }])
-              .select();
-              
-            if (error) throw error;
-            return data[0];
-          }
-        }
-        throw new Error("Kullanıcının işletme bilgisi bulunamadı");
-      }
-      
-      // Get the max sira value
-      const { data: maxSiraData, error: maxSiraError } = await supabase
-        .from('islem_kategorileri')
-        .select('sira')
-        .eq('dukkan_id', dukkanId)
-        .order('sira', { ascending: false })
-        .limit(1);
-      
-      if (maxSiraError) throw maxSiraError;
-      
-      const maxSira = maxSiraData && maxSiraData.length > 0 ? maxSiraData[0].sira || 0 : 0;
-      
       const { data, error } = await supabase
         .from('islem_kategorileri')
-        .insert([{
-          ...kategori,
-          dukkan_id: dukkanId,
-          sira: maxSira + 1
-        }])
-        .select();
-        
+        .select('*')
+        .order('sira', { ascending: true });
+
       if (error) throw error;
-      return data[0];
+      return data || [];
     } catch (error) {
-      console.error('Kategori ekleme hatası:', error);
+      console.error("Kategori getirme hatası:", error);
       throw error;
     }
   },
-  
-  async guncelle(id: number, kategori: Partial<IslemKategori>): Promise<IslemKategori> {
+
+  async getir(id: number) {
     try {
-      const dukkanId = await this._getCurrentUserDukkanId();
-      if (!dukkanId) {
-        throw new Error("Kullanıcının işletme bilgisi bulunamadı");
-      }
-      
-      // First verify this category belongs to our business
-      const { data: categoryData } = await supabase
+      const { data, error } = await supabase
         .from('islem_kategorileri')
-        .select('dukkan_id')
+        .select('*')
         .eq('id', id)
         .single();
-        
-      if (categoryData?.dukkan_id !== dukkanId) {
-        throw new Error("Bu kategori sizin işletmenize ait değil");
-      }
-      
-      // Don't allow changing dukkan_id
-      delete kategori.dukkan_id;
-      
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error("Kategori getirme hatası:", error);
+      throw error;
+    }
+  },
+
+  async ekle(kategori: Omit<KategoriDto, 'id'>) {
+    try {
+      // We don't need dukkan_id for categories anymore, as categories
+      // are shared across all shops
+      const { data, error } = await supabase
+        .from('islem_kategorileri')
+        .insert(kategori)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error("Kategori ekleme hatası:", error);
+      throw error;
+    }
+  },
+
+  async guncelle(id: number, kategori: Partial<KategoriDto>) {
+    try {
       const { data, error } = await supabase
         .from('islem_kategorileri')
         .update(kategori)
         .eq('id', id)
-        .eq('dukkan_id', dukkanId) // Additional safety filter
-        .select();
-        
+        .select()
+        .single();
+
       if (error) throw error;
-      return data[0];
+      return data;
     } catch (error) {
-      console.error('Kategori güncelleme hatası:', error);
+      console.error("Kategori güncelleme hatası:", error);
       throw error;
     }
   },
-  
-  async sil(id: number): Promise<void> {
+
+  async sil(id: number) {
     try {
-      const dukkanId = await this._getCurrentUserDukkanId();
-      if (!dukkanId) {
-        throw new Error("Kullanıcının işletme bilgisi bulunamadı");
-      }
-      
-      // First verify this category belongs to our business
-      const { data: categoryData } = await supabase
-        .from('islem_kategorileri')
-        .select('dukkan_id')
-        .eq('id', id)
-        .single();
-        
-      if (categoryData?.dukkan_id !== dukkanId) {
-        throw new Error("Bu kategori sizin işletmenize ait değil");
-      }
-      
       const { error } = await supabase
         .from('islem_kategorileri')
         .delete()
-        .eq('id', id)
-        .eq('dukkan_id', dukkanId); // Additional safety filter
-        
+        .eq('id', id);
+
       if (error) throw error;
+      return true;
     } catch (error) {
-      console.error('Kategori silme hatası:', error);
+      console.error("Kategori silme hatası:", error);
       throw error;
     }
-  },
-  
-  async siraGuncelle(kategoriler: IslemKategori[]): Promise<IslemKategori[]> {
-    try {
-      const dukkanId = await this._getCurrentUserDukkanId();
-      if (!dukkanId) {
-        throw new Error("Kullanıcının işletme bilgisi bulunamadı");
-      }
-      
-      // Verify all categories belong to our business
-      const kategoriIds = kategoriler.map(kategori => kategori.id);
-      
-      const { data: existingCategories } = await supabase
-        .from('islem_kategorileri')
-        .select('id, dukkan_id')
-        .in('id', kategoriIds);
-        
-      const unauthorizedCategories = existingCategories?.filter(cat => cat.dukkan_id !== dukkanId);
-      
-      if (unauthorizedCategories && unauthorizedCategories.length > 0) {
-        throw new Error("Bazı kategoriler sizin işletmenize ait değil");
-      }
-      
-      // Update each category with its new position
-      const updates = kategoriler.map((kategori, index) => ({
-        id: kategori.id,
-        sira: index,
-        dukkan_id: dukkanId, // Ensure correct dukkan_id
-      }));
-      
-      const { data, error } = await supabase
-        .from('islem_kategorileri')
-        .upsert(updates, { onConflict: 'id' })
-        .select();
-        
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error('Kategori sıra güncelleme hatası:', error);
-      throw error;
-    }
-  },
+  }
 };

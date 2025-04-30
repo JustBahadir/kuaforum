@@ -1,3 +1,4 @@
+
 import { Input } from "@/components/ui/input";
 import { useState, useEffect } from "react";
 
@@ -53,7 +54,8 @@ const validateDate = (dateString: string): boolean => {
     month < 1 || month > 12 ||
     year < 1900 || year > new Date().getFullYear() ||
     (year === new Date().getFullYear() && month > new Date().getMonth() + 1) ||
-    (year === new Date().getFullYear() && month === new Date().getMonth() + 1 && day > new Date().getDate())
+    (year === new Date().getFullYear() && month === new Date().getMonth() + 1 && day > new Date().getDate()) ||
+    !(/^(19|20)\d{2}$/.test(year.toString()))
   ) {
     return false;
   }
@@ -105,8 +107,14 @@ export function DateInputField({
     
     // Validate date if it's a complete date
     let dateIsValid = true;
-    if (formattedValue.length > 0 && formattedValue.split('.').length === 3) {
-      dateIsValid = validateDate(formattedValue);
+    if (formattedValue.length > 0) {
+      if (formattedValue.split('.').length === 3) {
+        dateIsValid = validateDate(formattedValue);
+      } else if (formattedValue.split('.').length === 2) {
+        // Allow partial dates (day and month only)
+        const [day, month] = formattedValue.split('.').map(Number);
+        dateIsValid = day >= 1 && day <= 31 && month >= 1 && month <= 12;
+      }
     }
     
     setIsValid(dateIsValid);
