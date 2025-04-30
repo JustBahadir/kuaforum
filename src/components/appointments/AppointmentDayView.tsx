@@ -4,14 +4,13 @@ import { format, addDays, subDays, isSameDay, isYesterday, isToday, isTomorrow, 
 import { tr } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronLeft, ChevronRight, CheckSquare, XSquare, Info, Undo } from "lucide-react";
+import { ChevronLeft, ChevronRight, CheckCircle, XCircle, Clock, Undo } from "lucide-react";
 import { Randevu, RandevuDurumu } from "@/lib/supabase/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge"; 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/lib/supabase/client";
 import React from "react";
-
 import { Calendar } from "@/components/ui/calendar";
 
 interface AppointmentDayViewProps {
@@ -115,6 +114,20 @@ export function AppointmentDayView({
     }
   };
 
+  const getAppointmentCardClassName = (status: RandevuDurumu) => {
+    switch (status) {
+      case 'beklemede':
+        return 'bg-yellow-50';
+      case 'tamamlandi':
+        return 'bg-green-50';
+      case 'iptal_edildi':
+      case 'iptal':
+        return 'bg-red-50';
+      default:
+        return '';
+    }
+  };
+
   const filteredAppointments = appointments.filter(appointment => {
     const appointmentDate = typeof appointment.tarih === 'string' 
       ? parseISO(appointment.tarih) 
@@ -196,16 +209,10 @@ export function AppointmentDayView({
             const isUndoable = appointment.durum === "iptal_edildi";
             return (
               <Card key={appointment.id} 
-                className={`overflow-hidden ${
-                  isReturnedFromCancel ? "bg-[#FFE5E5]" : ""
-                }`}
+                className={`overflow-hidden ${getAppointmentCardClassName(appointment.durum)}`}
               >
                 <CardContent className="p-0">
-                  <div className={`grid grid-cols-1 md:grid-cols-5 border-l-4 ${
-                    appointment.durum === "tamamlandi" ? "border-green-500" : 
-                    appointment.durum === "iptal_edildi" ? "border-red-500" : 
-                    "border-blue-500"
-                  } p-4`}>
+                  <div className="grid grid-cols-1 md:grid-cols-5 border-l-4 border-transparent p-4">
                     <div className="col-span-4 grid grid-cols-4 gap-4">
                       <div>
                         <p className="text-sm text-muted-foreground">Saat</p>
@@ -240,6 +247,27 @@ export function AppointmentDayView({
                     </div>
                     
                     <div className="col-span-1 flex items-center justify-end flex-col sm:flex-row gap-2">
+                      {appointment.durum === "beklemede" && (
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className="flex items-center gap-1" 
+                            onClick={() => handleCompleteClick(appointment)}
+                          >
+                            <CheckCircle className="h-4 w-4" /> Tamamlandı
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="destructive"
+                            className="flex items-center gap-1" 
+                            onClick={() => handleCancelClick(appointment)}
+                          >
+                            <XCircle className="h-4 w-4" /> İptal
+                          </Button>
+                        </div>
+                      )}
+
                       {appointment.durum === "onaylandi" && (
                         <div className="flex flex-col sm:flex-row gap-2">
                           <Button 
@@ -248,7 +276,7 @@ export function AppointmentDayView({
                             className="flex items-center gap-1" 
                             onClick={() => handleCompleteClick(appointment)}
                           >
-                            <CheckSquare className="h-4 w-4" /> Tamamlandı
+                            <CheckCircle className="h-4 w-4" /> Tamamlandı
                           </Button>
                           <Button 
                             size="sm" 
@@ -256,7 +284,7 @@ export function AppointmentDayView({
                             className="flex items-center gap-1" 
                             onClick={() => handleCancelClick(appointment)}
                           >
-                            <XSquare className="h-4 w-4" /> İptal
+                            <XCircle className="h-4 w-4" /> İptal
                           </Button>
                         </div>
                       )}
@@ -266,7 +294,7 @@ export function AppointmentDayView({
                           <Badge className="bg-green-100 text-green-800 border-green-200">
                             Tamamlandı
                           </Badge>
-                          <CheckSquare className="text-green-600" />
+                          <CheckCircle className="text-green-600" />
                         </div>
                       )}
                       
@@ -283,25 +311,6 @@ export function AppointmentDayView({
                           >
                             <Undo className="h-4 w-4" /> Geri Al
                           </Button>
-                          {isReturnedFromCancel && (
-                            <>
-                              <Badge variant="outline" className="ml-2 text-xs flex items-center gap-1 bg-pink-50 text-pink-600 border-pink-200 rounded-full px-2 py-[2px] select-none" >
-                                🔁 İptalden Döndü
-                              </Badge>
-                              <CheckSquare className="text-green-600" />
-                              <Button 
-                                variant="ghost"
-                                size="icon"
-                                className="ml-1 text-blue-600 cursor-default"
-                                aria-label="İptalden dönen randevu hakkında bilgi"
-                                title="İptalden dönen randevu"
-                                tabIndex={-1}
-                                disabled
-                              >
-                                <Info className="h-5 w-5" />
-                              </Button>
-                            </>
-                          )}
                         </div>
                       )}
                     </div>

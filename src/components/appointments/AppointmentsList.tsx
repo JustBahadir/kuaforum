@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { Randevu, RandevuDurumu } from '@/lib/supabase/types';
-import { MoreHorizontal, AlertCircle } from 'lucide-react';
+import { MoreHorizontal, AlertCircle, CheckCircle, Clock, XCircle } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,17 +32,31 @@ export function AppointmentsList({
   const getStatusBadge = (status: RandevuDurumu) => {
     switch(status) {
       case 'beklemede':
-        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 hover:bg-yellow-100">Beklemede</Badge>;
+        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 hover:bg-yellow-100 flex items-center gap-1"><Clock className="h-3 w-3" /> Beklemede</Badge>;
       case 'onaylandi':
-        return <Badge variant="outline" className="bg-blue-50 text-blue-700 hover:bg-blue-100">Onaylandı</Badge>;
+        return <Badge variant="outline" className="bg-blue-50 text-blue-700 hover:bg-blue-100 flex items-center gap-1"><Clock className="h-3 w-3" /> Onaylandı</Badge>;
       case 'tamamlandi':
-        return <Badge variant="outline" className="bg-green-50 text-green-700 hover:bg-green-100">Tamamlandı</Badge>;
+        return <Badge variant="outline" className="bg-green-50 text-green-700 hover:bg-green-100 flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Tamamlandı</Badge>;
       case 'iptal_edildi':
-        return <Badge variant="outline" className="bg-red-50 text-red-700 hover:bg-red-100">İptal Edildi</Badge>;
+        return <Badge variant="outline" className="bg-red-50 text-red-700 hover:bg-red-100 flex items-center gap-1"><XCircle className="h-3 w-3" /> İptal Edildi</Badge>;
       case 'iptal':
-        return <Badge variant="outline" className="bg-red-50 text-red-700 hover:bg-red-100">İptal</Badge>;
+        return <Badge variant="outline" className="bg-red-50 text-red-700 hover:bg-red-100 flex items-center gap-1"><XCircle className="h-3 w-3" /> İptal</Badge>;
       default:
         return <Badge variant="outline">Bilinmiyor</Badge>;
+    }
+  };
+
+  const getRowClassName = (status: RandevuDurumu) => {
+    switch(status) {
+      case 'beklemede':
+        return 'bg-yellow-50';
+      case 'tamamlandi':
+        return 'bg-green-50';
+      case 'iptal_edildi':
+      case 'iptal':
+        return 'bg-red-50';
+      default:
+        return '';
     }
   };
 
@@ -94,7 +108,7 @@ export function AppointmentsList({
                              appointment.personel_id === null;
 
             return (
-              <TableRow key={appointment.id}>
+              <TableRow key={appointment.id} className={getRowClassName(appointment.durum)}>
                 <TableCell>
                   <div className="font-medium">{formattedDate}</div>
                   <div className="text-sm text-muted-foreground">{formattedTime}</div>

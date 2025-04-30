@@ -15,24 +15,20 @@ export function AppointmentStatusFilter({
   return (
     <div className="flex flex-col space-y-2">
       <label className="text-sm font-medium">Randevu Durumu</label>
-      <ToggleGroup type="single" value={value} onValueChange={(v) => onChange(v as RandevuDurumu | 'all')}>
-        <ToggleGroupItem value="all" aria-label="Hepsi">
+      <ToggleGroup type="single" value={value} onValueChange={(v) => onChange(v as RandevuDurumu | 'all')} className="flex flex-wrap">
+        <ToggleGroupItem value="all" aria-label="Hepsi" className="bg-gray-100 data-[state=on]:bg-gray-300">
           <Calendar className="h-4 w-4 mr-2" />
           Hepsi
         </ToggleGroupItem>
-        <ToggleGroupItem value="beklemede" aria-label="Beklemede">
+        <ToggleGroupItem value="beklemede" aria-label="Beklemede" className="bg-yellow-50 data-[state=on]:bg-yellow-200">
           <Clock className="h-4 w-4 mr-2" />
           Beklemede
         </ToggleGroupItem>
-        <ToggleGroupItem value="onaylandi" aria-label="Onaylandı">
-          <Calendar className="h-4 w-4 mr-2" />
-          Onaylandı
-        </ToggleGroupItem>
-        <ToggleGroupItem value="tamamlandi" aria-label="Tamamlandı">
+        <ToggleGroupItem value="tamamlandi" aria-label="Tamamlandı" className="bg-green-50 data-[state=on]:bg-green-200">
           <CheckCircle className="h-4 w-4 mr-2" />
           Tamamlandı
         </ToggleGroupItem>
-        <ToggleGroupItem value="iptal_edildi" aria-label="İptal Edildi">
+        <ToggleGroupItem value="iptal_edildi" aria-label="İptal Edildi" className="bg-red-50 data-[state=on]:bg-red-200">
           <XCircle className="h-4 w-4 mr-2" />
           İptal
         </ToggleGroupItem>

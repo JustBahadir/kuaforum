@@ -13,14 +13,23 @@ import { PageHeader } from '@/components/common/PageHeader';
 import { RandevuDurumu } from '@/lib/supabase/types';
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Calendar } from "lucide-react";
+import { ArrowLeft, Calendar, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogHeader, 
+  DialogTitle
+} from '@/components/ui/dialog';
+import { AppointmentForm } from '@/components/appointments/AppointmentForm';
 
 type ViewMode = 'day' | 'week' | 'calendar' | 'list';
 
 export default function Appointments() {
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<ViewMode>('day');
+  const [dialogOpen, setDialogOpen] = useState(false);
   
   const { 
     appointments, 
@@ -31,7 +40,8 @@ export default function Appointments() {
     setDate,
     setAppointmentStatus, 
     updateStatus,
-    currentPersonelId
+    currentPersonelId,
+    dukkanId
   } = useAppointments({ initialStatus: 'all', initialDate: new Date() }); // Default to today and show all appointments
 
   const handleDateChange = (date: Date | null) => {
@@ -45,6 +55,10 @@ export default function Appointments() {
 
   const handleGoBack = () => {
     navigate(-1);
+  };
+
+  const handleAppointmentCreated = () => {
+    setDialogOpen(false);
   };
 
   return (
@@ -67,7 +81,11 @@ export default function Appointments() {
         <PageHeader
           title="Randevular"
           subtitle="Randevuları görüntüleyin, düzenleyin ve yönetin"
-          button={{ label: "Yeni Randevu", href: "/new-appointment" }}
+          button={{ 
+            label: "Yeni Randevu", 
+            onClick: () => setDialogOpen(true),
+            icon: <Plus className="h-4 w-4 mr-2" />
+          }}
         />
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4 mb-4">
@@ -146,6 +164,21 @@ export default function Appointments() {
             </CardContent>
           </Tabs>
         </Card>
+        
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Yeni Randevu Oluştur</DialogTitle>
+              <DialogDescription>
+                Lütfen randevu detaylarını girin.
+              </DialogDescription>
+            </DialogHeader>
+            <AppointmentForm 
+              shopId={dukkanId || 0}
+              onSuccess={handleAppointmentCreated}
+            />
+          </DialogContent>
+        </Dialog>
       </div>
     </StaffLayout>
   );

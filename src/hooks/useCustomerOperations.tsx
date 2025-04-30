@@ -50,7 +50,7 @@ export const useCustomerOperations = ({ customerId, limit = 10 }: UseCustomerOpe
             personel:personel_id (ad_soyad)
           `)
           .eq('musteri_id', customerId)
-          .eq('personel.dukkan_id', dukkanId)  // Add shop isolation
+          .eq('personel:personel_id.dukkan_id', dukkanId)  // Add shop isolation
           .order('created_at', { ascending: false })
           .limit(limit);
 

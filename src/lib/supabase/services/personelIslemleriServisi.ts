@@ -417,13 +417,216 @@ export const personelIslemleriServisi = {
 
   updateShopStatistics: async () => {
     try {
-      // İşletme istatistiklerini güncelleme işlevi
-      // Bu fonksiyon Supabase'de tanımlı bir RPC olabilir veya basit bir yenileme işlemi yapabilir
-      console.log("Dükkan istatistikleri güncelleniyor...");
-      return true;
+      // Get current user's shop ID
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        console.error("Authenticated user not found");
+        return null;
+      }
+      
+      // Fetch the shop ID from user's metadata
+      let dukkanId: number | null = null;
+      
+      if (user.user_metadata?.role === 'admin') {
+        const { data: shopData } = await supabase
+          .from('dukkanlar')
+          .select('id')
+          .eq('sahibi_id', user.id)
+          .single();
+          
+        if (shopData) {
+          dukkanId = shopData.id;
+        }
+      } else if (user.user_metadata?.role === 'staff') {
+        const { data: staffData } = await supabase
+          .from('personel')
+          .select('dukkan_id')
+          .eq('auth_id', user.id)
+          .single();
+          
+        if (staffData) {
+          dukkanId = staffData.dukkan_id;
+        }
+      }
+      
+      if (!dukkanId) {
+        console.warn("No shop ID found for user");
+        return null;
+      }
+      
+      // Fetch all staff for the shop
+      const { data: personelData } = await supabase
+        .from('personel')
+        .select('id, ad_soyad, calisma_sistemi, maas, prim_yuzdesi')
+        .eq('dukkan_id', dukkanId);
+        
+      if (!personelData || personelData.length === 0) {
+        console.warn("No personnel found for shop");
+        return null;
+      }
+      
+      // Create a mapping of personnel IDs to their names and other details
+      const personelMap = personelData.reduce((acc, p) => {
+        acc[p.id] = {
+          ad_soyad: p.ad_soyad,
+          calisma_sistemi: p.calisma_sistemi,
+          maas: p.maas,
+          prim_yuzdesi: p.prim_yuzdesi
+        };
+        return acc;
+      }, {} as Record<string, any>);
+      
+      // Calculate statistics for each staff member
+      for (const personel of personelData) {
+        const personelId = personel.id;
+        
+        // Get operations for this staff member
+        const { data: islemler } = await supabase
+          .from('personel_islemleri')
+          .select('*')
+          .eq('personel_id', personelId);
+          
+        if (!islemler || islemler.length === 0) {
+          continue;
+        }
+        
+        const islemSayisi = islemler.length;
+        const toplamCiro = islemler.reduce((sum, islem) => sum + (islem.tutar || 0), 0);
+        const toplamOdenen = islemler.reduce((sum, islem) => sum + (islem.odenen || 0), 0);
+        const ciroYuzdesi = (toplamOdenen / toplamCiro) * 100;
+        const toplamPuan = islemler.reduce((sum, islem) => sum + (islem.puan || 0), 0);
+        const ortalamaPuan = islemSayisi > 0 ? (toplamPuan / islemSayisi) : 0;
+        
+        // Update or insert the performance record
+        const { error } = await supabase
+          .from('personel_performans')
+          .upsert({
+            id: personelId,
+            ad_soyad: personel.ad_soyad,
+            islem_sayisi: islemSayisi,
+            toplam_ciro: toplamCiro,
+            toplam_odenen: toplamOdenen,
+            ciro_yuzdesi: ciroYuzdesi,
+            ortalama_puan: ortalamaPuan
+          });
+          
+        if (error) {
+          console.error("Error updating staff performance:", error);
+        }
+      }
+      
+      return { success: true };
     } catch (error) {
-      console.error("Dükkan istatistiklerini güncelleme hatası:", error);
-      return false;
+      console.error("Error updating shop statistics:", error);
+      return { success: false, error };
+    }
+  },
+
+  async getShopStatistics(dukkanId: number) {
+    if (!dukkanId) {
+      throw new Error("Shop ID is required");
+    }
+    
+    try {
+      // Get personnel for this shop
+      const { data: personelData, error: personelError } = await supabase
+        .from('personel')
+        .select('id, ad_soyad, dukkan_id')
+        .eq('dukkan_id', dukkanId);
+        
+      if (personelError) throw personelError;
+      
+      if (!personelData || personelData.length === 0) {
+        return {
+          totalRevenue: 0,
+          totalOperations: 0,
+          averageOperationValue: 0,
+          topStaff: [],
+          recentOperations: []
+        };
+      }
+      
+      const personelIds = personelData.map(p => p.id);
+      
+      // Get all operations for this shop's personnel
+      const { data: allOperations, error: opsError } = await supabase
+        .from('personel_islemleri')
+        .select(`
+          id, tutar, odenen, personel_id, created_at, 
+          personel:personel_id (ad_soyad, dukkan_id),
+          musteri:musteri_id (first_name, last_name)
+        `)
+        .in('personel_id', personelIds)
+        .order('created_at', { ascending: false });
+        
+      if (opsError) throw opsError;
+      
+      if (!allOperations || allOperations.length === 0) {
+        return {
+          totalRevenue: 0,
+          totalOperations: 0,
+          averageOperationValue: 0,
+          topStaff: [],
+          recentOperations: []
+        };
+      }
+      
+      // Filter out operations for other shops
+      const dukkanOperations = allOperations.filter(op => {
+        return op.personel && op.personel.dukkan_id === dukkanId;
+      });
+      
+      // Calculate statistics
+      const totalRevenue = dukkanOperations.reduce((sum, op) => sum + (op.tutar || 0), 0);
+      const totalOperations = dukkanOperations.length;
+      const averageOperationValue = totalOperations > 0 ? (totalRevenue / totalOperations) : 0;
+      
+      // Get top staff by revenue
+      const staffStats = personelIds.map(pid => {
+        const staffOps = dukkanOperations.filter(op => op.personel_id === pid);
+        const staffRevenue = staffOps.reduce((sum, op) => sum + (op.tutar || 0), 0);
+        const staffOperations = staffOps.length;
+        const staffMember = personelData.find(p => p.id === pid);
+        
+        return {
+          id: pid,
+          name: staffMember?.ad_soyad || 'Unknown',
+          revenue: staffRevenue,
+          operations: staffOperations,
+          averageValue: staffOperations > 0 ? (staffRevenue / staffOperations) : 0
+        };
+      });
+      
+      const topStaff = staffStats
+        .filter(staff => staff.operations > 0)
+        .sort((a, b) => b.revenue - a.revenue)
+        .slice(0, 5);
+      
+      // Get recent operations
+      const recentOperations = dukkanOperations
+        .slice(0, 5)
+        .map(op => ({
+          id: op.id,
+          amount: op.tutar || 0,
+          staffId: op.personel_id,
+          staffName: op.personel?.ad_soyad || 'Unknown',
+          customerName: op.musteri 
+            ? `${op.musteri.first_name} ${op.musteri.last_name || ''}`
+            : 'Unknown Customer',
+          date: op.created_at
+        }));
+      
+      return {
+        totalRevenue,
+        totalOperations,
+        averageOperationValue,
+        topStaff,
+        recentOperations
+      };
+    } catch (error) {
+      console.error("Error getting shop statistics:", error);
+      throw error;
     }
   }
 };
