@@ -1,3 +1,4 @@
+
 import { supabase } from "@/lib/supabase/client";
 import { PersonelIslemi } from "../types";
 
@@ -55,8 +56,8 @@ export const personelIslemleriServisi = {
 
       // Additional filter to ensure only operations from this shop are shown
       const filteredData = data.filter(item => 
-        (item.personel?.dukkan_id === dukkanId) && 
-        (!item.musteri || item.musteri?.dukkan_id === dukkanId)
+        (item.personel && item.personel.dukkan_id === dukkanId) && 
+        (!item.musteri || (item.musteri && item.musteri.dukkan_id === dukkanId))
       );
 
       return filteredData || [];
@@ -92,7 +93,8 @@ export const personelIslemleriServisi = {
       }
 
       // Ensure the operation belongs to current shop
-      if (data.personel?.dukkan_id !== dukkanId || data.musteri?.dukkan_id !== dukkanId) {
+      if (data.personel && data.personel.dukkan_id !== dukkanId || 
+          data.musteri && data.musteri.dukkan_id !== dukkanId) {
         throw new Error('Bu işlem sizin işletmenize ait değil');
       }
 
@@ -119,7 +121,7 @@ export const personelIslemleriServisi = {
         .eq('id', personelId)
         .single();
 
-      if (personnelError || personnelData?.dukkan_id !== dukkanId) {
+      if (personnelError || (personnelData && personnelData.dukkan_id !== dukkanId)) {
         console.error('Bu personel sizin işletmenize ait değil');
         return [];
       }
@@ -142,8 +144,8 @@ export const personelIslemleriServisi = {
 
       // Additional filter to ensure only operations from this shop are shown
       const filteredData = data.filter(item => 
-        (item.personel?.dukkan_id === dukkanId) && 
-        (!item.musteri || item.musteri?.dukkan_id === dukkanId)
+        (item.personel && item.personel.dukkan_id === dukkanId) && 
+        (!item.musteri || (item.musteri && item.musteri.dukkan_id === dukkanId))
       );
 
       return filteredData || [];
@@ -169,7 +171,7 @@ export const personelIslemleriServisi = {
         .eq('id', musteriId)
         .single();
 
-      if (customerError || customerData?.dukkan_id !== dukkanId) {
+      if (customerError || (customerData && customerData.dukkan_id !== dukkanId)) {
         console.error('Bu müşteri sizin işletmenize ait değil');
         return [];
       }
@@ -192,8 +194,8 @@ export const personelIslemleriServisi = {
 
       // Additional filter to ensure only operations from this shop are shown
       const filteredData = data.filter(item => 
-        (!item.personel || item.personel?.dukkan_id === dukkanId) && 
-        (item.musteri?.dukkan_id === dukkanId)
+        (!item.personel || (item.personel && item.personel.dukkan_id === dukkanId)) && 
+        (item.musteri && item.musteri.dukkan_id === dukkanId)
       );
 
       return filteredData || [];
@@ -610,9 +612,9 @@ export const personelIslemleriServisi = {
           id: op.id,
           amount: op.tutar || 0,
           staffId: op.personel_id,
-          staffName: op.personel?.ad_soyad || 'Unknown',
+          staffName: op.personel ? op.personel.ad_soyad || 'Unknown' : 'Unknown',
           customerName: op.musteri 
-            ? `${op.musteri.first_name} ${op.musteri.last_name || ''}`
+            ? `${op.musteri.first_name || ''} ${op.musteri.last_name || ''}`
             : 'Unknown Customer',
           date: op.created_at
         }));
