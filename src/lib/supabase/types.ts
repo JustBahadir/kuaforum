@@ -144,3 +144,23 @@ export interface CalismaSaati {
   kapali?: boolean;
   created_at?: string;
 }
+
+// Add the missing DTO types
+export interface IslemDto {
+  id?: number;
+  islem_adi: string;
+  kategori_id: number | null;
+  fiyat: number;
+  puan: number;
+  maliyet?: number;
+  sira?: number;
+  dukkan_id?: number;
+}
+
+export interface KategoriDto {
+  id?: number;
+  kategori_adi: string;
+  sira?: number;
+  dukkan_id?: number;
+}
+

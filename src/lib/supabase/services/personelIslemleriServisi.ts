@@ -628,7 +628,6 @@ export const personelIslemleriServisi = {
       }
       
       // Filter out operations for other shops - fixing TypeScript errors
-      // by properly checking each item individually
       const dukkanOperations = allOperations.filter(op => {
         // Fix: Cast to the correct type and check each personel object individually
         const personel = op.personel as { dukkan_id?: number } | null;

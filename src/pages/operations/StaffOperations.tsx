@@ -8,6 +8,7 @@ import { WorkingHours } from "@/components/operations/WorkingHours";
 import { toast } from "sonner";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
+import { IslemDto } from "@/lib/supabase/types";
 
 export default function StaffOperations() {
   const [islemAdi, setIslemAdi] = useState("");
@@ -38,39 +39,39 @@ export default function StaffOperations() {
   });
 
   const { mutate: islemEkle } = useMutation({
-    mutationFn: islemServisi.islemEkle,
+    mutationFn: (islem: Omit<IslemDto, 'id'>) => islemServisi.ekle(islem),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['islemler'] });
       toast.success("İşlem başarıyla eklendi");
       formuSifirla();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error("İşlem eklenirken hata:", error);
       toast.error("İşlem eklenirken hata oluştu: " + (error.message || "Bilinmeyen hata"));
     }
   });
 
   const { mutate: islemGuncelle } = useMutation({
-    mutationFn: ({ id, islem }: { id: number; islem: any }) => 
-      islemServisi.islemGuncelle(id, islem),
+    mutationFn: ({ id, islem }: { id: number; islem: Partial<IslemDto> }) => 
+      islemServisi.guncelle(id, islem),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['islemler'] });
       toast.success("İşlem başarıyla güncellendi");
       formuSifirla();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error("İşlem güncellenirken hata:", error);
       toast.error("İşlem güncellenirken hata oluştu: " + (error.message || "Bilinmeyen hata"));
     }
   });
 
   const { mutate: islemSil } = useMutation({
-    mutationFn: islemServisi.islemSil,
+    mutationFn: (id: number) => islemServisi.sil(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['islemler'] });
       toast.success("İşlem başarıyla silindi");
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error("İşlem silinirken hata:", error);
       toast.error("İşlem silinirken hata oluştu: " + (error.message || "Bilinmeyen hata"));
     }
@@ -160,7 +161,7 @@ export default function StaffOperations() {
 
   const handleServiceFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const islem = {
+    const islem: Omit<IslemDto, 'id'> = {
       islem_adi: islemAdi,
       fiyat,
       maliyet,
