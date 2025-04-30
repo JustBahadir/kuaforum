@@ -10,6 +10,7 @@ export default function AccountNotFound() {
   const [searchParams] = useSearchParams();
   const [isExistingAccount, setIsExistingAccount] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
+  const [countdown, setCountdown] = useState(2);
   
   useEffect(() => {
     const accountExists = searchParams.get("accountExists") === "true";
@@ -17,12 +18,19 @@ export default function AccountNotFound() {
       setIsExistingAccount(true);
       setRedirecting(true);
       
-      // Automatically redirect to login after 2 seconds
-      const timer = setTimeout(() => {
-        navigate("/login?error=account-exists");
-      }, 2000);
+      // Countdown timer
+      const timer = setInterval(() => {
+        setCountdown(prev => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            navigate("/login?error=account-exists");
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
       
-      return () => clearTimeout(timer);
+      return () => clearInterval(timer);
     }
   }, [searchParams, navigate]);
 
@@ -57,6 +65,9 @@ export default function AccountNotFound() {
             <p className="text-center text-blue-500 font-medium text-lg">
               Bu e-posta zaten sistemimizde kayıtlı. Giriş sayfasına yönlendiriliyorsunuz...
             </p>
+            <div className="text-center text-blue-400">
+              <p>{countdown} saniye içinde yönlendirileceksiniz</p>
+            </div>
             <div className="flex justify-center">
               <div className="w-8 h-8 border-4 border-t-blue-500 border-blue-200 rounded-full animate-spin"></div>
             </div>

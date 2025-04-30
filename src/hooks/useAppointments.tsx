@@ -11,7 +11,7 @@ interface UseAppointmentsProps {
   initialDate?: Date | null;
 }
 
-export const useAppointments = ({ initialStatus = 'beklemede', initialDate = null }: UseAppointmentsProps = {}) => {
+export const useAppointments = ({ initialStatus = 'beklemede', initialDate = new Date() }: UseAppointmentsProps = {}) => {
   const [status, setStatus] = useState<RandevuDurumu | 'all'>(initialStatus);
   const [selectedDate, setSelectedDate] = useState<Date | null>(initialDate);
   const [appointments, setAppointments] = useState<Randevu[]>([]);
@@ -90,7 +90,8 @@ export const useAppointments = ({ initialStatus = 'beklemede', initialDate = nul
   }, [fetchAppointments]);
 
   const setDate = (date: Date | null) => {
-    setSelectedDate(date);
+    // Ensure we always set a valid date
+    setSelectedDate(date || new Date());
   };
 
   const setAppointmentStatus = (newStatus: RandevuDurumu | 'all') => {

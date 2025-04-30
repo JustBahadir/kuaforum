@@ -29,7 +29,7 @@ export const shopService = {
     };
 
     // 2. Part 1: Extract first 5 letters from shop name, convert to uppercase
-    const cleanName = turkishToLatin(shopName)
+    const cleanName = turkishToLatin(shopName || "")
       .toUpperCase()
       .replace(/[^\w]/g, ''); // Remove non-alphanumeric chars
     
@@ -44,7 +44,10 @@ export const shopService = {
     const countryCode = "TR";
     
     // Get city code (3 letters) or use provided cityCode or default "XXX"
-    const finalCityCode = cityCode || "XXX";
+    let cityCodeValue = "XXX";
+    if (cityCode) {
+      cityCodeValue = cityCode;
+    }
 
     // 4. Part 3: Get the next branch number (3-digit format)
     const branchNumber = await shopService.getNextBranchNumber();
@@ -59,7 +62,7 @@ export const shopService = {
     
     // 6. Combine all parts with hyphens to create the shop code in the exact format:
     // [İşletmeAdıKısaltması]-[ÜlkeKodu+ŞehirKodu]-[ŞubeNumarası]-[RandomKısaKod]
-    const shopCode = `${namePrefix}-${countryCode}${finalCityCode}-${formattedBranchNumber}-${randomCode}`;
+    const shopCode = `${namePrefix}-${countryCode}${cityCodeValue}-${formattedBranchNumber}-${randomCode}`;
     
     return shopCode;
   },

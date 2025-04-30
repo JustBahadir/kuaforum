@@ -32,14 +32,19 @@ export default function Appointments() {
     setAppointmentStatus, 
     updateStatus,
     currentPersonelId
-  } = useAppointments({ initialStatus: 'all' }); // Default to showing all appointments
+  } = useAppointments({ initialStatus: 'all', initialDate: new Date() }); // Default to today and show all appointments
 
   const handleDateChange = (date: Date | null) => {
-    setDate(date);
+    // Ensure we always have a valid date, default to today if null
+    setDate(date || new Date());
   };
 
   const handleStatusChange = (status: RandevuDurumu | 'all') => {
     setAppointmentStatus(status);
+  };
+
+  const handleGoBack = () => {
+    navigate(-1);
   };
 
   return (
@@ -49,7 +54,7 @@ export default function Appointments() {
           <Button 
             variant="ghost" 
             size="sm" 
-            onClick={() => navigate(-1)}
+            onClick={handleGoBack}
             className="flex items-center gap-1 text-gray-600"
           >
             <ArrowLeft size={16} />
