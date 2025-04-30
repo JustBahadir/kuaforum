@@ -2,7 +2,7 @@
 import { supabase } from '../client';
 import { KategoriDto } from '../types';
 
-export const kategoriServisi = {
+export const kategorilerServisi = {
   async _getCurrentUserDukkanId() {
     try {
       // Get the current user auth data
@@ -167,6 +167,29 @@ export const kategoriServisi = {
     } catch (error) {
       console.error("Kategori silme hatası:", error);
       throw error;
+    }
+  },
+
+  async islemleriGetir() {
+    try {
+      const dukkanId = await this._getCurrentUserDukkanId();
+      if (!dukkanId) {
+        console.warn("No dukkanId found, returning empty islemler list");
+        return [];
+      }
+
+      const { data, error } = await supabase
+        .from('islemler')
+        .select('*')
+        .eq('dukkan_id', dukkanId)
+        .order('sira', { ascending: true });
+
+      if (error) throw error;
+      console.log("Retrieved islemler for shop ID:", dukkanId, "count:", data?.length);
+      return data || [];
+    } catch (error) {
+      console.error("İşlemler getirme hatası:", error);
+      return [];
     }
   }
 };

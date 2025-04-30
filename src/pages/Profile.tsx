@@ -10,6 +10,7 @@ import { useCustomerAuth } from '@/hooks/useCustomerAuth';
 import { useProfileManagement } from '@/hooks/useProfileManagement';
 import { useAuth } from '@/hooks/useAuth';
 import { StaffLayout } from '@/components/ui/staff-layout';
+import { toast } from 'sonner';
 
 export default function Profile() {
   const [activeTab, setActiveTab] = useState('personal');
@@ -44,6 +45,18 @@ export default function Profile() {
       return;
     } catch (error) {
       console.error("Error uploading avatar:", error);
+      toast.error("Profil fotoğrafı yüklenirken bir hata oluştu: " + (error instanceof Error ? error.message : String(error)));
+      throw error;
+    }
+  };
+
+  const handleSave = async (data: any): Promise<void> => {
+    try {
+      await updateProfile(data);
+      toast.success("Profil başarıyla güncellendi");
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      toast.error("Profil güncellenirken bir hata oluştu: " + (error instanceof Error ? error.message : String(error)));
       throw error;
     }
   };
@@ -81,7 +94,7 @@ export default function Profile() {
                     address: profileData?.address,
                     role: profileData?.role,
                   }}
-                  onSave={async (data) => await updateProfile(data)}
+                  onSave={handleSave}
                   onAvatarUpload={handleAvatarUpload}
                   isUploading={false}
                   isSaving={false}

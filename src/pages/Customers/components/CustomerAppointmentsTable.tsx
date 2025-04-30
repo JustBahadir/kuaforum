@@ -1,83 +1,100 @@
 
+import React from "react";
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
+import { tr } from "date-fns/locale";
+import { randevuServisi } from "@/lib/supabase/services/randevuServisi";
 import { useQuery } from "@tanstack/react-query";
-import { randevuServisi } from "@/lib/supabase";
-import { Card } from "@/components/ui/card";
 
-interface CustomerAppointmentsTableProps {
-  customerId: number;
-  limitCount?: number;
-}
-
-export function CustomerAppointmentsTable({ customerId, limitCount }: CustomerAppointmentsTableProps) {
+export function CustomerAppointmentsTable({ customerId }: { customerId: number }) {
+  // Get appointments for this customer
   const { data: appointments = [], isLoading } = useQuery({
-    queryKey: ['customerAppointments', customerId, limitCount],
+    queryKey: [`customer-${customerId}-appointments`],
     queryFn: async () => {
-      // Using the correct method name from randevuServisi
-      const data = await randevuServisi.kendiRandevulariniGetir();
-      // Filter the appointments by customer ID
-      const customerAppointments = data.filter(appointment => appointment.musteri_id === customerId);
-      return limitCount ? customerAppointments.slice(0, limitCount) : customerAppointments;
-    },
-    enabled: !!customerId
+      try {
+        return await randevuServisi.kendiRandevulariniGetir();
+      } catch (error) {
+        console.error("Error fetching customer appointments:", error);
+        return [];
+      }
+    }
   });
+
+  const renderAppointmentStatus = (status: string) => {
+    switch (status) {
+      case "onaylandi":
+        return <Badge className="bg-green-500">Onaylandı</Badge>;
+      case "tamamlandi":
+        return <Badge className="bg-blue-500">Tamamlandı</Badge>;
+      case "iptal":
+        return <Badge variant="destructive">İptal Edildi</Badge>;
+      case "beklemede":
+        return <Badge variant="outline" className="text-yellow-600 border-yellow-600">Beklemede</Badge>;
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
 
   if (isLoading) {
     return (
-      <div className="flex justify-center p-4">
-        <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
+      <div className="flex justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-purple-500 border-t-transparent"></div>
       </div>
     );
   }
 
-  if (appointments.length === 0) {
+  // Format date for display
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "-";
+    try {
+      return format(new Date(dateString), "dd.MM.yyyy", { locale: tr });
+    } catch (error) {
+      return "-";
+    }
+  };
+  
+  // Sort appointments by date (newest first)
+  const sortedAppointments = [...appointments].sort((a, b) => {
+    return new Date(b.tarih).getTime() - new Date(a.tarih).getTime();
+  });
+
+  if (!sortedAppointments.length) {
     return (
-      <div className="text-center p-4 text-gray-500">
-        Henüz randevu kaydı bulunmuyor.
+      <div className="text-center py-6 text-muted-foreground">
+        Bu müşterinin randevusu bulunmamaktadır.
       </div>
     );
   }
 
   return (
-    <div className="rounded-md border overflow-hidden">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
-          <tr>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tarih</th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Saat</th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlem</th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Durum</th>
-          </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
-          {appointments.map((appointment) => (
-            <tr key={appointment.id} className="hover:bg-gray-50">
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                {new Date(appointment.tarih).toLocaleDateString('tr-TR')}
-              </td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                {appointment.saat}
-              </td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                {/* Placeholder for service name extraction from islemler JSON */}
-                {appointment.islemler?.length > 0 ? 'Çeşitli İşlemler' : '-'}
-              </td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm">
-                <span className={`px-2 py-1 rounded-full text-xs ${
-                  appointment.durum === 'tamamlandi' ? 'bg-green-100 text-green-800' :
-                  appointment.durum === 'iptal' ? 'bg-red-100 text-red-800' :
-                  appointment.durum === 'beklemede' ? 'bg-yellow-100 text-yellow-800' :
-                  'bg-blue-100 text-blue-800'
-                }`}>
-                  {appointment.durum === 'tamamlandi' ? 'Tamamlandı' :
-                   appointment.durum === 'iptal' ? 'İptal' :
-                   appointment.durum === 'beklemede' ? 'Beklemede' :
-                   'Onaylandı'}
-                </span>
-              </td>
-            </tr>
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Tarih</TableHead>
+            <TableHead>Saat</TableHead>
+            <TableHead>Personel</TableHead>
+            <TableHead>Hizmet(ler)</TableHead>
+            <TableHead>Durum</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {sortedAppointments.map((appointment) => (
+            <TableRow key={appointment.id}>
+              <TableCell>{formatDate(appointment.tarih)}</TableCell>
+              <TableCell>{appointment.saat.substring(0, 5)}</TableCell>
+              <TableCell>{appointment.personel?.ad_soyad || "-"}</TableCell>
+              <TableCell>
+                {Array.isArray(appointment.islemler) && appointment.islemler.length
+                  ? `${appointment.islemler.length} hizmet`
+                  : "-"}
+              </TableCell>
+              <TableCell>{renderAppointmentStatus(appointment.durum)}</TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }

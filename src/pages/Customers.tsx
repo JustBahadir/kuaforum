@@ -36,7 +36,7 @@ export default function Customers() {
     }
   }, [location, navigate]);
 
-  // Add a separate function to get the current shop ID
+  // Get the current shop ID
   const getCurrentShopId = async () => {
     if (isletmeData?.id) return isletmeData.id;
     
@@ -66,6 +66,7 @@ export default function Customers() {
           return [];
         }
         
+        console.log("Fetching customers with shopId:", shopId);
         const result = await musteriServisi.hepsiniGetir(shopId);
         console.log("Fetched customers:", result);
         return result;
@@ -75,8 +76,8 @@ export default function Customers() {
       }
     },
     refetchOnWindowFocus: false,
-    staleTime: 5000,
-    retry: 1
+    staleTime: 1000, // Reduce stale time to refresh more often
+    retry: 2
   });
 
   const filteredCustomers = searchText
@@ -95,6 +96,7 @@ export default function Customers() {
   };
 
   const handleCustomerAdded = async () => {
+    console.log("Customer added, refreshing list");
     await refetch();
     handleCloseNewCustomerModal();
   };
@@ -156,6 +158,12 @@ export default function Customers() {
                 </div>
               </CardContent>
             </Card>
+            
+            <div className="mb-3">
+              <p className="text-sm text-muted-foreground">
+                Toplam {filteredCustomers.length} müşteri bulundu
+              </p>
+            </div>
             
             <CustomerList 
               customers={filteredCustomers} 

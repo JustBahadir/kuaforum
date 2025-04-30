@@ -1,5 +1,7 @@
+
 import { supabase } from '../client';
 import { Musteri } from '../types';
+import { toast } from 'sonner';
 
 export const musteriServisi = {
   // Helper function to get the current user's dukkan_id
@@ -46,6 +48,7 @@ export const musteriServisi = {
   
   async hepsiniGetir(dukkanId?: number) {
     try {
+      // Get the current user's dukkanId if one isn't provided
       const userDukkanId = dukkanId || await this._getCurrentUserDukkanId();
       if (!userDukkanId) {
         console.error("Kullanıcının işletme bilgisi bulunamadı");
@@ -65,7 +68,7 @@ export const musteriServisi = {
         throw error;
       }
       
-      console.log(`${data.length} müşteri başarıyla getirildi`);
+      console.log(`${data.length} müşteri başarıyla getirildi:`, data);
       return data || [];
     } catch (err) {
       console.error("Müşteriler getirme sırasında hata:", err);
@@ -158,6 +161,9 @@ export const musteriServisi = {
         dukkan_id: dukkanId,
       };
 
+      console.log("İşletme ID:", dukkanId);
+      console.log("Eklenecek veri:", dataForInsert);
+
       const { data, error } = await supabase
         .from('musteriler')
         .insert([dataForInsert])
@@ -169,9 +175,11 @@ export const musteriServisi = {
       }
       
       console.log("Eklenen müşteri:", data[0]);
+      toast.success("Müşteri başarıyla eklendi");
       return data[0];
     } catch (err) {
       console.error("Müşteri eklenirken hata:", err);
+      toast.error("Müşteri eklenirken bir hata oluştu: " + (err instanceof Error ? err.message : "Bilinmeyen hata"));
       throw err;
     }
   },

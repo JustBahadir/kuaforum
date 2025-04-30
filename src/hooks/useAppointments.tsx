@@ -1,173 +1,108 @@
-import { useState, useEffect, useCallback } from 'react';
-import { randevuServisi, personelServisi } from '@/lib/supabase';
+
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from './useAuth';
+import { randevuServisi } from '@/lib/supabase/services/randevuServisi';
 import { toast } from 'sonner';
-import { Randevu, RandevuDurumu } from '@/lib/supabase/types';
-import { useCustomerAuth } from '@/hooks/useCustomerAuth';
-import { supabase } from '@/lib/supabase/client';
 
-interface UseAppointmentsProps {
-  initialStatus?: RandevuDurumu | 'all';
-  initialDate?: Date | null;
-}
+export type AppointmentFilters = {
+  status?: string | null;
+  date?: Date | null;
+  personnelId?: number | null;
+  customerId?: number | null;
+};
 
-export const useAppointments = ({ initialStatus = 'all', initialDate = new Date() }: UseAppointmentsProps = {}) => {
-  const [status, setStatus] = useState<RandevuDurumu | 'all'>(initialStatus);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(initialDate);
-  const [appointments, setAppointments] = useState<Randevu[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
+export function useAppointments(initialFilters: AppointmentFilters = {}) {
   const { user } = useAuth();
-  const { dukkanId } = useCustomerAuth();
-  const [personelId, setPersonelId] = useState<number | null>(null);
+  const [filters, setFilters] = useState<AppointmentFilters>(initialFilters);
+  const userRole = user?.user_metadata?.role || 'customer';
 
-  const fetchAppointments = useCallback(async () => {
-    if (!user) return;
-
-    setLoading(true);
-    setError(null);
+  // Determine the fetch function based on user role
+  const fetchAppointments = async () => {
+    if (!user) {
+      return [];
+    }
 
     try {
-      let fetchedAppointments: Randevu[] = [];
+      let appointments = [];
 
-      if (user.user_metadata?.role === 'admin') {
-        if (dukkanId) {
-          // Ensure admin only sees their own shop's appointments
-          fetchedAppointments = await randevuServisi.dukkanRandevulariniGetir(dukkanId);
-        } else {
-          console.warn("İşletme ID bulunamadı");
-          setLoading(false);
-          return;
-        }
-      } else if (user.user_metadata?.role === 'staff') {
-        if (personelId && dukkanId) {
-          // For staff, we need to get appointments assigned to them
-          // Since there's no direct personelRandevulariniGetir method, we'll filter from dukkanRandevulariniGetir
-          const allAppointments = await randevuServisi.dukkanRandevulariniGetir(dukkanId);
-          fetchedAppointments = allAppointments.filter(appt => appt.personel_id === personelId);
-        } else {
-          console.warn("Personel veya İşletme bilgisi bulunamadı");
-          setLoading(false);
-          return;
-        }
+      if (userRole === 'admin') {
+        // Admin sees all appointments for their shop
+        console.log('Fetching appointments for admin');
+        appointments = await randevuServisi.dukkanRandevulariniGetir();
+      } else if (userRole === 'staff') {
+        // Staff sees all appointments for their shop
+        console.log('Fetching appointments for staff');
+        appointments = await randevuServisi.dukkanRandevulariniGetir();
       } else {
-        fetchedAppointments = await randevuServisi.kendiRandevulariniGetir();
+        // Customers see only their own appointments
+        console.log('Fetching appointments for customer');
+        appointments = await randevuServisi.kendiRandevulariniGetir();
       }
 
-      let filteredAppointments = fetchedAppointments;
-
-      if (selectedDate) {
-        const formattedDate = selectedDate.toISOString().split('T')[0];
-        filteredAppointments = filteredAppointments.filter(
-          (appointment) => appointment.tarih && appointment.tarih.split('T')[0] === formattedDate
-        );
-      }
-
-      // Updated filtering for "beklemede" to include both "beklemede" and "onaylandi" statuses
-      if (status !== 'all') {
-        if (status === 'beklemede') {
-          filteredAppointments = filteredAppointments.filter(
-            (appointment) => appointment.durum !== 'tamamlandi' && appointment.durum !== 'iptal_edildi' && appointment.durum !== 'iptal'
-          );
-        } else {
-          filteredAppointments = filteredAppointments.filter(
-            (appointment) => appointment.durum === status
-          );
-        }
-      }
-
-      setAppointments(filteredAppointments);
-    } catch (err: any) {
-      setError(err);
-      console.error("Randevu fetch hatası:", err);
-      toast.error("Randevular yüklenirken bir hata oluştu");
-    } finally {
-      setLoading(false);
-    }
-  }, [status, selectedDate, user, personelId, dukkanId]);
-
-  useEffect(() => {
-    if (user && user.user_metadata?.role === 'staff') {
-      const fetchPersonelId = async () => {
-        try {
-          const personel = await personelServisi.getirByAuthId(user.id);
-          if (personel?.id) {
-            setPersonelId(personel.id);
-          } else {
-            console.warn("Personel bilgisi bulunamadı");
-          }
-        } catch (error) {
-          console.error("Error fetching personel ID:", error);
-          toast.error("Personel bilgileri alınırken bir hata oluştu");
-        }
-      };
-      fetchPersonelId();
-    }
-  }, [user]);
-
-  useEffect(() => {
-    fetchAppointments();
-  }, [fetchAppointments]);
-
-  const setDate = (date: Date | null) => {
-    // Ensure we always set a valid date
-    setSelectedDate(date || new Date());
-  };
-
-  const setAppointmentStatus = (newStatus: RandevuDurumu | 'all') => {
-    setStatus(newStatus);
-  };
-
-  const updateStatus = async (id: number, status: RandevuDurumu) => {
-    if (!id) {
-      console.error("Cannot update appointment without valid ID");
-      toast.error("Geçersiz randevu kimliği");
-      return null;
-    }
-    
-    try {
-      // For security, verify that the appointment belongs to this shop before updating
-      const { data: appointmentData } = await supabase
-        .from('randevular')
-        .select('dukkan_id')
-        .eq('id', id)
-        .single();
-      
-      if (appointmentData && appointmentData.dukkan_id !== dukkanId) {
-        throw new Error("Bu randevu sizin işletmenize ait değil");
-      }
-      
-      const updatedAppointment = await randevuServisi.guncelle(id, { durum: status });
-      if (updatedAppointment) {
-        setAppointments((prevAppointments) =>
-          prevAppointments.map((appointment) =>
-            appointment.id === id ? { ...appointment, durum: status } : appointment
-          )
-        );
-        toast.success("Randevu durumu başarıyla güncellendi");
-        return updatedAppointment;
-      } else {
-        toast.error("Randevu durumu güncellenirken bir hata oluştu");
-        return null;
-      }
+      return appointments;
     } catch (error) {
-      console.error("Error updating appointment status:", error);
-      toast.error("Randevu durumu güncellenirken bir hata oluştu");
-      return null;
+      console.error('Error fetching appointments:', error);
+      toast.error('Randevular yüklenirken bir hata oluştu.');
+      return [];
     }
   };
+
+  const { 
+    data: appointments = [], 
+    isLoading,
+    isError,
+    refetch
+  } = useQuery({
+    queryKey: ['appointments', userRole, user?.id],
+    queryFn: fetchAppointments,
+    enabled: !!user,
+    staleTime: 60000, // 1 minute
+  });
+
+  // Apply filters to the fetched appointments
+  const filteredAppointments = appointments.filter(appointment => {
+    let matches = true;
+
+    // Filter by status if specified
+    if (filters.status && appointment.durum !== filters.status) {
+      matches = false;
+    }
+
+    // Filter by date if specified
+    if (filters.date) {
+      const filterDate = new Date(filters.date);
+      const appointmentDate = new Date(appointment.tarih);
+
+      // Compare year, month, day only
+      if (
+        filterDate.getFullYear() !== appointmentDate.getFullYear() ||
+        filterDate.getMonth() !== appointmentDate.getMonth() ||
+        filterDate.getDate() !== appointmentDate.getDate()
+      ) {
+        matches = false;
+      }
+    }
+
+    // Filter by personnelId if specified
+    if (filters.personnelId && appointment.personel_id !== filters.personnelId) {
+      matches = false;
+    }
+
+    // Filter by customerId if specified
+    if (filters.customerId && appointment.musteri_id !== filters.customerId) {
+      matches = false;
+    }
+
+    return matches;
+  });
 
   return {
-    appointments,
-    loading,
-    error,
-    status,
-    selectedDate,
-    setDate: (date: Date | null) => setSelectedDate(date || new Date()),
-    setAppointmentStatus,
-    updateStatus,
-    currentPersonelId: personelId,
-    dukkanId
+    appointments: filteredAppointments,
+    isLoading,
+    isError,
+    refetch,
+    filters,
+    setFilters,
   };
-};
+}

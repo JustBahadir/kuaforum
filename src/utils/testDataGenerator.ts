@@ -1,5 +1,39 @@
+
 import { supabase } from "@/lib/supabase/client";
 import { KategoriDto, IslemDto, PersonelIslemi } from "@/lib/supabase/types";
+
+interface Personel {
+  id: number;
+  ad_soyad: string;
+  telefon: string;
+  eposta: string;
+  adres: string;
+  personel_no: string;
+  maas: number;
+  prim_yuzdesi: number;
+  calisma_sistemi: string;
+  created_at: string;
+  dukkan_id: number;
+}
+
+interface Islem {
+  id: number;
+  islem_adi: string;
+  kategori_id: number;
+  fiyat: number;
+  puan: number;
+  sira: number;
+  created_at: string;
+  dukkan_id: number;
+}
+
+interface IslemKategori {
+  id: number;
+  kategori_adi: string;
+  sira: number;
+  created_at: string;
+  dukkan_id: number;
+}
 
 const generatePersonel = (count: number): Personel[] => {
   return Array.from({ length: count }, (_, i) => ({

@@ -30,6 +30,12 @@ export async function setupStorageBuckets() {
           console.error("Error creating profile-photos bucket:", error);
         } else {
           console.log("Created profile-photos bucket");
+          
+          // Add public policy after bucket creation
+          const { error: policyError } = await supabase.storage.from('profile-photos').createSignedUploadUrl('test.jpg');
+          if (policyError) {
+            console.warn("Note: May need to set up bucket policies manually:", policyError);
+          }
         }
       } catch (err) {
         console.error("Failed to create profile-photos bucket:", err);
@@ -49,6 +55,12 @@ export async function setupStorageBuckets() {
           console.error("Error creating shop-photos bucket:", error);
         } else {
           console.log("Created shop-photos bucket");
+          
+          // Add public policy after bucket creation
+          const { error: policyError } = await supabase.storage.from('shop-photos').createSignedUploadUrl('test.jpg');
+          if (policyError) {
+            console.warn("Note: May need to set up bucket policies manually:", policyError);
+          }
         }
       } catch (err) {
         console.error("Failed to create shop-photos bucket:", err);
