@@ -58,6 +58,12 @@ export const useCustomerOperations = ({ customerId, limit = 10 }: UseCustomerOpe
         // Process operations to match the expected format
         if (operationsData && operationsData.length > 0) {
           const enhancedOperations = operationsData.map(operation => {
+            // Explicitly type the personel object to fix TypeScript error
+            interface PersonelData {
+              ad_soyad?: string;
+            }
+            const personel = operation.personel as PersonelData | null;
+            
             return {
               id: operation.id,
               customer_id: operation.musteri_id,
@@ -65,7 +71,7 @@ export const useCustomerOperations = ({ customerId, limit = 10 }: UseCustomerOpe
               description: operation.aciklama,
               created_at: operation.created_at,
               staff_id: operation.personel_id,
-              staff_name: operation.personel?.ad_soyad || 'Bilinmiyor',
+              staff_name: personel?.ad_soyad || 'Bilinmiyor',
               status: 'tamamlandı',
               payment_method: operation.odeme_yontemi || 'nakit',
               notes: operation.notlar

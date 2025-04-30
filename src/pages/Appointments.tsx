@@ -88,7 +88,6 @@ export default function Appointments() {
           subtitle="Randevuları görüntüleyin, düzenleyin ve yönetin"
           button={{ 
             label: "Yeni Randevu", 
-            icon: <Plus className="h-4 w-4 mr-2" />,
             onClick: () => setDialogOpen(true)
           }}
         />

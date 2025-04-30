@@ -55,10 +55,21 @@ export const personelIslemleriServisi = {
       }
 
       // Additional filter to ensure only operations from this shop are shown
-      const filteredData = data.filter(item => 
-        (item.personel && item.personel.dukkan_id === dukkanId) && 
-        (!item.musteri || (item.musteri && item.musteri.dukkan_id === dukkanId))
-      );
+      interface PersonelData {
+        dukkan_id?: number;
+      }
+      
+      interface MusteriData {
+        dukkan_id?: number;
+      }
+      
+      const filteredData = data.filter(item => {
+        const personel = item.personel as PersonelData | null;
+        const musteri = item.musteri as MusteriData | null;
+        
+        return (personel && personel.dukkan_id === dukkanId) && 
+               (!musteri || (musteri && musteri.dukkan_id === dukkanId));
+      });
 
       return filteredData || [];
     } catch (err) {
@@ -93,8 +104,19 @@ export const personelIslemleriServisi = {
       }
 
       // Ensure the operation belongs to current shop
-      if (data.personel && data.personel.dukkan_id !== dukkanId || 
-          data.musteri && data.musteri.dukkan_id !== dukkanId) {
+      interface PersonelData {
+        dukkan_id?: number;
+      }
+      
+      interface MusteriData {
+        dukkan_id?: number;
+      }
+      
+      const personel = data.personel as PersonelData | null;
+      const musteri = data.musteri as MusteriData | null;
+
+      if ((personel && personel.dukkan_id !== dukkanId) || 
+          (musteri && musteri.dukkan_id !== dukkanId)) {
         throw new Error('Bu işlem sizin işletmenize ait değil');
       }
 
@@ -193,10 +215,21 @@ export const personelIslemleriServisi = {
       }
 
       // Additional filter to ensure only operations from this shop are shown
-      const filteredData = data.filter(item => 
-        (!item.personel || (item.personel && item.personel.dukkan_id === dukkanId)) && 
-        (item.musteri && item.musteri.dukkan_id === dukkanId)
-      );
+      interface PersonelData {
+        dukkan_id?: number;
+      }
+      
+      interface MusteriData {
+        dukkan_id?: number;
+      }
+      
+      const filteredData = data.filter(item => {
+        const personel = item.personel as PersonelData | null;
+        const musteri = item.musteri as MusteriData | null;
+        
+        return (!personel || (personel && personel.dukkan_id === dukkanId)) && 
+               (musteri && musteri.dukkan_id === dukkanId);
+      });
 
       return filteredData || [];
     } catch (err) {
@@ -575,8 +608,14 @@ export const personelIslemleriServisi = {
       }
       
       // Filter out operations for other shops
+      interface PersonelData {
+        ad_soyad?: string;
+        dukkan_id?: number;
+      }
+      
       const dukkanOperations = allOperations.filter(op => {
-        return op.personel && op.personel.dukkan_id === dukkanId;
+        const personel = op.personel as PersonelData | null;
+        return personel && personel.dukkan_id === dukkanId;
       });
       
       // Calculate statistics
@@ -606,18 +645,28 @@ export const personelIslemleriServisi = {
         .slice(0, 5);
       
       // Get recent operations
+      interface MusteriData {
+        first_name?: string;
+        last_name?: string;
+      }
+      
       const recentOperations = dukkanOperations
         .slice(0, 5)
-        .map(op => ({
-          id: op.id,
-          amount: op.tutar || 0,
-          staffId: op.personel_id,
-          staffName: op.personel ? op.personel.ad_soyad || 'Unknown' : 'Unknown',
-          customerName: op.musteri 
-            ? `${op.musteri.first_name || ''} ${op.musteri.last_name || ''}`
-            : 'Unknown Customer',
-          date: op.created_at
-        }));
+        .map(op => {
+          const personel = op.personel as PersonelData | null;
+          const musteri = op.musteri as MusteriData | null;
+          
+          return {
+            id: op.id,
+            amount: op.tutar || 0,
+            staffId: op.personel_id,
+            staffName: personel ? personel.ad_soyad || 'Unknown' : 'Unknown',
+            customerName: musteri 
+              ? `${musteri.first_name || ''} ${musteri.last_name || ''}`
+              : 'Unknown Customer',
+            date: op.created_at
+          };
+        });
       
       return {
         totalRevenue,
