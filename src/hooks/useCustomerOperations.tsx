@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { formatCurrency } from '@/lib/utils';
+import { useCustomerAuth } from '@/hooks/useCustomerAuth';
 
 export interface CustomerOperation {
   id: number;
@@ -25,20 +26,22 @@ export const useCustomerOperations = ({ customerId, limit = 10 }: UseCustomerOpe
   const [operations, setOperations] = useState<CustomerOperation[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<Error | null>(null);
+  const { dukkanId } = useCustomerAuth();
 
   useEffect(() => {
     const fetchOperations = async () => {
-      if (!customerId) return;
+      if (!customerId || !dukkanId) return;
 
       setLoading(true);
       setError(null);
 
       try {
-        // Fetch operations for the customer
+        // Fetch operations for the customer with proper dukkanId isolation
         const { data: operationsData, error: operationsError } = await supabase
           .from('islemler')
           .select('*')
           .eq('musteri_id', customerId)
+          .eq('dukkan_id', dukkanId)  // Add shop isolation
           .order('created_at', { ascending: false })
           .limit(limit);
 
@@ -55,6 +58,7 @@ export const useCustomerOperations = ({ customerId, limit = 10 }: UseCustomerOpe
                   .from('personel')
                   .select('ad_soyad')
                   .eq('id', operation.personel_id)
+                  .eq('dukkan_id', dukkanId) // Add shop isolation for personnel too
                   .maybeSingle();
 
                 if (!staffError && staffData) {
@@ -90,7 +94,7 @@ export const useCustomerOperations = ({ customerId, limit = 10 }: UseCustomerOpe
     };
 
     fetchOperations();
-  }, [customerId, limit]);
+  }, [customerId, limit, dukkanId]);
 
   return { operations, loading, error };
 };

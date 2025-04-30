@@ -46,7 +46,7 @@ export function PersonnelDialog({ open, onOpenChange }: PersonnelDialogProps) {
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
             Personel eklemek için, personellerinizin dükkan kodunuzu kullanarak üye olmalarını sağlayın. 
-            Dükkanınızın kodunu Dükkan Ayarları sayfasından öğrenebilirsiniz.
+            Dükkanınızın kodunu İşletme Ayarları sayfasından öğrenebilirsiniz.
           </AlertDescription>
         </Alert>
         
@@ -56,7 +56,7 @@ export function PersonnelDialog({ open, onOpenChange }: PersonnelDialogProps) {
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              Yalnızca dükkan yöneticileri personel ekleyebilir.
+              Yalnızca İşletme Sahipleri personel ekleyebilir.
             </AlertDescription>
           </Alert>
         )}

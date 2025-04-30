@@ -70,6 +70,38 @@ export function AppLayout({ children, userRole }: AppLayoutProps) {
       ];
     }
     
+    // Admin (İşletme Sahibi) specific items
+    if (userRole === 'admin') {
+      return [
+        {
+          title: "Ana Sayfa",
+          href: "/dashboard",
+          icon: <Home className="w-4 h-4" />
+        },
+        ...commonItems,
+        {
+          title: "Müşteriler",
+          href: "/customers",
+          icon: <Users className="w-4 h-4" />
+        },
+        {
+          title: "Personel",
+          href: "/personnel",
+          icon: <Users className="w-4 h-4" />
+        },
+        {
+          title: "Salon Ayarları",
+          href: "/operations/staff",
+          icon: <Settings className="w-4 h-4" />
+        },
+        {
+          title: "İşletme Ayarları",
+          href: "/shop-settings",
+          icon: <Settings className="w-4 h-4" />
+        }
+      ];
+    }
+    
     return commonItems;
   };
 

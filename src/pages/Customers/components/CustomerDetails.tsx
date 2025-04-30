@@ -1,177 +1,174 @@
 
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  Card, CardHeader, CardTitle, CardContent, CardDescription, 
-  CardFooter 
-} from "@/components/ui/card";
+import React, { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { musteriServisi, personelIslemleriServisi } from "@/lib/supabase";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useQuery } from '@tanstack/react-query';
-import { toast } from 'sonner';
-import CustomerOperationsTable from './CustomerOperationsTable';
+import { Pencil, Trash2, Alert } from "lucide-react";
+import { CustomerPersonalInfo } from "./CustomerPersonalInfo";
+import { CustomerOperationsTable } from "./CustomerOperationsTable";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EditCustomerForm } from "./EditCustomerForm";
+import { toast } from "sonner";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 
-// Add stub components for any missing components used in this file
-const CustomerProfile = ({ customer }: { customer: any }) => (
-  <div className="space-y-4">
-    {/* Basic customer info display */}
-    <div className="grid grid-cols-3 items-center border-b py-2">
-      <div className="font-medium">Ad Soyad</div>
-      <div className="col-span-2">
-        {customer?.first_name || ''} {customer?.last_name || ''}
-      </div>
-    </div>
-    {/* More customer info rows... */}
-  </div>
-);
+interface CustomerDetailsProps {
+  customerId: number;
+  onUpdate?: () => void;
+  onDelete?: () => void;
+}
 
-const CustomerPersonalData = ({ customerId }: { customerId: number | string }) => (
-  <div className="space-y-4">
-    <p>Müşteri kişisel bilgileri yükleniyor...</p>
-  </div>
-);
-
-const CustomerPhotoGallery = ({ customerId }: { customerId: number | string }) => (
-  <div className="space-y-4">
-    <p>Fotoğraflar yakında burada görüntülenecek...</p>
-  </div>
-);
-
-const CustomerLoyaltyCard = ({ customerId, expanded }: { customerId: number | string, expanded: boolean }) => (
-  <div className="space-y-4">
-    <p>Sadakat programı bilgileri yakında burada görüntülenecek...</p>
-  </div>
-);
-
-const PhoneInputField = ({ value, onChange, placeholder, id }: any) => (
-  <input 
-    type="tel" 
-    value={value || ''} 
-    onChange={(e) => onChange(e.target.value)}
-    placeholder={placeholder} 
-    id={id} 
-    className="border rounded p-2 w-full"
-  />
-);
-
-// Mock services for stub functionality
-const musteriServisi = {
-  getirById: async (id: number | string) => ({ id, first_name: 'Test', last_name: 'Müşteri' }),
-  guncelle: async (id: number | string, data: any) => ({ success: true })
-};
-
-const customerPersonalDataService = {
-  getCustomerPersonalData: async (id: number | string) => ({}),
-  updateCustomerPersonalData: async (id: number | string, data: any) => ({ success: true })
-};
-
-const islemServisi = {
-  hepsiniGetir: async () => []
-};
-
-export function CustomerDetails(props: { customerId?: number | string }) {
-  const [activeTab, setActiveTab] = useState("basic");
-  const params = useParams<{ id: string }>();
-  const navigate = useNavigate();
-
-  // Convert customerId to string where needed because Supabase expects string keys for eq filters
-  const customerId = props.customerId !== undefined ? props.customerId : params.id ? parseInt(params.id) : undefined;
-
-  const { 
-    data: customer, 
-    isLoading: isLoadingCustomer,
-    error: customerError
-  } = useQuery({
+export function CustomerDetails({ customerId, onUpdate, onDelete }: CustomerDetailsProps) {
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const { userRole } = useCustomerAuth();
+  
+  const { data: customer, isLoading, error } = useQuery({
     queryKey: ['customer', customerId],
-    queryFn: async () => {
-      if (!customerId) throw new Error("No customer ID provided");
-      return musteriServisi.getirById(customerId);
-    },
+    queryFn: () => musteriServisi.getirById(customerId),
     enabled: !!customerId,
   });
-  
-  // This component is quite large and has many functionality issues
-  // For now, we'll return a simplified version to prevent build errors
-  if (isLoadingCustomer) {
-    return <div>Loading customer details...</div>;
+
+  const { data: operations = [] } = useQuery({
+    queryKey: ['customer-operations', customerId],
+    queryFn: async () => {
+      try {
+        return await personelIslemleriServisi.musteriIslemleriGetir(customerId);
+      } catch (error) {
+        console.error("Müşteri işlemleri getirilirken hata:", error);
+        return [];
+      }
+    },
+    enabled: !!customerId
+  });
+
+  const handleDelete = async () => {
+    if (!customerId) return;
+    
+    try {
+      await musteriServisi.sil(customerId);
+      toast.success("Müşteri başarıyla silindi");
+      setIsDeleteDialogOpen(false);
+      if (onDelete) onDelete();
+    } catch (error) {
+      console.error("Müşteri silinirken hata:", error);
+      toast.error("Müşteri silinirken bir hata oluştu");
+    }
+  };
+
+  const handleCustomerUpdated = () => {
+    if (onUpdate) onUpdate();
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-8 w-1/3" />
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-2/3" />
+              <Skeleton className="h-4 w-1/2" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
-  if (!customer || customerError) {
-    return <div>Error loading customer details</div>;
+  if (error || !customer) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-2 text-destructive mb-2">
+            <Alert className="h-4 w-4" />
+            <p className="font-semibold">Müşteri bilgileri yüklenemedi</p>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Müşteri bilgileri getirilirken bir hata oluştu. Lütfen daha sonra tekrar deneyin.
+          </p>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
-    <div className="space-y-4 md:space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h2 className="text-xl md:text-2xl font-bold">
-            {customer.first_name} {customer.last_name}
-          </h2>
-          <p className="text-sm text-gray-500">Müşteri #{customer.id}</p>
-        </div>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">
+          {customer.first_name} {customer.last_name}
+        </h2>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm">Mesaj Gönder</Button>
-          <Button size="sm">Randevu Oluştur</Button>
+          <Button 
+            size="sm" 
+            variant="outline" 
+            onClick={() => setIsEditDialogOpen(true)}
+          >
+            <Pencil className="h-4 w-4 mr-1" />
+            Düzenle
+          </Button>
+          
+          {userRole === 'admin' && (
+            <Button 
+              size="sm" 
+              variant="destructive" 
+              onClick={() => setIsDeleteDialogOpen(true)}
+            >
+              <Trash2 className="h-4 w-4 mr-1" />
+              Sil
+            </Button>
+          )}
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-4 md:grid-cols-5 mb-4">
-          <TabsTrigger value="basic">Temel Bilgiler</TabsTrigger>
-          <TabsTrigger value="detailed">Detaylı Bilgiler</TabsTrigger>
-          <TabsTrigger value="operations">İşlem Geçmişi</TabsTrigger>
-          <TabsTrigger value="photos">Fotoğraflar</TabsTrigger>
-          <TabsTrigger value="loyalty">Sadakat & Puanlar</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="basic">
-          <Card>
-            <CardHeader>
-              <CardTitle>Müşteri Bilgileri</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <CustomerProfile customer={customer} />
-            </CardContent>
-          </Card>
-        </TabsContent>
+      <CustomerPersonalInfo customer={customer} />
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>İşlem Geçmişi</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <CustomerOperationsTable operations={operations} />
+        </CardContent>
+      </Card>
 
-        <TabsContent value="detailed">
-          <Card>
-            <CardHeader>
-              <CardTitle>Detaylı Bilgiler</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {customerId && <CustomerPersonalData customerId={customerId} />}
-            </CardContent>
-          </Card>
-        </TabsContent>
+      <EditCustomerForm 
+        customer={customer}
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        onSuccess={handleCustomerUpdated}
+      />
 
-        <TabsContent value="operations">
-          {customerId && <CustomerOperationsTable customerId={customerId} />}
-        </TabsContent>
-
-        <TabsContent value="photos">
-          <Card>
-            <CardHeader>
-              <CardTitle>Müşteri Fotoğrafları</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {customerId && <CustomerPhotoGallery customerId={customerId} />}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="loyalty">
-          <Card>
-            <CardHeader>
-              <CardTitle>Sadakat Programı ve Puanlar</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {customerId && <CustomerLoyaltyCard customerId={customerId} expanded={true} />}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Müşteriyi Sil</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bu müşteriyi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz ve 
+              müşteriye ait tüm veriler kalıcı olarak silinecektir.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Vazgeç</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
+              Sil
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

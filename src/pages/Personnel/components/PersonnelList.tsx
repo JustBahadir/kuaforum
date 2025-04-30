@@ -21,36 +21,44 @@ export function PersonnelList({
   personnel: externalPersonnel,
   onPersonnelSelect
 }: PersonnelListProps) {
-  const { userRole } = useCustomerAuth();
+  const { userRole, dukkanId } = useCustomerAuth();
   const [isAddPersonnelDialogOpen, setIsAddPersonnelDialogOpen] = useState(false);
   const [isPersonnelDetailsDialogOpen, setIsPersonnelDetailsDialogOpen] = useState(false);
   const [selectedPersonnel, setSelectedPersonnel] = useState<any>(null);
   const [search, setSearch] = useState("");
   const queryClient = useQueryClient();
+  
   const {
     data: personeller = [],
     isLoading,
     refetch: refreshList
   } = useQuery({
-    queryKey: ['personeller'],
-    queryFn: () => personelServisi.hepsiniGetir(),
-    enabled: !externalPersonnel
+    queryKey: ['personeller', dukkanId],
+    queryFn: () => personelServisi.hepsiniGetir(dukkanId),
+    enabled: !externalPersonnel && !!dukkanId
   });
+  
   const {
     data: personelIslemleri = []
   } = useQuery({
-    queryKey: ['personel-islemleri', 'last-30-days'],
+    queryKey: ['personel-islemleri', 'last-30-days', dukkanId],
     queryFn: async () => {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      const data = await personelIslemleriServisi.hepsiniGetir();
+      
+      if (!dukkanId) return [];
+      
+      const data = await personelIslemleriServisi.hepsiniGetir(dukkanId);
       return data.filter(islem => {
         const islemDate = new Date(islem.created_at || '');
         return islemDate >= thirtyDaysAgo;
       });
-    }
+    },
+    enabled: !!dukkanId
   });
+  
   const personnelData = externalPersonnel || personeller;
+  
   const handlePersonnelSelect = (personnel: any) => {
     setSelectedPersonnel(personnel);
     setIsPersonnelDetailsDialogOpen(true);
@@ -58,13 +66,14 @@ export function PersonnelList({
       onPersonnelSelect(personnel.id);
     }
   };
+  
   const deletePersonnelMutation = useMutation({
     mutationFn: async (id: number) => {
       return await personelServisi.sil(id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['personeller']
+        queryKey: ['personeller', dukkanId]
       });
       toast.success("Personel başarıyla silindi.");
     },
@@ -73,15 +82,20 @@ export function PersonnelList({
       console.error("Error deleting personnel:", error);
     }
   });
+  
   const handleAddPersonnelSubmit = async (values: any) => {
     if (values.email) {
       values.eposta = values.email;
       delete values.email;
     }
+    
+    // Ensure personnel is tied to the correct shop
+    values.dukkan_id = dukkanId;
+    
     try {
       await personelServisi.ekle(values);
       queryClient.invalidateQueries({
-        queryKey: ['personeller']
+        queryKey: ['personeller', dukkanId]
       });
       toast.success("Personel başarıyla eklendi.");
       setIsAddPersonnelDialogOpen(false);
@@ -99,7 +113,9 @@ export function PersonnelList({
       toplam_ciro: personnelOperations.reduce((sum, islem) => sum + (islem.tutar || 0), 0)
     };
   });
+  
   const filteredPersonnel = enrichedPersonnel.filter(p => p.ad_soyad?.toLowerCase().includes(search.toLowerCase()));
+  
   return (
     <div className="space-y-6">
       <Card>

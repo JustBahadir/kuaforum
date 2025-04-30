@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -136,7 +137,6 @@ export default function Customers() {
                     variant="outline" 
                     className="gap-1"
                     onClick={handleOpenNewCustomerModal}
-                    disabled={!isletmeData?.id}
                   >
                     <UserPlus className="h-4 w-4" />
                     <span>Yeni Müşteri</span>
@@ -144,7 +144,7 @@ export default function Customers() {
                 </div>
                 {!isletmeData?.id && (
                   <p className="text-sm text-red-500 mt-2">
-                    Müşteri eklemek için dükkan yöneticisi olmanız gerekmektedir.
+                    Müşteri eklemek için işletme bilgilerinizin tamamlanmış olması gerekmektedir.
                   </p>
                 )}
               </CardContent>

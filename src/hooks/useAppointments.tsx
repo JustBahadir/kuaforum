@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { Randevu, RandevuDurumu } from '@/lib/supabase/types';
+import { useCustomerAuth } from '@/hooks/useCustomerAuth';
 
 interface UseAppointmentsProps {
   initialStatus?: RandevuDurumu | 'all';
@@ -18,6 +19,7 @@ export const useAppointments = ({ initialStatus = 'beklemede', initialDate = new
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const { user } = useAuth();
+  const { dukkanId } = useCustomerAuth();
   const [personelId, setPersonelId] = useState<number | null>(null);
 
   const fetchAppointments = useCallback(async () => {
@@ -30,12 +32,20 @@ export const useAppointments = ({ initialStatus = 'beklemede', initialDate = new
       let fetchedAppointments: Randevu[] = [];
 
       if (user.user_metadata?.role === 'admin') {
-        fetchedAppointments = await randevuServisi.hepsiniGetir();
-      } else if (user.user_metadata?.role === 'staff') {
-        if (personelId) {
-          fetchedAppointments = await randevuServisi.dukkanRandevulariniGetir(personelId);
+        if (dukkanId) {
+          // Ensure admin only sees their own shop's appointments
+          fetchedAppointments = await randevuServisi.dukkanRandevulariniGetir(dukkanId);
         } else {
-          console.warn("Personel ID is not available yet.");
+          console.warn("İşletme ID bulunamadı");
+          setLoading(false);
+          return;
+        }
+      } else if (user.user_metadata?.role === 'staff') {
+        if (personelId && dukkanId) {
+          // Ensure staff only sees appointments from their shop
+          fetchedAppointments = await randevuServisi.personelRandevulariniGetir(personelId, dukkanId);
+        } else {
+          console.warn("Personel veya İşletme bilgisi bulunamadı");
           setLoading(false);
           return;
         }
@@ -64,7 +74,7 @@ export const useAppointments = ({ initialStatus = 'beklemede', initialDate = new
     } finally {
       setLoading(false);
     }
-  }, [status, selectedDate, user, personelId]);
+  }, [status, selectedDate, user, personelId, dukkanId]);
 
   useEffect(() => {
     if (user && user.user_metadata?.role === 'staff') {
@@ -106,6 +116,17 @@ export const useAppointments = ({ initialStatus = 'beklemede', initialDate = new
     }
     
     try {
+      // For security, verify that the appointment belongs to this shop before updating
+      const { data: appointmentData } = await supabase
+        .from('randevular')
+        .select('dukkan_id')
+        .eq('id', id)
+        .single();
+      
+      if (appointmentData?.dukkan_id !== dukkanId) {
+        throw new Error("Bu randevu sizin işletmenize ait değil");
+      }
+      
       const updatedAppointment = await randevuServisi.guncelle(id, { durum: status });
       if (updatedAppointment) {
         setAppointments((prevAppointments) =>
@@ -136,5 +157,6 @@ export const useAppointments = ({ initialStatus = 'beklemede', initialDate = new
     setAppointmentStatus,
     updateStatus,
     currentPersonelId: personelId,
+    dukkanId
   };
 };

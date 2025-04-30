@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { isletmeServisi } from "@/lib/supabase";
@@ -14,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CityISOCodes } from "@/utils/cityISOCodes";
 import { shopService } from "@/lib/auth/services/shopService";
+
 export default function ShopSettings() {
   const {
     userRole,
@@ -32,6 +34,7 @@ export default function ShopSettings() {
     value: city,
     label: city
   })).sort((a, b) => a.label.localeCompare(b.label));
+  
   const {
     data: isletme,
     isLoading,
@@ -41,6 +44,7 @@ export default function ShopSettings() {
     queryFn: () => dukkanId ? isletmeServisi.getirById(dukkanId) : null,
     enabled: !!dukkanId
   });
+  
   useEffect(() => {
     if (isletme) {
       setIsletmeKodu(isletme.kod);
@@ -60,6 +64,7 @@ export default function ShopSettings() {
       }
     }
   }, [isletme]);
+  
   const handleCopyCode = () => {
     if (isletmeKodu) {
       navigator.clipboard.writeText(isletmeKodu);
@@ -70,6 +75,7 @@ export default function ShopSettings() {
       }, 3000);
     }
   };
+  
   const updateShopAddress = useMutation({
     mutationFn: async (updates: {
       acik_adres?: string;
@@ -107,11 +113,13 @@ export default function ShopSettings() {
       toast.error(`İşletme bilgileri güncellenirken bir hata oluştu: ${error instanceof Error ? error.message : "Bilinmeyen hata"}`);
     }
   });
+  
   const handleAddressUpdate = () => {
     updateShopAddress.mutate({
       acik_adres: fullAddress
     });
   };
+  
   const handleShopNameUpdate = () => {
     if (!shopName || shopName.trim().length < 2) {
       toast.error("İşletme adı en az 2 karakter olmalıdır");
@@ -121,6 +129,7 @@ export default function ShopSettings() {
       ad: shopName
     });
   };
+  
   const handleCityUpdate = async () => {
     if (!selectedCity) {
       toast.error("Lütfen bir il seçin");
@@ -154,6 +163,7 @@ export default function ShopSettings() {
       });
     }
   };
+  
   const openInMaps = () => {
     if (!fullAddress) {
       toast.error("Haritada göstermek için bir açık adres girilmelidir");
@@ -162,6 +172,7 @@ export default function ShopSettings() {
     const encodedAddress = encodeURIComponent(fullAddress);
     window.open(`https://www.google.com/maps/search/?api=1&query=${encodedAddress}`, '_blank');
   };
+  
   if (!userRole) {
     return <StaffLayout>
         <div className="flex justify-center p-12">
@@ -169,16 +180,18 @@ export default function ShopSettings() {
         </div>
       </StaffLayout>;
   }
+  
   if (userRole !== 'admin') {
     return <StaffLayout>
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Bu sayfaya erişim yetkiniz bulunmamaktadır. Yalnızca yöneticiler işletme ayarlarını düzenleyebilir.
+            Bu sayfaya erişim yetkiniz bulunmamaktadır. Yalnızca İşletme Sahipleri işletme ayarlarını düzenleyebilir.
           </AlertDescription>
         </Alert>
       </StaffLayout>;
   }
+  
   return <StaffLayout>
       <div className="container mx-auto p-4">
         <h1 className="text-2xl font-bold mb-6">İşletme Ayarları</h1>
@@ -271,7 +284,7 @@ export default function ShopSettings() {
                   <Alert className="bg-blue-50 border-blue-200">
                     <AlertCircle className="h-4 w-4 text-blue-500" />
                     <AlertDescription className="text-blue-700">
-                      İşletme kodu bir kez oluşturulduktan sonra değiştirilemez. Lütfen bu kodu güvenli bir şekilde paylaşın.
+                      İşletme kodu, işletme adınız ve il bilgilerinize göre otomatik olarak oluşturulmuştur ve kalıcıdır. Lütfen bu kodu güvenli bir şekilde paylaşın.
                     </AlertDescription>
                   </Alert>
                 </div>

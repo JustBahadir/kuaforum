@@ -37,48 +37,48 @@ export const shouldRedirect = (
     return false;
   }
 
-  // Admin users have full access to admin pages
+  // İşletme Sahibi (admin) users have full access to admin pages
   if (userRole === 'admin') {
-    // If admin is on customer dashboard, redirect to admin dashboard
+    // If İşletme Sahibi is on customer dashboard, redirect to admin dashboard
     if (pathname.includes('/customer-dashboard')) {
-      console.log("Admin müşteri sayfasına erişmeye çalışıyor:", pathname);
+      console.log("İşletme Sahibi müşteri sayfasına erişmeye çalışıyor:", pathname);
       return true;
     }
     
-    // Admin on homepage should be redirected to shop-home
+    // İşletme Sahibi on homepage should be redirected to shop-home
     if (pathname === "/") {
-      console.log("Admin ana sayfada, dükkan ana sayfasına yönlendiriliyor");
+      console.log("İşletme Sahibi ana sayfada, dükkan ana sayfasına yönlendiriliyor");
       return false; // Don't redirect, show logout button instead
     }
     
-    // Admin trying to access login pages
+    // İşletme Sahibi trying to access login pages
     if (pathname === "/login" || pathname === "/admin" || pathname === "/staff-login") {
       return true;
     }
     
-    console.log("Admin kullanıcı, yönlendirme gerekmez");
+    console.log("İşletme Sahibi kullanıcı, yönlendirme gerekmez");
     return false;
   }
 
-  // Staff can't access customer-specific pages
+  // Personel can't access customer-specific pages
   if (userRole === 'staff' && 
       pathname.includes('/customer-dashboard')) {
     console.log("Personel müşteri sayfasına erişmeye çalışıyor:", pathname);
     return true;
   } 
   
-  // Staff on homepage should be redirected to shop-home
+  // Personel on homepage should be redirected to shop-home
   if (userRole === 'staff' && pathname === "/") {
     console.log("Personel ana sayfada, dükkan ana sayfasına yönlendiriliyor");
     return false; // Don't redirect, show logout button instead
   }
   
-  // Staff trying to access login pages
+  // Personel trying to access login pages
   if (userRole === 'staff' && (pathname === "/login" || pathname === "/admin" || pathname === "/staff-login")) {
     return true;
   }
   
-  // Staff attempting to access shop-home without authentication
+  // Personel attempting to access shop-home without authentication
   if (!isAuthenticated && 
       (pathname === "/shop-home" || 
        pathname === "/shop-settings" || 
@@ -87,7 +87,7 @@ export const shouldRedirect = (
     return true;
   }
   
-  // Customers can't access staff pages
+  // Müşteri can't access staff pages
   if (userRole === 'customer' && 
       (pathname.includes('/admin') || 
        pathname.includes('/shop-home') || 
@@ -101,7 +101,7 @@ export const shouldRedirect = (
     return true;
   }
 
-  // Customer on homepage stays on homepage - no redirect needed
+  // Müşteri on homepage stays on homepage - no redirect needed
   if (userRole === 'customer' && pathname === "/") {
     console.log("Müşteri ana sayfada, yönlendirme gerekmez");
     return false;
@@ -134,32 +134,32 @@ export const getRedirectPath = (
     return "/login"; // Default to login page for unauthenticated users
   }
   
-  // Admin redirect based on path
+  // İşletme Sahibi redirect based on path
   if (userRole === 'admin') {
     if (currentPath === "/admin" || currentPath === "/login" || currentPath === "/staff-login") {
       return "/shop-home";
     }
     
-    // Admin trying to access customer-specific pages
+    // İşletme Sahibi trying to access customer-specific pages
     if (currentPath.includes('/customer-dashboard')) {
       return "/shop-home";
     }
   }
   
-  // Staff redirect based on path
+  // Personel redirect based on path
   if (userRole === 'staff') {
     if (currentPath === "/admin" || currentPath === "/login" || currentPath === "/staff-login") {
       return "/shop-home";
     }
     
-    // Staff trying to access customer-specific pages
+    // Personel trying to access customer-specific pages
     if (currentPath.includes('/customer-dashboard')) {
       return "/shop-home";
     }
   }
   
   if (userRole === 'customer') {
-    // Customer trying to access staff pages
+    // Müşteri trying to access staff pages
     if (currentPath.includes('/admin') || 
         currentPath.includes('/shop-home') ||
         currentPath.includes('/shop-settings') ||
@@ -171,7 +171,7 @@ export const getRedirectPath = (
       return "/customer-dashboard";
     }
     
-    // Customer on login pages should go to customer dashboard
+    // Müşteri on login pages should go to customer dashboard
     if (currentPath === "/admin" || currentPath === "/login" || currentPath === "/staff-login") {
       return "/customer-dashboard";
     }

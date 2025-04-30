@@ -60,12 +60,12 @@ export const musteriServisi = {
       
       console.log(`Müşteri ID ${id} getiriliyor`);
       
-      // Get the customer data
+      // Get the customer data with shop isolation
       const { data, error } = await supabase
         .from('musteriler')
         .select('*')
         .eq('id', id)
-        .eq('dukkan_id', dukkanId) // Filter by dukkan_id
+        .eq('dukkan_id', dukkanId) // Strict shop isolation
         .single();
       
       if (error) {
@@ -78,7 +78,6 @@ export const musteriServisi = {
       // If we have customer data, create a complete customer object with auth_id
       if (data) {
         // Simply use the customer ID as the auth_id for now
-        // This avoids the problematic profiles join
         let customer = { 
           ...data,
           auth_id: id.toString()
