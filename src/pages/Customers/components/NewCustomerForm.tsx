@@ -1,20 +1,13 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useMutation } from "@tanstack/react-query";
 import { musteriServisi } from "@/lib/supabase";
 import { toast } from "sonner";
-import { CalendarIcon } from "lucide-react";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
-import { format, isValid } from "date-fns";
+import { NameInputField } from "./FormFields/NameInputField";
+import { PhoneInputField } from "./FormFields/PhoneInputField";
+import { DateInputField } from "./FormFields/DateInputField";
 
 type NewCustomerFormProps = {
   onSuccess: () => void;
@@ -26,23 +19,41 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFo
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
-  const [birthDate, setBirthDate] = useState<Date | undefined>(undefined);
+  const [birthDate, setBirthDate] = useState("");
   const [phoneError, setPhoneError] = useState("");
   const [dateError, setDateError] = useState("");
+  const [nameError, setNameError] = useState("");
+  const [lastNameError, setLastNameError] = useState("");
   const [formValid, setFormValid] = useState(false);
+  const [dateIsValid, setDateIsValid] = useState(true);
   
   useEffect(() => {
     validateForm();
-  }, [firstName, phone, birthDate]);
+  }, [firstName, lastName, phone, birthDate, dateIsValid]);
   
   const validateForm = () => {
     let valid = true;
     
+    // Validate name (required and must not be empty)
+    if (!firstName.trim()) {
+      setNameError("İsim alanı zorunludur");
+      valid = false;
+    } else {
+      setNameError("");
+    }
+    
+    // Validate last name (optional but if provided must be valid)
+    if (lastName && !lastName.trim()) {
+      setLastNameError("Soyisim geçerli değil");
+      valid = false;
+    } else {
+      setLastNameError("");
+    }
+    
     // Validate phone (allow empty, but if provided must be numeric)
     if (phone) {
-      const phoneRegex = /^[0-9+\s()-]{10,15}$/;
-      if (!phoneRegex.test(phone)) {
-        setPhoneError("Telefon numarası geçerli bir format olmalıdır");
+      if (phone.length < 10) {
+        setPhoneError("Telefon numarası en az 10 haneli olmalıdır");
         valid = false;
       } else {
         setPhoneError("");
@@ -51,29 +62,21 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFo
       setPhoneError("");
     }
     
-    // Validate birth date if provided
-    if (birthDate) {
-      if (!isValid(birthDate)) {
-        setDateError("Geçerli bir tarih seçin");
-        valid = false;
-      } else {
-        const today = new Date();
-        if (birthDate > today) {
-          setDateError("Doğum tarihi bugünden sonra olamaz");
-          valid = false;
-        } else {
-          setDateError("");
-        }
-      }
+    // Validate birth date using the dateIsValid state that comes from the DateInputField
+    if (birthDate && !dateIsValid) {
+      setDateError("Geçerli bir tarih formatı giriniz (gg.aa.yyyy)");
+      valid = false;
     } else {
       setDateError("");
     }
     
-    // First name is required
-    valid = valid && firstName.trim().length > 0;
-    
     setFormValid(valid);
     return valid;
+  };
+
+  const handleDateChange = (value: string, isValid: boolean) => {
+    setBirthDate(value);
+    setDateIsValid(isValid);
   };
 
   const { mutate, isPending } = useMutation({
@@ -95,20 +98,24 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFo
       return;
     }
     
+    // Format date from DD.MM.YYYY to YYYY-MM-DD for database
+    let formattedDate = null;
+    if (birthDate) {
+      const parts = birthDate.split('.');
+      if (parts.length === 3 && parts[2].length === 4) {
+        formattedDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+      }
+    }
+    
     const customerData = {
       first_name: firstName.trim(),
       last_name: lastName.trim() || null,
       phone: phone.trim() || null,
-      birthdate: birthDate ? format(birthDate, "yyyy-MM-dd") : null,
+      birthdate: formattedDate,
       dukkan_id: dukkanId,
     };
     
     mutate(customerData);
-  };
-
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setPhone(value);
   };
 
   return (
@@ -119,11 +126,12 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFo
             İsim
             <span className="text-red-500">*</span>
           </Label>
-          <Input
+          <NameInputField
             id="firstName"
-            placeholder="İsim"
             value={firstName}
-            onChange={(e) => setFirstName(e.target.value)}
+            onChange={setFirstName}
+            placeholder="İsim"
+            error={nameError}
             required
           />
         </div>
@@ -131,11 +139,12 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFo
           <Label htmlFor="lastName" className="text-right">
             Soyisim
           </Label>
-          <Input
+          <NameInputField
             id="lastName"
-            placeholder="Soyisim"
             value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
+            onChange={setLastName}
+            placeholder="Soyisim"
+            error={lastNameError}
           />
         </div>
       </div>
@@ -144,46 +153,27 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFo
         <Label htmlFor="phone" className="text-right">
           Telefon
         </Label>
-        <Input
+        <PhoneInputField
           id="phone"
-          placeholder="Telefon"
           value={phone}
-          onChange={handlePhoneChange}
+          onChange={setPhone}
+          error={phoneError}
         />
-        {phoneError && <p className="text-sm text-red-500">{phoneError}</p>}
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="birthdate" className="text-right">
           Doğum Tarihi
         </Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant={"outline"}
-              className={cn(
-                "w-full pl-3 text-left font-normal",
-                !birthDate && "text-muted-foreground"
-              )}
-            >
-              {birthDate ? format(birthDate, "dd.MM.yyyy") : <span>Tarih seçin</span>}
-              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <Calendar
-              mode="single"
-              selected={birthDate}
-              onSelect={setBirthDate}
-              disabled={(date) => {
-                return date > new Date();
-              }}
-              initialFocus
-              className={cn("p-3 pointer-events-auto")}
-            />
-          </PopoverContent>
-        </Popover>
-        {dateError && <p className="text-sm text-red-500">{dateError}</p>}
+        <DateInputField
+          id="birthdate"
+          value={birthDate}
+          onChange={handleDateChange}
+          error={dateError}
+        />
+        <p className="text-xs text-gray-500">
+          Doğum tarihini gg.aa.yyyy formatında girin (Örn: 15.04.1990)
+        </p>
       </div>
 
       <div className="flex gap-2 justify-end">

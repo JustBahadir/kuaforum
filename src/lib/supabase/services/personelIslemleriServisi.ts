@@ -62,6 +62,7 @@ export const personelIslemleriServisi = {
         dukkan_id?: number;
       }
       
+      // Fix TypeScript errors by properly casting the array items
       const filteredData = data.filter(item => {
         const personel = item.personel as PersonelData | null;
         const musteri = item.musteri as MusteriData | null;
@@ -172,6 +173,7 @@ export const personelIslemleriServisi = {
         dukkan_id?: number;
       }
       
+      // Fix TypeScript errors by properly casting the array items
       const filteredData = data.filter(item => {
         const personel = item.personel as PersonelData | null;
         const musteri = item.musteri as MusteriData | null;

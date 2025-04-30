@@ -1,5 +1,6 @@
 
 import { Input } from "@/components/ui/input";
+import { useState, useEffect } from "react";
 import { formatPhoneNumber } from "@/utils/phoneFormatter";
 
 interface PhoneInputFieldProps {
@@ -15,38 +16,48 @@ interface PhoneInputFieldProps {
 export function PhoneInputField({
   value,
   onChange,
-  label = "Telefon Numarası",
   placeholder = "05xx xxx xx xx",
   id = "phone",
   error,
   disabled = false
 }: PhoneInputFieldProps) {
-  // Correct placeholder passed down and formatting applied
+  const [displayValue, setDisplayValue] = useState<string>(formatPhoneNumber(value));
+  
+  // Update display value when external value changes
+  useEffect(() => {
+    setDisplayValue(formatPhoneNumber(value));
+  }, [value]);
+  
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (disabled) return;
 
-    // Remove all non-digit characters and limit maximum 11 digits
-    const digitsOnly = e.target.value.replace(/\D/g, '').substring(0, 11);
-
-    onChange(digitsOnly);
+    // Remove all non-digit characters
+    const digitsOnly = e.target.value.replace(/\D/g, '');
+    
+    // Limit to 11 digits
+    const limitedDigits = digitsOnly.substring(0, 11);
+    
+    // Update the formatted display value
+    setDisplayValue(formatPhoneNumber(limitedDigits));
+    
+    // Pass only digits to the parent component
+    onChange(limitedDigits);
   };
 
-  // Note: formatPhoneNumber applies Turkish phone number grouping and placeholder style '05xx xxx xx xx'
   return (
     <div>
-      {/* Label removed as user didn't want duplicate */}
       <Input
         id={id}
-        value={formatPhoneNumber(value)}
+        value={displayValue}
         onChange={handleInputChange}
-        placeholder={placeholder} // now properly set
+        placeholder={placeholder}
         className={error ? "border-red-500" : ""}
         disabled={disabled}
-        maxLength={15}
+        maxLength={15} // Allow some space for formatting
         type="tel"
         inputMode="tel"
       />
-      {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
+      {error && <p className="text-sm text-red-500 mt-1">{error}</p>}
     </div>
   );
 }

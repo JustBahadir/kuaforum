@@ -23,6 +23,7 @@ export function PersonnelDialog({ open, onOpenChange }: PersonnelDialogProps) {
   const { userRole } = useCustomerAuth();
   const { isletmeData } = useShopData(null);
   const [businessCode, setBusinessCode] = useState<string>("");
+  const [copied, setCopied] = useState(false);
   
   useEffect(() => {
     if (open && isletmeData?.id) {
@@ -48,7 +49,11 @@ export function PersonnelDialog({ open, onOpenChange }: PersonnelDialogProps) {
     
     try {
       navigator.clipboard.writeText(businessCode);
+      setCopied(true);
       toast.success("İşletme kodu panoya kopyalandı");
+      setTimeout(() => {
+        setCopied(false);
+      }, 3000);
     } catch (error) {
       console.error("Kopyalama hatası:", error);
       toast.error("Kopyalama işlemi başarısız oldu");
@@ -76,13 +81,14 @@ export function PersonnelDialog({ open, onOpenChange }: PersonnelDialogProps) {
               <div className="text-sm font-medium mb-1">İşletme Kodu</div>
               <div className="flex items-center gap-2">
                 <div className="flex-1 border rounded-md p-2 bg-muted">
-                  <code className="text-sm">{businessCode || "Yükleniyor..."}</code>
+                  <code className="text-sm">{businessCode || "Kod yüklenemedi"}</code>
                 </div>
                 <Button 
                   variant="outline" 
                   size="sm" 
                   onClick={copyToClipboard}
                   disabled={!businessCode}
+                  className={copied ? "text-green-500" : ""}
                 >
                   <Copy className="h-4 w-4" />
                 </Button>
