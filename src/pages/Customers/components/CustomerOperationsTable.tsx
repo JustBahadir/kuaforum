@@ -9,7 +9,7 @@ export interface CustomerOperationsTableProps {
   customerId: number | string;
 }
 
-export default function CustomerOperationsTable({ customerId }: CustomerOperationsTableProps) {
+export function CustomerOperationsTable({ customerId }: CustomerOperationsTableProps) {
   const { operations, loading, error } = useCustomerOperations({ customerId });
   
   if (loading) {
@@ -69,3 +69,5 @@ export default function CustomerOperationsTable({ customerId }: CustomerOperatio
     </div>
   );
 }
+
+export default CustomerOperationsTable;

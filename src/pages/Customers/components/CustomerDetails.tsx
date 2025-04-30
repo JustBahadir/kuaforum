@@ -4,9 +4,9 @@ import { useQuery } from "@tanstack/react-query";
 import { musteriServisi, personelIslemleriServisi } from "@/lib/supabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Pencil, Trash2, Alert } from "lucide-react";
+import { Pencil, Trash2, AlertCircle } from "lucide-react";
 import { CustomerPersonalInfo } from "./CustomerPersonalInfo";
-import { CustomerOperationsTable } from "./CustomerOperationsTable";
+import CustomerOperationsTable from "./CustomerOperationsTable";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EditCustomerForm } from "./EditCustomerForm";
 import { toast } from "sonner";
@@ -43,7 +43,9 @@ export function CustomerDetails({ customerId, onUpdate, onDelete }: CustomerDeta
     queryKey: ['customer-operations', customerId],
     queryFn: async () => {
       try {
-        return await personelIslemleriServisi.musteriIslemleriGetir(customerId);
+        // Using customerOperationsService instead of personelIslemleriServisi
+        // Import customerOperationsService at the top if needed
+        return await personelIslemleriServisi.getirByMusteriId(customerId);
       } catch (error) {
         console.error("Müşteri işlemleri getirilirken hata:", error);
         return [];
@@ -94,7 +96,7 @@ export function CustomerDetails({ customerId, onUpdate, onDelete }: CustomerDeta
       <Card>
         <CardContent className="pt-6">
           <div className="flex items-center gap-2 text-destructive mb-2">
-            <Alert className="h-4 w-4" />
+            <AlertCircle className="h-4 w-4" />
             <p className="font-semibold">Müşteri bilgileri yüklenemedi</p>
           </div>
           <p className="text-sm text-muted-foreground">
@@ -134,14 +136,14 @@ export function CustomerDetails({ customerId, onUpdate, onDelete }: CustomerDeta
         </div>
       </div>
 
-      <CustomerPersonalInfo customer={customer} />
+      <CustomerPersonalInfo customer={customer} customerId={customer.id} />
       
       <Card>
         <CardHeader>
           <CardTitle>İşlem Geçmişi</CardTitle>
         </CardHeader>
         <CardContent>
-          <CustomerOperationsTable operations={operations} />
+          <CustomerOperationsTable customerId={customer.id} />
         </CardContent>
       </Card>
 

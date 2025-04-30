@@ -61,6 +61,27 @@ export const personelIslemleriServisi = {
     return data || [];
   },
 
+  // Add the missing method for fetching operations by customer ID
+  getirByMusteriId: async (musteriId: number) => {
+    const { data, error } = await supabase
+      .from('personel_islemleri')
+      .select(`
+        *,
+        personel:personel_id (id, ad_soyad),
+        musteri:musteri_id (id, first_name, last_name, phone),
+        islem:islem_id (id, islem_adi, fiyat, kategori_id)
+      `)
+      .eq('musteri_id', musteriId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Müşteri işlemleri getirme hatası:', error);
+      throw error;
+    }
+
+    return data || [];
+  },
+
   ekle: async (data: any) => {
     const { data: result, error } = await supabase
       .from('personel_islemleri')

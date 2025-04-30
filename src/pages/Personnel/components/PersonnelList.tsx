@@ -1,173 +1,150 @@
-
-import React, { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { personelServisi, personelIslemleriServisi } from "@/lib/supabase";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { PersonnelDetailsDialog } from "./PersonnelDetailsDialog";
-import { PersonnelForm } from "./PersonnelForm";
+import { Card } from "@/components/ui/card";
+import { Eye, MessageSquare, Phone, Trash } from "lucide-react";
 import { PersonnelCard } from "./PersonnelCard";
-import { toast } from "sonner";
-import { RefreshCcw } from "lucide-react";
-import { useCustomerAuth } from "@/hooks/useCustomerAuth";
+import { PersonnelDialog } from "./PersonnelDialog";
+import { PersonnelDetailsDialog } from "./PersonnelDetailsDialog";
+import { PersonnelDeleteDialog } from "./PersonnelDeleteDialog";
+import { useCustomerAuth } from '@/hooks/useCustomerAuth';
 
 interface PersonnelListProps {
-  personnel?: any[];
-  onPersonnelSelect?: (id: number | null) => void;
+  personel: any[];
+  onRefresh: () => void;
+  isLoading?: boolean;
 }
 
-export function PersonnelList({
-  personnel: externalPersonnel,
-  onPersonnelSelect
-}: PersonnelListProps) {
-  const { userRole, dukkanId } = useCustomerAuth();
-  const [isAddPersonnelDialogOpen, setIsAddPersonnelDialogOpen] = useState(false);
-  const [isPersonnelDetailsDialogOpen, setIsPersonnelDetailsDialogOpen] = useState(false);
-  const [selectedPersonnel, setSelectedPersonnel] = useState<any>(null);
-  const [search, setSearch] = useState("");
-  const queryClient = useQueryClient();
-  
-  const {
-    data: personeller = [],
-    isLoading,
-    refetch: refreshList
-  } = useQuery({
-    queryKey: ['personeller', dukkanId],
-    queryFn: () => personelServisi.hepsiniGetir(dukkanId),
-    enabled: !externalPersonnel && !!dukkanId
-  });
-  
-  const {
-    data: personelIslemleri = []
-  } = useQuery({
-    queryKey: ['personel-islemleri', 'last-30-days', dukkanId],
-    queryFn: async () => {
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      
-      if (!dukkanId) return [];
-      
-      const data = await personelIslemleriServisi.hepsiniGetir(dukkanId);
-      return data.filter(islem => {
-        const islemDate = new Date(islem.created_at || '');
-        return islemDate >= thirtyDaysAgo;
-      });
-    },
-    enabled: !!dukkanId
-  });
-  
-  const personnelData = externalPersonnel || personeller;
-  
-  const handlePersonnelSelect = (personnel: any) => {
-    setSelectedPersonnel(personnel);
-    setIsPersonnelDetailsDialogOpen(true);
-    if (onPersonnelSelect) {
-      onPersonnelSelect(personnel.id);
-    }
+export function PersonnelList({ personel, onRefresh, isLoading = false }: PersonnelListProps) {
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedPersonel, setSelectedPersonel] = useState<any | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const { userRole } = useCustomerAuth();
+
+  const handleViewDetails = (personel: any) => {
+    setSelectedPersonel(personel);
   };
-  
-  const deletePersonnelMutation = useMutation({
-    mutationFn: async (id: number) => {
-      return await personelServisi.sil(id);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['personeller', dukkanId]
-      });
-      toast.success("Personel başarıyla silindi.");
-    },
-    onError: error => {
-      toast.error("Personel silinirken bir hata oluştu.");
-      console.error("Error deleting personnel:", error);
-    }
-  });
-  
-  const handleAddPersonnelSubmit = async (values: any) => {
-    if (values.email) {
-      values.eposta = values.email;
-      delete values.email;
-    }
-    
-    // Ensure personnel is tied to the correct shop
-    values.dukkan_id = dukkanId;
-    
-    try {
-      await personelServisi.ekle(values);
-      queryClient.invalidateQueries({
-        queryKey: ['personeller', dukkanId]
-      });
-      toast.success("Personel başarıyla eklendi.");
-      setIsAddPersonnelDialogOpen(false);
-    } catch (error) {
-      console.error("Error adding personnel:", error);
-      toast.error("Personel eklenirken bir hata oluştu.");
-    }
+
+  const handleCloseDetails = () => {
+    setSelectedPersonel(null);
   };
-  
-  const enrichedPersonnel = personnelData.map(p => {
-    const personnelOperations = personelIslemleri.filter(islem => islem.personel_id === p.id);
-    return {
-      ...p,
-      islem_sayisi: personnelOperations.length,
-      toplam_ciro: personnelOperations.reduce((sum, islem) => sum + (islem.tutar || 0), 0)
-    };
-  });
-  
-  const filteredPersonnel = enrichedPersonnel.filter(p => p.ad_soyad?.toLowerCase().includes(search.toLowerCase()));
-  
+
+  const handleDeletePersonel = (personel: any) => {
+    setSelectedPersonel(personel);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleAddClick = () => {
+    setIsDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setIsDialogOpen(false);
+    onRefresh();
+  };
+
+  const handleDeleteSuccess = () => {
+    setIsDeleteDialogOpen(false);
+    setSelectedPersonel(null);
+    onRefresh();
+  };
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {[...Array(3)].map((_, index) => (
+          <Card key={index} className="p-4 animate-pulse h-48">
+            <div className="h-8 bg-gray-200 rounded mb-4"></div>
+            <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
+            <div className="mt-4 flex justify-end">
+              <div className="h-8 w-8 bg-gray-200 rounded-full mr-2"></div>
+              <div className="h-8 w-8 bg-gray-200 rounded-full"></div>
+            </div>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Personel Listesi</CardTitle>
-          <CardDescription>
-            Sistemdeki tüm personelleri görüntüleyebilir, düzenleyebilir ve silebilirsiniz.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-            <div className="relative flex-1 max-w-sm">
-              <Input type="search" placeholder="Personel ara..." value={search} onChange={e => setSearch(e.target.value)} className="pl-4" />
-            </div>
-            <div className="flex gap-2">
-              {userRole === 'admin' && (
-                <Button onClick={() => setIsAddPersonnelDialogOpen(true)} >
-                  Personel Ekle
+    <>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {personel.map((p) => (
+          <PersonnelCard
+            key={p.id}
+            personel={p}
+            actions={[
+              <Button
+                key="view"
+                size="icon"
+                variant="ghost"
+                onClick={() => handleViewDetails(p)}
+              >
+                <Eye className="w-4 h-4" />
+              </Button>,
+              <Button
+                key="message"
+                size="icon"
+                variant="ghost"
+                onClick={() => { /* Handle messaging functionality */ }}
+              >
+                <MessageSquare className="w-4 h-4" />
+              </Button>,
+              <Button
+                key="call"
+                size="icon"
+                variant="ghost"
+                onClick={() => { /* Handle call functionality */ }}
+              >
+                <Phone className="w-4 h-4" />
+              </Button>,
+              ...(userRole === 'admin' ? [
+                <Button
+                  key="delete"
+                  size="icon"
+                  variant="ghost"
+                  className="text-destructive hover:text-destructive"
+                  onClick={() => handleDeletePersonel(p)}
+                >
+                  <Trash className="w-4 h-4" />
                 </Button>
-              )}
+              ] : [])
+            ]}
+          />
+        ))}
+      </div>
+
+      {personel.length === 0 && (
+        <div className="text-center py-10 text-gray-500">
+          Kayıtlı personel bulunmamaktadır.
+          {userRole === 'admin' && (
+            <div className="mt-4">
+              <Button onClick={handleAddClick}>Personel Ekle</Button>
             </div>
-          </div>
-
-          {/* Personel Kartları */}
-          <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
-            {filteredPersonnel.map(personnel => (
-              <PersonnelCard
-                key={personnel.id}
-                personnel={personnel}
-                onClick={() => handlePersonnelSelect(personnel)}
-              />
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Personel Ekleme Dialogu */}
-      {userRole === 'admin' && isAddPersonnelDialogOpen && (
-        <PersonnelForm
-          onSubmit={handleAddPersonnelSubmit}
-          isLoading={false}
-        />
+          )}
+        </div>
       )}
 
-      {/* Personel Detayları Dialogu */}
-      {selectedPersonnel && (
+      <PersonnelDialog
+        open={isDialogOpen}
+        onOpenChange={handleCloseDialog}
+      />
+
+      {selectedPersonel && (
         <PersonnelDetailsDialog
-          personnel={selectedPersonnel}
-          isOpen={isPersonnelDetailsDialogOpen}
-          onOpenChange={setIsPersonnelDetailsDialogOpen}
+          personel={selectedPersonel}
+          open={!!selectedPersonel}
+          onOpenChange={handleCloseDetails}
+          onRefresh={onRefresh}
         />
       )}
-    </div>
+
+      <PersonnelDeleteDialog
+        personel={selectedPersonel}
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onSuccess={handleDeleteSuccess}
+      />
+    </>
   );
 }

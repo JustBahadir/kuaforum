@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { Randevu, RandevuDurumu } from '@/lib/supabase/types';
 import { useCustomerAuth } from '@/hooks/useCustomerAuth';
+import { supabase } from '@/lib/supabase/client';  // Add the missing supabase import
 
 interface UseAppointmentsProps {
   initialStatus?: RandevuDurumu | 'all';
@@ -42,8 +43,10 @@ export const useAppointments = ({ initialStatus = 'beklemede', initialDate = new
         }
       } else if (user.user_metadata?.role === 'staff') {
         if (personelId && dukkanId) {
-          // Ensure staff only sees appointments from their shop
-          fetchedAppointments = await randevuServisi.personelRandevulariniGetir(personelId, dukkanId);
+          // For staff, we need to get appointments assigned to them
+          // Since there's no direct personelRandevulariniGetir method, we'll filter from dukkanRandevulariniGetir
+          const allAppointments = await randevuServisi.dukkanRandevulariniGetir(dukkanId);
+          fetchedAppointments = allAppointments.filter(appt => appt.personel_id === personelId);
         } else {
           console.warn("Personel veya İşletme bilgisi bulunamadı");
           setLoading(false);
