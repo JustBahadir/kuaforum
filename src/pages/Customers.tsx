@@ -15,12 +15,14 @@ import { NewCustomerForm } from "./Customers/components/NewCustomerForm";
 import { Toaster } from "sonner";
 import { useShopData } from "@/hooks/useShopData";
 import { Musteri } from "@/lib/supabase/types";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Customers() {
   const [searchText, setSearchText] = useState("");
   const [isNewCustomerModalOpen, setIsNewCustomerModalOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Musteri | null>(null);
   const { isletmeData } = useShopData(null);
+  const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   
@@ -33,6 +35,19 @@ export default function Customers() {
       navigate(location.pathname, { replace: true });
     }
   }, [location, navigate]);
+
+  // Add a separate function to get the current shop ID
+  const getCurrentShopId = async () => {
+    if (isletmeData?.id) return isletmeData.id;
+    
+    // Try to get from user metadata
+    if (user?.user_metadata?.dukkan_id) {
+      return user.user_metadata.dukkan_id;
+    }
+    
+    // If no shop ID yet, try to get it directly from musteriServisi
+    return await musteriServisi._getCurrentUserDukkanId();
+  };
   
   const { 
     data: customers = [], 
@@ -40,22 +55,28 @@ export default function Customers() {
     refetch,
     isRefetching
   } = useQuery({
-    queryKey: ['musteriler', isletmeData?.id],
+    queryKey: ['musteriler'],
     queryFn: async () => {
       try {
-        if (!isletmeData?.id) {
-          throw new Error("Dükkan ID bulunamadı");
+        const shopId = await getCurrentShopId();
+        console.log("Using shop ID for customer fetch:", shopId);
+        
+        if (!shopId) {
+          console.warn("No shop ID found for customer fetch");
+          return [];
         }
-        return await musteriServisi.hepsiniGetir(isletmeData?.id);
+        
+        const result = await musteriServisi.hepsiniGetir(shopId);
+        console.log("Fetched customers:", result);
+        return result;
       } catch (err) {
         console.error("Müşteri verisi yüklenirken hata:", err);
         throw err;
       }
     },
     refetchOnWindowFocus: false,
-    staleTime: 30000,
-    retry: 1,
-    enabled: !!isletmeData?.id
+    staleTime: 5000,
+    retry: 1
   });
 
   const filteredCustomers = searchText

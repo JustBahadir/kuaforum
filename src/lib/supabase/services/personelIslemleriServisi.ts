@@ -1,4 +1,3 @@
-
 import { supabase } from '../client';
 import { PersonelIslemi } from '../types';
 

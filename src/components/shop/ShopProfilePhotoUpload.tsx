@@ -70,68 +70,73 @@ export function ShopProfilePhotoUpload({
       setIsUploading(true);
       
       const fileExt = file.name.split('.').pop();
-      const bucketName = galleryMode ? 'shop-photos' : 'photos';
-      const filePath = `shops/${dukkanId}/${nanoid()}.${fileExt}`;
-      
-      const { data, error } = await supabase.storage
-        .from(bucketName)
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
-      
-      if (error) {
-        console.error('Yükleme hatası:', error);
-        if (error.message.includes('Bucket not found')) {
-          toast.error('Depolama alanı bulunamadı. Lütfen sistem yöneticisiyle iletişime geçin.');
-        } else if (error.message.includes('Failed to fetch')) {
-          toast.error('Bağlantı hatası. Lütfen internet bağlantınızı kontrol edin ve tekrar deneyin.');
-        } else {
-          toast.error(`Yükleme hatası: ${error.message}`);
-        }
-        return;
-      }
-      
-      const { data: publicUrl } = supabase.storage
-        .from(bucketName)
-        .getPublicUrl(data.path);
-      
-      if (galleryMode) {
-        onSuccess(publicUrl.publicUrl);
-        toast.success(isVideo ? 'Galeri videosu başarıyla yüklendi' : 'Galeri fotoğrafı başarıyla yüklendi');
-      } else {
-        // Only update shop logo for images, not videos
-        const { error: updateError } = await supabase
-          .from('dukkanlar')
-          .update({ logo_url: publicUrl.publicUrl })
-          .eq('id', dukkanId);
+      // First check if bucket exists, if not create it
+      try {
+        // Check if profile-photos bucket exists, create it if not
+        const { data: buckets } = await supabase.storage.listBuckets();
+        const bucketName = galleryMode ? 'shop-photos' : 'profile-photos';
         
-        if (updateError) {
-          console.error('Dükkan logo güncellenemedi:', updateError);
-          toast.error('Dükkan logosu güncellenemedi: ' + updateError.message);
+        if (!buckets?.some(bucket => bucket.name === bucketName)) {
+          console.log(`Creating storage bucket: ${bucketName}`);
+          // Bucket needs to be created via Supabase admin - handle gracefully
+          toast.error(`Profil fotoğrafı yüklenemiyor: Depolama alanı '${bucketName}' bulunamadı`);
+          setIsUploading(false);
           return;
         }
-
-        // Also update user profile avatar if needed
-        if (updateUserProfile) {
-          try {
-            const user = await authService.getCurrentUser();
-            if (user) {
-              await supabase
-                .from('profiles')
-                .update({ avatar_url: publicUrl.publicUrl })
-                .eq('id', user.id);
-            }
-          } catch (err) {
-            console.error('Profil avatar güncellenemedi:', err);
-            // Don't show error toast here since the shop logo was still updated
-          }
-        }
         
-        onSuccess(publicUrl.publicUrl);
-        toast.success('Dükkan fotoğrafı başarıyla güncellendi');
+        const filePath = `${dukkanId ? `shops/${dukkanId}/` : ''}${nanoid()}.${fileExt}`;
+        
+        const { data, error } = await supabase.storage
+          .from(bucketName)
+          .upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
+        
+        if (error) throw error;
+        
+        const { data: publicUrl } = supabase.storage
+          .from(bucketName)
+          .getPublicUrl(data.path);
+        
+        if (galleryMode) {
+          onSuccess(publicUrl.publicUrl);
+          toast.success(isVideo ? 'Galeri videosu başarıyla yüklendi' : 'Galeri fotoğrafı başarıyla yüklendi');
+        } else {
+          // Only update shop logo for images, not videos
+          if (dukkanId) {
+            const { error: updateError } = await supabase
+              .from('dukkanlar')
+              .update({ logo_url: publicUrl.publicUrl })
+              .eq('id', dukkanId);
+            
+            if (updateError) throw updateError;
+          }
+  
+          // Also update user profile avatar if needed
+          if (updateUserProfile) {
+            try {
+              const user = await authService.getCurrentUser();
+              if (user) {
+                await supabase
+                  .from('profiles')
+                  .update({ avatar_url: publicUrl.publicUrl })
+                  .eq('id', user.id);
+              }
+            } catch (err) {
+              console.error('Profil avatar güncellenemedi:', err);
+              // Don't show error toast here since the shop logo was still updated
+            }
+          }
+          
+          onSuccess(publicUrl.publicUrl);
+          toast.success('Profil fotoğrafı başarıyla güncellendi');
+        }
+      } catch (bucketError) {
+        console.error("Storage bucket error:", bucketError);
+        toast.error("Depolama alanı erişim hatası. Lütfen sistem yöneticisine başvurun.");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Yükleme işlemi sırasında hata:', error);
       toast.error('Dosya yüklenirken bir hata oluştu: ' + (error instanceof Error ? error.message : String(error)));
     } finally {
@@ -145,15 +150,17 @@ export function ShopProfilePhotoUpload({
         return;
       }
       
-      const { error: updateError } = await supabase
-        .from('dukkanlar')
-        .update({ logo_url: null })
-        .eq('id', dukkanId);
-      
-      if (updateError) {
-        console.error('Dükkan logo silinirken hata:', updateError);
-        toast.error('Dükkan logosu silinemedi: ' + updateError.message);
-        return;
+      if (dukkanId) {
+        const { error: updateError } = await supabase
+          .from('dukkanlar')
+          .update({ logo_url: null })
+          .eq('id', dukkanId);
+        
+        if (updateError) {
+          console.error('Dükkan logo silinirken hata:', updateError);
+          toast.error('Dükkan logosu silinemedi: ' + updateError.message);
+          return;
+        }
       }
 
       // Also update user profile avatar if needed
@@ -168,12 +175,11 @@ export function ShopProfilePhotoUpload({
           }
         } catch (err) {
           console.error('Profil avatar silinirken hata:', err);
-          // Don't show error toast here since the shop logo was still removed
         }
       }
       
       onSuccess('');
-      toast.success('Dükkan fotoğrafı başarıyla kaldırıldı');
+      toast.success('Profil fotoğrafı başarıyla kaldırıldı');
     } catch (error) {
       console.error('Fotoğraf silme hatası:', error);
       toast.error('Fotoğraf silinirken bir hata oluştu: ' + (error instanceof Error ? error.message : String(error)));

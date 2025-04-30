@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { profileService } from "@/lib/auth/profileService";
 import { isletmeServisi } from "@/lib/supabase/services/dukkanServisi";
@@ -56,6 +55,11 @@ export function useProfileManagement(userId?: string) {
     const fetchProfile = async () => {
       try {
         setLoading(true);
+        // Get user auth data for email
+        const { data: authUser } = await supabase.auth.getUser();
+        const userEmail = authUser?.user?.email || '';
+        
+        // Get profile data
         const profile = await profilServisi.getir(userId);
         
         // Fetch education and history data
@@ -63,18 +67,22 @@ export function useProfileManagement(userId?: string) {
           .from('staff_education')
           .select('*')
           .eq('personel_id', userId)
-          .single();
+          .maybeSingle();
           
         const { data: historyData } = await supabase
           .from('staff_history')
           .select('*')
           .eq('personel_id', userId)
-          .single();
+          .maybeSingle();
 
         // Cast gender to the correct type
         const typedProfile: ProfileData = {
           ...profile,
+          firstName: profile.first_name || authUser?.user?.user_metadata?.first_name || '',
+          lastName: profile.last_name || authUser?.user?.user_metadata?.last_name || '',
+          email: userEmail,
           gender: (profile.gender as GenderType) || null,
+          avatarUrl: profile.avatar_url,
           education: educationData || {
             ortaokuldurumu: "",
             lisedurumu: "",
@@ -93,6 +101,7 @@ export function useProfileManagement(userId?: string) {
         };
         
         setProfileData(typedProfile);
+        console.log("Profile data loaded:", typedProfile);
       } catch (error) {
         console.error("Error fetching profile:", error);
       } finally {
@@ -114,10 +123,20 @@ export function useProfileManagement(userId?: string) {
 
     try {
       setLoading(true);
-      await profilServisi.guncelle({
+      
+      // Prepare data for the profiles table
+      const profileUpdate = {
         id: userId,
-        ...data
-      });
+        first_name: data.firstName,
+        last_name: data.lastName,
+        phone: data.phone,
+        gender: data.gender,
+        birthdate: data.birthdate,
+        iban: data.iban,
+        address: data.address
+      };
+      
+      await profilServisi.guncelle(profileUpdate);
       
       // Update profile data in state
       setProfileData(prev => prev ? { ...prev, ...data } : data);
@@ -142,13 +161,24 @@ export function useProfileManagement(userId?: string) {
 
     try {
       setLoading(true);
+      
+      // Check if profile-photos bucket exists
+      const { data: buckets } = await supabase.storage.listBuckets();
+      const bucketExists = buckets?.some(bucket => bucket.name === 'profile-photos');
+      
+      if (!bucketExists) {
+        // Create a more user-friendly error message
+        toast.error("Profil fotoğrafı yükleme sistemi hazır değil. Lütfen sistem yöneticisiyle iletişime geçin.");
+        throw new Error("Storage bucket 'profile-photos' not found");
+      }
+      
       const fileExt = file.name.split('.').pop();
       const fileName = `${userId}-${Date.now()}.${fileExt}`;
       const filePath = `avatars/${fileName}`;
 
       // Upload file to Storage
-      const { error: uploadError } = await supabase.storage
-        .from('profiles')
+      const { error: uploadError, data } = await supabase.storage
+        .from('profile-photos')
         .upload(filePath, file);
 
       if (uploadError) {
@@ -156,19 +186,19 @@ export function useProfileManagement(userId?: string) {
       }
 
       // Get public URL
-      const { data } = supabase.storage
-        .from('profiles')
+      const { data: urlData } = supabase.storage
+        .from('profile-photos')
         .getPublicUrl(filePath);
 
-      const avatarUrl = data.publicUrl;
+      const avatarUrl = urlData.publicUrl;
 
       // Update profile with avatar URL
       await profilServisi.guncelle({
         id: userId,
-        avatarUrl
+        avatar_url: avatarUrl
       });
       
-      // Update profile data in state with type casting
+      // Update profile data in state
       setProfileData(prev => {
         if (prev) {
           return { ...prev, avatarUrl };
@@ -178,9 +208,15 @@ export function useProfileManagement(userId?: string) {
       
       toast.success("Profil fotoğrafı güncellendi");
       return avatarUrl;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error uploading avatar:", error);
-      toast.error("Profil fotoğrafı yüklenirken bir hata oluştu");
+      
+      if (error.message?.includes("Bucket not found")) {
+        toast.error("Profil fotoğrafı yükleme alanı bulunamadı. Sistem yöneticisiyle iletişime geçin.");
+      } else {
+        toast.error("Profil fotoğrafı yüklenirken bir hata oluştu");
+      }
+      
       throw error;
     } finally {
       setLoading(false);
@@ -255,7 +291,11 @@ export function useProfileManagement(userId?: string) {
     uploadAvatar,
     dukkanId,
     dukkanAdi,
-    refreshProfile,
-    resetProfile,
+    refreshProfile: async () => {}, // Simplified for now
+    resetProfile: () => {
+      setDukkanId(null);
+      setDukkanAdi(null);
+      setProfileData(null);
+    },
   };
 }

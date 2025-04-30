@@ -153,26 +153,39 @@ export function AppointmentsList({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem>Randevu Detayları</DropdownMenuItem>
+                      {appointment.durum !== 'tamamlandi' && (
+                        <DropdownMenuItem 
+                          onClick={() => handleStatusChange(appointment.id, 'tamamlandi')}
+                          className="text-green-700 focus:text-green-700"
+                        >
+                          <CheckCircle className="mr-2 h-4 w-4" />
+                          İşlemi Tamamla
+                        </DropdownMenuItem>
+                      )}
+                      
+                      {appointment.durum !== 'iptal_edildi' && (
+                        <DropdownMenuItem 
+                          onClick={() => handleStatusChange(appointment.id, 'iptal_edildi')}
+                          className="text-red-700 focus:text-red-700"
+                        >
+                          <XCircle className="mr-2 h-4 w-4" />
+                          İşlemi İptal Et
+                        </DropdownMenuItem>
+                      )}
+                      
+                      {appointment.durum === 'iptal_edildi' && (
+                        <DropdownMenuItem 
+                          onClick={() => handleStatusChange(appointment.id, 'onaylandi')}
+                          className="text-blue-700 focus:text-blue-700"
+                        >
+                          <CheckCircle className="mr-2 h-4 w-4" />
+                          Randevuyu Yeniden Aktifleştir
+                        </DropdownMenuItem>
+                      )}
+                      
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        onSelect={() => handleStatusChange(appointment.id, 'onaylandi')}
-                        disabled={appointment.durum === 'onaylandi'}
-                      >
-                        Onayla
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onSelect={() => handleStatusChange(appointment.id, 'tamamlandi')}
-                        disabled={appointment.durum === 'tamamlandi'}
-                      >
-                        Tamamlandı
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onSelect={() => handleStatusChange(appointment.id, 'iptal_edildi')}
-                        disabled={appointment.durum === 'iptal_edildi'}
-                        className="text-red-600"
-                      >
-                        İptal Et
+                      <DropdownMenuItem>
+                        Detayları Görüntüle
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

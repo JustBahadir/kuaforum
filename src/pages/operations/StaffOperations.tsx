@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { kategoriServisi, islemServisi, siralamaServisi } from "@/lib/supabase";
@@ -24,6 +23,8 @@ export default function StaffOperations() {
   const [duzenleKategoriAdi, setDuzenleKategoriAdi] = useState("");
   const [kategoriDuzenleDialogAcik, setKategoriDuzenleDialogAcik] = useState(false);
   const [puanlamaAktif, setPuanlamaAktif] = useState(true);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { dukkanId } = useCustomerAuth();
 
   const queryClient = useQueryClient();
@@ -209,6 +210,41 @@ export default function StaffOperations() {
     setDuzenleKategoriId(kategori.id);
     setDuzenleKategoriAdi(kategori.kategori_adi);
     setKategoriDuzenleDialogAcik(true);
+  };
+
+  const handleAddCategory = async () => {
+    try {
+      setIsSubmitting(true);
+      if (!newCategoryName) {
+        toast.error("Kategori adı boş olamaz");
+        return;
+      }
+
+      // Get shop ID from context
+      const shopId = dukkanId || (await kategoriServisi._getCurrentUserDukkanId());
+
+      if (!shopId) {
+        toast.error("İşletme bilginiz bulunamadı");
+        return;
+      }
+
+      const newCategory = {
+        kategori_adi: newCategoryName,
+        dukkan_id: shopId,
+        sira: 0 // Default sira value
+      };
+
+      const addedCategory = await kategoriServisi.ekle(newCategory);
+      if (addedCategory) {
+        toast.success("Kategori başarıyla eklendi");
+        setNewCategoryName("");
+        refetchCategories();
+      }
+    } catch (error: any) {
+      toast.error(`Kategori eklenirken hata oluştu: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
