@@ -13,7 +13,7 @@ interface UseAppointmentsProps {
   initialDate?: Date | null;
 }
 
-export const useAppointments = ({ initialStatus = 'beklemede', initialDate = new Date() }: UseAppointmentsProps = {}) => {
+export const useAppointments = ({ initialStatus = 'all', initialDate = new Date() }: UseAppointmentsProps = {}) => {
   const [status, setStatus] = useState<RandevuDurumu | 'all'>(initialStatus);
   const [selectedDate, setSelectedDate] = useState<Date | null>(initialDate);
   const [appointments, setAppointments] = useState<Randevu[]>([]);
@@ -126,7 +126,7 @@ export const useAppointments = ({ initialStatus = 'beklemede', initialDate = new
         .eq('id', id)
         .single();
       
-      if (appointmentData?.dukkan_id !== dukkanId) {
+      if (appointmentData && appointmentData.dukkan_id !== dukkanId) {
         throw new Error("Bu randevu sizin işletmenize ait değil");
       }
       

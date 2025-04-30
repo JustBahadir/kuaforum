@@ -117,14 +117,15 @@ export function AppointmentDayView({
   const getAppointmentCardClassName = (status: RandevuDurumu) => {
     switch (status) {
       case 'beklemede':
-        return 'bg-yellow-50';
+      case 'onaylandi':
+        return 'bg-yellow-50 border-l-4 border-yellow-500';
       case 'tamamlandi':
-        return 'bg-green-50';
+        return 'bg-green-50 border-l-4 border-green-500';
       case 'iptal_edildi':
       case 'iptal':
-        return 'bg-red-50';
+        return 'bg-red-50 border-l-4 border-red-500';
       default:
-        return '';
+        return 'border-l-4 border-transparent';
     }
   };
 
@@ -211,8 +212,8 @@ export function AppointmentDayView({
               <Card key={appointment.id} 
                 className={`overflow-hidden ${getAppointmentCardClassName(appointment.durum)}`}
               >
-                <CardContent className="p-0">
-                  <div className="grid grid-cols-1 md:grid-cols-5 border-l-4 border-transparent p-4">
+                <CardContent className="p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                     <div className="col-span-4 grid grid-cols-4 gap-4">
                       <div>
                         <p className="text-sm text-muted-foreground">Saat</p>
@@ -247,28 +248,7 @@ export function AppointmentDayView({
                     </div>
                     
                     <div className="col-span-1 flex items-center justify-end flex-col sm:flex-row gap-2">
-                      {appointment.durum === "beklemede" && (
-                        <div className="flex flex-col sm:flex-row gap-2">
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            className="flex items-center gap-1" 
-                            onClick={() => handleCompleteClick(appointment)}
-                          >
-                            <CheckCircle className="h-4 w-4" /> Tamamlandı
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="destructive"
-                            className="flex items-center gap-1" 
-                            onClick={() => handleCancelClick(appointment)}
-                          >
-                            <XCircle className="h-4 w-4" /> İptal
-                          </Button>
-                        </div>
-                      )}
-
-                      {appointment.durum === "onaylandi" && (
+                      {(appointment.durum === "beklemede" || appointment.durum === "onaylandi") && (
                         <div className="flex flex-col sm:flex-row gap-2">
                           <Button 
                             size="sm" 

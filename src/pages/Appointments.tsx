@@ -23,6 +23,8 @@ import {
   DialogTitle
 } from '@/components/ui/dialog';
 import { AppointmentForm } from '@/components/appointments/AppointmentForm';
+import { StaffAppointmentForm } from '@/components/appointments/StaffAppointmentForm'; 
+import { useAuth } from '@/hooks/useAuth';
 
 type ViewMode = 'day' | 'week' | 'calendar' | 'list';
 
@@ -30,6 +32,7 @@ export default function Appointments() {
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<ViewMode>('day');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const { user } = useAuth();
   
   const { 
     appointments, 
@@ -60,6 +63,8 @@ export default function Appointments() {
   const handleAppointmentCreated = () => {
     setDialogOpen(false);
   };
+
+  const isStaffOrAdmin = user?.user_metadata?.role === 'staff' || user?.user_metadata?.role === 'admin';
 
   return (
     <StaffLayout>
@@ -173,9 +178,16 @@ export default function Appointments() {
                 Lütfen randevu detaylarını girin.
               </DialogDescription>
             </DialogHeader>
-            <AppointmentForm 
-              shopId={dukkanId || 0}
-            />
+            {isStaffOrAdmin ? (
+              <StaffAppointmentForm 
+                onAppointmentCreated={handleAppointmentCreated}
+                initialDate={selectedDate ? selectedDate.toISOString().split('T')[0] : undefined}
+              />
+            ) : (
+              <AppointmentForm 
+                shopId={dukkanId || 0}
+              />
+            )}
           </DialogContent>
         </Dialog>
       </div>

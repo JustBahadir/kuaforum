@@ -34,7 +34,7 @@ export function AppointmentsList({
       case 'beklemede':
         return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 hover:bg-yellow-100 flex items-center gap-1"><Clock className="h-3 w-3" /> Beklemede</Badge>;
       case 'onaylandi':
-        return <Badge variant="outline" className="bg-blue-50 text-blue-700 hover:bg-blue-100 flex items-center gap-1"><Clock className="h-3 w-3" /> Onaylandı</Badge>;
+        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 hover:bg-yellow-100 flex items-center gap-1"><Clock className="h-3 w-3" /> Onaylandı</Badge>;
       case 'tamamlandi':
         return <Badge variant="outline" className="bg-green-50 text-green-700 hover:bg-green-100 flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Tamamlandı</Badge>;
       case 'iptal_edildi':
@@ -49,6 +49,7 @@ export function AppointmentsList({
   const getRowClassName = (status: RandevuDurumu) => {
     switch(status) {
       case 'beklemede':
+      case 'onaylandi':
         return 'bg-yellow-50';
       case 'tamamlandi':
         return 'bg-green-50';

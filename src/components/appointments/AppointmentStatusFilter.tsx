@@ -1,7 +1,7 @@
 
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { RandevuDurumu } from "@/lib/supabase/types";
-import { CheckCircle, Clock, XCircle, Calendar } from "lucide-react";
+import { Calendar, CheckCircle, Clock, XCircle } from "lucide-react";
 
 interface AppointmentStatusFilterProps {
   value: RandevuDurumu | 'all';

@@ -66,7 +66,7 @@ export const useCustomerOperations = ({ customerId, limit = 10 }: UseCustomerOpe
               description: operation.aciklama,
               created_at: operation.created_at,
               staff_id: operation.personel_id,
-              staff_name: operation.personel?.ad_soyad || 'Bilinmiyor',
+              staff_name: operation.personel ? operation.personel.ad_soyad || 'Bilinmiyor' : 'Bilinmiyor',
               status: 'tamamlandı',
               payment_method: operation.odeme_yontemi || 'nakit',
               notes: operation.notlar
