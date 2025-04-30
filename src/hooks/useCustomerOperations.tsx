@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase/client';
-import { formatCurrency } from '@/lib/utils';
 import { useCustomerAuth } from '@/hooks/useCustomerAuth';
 
 export interface CustomerOperation {
@@ -38,48 +37,41 @@ export const useCustomerOperations = ({ customerId, limit = 10 }: UseCustomerOpe
       try {
         // Fetch operations for the customer with proper dukkanId isolation
         const { data: operationsData, error: operationsError } = await supabase
-          .from('islemler')
-          .select('*')
+          .from('personel_islemleri')
+          .select(`
+            id,
+            musteri_id,
+            tutar,
+            aciklama,
+            created_at,
+            personel_id,
+            odeme_yontemi,
+            notlar,
+            personel:personel_id (ad_soyad)
+          `)
           .eq('musteri_id', customerId)
-          .eq('dukkan_id', dukkanId)  // Add shop isolation
+          .eq('personel:dukkan_id', dukkanId)  // Add shop isolation
           .order('created_at', { ascending: false })
           .limit(limit);
 
         if (operationsError) throw operationsError;
 
-        // Process operations (get staff names)
+        // Process operations to match the expected format
         if (operationsData && operationsData.length > 0) {
-          const enhancedOperations = await Promise.all(
-            operationsData.map(async (operation) => {
-              let staffName = 'Bilinmiyor';
-
-              if (operation.personel_id) {
-                const { data: staffData, error: staffError } = await supabase
-                  .from('personel')
-                  .select('ad_soyad')
-                  .eq('id', operation.personel_id)
-                  .eq('dukkan_id', dukkanId) // Add shop isolation for personnel too
-                  .maybeSingle();
-
-                if (!staffError && staffData) {
-                  staffName = staffData.ad_soyad;
-                }
-              }
-
-              return {
-                id: operation.id,
-                customer_id: operation.musteri_id,
-                amount: operation.tutar,
-                description: operation.islem_tanimi,
-                created_at: operation.created_at,
-                staff_id: operation.personel_id,
-                staff_name: staffName,
-                status: operation.durum || 'tamamlandı',
-                payment_method: operation.odeme_yontemi || 'nakit',
-                notes: operation.notlar
-              };
-            })
-          );
+          const enhancedOperations = operationsData.map(operation => {
+            return {
+              id: operation.id,
+              customer_id: operation.musteri_id,
+              amount: operation.tutar,
+              description: operation.aciklama,
+              created_at: operation.created_at,
+              staff_id: operation.personel_id,
+              staff_name: operation.personel?.ad_soyad || 'Bilinmiyor',
+              status: 'tamamlandı',
+              payment_method: operation.odeme_yontemi || 'nakit',
+              notes: operation.notlar
+            };
+          });
 
           setOperations(enhancedOperations);
         } else {

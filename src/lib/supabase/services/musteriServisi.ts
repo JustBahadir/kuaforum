@@ -8,19 +8,27 @@ export const musteriServisi = {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
     
+    // Try to get dukkan_id from user metadata first
+    const dukkanIdFromMeta = user.user_metadata?.dukkan_id;
+    if (dukkanIdFromMeta) return dukkanIdFromMeta;
+    
+    // If not in metadata, try profiles table
     const { data: profileData } = await supabase
       .from('profiles')
       .select('dukkan_id')
       .eq('id', user.id)
       .maybeSingle();
     
+    if (profileData?.dukkan_id) return profileData.dukkan_id;
+    
+    // Finally try personel table
     const { data: personelData } = await supabase
       .from('personel')
       .select('dukkan_id')
       .eq('auth_id', user.id)
       .maybeSingle();
     
-    return profileData?.dukkan_id || personelData?.dukkan_id;
+    return personelData?.dukkan_id;
   },
   
   async hepsiniGetir(dukkanId?: number) {
@@ -30,6 +38,8 @@ export const musteriServisi = {
         console.error("Kullanıcının işletme bilgisi bulunamadı");
         return [];
       }
+      
+      console.log(`Dükkan ID ${userDukkanId} için müşteriler getiriliyor`);
       
       const { data, error } = await supabase
         .from('musteriler')
@@ -58,7 +68,7 @@ export const musteriServisi = {
         return null;
       }
       
-      console.log(`Müşteri ID ${id} getiriliyor`);
+      console.log(`Müşteri ID ${id} ve Dükkan ID ${dukkanId} için müşteri getiriliyor`);
       
       // Get the customer data with shop isolation
       const { data, error } = await supabase
@@ -73,8 +83,6 @@ export const musteriServisi = {
         return null;
       }
       
-      console.log(`Müşteri ID ${id} temel verisi:`, data);
-      
       // If we have customer data, create a complete customer object with auth_id
       if (data) {
         // Simply use the customer ID as the auth_id for now
@@ -83,7 +91,6 @@ export const musteriServisi = {
           auth_id: id.toString()
         } as Musteri;
         
-        console.log(`Müşteri verisi hazırlandı:`, customer);
         return customer;
       }
       
@@ -101,8 +108,6 @@ export const musteriServisi = {
         throw new Error("Kullanıcının işletme bilgisi bulunamadı");
       }
       
-      console.log("Eklenecek müşteri verileri:", musteri);
-
       // Set the correct dukkan_id
       musteri.dukkan_id = dukkanId;
       
@@ -127,7 +132,6 @@ export const musteriServisi = {
         throw error;
       }
       
-      console.log("Eklenen müşteri:", data[0]);
       return data[0];
     } catch (err) {
       console.error("Müşteri eklenirken hata:", err);

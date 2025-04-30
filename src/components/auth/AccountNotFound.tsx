@@ -44,6 +44,10 @@ export default function AccountNotFound() {
     navigate("/login");
   };
 
+  const handleReturnHome = () => {
+    navigate("/");
+  };
+
   if (isExistingAccount) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -73,7 +77,7 @@ export default function AccountNotFound() {
             </div>
           </CardContent>
           <CardFooter className="flex justify-center">
-            <Button variant="ghost" onClick={() => navigate("/")} className="flex items-center gap-2">
+            <Button variant="ghost" onClick={handleReturnHome} className="flex items-center gap-2">
               <Home size={16} />
               Ana Sayfaya Dön
             </Button>
@@ -88,7 +92,7 @@ export default function AccountNotFound() {
       <Card className="w-full max-w-md shadow-lg border border-red-100">
         <CardHeader className="text-center">
           <CardTitle className="text-center bg-gradient-to-r from-pink-500 to-purple-500 text-white p-4 rounded-t-lg">
-            Hesap Durumu
+            Hesap Bulunamadı
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6 p-6">
@@ -123,7 +127,7 @@ export default function AccountNotFound() {
           </div>
         </CardContent>
         <CardFooter className="flex justify-center">
-          <Button variant="ghost" onClick={() => navigate("/")} className="flex items-center gap-2">
+          <Button variant="ghost" onClick={handleReturnHome} className="flex items-center gap-2">
             <Home size={16} />
             Ana Sayfaya Dön
           </Button>

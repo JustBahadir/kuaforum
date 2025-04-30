@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -12,9 +13,10 @@ interface PersonnelListProps {
   personel: any[];
   onRefresh: () => void;
   isLoading?: boolean;
+  onPersonnelSelect?: (id: number) => void;
 }
 
-export function PersonnelList({ personel, onRefresh, isLoading = false }: PersonnelListProps) {
+export function PersonnelList({ personel, onRefresh, isLoading = false, onPersonnelSelect }: PersonnelListProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedPersonel, setSelectedPersonel] = useState<any | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -22,6 +24,9 @@ export function PersonnelList({ personel, onRefresh, isLoading = false }: Person
 
   const handleViewDetails = (personel: any) => {
     setSelectedPersonel(personel);
+    if (onPersonnelSelect) {
+      onPersonnelSelect(personel.id);
+    }
   };
 
   const handleCloseDetails = () => {
@@ -72,7 +77,7 @@ export function PersonnelList({ personel, onRefresh, isLoading = false }: Person
         {personel.map((p) => (
           <PersonnelCard
             key={p.id}
-            personel={p}
+            personnel={p}
             actions={[
               <Button
                 key="view"
@@ -132,7 +137,7 @@ export function PersonnelList({ personel, onRefresh, isLoading = false }: Person
 
       {selectedPersonel && (
         <PersonnelDetailsDialog
-          personel={selectedPersonel}
+          personnel={selectedPersonel}
           open={!!selectedPersonel}
           onOpenChange={handleCloseDetails}
           onRefresh={onRefresh}
@@ -140,7 +145,7 @@ export function PersonnelList({ personel, onRefresh, isLoading = false }: Person
       )}
 
       <PersonnelDeleteDialog
-        personel={selectedPersonel}
+        personnel={selectedPersonel}
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
         onSuccess={handleDeleteSuccess}

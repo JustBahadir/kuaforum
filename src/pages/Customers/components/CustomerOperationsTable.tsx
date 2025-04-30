@@ -4,6 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { useCustomerOperations, CustomerOperation } from '@/hooks/useCustomerOperations';
 import { formatCurrency } from '@/lib/utils';
+import { AlertCircle } from "lucide-react";
 
 export interface CustomerOperationsTableProps {
   customerId: number | string;
@@ -23,7 +24,10 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
   if (error) {
     return (
       <div className="p-4 border border-red-200 rounded bg-red-50 text-red-700">
-        <p>İşlem geçmişi yüklenirken bir hata oluştu.</p>
+        <div className="flex items-center gap-2">
+          <AlertCircle className="h-4 w-4" />
+          <p>İşlem geçmişi yüklenirken bir hata oluştu.</p>
+        </div>
       </div>
     );
   }

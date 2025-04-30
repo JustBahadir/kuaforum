@@ -43,8 +43,6 @@ export function CustomerDetails({ customerId, onUpdate, onDelete }: CustomerDeta
     queryKey: ['customer-operations', customerId],
     queryFn: async () => {
       try {
-        // Using customerOperationsService instead of personelIslemleriServisi
-        // Import customerOperationsService at the top if needed
         return await personelIslemleriServisi.getirByMusteriId(customerId);
       } catch (error) {
         console.error("Müşteri işlemleri getirilirken hata:", error);
