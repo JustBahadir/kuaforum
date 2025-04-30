@@ -1,3 +1,4 @@
+
 import { supabase } from '../client';
 import { PersonelIslemi } from '../types';
 
@@ -45,6 +46,12 @@ export const personelIslemleriServisi = {
   
   async hepsiniGetir() {
     try {
+      const dukkanId = await this._getCurrentUserDukkanId();
+      if (!dukkanId) {
+        console.warn("Kullanıcının işletme bilgisi bulunamadı");
+        return [];
+      }
+
       const { data, error } = await supabase
         .from('personel_islemleri')
         .select(`
@@ -53,6 +60,7 @@ export const personelIslemleriServisi = {
           musteri:musteri_id(*),
           islem:islem_id(*)
         `)
+        .eq('dukkan_id', dukkanId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -65,6 +73,11 @@ export const personelIslemleriServisi = {
 
   async getir(id: number) {
     try {
+      const dukkanId = await this._getCurrentUserDukkanId();
+      if (!dukkanId) {
+        throw new Error("Kullanıcının işletme bilgisi bulunamadı");
+      }
+      
       const { data, error } = await supabase
         .from('personel_islemleri')
         .select(`
@@ -74,6 +87,7 @@ export const personelIslemleriServisi = {
           islem:islem_id(*)
         `)
         .eq('id', id)
+        .eq('dukkan_id', dukkanId)
         .single();
 
       if (error) throw error;
@@ -86,6 +100,12 @@ export const personelIslemleriServisi = {
 
   async personelIslemleriGetir(personel_id: number) {
     try {
+      const dukkanId = await this._getCurrentUserDukkanId();
+      if (!dukkanId) {
+        console.warn("Kullanıcının işletme bilgisi bulunamadı");
+        return [];
+      }
+
       const { data, error } = await supabase
         .from('personel_islemleri')
         .select(`
@@ -95,6 +115,7 @@ export const personelIslemleriServisi = {
           islem:islem_id(*)
         `)
         .eq('personel_id', personel_id)
+        .eq('dukkan_id', dukkanId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -135,6 +156,12 @@ export const personelIslemleriServisi = {
 
   async musteriIslemleriGetir(musteri_id: number) {
     try {
+      const dukkanId = await this._getCurrentUserDukkanId();
+      if (!dukkanId) {
+        console.warn("Kullanıcının işletme bilgisi bulunamadı");
+        return [];
+      }
+      
       const { data, error } = await supabase
         .from('personel_islemleri')
         .select(`
@@ -144,6 +171,7 @@ export const personelIslemleriServisi = {
           islem:islem_id(*)
         `)
         .eq('musteri_id', musteri_id)
+        .eq('dukkan_id', dukkanId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -156,6 +184,12 @@ export const personelIslemleriServisi = {
 
   async randevuIslemleriGetir(randevu_id: number) {
     try {
+      const dukkanId = await this._getCurrentUserDukkanId();
+      if (!dukkanId) {
+        console.warn("Kullanıcının işletme bilgisi bulunamadı");
+        return [];
+      }
+      
       const { data, error } = await supabase
         .from('personel_islemleri')
         .select(`
@@ -165,6 +199,7 @@ export const personelIslemleriServisi = {
           islem:islem_id(*)
         `)
         .eq('randevu_id', randevu_id)
+        .eq('dukkan_id', dukkanId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -279,13 +314,11 @@ export const personelIslemleriServisi = {
         throw error;
       }
       
-      // Filter out operations for other shops
+      // Filter for records with matching dukkan_id
       const dukkanOperations = allOperations.filter(op => {
-        // Check if personel exists and has dukkan_id
         if (!op.personel) return false;
-        // Type assertion to access dukkan_id safely
-        const personelObj = op.personel as { dukkan_id?: number };
-        return personelObj.dukkan_id === userDukkanId;
+        if (!op.dukkan_id) return false;
+        return op.dukkan_id === userDukkanId;
       });
       
       // Calculate totals

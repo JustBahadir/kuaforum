@@ -5,58 +5,45 @@ import { IslemDto } from '../types';
 export const islemServisi = {
   async _getCurrentUserDukkanId() {
     try {
-      // Get the current user auth data
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
       
-      // First try to get it from user metadata
-      if (user.user_metadata?.dukkan_id) {
-        return user.user_metadata.dukkan_id;
-      }
+      // Try to get dukkan_id from user metadata first
+      const dukkanIdFromMeta = user?.user_metadata?.dukkan_id;
+      if (dukkanIdFromMeta) return dukkanIdFromMeta;
       
-      // Try to get it from profiles
-      const { data: profile } = await supabase
+      // If not in metadata, try profiles table
+      const { data: profileData } = await supabase
         .from('profiles')
         .select('dukkan_id')
         .eq('id', user.id)
         .maybeSingle();
-        
-      if (profile?.dukkan_id) {
-        return profile.dukkan_id;
-      }
       
-      // Try to get it from personel table
-      const { data: personel } = await supabase
+      if (profileData?.dukkan_id) return profileData.dukkan_id;
+      
+      // Try personel table
+      const { data: personelData } = await supabase
         .from('personel')
         .select('dukkan_id')
         .eq('auth_id', user.id)
         .maybeSingle();
-        
-      if (personel?.dukkan_id) {
-        return personel.dukkan_id;
-      }
       
-      // If admin, try to get the shop they own
-      if (user.user_metadata?.role === 'admin') {
-        const { data: dukkan } = await supabase
-          .from('dukkanlar')
-          .select('id')
-          .eq('sahibi_id', user.id)
-          .maybeSingle();
-          
-        if (dukkan?.id) {
-          return dukkan.id;
-        }
-      }
+      if (personelData?.dukkan_id) return personelData.dukkan_id;
       
-      console.warn("Could not determine dukkan_id for current user");
-      return null;
+      // As fallback, try to get shop ID where user is owner
+      const { data: shopData } = await supabase
+        .from('dukkanlar')
+        .select('id')
+        .eq('sahibi_id', user.id)
+        .maybeSingle();
+      
+      return shopData?.id || null;
     } catch (error) {
-      console.error("Error getting current user's dukkan_id:", error);
+      console.error("Error getting dukkan_id:", error);
       return null;
     }
   },
-  
+
   async hepsiniGetir() {
     try {
       const dukkanId = await this._getCurrentUserDukkanId();
@@ -67,12 +54,11 @@ export const islemServisi = {
 
       const { data, error } = await supabase
         .from('islemler')
-        .select('*')
+        .select('*, kategori_id(id, kategori_adi)')
         .eq('dukkan_id', dukkanId)
         .order('sira', { ascending: true });
 
       if (error) throw error;
-      console.log("Retrieved services for shop ID:", dukkanId, "count:", data?.length);
       return data || [];
     } catch (error) {
       console.error("İşlem getirme hatası:", error);
@@ -83,10 +69,13 @@ export const islemServisi = {
   async getir(id: number) {
     try {
       const dukkanId = await this._getCurrentUserDukkanId();
+      if (!dukkanId) {
+        throw new Error("Kullanıcının işletme bilgisi bulunamadı");
+      }
       
       const { data, error } = await supabase
         .from('islemler')
-        .select('*')
+        .select('*, kategori_id(id, kategori_adi)')
         .eq('id', id)
         .eq('dukkan_id', dukkanId)
         .single();
@@ -102,10 +91,14 @@ export const islemServisi = {
   async kategoriIslemleriGetir(kategori_id: number) {
     try {
       const dukkanId = await this._getCurrentUserDukkanId();
+      if (!dukkanId) {
+        console.warn("No dukkanId found, returning empty category services list");
+        return [];
+      }
       
       const { data, error } = await supabase
         .from('islemler')
-        .select('*')
+        .select('*, kategori_id(id, kategori_adi)')
         .eq('kategori_id', kategori_id)
         .eq('dukkan_id', dukkanId)
         .order('sira', { ascending: true });
@@ -118,28 +111,29 @@ export const islemServisi = {
     }
   },
 
-  async ekle(islem: Omit<IslemDto, 'id'>) {
+  async ekle(islem: Omit<IslemDto, "id">) {
     try {
       const dukkanId = await this._getCurrentUserDukkanId();
       if (!dukkanId) {
         throw new Error("Kullanıcının işletme bilgisi bulunamadı");
       }
-
+      
       // Add dukkan_id to the islem
       const islemToInsert = {
         ...islem,
         dukkan_id: dukkanId
       };
-
+      
       const { data, error } = await supabase
         .from('islemler')
         .insert(islemToInsert)
-        .select();
+        .select()
+        .single();
 
       if (error) throw error;
-      return data[0];
+      return data;
     } catch (error) {
-      console.error("İşlem eklenirken hata:", error);
+      console.error("İşlem ekleme hatası:", error);
       throw error;
     }
   },
@@ -150,7 +144,7 @@ export const islemServisi = {
       if (!dukkanId) {
         throw new Error("Kullanıcının işletme bilgisi bulunamadı");
       }
-
+      
       // Ensure we're only updating islemler for this shop
       const { data, error } = await supabase
         .from('islemler')
@@ -162,7 +156,7 @@ export const islemServisi = {
       if (error) throw error;
       return data[0];
     } catch (error) {
-      console.error("İşlem güncellenirken hata:", error);
+      console.error("İşlem güncelleme hatası:", error);
       throw error;
     }
   },
@@ -173,7 +167,7 @@ export const islemServisi = {
       if (!dukkanId) {
         throw new Error("Kullanıcının işletme bilgisi bulunamadı");
       }
-
+      
       // Ensure we're only deleting islemler for this shop
       const { error } = await supabase
         .from('islemler')
@@ -184,7 +178,7 @@ export const islemServisi = {
       if (error) throw error;
       return true;
     } catch (error) {
-      console.error("İşlem silinirken hata:", error);
+      console.error("İşlem silme hatası:", error);
       throw error;
     }
   }

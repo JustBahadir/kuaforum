@@ -12,6 +12,7 @@ import { useAuth } from '@/hooks/useAuth';
 
 export default function Profile() {
   const [activeTab, setActiveTab] = useState('personal');
+  const [activeSubTab, setActiveSubTab] = useState('education');
   const { user } = useAuth();
   const { profileData, loading, updateProfile, uploadAvatar } = useProfileManagement(user?.id);
 
@@ -27,6 +28,10 @@ export default function Profile() {
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
+  };
+
+  const handleSubTabChange = (value: string) => {
+    setActiveSubTab(value);
   };
 
   // Wrapper for avatar upload to convert Promise<string> to Promise<void>
@@ -52,12 +57,10 @@ export default function Profile() {
           <CardTitle>Profil Detayları</CardTitle>
         </CardHeader>
         <CardContent>
-          <Tabs value={activeTab} onValueChange={handleTabChange}>
-            <TabsList className="mb-4">
-              <TabsTrigger value="personal">Kişisel Bilgiler</TabsTrigger>
-              <TabsTrigger value="education">Eğitim Bilgileri</TabsTrigger>
-              <TabsTrigger value="history">Geçmiş Bilgileri</TabsTrigger>
-              <TabsTrigger value="registration">Ön Kayıt</TabsTrigger>
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+            <TabsList className="grid grid-cols-2 w-full mb-6">
+              <TabsTrigger value="personal" className="text-center py-3">Kişisel Bilgiler</TabsTrigger>
+              <TabsTrigger value="education_history" className="text-center py-3">Eğitim ve Geçmiş</TabsTrigger>
             </TabsList>
 
             <TabsContent value="personal">
@@ -79,59 +82,54 @@ export default function Profile() {
               />
             </TabsContent>
             
-            <TabsContent value="education">
-              <EducationTab 
-                educationData={profileData?.education || {
-                  ortaokuldurumu: "",
-                  lisedurumu: "",
-                  liseturu: "",
-                  meslekibrans: "",
-                  universitedurumu: "",
-                  universitebolum: ""
-                }}
-                onEducationChange={() => {}}
-                onSave={async () => {}}
-                isLoading={loading}
-              />
-            </TabsContent>
-            
-            <TabsContent value="history">
-              <HistoryTab 
-                historyData={profileData?.history || {
-                  isyerleri: "",
-                  gorevpozisyon: "",
-                  belgeler: "",
-                  yarismalar: "",
-                  cv: ""
-                }}
-                onHistoryChange={() => {}}
-                onSave={async () => {}}
-                isLoading={loading}
-              />
-            </TabsContent>
-            
-            <TabsContent value="registration">
-              <StaffPreRegistrationTab 
-                educationData={profileData?.education || {
-                  ortaokuldurumu: "",
-                  lisedurumu: "",
-                  liseturu: "",
-                  meslekibrans: "",
-                  universitedurumu: "",
-                  universitebolum: ""
-                }}
-                historyData={profileData?.history || {
-                  isyerleri: "",
-                  gorevpozisyon: "",
-                  belgeler: "",
-                  yarismalar: "",
-                  cv: ""
-                }}
-                onEducationChange={() => {}}
-                onHistoryChange={() => {}}
-                onSave={async () => {}}
-                isLoading={loading}
-              />
+            <TabsContent value="education_history">
+              <Tabs value={activeSubTab} onValueChange={handleSubTabChange} className="w-full">
+                <TabsList className="inline-flex w-full border-b mb-6">
+                  <TabsTrigger 
+                    value="education" 
+                    className="flex-1 text-center py-4 border-b-2 data-[state=active]:border-purple-600"
+                  >
+                    Eğitim Bilgileri
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="history" 
+                    className="flex-1 text-center py-4 border-b-2 data-[state=active]:border-purple-600"
+                  >
+                    Geçmiş Bilgileri
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="education">
+                  <EducationTab 
+                    educationData={profileData?.education || {
+                      ortaokuldurumu: "",
+                      lisedurumu: "",
+                      liseturu: "",
+                      meslekibrans: "",
+                      universitedurumu: "",
+                      universitebolum: ""
+                    }}
+                    onEducationChange={() => {}}
+                    onSave={async () => {}}
+                    isLoading={loading}
+                  />
+                </TabsContent>
+                
+                <TabsContent value="history">
+                  <HistoryTab 
+                    historyData={profileData?.history || {
+                      isyerleri: "",
+                      gorevpozisyon: "",
+                      belgeler: "",
+                      yarismalar: "",
+                      cv: ""
+                    }}
+                    onHistoryChange={() => {}}
+                    onSave={async () => {}}
+                    isLoading={loading}
+                  />
+                </TabsContent>
+              </Tabs>
             </TabsContent>
           </Tabs>
         </CardContent>

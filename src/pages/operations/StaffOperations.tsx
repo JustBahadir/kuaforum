@@ -38,7 +38,7 @@ export default function StaffOperations() {
     queryFn: islemServisi.hepsiniGetir
   });
 
-  const { mutate: islemEkle } = useMutation({
+  const islemEkleMutation = useMutation({
     mutationFn: (islem: Omit<IslemDto, 'id'>) => islemServisi.ekle(islem),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['islemler'] });
@@ -51,7 +51,7 @@ export default function StaffOperations() {
     }
   });
 
-  const { mutate: islemGuncelle } = useMutation({
+  const islemGuncelleMutation = useMutation({
     mutationFn: ({ id, islem }: { id: number; islem: Partial<IslemDto> }) => 
       islemServisi.guncelle(id, islem),
     onSuccess: () => {
@@ -65,7 +65,7 @@ export default function StaffOperations() {
     }
   });
 
-  const { mutate: islemSil } = useMutation({
+  const islemSilMutation = useMutation({
     mutationFn: (id: number) => islemServisi.sil(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['islemler'] });
@@ -166,13 +166,14 @@ export default function StaffOperations() {
       fiyat,
       maliyet,
       puan: puanlamaAktif ? puan : 0,
-      kategori_id: kategoriId
+      kategori_id: kategoriId,
+      dukkan_id: 0 // Will be set by the service
     };
     
     if (duzenleId) {
-      islemGuncelle({ id: duzenleId, islem });
+      islemGuncelleMutation.mutate({ id: duzenleId, islem });
     } else {
-      islemEkle(islem);
+      islemEkleMutation.mutate(islem);
     }
   };
 
@@ -258,7 +259,7 @@ export default function StaffOperations() {
                 setKategoriId(islem.kategori_id || null);
                 setDialogAcik(true);
               }}
-              onServiceDelete={islemSil}
+              onServiceDelete={(id) => islemSilMutation.mutate(id)}
               onCategoryDelete={kategoriSil}
               onCategoryEdit={handleKategoriDuzenle}
               onSiralamaChange={handleSiralamaChange}
