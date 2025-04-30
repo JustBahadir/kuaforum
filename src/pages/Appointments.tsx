@@ -1,195 +1,144 @@
 
-import React, { useState } from 'react';
-import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useAppointments } from '@/hooks/useAppointments';
-import { AppointmentDayView } from '@/components/appointments/AppointmentDayView';
-import { AppointmentWeekView } from '@/components/appointments/AppointmentWeekView';
-import { AppointmentCalendarView } from '@/components/appointments/AppointmentCalendarView';
-import { AppointmentsList } from '@/components/appointments/AppointmentsList';
-import { AppointmentStatusFilter } from '@/components/appointments/AppointmentStatusFilter';
-import { CalendarDatePicker } from '@/components/appointments/CalendarDatePicker';
-import { PageHeader } from '@/components/common/PageHeader';
-import { RandevuDurumu } from '@/lib/supabase/types';
+import { useState } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft, Calendar, Plus } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogHeader, 
-  DialogTitle
-} from '@/components/ui/dialog';
-import { AppointmentForm } from '@/components/appointments/AppointmentForm';
-import { StaffAppointmentForm } from '@/components/appointments/StaffAppointmentForm'; 
-import { useAuth } from '@/hooks/useAuth';
-
-type ViewMode = 'day' | 'week' | 'calendar' | 'list';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { CalendarDatePicker } from "@/components/appointments/CalendarDatePicker";
+import { AppointmentStatusFilter } from "@/components/appointments/AppointmentStatusFilter";
+import { AppointmentCalendarView } from "@/components/appointments/AppointmentCalendarView";
+import { AppointmentWeekView } from "@/components/appointments/AppointmentWeekView";
+import { AppointmentDayView } from "@/components/appointments/AppointmentDayView";
+import { AppointmentsList } from "@/components/appointments/AppointmentsList";
+import { useAppointments } from "@/hooks/useAppointments";
+import { useAuth } from "@/hooks/useAuth";
+import { randevuServisi } from "@/lib/supabase/services/randevuServisi";
+import { useShopData } from "@/hooks/useShopData";
+import { toast } from "sonner";
 
 export default function Appointments() {
-  const navigate = useNavigate();
-  const [viewMode, setViewMode] = useState<ViewMode>('day');
-  const [dialogOpen, setDialogOpen] = useState(false);
+  // State for the view tab
+  const [currentView, setCurrentView] = useState<"day" | "week" | "month" | "list">("day");
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const { user } = useAuth();
+  const { isletmeData } = useShopData();
+  const dukkanId = isletmeData?.id;
+  const userRole = user?.user_metadata?.role || "customer";
+  const isStaff = userRole === "staff" || userRole === "admin";
   
+  // Get personel_id from user metadata for staff members
+  const currentPersonelId = user?.user_metadata?.personel_id 
+    ? Number(user.user_metadata.personel_id) 
+    : undefined;
+
+  // Get appointments with initial filters by status and date
   const { 
     appointments, 
-    loading, 
-    error, 
-    status, 
-    selectedDate, 
-    setDate,
-    setAppointmentStatus, 
-    updateStatus,
-    currentPersonelId,
-    dukkanId
-  } = useAppointments({ initialStatus: 'all', initialDate: new Date() }); // Default to today and show all appointments
+    isLoading, 
+    isError, 
+    refetch, 
+    filters, 
+    setFilters 
+  } = useAppointments({ date: selectedDate });
 
-  const handleDateChange = (date: Date | null) => {
-    // Ensure we always have a valid date, default to today if null
-    setDate(date || new Date());
+  // Set appointment date filter
+  const handleDateChange = (date: Date | undefined) => {
+    if (date) {
+      setSelectedDate(date);
+      setFilters(prev => ({ ...prev, date }));
+    }
   };
 
-  const handleStatusChange = (status: RandevuDurumu | 'all') => {
-    setAppointmentStatus(status);
+  // Set appointment status filter
+  const handleStatusChange = (status: string | null) => {
+    setFilters(prev => ({ ...prev, status }));
   };
 
-  const handleGoBack = () => {
-    navigate(-1);
+  // Update appointment status
+  const updateAppointmentStatus = async (appointmentId: number, newStatus: string) => {
+    try {
+      await randevuServisi.randevuDurumGuncelle(appointmentId, newStatus);
+      toast.success("Randevu durumu güncellendi");
+      refetch();
+    } catch (error) {
+      console.error("Error updating appointment status:", error);
+      toast.error("Randevu durumu güncellenirken bir hata oluştu");
+    }
   };
-
-  const handleAppointmentCreated = () => {
-    setDialogOpen(false);
-  };
-
-  const isStaffOrAdmin = user?.user_metadata?.role === 'staff' || user?.user_metadata?.role === 'admin';
 
   return (
     <StaffLayout>
-      <div className="container px-4 py-8 mx-auto max-w-7xl">
-        <div className="flex items-center justify-between mb-6">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={handleGoBack}
-            className="flex items-center gap-1 text-gray-600"
-          >
-            <ArrowLeft size={16} />
-            Geri Dön
-          </Button>
-          
-          <Calendar className="h-5 w-5 text-gray-400" />
-        </div>
-
-        <PageHeader
-          title="Randevular"
-          subtitle="Randevuları görüntüleyin, düzenleyin ve yönetin"
-          button={{ 
-            label: "Yeni Randevu", 
-            href: "#",
-            onClick: () => setDialogOpen(true)
-          }}
-        />
-
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-4 mb-4">
-          <div className="md:col-span-3">
-            <AppointmentStatusFilter value={status} onChange={handleStatusChange} />
-          </div>
-          <div>
-            <CalendarDatePicker date={selectedDate} onSelect={handleDateChange} />
-          </div>
-        </div>
-
-        <Card>
-          <Tabs defaultValue={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="day">Günlük</TabsTrigger>
-              <TabsTrigger value="week">Haftalık</TabsTrigger>
-              <TabsTrigger value="calendar">Takvim</TabsTrigger>
-              <TabsTrigger value="list">Liste</TabsTrigger>
-            </TabsList>
-            
-            <CardContent className="pt-4 pb-0">
-              {loading ? (
-                <div className="flex items-center justify-center h-96">
-                  <div className="w-16 h-16 border-4 border-t-blue-500 border-blue-200 rounded-full animate-spin"></div>
-                </div>
-              ) : error ? (
-                <div className="flex items-center justify-center h-96">
-                  <div className="text-center">
-                    <h3 className="text-xl font-medium text-gray-900">Bir hata oluştu</h3>
-                    <p className="mt-2 text-gray-500">{error.message}</p>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <TabsContent value="day">
-                    <AppointmentDayView
-                      selectedDate={selectedDate || new Date()}
-                      appointments={appointments}
-                      isLoading={loading}
-                      onDateChange={handleDateChange}
-                      onUpdateStatus={updateStatus}
-                      currentPersonelId={currentPersonelId}
-                    />
-                  </TabsContent>
-                  
-                  <TabsContent value="week">
-                    <AppointmentWeekView
-                      selectedDate={selectedDate || new Date()}
-                      appointments={appointments}
-                      isLoading={loading}
-                      onDateChange={handleDateChange}
-                      currentPersonelId={currentPersonelId}
-                    />
-                  </TabsContent>
-                  
-                  <TabsContent value="calendar">
-                    <AppointmentCalendarView
-                      appointments={appointments}
-                      isLoading={loading}
-                      onDateChange={handleDateChange}
-                      onUpdateStatus={updateStatus}
-                      currentPersonelId={currentPersonelId}
-                    />
-                  </TabsContent>
-                  
-                  <TabsContent value="list">
-                    <AppointmentsList
-                      appointments={appointments}
-                      isLoading={loading}
-                      onUpdateStatus={updateStatus}
-                      currentPersonelId={currentPersonelId}
-                    />
-                  </TabsContent>
-                </>
-              )}
-            </CardContent>
-          </Tabs>
-        </Card>
+      <div className="container p-4 mx-auto">
+        <h1 className="text-2xl font-bold mb-6">Randevular</h1>
         
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Yeni Randevu Oluştur</DialogTitle>
-              <DialogDescription>
-                Lütfen randevu detaylarını girin.
-              </DialogDescription>
-            </DialogHeader>
-            {isStaffOrAdmin ? (
-              <StaffAppointmentForm 
-                onAppointmentCreated={handleAppointmentCreated}
-                initialDate={selectedDate ? selectedDate.toISOString().split('T')[0] : undefined}
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-3 mb-6">
+          <Card className="md:col-span-2">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg">Tarih Seçimi</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CalendarDatePicker 
+                date={selectedDate}
+                onDateChange={handleDateChange}
               />
-            ) : (
-              <AppointmentForm 
-                shopId={dukkanId || 0}
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg">Durum Filtresi</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <AppointmentStatusFilter 
+                selectedStatus={filters.status || null}
+                onChange={handleStatusChange}
               />
-            )}
-          </DialogContent>
-        </Dialog>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Tabs value={currentView} onValueChange={(v) => setCurrentView(v as any)}>
+          <TabsList className="grid grid-cols-4 mb-4">
+            <TabsTrigger value="day">Günlük</TabsTrigger>
+            <TabsTrigger value="week">Haftalık</TabsTrigger>
+            <TabsTrigger value="month">Aylık</TabsTrigger>
+            <TabsTrigger value="list">Liste</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="day">
+            <AppointmentDayView 
+              appointments={appointments}
+              isLoading={isLoading}
+              selectedDate={selectedDate}
+              onAppointmentStatusUpdate={updateAppointmentStatus}
+            />
+          </TabsContent>
+
+          <TabsContent value="week">
+            <AppointmentWeekView 
+              appointments={appointments}
+              isLoading={isLoading}
+              selectedDate={selectedDate}
+              onAppointmentStatusUpdate={updateAppointmentStatus}
+            />
+          </TabsContent>
+
+          <TabsContent value="month">
+            <AppointmentCalendarView 
+              appointments={appointments}
+              isLoading={isLoading}
+              selectedDate={selectedDate}
+              onDateSelect={handleDateChange}
+            />
+          </TabsContent>
+
+          <TabsContent value="list">
+            <AppointmentsList 
+              appointments={appointments}
+              isLoading={isLoading}
+              onAppointmentStatusUpdate={updateAppointmentStatus}
+            />
+          </TabsContent>
+        </Tabs>
       </div>
     </StaffLayout>
   );

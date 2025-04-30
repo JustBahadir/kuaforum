@@ -1,132 +1,118 @@
 
-import React, { useState, useEffect } from 'react';
-import { Button } from "@/components/ui/button";
-import { KategoriDto, IslemDto } from "@/lib/supabase/types";
-import { kategorilerServisi } from "@/lib/supabase/services/kategoriServisi";
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { StaffLayout } from "@/components/ui/staff-layout";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { kategorilerServisi, islemServisi } from "@/lib/supabase";
+import { useShopData } from "@/hooks/useShopData";
+import { ServicesContent } from "@/components/operations/ServicesContent";
 import { toast } from "sonner";
-import { StaffLayout } from '@/components/ui/staff-layout';
 
 export default function StaffOperations() {
-  const [kategoriler, setKategoriler] = useState<KategoriDto[]>([]);
-  const [islemler, setIslemler] = useState<IslemDto[]>([]);
-  const [yeniKategoriAdi, setYeniKategoriAdi] = useState("");
-  const [loadingKategoriler, setLoadingKategoriler] = useState(false);
-  const [loadingIslemler, setLoadingIslemler] = useState(false);
-  const [addingCategory, setAddingCategory] = useState(false);
+  const [activeTab, setActiveTab] = useState("services");
+  const { isletmeData } = useShopData();
+  const dukkanId = isletmeData?.id ?? 0;
+  
+  // Fetch categories
+  const {
+    data: categories = [],
+    isLoading: isCategoriesLoading,
+    refetch: refetchCategories
+  } = useQuery({
+    queryKey: ["categories", dukkanId],
+    queryFn: () => dukkanId ? kategorilerServisi.hepsiniGetir(dukkanId) : Promise.resolve([]),
+    enabled: !!dukkanId,
+  });
 
-  useEffect(() => {
-    fetchCategories();
-    fetchIslemler();
-  }, []);
-
-  const fetchIslemler = async () => {
-    try {
-      setLoadingIslemler(true);
-      const data = await kategorilerServisi.islemleriGetir();
-      setIslemler(data);
-    } catch (error) {
-      console.error("İşlemler yüklenirken hata:", error);
-      toast.error("İşlemler yüklenirken bir hata oluştu");
-    } finally {
-      setLoadingIslemler(false);
+  // Fetch services
+  const {
+    data: services = [],
+    isLoading: isServicesLoading,
+    refetch: refetchServices
+  } = useQuery({
+    queryKey: ["services", dukkanId],
+    queryFn: () => dukkanId ? islemServisi.hepsiniGetir(dukkanId) : Promise.resolve([]),
+    enabled: !!dukkanId,
+  });
+  
+  // Handle category add
+  const handleAddCategory = async (kategori_adi: string) => {
+    if (!dukkanId) {
+      toast.error("İşletme bilgisi bulunamadı");
+      return;
     }
-  };
-
-  // Fix the addCategory function to include dukkan_id
-  const addCategory = async () => {
+    
     try {
-      setAddingCategory(true);
-      
-      if (!yeniKategoriAdi.trim()) {
-        toast.error("Kategori adı boş olamaz");
-        return;
-      }
-      
-      await kategorilerServisi.ekle({ 
-        kategori_adi: yeniKategoriAdi,
-        sira: 0
+      await kategorilerServisi.ekle({
+        kategori_adi,
+        sira: categories.length,
+        dukkan_id: dukkanId
       });
-      
-      // Reset form and refetch categories
-      setYeniKategoriAdi("");
+      refetchCategories();
       toast.success("Kategori başarıyla eklendi");
-      await fetchCategories();
-      
-    } catch (error) {
+    } catch (error: any) {
       console.error("Kategori eklenirken hata:", error);
-      toast.error(`Kategori eklenirken hata oluştu: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`);
-    } finally {
-      setAddingCategory(false);
+      toast.error(`Kategori eklenirken hata oluştu: ${error.message}`);
     }
   };
-
-  // Add missing fetchCategories function
-  const fetchCategories = async () => {
+  
+  // Handle service add
+  const handleAddService = async (serviceData: any) => {
+    if (!dukkanId) {
+      toast.error("İşletme bilgisi bulunamadı");
+      return;
+    }
+    
     try {
-      setLoadingKategoriler(true);
-      const data = await kategorilerServisi.hepsiniGetir();
-      setKategoriler(data);
-    } catch (error) {
-      console.error("Kategoriler yüklenirken hata:", error);
-      toast.error("Kategoriler yüklenirken bir hata oluştu");
-    } finally {
-      setLoadingKategoriler(false);
+      const data = {
+        ...serviceData,
+        dukkan_id: dukkanId
+      };
+      await islemServisi.ekle(data);
+      refetchServices();
+      toast.success("Hizmet başarıyla eklendi");
+    } catch (error: any) {
+      console.error("Hizmet eklenirken hata:", error);
+      toast.error(`Hizmet eklenirken hata oluştu: ${error.message}`);
     }
   };
-
+  
   return (
     <StaffLayout>
-      <div className="container mx-auto p-4">
-        <h1 className="text-2xl font-bold mb-4">Hizmet ve Kategori Yönetimi</h1>
-
-        {/* Kategori Ekleme */}
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold mb-2">Yeni Kategori Ekle</h2>
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              placeholder="Kategori Adı"
-              value={yeniKategoriAdi}
-              onChange={(e) => setYeniKategoriAdi(e.target.value)}
-              className="border p-2 rounded flex-1"
+      <div className="container p-4 mx-auto">
+        <h1 className="text-2xl font-bold mb-6">İşlem Yönetimi</h1>
+        
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="services">Hizmetler</TabsTrigger>
+            <TabsTrigger value="products">Ürünler</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="services" className="space-y-4">
+            <ServicesContent
+              categories={categories}
+              services={services} 
+              isCategoriesLoading={isCategoriesLoading}
+              isServicesLoading={isServicesLoading}
+              onAddCategory={handleAddCategory}
+              onAddService={handleAddService}
+              onCategoryChange={refetchCategories}
+              onServiceChange={refetchServices}
             />
-            <Button
-              onClick={addCategory}
-              disabled={addingCategory}
-              className="bg-purple-600 text-white hover:bg-purple-700"
-            >
-              {addingCategory ? "Ekleniyor..." : "Kategori Ekle"}
-            </Button>
-          </div>
-        </div>
-
-        {/* Kategori Listesi */}
-        <div>
-          <h2 className="text-xl font-semibold mb-2">Kategoriler</h2>
-          {loadingKategoriler ? (
-            <p>Kategoriler yükleniyor...</p>
-          ) : (
-            <ul className="list-disc pl-5">
-              {kategoriler.map((kategori) => (
-                <li key={kategori.id}>{kategori.kategori_adi}</li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        {/* Hizmet Listesi */}
-        <div>
-          <h2 className="text-xl font-semibold mb-2">Hizmetler</h2>
-          {loadingIslemler ? (
-            <p>Hizmetler yükleniyor...</p>
-          ) : (
-            <ul className="list-disc pl-5">
-              {islemler.map((islem) => (
-                <li key={islem.id}>{islem.islem_adi}</li>
-              ))}
-            </ul>
-          )}
-        </div>
+          </TabsContent>
+          
+          <TabsContent value="products">
+            <Card>
+              <CardHeader>
+                <CardTitle>Ürün Yönetimi</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">Bu özellik yakında eklenecektir.</p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </StaffLayout>
   );

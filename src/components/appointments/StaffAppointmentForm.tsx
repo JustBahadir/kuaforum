@@ -1,23 +1,25 @@
-
 import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { format, isValid, parse } from "date-fns";
+import { tr } from "date-fns/locale";
+import { CalendarIcon, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useCustomerAuth } from "@/hooks/useCustomerAuth";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { musteriServisi, personelServisi, randevuServisi } from "@/lib/supabase";
-import { kategoriServisi } from "@/lib/supabase/services/kategoriServisi";
+import { kategorilerServisi } from "@/lib/supabase/services/kategoriServisi";
 import { islemServisi } from "@/lib/supabase/services/islemServisi";
 import { CalismaSaati, RandevuDurumu } from "@/lib/supabase/types";
-import { calismaSaatleriServisi } from "@/lib/supabase/services/calismaSaatleriServisi";
-import { format } from "date-fns";
-import { Skeleton } from "@/components/ui/skeleton";
-import { PhoneInput } from "@/components/ui/phone-input";
+import { cn } from "@/lib/utils";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useShopData } from "@/hooks/useShopData";
+import { useAvailableTimeSlots } from "@/hooks/useAvailableTimeSlots";
+import { toast } from "sonner";
 
 interface StaffAppointmentFormProps {
   onAppointmentCreated: () => void;
@@ -65,7 +67,7 @@ export function StaffAppointmentForm({ onAppointmentCreated, initialDate }: Staf
   
   const { data: kategoriler = [], isLoading: isLoadingKategoriler } = useQuery({
     queryKey: ['kategoriler'],
-    queryFn: () => kategoriServisi.hepsiniGetir()
+    queryFn: () => kategorilerServisi.hepsiniGetir()
   });
   
   const { data: islemler = [], isLoading: isLoadingIslemler } = useQuery({

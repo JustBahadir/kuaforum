@@ -1,23 +1,32 @@
 
-// Fix import/export name for isletmeServisi, remove nonexistent dukkanServisi reference
+import { supabase } from './client';
+import { dukkanServisi } from './services/dukkanServisi';
+import { islemServisi } from './services/islemServisi';
+import { kategorilerServisi } from './services/kategoriServisi';
+import { musteriServisi } from './services/musteriServisi';
+import { personelServisi } from './services/personelServisi';
+import { randevuServisi } from './services/randevuServisi';
+import { siralamaServisi } from './services/siralamaServisi';
+import { profilServisi } from './services/profilServisi';
+import { bildirimServisi } from './services/bildirimServisi';
+import { calismaSaatleriServisi } from './services/calismaSaatleriServisi';
+import { personelIslemleriServisi } from './services/personelIslemleriServisi';
 
-export * from './types';
-export * from './services/customerOperationsService';
-export * from './services/customerPersonalDataService';
+// Re-export services
+export {
+  supabase,
+  dukkanServisi,
+  islemServisi,
+  kategorilerServisi,
+  musteriServisi,
+  personelServisi,
+  randevuServisi,
+  siralamaServisi,
+  profilServisi,
+  bildirimServisi,
+  calismaSaatleriServisi,
+  personelIslemleriServisi
+};
 
-// Export services with correct names
-export { isletmeServisi } from './services/dukkanServisi';
-export { personelServisi } from './services/personelServisi';
-export { profilServisi } from './services/profilServisi';
-export { randevuServisi } from './services/randevuServisi';
-export { islemServisi } from './services/islemServisi';
-export { personelIslemleriServisi } from './services/personelIslemleriServisi';
-export { kategoriServisi } from './services/kategoriServisi';
-export { musteriServisi } from './services/musteriServisi';
-export { calismaSaatleriServisi } from './services/calismaSaatleriServisi';
-export { bildirimServisi as notificationServisi } from './services/bildirimServisi';
-export { customerPersonalDataService } from './services/customerPersonalDataService';
-export { customerOperationsService } from './services/customerOperationsService';
-export { supabase } from './client';
-export { siralamaServisi } from './services/siralamaServisi';
-
+// For backward compatibility
+export const kategoriServisi = kategorilerServisi;

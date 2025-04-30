@@ -29,15 +29,15 @@ export function useAppointments(initialFilters: AppointmentFilters = {}) {
       if (userRole === 'admin') {
         // Admin sees all appointments for their shop
         console.log('Fetching appointments for admin');
-        appointments = await randevuServisi.dukkanRandevulariniGetir();
+        appointments = await randevuServisi.dukkanRandevulariniGetir(null);
       } else if (userRole === 'staff') {
         // Staff sees all appointments for their shop
         console.log('Fetching appointments for staff');
-        appointments = await randevuServisi.dukkanRandevulariniGetir();
+        appointments = await randevuServisi.dukkanRandevulariniGetir(null);
       } else {
         // Customers see only their own appointments
         console.log('Fetching appointments for customer');
-        appointments = await randevuServisi.kendiRandevulariniGetir();
+        appointments = await randevuServisi.kendiRandevulariniGetir(null);
       }
 
       return appointments;

@@ -117,30 +117,14 @@ export const musteriServisi = {
     }
   },
   
-  async ekle(musteri: Omit<Musteri, 'id' | 'created_at'>) {
+  async ekle(musteriData: any) {
     try {
       // Try to get the user's dukkan_id
-      let dukkanId = await this._getCurrentUserDukkanId();
+      let dukkanId = musteriData.dukkan_id;
       
-      // If we still don't have a dukkan_id, try from provided data
-      if (!dukkanId && musteri.dukkan_id) {
-        dukkanId = musteri.dukkan_id;
-      }
-      
-      // Last resort - try getting the shop ID directly
+      // If we don't have a dukkan_id, try to get from current user
       if (!dukkanId) {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: shopData } = await supabase
-            .from('dukkanlar')
-            .select('id')
-            .eq('sahibi_id', user.id)
-            .maybeSingle();
-            
-          if (shopData?.id) {
-            dukkanId = shopData.id;
-          }
-        }
+        dukkanId = await this._getCurrentUserDukkanId();
       }
       
       if (!dukkanId) {
@@ -148,16 +132,16 @@ export const musteriServisi = {
       }
       
       // Set the correct dukkan_id
-      musteri.dukkan_id = dukkanId;
+      musteriData.dukkan_id = dukkanId;
       
-      console.log("Eklenecek müşteri:", musteri);
+      console.log("Eklenecek müşteri:", musteriData);
       
       // Explicitly set optional fields to null if undefined to ensure DB has values
       const dataForInsert = {
-        first_name: musteri.first_name,
-        last_name: musteri.last_name || null,
-        phone: musteri.phone || null,
-        birthdate: musteri.birthdate || null,
+        first_name: musteriData.first_name,
+        last_name: musteriData.last_name || null,
+        phone: musteriData.phone || null,
+        birthdate: musteriData.birthdate || null,
         dukkan_id: dukkanId,
       };
 
@@ -175,7 +159,6 @@ export const musteriServisi = {
       }
       
       console.log("Eklenen müşteri:", data[0]);
-      toast.success("Müşteri başarıyla eklendi");
       return data[0];
     } catch (err) {
       console.error("Müşteri eklenirken hata:", err);

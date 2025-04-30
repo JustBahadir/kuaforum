@@ -1,232 +1,188 @@
 
 import { supabase } from '../client';
+import { Randevu } from '../types';
 
 export const randevuServisi = {
-  async _getCurrentUserDukkanId() {
+  async dukkanRandevulariniGetir(dukkanId: number | null) {
     try {
-      // Get the current user auth data
+      // If dukkanId is not provided, try to get it from user metadata
+      const actualDukkanId = dukkanId || await this.getCurrentUserDukkanId();
+      
+      if (!actualDukkanId) {
+        console.error('Randevuları getirmek için dükkan bilgisi bulunamadı');
+        return [];
+      }
+      
+      const { data, error } = await supabase
+        .from('randevular')
+        .select('*, personel:personel_id(*)')
+        .eq('dukkan_id', actualDukkanId)
+        .order('tarih', { ascending: true });
+      
+      if (error) {
+        console.error('Randevular getirilemedi:', error);
+        return [];
+      }
+      
+      return data || [];
+    } catch (error) {
+      console.error('Randevular getirilemedi:', error);
+      return [];
+    }
+  },
+  
+  async kendiRandevulariniGetir(userId: string | null) {
+    try {
+      // Get current user if not provided
       const { data: { user } } = await supabase.auth.getUser();
+      const actualUserId = userId || user?.id;
+      
+      if (!actualUserId) {
+        console.error('Kullanıcı bilgisi bulunamadı');
+        return [];
+      }
+      
+      const { data, error } = await supabase
+        .from('randevular')
+        .select('*, personel:personel_id(*)')
+        .eq('customer_id', actualUserId)
+        .order('tarih', { ascending: true });
+      
+      if (error) {
+        console.error('Randevular getirilemedi:', error);
+        return [];
+      }
+      
+      return data || [];
+    } catch (error) {
+      console.error('Randevular getirilemedi:', error);
+      return [];
+    }
+  },
+  
+  async getCurrentUserDukkanId() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
       if (!user) return null;
       
-      // First try to get it from user metadata
+      // Try to get from metadata first
       if (user.user_metadata?.dukkan_id) {
         return user.user_metadata.dukkan_id;
       }
       
-      // Try to get it from profiles
+      // Try from profiles table
       const { data: profile } = await supabase
         .from('profiles')
         .select('dukkan_id')
         .eq('id', user.id)
         .maybeSingle();
-        
+      
       if (profile?.dukkan_id) {
         return profile.dukkan_id;
       }
       
-      // Try to get it from personel table
+      // Try from personel table
       const { data: personel } = await supabase
         .from('personel')
         .select('dukkan_id')
         .eq('auth_id', user.id)
         .maybeSingle();
-        
+      
       if (personel?.dukkan_id) {
         return personel.dukkan_id;
       }
       
-      // If admin, try to get the shop they own
-      if (user.user_metadata?.role === 'admin') {
-        const { data: dukkan } = await supabase
-          .from('dukkanlar')
-          .select('id')
-          .eq('sahibi_id', user.id)
-          .maybeSingle();
-          
-        if (dukkan?.id) {
-          return dukkan.id;
-        }
+      // Last resort - check if user is shop owner
+      const { data: dukkan } = await supabase
+        .from('dukkanlar')
+        .select('id')
+        .eq('sahibi_id', user.id)
+        .maybeSingle();
+      
+      return dukkan?.id || null;
+    } catch (error) {
+      console.error('Dükkan ID alınamadı:', error);
+      return null;
+    }
+  },
+
+  // Add other required methods here
+  async randevuOlustur(randevuVerisi: Partial<Randevu>) {
+    try {
+      const { data, error } = await supabase
+        .from('randevular')
+        .insert([randevuVerisi])
+        .select();
+      
+      if (error) {
+        console.error('Randevu oluşturulamadı:', error);
+        throw error;
       }
       
-      return null;
-    } catch (error) {
-      console.error("Error getting current user's dukkan_id:", error);
-      return null;
-    }
-  },
-  
-  async hepsiniGetir() {
-    try {
-      const dukkanId = await this._getCurrentUserDukkanId();
-      if (!dukkanId) {
-        console.warn("No dukkanId found, returning empty appointments list");
-        return [];
-      }
-
-      const { data, error } = await supabase
-        .from('randevular')
-        .select('*')
-        .eq('dukkan_id', dukkanId)
-        .order('tarih', { ascending: true })
-        .order('saat', { ascending: true });
-
-      if (error) throw error;
-      console.log("Retrieved appointments for shop ID:", dukkanId, "count:", data?.length);
-      return data || [];
-    } catch (error) {
-      console.error("Randevu getirme hatası:", error);
-      throw error;
-    }
-  },
-
-  async getir(id) {
-    try {
-      const { data, error } = await supabase
-        .from('randevular')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error("Randevu getirme hatası:", error);
-      throw error;
-    }
-  },
-  
-  async musteriRandevulari(musteriId) {
-    try {
-      const { data, error } = await supabase
-        .from('randevular')
-        .select('*')
-        .eq('musteri_id', musteriId)
-        .order('tarih', { ascending: true })
-        .order('saat', { ascending: true });
-
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error("Müşteri randevu getirme hatası:", error);
-      return [];
-    }
-  },
-
-  async ekle(randevu) {
-    try {
-      const { data, error } = await supabase
-        .from('randevular')
-        .insert(randevu)
-        .select();
-
-      if (error) throw error;
       return data[0];
     } catch (error) {
-      console.error("Randevu ekleme hatası:", error);
+      console.error('Randevu oluşturulamadı:', error);
       throw error;
     }
   },
-
-  async guncelle(id, updates) {
+  
+  async randevuGuncelle(id: number, updates: Partial<Randevu>) {
     try {
       const { data, error } = await supabase
         .from('randevular')
         .update(updates)
         .eq('id', id)
         .select();
-
-      if (error) throw error;
+      
+      if (error) {
+        console.error('Randevu güncellenemedi:', error);
+        throw error;
+      }
+      
       return data[0];
     } catch (error) {
-      console.error("Randevu güncelleme hatası:", error);
+      console.error('Randevu güncellenemedi:', error);
       throw error;
     }
   },
   
-  async durumGuncelle(id, yeniDurum) {
-    try {
-      const { data, error } = await supabase
-        .from('randevular')
-        .update({ durum: yeniDurum })
-        .eq('id', id)
-        .select();
-
-      if (error) throw error;
-      return data[0];
-    } catch (error) {
-      console.error("Randevu durum güncelleme hatası:", error);
-      throw error;
-    }
-  },
-
-  async sil(id) {
+  async randevuSil(id: number) {
     try {
       const { error } = await supabase
         .from('randevular')
         .delete()
         .eq('id', id);
-
-      if (error) throw error;
+      
+      if (error) {
+        console.error('Randevu silinemedi:', error);
+        throw error;
+      }
+      
       return true;
     } catch (error) {
-      console.error("Randevu silme hatası:", error);
+      console.error('Randevu silinemedi:', error);
       throw error;
     }
   },
-
-  // Add missing methods for: dukkanRandevulariniGetir, kendiRandevulariniGetir
-
-  async dukkanRandevulariniGetir(dukkanId) {
+  
+  async randevuDurumGuncelle(id: number, durum: string) {
     try {
-      if (!dukkanId) {
-        dukkanId = await this._getCurrentUserDukkanId();
-        if (!dukkanId) {
-          console.warn("No dukkanId found, returning empty appointments list");
-          return [];
-        }
+      const { data, error } = await supabase
+        .from('randevular')
+        .update({ durum })
+        .eq('id', id)
+        .select();
+      
+      if (error) {
+        console.error('Randevu durumu güncellenemedi:', error);
+        throw error;
       }
-
-      const { data, error } = await supabase
-        .from('randevular')
-        .select(`
-          *,
-          personel:personel_id (ad_soyad),
-          musteri:musteri_id (first_name, last_name)
-        `)
-        .eq('dukkan_id', dukkanId)
-        .order('tarih', { ascending: true })
-        .order('saat', { ascending: true });
-
-      if (error) throw error;
-      return data || [];
+      
+      return data[0];
     } catch (error) {
-      console.error("Dükkan randevuları getirme hatası:", error);
+      console.error('Randevu durumu güncellenemedi:', error);
       throw error;
-    }
-  },
-
-  async kendiRandevulariniGetir() {
-    try {
-      // Get current user's id
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
-
-      const { data, error } = await supabase
-        .from('randevular')
-        .select(`
-          *,
-          personel:personel_id (ad_soyad),
-          musteri:musteri_id (first_name, last_name)
-        `)
-        .eq('customer_id', user.id)
-        .order('tarih', { ascending: true })
-        .order('saat', { ascending: true });
-
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error("Kendi randevularını getirme hatası:", error);
-      return [];
     }
   }
 };
