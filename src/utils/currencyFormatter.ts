@@ -1,26 +1,12 @@
 
 /**
  * Format a number as Turkish Lira currency
- * @param value - The numeric value to format
- * @returns Formatted currency string
  */
-export function formatCurrency(value: number): string {
+export const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat('tr-TR', {
     style: 'currency',
     currency: 'TRY',
-    minimumFractionDigits: 2
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
   }).format(value);
-}
-
-/**
- * Format a number as percentage
- * @param value - The numeric value to format as percentage
- * @returns Formatted percentage string
- */
-export function formatPercentage(value: number): string {
-  return new Intl.NumberFormat('tr-TR', {
-    style: 'percent',
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1
-  }).format(value / 100);
-}
+};

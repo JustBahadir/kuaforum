@@ -3,15 +3,14 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { format, isToday, parseISO } from "date-fns";
+import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { Randevu, RandevuDurumu } from "@/lib/supabase/types";
-import { Calendar, Check, Clock, X, User, Scissors } from "lucide-react";
+import { Calendar, Check, Clock, User, Scissors, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { randevuServisi } from "@/lib/supabase";
+import { randevuServisi } from "@/lib/supabase/services/randevuServisi";
 import { toast } from "sonner";
-import { formatPhoneNumber } from "@/utils/phoneFormatter";
 
 export interface AppointmentsListProps {
   onAddClick?: () => void;
@@ -32,8 +31,16 @@ export function AppointmentsList({
   const { data: appointments = [], isLoading, refetch } = useQuery({
     queryKey: ['appointments', selectedDate],
     queryFn: async () => {
-      const data = await randevuServisi.hepsiniGetir();
-      return data;
+      try {
+        console.log("Fetching appointments with randevuServisi.hepsiniGetir()");
+        const data = await randevuServisi.hepsiniGetir();
+        console.log("Appointments fetched:", data);
+        return data;
+      } catch (error) {
+        console.error("Error in appointment fetch:", error);
+        toast.error("Randevular yüklenirken bir hata oluştu.");
+        return [];
+      }
     },
   });
 
@@ -55,7 +62,7 @@ export function AppointmentsList({
     );
   });
 
-  // Group appointments by time
+  // Group appointments by time - only hours that have appointments
   const appointmentsByHour: Record<string, Randevu[]> = {};
   
   filteredAppointments.forEach(appointment => {

@@ -1,10 +1,10 @@
 
 import { supabase } from '../client';
 import { IslemDto } from '../types';
+import { isletmeServisi } from './dukkanServisi';
 
 export const islemServisi = {
-  // Get the current user's dukkan_id
-  getCurrentDukkanId: async () => {
+  async getCurrentDukkanId() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Kullanıcı bulunamadı');
@@ -45,26 +45,37 @@ export const islemServisi = {
       return data?.dukkan_id;
     } catch (error) {
       console.error('Dükkan ID getirme hatası:', error);
-      throw error;
+      return null;
     }
   },
-
-  // Get all operations
+  
   hepsiniGetir: async (dukkanId?: number) => {
     try {
-      const shopId = dukkanId || await islemServisi.getCurrentDukkanId();
+      console.log("islemServisi.hepsiniGetir called with dukkanId:", dukkanId);
       
-      if (!shopId) {
-        throw new Error('Dükkan bilgisi bulunamadı');
+      let id = dukkanId;
+      if (!id) {
+        id = await islemServisi.getCurrentDukkanId();
+        console.log("Fetched current dukkanId:", id);
+      }
+      
+      if (!id) {
+        console.error("No dukkan ID available");
+        throw new Error('İşletme bilgisi bulunamadı');
       }
       
       const { data, error } = await supabase
         .from('islemler')
         .select('*')
-        .eq('dukkan_id', shopId)
-        .order('sira', { ascending: true });
-        
-      if (error) throw error;
+        .eq('dukkan_id', id)
+        .order('sira');
+
+      if (error) {
+        console.error("Error fetching islemler:", error);
+        throw error;
+      }
+      
+      console.log(`Found ${data?.length || 0} islemler`);
       return data || [];
     } catch (error) {
       console.error('İşlem listesi getirme hatası:', error);
@@ -72,100 +83,82 @@ export const islemServisi = {
     }
   },
 
-  // Get operations by personnel ID
-  personelIslemleriniGetir: async (personelId: number) => {
+  getir: async (id: number) => {
     try {
-      const { data, error } = await supabase
-        .from('personel_islemleri')
-        .select('*')
-        .eq('personel_id', personelId)
-        .order('created_at', { ascending: false });
-        
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error('Personel işlemleri getirme hatası:', error);
-      throw error;
-    }
-  },
-
-  // Alias for compatibility
-  personelIslemleriGetir: async (personelId: number) => {
-    return islemServisi.personelIslemleriniGetir(personelId);
-  },
-
-  // Get operations by customer ID
-  musteriIslemleriniGetir: async (musteriId: number) => {
-    try {
-      const { data, error } = await supabase
-        .from('personel_islemleri')
-        .select(`
-          *,
-          personel:personel_id (*),
-          islem:islem_id (*)
-        `)
-        .eq('musteri_id', musteriId)
-        .order('created_at', { ascending: false });
-        
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error('Müşteri işlemleri getirme hatası:', error);
-      throw error;
-    }
-  },
-
-  // Alias for compatibility
-  getirByMusteriId: async (musteriId: number) => {
-    return islemServisi.musteriIslemleriniGetir(musteriId);
-  },
-
-  // Add a new operation
-  islemEkle: async (islemVerileri: any) => {
-    try {
-      const { data, error } = await supabase
-        .from('personel_islemleri')
-        .insert([islemVerileri])
-        .select();
-        
-      if (error) throw error;
-      return data[0];
-    } catch (error) {
-      console.error('İşlem ekleme hatası:', error);
-      throw error;
-    }
-  },
-
-  // Delete an operation
-  islemSil: async (islemId: number) => {
-    try {
-      const { error } = await supabase
-        .from('personel_islemleri')
-        .delete()
-        .eq('id', islemId);
-        
-      if (error) throw error;
-      return true;
-    } catch (error) {
-      console.error('İşlem silme hatası:', error);
-      throw error;
-    }
-  },
-
-  // Add these methods for service operations
-  ekle: async (islem: Partial<IslemDto>) => {
-    try {
-      // Get dukkan_id if not provided
-      if (!islem.dukkan_id) {
-        islem.dukkan_id = await islemServisi.getCurrentDukkanId();
-      }
-
       const { data, error } = await supabase
         .from('islemler')
-        .insert([islem])
-        .select();
+        .select('*')
+        .eq('id', id)
+        .single();
 
       if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('İşlem getirme hatası:', error);
+      throw error;
+    }
+  },
+
+  kategoriIdyeGoreGetir: async (kategoriId: number, dukkanId?: number) => {
+    try {
+      console.log(`islemServisi.kategoriIdyeGoreGetir called with kategoriId: ${kategoriId}, dukkanId: ${dukkanId}`);
+      
+      let id = dukkanId;
+      if (!id) {
+        id = await islemServisi.getCurrentDukkanId();
+        console.log("Fetched current dukkanId:", id);
+      }
+      
+      if (!id) {
+        console.error("No dukkan ID available");
+        throw new Error('İşletme bilgisi bulunamadı');
+      }
+      
+      const { data, error } = await supabase
+        .from('islemler')
+        .select('*')
+        .eq('kategori_id', kategoriId)
+        .eq('dukkan_id', id)
+        .order('sira');
+
+      if (error) {
+        console.error("Error fetching islemler by kategoriId:", error);
+        throw error;
+      }
+      
+      console.log(`Found ${data?.length || 0} islemler for kategoriId: ${kategoriId}`);
+      return data || [];
+    } catch (error) {
+      console.error('Kategoriye göre işlemleri getirme hatası:', error);
+      throw error;
+    }
+  },
+
+  ekle: async (islemData: Partial<IslemDto>) => {
+    try {
+      console.log("Adding islem with data:", islemData);
+      
+      // Make sure we have a dukkan_id
+      if (!islemData.dukkan_id) {
+        const dukkanId = await islemServisi.getCurrentDukkanId();
+        if (!dukkanId) {
+          console.error("No dukkan ID available for adding islem");
+          throw new Error('İşletme bilgisi bulunamadı');
+        }
+        islemData.dukkan_id = dukkanId;
+      }
+      
+      const { data, error } = await supabase
+        .from('islemler')
+        .insert([islemData])
+        .select();
+
+      if (error) {
+        console.error("Error adding islem:", error);
+        throw error;
+      }
+      
+      console.log("İşlem added:", data[0]);
       return data[0];
     } catch (error) {
       console.error('İşlem ekleme hatası:', error);
@@ -187,7 +180,39 @@ export const islemServisi = {
       console.error('İşlem güncelleme hatası:', error);
       throw error;
     }
+  },
+
+  sil: async (id: number) => {
+    try {
+      const { error } = await supabase
+        .from('islemler')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('İşlem silme hatası:', error);
+      throw error;
+    }
+  },
+
+  siralamaGuncelle: async (items: any[]) => {
+    try {
+      // Update each item in sequence to avoid race conditions
+      for (const item of items) {
+        const { error } = await supabase
+          .from('islemler')
+          .update({ sira: item.sira })
+          .eq('id', item.id);
+
+        if (error) throw error;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('İşlem sıralaması güncelleme hatası:', error);
+      throw error;
+    }
   }
 };
-
-export const personelIslemServisi = islemServisi;

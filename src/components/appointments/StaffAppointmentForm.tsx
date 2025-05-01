@@ -47,6 +47,29 @@ export function StaffAppointmentForm({
   const [time, setTime] = useState<string>("09:00");
   const [notes, setNotes] = useState<string>("");
   const [availableTimes, setAvailableTimes] = useState<string[]>([]);
+  const [dukkanId, setDukkanId] = useState<number | null>(null);
+
+  // Fetch current dukkan ID
+  useEffect(() => {
+    const fetchDukkanId = async () => {
+      try {
+        const id = await randevuServisi.getCurrentDukkanId();
+        console.log("Current dukkanId in StaffAppointmentForm:", id);
+        if (id) {
+          setDukkanId(id);
+        } else {
+          console.error("No dukkan ID found for the current user");
+          toast.error("İşletme bilgisi bulunamadı");
+        }
+      } catch (error) {
+        console.error("Error fetching dukkanId:", error);
+      }
+    };
+    
+    if (open) {
+      fetchDukkanId();
+    }
+  }, [open]);
 
   const resetForm = () => {
     setCustomerId("");
@@ -62,63 +85,64 @@ export function StaffAppointmentForm({
     queryKey: ["customers"],
     queryFn: async () => {
       try {
-        return await musteriServisi.hepsiniGetir();
+        if (!dukkanId) return [];
+        return await musteriServisi.hepsiniGetir(dukkanId);
       } catch (error) {
         console.error("Error fetching customers:", error);
-        toast.error("Müşteri listesi alınamadı");
         return [];
       }
     },
+    enabled: !!dukkanId
   });
 
   const { data: personnel = [], isLoading: isLoadingPersonnel } = useQuery({
     queryKey: ["personnel"],
     queryFn: async () => {
       try {
-        return await personelServisi.hepsiniGetir();
+        if (!dukkanId) return [];
+        return await personelServisi.hepsiniGetir(dukkanId);
       } catch (error) {
         console.error("Error fetching personnel:", error);
-        toast.error("Personel listesi alınamadı");
         return [];
       }
     },
+    enabled: !!dukkanId
   });
 
   // Add query for categories
   const { data: categories = [], isLoading: isLoadingCategories } = useQuery({
-    queryKey: ["categories"],
+    queryKey: ["categories", dukkanId],
     queryFn: async () => {
       try {
-        return await kategoriServisi.hepsiniGetir();
+        if (!dukkanId) return [];
+        console.log("Fetching categories for dukkanId:", dukkanId);
+        const data = await kategoriServisi.hepsiniGetir(dukkanId);
+        console.log("Categories fetched:", data);
+        return data;
       } catch (error) {
         console.error("Error fetching categories:", error);
-        toast.error("Kategori listesi alınamadı");
         return [];
       }
     },
+    enabled: !!dukkanId
   });
 
   // Add query for services based on selected category
   const { data: services = [], isLoading: isLoadingServices } = useQuery({
-    queryKey: ["services", categoryId],
+    queryKey: ["services", categoryId, dukkanId],
     queryFn: async () => {
-      if (!categoryId) return [];
+      if (!categoryId || !dukkanId) return [];
       try {
-        const { data, error } = await supabase
-          .from('islemler')
-          .select('*')
-          .eq('kategori_id', parseInt(categoryId))
-          .order('sira', { ascending: true });
-
-        if (error) throw error;
-        return data || [];
+        console.log(`Fetching services for categoryId: ${categoryId}, dukkanId: ${dukkanId}`);
+        const data = await islemServisi.kategoriIdyeGoreGetir(parseInt(categoryId), dukkanId);
+        console.log("Services fetched:", data);
+        return data;
       } catch (error) {
         console.error("Error fetching services:", error);
-        toast.error("Hizmet listesi alınamadı");
         return [];
       }
     },
-    enabled: !!categoryId,
+    enabled: !!categoryId && !!dukkanId,
   });
 
   useEffect(() => {
@@ -133,6 +157,23 @@ export function StaffAppointmentForm({
             setDate(new Date(appointmentData.tarih));
             setTime(appointmentData.saat.substring(0, 5));
             setNotes(appointmentData.notlar || "");
+            
+            // If there's an islemler array with at least one item
+            if (appointmentData.islemler && appointmentData.islemler.length > 0) {
+              // Get the service to find its category
+              const serviceId = appointmentData.islemler[0];
+              setServiceId(serviceId.toString());
+              
+              // Fetch the service to get its category
+              try {
+                const service = await islemServisi.getir(serviceId);
+                if (service && service.kategori_id) {
+                  setCategoryId(service.kategori_id.toString());
+                }
+              } catch (err) {
+                console.error("Error fetching service for category:", err);
+              }
+            }
           }
         } catch (error) {
           console.error("Error fetching appointment:", error);
@@ -141,7 +182,7 @@ export function StaffAppointmentForm({
       };
       
       fetchAppointment();
-    } else {
+    } else if (open) {
       // Reset form when opening new appointment
       resetForm();
     }
@@ -169,19 +210,22 @@ export function StaffAppointmentForm({
   // Create or update appointment
   const { mutate: saveAppointment, isPending: isSaving } = useMutation({
     mutationFn: async () => {
-      if (!customerId || !personnelId || !date || !time || !serviceId) {
+      if (!customerId || !personnelId || !date || !time || !serviceId || !dukkanId) {
         throw new Error("Lütfen tüm alanları doldurun");
       }
       
       const appointmentData = {
         musteri_id: parseInt(customerId),
         personel_id: parseInt(personnelId),
+        dukkan_id: dukkanId,
         tarih: format(date, "yyyy-MM-dd"),
         saat: time,
         durum: 'beklemede' as RandevuDurumu,
         notlar: notes,
         islemler: [parseInt(serviceId)],
       };
+      
+      console.log("Saving appointment with data:", appointmentData);
       
       if (editAppointmentId) {
         return await randevuServisi.randevuGuncelle(editAppointmentId, appointmentData);
@@ -261,6 +305,36 @@ export function StaffAppointmentForm({
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="personnel">Personel Seçin</Label>
+            <Select
+              value={personnelId}
+              onValueChange={setPersonnelId}
+              disabled={isSaving}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Personel seçin" />
+              </SelectTrigger>
+              <SelectContent>
+                {isLoadingPersonnel ? (
+                  <SelectItem value="loading" disabled>
+                    Yükleniyor...
+                  </SelectItem>
+                ) : personnel.length === 0 ? (
+                  <SelectItem value="empty" disabled>
+                    Personel bulunamadı
+                  </SelectItem>
+                ) : (
+                  personnel.map((person) => (
+                    <SelectItem key={person.id} value={person.id.toString()}>
+                      {person.ad_soyad}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="category">Kategori Seçin</Label>
             <Select
               value={categoryId}
@@ -271,7 +345,7 @@ export function StaffAppointmentForm({
               disabled={isSaving}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Önce kategori seçin" />
+                <SelectValue placeholder="Kategori seçin" />
               </SelectTrigger>
               <SelectContent>
                 {isLoadingCategories ? (
@@ -314,42 +388,16 @@ export function StaffAppointmentForm({
                   </SelectItem>
                 ) : services.length === 0 ? (
                   <SelectItem value="empty" disabled>
-                    Hizmet bulunamadı
+                    Bu kategoride hizmet bulunamadı
                   </SelectItem>
                 ) : (
                   services.map((service) => (
                     <SelectItem key={service.id} value={service.id.toString()}>
-                      {service.islem_adi}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="personnel">Personel Seçin</Label>
-            <Select
-              value={personnelId}
-              onValueChange={setPersonnelId}
-              disabled={isSaving}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Personel seçin" />
-              </SelectTrigger>
-              <SelectContent>
-                {isLoadingPersonnel ? (
-                  <SelectItem value="loading" disabled>
-                    Yükleniyor...
-                  </SelectItem>
-                ) : personnel.length === 0 ? (
-                  <SelectItem value="empty" disabled>
-                    Personel bulunamadı
-                  </SelectItem>
-                ) : (
-                  personnel.map((person) => (
-                    <SelectItem key={person.id} value={person.id.toString()}>
-                      {person.ad_soyad}
+                      {service.islem_adi} - {new Intl.NumberFormat('tr-TR', {
+                        style: 'currency',
+                        currency: 'TRY',
+                        maximumFractionDigits: 0,
+                      }).format(service.fiyat)}
                     </SelectItem>
                   ))
                 )}
@@ -421,7 +469,7 @@ export function StaffAppointmentForm({
           <Button
             type="submit"
             className="w-full"
-            disabled={isSaving || !customerId || !personnelId || !date || !time || !serviceId}
+            disabled={isSaving || !customerId || !personnelId || !date || !time || !serviceId || !dukkanId}
           >
             {isSaving
               ? "Kaydediliyor..."

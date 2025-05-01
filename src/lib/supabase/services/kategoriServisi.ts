@@ -1,18 +1,13 @@
 
 import { supabase } from '../client';
-import { toast } from 'sonner';
 import { KategoriDto } from '../types';
+import { isletmeServisi } from './dukkanServisi';
 
 export const kategoriServisi = {
-  async getCurrentUserDukkanId() {
+  async getCurrentDukkanId() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Kullanıcı bulunamadı');
-      
-      // First check user metadata for dukkan_id - fastest source
-      if (user.user_metadata?.dukkan_id) {
-        return user.user_metadata.dukkan_id;
-      }
       
       // Check if user is admin
       const role = user.user_metadata?.role;
@@ -25,20 +20,8 @@ export const kategoriServisi = {
           .eq('sahibi_id', user.id)
           .single();
           
-        if (error) {
-          console.error("Dükkan bulunamadı (admin):", error);
-        }
-        
-        if (data?.id) {
-          console.log("Found dukkan_id from dukkanlar:", data.id);
-          
-          // Update auth metadata for faster access next time
-          await supabase.auth.updateUser({
-            data: { dukkan_id: data.id }
-          });
-          
-          return data.id;
-        }
+        if (error) throw error;
+        return data?.id;
       } else if (role === 'staff') {
         // Staff user - get dukkan through personeller
         const { data, error } = await supabase
@@ -47,20 +30,8 @@ export const kategoriServisi = {
           .eq('auth_id', user.id)
           .single();
           
-        if (error) {
-          console.error("Dükkan bulunamadı (personel):", error);
-        }
-        
-        if (data?.dukkan_id) {
-          console.log("Found dukkan_id from personel:", data.dukkan_id);
-          
-          // Update auth metadata for faster access next time
-          await supabase.auth.updateUser({
-            data: { dukkan_id: data.dukkan_id }
-          });
-          
-          return data.dukkan_id;
-        }
+        if (error) throw error;
+        return data?.dukkan_id;
       }
       
       // Try to get from profiles as last resort
@@ -70,64 +41,41 @@ export const kategoriServisi = {
         .eq('id', user.id)
         .single();
         
-      if (error) {
-        console.error("Dükkan bulunamadı (profiles):", error);
-        throw new Error('İşletme bilgisi bulunamadı');
-      }
-      
-      if (!data?.dukkan_id) {
-        console.error("Dükkan ID null from profiles for user:", user.id);
-        throw new Error('İşletme bilgisi bulunamadı');
-      }
-      
-      console.log("Found dukkan_id from profiles:", data.dukkan_id);
-      
-      // Update auth metadata for faster access next time
-      await supabase.auth.updateUser({
-        data: { dukkan_id: data.dukkan_id }
-      });
-      
-      return data.dukkan_id;
-    } catch (error: any) {
+      if (error) throw error;
+      return data?.dukkan_id;
+    } catch (error) {
       console.error('Dükkan ID getirme hatası:', error);
-      throw error;
+      return null;
     }
   },
   
-  async hepsiniGetir(dukkanId?: number) {
+  hepsiniGetir: async (dukkanId?: number) => {
     try {
-      // If dukkanId is not provided, get it from the current user
-      let shopId = dukkanId;
+      console.log("kategoriServisi.hepsiniGetir called with dukkanId:", dukkanId);
       
-      if (!shopId) {
-        try {
-          shopId = await this.getCurrentUserDukkanId();
-          console.log("Kategori hepsiniGetir, resolved dukkanId:", shopId);
-        } catch (error) {
-          console.error("Dükkan ID getirilemedi:", error);
-          toast.error("İşletme bilgisi bulunamadı");
-          return [];
-        }
+      let id = dukkanId;
+      if (!id) {
+        id = await kategoriServisi.getCurrentDukkanId();
+        console.log("Fetched current dukkanId:", id);
       }
       
-      if (!shopId) {
-        toast.error("İşletme bilgisi bulunamadı");
-        return [];
+      if (!id) {
+        console.error("No dukkan ID available");
+        throw new Error('İşletme bilgisi bulunamadı');
       }
-
-      console.log("Kategori hepsiniGetir, dukkanId:", shopId);
-
+      
       const { data, error } = await supabase
         .from('islem_kategorileri')
         .select('*')
-        .eq('dukkan_id', shopId)
+        .eq('dukkan_id', id)
         .order('sira');
 
       if (error) {
-        console.error("Kategori getirme hatası:", error);
+        console.error("Error fetching categories:", error);
         throw error;
       }
       
+      console.log(`Found ${data?.length || 0} categories`);
       return data || [];
     } catch (error) {
       console.error('Kategori listesi getirme hatası:', error);
@@ -135,7 +83,7 @@ export const kategoriServisi = {
     }
   },
 
-  async getir(id: number) {
+  getir: async (id: number) => {
     try {
       const { data, error } = await supabase
         .from('islem_kategorileri')
@@ -151,42 +99,31 @@ export const kategoriServisi = {
     }
   },
 
-  async ekle(kategori: {kategori_adi: string, sira: number, dukkan_id?: number}): Promise<KategoriDto> {
+  ekle: async (kategoriData: Partial<KategoriDto>) => {
     try {
-      if (!kategori.dukkan_id) {
-        // Get the current user's dukkan_id if not provided
-        try {
-          kategori.dukkan_id = await this.getCurrentUserDukkanId();
-        } catch (error) {
-          console.error("Dükkan ID getirilemedi:", error);
-          toast.error("İşletme bilgisi bulunamadı");
-          throw error;
+      console.log("Adding category with data:", kategoriData);
+      
+      // Make sure we have a dukkan_id
+      if (!kategoriData.dukkan_id) {
+        const dukkanId = await kategoriServisi.getCurrentDukkanId();
+        if (!dukkanId) {
+          console.error("No dukkan ID available for adding category");
+          throw new Error('İşletme bilgisi bulunamadı');
         }
+        kategoriData.dukkan_id = dukkanId;
       }
       
-      if (!kategori.dukkan_id) {
-        console.error("kategori.dukkan_id hala null:");
-        toast.error("İşletme bilgisi bulunamadı");
-        throw new Error('İşletme bilgisi bulunamadı');
-      }
-
-      console.log("Kategori ekle, dukkanId:", kategori.dukkan_id);
-      
-      // Since we might have issues with the function, let's directly insert
       const { data, error } = await supabase
         .from('islem_kategorileri')
-        .insert({
-          kategori_adi: kategori.kategori_adi,
-          sira: kategori.sira,
-          dukkan_id: kategori.dukkan_id
-        })
+        .insert([kategoriData])
         .select();
 
       if (error) {
-        console.error('Kategori ekle error details:', error);
+        console.error("Error adding category:", error);
         throw error;
       }
       
+      console.log("Category added:", data[0]);
       return data[0];
     } catch (error) {
       console.error('Kategori ekleme hatası:', error);
@@ -194,24 +131,23 @@ export const kategoriServisi = {
     }
   },
 
-  async guncelle(id: number, updates: Partial<{kategori_adi: string, sira: number}>) {
+  guncelle: async (id: number, updates: Partial<KategoriDto>) => {
     try {
       const { data, error } = await supabase
         .from('islem_kategorileri')
         .update(updates)
         .eq('id', id)
-        .select()
-        .single();
+        .select();
 
       if (error) throw error;
-      return data;
+      return data[0];
     } catch (error) {
       console.error('Kategori güncelleme hatası:', error);
       throw error;
     }
   },
 
-  async sil(id: number) {
+  sil: async (id: number) => {
     try {
       const { error } = await supabase
         .from('islem_kategorileri')
@@ -226,8 +162,9 @@ export const kategoriServisi = {
     }
   },
 
-  async sirayiGuncelle(items: {id: number, sira: number}[]) {
+  sirayiGuncelle: async (items: { id: number; sira: number }[]) => {
     try {
+      // Update each item in sequence to avoid race conditions
       for (const item of items) {
         const { error } = await supabase
           .from('islem_kategorileri')
@@ -236,12 +173,11 @@ export const kategoriServisi = {
 
         if (error) throw error;
       }
+
       return true;
     } catch (error) {
-      console.error('Sıra güncelleme hatası:', error);
+      console.error('Kategori sıralaması güncelleme hatası:', error);
       throw error;
     }
   }
 };
-
-export const kategorilerServisi = kategoriServisi;
