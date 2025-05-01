@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +21,8 @@ export function PersonnelHistoryTable({ personelId, limit = 5, showHeader = true
     const loadOperations = async () => {
       try {
         setLoading(true);
-        const data = await personelIslemleriServisi.personelIslemleriGetir(personelId);
+        // Using personelIslemleriniGetir as it's the standard method name
+        const data = await personelIslemleriServisi.personelIslemleriniGetir(personelId);
         
         // Apply limit if needed
         const limitedData = limit ? data.slice(0, limit) : data;

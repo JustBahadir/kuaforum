@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,7 +24,7 @@ export function OperationsHistoryTab({ personnelId, showPoints = false }: Operat
 
   const { data: operations = [], isLoading } = useQuery({
     queryKey: ['personel-islemleri', personnelId, dateRange],
-    queryFn: () => personelIslemleriServisi.personelIslemleriGetir(personnelId),
+    queryFn: () => personelIslemleriServisi.personelIslemleriniGetir(personnelId),
     refetchOnWindowFocus: false,
   });
 

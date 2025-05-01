@@ -16,7 +16,7 @@ export function PersonnelPerformance({ personnelId, personelId }: PersonnelPerfo
   const { data: operations = [], isLoading } = useQuery({
     queryKey: ['personnel-operations', actualPersonnelId],
     queryFn: async () => {
-      return personelIslemleriServisi.personelIslemleriGetir(actualPersonnelId);
+      return personelIslemleriServisi.personelIslemleriniGetir(actualPersonnelId);
     },
     enabled: !!actualPersonnelId
   });

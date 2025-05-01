@@ -105,19 +105,17 @@ export function NewAppointmentDialog({ isOpen, onOpenChange, onSuccess }: NewApp
       
       const formattedDate = format(selectedDate, "yyyy-MM-dd");
       
-      // Use the insert method since randevuServisi.randevuOlustur doesn't exist
-      await supabase
-        .from('randevular')
-        .insert({
-          dukkan_id: dukkanId,
-          musteri_id: selectedMusteriId,
-          personel_id: selectedPersonelId,
-          tarih: formattedDate,
-          saat: selectedTime,
-          durum: "onaylandi",
-          notlar: notes,
-          islemler: selectedIslemIds
-        });
+      // Use the randevuServisi instead of direct supabase call
+      await randevuServisi.randevuOlustur({
+        dukkan_id: dukkanId,
+        musteri_id: selectedMusteriId,
+        personel_id: selectedPersonelId,
+        tarih: formattedDate,
+        saat: selectedTime,
+        durum: "onaylandi",
+        notlar: notes,
+        islemler: selectedIslemIds
+      });
       
       toast.success("Randevu başarıyla oluşturuldu");
       onOpenChange(false);

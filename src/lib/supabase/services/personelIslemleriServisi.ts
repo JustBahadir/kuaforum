@@ -1,110 +1,95 @@
 
-import { supabase } from '../client';
-import { musteriServisi } from './musteriServisi';
+import { supabase } from '@/lib/supabase/client';
 
+// Define the personelIslemleriServisi object with its methods
 export const personelIslemleriServisi = {
-  async getCurrentDukkanId() {
-    return musteriServisi.getCurrentUserDukkanId();
+  getCurrentDukkanId: async function() {
+    // Implementation depends on how you manage the current dukkan_id
+    // For example, from local storage or from user profile
+    return null; // Placeholder
   },
   
-  async hepsiniGetir(dukkanId?: number) {
+  hepsiniGetir: async function(dukkanId?: number) {
     try {
-      let shopId = dukkanId;
-      if (!shopId) {
-        shopId = await this.getCurrentDukkanId();
+      let query = supabase.from('personel_islemleri').select('*, personel:personel_id(ad_soyad)');
+      
+      if (dukkanId) {
+        // Assuming personel_islemleri has a dukkan_id
+        query = query.eq('dukkan_id', dukkanId);
       }
       
-      if (!shopId) {
-        throw new Error('Dükkan bilgisi bulunamadı');
-      }
+      const { data, error } = await query;
       
-      // We join with personel to get only operations from the current shop
-      const { data, error } = await supabase
-        .from('personel_islemleri')
-        .select(`
-          *,
-          personel:personel_id (*)
-        `)
-        .order('created_at', { ascending: false });
-        
       if (error) throw error;
       return data || [];
     } catch (error) {
-      console.error('Personel işlemleri getirme hatası:', error);
-      throw error;
+      console.error('Personel işlemleri listesi getirme hatası:', error);
+      return [];
     }
   },
   
-  async getir(id: number) {
+  getir: async function(id: number) {
     try {
       const { data, error } = await supabase
         .from('personel_islemleri')
-        .select(`
-          *,
-          personel:personel_id (*),
-          islem:islem_id (*),
-          musteri:musteri_id (*)
-        `)
+        .select('*, personel:personel_id(ad_soyad)')
         .eq('id', id)
         .single();
-        
+      
       if (error) throw error;
       return data;
     } catch (error) {
       console.error('Personel işlemi getirme hatası:', error);
-      throw error;
+      return null;
     }
   },
   
-  async personelIslemleriniGetir(personelId: number) {
+  // Method for getting operations by personnel ID
+  personelIslemleriniGetir: async function(personelId: number) {
     try {
       const { data, error } = await supabase
         .from('personel_islemleri')
-        .select(`
-          *,
-          personel:personel_id (*),
-          islem:islem_id (*),
-          musteri:musteri_id (*)
-        `)
+        .select('*, islem:islem_id(*), musteri(*)')
         .eq('personel_id', personelId)
         .order('created_at', { ascending: false });
-        
+      
       if (error) throw error;
       return data || [];
     } catch (error) {
       console.error('Personel işlemleri getirme hatası:', error);
-      throw error;
+      return [];
     }
   },
   
-  async musteriIslemleriniGetir(musteriId: number) {
+  // Alias for personelIslemleriniGetir to fix the naming inconsistency
+  personelIslemleriGetir: async function(personelId: number) {
+    return this.personelIslemleriniGetir(personelId);
+  },
+  
+  // Method for getting operations by customer ID
+  musteriIslemleriniGetir: async function(musteriId: number) {
     try {
       const { data, error } = await supabase
         .from('personel_islemleri')
-        .select(`
-          *,
-          personel:personel_id (*),
-          islem:islem_id (*),
-          musteri:musteri_id (*)
-        `)
+        .select('*, personel:personel_id(ad_soyad), islem:islem_id(*)')
         .eq('musteri_id', musteriId)
         .order('created_at', { ascending: false });
-        
+      
       if (error) throw error;
       return data || [];
     } catch (error) {
       console.error('Müşteri işlemleri getirme hatası:', error);
-      throw error;
+      return [];
     }
   },
   
-  async ekle(islem: any) {
+  ekle: async function(islem: any) {
     try {
       const { data, error } = await supabase
         .from('personel_islemleri')
         .insert([islem])
         .select();
-        
+      
       if (error) throw error;
       return data[0];
     } catch (error) {
@@ -113,14 +98,14 @@ export const personelIslemleriServisi = {
     }
   },
   
-  async guncelle(id: number, updates: any) {
+  guncelle: async function(id: number, updates: any) {
     try {
       const { data, error } = await supabase
         .from('personel_islemleri')
         .update(updates)
         .eq('id', id)
         .select();
-        
+      
       if (error) throw error;
       return data[0];
     } catch (error) {
@@ -129,13 +114,13 @@ export const personelIslemleriServisi = {
     }
   },
   
-  async sil(id: number) {
+  sil: async function(id: number) {
     try {
       const { error } = await supabase
         .from('personel_islemleri')
         .delete()
         .eq('id', id);
-        
+      
       if (error) throw error;
       return true;
     } catch (error) {

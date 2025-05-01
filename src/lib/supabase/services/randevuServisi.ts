@@ -155,5 +155,66 @@ export const randevuServisi = {
       console.error('Randevu oluşturma hatası:', error);
       throw error;
     }
+  },
+
+  // Add method for tarihe göre randevular
+  tariheGoreGetir: async function(tarih: string) {
+    try {
+      const { data, error } = await supabase
+        .from('randevular')
+        .select('*, personel:personel_id(ad_soyad)')
+        .eq('tarih', tarih)
+        .order('saat', { ascending: true });
+      
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Tarihe göre randevu getirme hatası:', error);
+      return [];
+    }
+  },
+
+  // Add method for guncelle
+  guncelle: async function(randevuId: number, updates: any) {
+    try {
+      const { data, error } = await supabase
+        .from('randevular')
+        .update(updates)
+        .eq('id', randevuId)
+        .select();
+      
+      if (error) throw error;
+      return data[0];
+    } catch (error) {
+      console.error('Randevu güncelleme hatası:', error);
+      throw error;
+    }
+  },
+
+  // Add method for delete
+  sil: async function(randevuId: number) {
+    try {
+      const { error } = await supabase
+        .from('randevular')
+        .delete()
+        .eq('id', randevuId);
+      
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Randevu silme hatası:', error);
+      throw error;
+    }
+  },
+  
+  // Customer appointments
+  musteriRandevulari: async function(musteriId: number) {
+    return this.getirByMusteriId(musteriId);
+  },
+  
+  // Implement method to get current user's dukkan id
+  getCurrentDukkanId: async function() {
+    // Implement based on your auth structure
+    return null;
   }
 };

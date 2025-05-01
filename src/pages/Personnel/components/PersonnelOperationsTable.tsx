@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { personelIslemleriServisi, personelServisi } from "@/lib/supabase";
@@ -49,7 +48,7 @@ export function PersonnelOperationsTable({
     queryFn: async () => {
       try {
         const data = personnelId
-          ? await personelIslemleriServisi.personelIslemleriGetir(personnelId)
+          ? await personelIslemleriServisi.personelIslemleriniGetir(personnelId)
           : await personelIslemleriServisi.hepsiniGetir();
         
         return data.filter(op => {

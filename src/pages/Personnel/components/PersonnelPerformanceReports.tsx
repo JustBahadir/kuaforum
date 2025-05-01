@@ -8,6 +8,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { PieChart, Pie } from "recharts";
 import { formatCurrency } from "@/lib/utils";
 import { ValueType } from "recharts/types/component/DefaultTooltipContent";
+
 interface Operation {
   id: number | string;
   created_at: string | Date;
@@ -27,6 +28,7 @@ interface Operation {
   odenen?: number | string;
   prim_yuzdesi?: number | string;
 }
+
 function generateInsights(operations: Operation[], personnel: {
   id: number;
   ad_soyad: string;
@@ -68,6 +70,7 @@ function generateInsights(operations: Operation[], personnel: {
   }
   return insights;
 }
+
 export function PersonnelPerformanceReports({
   personnelId = null
 }: {
@@ -77,20 +80,23 @@ export function PersonnelPerformanceReports({
     from: new Date(new Date().setDate(new Date().getDate() - 30)),
     to: new Date()
   });
+  
   const {
     data: personnel = []
   } = useQuery({
     queryKey: ['personnel'],
     queryFn: () => import("@/lib/supabase").then(mod => mod.personelServisi.hepsiniGetir())
   });
+  
   const {
     data: operations = [],
     isLoading
   } = useQuery({
     queryKey: ['personel-operations', personnelId, dateRange.from, dateRange.to],
-    queryFn: () => personnelId ? personelIslemleriServisi.personelIslemleriGetir(personnelId) : Promise.resolve([]),
+    queryFn: () => personnelId ? personelIslemleriServisi.personelIslemleriniGetir(personnelId) : Promise.resolve([]),
     enabled: personnelId != null
   });
+
   const filteredOperations = useMemo(() => {
     return operations.filter(op => {
       if (!op.created_at) return false;
@@ -98,21 +104,26 @@ export function PersonnelPerformanceReports({
       return opDate >= dateRange.from && opDate <= dateRange.to;
     });
   }, [operations, dateRange]);
+  
   const totalRevenue = useMemo(() => filteredOperations.reduce((sum, op) => {
     const tutarVal = typeof op.tutar === "number" ? op.tutar : Number(op.tutar) || 0;
     return sum + tutarVal;
   }, 0), [filteredOperations]);
+  
   const totalCommission = useMemo(() => filteredOperations.reduce((sum, op) => {
     const odenenVal = typeof op.odenen === "number" ? op.odenen : Number(op.odenen) || 0;
     return sum + odenenVal;
   }, 0), [filteredOperations]);
+  
   const operationCount = filteredOperations.length;
+  
   const dailyDataMap = useMemo(() => {
     const map = new Map<string, {
       date: string;
       revenue: number;
       operations: number;
     }>();
+    
     filteredOperations.forEach(op => {
       if (!op.created_at) return;
       const d = new Date(op.created_at);
@@ -120,6 +131,7 @@ export function PersonnelPerformanceReports({
         day: "2-digit",
         month: "2-digit"
       });
+      
       if (!map.has(key)) {
         map.set(key, {
           date: key,
@@ -127,19 +139,23 @@ export function PersonnelPerformanceReports({
           operations: 0
         });
       }
+      
       const entry = map.get(key)!;
       const tutarVal = typeof op.tutar === "number" ? op.tutar : Number(op.tutar) || 0;
       entry.revenue += tutarVal;
       entry.operations += 1;
     });
+    
     return Array.from(map.values());
   }, [filteredOperations]);
+  
   const serviceDataMap = useMemo(() => {
     const map = new Map<string, {
       name: string;
       revenue: number;
       count: number;
     }>();
+    
     filteredOperations.forEach(op => {
       if (!op.islem) return;
       const serviceName = op.islem.islem_adi || "Diğer";
@@ -148,16 +164,21 @@ export function PersonnelPerformanceReports({
         revenue: 0,
         count: 0
       };
+      
       const tutarVal = typeof op.tutar === "number" ? op.tutar : Number(op.tutar) || 0;
       entry.revenue += tutarVal;
       entry.count += 1;
       map.set(serviceName, entry);
     });
+    
     return Array.from(map.values()).sort((a, b) => b.revenue - a.revenue);
   }, [filteredOperations]);
+  
   const tableData = filteredOperations.slice();
+  
   const [debouncedOps, setDebouncedOps] = useState(filteredOperations);
   const debounceTimeoutRef = useRef<number | null>(null);
+  
   useEffect(() => {
     if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current);
     debounceTimeoutRef.current = window.setTimeout(() => setDebouncedOps(filteredOperations), 500);
@@ -165,14 +186,17 @@ export function PersonnelPerformanceReports({
       if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current);
     };
   }, [filteredOperations]);
+  
   const [insights, setInsights] = useState<string[]>([]);
   const [isInsightsLoading, setIsInsightsLoading] = useState(false);
+  
   useEffect(() => {
     setIsInsightsLoading(true);
     const generated = generateInsights(debouncedOps, personnel);
     setInsights(generated);
     setIsInsightsLoading(false);
   }, [debouncedOps, personnel]);
+  
   const customTooltipFormatter = (value: ValueType, name: string) => {
     if (name === 'revenue') {
       const numValue = Number(value);
@@ -182,6 +206,7 @@ export function PersonnelPerformanceReports({
     }
     return [String(value), name];
   };
+
   return <div className="space-y-6">
       <AnalystBox title="Akıllı Analiz" insights={insights} isLoading={isInsightsLoading} onRefresh={() => {
       setIsInsightsLoading(true);
