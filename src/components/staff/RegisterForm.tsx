@@ -1,255 +1,169 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { supabase } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { useForm } from "react-hook-form";
+import { LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { personelServisi } from "@/lib/supabase";
-import { dukkanServisi } from "@/lib/supabase";
 
 export function RegisterForm() {
-  const {
-    register,
-    handleSubmit,
-    watch,
-    reset,
-    formState: { errors, isSubmitting },
-  } = useForm();
-  
-  const [dukkanKodu, setDukkanKodu] = useState("");
-  const [dukkanKodGecerli, setDukkanKodGecerli] = useState<boolean | null>(null);
-  const [dukkanBilgisi, setDukkanBilgisi] = useState<any>(null);
-  const [isCheckingCode, setIsCheckingCode] = useState(false);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const navigate = useNavigate();
-  
-  const enteredDukkanKodu = watch("dukkan_kod");
-  
-  useEffect(() => {
-    if (enteredDukkanKodu && enteredDukkanKodu.length >= 5) {
-      const checkDukkanKodu = async () => {
-        setIsCheckingCode(true);
-        try {
-          const dukkanlar = await dukkanServisi.kodaGoreGetir(enteredDukkanKodu);
-          
-          if (dukkanlar && dukkanlar.length > 0) {
-            setDukkanKodGecerli(true);
-            setDukkanBilgisi(dukkanlar[0]);
-          } else {
-            setDukkanKodGecerli(false);
-            setDukkanBilgisi(null);
-          }
-        } catch (error) {
-          console.error("Dükkan kodu kontrolünde hata:", error);
-          setDukkanKodGecerli(false);
-          setDukkanBilgisi(null);
-        } finally {
-          setIsCheckingCode(false);
-        }
-      };
-      
-      checkDukkanKodu();
-    } else {
-      setDukkanKodGecerli(null);
-      setDukkanBilgisi(null);
-    }
-  }, [enteredDukkanKodu]);
-  
-  const onSubmit = async (data: any) => {
-    if (!dukkanBilgisi) {
-      toast.error("Lütfen geçerli bir işletme kodu girin.");
+
+  const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    if (!firstName || !email || !password) {
+      setError("Lütfen tüm zorunlu alanları doldurun");
       return;
     }
-    
+
+    if (password.length < 6) {
+      setError("Şifre en az 6 karakter olmalıdır");
+      return;
+    }
+
     try {
-      // Set the dukkan_id from the validated dukkan code
-      data.dukkan_id = dukkanBilgisi.id;
-      
-      const response = await personelServisi.register(data);
-      
-      if (response) {
-        toast.success("Başarıyla kaydoldunuz! Yönetici onayı bekleyiniz.");
-        reset();
-        navigate("/auth/login");
+      setLoading(true);
+      setError(null);
+
+      const {
+        data: { user },
+        error: signUpError,
+      } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            first_name: firstName,
+            last_name: lastName || "",
+            role: "admin", // Default role for shop owners
+          },
+        },
+      });
+
+      if (signUpError) throw signUpError;
+
+      if (user) {
+        // Update profile
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .upsert({
+            id: user.id,
+            first_name: firstName,
+            last_name: lastName || "",
+            phone: phone || null,
+            role: "admin",
+            updated_at: new Date().toISOString(),
+          });
+
+        if (profileError) throw profileError;
+
+        toast.success("Kayıt işlemi başarılı! Giriş yapıyorsunuz...");
+        navigate("/shop-home");
       }
     } catch (error: any) {
-      console.error("Kayıt hatası:", error);
-      toast.error(`Kayıt başarısız: ${error.message || "Bilinmeyen bir hata oluştu"}`);
+      console.error("Registration error:", error);
+      setError(
+        error.message === "User already registered"
+          ? "Bu e-posta adresi zaten kayıtlı"
+          : error.message || "Kayıt işlemi sırasında bir hata oluştu"
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardContent className="pt-6">
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleRegister} className="space-y-4">
+      <div className="grid gap-4">
+        <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="dukkan_kod">İşletme Kodu</Label>
+            <Label htmlFor="first-name">Ad *</Label>
             <Input
-              id="dukkan_kod"
-              placeholder="İşletme kodunu girin"
-              {...register("dukkan_kod", { required: "İşletme kodu zorunludur" })}
+              id="first-name"
+              placeholder="Adınız"
+              required
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
             />
-            {errors.dukkan_kod && (
-              <p className="text-sm text-red-500">{`${errors.dukkan_kod.message}`}</p>
-            )}
-            {isCheckingCode && <p className="text-sm text-muted-foreground">Kod kontrol ediliyor...</p>}
-            {dukkanKodGecerli === false && !isCheckingCode && (
-              <p className="text-sm text-red-500">Geçersiz işletme kodu</p>
-            )}
-            {dukkanKodGecerli === true && !isCheckingCode && (
-              <p className="text-sm text-green-500">
-                İşletme bulundu: {dukkanBilgisi?.ad}
-              </p>
-            )}
           </div>
-          
           <div className="space-y-2">
-            <Label htmlFor="ad_soyad">Ad Soyad</Label>
+            <Label htmlFor="last-name">Soyad</Label>
             <Input
-              id="ad_soyad"
-              placeholder="Adınız ve soyadınız"
-              {...register("ad_soyad", { required: "Ad Soyad zorunludur" })}
-            />
-            {errors.ad_soyad && (
-              <p className="text-sm text-red-500">{`${errors.ad_soyad.message}`}</p>
-            )}
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="telefon">Telefon</Label>
-            <Input
-              id="telefon"
-              placeholder="Telefon numaranız"
-              {...register("telefon", { required: "Telefon zorunludur" })}
-            />
-            {errors.telefon && (
-              <p className="text-sm text-red-500">{`${errors.telefon.message}`}</p>
-            )}
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="eposta">E-posta</Label>
-            <Input
-              id="eposta"
-              type="email"
-              placeholder="E-posta adresiniz"
-              {...register("eposta", { required: "E-posta zorunludur" })}
-            />
-            {errors.eposta && (
-              <p className="text-sm text-red-500">{`${errors.eposta.message}`}</p>
-            )}
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="adres">Adres</Label>
-            <Textarea
-              id="adres"
-              placeholder="Adresiniz"
-              {...register("adres", { required: "Adres zorunludur" })}
-            />
-            {errors.adres && (
-              <p className="text-sm text-red-500">{`${errors.adres.message}`}</p>
-            )}
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="birth_date">Doğum Tarihi</Label>
-            <Input
-              id="birth_date"
-              type="date"
-              {...register("birth_date")}
+              id="last-name"
+              placeholder="Soyadınız"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
             />
           </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="personel_no">Personel Numarası</Label>
-            <Input
-              id="personel_no"
-              placeholder="Personel numaranız"
-              {...register("personel_no", { required: "Personel numarası zorunludur" })}
-            />
-            {errors.personel_no && (
-              <p className="text-sm text-red-500">{`${errors.personel_no.message}`}</p>
-            )}
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="calisma_sistemi">Çalışma Sistemi</Label>
-            <Input
-              id="calisma_sistemi"
-              placeholder="Çalışma sisteminiz"
-              {...register("calisma_sistemi", { required: "Çalışma sistemi zorunludur" })}
-            />
-            {errors.calisma_sistemi && (
-              <p className="text-sm text-red-500">{`${errors.calisma_sistemi.message}`}</p>
-            )}
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="prim_yuzdesi">Prim Yüzdesi (%)</Label>
-              <Input
-                id="prim_yuzdesi"
-                type="number"
-                placeholder="20"
-                {...register("prim_yuzdesi", { 
-                  required: "Prim yüzdesi zorunludur",
-                  min: {
-                    value: 0,
-                    message: "Prim yüzdesi 0'dan küçük olamaz"
-                  },
-                  max: {
-                    value: 100,
-                    message: "Prim yüzdesi 100'den büyük olamaz"
-                  }
-                })}
-              />
-              {errors.prim_yuzdesi && (
-                <p className="text-sm text-red-500">{`${errors.prim_yuzdesi.message}`}</p>
-              )}
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="maas">Maaş (₺)</Label>
-              <Input
-                id="maas"
-                type="number"
-                placeholder="5000"
-                {...register("maas", { 
-                  required: "Maaş zorunludur",
-                  min: {
-                    value: 0,
-                    message: "Maaş 0'dan küçük olamaz"
-                  }
-                })}
-              />
-              {errors.maas && (
-                <p className="text-sm text-red-500">{`${errors.maas.message}`}</p>
-              )}
-            </div>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="iban">IBAN (Opsiyonel)</Label>
-            <Input
-              id="iban"
-              placeholder="IBAN numaranız"
-              {...register("iban")}
-            />
-          </div>
-          
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={isSubmitting || isCheckingCode || dukkanKodGecerli === false}
-          >
-            {isSubmitting ? "Kaydediliyor..." : "Kayıt Ol"}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="email">E-posta *</Label>
+          <Input
+            id="email"
+            type="email"
+            placeholder="ornek@email.com"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="phone">Telefon</Label>
+          <Input
+            id="phone"
+            type="tel"
+            placeholder="05XX XXX XX XX"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="password">Şifre *</Label>
+          <Input
+            id="password"
+            type="password"
+            required
+            minLength={6}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <p className="text-xs text-muted-foreground">
+            Şifreniz en az 6 karakter olmalıdır
+          </p>
+        </div>
+      </div>
+
+      {error && (
+        <div className="bg-red-50 text-red-500 p-3 rounded-md text-sm">
+          {error}
+        </div>
+      )}
+
+      <Button type="submit" className="w-full" disabled={loading}>
+        {loading && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
+        Kaydol
+      </Button>
+
+      <p className="text-center text-sm text-muted-foreground">
+        Zaten hesabınız var mı?{" "}
+        <a href="/login" className="text-primary hover:underline">
+          Giriş Yap
+        </a>
+      </p>
+    </form>
   );
 }

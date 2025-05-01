@@ -1,5 +1,6 @@
 
 import { supabase } from '../client';
+import { IslemDto } from '../types';
 
 export const islemServisi = {
   // Get the current user's dukkan_id
@@ -58,14 +59,10 @@ export const islemServisi = {
       }
       
       const { data, error } = await supabase
-        .from('personel_islemleri')
-        .select(`
-          *,
-          personel:personel_id (*),
-          musteri:musteri_id (*)
-        `)
+        .from('islemler')
+        .select('*')
         .eq('dukkan_id', shopId)
-        .order('created_at', { ascending: false });
+        .order('sira', { ascending: true });
         
       if (error) throw error;
       return data || [];
@@ -151,6 +148,43 @@ export const islemServisi = {
       return true;
     } catch (error) {
       console.error('İşlem silme hatası:', error);
+      throw error;
+    }
+  },
+
+  // Add these methods for service operations
+  ekle: async (islem: Partial<IslemDto>) => {
+    try {
+      // Get dukkan_id if not provided
+      if (!islem.dukkan_id) {
+        islem.dukkan_id = await islemServisi.getCurrentDukkanId();
+      }
+
+      const { data, error } = await supabase
+        .from('islemler')
+        .insert([islem])
+        .select();
+
+      if (error) throw error;
+      return data[0];
+    } catch (error) {
+      console.error('İşlem ekleme hatası:', error);
+      throw error;
+    }
+  },
+
+  guncelle: async (id: number, updates: Partial<IslemDto>) => {
+    try {
+      const { data, error } = await supabase
+        .from('islemler')
+        .update(updates)
+        .eq('id', id)
+        .select();
+
+      if (error) throw error;
+      return data[0];
+    } catch (error) {
+      console.error('İşlem güncelleme hatası:', error);
       throw error;
     }
   }

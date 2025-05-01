@@ -1,131 +1,104 @@
 
-import { useState } from "react";
-import { supabase } from "@/lib/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
-import { toast } from "sonner";
-import { profileServisi } from "@/lib/supabase/services/profileServisi";
-import { uiStore } from "@/stores/uiStore";
+import { useState } from 'react';
+import { supabase } from '@/lib/supabase/client';
+import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
+import { useUIStore } from '@/stores/uiStore';
 
 export function useProfileManagement() {
-  const { user } = useAuth();
-  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const [profileData, setProfileData] = useState({
-    first_name: "",
-    last_name: "",
-    phone: "",
-    address: "",
-    birthdate: "",
-    iban: "",
-    gender: "",
+    first_name: '',
+    last_name: '',
+    phone: '',
+    iban: '',
+    address: '',
+    birthdate: '',
+    avatar_url: '',
   });
-  const [isSaving, setIsSaving] = useState(false);
-  const {setIsProfileCompleted} = uiStore();
 
-  const updateProfileField = (field: string, value: string) => {
-    setProfileData((prev) => ({ ...prev, [field]: value }));
-  };
+  const navigate = useNavigate();
 
-  const loadProfileData = async () => {
+  const fetchProfile = async () => {
     try {
-      if (!user?.id) return;
+      setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        navigate('/login');
+        return;
+      }
 
       // Get profile data
-      const profile = await profileServisi.getir(user.id);
-      
-      if (profile) {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching profile:', error);
+        toast.error('Profil bilgileri alınamadı');
+        return;
+      }
+
+      if (data) {
         setProfileData({
-          first_name: profile.first_name || "",
-          last_name: profile.last_name || "",
-          phone: profile.phone || "",
-          address: profile.address || "",
-          birthdate: profile.birthdate ? new Date(profile.birthdate).toISOString().split('T')[0] : "",
-          iban: profile.iban || "",
-          gender: profile.gender || "",
+          first_name: data.first_name || '',
+          last_name: data.last_name || '',
+          phone: data.phone || '',
+          iban: data.iban || '',
+          address: data.address || '',
+          birthdate: data.birthdate || '',
+          avatar_url: data.avatar_url || '',
         });
-        
-        setAvatarUrl(profile.avatar_url || null);
-        
-        // Check if profile is completed
-        const isComplete = Boolean(profile.first_name && profile.phone);
-        setIsProfileCompleted(isComplete);
       }
     } catch (error) {
-      console.error("Error loading profile data:", error);
-      toast.error("Profil bilgileri yüklenemedi");
+      console.error('Profile fetch error:', error);
+      toast.error('Profil bilgileri alınamadı');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const saveProfile = async () => {
+  const updateProfile = async (updates: Partial<typeof profileData>) => {
     try {
-      if (!user?.id) {
-        throw new Error("Kullanıcı kimliği bulunamadı");
+      setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        navigate('/login');
+        return false;
       }
-      
-      setIsSaving(true);
-      
-      // Fix: Use the profileServisi to update the profile
-      await profileServisi.guncelle(user.id, {
-        ...profileData,
-        updated_at: new Date().toISOString(),
-      });
-      
-      // Check if profile is completed
-      const isComplete = Boolean(profileData.first_name && profileData.phone);
-      setIsProfileCompleted(isComplete);
-      
-      toast.success("Profil bilgileri başarıyla güncellendi");
-    } catch (error) {
-      console.error("Error saving profile:", error);
-      toast.error("Profil kaydedilirken bir hata oluştu");
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
-  const uploadAvatar = async (file: File) => {
-    try {
-      if (!user?.id) {
-        throw new Error("Kullanıcı kimliği bulunamadı");
+      const { error } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', user.id);
+
+      if (error) {
+        console.error('Error updating profile:', error);
+        toast.error('Profil güncellenemedi');
+        return false;
       }
-      
-      setIsUploadingAvatar(true);
-      
-      // Upload file to storage
-      const filePath = `avatars/${user.id}/${file.name}`;
-      const { error: uploadError } = await supabase.storage
-        .from("avatars")
-        .upload(filePath, file, { upsert: true });
-      
-      if (uploadError) throw uploadError;
-      
-      // Get public URL
-      const { data } = supabase.storage.from("avatars").getPublicUrl(filePath);
-      const publicUrl = data.publicUrl;
-      
-      // Update profile with avatar URL
-      await profileServisi.guncelle(user.id, {
-        avatar_url: publicUrl,
-      });
-      
-      setAvatarUrl(publicUrl);
-      toast.success("Profil fotoğrafı güncellendi");
-    } catch (error: any) {
-      console.error("Error uploading avatar:", error);
-      toast.error(`Profil fotoğrafı yüklenirken bir hata oluştu - ${error.message || "Bilinmeyen hata"}`);
+
+      toast.success('Profil başarıyla güncellendi');
+      setProfileData((prev) => ({ ...prev, ...updates }));
+      return true;
+    } catch (error) {
+      console.error('Profile update error:', error);
+      toast.error('Profil güncellenemedi');
+      return false;
     } finally {
-      setIsUploadingAvatar(false);
+      setLoading(false);
     }
   };
 
   return {
     profileData,
-    updateProfileField,
-    loadProfileData,
-    saveProfile,
-    isSaving,
-    uploadAvatar,
-    isUploadingAvatar,
-    avatarUrl,
+    setProfileData,
+    loading,
+    fetchProfile,
+    updateProfile
   };
 }

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -19,6 +20,7 @@ import { randevuServisi } from "@/lib/supabase/services/randevuServisi";
 import { kategoriServisi } from "@/lib/supabase/services/kategoriServisi";
 import { islemServisi } from "@/lib/supabase/services/islemServisi";
 import { supabase } from '@/lib/supabase/client';
+import { RandevuDurumu } from "@/lib/supabase/types";
 
 interface StaffAppointmentFormProps {
   open: boolean;
@@ -176,7 +178,7 @@ export function StaffAppointmentForm({
         personel_id: parseInt(personnelId),
         tarih: format(date, "yyyy-MM-dd"),
         saat: time,
-        durum: "beklemede",
+        durum: 'beklemede' as RandevuDurumu,
         notlar: notes,
         islemler: [parseInt(serviceId)],
       };

@@ -1,257 +1,261 @@
 
-import { useState, useEffect } from "react";
-import { useQuery, type UseQueryResult } from "@tanstack/react-query";
-import { PersonelIslemi as PersonelIslemiType, islemServisi, personelIslemleriServisi, personelServisi } from "@/lib/supabase";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PersonnelList } from "./components/PersonnelList";
-import { PerformanceCharts } from "./components/PerformanceCharts";
-import { PersonnelPerformanceReports } from "./components/PersonnelPerformanceReports";
+import { useState } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
-import { useCustomerAuth } from "@/hooks/useCustomerAuth";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, FileBarChart } from "lucide-react";
-import { Navigate } from "react-router-dom";
-import { formatCurrency } from "@/lib/utils";
-import { DateControlBar } from "@/components/ui/date-control-bar";
-import { createMonthCycleDateRange } from "@/utils/dateUtils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Edit, Plus, Search, Trash } from "lucide-react";
+import { personelServisi } from "@/lib/supabase/services/personelServisi";
+import { useQuery } from "@tanstack/react-query";
+import { PersonnelActionMenu } from "./components/PersonnelActionMenu";
+import { PersonnelDetail } from "./components/PersonnelDetail";
+import { CreatePersonnelForm } from "./components/CreatePersonnelForm";
+import { Toaster } from "sonner";
+import { formatPhoneNumber } from "@/utils/phoneFormatter";
+import { usePersonnelMutation } from "./hooks/usePersonnelMutation";
 
-interface PersonelIslemi extends PersonelIslemiType {
-  personel_id: number;
-  created_at: string;
-}
-
-export default function Personnel() {
-  const { userRole, refreshProfile } = useCustomerAuth();
-  const [dateRange, setDateRange] = useState({
-    from: new Date(new Date().setDate(new Date().getDate() - 30)),
-    to: new Date()
-  });
+export default function PersonnelPage() {
+  const [searchTerm, setSearchTerm] = useState("");
   const [selectedPersonnelId, setSelectedPersonnelId] = useState<number | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("active");
 
-  useEffect(() => {
-    refreshProfile().catch(console.error);
-  }, []);
-
-  const { data: islemler = [] } = useQuery({
-    queryKey: ['islemler'],
-    queryFn: islemServisi.hepsiniGetir,
-    retry: 1,
-    enabled: userRole === 'admin'
-  });
-
-  const { data: personeller = [] } = useQuery({
-    queryKey: ['personel'],
-    queryFn: () => personelServisi.hepsiniGetir(),
-    retry: 1,
-    enabled: userRole === 'admin'
-  });
-
-  const { data: rawIslemGecmisi = [], isLoading: islemlerLoading }: UseQueryResult<PersonelIslemiType[], Error> = useQuery({
-    queryKey: ['personelIslemleri', dateRange.from, dateRange.to],
+  // Query personnel data
+  const { data: personnel = [], isLoading } = useQuery({
+    queryKey: ["personnel"],
     queryFn: async () => {
-      const data = await personelIslemleriServisi.hepsiniGetir();
-      return data.filter(islem => {
-        if (!islem.created_at) return true;
-        const islemDate = new Date(islem.created_at);
-        return islemDate >= dateRange.from && islemDate <= dateRange.to;
-      });
+      try {
+        const data = await personelServisi.hepsiniGetir();
+        return data;
+      } catch (error) {
+        console.error("Error fetching personnel:", error);
+        return [];
+      }
     },
-    retry: 1,
-    enabled: userRole === 'admin'
   });
-  
-  const islemGecmisi: PersonelIslemi[] = rawIslemGecmisi
-    .filter(islem => islem.personel_id !== undefined && islem.created_at !== undefined)
-    .map(islem => ({
-      ...islem,
-      personel_id: islem.personel_id as number,
-      created_at: islem.created_at as string
-    }));
 
-  const handleDateRangeChange = (newRange: {from: Date, to: Date}) => {
-    setDateRange(newRange);
-  };
-  
-  const handleSingleDateSelect = (date: Date) => {
-    setDateRange({
-      from: date,
-      to: date
-    });
-  };
-  
-  const handleMonthCycleChange = (day: number, cycleDate: Date) => {
-    const { from, to } = createMonthCycleDateRange(day);
-    setDateRange({ from, to });
+  // Filter personnel by search term and status
+  const filteredPersonnel = personnel.filter((person) => {
+    const matchesSearch =
+      searchTerm === "" ||
+      person.ad_soyad.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      person.telefon.includes(searchTerm);
+
+    if (activeTab === "active") {
+      return matchesSearch && person.aktif !== false;
+    }
+    return matchesSearch && person.aktif === false;
+  });
+
+  // Mutations
+  const { deletePersonnel } = usePersonnelMutation();
+
+  // Handlers
+  const handleSelectPersonnel = (id: number) => {
+    setSelectedPersonnelId(id);
   };
 
-  const handleRefreshPersonnel = () => {
-    // Refresh the personnel list
+  const handleCloseDetail = () => {
+    setSelectedPersonnelId(null);
   };
 
-  if (userRole === 'staff') {
-    return <Navigate to="/shop-home" replace />;
-  } else if (userRole === 'customer') {
-    return <Navigate to="/customer-dashboard" replace />;
-  } 
-  
-  if (!userRole) {
-    return (
-      <StaffLayout>
-        <div className="flex justify-center p-12">
-          <div className="w-10 h-10 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
-        </div>
-      </StaffLayout>
+  const handleOpenCreateModal = () => {
+    setIsCreateModalOpen(true);
+  };
+
+  const handleCloseCreateModal = () => {
+    setIsCreateModalOpen(false);
+  };
+
+  const handleDeleteConfirm = (id: number) => {
+    if (confirm("Bu personeli silmek istediğinizden emin misiniz?")) {
+      deletePersonnel.mutate(id);
+    }
+  };
+
+  // This is a modal to display personnel details
+  const renderPersonnelDetailModal = () => {
+    if (!selectedPersonnelId) return null;
+
+    const selectedPersonnel = personnel.find(
+      (person) => person.id === selectedPersonnelId
     );
-  }
 
-  if (userRole !== 'admin') {
+    if (!selectedPersonnel) return null;
+
     return (
-      <StaffLayout>
-        <Alert variant="destructive" className="mb-4">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Bu sayfaya erişim yetkiniz bulunmamaktadır. Yalnızca yöneticiler personel yönetimi yapabilir.
-          </AlertDescription>
-        </Alert>
-      </StaffLayout>
+      <Dialog open={!!selectedPersonnelId} onOpenChange={handleCloseDetail}>
+        <DialogContent className="sm:max-w-[800px]">
+          <DialogHeader>
+            <DialogTitle>Personel Detayları</DialogTitle>
+            <DialogDescription>
+              {selectedPersonnel.ad_soyad} adlı personelin bilgileri
+            </DialogDescription>
+          </DialogHeader>
+          
+          <PersonnelDetail
+            personnelId={selectedPersonnelId}
+            onClose={handleCloseDetail}
+          />
+        </DialogContent>
+      </Dialog>
     );
-  }
+  };
 
-  const totalRevenue = islemGecmisi.reduce((sum, islem) => sum + (islem.tutar || 0), 0);
-  const totalCommission = islemGecmisi.reduce((sum, islem) => sum + (islem.odenen || 0), 0);
-  const operationCount = islemGecmisi.length;
-  
   return (
     <StaffLayout>
-      <div className="container mx-auto">
-        <Tabs defaultValue="personel" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="personel">Personel Yönetimi</TabsTrigger>
-            <TabsTrigger value="islemler">İşlem Geçmişi</TabsTrigger>
-            <TabsTrigger value="performans">Performans Raporları</TabsTrigger>
-            <TabsTrigger value="raporlar">Grafik Raporları</TabsTrigger>
-          </TabsList>
+      <div className="container mx-auto p-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+          <h1 className="text-2xl font-bold">Personel Yönetimi</h1>
+          <Button onClick={handleOpenCreateModal} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Personel Ekle
+          </Button>
+        </div>
 
-          <TabsContent value="personel">
-            <PersonnelList 
-              personel={personeller} 
-              onRefresh={handleRefreshPersonnel}
-              isLoading={false}
-              onPersonnelSelect={setSelectedPersonnelId} 
-            />
-          </TabsContent>
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <CardTitle>Personel Listesi</CardTitle>
+                <CardDescription>
+                  İşletmenizde çalışan personellerin listesi
+                </CardDescription>
+              </div>
 
-          <TabsContent value="islemler">
-            <Card>
-              <CardHeader>
-                <CardTitle>İşlem Geçmişi</CardTitle>
-                <div className="flex justify-between items-center flex-wrap gap-4">
-                  <div className="flex gap-4 items-center">
-                    <DateControlBar 
-                      dateRange={dateRange}
-                      onDateRangeChange={handleDateRangeChange}
-                      onSingleDateChange={handleSingleDateSelect}
-                      onMonthCycleChange={handleMonthCycleChange}
-                    />
-                  </div>
-                  
-                  <div className="flex gap-4">
-                    <div className="text-sm bg-gray-100 p-2 rounded-md flex items-center gap-1">
-                      <FileBarChart className="h-4 w-4 text-purple-600" />
-                      <span className="font-medium">Toplam İşlem:</span> 
-                      <span>{operationCount}</span>
-                    </div>
-                    <div className="text-sm bg-gray-100 p-2 rounded-md">
-                      <span className="font-medium">Toplam Ciro:</span> 
-                      <span className="text-green-600">{formatCurrency(totalRevenue)}</span>
-                    </div>
-                    <div className="text-sm bg-gray-100 p-2 rounded-md">
-                      <span className="font-medium">Toplam Ödenen:</span> 
-                      <span className="text-blue-600">{formatCurrency(totalCommission)}</span>
-                    </div>
-                  </div>
+              <div className="w-full sm:w-auto">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Personel ara..."
+                    className="pl-8 max-w-xs"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
                 </div>
-              </CardHeader>
-              <CardContent>
-                {islemlerLoading ? (
-                  <div className="flex justify-center p-6">
-                    <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
-                  </div>
-                ) : (
-                  <div className="rounded-md border overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tarih</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Personel</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Müşteri</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlem</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tutar</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prim %</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ödenen</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {islemGecmisi.length > 0 ? (
-                          islemGecmisi.map((islem) => (
-                            <tr key={islem.id} className="hover:bg-gray-50">
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {new Date(islem.created_at!).toLocaleDateString('tr-TR')}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {personeller?.find(p => p.id === islem.personel_id)?.ad_soyad}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {islem.musteri?.first_name} {islem.musteri?.last_name}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {islem.islem?.islem_adi || islem.aciklama?.split(' hizmeti verildi')[0]}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                %{islem.prim_yuzdesi}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {formatCurrency(islem.tutar)}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {formatCurrency(islem.odenen)}
-                              </td>
-                            </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">
-                              Seçilen tarih aralığında işlem bulunamadı
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
+              </div>
+            </div>
+            
+            <Tabs
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className="w-full mt-3"
+            >
+              <TabsList className="w-full sm:w-auto">
+                <TabsTrigger value="active">Aktif Personeller</TabsTrigger>
+                <TabsTrigger value="inactive">İnaktif Personeller</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              </div>
+            ) : filteredPersonnel.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                {searchTerm
+                  ? "Arama kriterlerine uygun personel bulunamadı."
+                  : activeTab === "active"
+                  ? "Aktif personel bulunmamaktadır."
+                  : "İnaktif personel bulunmamaktadır."}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Personel Adı</TableHead>
+                      <TableHead>Telefon</TableHead>
+                      <TableHead>Çalışma Sistemi</TableHead>
+                      <TableHead>Maaş</TableHead>
+                      <TableHead>Prim Yüzdesi</TableHead>
+                      <TableHead>İşlemler</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredPersonnel.map((person) => (
+                      <TableRow key={person.id}>
+                        <TableCell>
+                          <div className="font-medium">{person.ad_soyad}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {person.eposta}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {person.telefon && formatPhoneNumber(person.telefon)}
+                        </TableCell>
+                        <TableCell>{person.calisma_sistemi}</TableCell>
+                        <TableCell>{person.maas} ₺</TableCell>
+                        <TableCell>%{person.prim_yuzdesi}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleSelectPersonnel(person.id)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-destructive"
+                              onClick={() => handleDeleteConfirm(person.id)}
+                            >
+                              <Trash className="h-4 w-4" />
+                            </Button>
+                            <PersonnelActionMenu personnelId={person.id} />
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-          <TabsContent value="performans">
-            <Card>
-              <CardHeader>
-                <CardTitle>Personel Performans Çizelgeleri</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <PersonnelPerformanceReports personnelId={selectedPersonnelId} />
-              </CardContent>
-            </Card>
-          </TabsContent>
+        {/* Detail Modal */}
+        {renderPersonnelDetailModal()}
 
-          <TabsContent value="raporlar">
-            <PerformanceCharts 
-              personeller={personeller} 
-              islemGecmisi={islemGecmisi}
-            />
-          </TabsContent>
-        </Tabs>
+        {/* Create Modal */}
+        <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>Yeni Personel Ekle</DialogTitle>
+              <DialogDescription>
+                İşletmenize yeni bir personel eklemek için formu doldurun.
+              </DialogDescription>
+            </DialogHeader>
+            <CreatePersonnelForm onClose={handleCloseCreateModal} />
+          </DialogContent>
+        </Dialog>
+
+        <Toaster richColors position="bottom-right" />
       </div>
     </StaffLayout>
   );
