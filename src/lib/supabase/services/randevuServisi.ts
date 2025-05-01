@@ -111,5 +111,49 @@ export const randevuServisi = {
       console.error('Personel işlemleri getirme hatası:', error);
       return [];
     }
+  },
+
+  // Add the missing methods
+  dukkanRandevulariniGetir: async function(dukkanId?: number) {
+    try {
+      const user = await authService.getCurrentUser();
+      
+      if (!user) {
+        throw new Error("Oturum açılmamış");
+      }
+      
+      let query = supabase
+        .from('randevular')
+        .select('*, personel:personel_id(ad_soyad)');
+      
+      if (dukkanId) {
+        query = query.eq('dukkan_id', dukkanId);
+      }
+      
+      const { data, error } = await query
+        .order('tarih', { ascending: false })
+        .order('saat', { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Dükkan randevularını getirme hatası:', error);
+      return [];
+    }
+  },
+
+  randevuOlustur: async function(randevuData: any) {
+    try {
+      const { data, error } = await supabase
+        .from('randevular')
+        .insert([randevuData])
+        .select();
+        
+      if (error) throw error;
+      return data[0];
+    } catch (error) {
+      console.error('Randevu oluşturma hatası:', error);
+      throw error;
+    }
   }
 };

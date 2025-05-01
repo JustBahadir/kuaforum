@@ -17,21 +17,21 @@ interface ShopWorkingHoursCardProps {
 }
 
 export function ShopWorkingHoursCard({ calisma_saatleri = [], userRole, dukkanId }: ShopWorkingHoursCardProps) {
-  const { data: fetchedSaatler = [], isLoading, error } = useQuery({
+  const { data: fetchedSaatler = [], isLoading, error, refetch } = useQuery({
     queryKey: ['dukkan_saatleri', dukkanId],
     queryFn: async () => {
       if (!dukkanId) return [];
       
       try {
-        const data = await calismaSaatleriServisi.dukkanSaatleriGetir(dukkanId);
-        return data;
+        const data = await calismaSaatleriServisi.hepsiniGetir(dukkanId);
+        return data || [];
       } catch (err) {
         console.error("Error fetching shop working hours:", err);
         throw err;
       }
     },
-    enabled: !!dukkanId && calisma_saatleri.length === 0,
-    staleTime: 30000 // 30 seconds
+    enabled: !!dukkanId,
+    staleTime: 5000 // 5 seconds - refresh more frequently
   });
 
   useEffect(() => {
@@ -41,18 +41,28 @@ export function ShopWorkingHoursCard({ calisma_saatleri = [], userRole, dukkanId
     }
   }, [error]);
 
+  // Use provided hours if available, otherwise use fetched hours
   const saatler = calisma_saatleri.length > 0 ? calisma_saatleri : fetchedSaatler;
 
+  // Format time display
   const formatTime = (time: string | null) => {
     if (!time) return "-";
     return time.substring(0, 5);
   };
 
+  // Ensure the days are sorted correctly
   const sortedSaatler = [...saatler].sort((a, b) => {
-    const aIndex = gunSiralama.indexOf(a.gun);
-    const bIndex = gunSiralama.indexOf(b.gun);
-    return aIndex - bIndex;
+    return a.gun_sira - b.gun_sira;
   });
+
+  // Remove any duplicate days that might have been created by mistake
+  const uniqueDays = sortedSaatler.reduce((acc, current) => {
+    const existingDay = acc.find(day => day.gun_sira === current.gun_sira);
+    if (!existingDay) {
+      acc.push(current);
+    }
+    return acc;
+  }, [] as any[]);
 
   if (isLoading) {
     return (
@@ -101,10 +111,11 @@ export function ShopWorkingHoursCard({ calisma_saatleri = [], userRole, dukkanId
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedSaatler.map((saat: any) => (
-                <TableRow key={saat.gun}>
+              {uniqueDays.length > 0 ? uniqueDays.map((saat: any) => (
+                <TableRow key={saat.gun_sira}>
                   <TableCell className="font-medium">
-                    {gunIsimleri[saat.gun] || saat.gun}
+                    {/* Use proper capitalized Turkish day names */}
+                    {saat.gun}
                   </TableCell>
                   <TableCell className="text-right">
                     {saat.kapali ? (
@@ -116,7 +127,19 @@ export function ShopWorkingHoursCard({ calisma_saatleri = [], userRole, dukkanId
                     )}
                   </TableCell>
                 </TableRow>
-              ))}
+              )) : (
+                // Fallback for when no schedule is available
+                gunSiralama.map((gun_sira, index) => (
+                  <TableRow key={index}>
+                    <TableCell className="font-medium">
+                      {gunIsimleri[gun_sira]}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <span>09:00 - 18:00</span>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </div>

@@ -1,15 +1,44 @@
 
 import { supabase } from '../client';
-import { musteriServisi } from './musteriServisi';
+import { authService } from '@/lib/auth/authService';
 
 export const kategoriServisi = {
   async getCurrentDukkanId() {
-    return musteriServisi.getCurrentUserDukkanId();
+    try {
+      const user = await authService.getCurrentUser();
+      
+      if (!user) {
+        throw new Error('Kullanıcı oturumu bulunamadı');
+      }
+      
+      const { data, error } = await supabase
+        .from('dukkanlar')
+        .select('id')
+        .eq('sahibi_id', user.id)
+        .single();
+      
+      if (error) {
+        console.error('Dükkan ID alma hatası:', error);
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('dukkan_id')
+          .eq('id', user.id)
+          .single();
+          
+        return profileData?.dukkan_id;
+      }
+      
+      return data?.id;
+    } catch (error) {
+      console.error('getCurrentDukkanId hatası:', error);
+      return null;
+    }
   },
   
   async hepsiniGetir(dukkanId?: number) {
     try {
       let shopId = dukkanId;
+      
       if (!shopId) {
         shopId = await this.getCurrentDukkanId();
       }
@@ -51,11 +80,30 @@ export const kategoriServisi = {
   async ekle(kategori: any) {
     try {
       if (!kategori.dukkan_id) {
-        kategori.dukkan_id = await this.getCurrentDukkanId();
-      }
-      
-      if (!kategori.dukkan_id) {
-        throw new Error('Dükkan bilgisi bulunamadı');
+        const dukkanId = await this.getCurrentDukkanId();
+        
+        if (!dukkanId) {
+          // Try to get from profile if user is staff
+          const user = await authService.getCurrentUser();
+          
+          if (user) {
+            const { data: profileData } = await supabase
+              .from('profiles')
+              .select('dukkan_id')
+              .eq('id', user.id)
+              .single();
+              
+            if (profileData?.dukkan_id) {
+              kategori.dukkan_id = profileData.dukkan_id;
+            }
+          }
+          
+          if (!kategori.dukkan_id) {
+            throw new Error('Dükkan bilgisi bulunamadı');
+          }
+        } else {
+          kategori.dukkan_id = dukkanId;
+        }
       }
       
       // Get the current max sira

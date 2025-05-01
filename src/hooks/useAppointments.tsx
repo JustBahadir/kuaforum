@@ -30,15 +30,15 @@ export function useAppointments(initialFilters: AppointmentFilters = {}) {
       if (userRole === 'admin') {
         // Admin sees all appointments for their shop
         console.log('Fetching appointments for admin');
-        appointments = await randevuServisi.dukkanRandevulariniGetir(null);
+        appointments = await randevuServisi.dukkanRandevulariniGetir();
       } else if (userRole === 'staff') {
         // Staff sees all appointments for their shop
         console.log('Fetching appointments for staff');
-        appointments = await randevuServisi.dukkanRandevulariniGetir(null);
+        appointments = await randevuServisi.dukkanRandevulariniGetir();
       } else {
         // Customers see only their own appointments
         console.log('Fetching appointments for customer');
-        appointments = await randevuServisi.kendiRandevulariniGetir(null);
+        appointments = await randevuServisi.kendiRandevulariniGetir();
       }
 
       return appointments;

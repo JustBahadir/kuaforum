@@ -52,5 +52,55 @@ export const personelServisi = {
       console.error('Personel getirme hatası:', error);
       return null;
     }
+  },
+
+  getirById: async function(id: number) {
+    return this.getir(id);
+  },
+
+  guncelle: async function(id: number, updates: any) {
+    try {
+      const { data, error } = await supabase
+        .from('personel')
+        .update(updates)
+        .eq('id', id)
+        .select();
+      
+      if (error) throw error;
+      return data[0];
+    } catch (error) {
+      console.error('Personel güncelleme hatası:', error);
+      throw error;
+    }
+  },
+
+  sil: async function(id: number) {
+    try {
+      const { error } = await supabase
+        .from('personel')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Personel silme hatası:', error);
+      throw error;
+    }
+  },
+
+  register: async function(personelData: any) {
+    try {
+      const { data, error } = await supabase
+        .from('personel')
+        .insert([personelData])
+        .select();
+      
+      if (error) throw error;
+      return data[0];
+    } catch (error) {
+      console.error('Personel kayıt hatası:', error);
+      throw error;
+    }
   }
 };

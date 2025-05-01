@@ -38,54 +38,9 @@ export function WorkingHoursForm({ onClose, onSave }: WorkingHoursFormProps) {
           throw new Error("İşletme bilgisi bulunamadı");
         }
 
+        // Get working hours data with standardized day names
         const data = await calismaSaatleriServisi.hepsiniGetir(dukkanId);
-        
-        // Make sure we have all days with proper Turkish capitalization
-        const days = [
-          { gun: "Pazartesi", gun_sira: 0 },
-          { gun: "Salı", gun_sira: 1 },
-          { gun: "Çarşamba", gun_sira: 2 },
-          { gun: "Perşembe", gun_sira: 3 },
-          { gun: "Cuma", gun_sira: 4 },
-          { gun: "Cumartesi", gun_sira: 5 },
-          { gun: "Pazar", gun_sira: 6 },
-        ];
-        
-        // Create an object with entries for existing days
-        const existingDays = {};
-        data.forEach(day => {
-          // Find the canonical day name
-          const canonicalDay = days.find(d => 
-            d.gun.toLowerCase() === day.gun.toLowerCase() || 
-            d.gun_sira === day.gun_sira
-          );
-          
-          if (canonicalDay) {
-            existingDays[canonicalDay.gun] = {
-              ...day,
-              gun: canonicalDay.gun // Use properly capitalized name
-            };
-          }
-        });
-        
-        // Fill in missing days with default values
-        const hoursWithAllDays = days.map(day => {
-          if (existingDays[day.gun]) {
-            return existingDays[day.gun];
-          } else {
-            return {
-              id: undefined,
-              gun: day.gun,
-              gun_sira: day.gun_sira,
-              dukkan_id: dukkanId,
-              acilis: "09:00",
-              kapanis: "18:00",
-              kapali: false,
-            };
-          }
-        });
-        
-        setHours(hoursWithAllDays);
+        setHours(data);
       } catch (error: any) {
         console.error("Error fetching working hours:", error);
         setError(error.message || "Çalışma saatleri yüklenirken bir hata oluştu");
@@ -111,6 +66,8 @@ export function WorkingHoursForm({ onClose, onSave }: WorkingHoursFormProps) {
       if (!dukkanId) {
         throw new Error("İşletme bilgisi bulunamadı");
       }
+      
+      console.log("Saving hours:", hours);
       
       // Save all hours
       for (const hour of hours) {

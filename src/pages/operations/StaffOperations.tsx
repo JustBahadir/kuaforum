@@ -248,6 +248,29 @@ export default function StaffOperations() {
           </TabsList>
           
           <TabsContent value="services" className="space-y-4">
+            <div className="flex justify-between items-center mb-6">
+              <h1 className="text-2xl font-bold">Hizmet Yönetimi</h1>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center space-x-2">
+                  <Switch id="puanlama-modu" checked={puanlamaAktif} onCheckedChange={setPuanlamaAktif} />
+                  <Label htmlFor="puanlama-modu" className="text-sm">Puanlama Sistemi</Label>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => {
+                    formuSifirla();
+                    setDialogAcik(true);
+                  }}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Hizmet Ekle
+                  </Button>
+                  <Button variant="outline" onClick={() => setKategoriDialogAcik(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Kategori Ekle
+                  </Button>
+                </div>
+              </div>
+            </div>
+            
             <ServicesContent
               isStaff={true}
               kategoriler={kategoriler}
@@ -288,6 +311,7 @@ export default function StaffOperations() {
               dukkanId={dukkanId}
               puanlamaAktif={puanlamaAktif}
               setPuanlamaAktif={setPuanlamaAktif}
+              hideTabBar={true} // Hide the inner tab bar
             />
           </TabsContent>
           

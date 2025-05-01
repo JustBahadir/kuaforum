@@ -57,6 +57,7 @@ interface ServicesContentProps {
   dukkanId?: number | null;
   puanlamaAktif: boolean;
   setPuanlamaAktif: (value: boolean) => void;
+  hideTabBar?: boolean;
 }
 
 export function ServicesContent({
@@ -98,7 +99,8 @@ export function ServicesContent({
   formuSifirla,
   dukkanId,
   puanlamaAktif,
-  setPuanlamaAktif
+  setPuanlamaAktif,
+  hideTabBar = false
 }: ServicesContentProps) {
   const [openCategories, setOpenCategories] = useState<string[]>([]);
   const [infoDialogOpen, setInfoDialogOpen] = useState(false);
@@ -134,9 +136,38 @@ export function ServicesContent({
     }
   };
 
+  const renderServicesContent = () => {
+    return (
+      <div className="space-y-6">
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={kategoriler.map(k => k.id)} strategy={verticalListSortingStrategy}>
+            <Accordion type="single" collapsible className="w-full space-y-4" value={openCategories.length > 0 ? openCategories[0] : undefined} onValueChange={handleCategoryToggle}>
+              {kategoriler.map(kategori => (
+                <SortableCategory 
+                  key={kategori.id} 
+                  id={kategori.id} 
+                  kategori={kategori} 
+                  islemler={islemler.filter((islem: any) => islem.kategori_id === kategori.id)} 
+                  isStaff={isStaff} 
+                  onServiceEdit={onServiceEdit} 
+                  onServiceDelete={onServiceDelete} 
+                  onCategoryDelete={onCategoryDelete} 
+                  onCategoryEdit={onCategoryEdit} 
+                  onSiralamaChange={onSiralamaChange} 
+                  onRandevuAl={onRandevuAl} 
+                  puanlamaAktif={puanlamaAktif} 
+                />
+              ))}
+            </Accordion>
+          </SortableContext>
+        </DndContext>
+      </div>
+    );
+  };
+
   return (
     <>
-      {isStaff && (
+      {isStaff && !hideTabBar && (
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">Hizmet Yönetimi</h1>
           <div className="flex items-center gap-2">
@@ -174,43 +205,25 @@ export function ServicesContent({
         </div>
       )}
       
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="hizmetler">Hizmetler</TabsTrigger>
-          <TabsTrigger value="calisma-saatleri">Çalışma Saatleri</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="hizmetler" className="space-y-4">
-          <div className="space-y-6">
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-              <SortableContext items={kategoriler.map(k => k.id)} strategy={verticalListSortingStrategy}>
-                <Accordion type="single" collapsible className="w-full space-y-4" value={openCategories.length > 0 ? openCategories[0] : undefined} onValueChange={handleCategoryToggle}>
-                  {kategoriler.map(kategori => (
-                    <SortableCategory 
-                      key={kategori.id} 
-                      id={kategori.id} 
-                      kategori={kategori} 
-                      islemler={islemler.filter((islem: any) => islem.kategori_id === kategori.id)} 
-                      isStaff={isStaff} 
-                      onServiceEdit={onServiceEdit} 
-                      onServiceDelete={onServiceDelete} 
-                      onCategoryDelete={onCategoryDelete} 
-                      onCategoryEdit={onCategoryEdit} 
-                      onSiralamaChange={onSiralamaChange} 
-                      onRandevuAl={onRandevuAl} 
-                      puanlamaAktif={puanlamaAktif} 
-                    />
-                  ))}
-                </Accordion>
-              </SortableContext>
-            </DndContext>
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="calisma-saatleri">
-          <WorkingHours dukkanId={dukkanId} />
-        </TabsContent>
-      </Tabs>
+      {!hideTabBar ? (
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="hizmetler">Hizmetler</TabsTrigger>
+            <TabsTrigger value="calisma-saatleri">Çalışma Saatleri</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="hizmetler" className="space-y-4">
+            {renderServicesContent()}
+          </TabsContent>
+          
+          <TabsContent value="calisma-saatleri">
+            <WorkingHours dukkanId={dukkanId} />
+          </TabsContent>
+        </Tabs>
+      ) : (
+        // If hideTabBar is true, just render the content directly
+        renderServicesContent()
+      )}
       
       <CategoryForm 
         isOpen={kategoriDialogAcik} 
