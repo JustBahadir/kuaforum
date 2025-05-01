@@ -33,7 +33,7 @@ export function AppointmentsList({
       case "iptal":
         return "destructive";
       case "tamamlandi":
-        return "success";
+        return "secondary"; // Changed from "success" to "secondary" to match valid Badge variants
       default:
         return "secondary";
     }

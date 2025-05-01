@@ -27,7 +27,7 @@ export const useShopData = (dukkanId?: number | null) => {
   const { data: saatler, isLoading: saatlerLoading } = useQuery({
     queryKey: ["calisma_saatleri", dukkanId],
     queryFn: () =>
-      dukkanId ? calismaSaatleriServisi.dukkanSaatleriGetir(dukkanId) : [],
+      dukkanId ? calismaSaatleriServisi.hepsiniGetir(dukkanId) : [], // Using hepsiniGetir instead of dukkanSaatleriGetir
     enabled: !!dukkanId,
   });
 

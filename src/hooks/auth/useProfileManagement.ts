@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { profileService } from "@/lib/auth/profileService";
-import { dukkanServisi } from "@/lib/supabase"; // Updated import
+import { dukkanServisi } from "@/lib/supabase"; 
 import { authService } from "@/lib/auth/authService";
 import { toast } from "sonner";
 
@@ -36,8 +36,8 @@ export function useProfileManagement(
           // Use dukkanServisi instead of isletmeServisi
           const userShop = await dukkanServisi.kullanicininIsletmesi(user.id);
           if (userShop) {
-            setDukkanId(userShop.id);
-            setDukkanAdi(userShop.ad);
+            setDukkanId(userShop.id as number); // Type assertion to ensure it's a number
+            setDukkanAdi(userShop.ad as string); // Type assertion to ensure it's a string
           } else if (location.pathname.includes('/personnel') || location.pathname.includes('/appointments')) {
             toast.error("İşletme bilgileriniz bulunamadı. Lütfen işletme bilgilerinizi oluşturun.");
             
@@ -54,8 +54,8 @@ export function useProfileManagement(
           const staffShop = await dukkanServisi.personelAuthIdIsletmesi(user.id);
           // Ensure staffShop exists and is an object with id and ad properties
           if (staffShop && typeof staffShop === 'object' && 'id' in staffShop && 'ad' in staffShop) {
-            setDukkanId(staffShop.id);
-            setDukkanAdi(staffShop.ad);
+            setDukkanId(Number(staffShop.id)); // Convert to number explicitly
+            setDukkanAdi(String(staffShop.ad)); // Convert to string explicitly
           } else if (location.pathname.includes('/personnel')) {
             toast.error("İşletme bilgileriniz bulunamadı. Lütfen yönetici ile iletişime geçin.");
           }

@@ -1,217 +1,74 @@
 
-import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase/client";
-import { nanoid } from 'nanoid';
+import React, { useState } from "react";
 import { toast } from "sonner";
-import { Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { authService } from "@/lib/auth/authService";
-import { setupStorageBuckets } from "@/lib/supabase/setupStorage";
+import { uploadToSupabase } from "@/lib/supabase/storage";
 
-interface ShopProfilePhotoUploadProps {
-  children: React.ReactNode;
+export interface ShopProfilePhotoUploadProps {
   dukkanId: number;
-  galleryMode?: boolean;
-  onSuccess: (url: string) => void;
+  onSuccess: (url: string) => Promise<void>;
   currentImageUrl?: string;
-  className?: string;
-  updateUserProfile?: boolean;
-  acceptVideoFiles?: boolean;
+  children: React.ReactNode; // Required children prop
 }
 
-export function ShopProfilePhotoUpload({ 
-  children, 
-  dukkanId, 
-  galleryMode = false,
+export function ShopProfilePhotoUpload({
+  dukkanId,
   onSuccess,
   currentImageUrl,
-  className,
-  updateUserProfile = true,
-  acceptVideoFiles = false
+  children
 }: ShopProfilePhotoUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
-
-  // Ensure buckets exist on component mount
-  useEffect(() => {
-    setupStorageBuckets().catch(console.error);
-  }, []);
-
-  const handleClick = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
+  
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
     
-    // Accept videos if galleryMode and acceptVideoFiles are both true
-    if (galleryMode && acceptVideoFiles) {
-      input.accept = 'image/*, video/mp4, video/webm, video/ogg';
-    } else {
-      input.accept = 'image/*';
-    }
-    
-    input.onchange = handleFileChange;
-    input.click();
-  };
-
-  const handleFileChange = async (e: Event) => {
-    const files = (e.target as HTMLInputElement).files;
-    if (!files || files.length === 0) return;
-
-    const file = files[0];
-    
-    // Check if the file is an image or a video
-    const isImage = file.type.startsWith('image/');
-    const isVideo = file.type.startsWith('video/');
-    
-    if (!(isImage || (acceptVideoFiles && isVideo && galleryMode))) {
-      toast.error('Lütfen sadece resim veya video dosyası yükleyin');
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/png', 'image/gif'];
+    if (!validTypes.includes(file.type)) {
+      toast.error("Lütfen sadece JPEG, PNG ve GIF formatında resimler yükleyin");
       return;
     }
-
-    // 20MB limit for all files
-    if (file.size > 20 * 1024 * 1024) {
-      toast.error('Dosya boyutu 20MB\'ı geçemez');
+    
+    // Check file size (limit to 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Resim dosyası 2MB'dan küçük olmalıdır");
       return;
     }
-
+    
+    setIsUploading(true);
     try {
-      setIsUploading(true);
+      // Create a folder path for shop logos
+      const folderPath = `shop-logos/${dukkanId}`;
+      const fileName = `logo-${Date.now()}`;
       
-      // Ensure storage buckets exist before uploading
-      await setupStorageBuckets();
+      // Upload the file to Supabase Storage
+      const url = await uploadToSupabase(file, folderPath, fileName);
       
-      const fileExt = file.name.split('.').pop();
-      const bucketName = galleryMode ? 'shop-photos' : 'profile-photos';
-      
-      const filePath = `${dukkanId ? `shops/${dukkanId}/` : ''}${nanoid()}.${fileExt}`;
-      
-      const { data, error } = await supabase.storage
-        .from(bucketName)
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: true
-        });
-      
-      if (error) {
-        console.error("Upload error:", error);
-        toast.error(`Yükleme hatası: ${error.message}`);
-        return;
-      }
-      
-      const { data: publicUrl } = supabase.storage
-        .from(bucketName)
-        .getPublicUrl(data.path);
-      
-      if (galleryMode) {
-        onSuccess(publicUrl.publicUrl);
-        toast.success(isVideo ? 'Galeri videosu başarıyla yüklendi' : 'Galeri fotoğrafı başarıyla yüklendi');
-      } else {
-        // Only update shop logo for images, not videos
-        if (dukkanId) {
-          const { error: updateError } = await supabase
-            .from('dukkanlar')
-            .update({ logo_url: publicUrl.publicUrl })
-            .eq('id', dukkanId);
-          
-          if (updateError) {
-            console.error("Logo update error:", updateError);
-            toast.error(`Logo güncellenemedi: ${updateError.message}`);
-            return;
-          }
-        }
-
-        // Also update user profile avatar if needed
-        if (updateUserProfile) {
-          try {
-            const user = await authService.getCurrentUser();
-            if (user) {
-              await supabase
-                .from('profiles')
-                .update({ avatar_url: publicUrl.publicUrl })
-                .eq('id', user.id);
-            }
-          } catch (err) {
-            console.error('Profil avatar güncellenemedi:', err);
-            // Don't show error toast here since the shop logo was still updated
-          }
-        }
-        
-        onSuccess(publicUrl.publicUrl);
-        toast.success('Profil fotoğrafı başarıyla güncellendi');
-      }
-    } catch (error: any) {
-      console.error('Yükleme işlemi sırasında hata:', error);
-      toast.error('Dosya yüklenirken bir hata oluştu: ' + (error instanceof Error ? error.message : String(error)));
+      // Call the onSuccess callback with the uploaded URL
+      await onSuccess(url);
+    } catch (error) {
+      console.error("Logo yükleme hatası:", error);
+      toast.error(`Yükleme hatası: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`);
     } finally {
       setIsUploading(false);
     }
   };
-
-  const handleRemovePhoto = async () => {
-    try {
-      if (galleryMode) {
-        return;
-      }
-      
-      if (dukkanId) {
-        const { error: updateError } = await supabase
-          .from('dukkanlar')
-          .update({ logo_url: null })
-          .eq('id', dukkanId);
-        
-        if (updateError) {
-          console.error('Dükkan logo silinirken hata:', updateError);
-          toast.error('Dükkan logosu silinemedi: ' + updateError.message);
-          return;
-        }
-      }
-
-      // Also update user profile avatar if needed
-      if (updateUserProfile) {
-        try {
-          const user = await authService.getCurrentUser();
-          if (user) {
-            await supabase
-              .from('profiles')
-              .update({ avatar_url: null })
-              .eq('id', user.id);
-          }
-        } catch (err) {
-          console.error('Profil avatar silinirken hata:', err);
-        }
-      }
-      
-      onSuccess('');
-      toast.success('Profil fotoğrafı başarıyla kaldırıldı');
-    } catch (error) {
-      console.error('Fotoğraf silme hatası:', error);
-      toast.error('Fotoğraf silinirken bir hata oluştu: ' + (error instanceof Error ? error.message : String(error)));
-    }
-  };
-
+  
   return (
-    <div className={className}>
-      <div 
-        onClick={handleClick}
-        className={`${isUploading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} relative`}
-      >
-        {children}
-        {isUploading && (
-          <span className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-20 rounded-full">
-            <div className="w-5 h-5 border-2 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
-          </span>
-        )}
-      </div>
-      
-      {currentImageUrl && !galleryMode && (
-        <Button 
-          variant="destructive" 
-          size="sm" 
-          onClick={handleRemovePhoto}
-          className="mt-2"
-        >
-          <Trash2 className="h-4 w-4 mr-2" />
-          Fotoğrafı Kaldır
-        </Button>
+    <label className="cursor-pointer relative">
+      {isUploading && (
+        <div className="absolute inset-0 bg-black/20 rounded-full flex items-center justify-center">
+          <div className="w-8 h-8 border-4 border-t-white border-white/30 rounded-full animate-spin"></div>
+        </div>
       )}
-    </div>
+      {children}
+      <input
+        type="file"
+        className="hidden"
+        onChange={handleFileChange}
+        accept="image/jpeg,image/png,image/gif"
+        disabled={isUploading}
+      />
+    </label>
   );
 }

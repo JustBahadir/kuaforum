@@ -39,8 +39,7 @@ export default function ShopSettings() {
   const {
     data: isletme,
     isLoading,
-    error,
-    refetch
+    error
   } = useQuery({
     queryKey: ['dukkan', dukkanId],
     queryFn: () => dukkanId ? isletmeServisi.getirById(dukkanId) : null,
@@ -84,6 +83,7 @@ export default function ShopSettings() {
       adres?: string;
       ad?: string;
       kod?: string;
+      logo_url?: string;
     }) => {
       if (!dukkanId) {
         throw new Error("İşletme ID bulunamadı");
@@ -91,7 +91,7 @@ export default function ShopSettings() {
       try {
         console.log("İşletme bilgileri güncelleniyor:", updates);
         
-        // Use updateDukkan method instead
+        // Use isletmeServisi.guncelle method
         const result = await isletmeServisi.guncelle(dukkanId, updates);
         
         console.log("Güncelleme sonucu:", result);
@@ -102,8 +102,8 @@ export default function ShopSettings() {
       }
     },
     onSuccess: data => {
-      queryClient.invalidateQueries({
-        queryKey: ['dukkan', dukkanId]
+      queryClient.invalidateQueries({ 
+        queryKey: ['dukkan', dukkanId] 
       });
       toast.success("İşletme bilgileri güncellendi");
       setFullAddress(data.acik_adres || "");
@@ -182,11 +182,8 @@ export default function ShopSettings() {
     if (!dukkanId) return;
     
     try {
-      // Update logo in the database
-      await isletmeServisi.guncelle(dukkanId, { logo_url: url });
-      
-      // Refresh the data
-      queryClient.invalidateQueries(['dukkan', dukkanId]);
+      // Update logo in the database using the updateShopAddress mutation
+      updateShopAddress.mutate({ logo_url: url });
       
       toast.success("Logo başarıyla güncellendi");
     } catch (error) {

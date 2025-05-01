@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { StaffLayout } from "@/components/ui/staff-layout";
@@ -11,6 +12,12 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Plus } from "lucide-react";
+
+// Define the WorkingHoursProps interface to match what WorkingHours expects
+interface WorkingHoursProps {
+  dukkanId: number | null;
+  // Add any other props that WorkingHours needs
+}
 
 export default function StaffOperations() {
   const [activeTab, setActiveTab] = useState("services");
@@ -199,7 +206,7 @@ export default function StaffOperations() {
         sira: index
       }));
       
-      await islemServisi.siralamaGuncelle(updatedItems);
+      await islemServisi.sirayiGuncelle(updatedItems); // Corrected method name
       refetchServices();
     } catch (error: any) {
       console.error("Sıralama güncellenirken hata:", error);
@@ -319,7 +326,8 @@ export default function StaffOperations() {
           </TabsContent>
           
           <TabsContent value="workinghours">
-            <WorkingHours isStaff={true} dukkanId={dukkanId} />
+            {/* Remove the isStaff prop since it's not in the component interface */}
+            <WorkingHours dukkanId={dukkanId} />
           </TabsContent>
         </Tabs>
       </div>
