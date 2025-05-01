@@ -1,23 +1,20 @@
 
 import { supabase } from '../client';
-import { IslemDto } from '../types'; 
-import { kategorilerServisi } from './kategoriServisi';
+import { kategoriServisi } from './kategoriServisi';
 
 export const islemServisi = {
+  // Get current user's dukkan ID - use the same method from kategoriServisi
+  getCurrentUserDukkanId: kategoriServisi.getCurrentUserDukkanId,
+
   async hepsiniGetir(dukkanId?: number) {
     try {
-      let actualDukkanId = dukkanId;
+      // If dukkanId is not provided, get it from the current user
+      const shopId = dukkanId || await this.getCurrentUserDukkanId();
       
-      // If dukkanId is not provided, try to get the current user's dukkan_id
-      if (!actualDukkanId) {
-        actualDukkanId = await kategorilerServisi.getCurrentUserDukkanId();
+      if (!shopId) {
+        throw new Error('İşletme bilgisi bulunamadı');
       }
-      
-      if (!actualDukkanId) {
-        console.warn('Kullanıcının dükkan bilgisi bulunamadı');
-        return [];
-      }
-      
+
       const { data, error } = await supabase
         .from('islemler')
         .select(`
@@ -27,141 +24,162 @@ export const islemServisi = {
             kategori_adi
           )
         `)
-        .eq('dukkan_id', actualDukkanId)
-        .order('sira', { ascending: true });
-        
-      if (error) {
-        console.error('Hizmetleri getirirken hata:', error);
-        throw error;
-      }
-      
+        .eq('dukkan_id', shopId)
+        .order('sira');
+
+      if (error) throw error;
       return data || [];
     } catch (error) {
-      console.error('Hizmetleri getirirken hata:', error);
-      return [];
+      console.error('İşlem listesi getirme hatası:', error);
+      throw error;
     }
   },
-  
-  async kategoriVeDukkanaGoreGetir(kategoriId: number, dukkanId: number) {
+
+  async kategoriIslemleriGetir(kategoriId: number, dukkanId?: number) {
     try {
+      // If dukkanId is not provided, get it from the current user
+      const shopId = dukkanId || await this.getCurrentUserDukkanId();
+      
+      if (!shopId) {
+        throw new Error('İşletme bilgisi bulunamadı');
+      }
+
       const { data, error } = await supabase
         .from('islemler')
         .select('*')
         .eq('kategori_id', kategoriId)
-        .eq('dukkan_id', dukkanId)
+        .eq('dukkan_id', shopId)
         .order('sira');
-        
+
       if (error) throw error;
       return data || [];
     } catch (error) {
-      console.error('Kategori hizmetlerini getirirken hata:', error);
-      return [];
+      console.error('Kategori işlemleri getirme hatası:', error);
+      throw error;
     }
   },
-  
+
   async getir(id: number) {
     try {
       const { data, error } = await supabase
         .from('islemler')
-        .select(`
-          *,
-          kategori:kategori_id (
-            id,
-            kategori_adi
-          )
-        `)
+        .select('*')
         .eq('id', id)
         .single();
-        
+
       if (error) throw error;
       return data;
     } catch (error) {
-      console.error(`ID: ${id} hizmet getirme hatası:`, error);
+      console.error('İşlem getirme hatası:', error);
       throw error;
     }
   },
-  
-  async ekle(islem: Partial<IslemDto>) {
+
+  async ekle(islem: {
+    islem_adi: string, 
+    fiyat: number, 
+    maliyet?: number, 
+    puan: number, 
+    kategori_id: number | null, 
+    dukkan_id?: number,
+    sira?: number
+  }) {
     try {
-      // If dukkan_id is not provided, get it from the current user
       if (!islem.dukkan_id) {
-        const dukkanId = await kategorilerServisi.getCurrentUserDukkanId();
-        if (!dukkanId) {
-          throw new Error('İşletme bilgisi bulunamadı');
-        }
-        islem.dukkan_id = dukkanId;
+        // Get the current user's dukkan_id if not provided
+        islem.dukkan_id = await this.getCurrentUserDukkanId();
       }
       
-      // Set default values if not provided
-      const islemData = {
-        ...islem,
-        sira: islem.sira ?? 0,
-        puan: islem.puan ?? 0,
-        maliyet: islem.maliyet ?? 0
-      };
-      
+      if (!islem.dukkan_id) {
+        throw new Error('İşletme bilgisi bulunamadı');
+      }
+
+      // If sira is not provided, get the count of islemler for the category
+      if (islem.sira === undefined) {
+        const { count, error: countError } = await supabase
+          .from('islemler')
+          .select('id', { count: 'exact' })
+          .eq('kategori_id', islem.kategori_id)
+          .eq('dukkan_id', islem.dukkan_id);
+
+        if (countError) throw countError;
+        islem.sira = count || 0;
+      }
+
       const { data, error } = await supabase
         .from('islemler')
-        .insert(islemData)
-        .select();
-        
-      if (error) {
-        console.error('Hizmet ekleme hatası:', error);
-        throw error;
-      }
-      
-      return data[0];
+        .insert([{
+          islem_adi: islem.islem_adi,
+          fiyat: islem.fiyat,
+          maliyet: islem.maliyet || 0,
+          puan: islem.puan,
+          kategori_id: islem.kategori_id,
+          dukkan_id: islem.dukkan_id,
+          sira: islem.sira
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
     } catch (error) {
-      console.error('Hizmet ekleme hatası:', error);
+      console.error('İşlem ekleme hatası:', error);
       throw error;
     }
   },
-  
-  async guncelle(id: number, updates: Partial<IslemDto>) {
+
+  async guncelle(id: number, updates: Partial<{
+    islem_adi: string,
+    fiyat: number,
+    maliyet: number,
+    puan: number,
+    kategori_id: number,
+    sira: number
+  }>) {
     try {
       const { data, error } = await supabase
         .from('islemler')
         .update(updates)
         .eq('id', id)
-        .select();
-        
+        .select()
+        .single();
+
       if (error) throw error;
-      return data[0];
+      return data;
     } catch (error) {
-      console.error(`ID: ${id} hizmet güncelleme hatası:`, error);
+      console.error('İşlem güncelleme hatası:', error);
       throw error;
     }
   },
-  
+
   async sil(id: number) {
     try {
       const { error } = await supabase
         .from('islemler')
         .delete()
         .eq('id', id);
-        
+
       if (error) throw error;
       return true;
     } catch (error) {
-      console.error(`ID: ${id} hizmet silme hatası:`, error);
+      console.error('İşlem silme hatası:', error);
       throw error;
     }
   },
-  
-  async siralamaGuncelle(islemler: { id: number; sira: number }[]) {
+
+  async siralamaGuncelle(items: {id: number, sira: number}[]) {
     try {
-      // Handle updates one by one to avoid issues with RLS
-      const updates = islemler.map((islem) =>
-        supabase
+      for (const item of items) {
+        const { error } = await supabase
           .from('islemler')
-          .update({ sira: islem.sira })
-          .eq('id', islem.id)
-      );
-      
-      await Promise.all(updates);
+          .update({ sira: item.sira })
+          .eq('id', item.id);
+
+        if (error) throw error;
+      }
       return true;
     } catch (error) {
-      console.error('Hizmet sıralama hatası:', error);
+      console.error('İşlem sıralama güncelleme hatası:', error);
       throw error;
     }
   }

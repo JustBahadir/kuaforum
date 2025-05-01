@@ -2,10 +2,8 @@
 import { useState, useEffect } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useQuery } from "@tanstack/react-query";
 import { kategorilerServisi, islemServisi } from "@/lib/supabase";
@@ -14,6 +12,7 @@ import { toast } from "sonner";
 import { CategoryCard } from "@/components/operations/CategoryCard";
 import { ServiceForm } from "@/components/operations/ServiceForm";
 import { CategoryForm } from "@/components/operations/CategoryForm";
+import { WorkingHours } from "@/components/operations/WorkingHours";
 
 export default function Services() {
   const [activeTab, setActiveTab] = useState("services");
@@ -99,7 +98,7 @@ export default function Services() {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="services">Hizmetler</TabsTrigger>
-            <TabsTrigger value="products">Ürünler</TabsTrigger>
+            <TabsTrigger value="workinghours">Çalışma Saatleri</TabsTrigger>
           </TabsList>
           
           <TabsContent value="services" className="space-y-4">
@@ -191,20 +190,8 @@ export default function Services() {
             )}
           </TabsContent>
           
-          <TabsContent value="products">
-            <Card>
-              <CardHeader>
-                <CardTitle>Ürün Yönetimi</CardTitle>
-                <CardDescription>
-                  İşletmenizde satılan ürünleri buradan yönetebilirsiniz.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Ürün yönetimi özelliği yakında eklenecektir.
-                </p>
-              </CardContent>
-            </Card>
+          <TabsContent value="workinghours">
+            <WorkingHours dukkanId={dukkanId} />
           </TabsContent>
         </Tabs>
       </div>

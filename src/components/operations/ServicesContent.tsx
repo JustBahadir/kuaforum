@@ -188,7 +188,7 @@ export function ServicesContent({
                 Kategori Ekle
               </Button>
             </div>
-            
+
             <CategoryForm 
               isOpen={kategoriDialogAcik}
               onOpenChange={setKategoriDialogAcik}
@@ -225,7 +225,6 @@ export function ServicesContent({
           </div>
         </div>
       )}
-
       <div className="space-y-6 pt-4">
         <DndContext 
           sensors={sensors} 
@@ -263,7 +262,6 @@ export function ServicesContent({
           </SortableContext>
         </DndContext>
       </div>
-
       {/* Information Dialog */}
       <Dialog open={infoDialogOpen} onOpenChange={setInfoDialogOpen}>
         <DialogContent className="sm:max-w-md">

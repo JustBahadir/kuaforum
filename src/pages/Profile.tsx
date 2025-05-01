@@ -4,15 +4,21 @@ import ProfileTabs from "./ProfileTabs";
 import { useProfileManagement } from "@/hooks/useProfileManagement";
 import { useEffect, useState } from "react";
 import { authService } from "@/lib/auth/authService";
+import { toast } from "sonner";
 
 export default function Profile() {
   const [userId, setUserId] = useState<string | undefined>(undefined);
   
   useEffect(() => {
     const getUserId = async () => {
-      const user = await authService.getCurrentUser();
-      if (user) {
-        setUserId(user.id);
+      try {
+        const user = await authService.getCurrentUser();
+        if (user) {
+          setUserId(user.id);
+        }
+      } catch (error) {
+        console.error("Error getting current user:", error);
+        toast.error("Kullanıcı bilgisi alınamadı");
       }
     };
     
@@ -34,7 +40,7 @@ export default function Profile() {
     if (userId) {
       fetchProfileData();
     }
-  }, [userId]);
+  }, [userId, fetchProfileData]);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;

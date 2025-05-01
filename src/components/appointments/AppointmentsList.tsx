@@ -1,200 +1,241 @@
 
-import React from 'react';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+import { useState } from "react";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { format } from 'date-fns';
-import { tr } from 'date-fns/locale';
-import { Randevu, RandevuDurumu } from '@/lib/supabase/types';
-import { MoreHorizontal, AlertCircle, CheckCircle, Clock, XCircle } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { format, isToday, parseISO } from "date-fns";
+import { tr } from "date-fns/locale";
+import { cn } from "@/lib/utils";
+import { Randevu, RandevuDurumu } from "@/lib/supabase/types";
+import { Calendar, Check, Clock, Search, X } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { randevuServisi } from "@/lib/supabase";
+import { toast } from "sonner";
+import { formatPhoneNumber } from "@/utils/phoneFormatter";
 
-interface AppointmentsListProps {
-  appointments: Randevu[];
-  isLoading: boolean;
-  onUpdateStatus: (id: number, status: RandevuDurumu) => Promise<Randevu | null>;
-  currentPersonelId: number | null;
+export interface AppointmentsListProps {
+  onAddClick?: () => void;
+  onSelectAppointment?: (appointment: Randevu) => void;
+  hidemobile?: boolean;
 }
 
-export function AppointmentsList({ 
-  appointments, 
-  isLoading, 
-  onUpdateStatus,
-  currentPersonelId
-}: AppointmentsListProps) {
-  
-  const getStatusBadge = (status: RandevuDurumu) => {
-    switch(status) {
-      case 'beklemede':
-      case 'onaylandi':
-        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 hover:bg-yellow-100 flex items-center gap-1"><Clock className="h-3 w-3" /> {status === 'beklemede' ? 'Beklemede' : 'Onaylandı'}</Badge>;
-      case 'tamamlandi':
-        return <Badge variant="outline" className="bg-green-50 text-green-700 hover:bg-green-100 flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Tamamlandı</Badge>;
-      case 'iptal_edildi':
-      case 'iptal':
-        return <Badge variant="outline" className="bg-red-50 text-red-700 hover:bg-red-100 flex items-center gap-1"><XCircle className="h-3 w-3" /> İptal Edildi</Badge>;
-      default:
-        return <Badge variant="outline">Bilinmiyor</Badge>;
+export function AppointmentsList({ onAddClick, onSelectAppointment, hidemobile = false }: AppointmentsListProps) {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const { data: appointments = [], isLoading, refetch } = useQuery({
+    queryKey: ['appointments'],
+    queryFn: async () => {
+      const data = await randevuServisi.hepsiniGetir();
+      return data;
+    },
+  });
+
+  // Apply filters
+  const filteredAppointments = appointments.filter((appointment: Randevu) => {
+    const matchesSearch = searchTerm === "" || 
+      (appointment.musteri?.first_name && appointment.musteri.first_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (appointment.musteri?.last_name && appointment.musteri.last_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (appointment.musteri?.phone && appointment.musteri.phone.includes(searchTerm));
+
+    const matchesStatus = statusFilter === "all" || appointment.durum === statusFilter;
+
+    return matchesSearch && matchesStatus;
+  });
+
+  // Sort appointments by date and time (most recent first)
+  const sortedAppointments = [...filteredAppointments].sort((a, b) => {
+    const dateA = new Date(`${a.tarih}T${a.saat}`);
+    const dateB = new Date(`${b.tarih}T${b.saat}`);
+    return dateB.getTime() - dateA.getTime();
+  });
+
+  const formatDateTime = (date: string, time: string) => {
+    try {
+      const dateTime = parseISO(`${date}T${time}`);
+      return isToday(dateTime) 
+        ? `Bugün ${format(dateTime, 'HH:mm', { locale: tr })}`
+        : format(dateTime, 'dd MMM, HH:mm', { locale: tr });
+    } catch (error) {
+      return "Geçersiz tarih";
     }
   };
 
-  const getRowClassName = (status: RandevuDurumu) => {
-    switch(status) {
-      case 'beklemede':
-      case 'onaylandi':
-        return 'bg-yellow-50';
-      case 'tamamlandi':
-        return 'bg-green-50';
-      case 'iptal_edildi':
-      case 'iptal':
-        return 'bg-red-50';
+  const getStatusBadgeClass = (status: RandevuDurumu) => {
+    switch (status) {
+      case "beklemede":
+        return "bg-amber-100 text-amber-800 border-amber-200";
+      case "onaylandi":
+        return "bg-green-100 text-green-800 border-green-200";
+      case "iptal":
+      case "iptal_edildi":
+        return "bg-red-100 text-red-800 border-red-200";
+      case "tamamlandi":
+        return "bg-blue-100 text-blue-800 border-blue-200";
       default:
-        return '';
+        return "bg-gray-100 text-gray-800 border-gray-200";
+    }
+  };
+
+  const getStatusText = (status: RandevuDurumu) => {
+    switch (status) {
+      case "beklemede": return "Beklemede";
+      case "onaylandi": return "Onaylandı";
+      case "iptal": return "İptal Edildi";
+      case "tamamlandi": return "Tamamlandı";
+      case "iptal_edildi": return "İptal Edildi";
+      default: return status;
     }
   };
 
   const handleStatusChange = async (id: number, status: RandevuDurumu) => {
     try {
-      await onUpdateStatus(id, status);
+      setIsUpdating(true);
+      await randevuServisi.durumGuncelle(id, status);
+      refetch();
+      toast.success("Randevu durumu güncellendi.");
     } catch (error) {
-      console.error("Error updating appointment status:", error);
+      console.error("Error updating status:", error);
+      toast.error("Durum güncellenirken bir hata oluştu.");
+    } finally {
+      setIsUpdating(false);
     }
   };
 
-  if (isLoading) {
-    return <div className="flex justify-center items-center h-64">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500" />
-    </div>;
-  }
-
-  if (appointments.length === 0) {
-    return <div className="text-center p-8 text-gray-500">
-      <AlertCircle className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-      <h3 className="text-lg font-medium">Randevu bulunamadı</h3>
-      <p className="mt-2">Seçilen tarih ve filtre için randevu bulunmamaktadır.</p>
-    </div>;
-  }
-
   return (
-    <div className="overflow-x-auto">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Tarih & Saat</TableHead>
-            <TableHead>Müşteri</TableHead>
-            <TableHead>Personel</TableHead>
-            <TableHead>İşlemler</TableHead>
-            <TableHead>Durum</TableHead>
-            <TableHead className="text-right">İşlemler</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {appointments.map((appointment) => {
-            // Combine date and time
-            const appointmentDateTime = `${appointment.tarih}T${appointment.saat}`;
-            const formattedDate = format(new Date(appointmentDateTime), 'dd MMMM yyyy', { locale: tr });
-            const formattedTime = format(new Date(appointmentDateTime), 'HH:mm', { locale: tr });
-            
-            // Check if the current staff can manage this appointment
-            const canManage = currentPersonelId === null || 
-                             currentPersonelId === appointment.personel_id ||
-                             appointment.personel_id === null;
-
-            return (
-              <TableRow key={appointment.id} className={getRowClassName(appointment.durum)}>
-                <TableCell>
-                  <div className="font-medium">{formattedDate}</div>
-                  <div className="text-sm text-muted-foreground">{formattedTime}</div>
-                </TableCell>
-                <TableCell>
-                  {appointment.musteri ? (
-                    <div>
-                      <div className="font-medium">{`${appointment.musteri.first_name} ${appointment.musteri.last_name || ''}`}</div>
-                      <div className="text-sm text-muted-foreground">{appointment.musteri.phone || 'Telefon yok'}</div>
+    <Card className={cn(hidemobile && "hidden md:block")}>
+      <CardHeader>
+        <CardTitle className="text-xl flex justify-between items-center">
+          <span>Randevular</span>
+          {onAddClick && (
+            <Button size="sm" onClick={onAddClick}>
+              Yeni Randevu
+            </Button>
+          )}
+        </CardTitle>
+        <CardDescription>Tüm randevularınızı buradan yönetebilirsiniz.</CardDescription>
+        
+        <div className="flex flex-col sm:flex-row gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input 
+              placeholder="İsim veya telefon ara..." 
+              className="pl-8"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          
+          <Select 
+            value={statusFilter} 
+            onValueChange={setStatusFilter}
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Durum Filtrele" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tüm Durumlar</SelectItem>
+              <SelectItem value="beklemede">Beklemede</SelectItem>
+              <SelectItem value="onaylandi">Onaylandı</SelectItem>
+              <SelectItem value="iptal">İptal Edildi</SelectItem>
+              <SelectItem value="tamamlandi">Tamamlandı</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </CardHeader>
+      
+      <CardContent className="px-0">
+        <div className="divide-y">
+          {isLoading ? (
+            <div className="flex justify-center p-8">
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            </div>
+          ) : sortedAppointments.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Görüntülenecek randevu bulunamadı.
+            </div>
+          ) : (
+            sortedAppointments.map((appointment: Randevu) => (
+              <div 
+                key={appointment.id} 
+                className={cn(
+                  "p-4 hover:bg-gray-50 transition-colors cursor-pointer",
+                  onSelectAppointment && "cursor-pointer"
+                )}
+                onClick={() => onSelectAppointment && onSelectAppointment(appointment)}
+              >
+                <div className="flex justify-between items-start gap-4">
+                  <div className="space-y-1">
+                    <div className="font-medium">{appointment.musteri?.first_name} {appointment.musteri?.last_name || ''}</div>
+                    <div className="text-sm text-muted-foreground">{appointment.musteri?.phone && formatPhoneNumber(appointment.musteri.phone)}</div>
+                    
+                    <div className="flex gap-2 mt-2">
+                      <div className="flex items-center text-xs text-muted-foreground">
+                        <Calendar className="h-3 w-3 mr-1" />
+                        {format(parseISO(appointment.tarih), 'dd MMM yyyy', { locale: tr })}
+                      </div>
+                      <div className="flex items-center text-xs text-muted-foreground">
+                        <Clock className="h-3 w-3 mr-1" />
+                        {appointment.saat.substring(0, 5)}
+                      </div>
                     </div>
-                  ) : (
-                    <span className="text-muted-foreground">Müşteri bilgisi yok</span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  {appointment.personel ? (
-                    appointment.personel.ad_soyad
-                  ) : (
-                    <span className="text-muted-foreground">Atanmamış</span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  {Array.isArray(appointment.islemler) && appointment.islemler.length > 0 ? (
-                    <ul className="list-disc list-inside space-y-1">
-                      {appointment.islemler.map((islem: any, index: number) => (
-                        <li key={index} className="text-sm">
-                          {islem.islem_adi || 'İsimsiz işlem'}
-                          {islem.fiyat && <span className="text-muted-foreground ml-1">({islem.fiyat} TL)</span>}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <span className="text-muted-foreground">İşlem bilgisi yok</span>
-                  )}
-                </TableCell>
-                <TableCell>{getStatusBadge(appointment.durum)}</TableCell>
-                <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild disabled={!canManage}>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                        <span className="sr-only">Menü aç</span>
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      {appointment.durum !== 'tamamlandi' && (
-                        <DropdownMenuItem 
-                          onClick={() => handleStatusChange(appointment.id, 'tamamlandi')}
-                          className="text-green-700 focus:text-green-700"
+                    
+                    <div className="flex items-center text-xs text-muted-foreground mt-1">
+                      <span className="mr-1">Personel:</span>
+                      {appointment.personel?.ad_soyad || 'Belirtilmemiş'}
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-col items-end gap-2">
+                    <span className={cn("text-xs px-2 py-1 rounded-full border whitespace-nowrap", getStatusBadgeClass(appointment.durum))}>
+                      {getStatusText(appointment.durum)}
+                    </span>
+                    
+                    {appointment.durum === "beklemede" && (
+                      <div className="flex gap-1">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          className="h-7 w-7 p-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleStatusChange(appointment.id, "onaylandi");
+                          }}
+                          disabled={isUpdating}
                         >
-                          <CheckCircle className="mr-2 h-4 w-4" />
-                          İşlemi Tamamla
-                        </DropdownMenuItem>
-                      )}
-                      
-                      {appointment.durum !== 'iptal_edildi' && (
-                        <DropdownMenuItem 
-                          onClick={() => handleStatusChange(appointment.id, 'iptal_edildi')}
-                          className="text-red-700 focus:text-red-700"
+                          <Check className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          className="h-7 w-7 p-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleStatusChange(appointment.id, "iptal");
+                          }}
+                          disabled={isUpdating}
                         >
-                          <XCircle className="mr-2 h-4 w-4" />
-                          İşlemi İptal Et
-                        </DropdownMenuItem>
-                      )}
-                      
-                      {appointment.durum === 'iptal_edildi' && (
-                        <DropdownMenuItem 
-                          onClick={() => handleStatusChange(appointment.id, 'onaylandi')}
-                          className="text-blue-700 focus:text-blue-700"
-                        >
-                          <CheckCircle className="mr-2 h-4 w-4" />
-                          Randevuyu Yeniden Aktifleştir
-                        </DropdownMenuItem>
-                      )}
-                      
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem>
-                        Detayları Görüntüle
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
-    </div>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </CardContent>
+      
+      {sortedAppointments.length > 0 && (
+        <CardFooter className="border-t p-4">
+          <div className="text-sm text-muted-foreground">
+            Toplam {sortedAppointments.length} randevu gösteriliyor
+          </div>
+        </CardFooter>
+      )}
+    </Card>
   );
 }

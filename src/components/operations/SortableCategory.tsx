@@ -1,13 +1,22 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical } from "lucide-react";
-import {
-  AccordionItem,
-  AccordionTrigger,
-  AccordionContent,
-} from "@/components/ui/accordion";
+import { AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { CategoryCard } from "./CategoryCard";
+
+interface SortableCategoryProps {
+  id: number;
+  kategori: any;
+  islemler: any[];
+  isStaff: boolean;
+  onServiceEdit: (islem: any) => void;
+  onServiceDelete: (islemId: number) => void;
+  onCategoryDelete: (kategoriId: number) => void;
+  onCategoryEdit: (kategori: any) => void;
+  onSiralamaChange: (items: any[]) => void;
+  onRandevuAl: (islemId: number) => void;
+  puanlamaAktif: boolean;
+}
 
 export function SortableCategory({
   id,
@@ -20,56 +29,55 @@ export function SortableCategory({
   onCategoryEdit,
   onSiralamaChange,
   onRandevuAl,
-  puanlamaAktif,
-}) {
+  puanlamaAktif
+}: SortableCategoryProps) {
   const {
     attributes,
     listeners,
     setNodeRef,
     transform,
     transition,
-    isDragging,
-  } = useSortable({ id });
+    isDragging
+  } = useSortable({
+    id: id,
+    data: kategori
+  });
 
-  // Fix the style object to conform to CSSProperties
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    zIndex: isDragging ? 1000 : undefined,  // Use undefined instead of 'auto'
-    position: isDragging ? 'relative' : undefined as any,  // Use undefined and type assertion
-    opacity: isDragging ? 0.6 : 1,
+    zIndex: isDragging ? 10 : 'auto',
+    position: isDragging ? 'relative' : 'static',
+    opacity: isDragging ? 0.5 : 1,
   };
 
   return (
-    <div ref={setNodeRef} style={style}>
-      <AccordionItem value={kategori.id.toString()} className="border rounded-md bg-white">
-        <div className="flex items-center">
-          {isStaff && (
-            <div
-              {...attributes}
-              {...listeners}
-              className="cursor-grab active:cursor-grabbing p-2 flex items-center"
-            >
-              <GripVertical className="h-5 w-5 text-gray-400" />
-            </div>
-          )}
-          <AccordionTrigger className="flex-grow py-4 hover:no-underline">
-            <span className="font-medium text-left">{kategori.kategori_adi}</span>
-          </AccordionTrigger>
-        </div>
-        <AccordionContent className="p-4">
-          <CategoryCard
-            kategori={kategori}
-            islemler={islemler}
-            isStaff={isStaff}
-            onServiceEdit={onServiceEdit}
-            onServiceDelete={onServiceDelete}
-            onCategoryDelete={onCategoryDelete}
-            onCategoryEdit={onCategoryEdit}
-            onSiralamaChange={onSiralamaChange}
-            onRandevuAl={onRandevuAl}
-            puanlamaAktif={puanlamaAktif}
-          />
+    <div ref={setNodeRef} style={style} {...attributes} className="touch-none">
+      <AccordionItem 
+        value={kategori.id.toString()}
+        className={`border rounded-md p-1 ${isDragging ? 'bg-accent' : ''}`}
+      >
+        <AccordionTrigger 
+          className="px-3 py-2"
+          {...listeners}
+        >
+          {kategori.kategori_adi}
+        </AccordionTrigger>
+        <AccordionContent>
+          <div className="p-3">
+            <CategoryCard
+              kategori={kategori}
+              islemler={islemler}
+              isStaff={isStaff}
+              onServiceEdit={onServiceEdit}
+              onServiceDelete={onServiceDelete}
+              onCategoryDelete={onCategoryDelete}
+              onCategoryEdit={onCategoryEdit}
+              onSiralamaChange={onSiralamaChange}
+              onRandevuAl={onRandevuAl}
+              puanlamaAktif={puanlamaAktif}
+            />
+          </div>
         </AccordionContent>
       </AccordionItem>
     </div>
