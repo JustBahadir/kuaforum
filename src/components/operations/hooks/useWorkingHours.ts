@@ -1,15 +1,13 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { calismaSaatleriServisi } from "@/lib/supabase";
-import { toast } from "sonner";
 
 export function useWorkingHours(dukkanId?: number) {
   const { 
     data: hours = [], 
     isLoading, 
     isError, 
-    refetch,
-    error
+    refetch 
   } = useQuery({
     queryKey: ['workingHours', dukkanId],
     queryFn: async () => {
@@ -18,28 +16,19 @@ export function useWorkingHours(dukkanId?: number) {
         
         if (shopId === null || shopId === undefined) {
           shopId = await calismaSaatleriServisi.getCurrentDukkanId();
-          console.log("Got shop ID from service:", shopId);
         }
         
         if (!shopId) {
-          console.error("No shop ID available for working hours");
           throw new Error("İşletme bilgisi bulunamadı");
         }
         
-        const result = await calismaSaatleriServisi.hepsiniGetir(shopId);
-        console.log("Fetched working hours:", result);
-        return result;
-      } catch (error: any) {
+        return calismaSaatleriServisi.hepsiniGetir(shopId);
+      } catch (error) {
         console.error("Error fetching working hours:", error);
-        toast.error(`Çalışma saatleri yüklenirken bir hata oluştu: ${error.message || "Bilinmeyen hata"}`, {
-          position: "bottom-right"
-        });
         throw error;
       }
-    },
-    staleTime: 0, // Always refetch data 
-    retry: 1
+    }
   });
   
-  return { hours, isLoading, isError, refetch, error };
+  return { hours, isLoading, isError, refetch };
 }

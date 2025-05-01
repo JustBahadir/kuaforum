@@ -1,59 +1,70 @@
 
-import { supabase } from "./client";
+import { supabase } from './client';
 
 /**
- * Ensure all necessary storage buckets exist
+ * Sets up necessary storage buckets for the application
  */
 export async function setupStorageBuckets() {
   try {
-    // Check if shop-photos bucket exists
-    const { data: buckets, error } = await supabase
-      .storage
-      .listBuckets();
+    // List existing buckets
+    const { data: buckets, error: listError } = await supabase.storage.listBuckets();
     
-    if (error) {
-      console.error("Error listing buckets:", error);
-      return;
+    if (listError) {
+      console.error("Error listing storage buckets:", listError);
+      return false;
     }
     
-    // Check if the buckets we need exist
-    const shopPhotosBucketExists = buckets?.some(bucket => bucket.name === 'shop-photos');
-    const profilePhotosBucketExists = buckets?.some(bucket => bucket.name === 'profile-photos');
-    
-    // Create shop-photos bucket if it doesn't exist
-    if (!shopPhotosBucketExists) {
-      const { error: createError } = await supabase
-        .storage
-        .createBucket('shop-photos', {
-          public: true,
-          fileSizeLimit: 20971520, // 20MB
-          allowedMimeTypes: ['image/*', 'video/*']
-        });
-      
-      if (createError) {
-        console.error("Error creating shop-photos bucket:", createError);
-      } else {
-        console.log("Successfully created shop-photos bucket");
-      }
-    }
+    const existingBuckets = buckets?.map(b => b.name) || [];
+    console.log("Existing buckets:", existingBuckets);
     
     // Create profile-photos bucket if it doesn't exist
-    if (!profilePhotosBucketExists) {
-      const { error: createError } = await supabase
-        .storage
-        .createBucket('profile-photos', {
+    if (!existingBuckets.includes('profile-photos')) {
+      console.log("Creating profile-photos bucket");
+      try {
+        const { data, error } = await supabase.storage.createBucket('profile-photos', {
           public: true,
-          fileSizeLimit: 10485760, // 10MB
-          allowedMimeTypes: ['image/*']
+          fileSizeLimit: 20971520, // 20MB
+          allowedMimeTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/gif']
         });
-      
-      if (createError) {
-        console.error("Error creating profile-photos bucket:", createError);
-      } else {
-        console.log("Successfully created profile-photos bucket");
+        
+        if (error) {
+          console.error("Error creating profile-photos bucket:", error);
+        } else {
+          console.log("Created profile-photos bucket successfully", data);
+        }
+      } catch (err) {
+        console.error("Failed to create profile-photos bucket:", err);
       }
     }
-  } catch (err) {
-    console.error("Error in setupStorageBuckets:", err);
+    
+    // Create shop-photos bucket if it doesn't exist
+    if (!existingBuckets.includes('shop-photos')) {
+      console.log("Creating shop-photos bucket");
+      try {
+        const { data, error } = await supabase.storage.createBucket('shop-photos', {
+          public: true,
+          fileSizeLimit: 20971520, // 20MB
+          allowedMimeTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/gif']
+        });
+        
+        if (error) {
+          console.error("Error creating shop-photos bucket:", error);
+        } else {
+          console.log("Created shop-photos bucket successfully", data);
+        }
+      } catch (err) {
+        console.error("Failed to create shop-photos bucket:", err);
+      }
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Error setting up storage buckets:", error);
+    return false;
   }
+}
+
+// Initialize storage buckets during application startup
+export async function initializeStorage() {
+  await setupStorageBuckets();
 }

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { StaffLayout } from "@/components/ui/staff-layout";
@@ -71,9 +70,7 @@ export default function StaffOperations() {
     e.preventDefault();
     
     if (!dukkanId) {
-      toast.error("İşletme bilgisi bulunamadı", {
-        position: "bottom-right"
-      });
+      toast.error("İşletme bilgisi bulunamadı");
       return;
     }
     
@@ -85,16 +82,12 @@ export default function StaffOperations() {
       });
       
       refetchCategories();
-      toast.success("Kategori başarıyla eklendi", {
-        position: "bottom-right"
-      });
+      toast.success("Kategori başarıyla eklendi");
       setKategoriDialogAcik(false);
       setYeniKategoriAdi("");
     } catch (error: any) {
       console.error("Kategori eklenirken hata:", error);
-      toast.error(`Kategori eklenirken hata oluştu: ${error.message}`, {
-        position: "bottom-right"
-      });
+      toast.error(`Kategori eklenirken hata oluştu: ${error.message}`);
     }
   };
   
@@ -116,15 +109,11 @@ export default function StaffOperations() {
       });
       
       refetchCategories();
-      toast.success("Kategori başarıyla güncellendi", {
-        position: "bottom-right"
-      });
+      toast.success("Kategori başarıyla güncellendi");
       setKategoriDuzenleDialogAcik(false);
     } catch (error: any) {
       console.error("Kategori güncellenirken hata:", error);
-      toast.error(`Kategori güncellenirken hata oluştu: ${error.message}`, {
-        position: "bottom-right"
-      });
+      toast.error(`Kategori güncellenirken hata oluştu: ${error.message}`);
     }
   };
   
@@ -133,17 +122,13 @@ export default function StaffOperations() {
     try {
       await kategorilerServisi.sil(kategoriId);
       refetchCategories();
-      toast.success("Kategori başarıyla silindi", {
-        position: "bottom-right"
-      });
+      toast.success("Kategori başarıyla silindi");
       
       // Also refresh services since related services might be affected
       refetchServices();
     } catch (error: any) {
       console.error("Kategori silinirken hata:", error);
-      toast.error(`Kategori silinirken hata oluştu: ${error.message}`, {
-        position: "bottom-right"
-      });
+      toast.error(`Kategori silinirken hata oluştu: ${error.message}`);
     }
   };
   
@@ -152,9 +137,7 @@ export default function StaffOperations() {
     e.preventDefault();
     
     if (!dukkanId) {
-      toast.error("İşletme bilgisi bulunamadı", {
-        position: "bottom-right"
-      });
+      toast.error("İşletme bilgisi bulunamadı");
       return;
     }
     
@@ -170,14 +153,10 @@ export default function StaffOperations() {
       
       if (duzenleId) {
         await islemServisi.guncelle(duzenleId, serviceData);
-        toast.success("Hizmet başarıyla güncellendi", {
-          position: "bottom-right"
-        });
+        toast.success("Hizmet başarıyla güncellendi");
       } else {
         await islemServisi.ekle(serviceData);
-        toast.success("Hizmet başarıyla eklendi", {
-          position: "bottom-right"
-        });
+        toast.success("Hizmet başarıyla eklendi");
       }
       
       refetchServices();
@@ -185,9 +164,7 @@ export default function StaffOperations() {
       formuSifirla();
     } catch (error: any) {
       console.error("Hizmet işlemi hatası:", error);
-      toast.error(`İşlem hatası: ${error.message}`, {
-        position: "bottom-right"
-      });
+      toast.error(`İşlem hatası: ${error.message}`);
     }
   };
   
@@ -207,14 +184,10 @@ export default function StaffOperations() {
     try {
       await islemServisi.sil(serviceId);
       refetchServices();
-      toast.success("Hizmet başarıyla silindi", {
-        position: "bottom-right"
-      });
+      toast.success("Hizmet başarıyla silindi");
     } catch (error: any) {
       console.error("Hizmet silinirken hata:", error);
-      toast.error(`Hizmet silinirken hata oluştu: ${error.message}`, {
-        position: "bottom-right"
-      });
+      toast.error(`Hizmet silinirken hata oluştu: ${error.message}`);
     }
   };
   
@@ -226,13 +199,11 @@ export default function StaffOperations() {
         sira: index
       }));
       
-      await islemServisi.sirayiGuncelle(updatedItems);
+      await islemServisi.siralamaGuncelle(updatedItems);
       refetchServices();
     } catch (error: any) {
       console.error("Sıralama güncellenirken hata:", error);
-      toast.error("Sıralama güncellenirken bir hata oluştu", {
-        position: "bottom-right"
-      });
+      toast.error("Sıralama güncellenirken bir hata oluştu");
     }
   };
   
@@ -248,9 +219,7 @@ export default function StaffOperations() {
       refetchCategories();
     } catch (error: any) {
       console.error("Kategori sıralaması güncellenirken hata:", error);
-      toast.error("Kategori sıralaması güncellenirken bir hata oluştu", {
-        position: "bottom-right"
-      });
+      toast.error("Kategori sıralaması güncellenirken bir hata oluştu");
     }
   };
   
@@ -283,22 +252,25 @@ export default function StaffOperations() {
           
           <TabsContent value="services" className="space-y-4">
             <div className="flex justify-between items-center mb-6">
-              <div className="flex items-center space-x-2">
-                <Switch id="puanlama-modu" checked={puanlamaAktif} onCheckedChange={setPuanlamaAktif} />
-                <Label htmlFor="puanlama-modu" className="text-sm">Puanlama Sistemi</Label>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => {
-                  formuSifirla();
-                  setDialogAcik(true);
-                }}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Hizmet Ekle
-                </Button>
-                <Button variant="outline" onClick={() => setKategoriDialogAcik(true)}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Kategori Ekle
-                </Button>
+              <h1 className="text-2xl font-bold">Hizmet Yönetimi</h1>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center space-x-2">
+                  <Switch id="puanlama-modu" checked={puanlamaAktif} onCheckedChange={setPuanlamaAktif} />
+                  <Label htmlFor="puanlama-modu" className="text-sm">Puanlama Sistemi</Label>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => {
+                    formuSifirla();
+                    setDialogAcik(true);
+                  }}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Hizmet Ekle
+                  </Button>
+                  <Button variant="outline" onClick={() => setKategoriDialogAcik(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Kategori Ekle
+                  </Button>
+                </div>
               </div>
             </div>
             
@@ -347,7 +319,7 @@ export default function StaffOperations() {
           </TabsContent>
           
           <TabsContent value="workinghours">
-            <WorkingHours dukkanId={dukkanId} />
+            <WorkingHours isStaff={true} dukkanId={dukkanId} />
           </TabsContent>
         </Tabs>
       </div>

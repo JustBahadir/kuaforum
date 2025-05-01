@@ -24,6 +24,6 @@ export const formatPhoneNumber = (value: string): string => {
  * Only allows numeric input
  */
 export const validatePhoneNumber = (value: string): boolean => {
-  // Check if the value contains only digits after removing spaces
+  // Check if the value contains only digits
   return /^\d+$/.test(value.replace(/\s/g, ''));
 };

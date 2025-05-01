@@ -7,7 +7,6 @@ import { DatePickerField } from "./FormFields/DatePickerField";
 import { PhoneInputField } from "./FormFields/PhoneInputField";
 import { CustomerFormActions } from "./FormFields/CustomerFormActions";
 import { CustomerFormFields } from "./FormFields/CustomerFormFields";
-import { useShopData } from "@/hooks/useShopData";
 
 interface NewCustomerFormProps {
   onSuccess: () => void;
@@ -15,8 +14,7 @@ interface NewCustomerFormProps {
   dukkanId?: number;
 }
 
-export function NewCustomerForm({ onSuccess, onCancel, dukkanId: propDukkanId }: NewCustomerFormProps) {
-  const { isletmeData } = useShopData();
+export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFormProps) {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
@@ -24,9 +22,6 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId: propDukkanId }:
   const [birthdateText, setBirthdateText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  
-  // Use dukkanId from props or from isletmeData
-  const dukkanId = propDukkanId || isletmeData?.id;
   
   // Form validation - Check if any field has a value
   const isFormValid = firstName.trim() !== '' || lastName.trim() !== '' || phone.trim() !== '' || birthdate !== undefined;
@@ -75,9 +70,7 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId: propDukkanId }:
       const result = await musteriServisi.ekle(customerData);
       
       if (result) {
-        toast.success("Müşteri başarıyla eklendi", {
-          position: "bottom-right"
-        });
+        toast.success("Müşteri başarıyla eklendi");
         
         // Reset form and notify parent
         setFirstName('');
@@ -88,15 +81,11 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId: propDukkanId }:
         setErrors({});
         onSuccess();
       } else {
-        toast.error("Müşteri eklenirken bir hata oluştu", {
-          position: "bottom-right"
-        });
+        toast.error("Müşteri eklenirken bir hata oluştu");
       }
     } catch (error: any) {
       console.error("Müşteri ekleme hatası (form):", error);
-      toast.error(`Müşteri eklenemedi: ${error.message || "Bir hata oluştu"}`, {
-        position: "bottom-right"
-      });
+      toast.error(`Müşteri eklenemedi: ${error.message || "Bir hata oluştu"}`);
     } finally {
       setIsSubmitting(false);
     }

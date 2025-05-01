@@ -5,7 +5,7 @@ import { Edit } from "lucide-react";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { gunSiralama, gunIsimleri } from "@/components/operations/constants/workingDays";
 import { useQuery } from "@tanstack/react-query";
-import { calismaSaatleriServisi } from "@/lib/supabase";
+import { calismaSaatleriServisi } from "@/lib/supabase/services/calismaSaatleriServisi";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useEffect } from "react";
@@ -37,17 +37,12 @@ export function ShopWorkingHoursCard({ calisma_saatleri = [], userRole, dukkanId
   useEffect(() => {
     if (error) {
       console.error("Error fetching working hours:", error);
-      toast.error("Çalışma saatleri yüklenirken bir hata oluştu", {
-        position: "bottom-right"
-      });
+      toast.error("Çalışma saatleri yüklenirken bir hata oluştu");
     }
   }, [error]);
 
   // Use provided hours if available, otherwise use fetched hours
-  // Important: Create a new array to avoid manipulation issues
-  const saatler = (calisma_saatleri && calisma_saatleri.length > 0) ? 
-    [...calisma_saatleri] : 
-    [...fetchedSaatler];
+  const saatler = calisma_saatleri.length > 0 ? calisma_saatleri : fetchedSaatler;
 
   // Format time display
   const formatTime = (time: string | null) => {
@@ -55,35 +50,20 @@ export function ShopWorkingHoursCard({ calisma_saatleri = [], userRole, dukkanId
     return time.substring(0, 5);
   };
 
-  // Ensure the days are sorted correctly and handle potential duplicates
-  // Group by gun_sira and take the latest entry (in case of duplicates)
-  const groupedByDay = saatler.reduce<Record<number, any>>((acc, current) => {
-    const existingDay = acc[current.gun_sira];
-    if (!existingDay || new Date(current.created_at) > new Date(existingDay.created_at)) {
-      acc[current.gun_sira] = current;
+  // Ensure the days are sorted correctly
+  const sortedSaatler = [...saatler].sort((a, b) => {
+    return a.gun_sira - b.gun_sira;
+  });
+
+  // Remove any duplicate days that might have been created by mistake
+  const uniqueDays = sortedSaatler.reduce((acc, current) => {
+    const existingDay = acc.find(day => day.gun_sira === current.gun_sira);
+    if (!existingDay) {
+      acc.push(current);
     }
     return acc;
-  }, {});
+  }, [] as any[]);
 
-  // Convert back to array and sort
-  const uniqueDays = Object.values(groupedByDay)
-    .sort((a, b) => a.gun_sira - b.gun_sira);
-
-  // Create an array with all 7 days, filling in missing days with defaults
-  const fullWeekSchedule = gunSiralama.map(gun_sira => {
-    const existingDay = uniqueDays.find(day => day.gun_sira === gun_sira);
-    if (existingDay) {
-      return existingDay;
-    }
-    return {
-      gun_sira,
-      gun: gunIsimleri[gun_sira],
-      acilis: "09:00",
-      kapanis: "18:00",
-      kapali: false
-    };
-  });
-  
   if (isLoading) {
     return (
       <Card>
@@ -131,7 +111,7 @@ export function ShopWorkingHoursCard({ calisma_saatleri = [], userRole, dukkanId
               </TableRow>
             </TableHeader>
             <TableBody>
-              {fullWeekSchedule.map((saat: any) => (
+              {uniqueDays.length > 0 ? uniqueDays.map((saat: any) => (
                 <TableRow key={saat.gun_sira}>
                   <TableCell className="font-medium">
                     {/* Use proper capitalized Turkish day names */}
@@ -147,7 +127,19 @@ export function ShopWorkingHoursCard({ calisma_saatleri = [], userRole, dukkanId
                     )}
                   </TableCell>
                 </TableRow>
-              ))}
+              )) : (
+                // Fallback for when no schedule is available
+                gunSiralama.map((gun_sira, index) => (
+                  <TableRow key={index}>
+                    <TableCell className="font-medium">
+                      {gunIsimleri[gun_sira]}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <span>09:00 - 18:00</span>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </div>

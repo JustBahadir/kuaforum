@@ -62,17 +62,13 @@ export function ShopProfilePhotoUpload({
     const isVideo = file.type.startsWith('video/');
     
     if (!(isImage || (acceptVideoFiles && isVideo && galleryMode))) {
-      toast.error('Lütfen sadece resim veya video dosyası yükleyin', {
-        position: "bottom-right"
-      });
+      toast.error('Lütfen sadece resim veya video dosyası yükleyin');
       return;
     }
 
     // 20MB limit for all files
     if (file.size > 20 * 1024 * 1024) {
-      toast.error('Dosya boyutu 20MB\'ı geçemez', {
-        position: "bottom-right"
-      });
+      toast.error('Dosya boyutu 20MB\'ı geçemez');
       return;
     }
 
@@ -96,9 +92,7 @@ export function ShopProfilePhotoUpload({
       
       if (error) {
         console.error("Upload error:", error);
-        toast.error(`Yükleme hatası: ${error.message}`, {
-          position: "bottom-right"
-        });
+        toast.error(`Yükleme hatası: ${error.message}`);
         return;
       }
       
@@ -108,9 +102,7 @@ export function ShopProfilePhotoUpload({
       
       if (galleryMode) {
         onSuccess(publicUrl.publicUrl);
-        toast.success(isVideo ? 'Galeri videosu başarıyla yüklendi' : 'Galeri fotoğrafı başarıyla yüklendi', {
-          position: "bottom-right"
-        });
+        toast.success(isVideo ? 'Galeri videosu başarıyla yüklendi' : 'Galeri fotoğrafı başarıyla yüklendi');
       } else {
         // Only update shop logo for images, not videos
         if (dukkanId) {
@@ -121,9 +113,7 @@ export function ShopProfilePhotoUpload({
           
           if (updateError) {
             console.error("Logo update error:", updateError);
-            toast.error(`Logo güncellenemedi: ${updateError.message}`, {
-              position: "bottom-right"
-            });
+            toast.error(`Logo güncellenemedi: ${updateError.message}`);
             return;
           }
         }
@@ -145,15 +135,11 @@ export function ShopProfilePhotoUpload({
         }
         
         onSuccess(publicUrl.publicUrl);
-        toast.success('Profil fotoğrafı başarıyla güncellendi', {
-          position: "bottom-right"
-        });
+        toast.success('Profil fotoğrafı başarıyla güncellendi');
       }
     } catch (error: any) {
       console.error('Yükleme işlemi sırasında hata:', error);
-      toast.error('Dosya yüklenirken bir hata oluştu: ' + (error instanceof Error ? error.message : String(error)), {
-        position: "bottom-right"
-      });
+      toast.error('Dosya yüklenirken bir hata oluştu: ' + (error instanceof Error ? error.message : String(error)));
     } finally {
       setIsUploading(false);
     }
@@ -173,9 +159,7 @@ export function ShopProfilePhotoUpload({
         
         if (updateError) {
           console.error('Dükkan logo silinirken hata:', updateError);
-          toast.error('Dükkan logosu silinemedi: ' + updateError.message, {
-            position: "bottom-right"
-          });
+          toast.error('Dükkan logosu silinemedi: ' + updateError.message);
           return;
         }
       }
@@ -196,14 +180,10 @@ export function ShopProfilePhotoUpload({
       }
       
       onSuccess('');
-      toast.success('Profil fotoğrafı başarıyla kaldırıldı', {
-        position: "bottom-right"
-      });
+      toast.success('Profil fotoğrafı başarıyla kaldırıldı');
     } catch (error) {
       console.error('Fotoğraf silme hatası:', error);
-      toast.error('Fotoğraf silinirken bir hata oluştu: ' + (error instanceof Error ? error.message : String(error)), {
-        position: "bottom-right"
-      });
+      toast.error('Fotoğraf silinirken bir hata oluştu: ' + (error instanceof Error ? error.message : String(error)));
     }
   };
 
