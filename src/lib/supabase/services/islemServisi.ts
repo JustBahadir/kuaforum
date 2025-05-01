@@ -10,7 +10,7 @@ export const islemServisi = {
   async hepsiniGetir(dukkanId?: number) {
     try {
       let shopId = dukkanId;
-      if (!shopId) {
+      if (shopId === undefined) {
         shopId = await this.getCurrentDukkanId();
       }
       
@@ -54,6 +54,32 @@ export const islemServisi = {
         .from('islemler')
         .select('*')
         .eq('kategori_id', kategoriId)
+        .order('sira', { ascending: true });
+        
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Kategori işlemlerini getirme hatası:', error);
+      throw error;
+    }
+  },
+  
+  async kategoriIdyeGoreGetir(kategoriId: number, dukkanId?: number) {
+    try {
+      let shopId = dukkanId;
+      if (shopId === undefined) {
+        shopId = await this.getCurrentDukkanId();
+      }
+      
+      if (!shopId) {
+        throw new Error('Dükkan bilgisi bulunamadı');
+      }
+      
+      const { data, error } = await supabase
+        .from('islemler')
+        .select('*')
+        .eq('kategori_id', kategoriId)
+        .eq('dukkan_id', shopId)
         .order('sira', { ascending: true });
         
       if (error) throw error;

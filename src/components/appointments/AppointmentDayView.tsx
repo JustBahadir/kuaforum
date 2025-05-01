@@ -182,7 +182,7 @@ export function AppointmentDayView({
                           )}
                         </div>
                         
-                        {appointment.durum !== 'tamamlandi' && appointment.durum !== 'iptal' && (
+                        {appointment.durum !== 'tamamlandi' && appointment.durum !== 'iptal' && appointment.durum !== 'iptal_edildi' && (
                           <div className="flex space-x-2">
                             <Button
                               variant="outline"
@@ -196,7 +196,7 @@ export function AppointmentDayView({
                               variant="outline"
                               size="sm"
                               className="h-8 text-xs text-destructive hover:text-destructive"
-                              onClick={() => onAppointmentStatusUpdate(appointment.id, 'iptal')}
+                              onClick={() => onAppointmentStatusUpdate(appointment.id, 'iptal_edildi')}
                             >
                               İptal
                             </Button>

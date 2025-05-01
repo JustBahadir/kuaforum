@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
@@ -111,7 +110,7 @@ export function NewAppointmentDialog({ isOpen, onOpenChange, onSuccess }: NewApp
         musteri_id: selectedMusteriId,
         personel_id: selectedPersonelId,
         tarih: formattedDate,
-        saat: `${selectedTime}:00`,
+        saat: selectedTime,
         durum: "onaylandi",
         notlar: notes,
         islemler: selectedIslemIds
@@ -131,17 +130,17 @@ export function NewAppointmentDialog({ isOpen, onOpenChange, onSuccess }: NewApp
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Yeni Randevu Oluştur</DialogTitle>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Müşteri</label>
               <Select value={selectedMusteriId?.toString()} onValueChange={(value) => setSelectedMusteriId(Number(value))}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Müşteri seçin" />
                 </SelectTrigger>
                 <SelectContent>
@@ -157,7 +156,7 @@ export function NewAppointmentDialog({ isOpen, onOpenChange, onSuccess }: NewApp
             <div className="space-y-2">
               <label className="text-sm font-medium">Personel</label>
               <Select value={selectedPersonelId?.toString()} onValueChange={(value) => setSelectedPersonelId(Number(value))}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Personel seçin" />
                 </SelectTrigger>
                 <SelectContent>
@@ -169,13 +168,11 @@ export function NewAppointmentDialog({ isOpen, onOpenChange, onSuccess }: NewApp
                 </SelectContent>
               </Select>
             </div>
-          </div>
           
-          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Kategori</label>
               <Select value={selectedKategoriId?.toString()} onValueChange={(value) => setSelectedKategoriId(Number(value))}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Kategori seçin" />
                 </SelectTrigger>
                 <SelectContent>
@@ -195,7 +192,7 @@ export function NewAppointmentDialog({ isOpen, onOpenChange, onSuccess }: NewApp
                 onValueChange={(value) => setSelectedIslemIds([Number(value)])}
                 disabled={!selectedKategoriId}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Hizmet seçin" />
                 </SelectTrigger>
                 <SelectContent>
@@ -207,9 +204,7 @@ export function NewAppointmentDialog({ isOpen, onOpenChange, onSuccess }: NewApp
                 </SelectContent>
               </Select>
             </div>
-          </div>
           
-          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Tarih</label>
               <Popover>
@@ -239,7 +234,7 @@ export function NewAppointmentDialog({ isOpen, onOpenChange, onSuccess }: NewApp
             <div className="space-y-2">
               <label className="text-sm font-medium">Saat</label>
               <Select value={selectedTime} onValueChange={setSelectedTime}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Saat seçin" />
                 </SelectTrigger>
                 <SelectContent>
@@ -251,19 +246,19 @@ export function NewAppointmentDialog({ isOpen, onOpenChange, onSuccess }: NewApp
                 </SelectContent>
               </Select>
             </div>
+          
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Notlar (opsiyonel)</label>
+              <Textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Randevu için notlar..."
+                className="min-h-[100px]"
+              />
+            </div>
           </div>
           
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Notlar (opsiyonel)</label>
-            <Textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Randevu için notlar..."
-              className="min-h-[100px]"
-            />
-          </div>
-          
-          <div className="flex justify-end space-x-2">
+          <div className="flex justify-end space-x-2 pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               İptal
             </Button>

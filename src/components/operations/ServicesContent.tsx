@@ -24,6 +24,8 @@ import {
 } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
 import { Info, Plus } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { WorkingHours } from "./WorkingHours";
 
 interface ServicesContentProps {
   isStaff: boolean;
@@ -110,6 +112,7 @@ export function ServicesContent({
 }: ServicesContentProps) {
   const [openCategories, setOpenCategories] = useState<string[]>([]);
   const [infoDialogOpen, setInfoDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("hizmetler");
   
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -167,7 +170,18 @@ export function ServicesContent({
                 <span className="sr-only">Puanlama Sistemi Bilgisi</span>
               </Button>
             </div>
-            
+          </div>
+        </div>
+      )}
+      
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="mb-4">
+          <TabsTrigger value="hizmetler">Hizmetler</TabsTrigger>
+          <TabsTrigger value="calisma-saatleri">Çalışma Saatleri</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="hizmetler" className="space-y-4">
+          <div className="flex justify-end">
             <div className="flex gap-2">
               <Button 
                 variant="outline" 
@@ -188,80 +202,88 @@ export function ServicesContent({
                 Kategori Ekle
               </Button>
             </div>
-
-            <CategoryForm 
-              isOpen={kategoriDialogAcik}
-              onOpenChange={setKategoriDialogAcik}
-              kategoriAdi={yeniKategoriAdi}
-              setKategoriAdi={setYeniKategoriAdi}
-              onSubmit={onCategoryFormSubmit}
-            />
-            <CategoryEditForm
-              isOpen={kategoriDuzenleDialogAcik}
-              onOpenChange={setKategoriDuzenleDialogAcik}
-              kategoriAdi={duzenleKategoriAdi}
-              setKategoriAdi={setDuzenleKategoriAdi}
-              onSubmit={onCategoryEditFormSubmit}
-            />
-            <ServiceForm
-              isOpen={dialogAcik}
-              onOpenChange={setDialogAcik}
-              kategoriler={kategoriler}
-              islemAdi={islemAdi}
-              setIslemAdi={setIslemAdi}
-              fiyat={fiyat}
-              setFiyat={setFiyat}
-              maliyet={maliyet}
-              setMaliyet={setMaliyet}
-              puan={puan}
-              setPuan={setPuan}
-              kategoriId={kategoriId}
-              setKategoriId={setKategoriId}
-              duzenleId={duzenleId}
-              onSubmit={onServiceFormSubmit}
-              onReset={formuSifirla}
-              puanlamaAktif={puanlamaAktif}
-            />
           </div>
-        </div>
-      )}
-      <div className="space-y-6 pt-4">
-        <DndContext 
-          sensors={sensors} 
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext 
-            items={kategoriler.map(k => k.id)} 
-            strategy={verticalListSortingStrategy}
-          >
-            <Accordion 
-              type="single" 
-              collapsible 
-              className="w-full space-y-4"
-              value={openCategories.length > 0 ? openCategories[0] : undefined}
-              onValueChange={handleCategoryToggle}
+          
+          <div className="space-y-6">
+            <DndContext 
+              sensors={sensors} 
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
             >
-              {kategoriler.map((kategori) => (
-                <SortableCategory
-                  key={kategori.id}
-                  id={kategori.id}
-                  kategori={kategori}
-                  islemler={islemler.filter((islem: any) => islem.kategori_id === kategori.id)}
-                  isStaff={isStaff}
-                  onServiceEdit={onServiceEdit}
-                  onServiceDelete={onServiceDelete}
-                  onCategoryDelete={onCategoryDelete}
-                  onCategoryEdit={onCategoryEdit}
-                  onSiralamaChange={onSiralamaChange}
-                  onRandevuAl={onRandevuAl}
-                  puanlamaAktif={puanlamaAktif}
-                />
-              ))}
-            </Accordion>
-          </SortableContext>
-        </DndContext>
-      </div>
+              <SortableContext 
+                items={kategoriler.map(k => k.id)} 
+                strategy={verticalListSortingStrategy}
+              >
+                <Accordion 
+                  type="single" 
+                  collapsible 
+                  className="w-full space-y-4"
+                  value={openCategories.length > 0 ? openCategories[0] : undefined}
+                  onValueChange={handleCategoryToggle}
+                >
+                  {kategoriler.map((kategori) => (
+                    <SortableCategory
+                      key={kategori.id}
+                      id={kategori.id}
+                      kategori={kategori}
+                      islemler={islemler.filter((islem: any) => islem.kategori_id === kategori.id)}
+                      isStaff={isStaff}
+                      onServiceEdit={onServiceEdit}
+                      onServiceDelete={onServiceDelete}
+                      onCategoryDelete={onCategoryDelete}
+                      onCategoryEdit={onCategoryEdit}
+                      onSiralamaChange={onSiralamaChange}
+                      onRandevuAl={onRandevuAl}
+                      puanlamaAktif={puanlamaAktif}
+                    />
+                  ))}
+                </Accordion>
+              </SortableContext>
+            </DndContext>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="calisma-saatleri">
+          <WorkingHours dukkanId={dukkanId} />
+        </TabsContent>
+      </Tabs>
+      
+      <CategoryForm 
+        isOpen={kategoriDialogAcik}
+        onOpenChange={setKategoriDialogAcik}
+        kategoriAdi={yeniKategoriAdi}
+        setKategoriAdi={setYeniKategoriAdi}
+        onSubmit={onCategoryFormSubmit}
+      />
+      
+      <CategoryEditForm
+        isOpen={kategoriDuzenleDialogAcik}
+        onOpenChange={setKategoriDuzenleDialogAcik}
+        kategoriAdi={duzenleKategoriAdi}
+        setKategoriAdi={setDuzenleKategoriAdi}
+        onSubmit={onCategoryEditFormSubmit}
+      />
+      
+      <ServiceForm
+        isOpen={dialogAcik}
+        onOpenChange={setDialogAcik}
+        kategoriler={kategoriler}
+        islemAdi={islemAdi}
+        setIslemAdi={setIslemAdi}
+        fiyat={fiyat}
+        setFiyat={setFiyat}
+        maliyet={maliyet}
+        setMaliyet={setMaliyet}
+        puan={puan}
+        setPuan={setPuan}
+        kategoriId={kategoriId}
+        setKategoriId={setKategoriId}
+        duzenleId={duzenleId}
+        onSubmit={onServiceFormSubmit}
+        onReset={formuSifirla}
+        puanlamaAktif={puanlamaAktif}
+      />
+      
       {/* Information Dialog */}
       <Dialog open={infoDialogOpen} onOpenChange={setInfoDialogOpen}>
         <DialogContent className="sm:max-w-md">

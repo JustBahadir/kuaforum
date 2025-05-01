@@ -1,12 +1,12 @@
+
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
 import { isletmeServisi } from "@/lib/supabase/services/dukkanServisi";
 import { authService } from "@/lib/auth/authService";
-import { gunSiralama } from "@/components/operations/constants/workingDays";
 import { calismaSaatleriServisi } from "@/lib/supabase/services/calismaSaatleriServisi";
 
-export function useShopData(isletmeId: number | null) {
+export function useShopData(isletmeId?: number | null) {
   const [isletmeData, setIsletmeData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -78,15 +78,6 @@ export function useShopData(isletmeId: number | null) {
                 
                 if (profileData) {
                   personel.avatar_url = profileData.avatar_url;
-                } else {
-                  try {
-                    const { data: { user } } = await supabase.auth.admin.getUserById(personel.auth_id);
-                    if (user?.user_metadata?.avatar_url) {
-                      personel.avatar_url = user.user_metadata.avatar_url;
-                    }
-                  } catch (authError) {
-                    console.error("Auth profile data fetch error:", authError);
-                  }
                 }
               } catch (profileError) {
                 console.error("Profile data fetch error:", profileError);
@@ -125,8 +116,7 @@ export function useShopData(isletmeId: number | null) {
       }
     },
     enabled: !!(isletmeData?.id || isletmeId),
-    staleTime: 30000, // Refresh every 30 seconds
-    retry: 3          // Retry 3 times on failure
+    staleTime: 30000 // Refresh every 30 seconds
   });
 
   return { 

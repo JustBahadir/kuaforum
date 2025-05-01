@@ -12,7 +12,8 @@ interface AppointmentWeekViewProps {
   appointments: Randevu[];
   isLoading: boolean;
   currentPersonelId?: number | null;
-  onDateChange: (date: Date) => void;
+  onAppointmentStatusUpdate?: (id: number, status: string) => Promise<void>;
+  onDateChange?: (date: Date) => void;
 }
 
 export function AppointmentWeekView({
@@ -20,6 +21,7 @@ export function AppointmentWeekView({
   appointments,
   isLoading,
   currentPersonelId,
+  onAppointmentStatusUpdate,
   onDateChange
 }: AppointmentWeekViewProps) {
   // Get the start of the week (Monday)
@@ -29,15 +31,21 @@ export function AppointmentWeekView({
   const weekDays = Array.from({ length: 7 }).map((_, i) => addDays(weekStart, i));
   
   const handlePrevWeek = () => {
-    onDateChange(subWeeks(selectedDate, 1));
+    if (onDateChange) {
+      onDateChange(subWeeks(selectedDate, 1));
+    }
   };
   
   const handleNextWeek = () => {
-    onDateChange(addWeeks(selectedDate, 1));
+    if (onDateChange) {
+      onDateChange(addWeeks(selectedDate, 1));
+    }
   };
   
   const handleToday = () => {
-    onDateChange(new Date());
+    if (onDateChange) {
+      onDateChange(new Date());
+    }
   };
   
   // Function to get appointments for a specific day
@@ -45,6 +53,22 @@ export function AppointmentWeekView({
     return appointments.filter(
       (appointment) => format(new Date(appointment.tarih), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')
     ).sort((a, b) => a.saat.localeCompare(b.saat));
+  };
+
+  const getStatusBackgroundColor = (status: string) => {
+    switch (status) {
+      case 'tamamlandi':
+        return 'bg-green-100';
+      case 'beklemede':
+        return 'bg-yellow-100';
+      case 'iptal':
+      case 'iptal_edildi':
+        return 'bg-red-100';
+      case 'onaylandi':
+        return 'bg-blue-100';
+      default:
+        return 'bg-gray-100';
+    }
   };
 
   return (
@@ -101,11 +125,7 @@ export function AppointmentWeekView({
                       {dayAppointments.map((appointment) => (
                         <div 
                           key={appointment.id}
-                          className={`p-2 text-xs rounded ${
-                            appointment.durum === "tamamlandi" ? "bg-green-100" : 
-                            appointment.durum === "iptal_edildi" ? "bg-red-100" : 
-                            "bg-blue-100"
-                          }`}
+                          className={`p-2 text-xs rounded ${getStatusBackgroundColor(appointment.durum)}`}
                         >
                           <div className="font-medium">{appointment.saat}</div>
                           <div className="truncate">{appointment.musteri?.first_name} {appointment.musteri?.last_name}</div>

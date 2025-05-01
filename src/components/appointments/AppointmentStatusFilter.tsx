@@ -1,38 +1,67 @@
 
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { ButtonGroup } from "../ui/button-group";
+import { Button } from "../ui/button";
 import { RandevuDurumu } from "@/lib/supabase/types";
-import { Calendar, CheckCircle, Clock, XCircle } from "lucide-react";
 
 interface AppointmentStatusFilterProps {
   value: RandevuDurumu | 'all';
-  onChange: (status: RandevuDurumu | 'all') => void;
+  onChange: (value: RandevuDurumu | 'all') => void;
 }
 
-export function AppointmentStatusFilter({
-  value,
-  onChange
-}: AppointmentStatusFilterProps) {
+export function AppointmentStatusFilter({ value, onChange }: AppointmentStatusFilterProps) {
   return (
-    <div className="flex flex-col space-y-2">
-      <label className="text-sm font-medium">Randevu Durumu</label>
-      <ToggleGroup type="single" value={value} onValueChange={(v) => onChange(v as RandevuDurumu | 'all')} className="flex flex-wrap">
-        <ToggleGroupItem value="all" aria-label="Hepsi" className="bg-gray-100 data-[state=on]:bg-gray-300">
-          <Calendar className="h-4 w-4 mr-2" />
-          Hepsi
-        </ToggleGroupItem>
-        <ToggleGroupItem value="beklemede" aria-label="Beklemede" className="bg-yellow-50 data-[state=on]:bg-yellow-200">
-          <Clock className="h-4 w-4 mr-2" />
-          Beklemede
-        </ToggleGroupItem>
-        <ToggleGroupItem value="tamamlandi" aria-label="Tamamlandı" className="bg-green-50 data-[state=on]:bg-green-200">
-          <CheckCircle className="h-4 w-4 mr-2" />
-          Tamamlandı
-        </ToggleGroupItem>
-        <ToggleGroupItem value="iptal" aria-label="İptal Edildi" className="bg-red-50 data-[state=on]:bg-red-200">
-          <XCircle className="h-4 w-4 mr-2" />
-          İptal
-        </ToggleGroupItem>
-      </ToggleGroup>
+    <div>
+      <h2 className="text-sm font-medium mb-3">Randevu Durumu</h2>
+      <div className="flex flex-wrap gap-2">
+        <Button 
+          variant={value === 'all' ? 'default' : 'outline'} 
+          size="sm"
+          onClick={() => onChange('all')}
+          className="flex items-center gap-2"
+        >
+          <span className="hidden sm:inline">Hepsi</span>
+        </Button>
+        
+        <Button 
+          variant={value === 'beklemede' ? 'default' : 'outline'} 
+          size="sm"
+          onClick={() => onChange('beklemede')}
+          className="flex items-center gap-2"
+        >
+          <span className="rounded-full w-2 h-2 bg-yellow-500"></span>
+          <span className="hidden sm:inline">Beklemede</span>
+        </Button>
+        
+        <Button 
+          variant={value === 'onaylandi' ? 'default' : 'outline'} 
+          size="sm"
+          onClick={() => onChange('onaylandi')}
+          className="flex items-center gap-2"
+        >
+          <span className="rounded-full w-2 h-2 bg-blue-500"></span>
+          <span className="hidden sm:inline">Onaylandı</span>
+        </Button>
+        
+        <Button 
+          variant={value === 'tamamlandi' ? 'default' : 'outline'} 
+          size="sm"
+          onClick={() => onChange('tamamlandi')}
+          className="flex items-center gap-2"
+        >
+          <span className="rounded-full w-2 h-2 bg-green-500"></span>
+          <span className="hidden sm:inline">Tamamlandı</span>
+        </Button>
+        
+        <Button 
+          variant={value === 'iptal_edildi' ? 'default' : 'outline'} 
+          size="sm"
+          onClick={() => onChange('iptal_edildi')}
+          className="flex items-center gap-2"
+        >
+          <span className="rounded-full w-2 h-2 bg-red-500"></span>
+          <span className="hidden sm:inline">İptal</span>
+        </Button>
+      </div>
     </div>
   );
 }

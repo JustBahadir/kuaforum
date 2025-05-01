@@ -16,8 +16,16 @@ export function WorkingHours({ dukkanId }: WorkingHoursProps) {
   
   const { data: hours = [], isLoading, refetch } = useQuery({
     queryKey: ['workingHours', dukkanId],
-    queryFn: () => calismaSaatleriServisi.hepsiniGetir(dukkanId),
-    enabled: !!dukkanId,
+    queryFn: async () => {
+      if (!dukkanId) {
+        const fetchedDukkanId = await calismaSaatleriServisi.getCurrentDukkanId();
+        if (!fetchedDukkanId) {
+          throw new Error('Dükkan bilgisi bulunamadı');
+        }
+        return calismaSaatleriServisi.hepsiniGetir(fetchedDukkanId);
+      }
+      return calismaSaatleriServisi.hepsiniGetir(dukkanId);
+    }
   });
 
   const handleEditClick = () => {

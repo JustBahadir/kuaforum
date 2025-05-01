@@ -78,3 +78,50 @@ export interface PersonelGecmis {
   cv: string;
   belgeler: string;
 }
+
+export interface Profil {
+  id: string;
+  first_name?: string;
+  last_name?: string;
+  avatar_url?: string;
+  phone?: string;
+  role?: string;
+  dukkan_id?: number;
+}
+
+export interface Personel {
+  id: number;
+  ad_soyad: string;
+  telefon: string;
+  eposta: string;
+  adres: string;
+  personel_no: string;
+  maas: number;
+  prim_yuzdesi: number;
+  dukkan_id: number;
+  calisma_sistemi: string;
+  auth_id?: string;
+  birth_date?: Date;
+  iban?: string;
+  avatar_url?: string;
+}
+
+export interface CalismaSaati {
+  id?: number;
+  dukkan_id?: number;
+  gun: string;
+  gun_sira: number;
+  acilis: string;
+  kapanis: string;
+  kapali: boolean;
+}
+
+export interface Musteri {
+  id: number;
+  first_name: string;
+  last_name?: string;
+  phone?: string;
+  birthdate?: string;
+  dukkan_id?: number;
+  created_at?: string;
+}

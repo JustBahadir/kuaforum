@@ -15,6 +15,7 @@ import { calismaSaatleriServisi } from './services/calismaSaatleriServisi';
 import { profileService } from './services/profileService';
 import { notificationsService, notificationServisi } from './services/notificationsService';
 import { customerServisi } from './services/customerServisi';
+import { businessServisi } from './services/businessServisi';
 
 // Import and export types
 import type { 
@@ -22,7 +23,11 @@ import type {
   PersonelEgitim, 
   PersonelGecmis,
   ProfileUpdateData,
-  RandevuDurumu
+  RandevuDurumu,
+  Profil,
+  Personel,
+  CalismaSaati,
+  Musteri
 } from './types';
 
 export {
@@ -47,11 +52,16 @@ export {
   notificationsService,
   notificationServisi,
   customerServisi,
+  businessServisi,
   
   // Types
   type PersonelIslemi,
   type PersonelEgitim,
   type PersonelGecmis,
   type ProfileUpdateData,
-  type RandevuDurumu
+  type RandevuDurumu,
+  type Profil,
+  type Personel,
+  type CalismaSaati,
+  type Musteri
 };

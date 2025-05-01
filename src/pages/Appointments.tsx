@@ -119,6 +119,7 @@ export default function Appointments() {
               isLoading={isLoading}
               selectedDate={selectedDate}
               onAppointmentStatusUpdate={updateAppointmentStatus}
+              onDateChange={handleDateChange}
             />
           </TabsContent>
 

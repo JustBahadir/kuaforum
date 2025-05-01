@@ -1,6 +1,7 @@
 
 import { supabase } from '../client';
 import { musteriServisi } from './musteriServisi';
+import { CalismaSaati } from '../types';
 
 export const calismaSaatleriServisi = {
   async getCurrentDukkanId() {
@@ -48,7 +49,23 @@ export const calismaSaatleriServisi = {
     }
   },
   
-  async ekle(calismaSaati: any) {
+  async dukkanSaatleriGetir(dukkanId: number) {
+    try {
+      const { data, error } = await supabase
+        .from('calisma_saatleri')
+        .select('*')
+        .eq('dukkan_id', dukkanId)
+        .order('gun_sira', { ascending: true });
+        
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Dükkan çalışma saatleri getirme hatası:', error);
+      throw error;
+    }
+  },
+  
+  async ekle(calismaSaati: CalismaSaati) {
     try {
       if (!calismaSaati.dukkan_id) {
         calismaSaati.dukkan_id = await this.getCurrentDukkanId();
@@ -71,12 +88,32 @@ export const calismaSaatleriServisi = {
     }
   },
   
-  async guncelle(id: number, updates: any) {
+  async guncelle(id: number, updates: Partial<CalismaSaati>) {
     try {
       const { data, error } = await supabase
         .from('calisma_saatleri')
         .update(updates)
         .eq('id', id)
+        .select();
+        
+      if (error) throw error;
+      return data[0];
+    } catch (error) {
+      console.error('Çalışma saati güncelleme hatası:', error);
+      throw error;
+    }
+  },
+  
+  async tekGuncelle(updates: Partial<CalismaSaati>) {
+    try {
+      if (!updates.id) {
+        throw new Error('Güncelleme için ID gerekli');
+      }
+      
+      const { data, error } = await supabase
+        .from('calisma_saatleri')
+        .update(updates)
+        .eq('id', updates.id)
         .select();
         
       if (error) throw error;

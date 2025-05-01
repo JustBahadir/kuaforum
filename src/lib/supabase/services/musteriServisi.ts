@@ -17,9 +17,12 @@ export const musteriServisi = {
         .eq('sahibi_id', user.id)
         .maybeSingle();
       
-      if (dukkanError) throw dukkanError;
+      if (dukkanError) {
+        console.error('Dükkan bilgisi sorgulama hatası:', dukkanError);
+      }
       
-      if (dukkanlar) {
+      if (dukkanlar && dukkanlar.id) {
+        console.log('Dukkan ID (from dukkanlar):', dukkanlar.id);
         return dukkanlar.id;
       }
       
@@ -30,9 +33,12 @@ export const musteriServisi = {
         .eq('auth_id', user.id)
         .maybeSingle();
         
-      if (personelError) throw personelError;
+      if (personelError) {
+        console.error('Personel bilgisi sorgulama hatası:', personelError);
+      }
       
-      if (personel) {
+      if (personel && personel.dukkan_id) {
+        console.log('Dukkan ID (from personel):', personel.dukkan_id);
         return personel.dukkan_id;
       }
       
@@ -43,12 +49,16 @@ export const musteriServisi = {
         .eq('id', user.id)
         .maybeSingle();
         
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('Profil bilgisi sorgulama hatası:', profileError);
+      }
       
       if (profile && profile.dukkan_id) {
+        console.log('Dukkan ID (from profile):', profile.dukkan_id);
         return profile.dukkan_id;
       }
       
+      console.log('Dükkan ID bulunamadı');
       return null;
     } catch (error) {
       console.error('Kullanıcı dükkanı getirme hatası:', error);
