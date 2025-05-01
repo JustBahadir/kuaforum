@@ -1,241 +1,95 @@
 
-import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/lib/supabase/client";
+import { useState } from "react";
+import { profileService } from "@/lib/auth/profileService";
+import { dukkanServisi } from "@/lib/supabase"; // Updated import
+import { authService } from "@/lib/auth/authService";
 import { toast } from "sonner";
 
-export const useProfileManagement = (authId: string) => {
-  const [educationData, setEducationData] = useState({
-    ortaokuldurumu: "",
-    lisedurumu: "",
-    liseturu: "",
-    universitedurumu: "",
-    universitebolum: "",
-    meslekibrans: ""
-  });
-  
-  const [historyData, setHistoryData] = useState({
-    isyerleri: "",
-    gorevpozisyon: "",
-    yarismalar: "",
-    belgeler: "",
-    cv: ""
-  });
+/**
+ * Hook for managing user profile information
+ */
+export function useProfileManagement(
+  userRole: string | null,
+  isAuthenticated: boolean,
+  setUserName: (name: string) => void
+) {
+  const [dukkanId, setDukkanId] = useState<number | null>(null);
+  const [dukkanAdi, setDukkanAdi] = useState<string | null>(null);
 
-  const [loading, setLoading] = useState(true);
-  const [personelId, setPersonelId] = useState<number>(0);
-  const [userId, setUserId] = useState<string>("");
-  
-  // Load initial data
-  useEffect(() => {
-    if (!authId) return;
-    
-    const loadData = async () => {
-      try {
-        setLoading(true);
-        
-        // Get personel ID from auth ID
-        const { data: personelData, error: personelError } = await supabase
-          .from('personel')
-          .select('id')
-          .eq('auth_id', authId)
-          .single();
-          
-        if (personelError) {
-          console.error('Error fetching personel data:', personelError);
-          return;
-        }
-        
-        if (personelData) {
-          // Hard type conversion to ensure number
-          setPersonelId(Number(personelData.id));
-          
-          // Set user ID
-          setUserId(authId);
-          
-          // Get education data
-          const { data: educData, error: educError } = await supabase
-            .from('staff_education')
-            .select('*')
-            .eq('personel_id', personelData.id)
-            .maybeSingle();
-            
-          if (educData) {
-            setEducationData({
-              ortaokuldurumu: educData.ortaokuldurumu || '',
-              lisedurumu: educData.lisedurumu || '',
-              liseturu: educData.liseturu || '',
-              universitedurumu: educData.universitedurumu || '',
-              universitebolum: educData.universitebolum || '',
-              meslekibrans: educData.meslekibrans || ''
-            });
-          } else if (educError && educError.code !== 'PGRST116') {
-            console.error('Error fetching education data:', educError);
-          }
-          
-          // Get history data
-          const { data: histData, error: histError } = await supabase
-            .from('staff_history')
-            .select('*')
-            .eq('personel_id', personelData.id)
-            .maybeSingle();
-            
-          if (histData) {
-            setHistoryData({
-              isyerleri: histData.isyerleri || '',
-              gorevpozisyon: histData.gorevpozisyon || '',
-              yarismalar: histData.yarismalar || '',
-              belgeler: histData.belgeler || '',
-              cv: histData.cv || ''
-            });
-          } else if (histError && histError.code !== 'PGRST116') {
-            console.error('Error fetching history data:', histError);
-          }
-        }
-      } catch (error) {
-        console.error('Error in loading profile data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    loadData();
-  }, [authId]);
-  
-  // Save education data
-  const saveEducation = useCallback(async () => {
-    if (!personelId) {
-      toast.error('Personel bilgisi bulunamadı', {
-        position: 'bottom-right'
-      });
-      return;
-    }
-    
+  /**
+   * Refreshes user profile information
+   */
+  const refreshProfile = async () => {
     try {
-      // Check if education data exists
-      const { data: existingData, error: checkError } = await supabase
-        .from('staff_education')
-        .select('personel_id')
-        .eq('personel_id', personelId)
-        .maybeSingle();
-        
-      if (checkError && checkError.code !== 'PGRST116') {
-        console.error('Error checking education data:', checkError);
-        throw checkError;
+      const user = await authService.getCurrentUser();
+      
+      if (!user) {
+        setUserName("Değerli Müşterimiz");
+        return;
+      }
+
+      // Get role from user metadata for reliable role checking
+      const role = user.user_metadata?.role || await profileService.getUserRole();
+      
+      if (role === 'admin') {
+        try {
+          // Use dukkanServisi instead of isletmeServisi
+          const userShop = await dukkanServisi.kullanicininIsletmesi(user.id);
+          if (userShop) {
+            // Type casting to ensure we're assigning the correct types
+            setDukkanId(userShop.id ? Number(userShop.id) : null);
+            setDukkanAdi(userShop.ad ? String(userShop.ad) : null);
+          } else if (location.pathname.includes('/personnel') || location.pathname.includes('/appointments')) {
+            toast.error("İşletme bilgileriniz bulunamadı. Lütfen işletme bilgilerinizi oluşturun.", {
+              position: "bottom-right"
+            });
+            
+            setTimeout(() => {
+              window.location.href = "/create-shop";
+            }, 2000);
+          }
+        } catch (error) {
+          console.error("İşletme bilgisi alınırken hata:", error);
+        }
+      } else if (role === 'staff') {
+        try {
+          // Use dukkanServisi instead of isletmeServisi
+          const staffShop = await dukkanServisi.personelAuthIdIsletmesi(user.id);
+          // Ensure staffShop exists and is an object with id and ad properties
+          if (staffShop && typeof staffShop === 'object' && 'id' in staffShop && 'ad' in staffShop) {
+            // Type casting to ensure we're assigning the correct types
+            setDukkanId(staffShop.id ? Number(staffShop.id) : null);
+            setDukkanAdi(staffShop.ad ? String(staffShop.ad) : null);
+          } else if (location.pathname.includes('/personnel')) {
+            toast.error("İşletme bilgileriniz bulunamadı. Lütfen yönetici ile iletişime geçin.", {
+              position: "bottom-right"
+            });
+          }
+        } catch (error) {
+          console.error("Personel işletme bilgisi alınırken hata:", error);
+        }
       }
       
-      let result;
+      const name = await profileService.getUserNameWithTitle();
+      setUserName(name);
       
-      if (existingData) {
-        // Update existing record
-        const { data, error } = await supabase
-          .from('staff_education')
-          .update(educationData)
-          .eq('personel_id', personelId)
-          .select();
-          
-        if (error) throw error;
-        result = data;
-        
-      } else {
-        // Insert new record
-        const { data, error } = await supabase
-          .from('staff_education')
-          .insert({
-            ...educationData,
-            personel_id: personelId
-          })
-          .select();
-          
-        if (error) throw error;
-        result = data;
-      }
-      
-      toast.success('Eğitim bilgileri kaydedildi', {
-        position: 'bottom-right'
-      });
-      
-      return result;
-    } catch (error: any) {
-      console.error('Error saving education data:', error);
-      toast.error(`Eğitim bilgileri kaydedilemedi: ${error.message}`, {
-        position: 'bottom-right'
-      });
-      throw error;
+    } catch (error) {
+      console.error("Error refreshing profile:", error);
     }
-  }, [personelId, educationData]);
-  
-  // Save history data
-  const saveHistory = useCallback(async () => {
-    if (!personelId) {
-      toast.error('Personel bilgisi bulunamadı', {
-        position: 'bottom-right'
-      });
-      return;
-    }
-    
-    try {
-      // Check if history data exists
-      const { data: existingData, error: checkError } = await supabase
-        .from('staff_history')
-        .select('personel_id')
-        .eq('personel_id', personelId)
-        .maybeSingle();
-        
-      if (checkError && checkError.code !== 'PGRST116') {
-        console.error('Error checking history data:', checkError);
-        throw checkError;
-      }
-      
-      let result;
-      
-      if (existingData) {
-        // Update existing record
-        const { data, error } = await supabase
-          .from('staff_history')
-          .update(historyData)
-          .eq('personel_id', personelId)
-          .select();
-          
-        if (error) throw error;
-        result = data;
-        
-      } else {
-        // Insert new record
-        const { data, error } = await supabase
-          .from('staff_history')
-          .insert({
-            ...historyData,
-            personel_id: personelId
-          })
-          .select();
-          
-        if (error) throw error;
-        result = data;
-      }
-      
-      toast.success('Çalışma geçmişi kaydedildi', {
-        position: 'bottom-right'
-      });
-      
-      return result;
-    } catch (error: any) {
-      console.error('Error saving history data:', error);
-      toast.error(`Çalışma geçmişi kaydedilemedi: ${error.message}`, {
-        position: 'bottom-right'
-      });
-      throw error;
-    }
-  }, [personelId, historyData]);
+  };
+
+  /**
+   * Reset all profile information
+   */
+  const resetProfile = () => {
+    setDukkanId(null);
+    setDukkanAdi(null);
+  };
 
   return {
-    educationData,
-    setEducationData,
-    historyData,
-    setHistoryData,
-    loading,
-    personelId,
-    userId,
-    saveEducation,
-    saveHistory
+    dukkanId,
+    dukkanAdi,
+    refreshProfile,
+    resetProfile
   };
-};
+}

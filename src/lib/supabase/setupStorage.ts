@@ -58,7 +58,7 @@ export async function setupStorageBuckets() {
   }
 }
 
-// This function is called in main.tsx
+// Export this function for use in main.tsx
 export const initializeStorage = async () => {
   try {
     await setupStorageBuckets();

@@ -8,7 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { calismaSaatleriServisi } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 
 interface ShopWorkingHoursCardProps {
   calisma_saatleri?: any[];
@@ -44,26 +44,10 @@ export function ShopWorkingHoursCard({ calisma_saatleri = [], userRole, dukkanId
   }, [error]);
 
   // Use provided hours if available, otherwise use fetched hours
-  // Important: Process data to avoid duplicated
-  const saatler = useMemo(() => {
-    // Determine which data source to use
-    const sourceData = (calisma_saatleri && calisma_saatleri.length > 0) ? 
-      [...calisma_saatleri] : 
-      [...fetchedSaatler];
-      
-    // Group by day, preferring newer entries
-    const dayMap = new Map();
-    sourceData.forEach(hour => {
-      const existingDay = dayMap.get(hour.gun_sira);
-      
-      if (!existingDay || new Date(hour.created_at) > new Date(existingDay.created_at)) {
-        dayMap.set(hour.gun_sira, hour);
-      }
-    });
-    
-    // Convert map back to array
-    return Array.from(dayMap.values());
-  }, [calisma_saatleri, fetchedSaatler]);
+  // Important: Create a new array to avoid manipulation issues
+  const saatler = (calisma_saatleri && calisma_saatleri.length > 0) ? 
+    [...calisma_saatleri] : 
+    [...fetchedSaatler];
 
   // Format time display
   const formatTime = (time: string | null) => {
@@ -71,22 +55,34 @@ export function ShopWorkingHoursCard({ calisma_saatleri = [], userRole, dukkanId
     return time.substring(0, 5);
   };
 
+  // Ensure the days are sorted correctly and handle potential duplicates
+  // Group by gun_sira and take the latest entry (in case of duplicates)
+  const groupedByDay = saatler.reduce<Record<number, any>>((acc, current) => {
+    const existingDay = acc[current.gun_sira];
+    if (!existingDay || new Date(current.created_at) > new Date(existingDay.created_at)) {
+      acc[current.gun_sira] = current;
+    }
+    return acc;
+  }, {});
+
+  // Convert back to array and sort
+  const uniqueDays = Object.values(groupedByDay)
+    .sort((a, b) => a.gun_sira - b.gun_sira);
+
   // Create an array with all 7 days, filling in missing days with defaults
-  const fullWeekSchedule = useMemo(() => {
-    return gunSiralama.map(gun_sira => {
-      const existingDay = saatler.find(day => day.gun_sira === gun_sira);
-      if (existingDay) {
-        return existingDay;
-      }
-      return {
-        gun_sira,
-        gun: gunIsimleri[gun_sira],
-        acilis: "09:00",
-        kapanis: "18:00",
-        kapali: false
-      };
-    });
-  }, [saatler]);
+  const fullWeekSchedule = gunSiralama.map(gun_sira => {
+    const existingDay = uniqueDays.find(day => day.gun_sira === gun_sira);
+    if (existingDay) {
+      return existingDay;
+    }
+    return {
+      gun_sira,
+      gun: gunIsimleri[gun_sira],
+      acilis: "09:00",
+      kapanis: "18:00",
+      kapali: false
+    };
+  });
   
   if (isLoading) {
     return (
@@ -138,6 +134,7 @@ export function ShopWorkingHoursCard({ calisma_saatleri = [], userRole, dukkanId
               {fullWeekSchedule.map((saat: any) => (
                 <TableRow key={saat.gun_sira}>
                   <TableCell className="font-medium">
+                    {/* Use proper capitalized Turkish day names */}
                     {saat.gun}
                   </TableCell>
                   <TableCell className="text-right">

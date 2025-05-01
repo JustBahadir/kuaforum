@@ -33,18 +33,12 @@ export default function ShopSettings() {
       setShopName(isletmeData.ad || "");
       setShopAddress(isletmeData.acik_adres || "");
       setShopPhone(isletmeData.telefon || "");
-      // Store this in localStorage for fallback use
-      localStorage.setItem('dukkanId', String(isletmeData.id));
     }
   }, [isletmeData]);
 
   const handleSave = async () => {
     setIsSubmitting(true);
     try {
-      if (!isletmeData?.id) {
-        throw new Error("İşletme bilgisi bulunamadı");
-      }
-      
       // Use dukkanServisi methods instead
       const result = await dukkanServisi.guncelle(isletmeData.id, {
         ad: shopName,
@@ -75,7 +69,7 @@ export default function ShopSettings() {
   const handleCreate = async () => {
     setIsSubmitting(true);
     try {
-      // Use dukkanServisi methods
+      // Use dukkanServisi methods instead
       const result = await dukkanServisi.olustur({
         ad: shopName,
         acik_adres: shopAddress,
@@ -86,8 +80,6 @@ export default function ShopSettings() {
         toast.success("İşletme başarıyla oluşturuldu", {
           position: "bottom-right"
         });
-        // Store this in localStorage for fallback use
-        localStorage.setItem('dukkanId', String(result.id));
         navigate("/shop-home-page");
       } else {
         toast.error("İşletme oluşturulurken bir hata oluştu", {
@@ -206,7 +198,7 @@ export default function ShopSettings() {
           </CardContent>
         </Card>
 
-        <Card className="mt-6">
+        <Card>
           <CardHeader>
             <CardTitle>İşletme Logosu</CardTitle>
           </CardHeader>

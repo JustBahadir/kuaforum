@@ -41,19 +41,10 @@ export function useAppointments(initialFilters: AppointmentFilters = {}) {
         appointments = await randevuServisi.kendiRandevulariniGetir();
       }
 
-      // Process appointments to convert onaylandi -> beklemede
-      return appointments.map(appointment => {
-        // Convert "onaylandi" status to "beklemede" (as per requirement)
-        if (appointment.durum === 'onaylandi') {
-          return { ...appointment, durum: 'beklemede' };
-        }
-        return appointment;
-      });
+      return appointments;
     } catch (error) {
       console.error('Error fetching appointments:', error);
-      toast.error('Randevular yüklenirken bir hata oluştu.', {
-        position: "bottom-right"
-      });
+      toast.error('Randevular yüklenirken bir hata oluştu.');
       return [];
     }
   };
@@ -74,7 +65,7 @@ export function useAppointments(initialFilters: AppointmentFilters = {}) {
   const filteredAppointments = appointments.filter(appointment => {
     let matches = true;
 
-    // Filter by status if specified - this will now handle converted statuses
+    // Filter by status if specified
     if (filters.status && appointment.durum !== filters.status) {
       matches = false;
     }
