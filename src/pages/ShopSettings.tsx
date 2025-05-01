@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { isletmeServisi } from "@/lib/supabase";
@@ -88,7 +87,7 @@ export default function ShopSettings() {
       }
       try {
         console.log("İşletme bilgileri güncelleniyor:", updates);
-        const result = await isletmeServisi.guncelle(dukkanId, updates);
+        const result = await isletmeServisi.update(dukkanId, updates);
         console.log("Güncelleme sonucu:", result);
         return result;
       } catch (err) {

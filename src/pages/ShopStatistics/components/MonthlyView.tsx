@@ -1,28 +1,23 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { DateRange } from "react-day-picker";
+import { format } from "date-fns";
+import { tr } from "date-fns/locale";
 
 interface MonthlyViewProps {
-  dateRange: {
-    from: Date;
-    to: Date;
-  };
+  dateRange: DateRange;
 }
 
 export function MonthlyView({ dateRange }: MonthlyViewProps) {
+  const formattedMonth = dateRange.from ? format(dateRange.from, "MMMM yyyy", { locale: tr }) : "";
+  
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Aylık İstatistikler</CardTitle>
+        <CardTitle>Aylık Görünüm - {formattedMonth}</CardTitle>
       </CardHeader>
       <CardContent>
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Bu modül şu anda hazırlanıyor. Çok yakında kullanıma sunulacaktır.
-          </AlertDescription>
-        </Alert>
+        <p>Bu ay için detaylı operasyon bilgileri burada görüntülenir.</p>
       </CardContent>
     </Card>
   );

@@ -3,8 +3,7 @@ import React from "react";
 import { UnassignedStaffSidebar } from "./UnassignedStaffSidebar";
 import { UnassignedStaffMobileNav } from "./UnassignedStaffMobileNav";
 import { PersonalInfoTab } from "./PersonalInfoTab";
-import HistoryTab from "@/pages/Profile/HistoryTab";
-import EducationTab from "@/pages/Profile/EducationTab";
+import { StaffPreRegistrationTab } from "@/pages/Profile/StaffPreRegistrationTab";
 
 export default function UnassignedStaffMain({
   activeTab,
@@ -36,18 +35,30 @@ export default function UnassignedStaffMain({
         );
       case "education":
         return (
-          <EducationTab
+          <StaffPreRegistrationTab
             educationData={educationData}
-            onEducationChange={setEducationData}
+            historyData={historyData}
+            onEducationChange={(field, value) => 
+              setEducationData(prev => ({ ...prev, [field]: value }))
+            }
+            onHistoryChange={(field, value) => 
+              setHistoryData(prev => ({ ...prev, [field]: value }))
+            }
             onSave={handleSave}
             isLoading={loading}
           />
         );
       case "history":
         return (
-          <HistoryTab
+          <StaffPreRegistrationTab
+            educationData={educationData}
             historyData={historyData}
-            onHistoryChange={setHistoryData}
+            onEducationChange={(field, value) => 
+              setEducationData(prev => ({ ...prev, [field]: value }))
+            }
+            onHistoryChange={(field, value) => 
+              setHistoryData(prev => ({ ...prev, [field]: value }))
+            }
             onSave={handleSave}
             isLoading={loading}
           />

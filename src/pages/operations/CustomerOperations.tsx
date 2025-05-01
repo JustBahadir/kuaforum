@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { StaffLayout } from '@/components/ui/staff-layout';
@@ -26,9 +25,10 @@ export default function CustomerOperations() {
   // Fetch operations for selected customer
   const { data: customerOperations = [], isLoading: isLoadingOperations } = useQuery({
     queryKey: ['customer-operations', selectedCustomerId],
-    queryFn: () => selectedCustomerId ? 
-      personelIslemleriServisi.musteriIslemleriGetir(selectedCustomerId) : 
-      Promise.resolve([]),
+    queryFn: async () => {
+      if (!selectedCustomerId) return [];
+      return await personelIslemleriServisi.musteriIslemleriniGetir(selectedCustomerId);
+    },
     enabled: !!selectedCustomerId
   });
   

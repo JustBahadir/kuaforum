@@ -1,28 +1,24 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { DateRange } from "react-day-picker";
+import { format } from "date-fns";
+import { tr } from "date-fns/locale";
 
 interface WeeklyViewProps {
-  dateRange: {
-    from: Date;
-    to: Date;
-  };
+  dateRange: DateRange;
 }
 
 export function WeeklyView({ dateRange }: WeeklyViewProps) {
+  const formattedStartDate = dateRange.from ? format(dateRange.from, "d MMMM", { locale: tr }) : "";
+  const formattedEndDate = dateRange.to ? format(dateRange.to, "d MMMM yyyy", { locale: tr }) : "";
+  
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Haftalık İstatistikler</CardTitle>
+        <CardTitle>Haftalık Görünüm - {formattedStartDate} - {formattedEndDate}</CardTitle>
       </CardHeader>
       <CardContent>
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Bu modül şu anda hazırlanıyor. Çok yakında kullanıma sunulacaktır.
-          </AlertDescription>
-        </Alert>
+        <p>Bu hafta için detaylı operasyon bilgileri burada görüntülenir.</p>
       </CardContent>
     </Card>
   );

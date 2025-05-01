@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { StaffLayout } from "@/components/ui/staff-layout";
@@ -8,6 +7,10 @@ import { useShopData } from "@/hooks/useShopData";
 import { ServicesContent } from "@/components/operations/ServicesContent";
 import { WorkingHours } from "@/components/operations/WorkingHours";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Plus } from "lucide-react";
 
 export default function StaffOperations() {
   const [activeTab, setActiveTab] = useState("services");

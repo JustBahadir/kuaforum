@@ -1,6 +1,22 @@
-
 import { supabase } from "@/lib/supabase/client";
-import { KategoriDto, IslemDto, PersonelIslemi } from "@/lib/supabase/types";
+
+interface KategoriDto {
+  id: number;
+  kategori_adi: string;
+  sira?: number;
+  created_at?: string;
+}
+
+interface IslemDto {
+  id: number;
+  islem_adi: string;
+  fiyat: number;
+  kategori_id?: number;
+  puan: number;
+  maliyet?: number;
+  sira?: number;
+  created_at?: string;
+}
 
 interface Personel {
   id: number;

@@ -39,10 +39,8 @@ export function useProfileManagement(
             setDukkanId(userShop.id);
             setDukkanAdi(userShop.ad);
           } else if (location.pathname.includes('/personnel') || location.pathname.includes('/appointments')) {
-            // Önce toast göster, sonra işletme oluşturma sayfasına yönlendir
             toast.error("İşletme bilgileriniz bulunamadı. Lütfen işletme bilgilerinizi oluşturun.");
             
-            // Kısa bir gecikme ekleyelim ki toast görülebilsin
             setTimeout(() => {
               window.location.href = "/create-shop";
             }, 2000);
@@ -54,8 +52,8 @@ export function useProfileManagement(
         try {
           // Use dukkanServisi instead of isletmeServisi
           const staffShop = await dukkanServisi.personelAuthIdIsletmesi(user.id);
-          // Fix: Check if staffShop exists before accessing properties
-          if (staffShop && typeof staffShop === 'object') {
+          // Ensure staffShop exists and is an object with id and ad properties
+          if (staffShop && typeof staffShop === 'object' && 'id' in staffShop && 'ad' in staffShop) {
             setDukkanId(staffShop.id);
             setDukkanAdi(staffShop.ad);
           } else if (location.pathname.includes('/personnel')) {

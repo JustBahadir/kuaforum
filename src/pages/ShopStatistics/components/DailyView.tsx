@@ -1,28 +1,23 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { DateRange } from "react-day-picker";
+import { format } from "date-fns";
+import { tr } from "date-fns/locale";
 
 interface DailyViewProps {
-  dateRange: {
-    from: Date;
-    to: Date;
-  };
+  dateRange: DateRange;
 }
 
 export function DailyView({ dateRange }: DailyViewProps) {
+  const formattedDate = dateRange.from ? format(dateRange.from, "d MMMM yyyy", { locale: tr }) : "";
+  
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Günlük İstatistikler</CardTitle>
+        <CardTitle>Günlük Görünüm - {formattedDate}</CardTitle>
       </CardHeader>
       <CardContent>
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Bu modül şu anda hazırlanıyor. Çok yakında kullanıma sunulacaktır.
-          </AlertDescription>
-        </Alert>
+        <p>Bu tarih için detaylı operasyon bilgileri burada görüntülenir.</p>
       </CardContent>
     </Card>
   );

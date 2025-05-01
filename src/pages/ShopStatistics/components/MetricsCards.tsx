@@ -1,42 +1,29 @@
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
-import { TrendingUp, Users, Calendar, AlertCircle, UserPlus, Award } from "lucide-react";
+import { Loader2, CalendarDays, TrendingUp, Users } from "lucide-react";
 
-interface MetricsCardsProps {
+export interface MetricData {
   totalRevenue: number;
-  totalServices: number;
-  uniqueCustomerCount: number;
-  totalCompletedAppointments: number;
-  cancelledAppointments?: number;
-  newCustomers?: number;
-  loyalCustomers?: number;
+  totalAppointments: number;
+  averageTicket: number;
+  customerCount: number;
+  completionRate: number;
+}
+
+export interface MetricsCardsProps {
+  metrics: MetricData;
   isLoading: boolean;
 }
 
-export function MetricsCards({
-  totalRevenue,
-  totalServices,
-  uniqueCustomerCount,
-  totalCompletedAppointments,
-  cancelledAppointments = 0,
-  newCustomers = 0,
-  loyalCustomers = 0,
-  isLoading
-}: MetricsCardsProps) {
+export function MetricsCards({ metrics, isLoading }: MetricsCardsProps) {
   if (isLoading) {
     return (
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {[...Array(4)].map((_, i) => (
-          <Card key={i}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Yükleniyor...</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-5 w-20 bg-gray-200 animate-pulse rounded"></div>
-              <p className="text-xs text-muted-foreground mt-2">
-                <div className="h-3 w-32 bg-gray-200 animate-pulse rounded"></div>
-              </p>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <Card key={index}>
+            <CardContent className="p-6 flex items-center justify-center">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </CardContent>
           </Card>
         ))}
@@ -44,109 +31,61 @@ export function MetricsCards({
     );
   }
 
-  const avgRevenuePerService = totalServices > 0 
-    ? totalRevenue / totalServices 
-    : 0;
-
-  const cancelRate = totalCompletedAppointments + cancelledAppointments > 0 
-    ? (cancelledAppointments / (totalCompletedAppointments + cancelledAppointments)) * 100 
-    : 0;
-
-  const customerLoyaltyRate = uniqueCustomerCount > 0 
-    ? (loyalCustomers / uniqueCustomerCount) * 100 
-    : 0;
-
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">
-            Toplam Ciro
-          </CardTitle>
-          <TrendingUp className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
-          <p className="text-xs text-muted-foreground">
-            İşlem Başına: {formatCurrency(avgRevenuePerService)}
-          </p>
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">
-            Müşteri Sayısı
-          </CardTitle>
-          <Users className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{uniqueCustomerCount}</div>
-          <p className="text-xs text-muted-foreground">
-            {newCustomers > 0 && `Yeni: +${newCustomers} müşteri`}
-          </p>
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">
-            Toplam İşlem
-          </CardTitle>
-          <Calendar className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{totalServices}</div>
-          <p className="text-xs text-muted-foreground">
-            Tamamlanan randevu: {totalCompletedAppointments}
-          </p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">
-            İptal Oranı
-          </CardTitle>
-          <AlertCircle className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">
-            %{cancelRate.toFixed(1)}
+        <CardContent className="p-6">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground mb-1">Toplam Gelir</p>
+              <h3 className="text-2xl font-bold">{formatCurrency(metrics.totalRevenue)}</h3>
+            </div>
+            <div className="bg-primary/10 p-2 rounded-full">
+              <TrendingUp className="h-5 w-5 text-primary" />
+            </div>
           </div>
-          <p className="text-xs text-muted-foreground">
-            İptal Edilen: {cancelledAppointments} randevu
-          </p>
         </CardContent>
       </Card>
-
+      
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">
-            Yeni Müşteriler
-          </CardTitle>
-          <UserPlus className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{newCustomers}</div>
-          <p className="text-xs text-muted-foreground">
-            Toplam müşterilerin %{uniqueCustomerCount > 0 ? Math.round((newCustomers / uniqueCustomerCount) * 100) : 0}'i
-          </p>
+        <CardContent className="p-6">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground mb-1">Randevu Sayısı</p>
+              <h3 className="text-2xl font-bold">{metrics.totalAppointments}</h3>
+            </div>
+            <div className="bg-blue-500/10 p-2 rounded-full">
+              <CalendarDays className="h-5 w-5 text-blue-500" />
+            </div>
+          </div>
         </CardContent>
       </Card>
-
+      
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">
-            Sadık Müşteriler
-          </CardTitle>
-          <Award className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{loyalCustomers}</div>
-          <p className="text-xs text-muted-foreground">
-            Sadakat oranı: %{customerLoyaltyRate.toFixed(1)}
-          </p>
+        <CardContent className="p-6">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground mb-1">Ortalama İşlem</p>
+              <h3 className="text-2xl font-bold">{formatCurrency(metrics.averageTicket)}</h3>
+            </div>
+            <div className="bg-green-500/10 p-2 rounded-full">
+              <TrendingUp className="h-5 w-5 text-green-500" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground mb-1">Müşteri Sayısı</p>
+              <h3 className="text-2xl font-bold">{metrics.customerCount}</h3>
+            </div>
+            <div className="bg-purple-500/10 p-2 rounded-full">
+              <Users className="h-5 w-5 text-purple-500" />
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>
