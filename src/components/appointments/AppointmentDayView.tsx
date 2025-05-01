@@ -38,7 +38,7 @@ export function AppointmentDayView({
         const dayNames = ['pazartesi', 'sali', 'carsamba', 'persembe', 'cuma', 'cumartesi', 'pazar'];
         const dayName = dayNames[adjustedDayNumber];
         
-        const allHours = await calismaSaatleriServisi.hepsiniGetir();
+        const allHours = await calismaSaatleriServisi.dukkanSaatleriGetir();
         return allHours.find(day => day.gun === dayName);
       } catch (error) {
         console.error('Error fetching working hours:', error);
@@ -136,81 +136,81 @@ export function AppointmentDayView({
       <CardContent className="p-6">
         <div className="text-lg font-medium mb-4 capitalize">{selectedDateString}</div>
         <ScrollArea className="h-[500px]">
-          {timeSlots.map(time => {
-            const slotsAppointments = getAppointmentsForTimeSlot(time);
-            
-            return (
-              <div key={time} className="mb-4">
-                <div className="flex items-center mb-2">
-                  <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
-                  <div className="font-medium">{time}</div>
-                </div>
+          {appointments.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-32">
+              <p className="text-muted-foreground">Bu tarihe ait randevu bulunmamaktadır.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {appointments.map(appointment => {
+                const statusInfo = getStatusBadge(appointment.durum);
+                let bgColor = "bg-white";
                 
-                {slotsAppointments.length === 0 ? (
-                  <div className="pl-6 border-l border-dashed border-gray-200 py-2 text-muted-foreground text-sm">
-                    Randevu yok
-                  </div>
-                ) : (
-                  <div className="pl-6 border-l border-dashed border-gray-200">
-                    {slotsAppointments.map(appointment => {
-                      const statusInfo = getStatusBadge(appointment.durum);
-                      
-                      return (
-                        <div 
-                          key={appointment.id} 
-                          className="py-2 px-3 mb-2 bg-gray-50 rounded-md"
-                        >
-                          <div className="flex justify-between items-center">
-                            <div>
-                              <div className="font-medium">
-                                {appointment.musteri?.first_name} {appointment.musteri?.last_name}
-                              </div>
-                              <div className="text-sm text-muted-foreground">
-                                {appointment.personel?.ad_soyad || 'Personel atanmamış'}
-                              </div>
-                            </div>
-                            
-                            <div className="flex items-center space-x-2">
-                              <Badge className={statusInfo.class}>
-                                {statusInfo.text}
-                              </Badge>
-                              
-                              {appointment.durum === 'beklemede' && (
-                                <div className="flex space-x-1">
-                                  <Button 
-                                    variant="outline" 
-                                    size="icon"
-                                    className="h-6 w-6"
-                                    onClick={() => onAppointmentStatusUpdate(appointment.id, 'onaylandi')}
-                                  >
-                                    <Check className="h-3 w-3" />
-                                  </Button>
-                                  <Button 
-                                    variant="outline" 
-                                    size="icon"
-                                    className="h-6 w-6"
-                                    onClick={() => onAppointmentStatusUpdate(appointment.id, 'iptal')}
-                                  >
-                                    <X className="h-3 w-3" />
-                                  </Button>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                          
-                          {appointment.notlar && (
-                            <div className="mt-2 text-sm text-muted-foreground">
-                              {appointment.notlar}
-                            </div>
-                          )}
+                if (appointment.durum === 'tamamlandi') {
+                  bgColor = "bg-green-50";
+                } else if (appointment.durum === 'beklemede') {
+                  bgColor = "bg-amber-50"; 
+                } else if (appointment.durum === 'iptal') {
+                  bgColor = "bg-red-50";
+                }
+                
+                return (
+                  <div 
+                    key={appointment.id} 
+                    className={`p-4 rounded-lg border ${bgColor}`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="flex items-center">
+                          <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
+                          <span className="font-medium">{appointment.saat}</span>
                         </div>
-                      );
-                    })}
+                        <div className="font-medium mt-2">
+                          {appointment.musteri?.first_name} {appointment.musteri?.last_name}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {appointment.personel?.ad_soyad || 'Personel atanmamış'}
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <Badge className={statusInfo.class}>
+                          {statusInfo.text}
+                        </Badge>
+                        
+                        {appointment.durum === 'beklemede' && (
+                          <div className="flex space-x-1">
+                            <Button 
+                              variant="outline" 
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => onAppointmentStatusUpdate(appointment.id, 'onaylandi')}
+                            >
+                              <Check className="h-3 w-3" />
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => onAppointmentStatusUpdate(appointment.id, 'iptal')}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {appointment.notlar && (
+                      <div className="mt-2 text-sm text-muted-foreground">
+                        {appointment.notlar}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            );
-          })}
+                );
+              })}
+            </div>
+          )}
         </ScrollArea>
       </CardContent>
     </Card>

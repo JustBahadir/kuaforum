@@ -1,51 +1,9 @@
 
 import { supabase } from '../client';
+import { getCurrentDukkanId } from '../utils/getCurrentDukkanId';
 
 export const personelServisi = {
-  async getCurrentDukkanId() {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Kullanıcı bulunamadı');
-      
-      // Check if user is admin
-      const role = user.user_metadata?.role;
-      
-      if (role === 'admin') {
-        // Admin user - get dukkan by user_id
-        const { data, error } = await supabase
-          .from('dukkanlar')
-          .select('id')
-          .eq('sahibi_id', user.id)
-          .single();
-          
-        if (error) throw error;
-        return data?.id;
-      } else if (role === 'staff') {
-        // Staff user - get dukkan through personeller
-        const { data, error } = await supabase
-          .from('personel')
-          .select('dukkan_id')
-          .eq('auth_id', user.id)
-          .single();
-          
-        if (error) throw error;
-        return data?.dukkan_id;
-      }
-      
-      // Try to get from profiles as last resort
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('dukkan_id')
-        .eq('id', user.id)
-        .single();
-        
-      if (error) throw error;
-      return data?.dukkan_id;
-    } catch (error) {
-      console.error('Dükkan ID getirme hatası:', error);
-      return null;
-    }
-  },
+  getCurrentDukkanId,
   
   hepsiniGetir: async (dukkanId?: number) => {
     try {
@@ -53,7 +11,7 @@ export const personelServisi = {
       
       let id = dukkanId;
       if (!id) {
-        id = await personelServisi.getCurrentDukkanId();
+        id = await getCurrentDukkanId();
         console.log("Fetched current dukkanId:", id);
       }
       
@@ -118,7 +76,7 @@ export const personelServisi = {
       
       // Make sure we have a dukkan_id
       if (!personelVerileri.dukkan_id) {
-        const dukkanId = await personelServisi.getCurrentDukkanId();
+        const dukkanId = await getCurrentDukkanId();
         if (!dukkanId) {
           console.error("No dukkan ID available for adding personel");
           throw new Error('İşletme bilgisi bulunamadı');

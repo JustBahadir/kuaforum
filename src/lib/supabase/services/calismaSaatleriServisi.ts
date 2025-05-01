@@ -49,65 +49,78 @@ export const calismaSaatleriServisi = {
   },
   
   dukkanSaatleriGetir: async (dukkanId?: number) => {
+    let id = dukkanId;
+    
     try {
-      let id = dukkanId;
       if (!id) {
         id = await calismaSaatleriServisi.getCurrentDukkanId();
+        console.log("Auto-resolved dukkanId:", id);
       }
       
       if (!id) {
+        console.error("No dukkan ID available for fetching hours");
         throw new Error('İşletme bilgisi bulunamadı');
       }
-
+      
       const { data, error } = await supabase
         .from('calisma_saatleri')
         .select('*')
-        .eq('dukkan_id', id)
-        .order('gun_sira');
-
-      if (error) throw error;
+        .eq('dukkan_id', id);
+      
+      if (error) {
+        console.error("Error fetching working hours:", error);
+        throw error;
+      }
+      
       return data || [];
     } catch (error) {
       console.error('Çalışma saatleri getirme hatası:', error);
       throw error;
     }
   },
-
+  
   dukkanSaatleriKaydet: async (saatler: Partial<CalismaSaati>[]) => {
     try {
-      // Make sure we have a dukkan_id
-      if (!saatler[0].dukkan_id) {
-        const dukkanId = await calismaSaatleriServisi.getCurrentDukkanId();
-        if (!dukkanId) {
-          throw new Error('İşletme bilgisi bulunamadı');
-        }
-        
-        // Add dukkan_id to each item
-        saatler = saatler.map(saat => ({
-          ...saat,
-          dukkan_id: dukkanId
-        }));
+      // First, check if all entries have dukkan_id
+      const dukkanId = saatler[0]?.dukkan_id;
+      
+      if (!dukkanId) {
+        throw new Error('Dükkan ID eksik');
       }
-
-      // First delete existing hours
+      
+      // Delete existing hours for the dukkan
       const { error: deleteError } = await supabase
         .from('calisma_saatleri')
         .delete()
-        .eq('dukkan_id', saatler[0].dukkan_id);
-
-      if (deleteError) throw deleteError;
-
-      // Then insert new hours
-      const { data, error: insertError } = await supabase
+        .eq('dukkan_id', dukkanId);
+      
+      if (deleteError) {
+        throw deleteError;
+      }
+      
+      // Insert the new hours
+      const { data, error } = await supabase
         .from('calisma_saatleri')
         .insert(saatler)
         .select();
-
-      if (insertError) throw insertError;
-      return data;
+      
+      if (error) {
+        throw error;
+      }
+      
+      return data || [];
     } catch (error) {
       console.error('Çalışma saatleri kaydetme hatası:', error);
       throw error;
     }
+  },
+  
+  // For backward compatibility
+  hepsiniGetir: async (dukkanId?: number) => {
+    return calismaSaatleriServisi.dukkanSaatleriGetir(dukkanId);
+  },
+  
+  guncelle: async (saatler: Partial<CalismaSaati>[]) => {
+    return calismaSaatleriServisi.dukkanSaatleriKaydet(saatler);
   }
 };

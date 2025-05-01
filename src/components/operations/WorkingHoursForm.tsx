@@ -62,7 +62,7 @@ export function WorkingHoursForm() {
         dukkan_id: dukkanId
       }));
       
-      const result = await calismaSaatleriServisi.guncelle(hoursWithShopId);
+      const result = await calismaSaatleriServisi.dukkanSaatleriKaydet(hoursWithShopId);
       
       if (result && result.length > 0) {
         toast.success("Çalışma saatleri başarıyla güncellendi");

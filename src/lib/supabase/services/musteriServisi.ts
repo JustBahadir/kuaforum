@@ -1,52 +1,10 @@
 
 import { supabase } from '../client';
 import { Musteri } from '../types';
+import { getCurrentDukkanId } from '../utils/getCurrentDukkanId';
 
 export const musteriServisi = {
-  async getCurrentDukkanId() {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Kullanıcı bulunamadı');
-      
-      // Check if user is admin
-      const role = user.user_metadata?.role;
-      
-      if (role === 'admin') {
-        // Admin user - get dukkan by user_id
-        const { data, error } = await supabase
-          .from('dukkanlar')
-          .select('id')
-          .eq('sahibi_id', user.id)
-          .single();
-          
-        if (error) throw error;
-        return data?.id;
-      } else if (role === 'staff') {
-        // Staff user - get dukkan through personeller
-        const { data, error } = await supabase
-          .from('personel')
-          .select('dukkan_id')
-          .eq('auth_id', user.id)
-          .single();
-          
-        if (error) throw error;
-        return data?.dukkan_id;
-      }
-      
-      // Try to get from profiles as last resort
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('dukkan_id')
-        .eq('id', user.id)
-        .single();
-        
-      if (error) throw error;
-      return data?.dukkan_id;
-    } catch (error) {
-      console.error('Dükkan ID getirme hatası:', error);
-      return null;
-    }
-  },
+  getCurrentDukkanId,
   
   hepsiniGetir: async (dukkanId?: number) => {
     try {
@@ -54,7 +12,7 @@ export const musteriServisi = {
       
       let id = dukkanId;
       if (!id) {
-        id = await musteriServisi.getCurrentDukkanId();
+        id = await getCurrentDukkanId();
         console.log("Fetched current dukkanId:", id);
       }
       
@@ -66,8 +24,7 @@ export const musteriServisi = {
       const { data, error } = await supabase
         .from('musteriler')
         .select('*')
-        .eq('dukkan_id', id)
-        .order('first_name');
+        .eq('dukkan_id', id);
 
       if (error) {
         console.error("Error fetching customers:", error);
@@ -104,7 +61,7 @@ export const musteriServisi = {
       
       // Make sure we have a dukkan_id
       if (!musteriData.dukkan_id) {
-        const dukkanId = await musteriServisi.getCurrentDukkanId();
+        const dukkanId = await getCurrentDukkanId();
         if (!dukkanId) {
           console.error("No dukkan ID available for adding customer");
           throw new Error('İşletme bilgisi bulunamadı');

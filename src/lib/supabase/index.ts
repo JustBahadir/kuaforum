@@ -1,51 +1,27 @@
 
-// Export all Supabase services
-import { supabase } from './client';
-import { authService } from '@/lib/auth/authService';
-
-// Import and export services
-import { islemServisi } from './services/islemServisi';
-import { kategoriServisi } from './services/kategoriServisi';
-import { randevuServisi } from './services/randevuServisi';
-import { musteriServisi } from './services/musteriServisi';
-import { personelServisi } from './services/personelServisi';
-import { isletmeServisi, dukkanServisi } from './services/dukkanServisi';
-import { personelIslemleriServisi } from './services/personelIslemleriServisi';
-import { calismaSaatleriServisi } from './services/calismaSaatleriServisi';
-import { profileService } from './services/profileService';
-import { notificationsService } from './services/notificationsService';
-
-// Import and export types
-import type { 
-  PersonelIslemi, 
-  PersonelEgitim, 
-  PersonelGecmis,
-  ProfileUpdateData 
-} from '@/types/personnel';
+import { supabase } from "./client";
+import { dukkanServisi, isletmeServisi } from "./services/dukkanServisi";
+import { kategoriServisi } from "./services/kategoriServisi";
+import { islemServisi } from "./services/islemServisi";
+import { personelServisi } from "./services/personelServisi";
+import { musteriServisi } from "./services/musteriServisi";
+import { calismaSaatleriServisi } from "./services/calismaSaatleriServisi";
+import { personelIslemleriServisi } from "./services/personelIslemleriServisi";
+import { randevuServisi } from "./services/randevuServisi";
+import { notificationServisi } from "./services/notificationsServisi";
+import { customerServisi } from "./services/customerServisi";
 
 export {
-  // Client
   supabase,
-  
-  // Auth
-  authService,
-  
-  // Services
-  islemServisi,
-  kategoriServisi,
-  randevuServisi,
-  musteriServisi,
-  personelServisi,
-  isletmeServisi,
   dukkanServisi,
-  personelIslemleriServisi,
+  isletmeServisi,
+  kategoriServisi,
+  islemServisi,
+  personelServisi,
+  musteriServisi,
   calismaSaatleriServisi,
-  profileService,
-  notificationsService,
-  
-  // Types
-  type PersonelIslemi,
-  type PersonelEgitim,
-  type PersonelGecmis,
-  type ProfileUpdateData
+  personelIslemleriServisi,
+  randevuServisi,
+  notificationServisi,
+  customerServisi
 };

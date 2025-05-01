@@ -46,7 +46,7 @@ export default function Customers() {
     }
     
     // If no shop ID yet, try to get it directly from musteriServisi
-    return await musteriServisi.getCurrentUserDukkanId();
+    return await musteriServisi.getCurrentDukkanId();
   };
   
   const { 
