@@ -35,8 +35,8 @@ export function SortableCategory({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    zIndex: isDragging ? 1000 : 'auto',  // Use 'auto' instead of 0
-    position: isDragging ? 'relative' : 'static' as const,  // Use 'as const' to fix the type
+    zIndex: isDragging ? 1000 : undefined,  // Use undefined instead of 'auto'
+    position: isDragging ? 'relative' : undefined as any,  // Use undefined and type assertion
     opacity: isDragging ? 0.6 : 1,
   };
 

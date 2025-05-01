@@ -243,10 +243,9 @@ export default function StaffOperations() {
         <h1 className="text-2xl font-bold mb-6">İşlem Yönetimi</h1>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="services">Hizmetler</TabsTrigger>
             <TabsTrigger value="workinghours">Çalışma Saatleri</TabsTrigger>
-            <TabsTrigger value="products">Ürünler</TabsTrigger>
           </TabsList>
           
           <TabsContent value="services" className="space-y-4">
@@ -295,17 +294,6 @@ export default function StaffOperations() {
           
           <TabsContent value="workinghours">
             <WorkingHours isStaff={true} dukkanId={dukkanId} />
-          </TabsContent>
-          
-          <TabsContent value="products">
-            <Card>
-              <CardHeader>
-                <CardTitle>Ürün Yönetimi</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">Bu özellik yakında eklenecektir.</p>
-              </CardContent>
-            </Card>
           </TabsContent>
         </Tabs>
       </div>

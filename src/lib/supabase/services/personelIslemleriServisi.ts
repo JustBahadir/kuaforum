@@ -99,5 +99,21 @@ export const personelIslemleriServisi = {
       console.error('Personel performans verisi getirme hatası:', error);
       throw error;
     }
+  },
+  
+  // Add missing hepsiniGetir method to fix build errors
+  hepsiniGetir: async () => {
+    try {
+      const { data, error } = await supabase
+        .from('personel_islemleri')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Tüm personel işlemlerini getirme hatası:', error);
+      throw error;
+    }
   }
 };

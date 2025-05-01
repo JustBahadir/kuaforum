@@ -54,13 +54,18 @@ export const kategorilerServisi = {
         return [];
       }
       
+      console.log("Fetching categories for shop ID:", actualDukkanId);
+      
       const { data, error } = await supabase
         .from('islem_kategorileri')
         .select('*')
         .eq('dukkan_id', actualDukkanId)
         .order('sira', { ascending: true });
       
-      if (error) throw error;
+      if (error) {
+        console.error("Category fetch error:", error);
+        throw error;
+      }
       return data || [];
     } catch (err) {
       console.error("Kategorileri getirirken hata:", err);
@@ -100,7 +105,8 @@ export const kategorilerServisi = {
       }
       
       if (!dukkanId) {
-        throw new Error("Kullanıcının dükkan bilgisi bulunamadı");
+        console.error("Dükkan ID bulunamadı, mevcut kullanıcı:", await supabase.auth.getUser());
+        throw new Error("İşletme bilgisi bulunamadı");
       }
       
       // Include dukkan_id in the category data
@@ -109,12 +115,17 @@ export const kategorilerServisi = {
         dukkan_id: dukkanId,
       };
       
+      console.log("Adding category with data:", kategoriData);
+      
       const { data, error } = await supabase
         .from('islem_kategorileri')
         .insert(kategoriData)
         .select();
       
-      if (error) throw error;
+      if (error) {
+        console.error("Category add error:", error);
+        throw error;
+      }
       return data[0];
     } catch (err) {
       console.error("Kategori ekleme hatası:", err);

@@ -14,12 +14,9 @@ import { personelIslemleriServisi } from './services/personelIslemleriServisi';
 import { calismaSaatleriServisi } from './services/calismaSaatleriServisi';
 import { profileService } from './services/profileService';
 import { notificationsService } from './services/notificationsService';
-import { customerPreferencesService } from './services/customerPreferencesService';
-import { customerPersonalDataService } from './services/customerPersonalDataService';
 
 // Import and export types
 import type { 
-  Personel, 
   PersonelIslemi, 
   PersonelEgitim, 
   PersonelGecmis,
@@ -46,11 +43,8 @@ export {
   calismaSaatleriServisi,
   profileService,
   notificationsService,
-  customerPreferencesService,
-  customerPersonalDataService,
   
   // Types
-  type Personel,
   type PersonelIslemi,
   type PersonelEgitim,
   type PersonelGecmis,

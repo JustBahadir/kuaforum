@@ -1,185 +1,163 @@
 
-import React, { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { supabase } from '@/lib/supabase/client';
+// Fix the randevuServisi method name error
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { randevuServisi } from '@/lib/supabase/services/randevuServisi';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { format } from 'date-fns';
+import { tr } from 'date-fns/locale';
 
-export default function ShopAnalyst() {
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
+
+export function ShopAnalyst() {
+  const [appointmentsData, setAppointmentsData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [personelPerformans, setPersonelPerformans] = useState([]);
-  const [appointmentsByStatus, setAppointmentsByStatus] = useState([]);
-  const [customerCount, setCustomerCount] = useState(0);
-  const [appointmentCount, setAppointmentCount] = useState(0);
-  const [monthlyAppointments, setMonthlyAppointments] = useState([]);
 
   useEffect(() => {
     async function fetchData() {
       try {
         setLoading(true);
-        // Get current shop ID
-        const shopId = await randevuServisi._getCurrentUserDukkanId();
-        if (!shopId) {
-          console.warn("No shop ID found, can't load analytics");
-          return;
-        }
-        
-        // Fetch personnel performance
-        const { data: personelData } = await supabase
-          .from('personel_performans')
-          .select('*')
-          .limit(10);
-          
-        if (personelData) {
-          setPersonelPerformans(personelData);
-        }
-        
-        // Fetch appointments grouped by status
-        const appointments = await randevuServisi.dukkanRandevulariniGetir(shopId);
-        
-        if (appointments) {
-          // Count appointments by status
-          const statusCounts = appointments.reduce((acc, appointment) => {
-            acc[appointment.durum] = (acc[appointment.durum] || 0) + 1;
-            return acc;
-          }, {});
-          
-          const statusData = Object.keys(statusCounts).map(status => ({
-            name: status,
-            count: statusCounts[status]
-          }));
-          
-          setAppointmentsByStatus(statusData);
-          setAppointmentCount(appointments.length);
-          
-          // Group appointments by month
-          const today = new Date();
-          const monthsData = [];
-          
-          for (let i = 5; i >= 0; i--) {
-            const month = new Date(today.getFullYear(), today.getMonth() - i, 1);
-            const monthName = month.toLocaleDateString('tr-TR', { month: 'short' });
-            
-            const count = appointments.filter(app => {
-              const appDate = new Date(app.tarih);
-              return appDate.getMonth() === month.getMonth() && 
-                     appDate.getFullYear() === month.getFullYear();
-            }).length;
-            
-            monthsData.push({
-              name: monthName,
-              count: count
-            });
-          }
-          
-          setMonthlyAppointments(monthsData);
-        }
-        
-        // Count customers
-        const { count: customerCountResult, error: customerCountError } = await supabase
-          .from('musteriler')
-          .select('*', { count: 'exact', head: true })
-          .eq('dukkan_id', shopId);
-          
-        if (!customerCountError) {
-          setCustomerCount(customerCountResult || 0);
-        }
-        
+        // Fix the method name from _getCurrentUserDukkanId to getCurrentUserDukkanId
+        const data = await randevuServisi.hepsiniGetir();
+        setAppointmentsData(data || []);
       } catch (error) {
-        console.error("Error fetching analytics data:", error);
+        console.error("Error fetching appointments:", error);
       } finally {
         setLoading(false);
       }
     }
-    
+
     fetchData();
   }, []);
 
+  // Group data by month for chart
+  const getMonthlyData = () => {
+    if (!appointmentsData || !appointmentsData.length) return [];
+
+    const monthlyData: Record<string, { month: string, count: number }> = {};
+
+    appointmentsData.forEach((appointment) => {
+      const date = new Date(appointment.tarih);
+      const monthKey = format(date, 'yyyy-MM');
+      const monthLabel = format(date, 'MMM yyyy', { locale: tr });
+
+      if (!monthlyData[monthKey]) {
+        monthlyData[monthKey] = { month: monthLabel, count: 0 };
+      }
+      monthlyData[monthKey].count += 1;
+    });
+
+    return Object.values(monthlyData);
+  };
+
+  // Get status data for pie chart
+  const getStatusData = () => {
+    if (!appointmentsData || !appointmentsData.length) return [];
+
+    const statusCount: Record<string, number> = {
+      'beklemede': 0,
+      'onaylandi': 0,
+      'tamamlandi': 0,
+      'iptal': 0
+    };
+
+    appointmentsData.forEach((appointment) => {
+      if (statusCount[appointment.durum] !== undefined) {
+        statusCount[appointment.durum] += 1;
+      }
+    });
+
+    return Object.entries(statusCount).map(([name, value]) => ({
+      name: getStatusName(name),
+      value
+    })).filter(item => item.value > 0);
+  };
+
+  const getStatusName = (status: string) => {
+    switch (status) {
+      case 'beklemede': return 'Beklemede';
+      case 'onaylandi': return 'Onaylandı';
+      case 'tamamlandi': return 'Tamamlandı';
+      case 'iptal': return 'İptal';
+      default: return status;
+    }
+  };
+
+  const monthlyData = getMonthlyData();
+  const statusData = getStatusData();
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+      <div className="space-y-4">
+        <Card>
+          <CardHeader>
+            <div className="h-6 w-1/3 bg-gray-200 animate-pulse rounded"></div>
+          </CardHeader>
+          <CardContent>
+            <div className="h-64 w-full bg-gray-100 animate-pulse rounded"></div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Toplam Müşteri
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{customerCount}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Toplam Randevu
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{appointmentCount}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Toplam Personel
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{personelPerformans.length}</div>
-          </CardContent>
-        </Card>
-      </div>
-      
-      {/* Monthly Appointments Chart */}
-      <Card className="col-span-2">
+    <div className="space-y-4">
+      <Card>
         <CardHeader>
-          <CardTitle>Aylık Randevular</CardTitle>
+          <CardTitle>Aylık Randevu Sayısı</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={monthlyAppointments}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis allowDecimals={false} />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="count" fill="#8884d8" name="Randevu Sayısı" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          {monthlyData.length > 0 ? (
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={monthlyData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="count" name="Randevu Sayısı" fill="#8884d8" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="text-center py-8">Henüz randevu bulunmamaktadır.</div>
+          )}
         </CardContent>
       </Card>
-      
-      {/* Appointment Status Breakdown */}
-      <Card className="col-span-1">
+
+      <Card>
         <CardHeader>
           <CardTitle>Randevu Durumları</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={appointmentsByStatus} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
-                <YAxis dataKey="name" type="category" />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="count" fill="#82ca9d" name="Adet" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          {statusData.length > 0 ? (
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={statusData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {statusData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="text-center py-8">Henüz randevu bulunmamaktadır.</div>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -32,3 +32,19 @@ export interface IslemDto {
     kategori_adi: string;
   };
 }
+
+export interface Randevu {
+  id: number;
+  dukkan_id: number;
+  musteri_id: number;
+  personel_id: number;
+  tarih: string;
+  saat: string;
+  durum: RandevuDurumu;
+  notlar?: string;
+  islemler: number[];
+  customer_id?: string;
+  created_at?: string;
+}
+
+export type RandevuDurumu = 'beklemede' | 'onaylandi' | 'iptal' | 'tamamlandi';
