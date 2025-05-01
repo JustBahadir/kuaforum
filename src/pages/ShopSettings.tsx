@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { isletmeServisi } from "@/lib/supabase";
@@ -14,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CityISOCodes } from "@/utils/cityISOCodes";
 import { shopService } from "@/lib/auth/services/shopService";
+import { ShopProfilePhotoUpload } from "@/components/shop/ShopProfilePhotoUpload";
 
 export default function ShopSettings() {
   const {
@@ -37,7 +39,8 @@ export default function ShopSettings() {
   const {
     data: isletme,
     isLoading,
-    error
+    error,
+    refetch
   } = useQuery({
     queryKey: ['dukkan', dukkanId],
     queryFn: () => dukkanId ? isletmeServisi.getirById(dukkanId) : null,
@@ -87,7 +90,10 @@ export default function ShopSettings() {
       }
       try {
         console.log("İşletme bilgileri güncelleniyor:", updates);
-        const result = await isletmeServisi.update(dukkanId, updates);
+        
+        // Use updateDukkan method instead
+        const result = await isletmeServisi.guncelle(dukkanId, updates);
+        
         console.log("Güncelleme sonucu:", result);
         return result;
       } catch (err) {
@@ -172,6 +178,23 @@ export default function ShopSettings() {
     window.open(`https://www.google.com/maps/search/?api=1&query=${encodedAddress}`, '_blank');
   };
   
+  const handleLogoUpload = async (url: string) => {
+    if (!dukkanId) return;
+    
+    try {
+      // Update logo in the database
+      await isletmeServisi.guncelle(dukkanId, { logo_url: url });
+      
+      // Refresh the data
+      queryClient.invalidateQueries(['dukkan', dukkanId]);
+      
+      toast.success("Logo başarıyla güncellendi");
+    } catch (error) {
+      console.error("Logo güncelleme hatası:", error);
+      toast.error("Logo güncellenirken bir hata oluştu");
+    }
+  };
+  
   if (!userRole) {
     return <StaffLayout>
         <div className="flex justify-center p-12">
@@ -212,6 +235,28 @@ export default function ShopSettings() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
+                  <div className="flex items-center justify-center mb-8">
+                    <ShopProfilePhotoUpload 
+                      dukkanId={dukkanId} 
+                      onSuccess={handleLogoUpload}
+                      currentImageUrl={isletme.logo_url}
+                    >
+                      <div className="w-32 h-32 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden border cursor-pointer hover:opacity-80 transition-opacity">
+                        {isletme.logo_url ? (
+                          <img 
+                            src={isletme.logo_url} 
+                            alt="İşletme Logo" 
+                            className="w-full h-full object-cover" 
+                          />
+                        ) : (
+                          <div className="text-gray-400 text-5xl font-light">
+                            {shopName ? shopName.charAt(0).toUpperCase() : "L"}
+                          </div>
+                        )}
+                      </div>
+                    </ShopProfilePhotoUpload>
+                  </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="shopName">İşletme Adı</Label>
                     <Input id="shopName" value={shopName} onChange={e => setShopName(e.target.value)} placeholder="İşletmenizin adını giriniz" />

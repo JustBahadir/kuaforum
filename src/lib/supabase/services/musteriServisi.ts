@@ -1,4 +1,5 @@
 import { supabase } from '../client';
+import { toast } from 'sonner';
 
 export const musteriServisi = {
   async getCurrentUserDukkanId() {
@@ -59,7 +60,7 @@ export const musteriServisi = {
         return profile.dukkan_id;
       }
       
-      // If no dukkan ID found but current user is an admin, create a new dukkan
+      // If no dukkan ID found try to get user role
       const { data: userRole } = await supabase.rpc('get_user_role');
       
       if (userRole === 'admin') {
@@ -162,11 +163,16 @@ export const musteriServisi = {
   
   async ekle(musteri: any) {
     try {
+      console.log('Adding customer with data:', musteri);
+      
       if (!musteri.dukkan_id) {
         musteri.dukkan_id = await this.getCurrentUserDukkanId();
+        console.log('Retrieved dukkan_id for customer:', musteri.dukkan_id);
       }
       
       if (!musteri.dukkan_id) {
+        console.error('No dukkan_id available for customer');
+        toast.error('Dükkan bilgisi bulunamadı. Lütfen sayfayı yenileyip tekrar deneyin.');
         throw new Error('Dükkan bilgisi bulunamadı');
       }
       
@@ -175,7 +181,12 @@ export const musteriServisi = {
         .insert([musteri])
         .select();
         
-      if (error) throw error;
+      if (error) {
+        console.error('Müşteri ekleme hatası (DB):', error);
+        throw error;
+      }
+      
+      console.log('Customer added successfully:', data[0]);
       return data[0];
     } catch (error) {
       console.error('Müşteri ekleme hatası:', error);
@@ -214,3 +225,5 @@ export const musteriServisi = {
     }
   }
 };
+
+export default musteriServisi;

@@ -1,7 +1,7 @@
 
 import { Input } from "@/components/ui/input";
 import { useState, useEffect } from "react";
-import { formatPhoneNumber } from "@/utils/phoneFormatter";
+import { formatPhoneNumber, validatePhoneNumber } from "@/utils/phoneFormatter";
 
 interface PhoneInputFieldProps {
   value: string;
@@ -30,8 +30,9 @@ export function PhoneInputField({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (disabled) return;
 
-    // Remove all non-digit characters
-    const digitsOnly = e.target.value.replace(/\D/g, '');
+    // Get only digits from the input
+    const rawInput = e.target.value;
+    const digitsOnly = rawInput.replace(/\D/g, '');
     
     // Limit to 11 digits (Turkish phone number format)
     const limitedDigits = digitsOnly.substring(0, 11);

@@ -8,7 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { calismaSaatleriServisi } from "@/lib/supabase/services/calismaSaatleriServisi";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 interface ShopWorkingHoursCardProps {
   calisma_saatleri?: any[];
@@ -17,6 +17,7 @@ interface ShopWorkingHoursCardProps {
 }
 
 export function ShopWorkingHoursCard({ calisma_saatleri = [], userRole, dukkanId }: ShopWorkingHoursCardProps) {
+  const [displayedHours, setDisplayedHours] = useState<any[]>([]);
   const { data: fetchedSaatler = [], isLoading, error, refetch } = useQuery({
     queryKey: ['dukkan_saatleri', dukkanId],
     queryFn: async () => {
@@ -41,28 +42,33 @@ export function ShopWorkingHoursCard({ calisma_saatleri = [], userRole, dukkanId
     }
   }, [error]);
 
-  // Use provided hours if available, otherwise use fetched hours
-  const saatler = calisma_saatleri.length > 0 ? calisma_saatleri : fetchedSaatler;
+  // Set displayed hours whenever source data changes
+  useEffect(() => {
+    // Use provided hours if available, otherwise use fetched hours
+    const saatler = calisma_saatleri.length > 0 ? calisma_saatleri : fetchedSaatler;
+    
+    // Ensure the days are sorted correctly
+    const sortedSaatler = [...saatler].sort((a, b) => {
+      return a.gun_sira - b.gun_sira;
+    });
+    
+    // Remove any duplicate days that might have been created by mistake
+    const uniqueDays = sortedSaatler.reduce((acc, current) => {
+      const existingDay = acc.find(day => day.gun_sira === current.gun_sira);
+      if (!existingDay) {
+        acc.push(current);
+      }
+      return acc;
+    }, [] as any[]);
+    
+    setDisplayedHours(uniqueDays);
+  }, [calisma_saatleri, fetchedSaatler]);
 
   // Format time display
   const formatTime = (time: string | null) => {
     if (!time) return "-";
     return time.substring(0, 5);
   };
-
-  // Ensure the days are sorted correctly
-  const sortedSaatler = [...saatler].sort((a, b) => {
-    return a.gun_sira - b.gun_sira;
-  });
-
-  // Remove any duplicate days that might have been created by mistake
-  const uniqueDays = sortedSaatler.reduce((acc, current) => {
-    const existingDay = acc.find(day => day.gun_sira === current.gun_sira);
-    if (!existingDay) {
-      acc.push(current);
-    }
-    return acc;
-  }, [] as any[]);
 
   if (isLoading) {
     return (
@@ -111,7 +117,7 @@ export function ShopWorkingHoursCard({ calisma_saatleri = [], userRole, dukkanId
               </TableRow>
             </TableHeader>
             <TableBody>
-              {uniqueDays.length > 0 ? uniqueDays.map((saat: any) => (
+              {displayedHours.length > 0 ? displayedHours.map((saat: any) => (
                 <TableRow key={saat.gun_sira}>
                   <TableCell className="font-medium">
                     {/* Use proper capitalized Turkish day names */}

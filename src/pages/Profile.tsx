@@ -4,6 +4,7 @@ import { StaffLayout } from "@/components/ui/staff-layout";
 import { ProfileComponent } from "@/components/profile/ProfileComponent";
 import { useUnassignedStaffData } from "@/hooks/useUnassignedStaffData";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -15,15 +16,26 @@ export default function Profile() {
     historyData,
     setHistoryData,
     handleLogout,
-    handleSave,
+    saveUserData,
     loadUserAndStaffData,
-    handleAvatarUpload, // We need to either use this or remove it
-    isUploading = false // Default value if not available
+    handleAvatarUpload,
+    isUploading = false
   } = useUnassignedStaffData();
 
   useEffect(() => {
     loadUserAndStaffData();
   }, [loadUserAndStaffData]);
+
+  // Create handleSave function that wraps saveUserData
+  const handleSave = async (updatedData: any) => {
+    try {
+      await saveUserData(updatedData);
+      toast.success("Profil bilgileri kaydedildi");
+    } catch (error) {
+      console.error("Profil kaydetme hatası:", error);
+      toast.error("Profil kaydedilemedi");
+    }
+  };
 
   return (
     <StaffLayout>

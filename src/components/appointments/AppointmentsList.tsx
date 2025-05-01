@@ -1,238 +1,110 @@
 
-import { useState } from "react";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { format, isToday, parseISO } from "date-fns";
+import { Card, CardContent } from "@/components/ui/card";
+import { RandevuDurumu } from "@/lib/supabase/types";
+import { format } from "date-fns";
 import { tr } from "date-fns/locale";
-import { cn } from "@/lib/utils";
-import { Randevu, RandevuDurumu } from "@/lib/supabase/types";
-import { Calendar, Check, Clock, Search, X } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-import { randevuServisi } from "@/lib/supabase";
-import { toast } from "sonner";
-import { formatPhoneNumber } from "@/utils/phoneFormatter";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-export interface AppointmentsListProps {
-  onAddClick?: () => void;
-  onSelectAppointment?: (appointment: Randevu) => void;
-  hidemobile?: boolean;
+interface AppointmentsListProps {
+  appointments: any[];
+  loading: boolean;
+  reload: () => void;
+  statusFilter: RandevuDurumu | "all";
+  setStatusFilter: (status: RandevuDurumu | "all") => void;
+  defaultStatus: RandevuDurumu;
 }
 
-export function AppointmentsList({ onAddClick, onSelectAppointment, hidemobile = false }: AppointmentsListProps) {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [isUpdating, setIsUpdating] = useState(false);
-
-  const { data: appointments = [], isLoading, refetch } = useQuery({
-    queryKey: ['appointments'],
-    queryFn: async () => {
-      const data = await randevuServisi.hepsiniGetir();
-      return data;
-    },
-  });
-
-  // Apply filters
-  const filteredAppointments = appointments.filter((appointment: Randevu) => {
-    const matchesSearch = searchTerm === "" || 
-      (appointment.musteri?.first_name && appointment.musteri.first_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (appointment.musteri?.last_name && appointment.musteri.last_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (appointment.musteri?.phone && appointment.musteri.phone.includes(searchTerm));
-
-    // Modified to exclude 'onaylandi' status
-    const matchesStatus = statusFilter === "all" || appointment.durum === statusFilter;
-
-    return matchesSearch && matchesStatus;
-  });
-
-  // Sort appointments by date and time (most recent first)
-  const sortedAppointments = [...filteredAppointments].sort((a, b) => {
-    const dateA = new Date(`${a.tarih}T${a.saat}`);
-    const dateB = new Date(`${b.tarih}T${b.saat}`);
-    return dateB.getTime() - dateA.getTime();
-  });
-
-  const formatDateTime = (date: string, time: string) => {
-    try {
-      const dateTime = parseISO(`${date}T${time}`);
-      return isToday(dateTime) 
-        ? `Bugün ${format(dateTime, 'HH:mm', { locale: tr })}`
-        : format(dateTime, 'dd MMM, HH:mm', { locale: tr });
-    } catch (error) {
-      return "Geçersiz tarih";
-    }
-  };
-
-  const getStatusBadgeClass = (status: RandevuDurumu) => {
+export function AppointmentsList({ 
+  appointments = [], 
+  loading,
+  reload,
+  statusFilter,
+  setStatusFilter,
+  defaultStatus = "beklemede"
+}: AppointmentsListProps) {
+  const getStatusBadgeVariant = (status: string) => {
     switch (status) {
       case "beklemede":
-        return "bg-amber-100 text-amber-800 border-amber-200";
-      case "tamamlandi":
-        return "bg-green-100 text-green-800 border-green-200";
+        return "outline";
+      case "onaylandi":
+        return "default";
       case "iptal":
-      case "iptal_edildi":
-        return "bg-red-100 text-red-800 border-red-200";
+        return "destructive";
+      case "tamamlandi":
+        return "success";
       default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
+        return "secondary";
     }
   };
 
-  const getStatusText = (status: RandevuDurumu) => {
+  const getStatusLabel = (status: string) => {
     switch (status) {
-      case "beklemede": return "Beklemede";
-      case "tamamlandi": return "Tamamlandı";
-      case "iptal": return "İptal Edildi";
-      case "iptal_edildi": return "İptal Edildi";
-      default: return status;
+      case "beklemede":
+        return "Beklemede";
+      case "onaylandi":
+        return "Onaylandı";
+      case "iptal":
+        return "İptal";
+      case "tamamlandi":
+        return "Tamamlandı";
+      default:
+        return status;
     }
   };
 
-  const handleStatusChange = async (id: number, status: RandevuDurumu) => {
-    try {
-      setIsUpdating(true);
-      await randevuServisi.durumGuncelle(id, status);
-      refetch();
-      toast.success("Randevu durumu güncellendi.");
-    } catch (error) {
-      console.error("Error updating status:", error);
-      toast.error("Durum güncellenirken bir hata oluştu.");
-    } finally {
-      setIsUpdating(false);
-    }
-  };
+  if (loading) {
+    return (
+      <div className="flex justify-center p-8">
+        <div className="w-8 h-8 border-2 border-t-purple-600 border-purple-100 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (appointments.length === 0) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        Bu tarihte randevu bulunmuyor.
+      </div>
+    );
+  }
 
   return (
-    <Card className={cn(hidemobile && "hidden md:block")}>
-      <CardHeader>
-        <CardTitle className="text-xl flex justify-between items-center">
-          <span>Randevular</span>
-          {onAddClick && (
-            <Button size="sm" onClick={onAddClick}>
-              Yeni Randevu
-            </Button>
-          )}
-        </CardTitle>
-        <CardDescription>Tüm randevularınızı buradan yönetebilirsiniz.</CardDescription>
-        
-        <div className="flex flex-col sm:flex-row gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="İsim veya telefon ara..." 
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          
-          <Select 
-            value={statusFilter} 
-            onValueChange={setStatusFilter}
-          >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Durum Filtrele" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tüm Durumlar</SelectItem>
-              <SelectItem value="beklemede">Beklemede</SelectItem>
-              <SelectItem value="iptal">İptal Edildi</SelectItem>
-              <SelectItem value="tamamlandi">Tamamlandı</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </CardHeader>
-      
-      <CardContent className="px-0">
-        <div className="divide-y">
-          {isLoading ? (
-            <div className="flex justify-center p-8">
-              <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            </div>
-          ) : sortedAppointments.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Görüntülenecek randevu bulunamadı.
-            </div>
-          ) : (
-            sortedAppointments.map((appointment: Randevu) => (
-              <div 
-                key={appointment.id} 
-                className={cn(
-                  "p-4 hover:bg-gray-50 transition-colors cursor-pointer",
-                  onSelectAppointment && "cursor-pointer"
-                )}
-                onClick={() => onSelectAppointment && onSelectAppointment(appointment)}
-              >
-                <div className="flex justify-between items-start gap-4">
-                  <div className="space-y-1">
-                    <div className="font-medium">{appointment.musteri?.first_name} {appointment.musteri?.last_name || ''}</div>
-                    <div className="text-sm text-muted-foreground">{appointment.musteri?.phone && formatPhoneNumber(appointment.musteri.phone)}</div>
-                    
-                    <div className="flex gap-2 mt-2">
-                      <div className="flex items-center text-xs text-muted-foreground">
-                        <Calendar className="h-3 w-3 mr-1" />
-                        {format(parseISO(appointment.tarih), 'dd MMM yyyy', { locale: tr })}
-                      </div>
-                      <div className="flex items-center text-xs text-muted-foreground">
-                        <Clock className="h-3 w-3 mr-1" />
-                        {appointment.saat.substring(0, 5)}
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center text-xs text-muted-foreground mt-1">
-                      <span className="mr-1">Personel:</span>
-                      {appointment.personel?.ad_soyad || 'Belirtilmemiş'}
-                    </div>
-                  </div>
-                  
-                  <div className="flex flex-col items-end gap-2">
-                    <span className={cn("text-xs px-2 py-1 rounded-full border whitespace-nowrap", getStatusBadgeClass(appointment.durum))}>
-                      {getStatusText(appointment.durum)}
-                    </span>
-                    
-                    {appointment.durum === "beklemede" && (
-                      <div className="flex gap-1">
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          className="h-7 w-7 p-0"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleStatusChange(appointment.id, "tamamlandi");
-                          }}
-                          disabled={isUpdating}
-                        >
-                          <Check className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          className="h-7 w-7 p-0"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleStatusChange(appointment.id, "iptal");
-                          }}
-                          disabled={isUpdating}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    )}
-                  </div>
+    <div className="space-y-3">
+      {appointments.map((appointment) => (
+        <Card key={appointment.id} className="overflow-hidden">
+          <CardContent className="p-4">
+            <div className="flex justify-between items-center">
+              <div className="flex-1">
+                <div className="flex items-center space-x-2 mb-2">
+                  <span className="font-medium">
+                    {format(new Date(`${appointment.tarih}T${appointment.saat}`), "HH:mm", { locale: tr })}
+                  </span>
+                  <Badge variant={getStatusBadgeVariant(appointment.durum)}>
+                    {getStatusLabel(appointment.durum)}
+                  </Badge>
+                </div>
+                
+                <div>
+                  <p className="font-medium">
+                    {appointment.musteri_adi || "İsimsiz Müşteri"}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {appointment.hizmet_adi || "Belirtilmemiş"}
+                  </p>
                 </div>
               </div>
-            ))
-          )}
-        </div>
-      </CardContent>
-      
-      {sortedAppointments.length > 0 && (
-        <CardFooter className="border-t p-4">
-          <div className="text-sm text-muted-foreground">
-            Toplam {sortedAppointments.length} randevu gösteriliyor
-          </div>
-        </CardFooter>
-      )}
-    </Card>
+
+              <div className="shrink-0">
+                <Button variant="outline" size="sm">
+                  Detaylar
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
   );
 }

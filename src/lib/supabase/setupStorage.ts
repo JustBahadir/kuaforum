@@ -1,11 +1,14 @@
 
 import { supabase } from './client';
+import { toast } from 'sonner';
 
 /**
  * Sets up necessary storage buckets for the application
  */
 export async function setupStorageBuckets() {
   try {
+    console.log('Setting up storage buckets...');
+    
     // List existing buckets
     const { data: buckets, error: listError } = await supabase.storage.listBuckets();
     
@@ -44,7 +47,7 @@ export async function setupStorageBuckets() {
         const { data, error } = await supabase.storage.createBucket('shop-photos', {
           public: true,
           fileSizeLimit: 20971520, // 20MB
-          allowedMimeTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/gif']
+          allowedMimeTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'video/mp4', 'video/webm', 'video/ogg']
         });
         
         if (error) {
@@ -64,7 +67,17 @@ export async function setupStorageBuckets() {
   }
 }
 
-// Initialize storage buckets during application startup
+// Export initializeStorage function for main.tsx
 export async function initializeStorage() {
-  await setupStorageBuckets();
+  try {
+    console.log("Initializing storage buckets...");
+    const result = await setupStorageBuckets();
+    if (result) {
+      console.log("Storage buckets initialized successfully");
+    } else {
+      console.error("Failed to initialize storage buckets");
+    }
+  } catch (error) {
+    console.error("Error initializing storage:", error);
+  }
 }
