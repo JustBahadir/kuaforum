@@ -66,7 +66,6 @@ export function PersonnelDetailsDialog({
           >
             <PersonalInfoTab
               personel={personel}
-              onEdit={() => setActiveTab("education")}
             />
           </TabsContent>
 
@@ -74,7 +73,7 @@ export function PersonnelDetailsDialog({
             value="operations"
             className="flex-1 overflow-y-auto pt-2"
           >
-            <OperationsHistoryTab personelId={personel?.id} />
+            <OperationsHistoryTab personnelId={personel?.id} />
           </TabsContent>
 
           <TabsContent
@@ -82,7 +81,7 @@ export function PersonnelDetailsDialog({
             className="flex-1 overflow-y-auto pt-2"
           >
             <EducationTab
-              personel={personel}
+              personnel={personel}
               onRefresh={onRefresh}
               onClose={handleCancelChanges}
             />

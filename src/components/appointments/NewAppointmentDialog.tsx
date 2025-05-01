@@ -142,7 +142,7 @@ export function NewAppointmentDialog({
         personel_id: parseInt(data.personnelId),
         tarih: format(data.date, "yyyy-MM-dd"),
         saat: data.time,
-        durum: "onaylandi",
+        durum: "onaylandi" as RandevuDurumu,  // Type cast to RandevuDurumu
         notlar: data.notes || "",
         islemler: JSON.stringify([parseInt(data.serviceId)]),
       };

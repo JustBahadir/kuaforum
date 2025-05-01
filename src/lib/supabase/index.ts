@@ -8,7 +8,7 @@ import { musteriServisi } from "./services/musteriServisi";
 import { calismaSaatleriServisi } from "./services/calismaSaatleriServisi";
 import { personelIslemleriServisi } from "./services/personelIslemleriServisi";
 import { randevuServisi } from "./services/randevuServisi";
-import { notificationServisi } from "./services/notificationsServisi";
+import { notificationServisi } from "./services/notificationServisi";
 import { customerServisi } from "./services/customerServisi";
 
 export {
