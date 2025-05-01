@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -12,7 +12,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { CalendarIcon } from "lucide-react";
-import { randevuServisi, musteriServisi, personelServisi, islemServisi } from "@/lib/supabase";
+import { randevuServisi, musteriServisi, personelServisi, islemServisi, kategoriServisi } from "@/lib/supabase";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +22,7 @@ export function StaffAppointmentForm({ onSuccess }: { onSuccess?: () => void }) 
   const [selectedTime, setSelectedTime] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<string>("");
   const [selectedStaff, setSelectedStaff] = useState<string>("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [notes, setNotes] = useState("");
   const [selectedServices, setSelectedServices] = useState<number[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -44,13 +45,25 @@ export function StaffAppointmentForm({ onSuccess }: { onSuccess?: () => void }) 
     },
   });
 
-  // Fetch services for the service select
-  const { data: services = [], isLoading: isServicesLoading } = useQuery({
-    queryKey: ['services'],
+  // Fetch categories
+  const { data: categories = [], isLoading: isCategoriesLoading } = useQuery({
+    queryKey: ['categories'],
     queryFn: async () => {
-      const data = await islemServisi.hepsiniGetir();
+      const data = await kategoriServisi.hepsiniGetir();
       return data;
     },
+  });
+
+  // Fetch services based on selected category
+  const { data: services = [], isLoading: isServicesLoading } = useQuery({
+    queryKey: ['services', selectedCategory],
+    queryFn: async () => {
+      if (!selectedCategory) return [];
+      const categoryId = parseInt(selectedCategory, 10);
+      const allServices = await islemServisi.hepsiniGetir();
+      return allServices.filter(service => service.kategori_id === categoryId);
+    },
+    enabled: !!selectedCategory,
   });
 
   const handleServiceSelect = (serviceId: string) => {
@@ -87,6 +100,11 @@ export function StaffAppointmentForm({ onSuccess }: { onSuccess?: () => void }) 
       return;
     }
     
+    if (selectedServices.length === 0) {
+      toast.error("Lütfen en az bir hizmet seçin");
+      return;
+    }
+    
     try {
       setIsSubmitting(true);
       
@@ -113,6 +131,7 @@ export function StaffAppointmentForm({ onSuccess }: { onSuccess?: () => void }) 
         setSelectedTime("");
         setSelectedCustomer("");
         setSelectedStaff("");
+        setSelectedCategory("");
         setNotes("");
         setSelectedServices([]);
         
@@ -146,10 +165,7 @@ export function StaffAppointmentForm({ onSuccess }: { onSuccess?: () => void }) 
   };
   
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle>Yeni Randevu Oluştur</CardTitle>
-      </CardHeader>
+    <div className="w-full">
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -248,28 +264,60 @@ export function StaffAppointmentForm({ onSuccess }: { onSuccess?: () => void }) 
             </div>
           </div>
           
+          <div className="grid grid-cols-1 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Kategori</label>
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Kategori seçin" />
+                </SelectTrigger>
+                <SelectContent>
+                  {isCategoriesLoading ? (
+                    <SelectItem value="loading" disabled>Yükleniyor...</SelectItem>
+                  ) : categories.length === 0 ? (
+                    <SelectItem value="empty" disabled>Kategori bulunamadı</SelectItem>
+                  ) : (
+                    categories.map((category: any) => (
+                      <SelectItem key={category.id} value={category.id.toString()}>
+                        {category.kategori_adi}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
           <div className="space-y-2">
             <label className="text-sm font-medium">Hizmetler</label>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-              {isServicesLoading ? (
-                <div className="col-span-full text-center py-4">Hizmetler yükleniyor...</div>
+              {selectedCategory ? (
+                isServicesLoading ? (
+                  <div className="col-span-full text-center py-4">Hizmetler yükleniyor...</div>
+                ) : services.length === 0 ? (
+                  <div className="col-span-full text-center py-4">Bu kategoride hizmet bulunamadı</div>
+                ) : (
+                  services.map((service: any) => (
+                    <Button
+                      key={service.id}
+                      type="button"
+                      variant={selectedServices.includes(service.id) ? "default" : "outline"}
+                      className="justify-start"
+                      onClick={() => handleServiceSelect(service.id.toString())}
+                    >
+                      {selectedServices.includes(service.id) ? (
+                        <Check className="mr-2 h-4 w-4" />
+                      ) : (
+                        <CirclePlus className="mr-2 h-4 w-4" />
+                      )}
+                      {service.islem_adi}
+                    </Button>
+                  ))
+                )
               ) : (
-                services.map((service: any) => (
-                  <Button
-                    key={service.id}
-                    type="button"
-                    variant={selectedServices.includes(service.id) ? "default" : "outline"}
-                    className="justify-start"
-                    onClick={() => handleServiceSelect(service.id.toString())}
-                  >
-                    {selectedServices.includes(service.id) ? (
-                      <Check className="mr-2 h-4 w-4" />
-                    ) : (
-                      <CirclePlus className="mr-2 h-4 w-4" />
-                    )}
-                    {service.islem_adi}
-                  </Button>
-                ))
+                <div className="col-span-full text-center py-4 text-muted-foreground">
+                  Lütfen önce bir kategori seçin
+                </div>
               )}
             </div>
             
@@ -309,6 +357,6 @@ export function StaffAppointmentForm({ onSuccess }: { onSuccess?: () => void }) 
           {isSubmitting ? "Kaydediliyor..." : "Randevu Oluştur"}
         </Button>
       </CardFooter>
-    </Card>
+    </div>
   );
 }

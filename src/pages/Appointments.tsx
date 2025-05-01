@@ -8,17 +8,21 @@ import { AppointmentStatusFilter } from "@/components/appointments/AppointmentSt
 import { AppointmentCalendarView } from "@/components/appointments/AppointmentCalendarView";
 import { AppointmentWeekView } from "@/components/appointments/AppointmentWeekView";
 import { AppointmentDayView } from "@/components/appointments/AppointmentDayView";
-import { AppointmentsList } from "@/components/appointments/AppointmentsList";
 import { useAppointments } from "@/hooks/useAppointments";
 import { useAuth } from "@/hooks/useAuth";
 import { randevuServisi } from "@/lib/supabase/services/randevuServisi";
 import { useShopData } from "@/hooks/useShopData";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { PlusCircle } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { StaffAppointmentForm } from "@/components/appointments/StaffAppointmentForm";
 
 export default function Appointments() {
   // State for the view tab
-  const [currentView, setCurrentView] = useState<"day" | "week" | "month" | "list">("day");
+  const [currentView, setCurrentView] = useState<"day" | "week" | "month">("day");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [showNewAppointmentDialog, setShowNewAppointmentDialog] = useState(false);
   const { user } = useAuth();
   const { isletmeData } = useShopData();
   const dukkanId = isletmeData?.id;
@@ -56,7 +60,7 @@ export default function Appointments() {
   // Update appointment status
   const updateAppointmentStatus = async (appointmentId: number, newStatus: string) => {
     try {
-      await randevuServisi.randevuDurumGuncelle(appointmentId, newStatus);
+      await randevuServisi.durumGuncelle(appointmentId, newStatus);
       toast.success("Randevu durumu güncellendi");
       refetch();
     } catch (error) {
@@ -65,43 +69,51 @@ export default function Appointments() {
     }
   };
 
+  const handleNewAppointmentCreated = () => {
+    toast.success("Randevu başarıyla oluşturuldu");
+    setShowNewAppointmentDialog(false);
+    refetch();
+  };
+
   return (
     <StaffLayout>
       <div className="container p-4 mx-auto">
-        <h1 className="text-2xl font-bold mb-6">Randevular</h1>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold">Randevular</h1>
+          <Button 
+            onClick={() => setShowNewAppointmentDialog(true)}
+            className="flex items-center gap-2"
+          >
+            <PlusCircle size={16} />
+            Yeni Randevu
+          </Button>
+        </div>
         
-        <div className="grid gap-4 grid-cols-1 md:grid-cols-3 mb-6">
-          <Card className="md:col-span-2">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Tarih Seçimi</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <CalendarDatePicker 
-                date={selectedDate}
-                onDateChange={handleDateChange}
-              />
-            </CardContent>
-          </Card>
-          
+        <div className="grid grid-cols-1 gap-4 mb-6">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Durum Filtresi</CardTitle>
+              <CardTitle className="text-lg">Tarih ve Durum Filtresi</CardTitle>
             </CardHeader>
             <CardContent>
-              <AppointmentStatusFilter 
-                selectedStatus={filters.status || null}
-                onChange={handleStatusChange}
-              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <CalendarDatePicker 
+                  date={selectedDate}
+                  onDateChange={handleDateChange}
+                />
+                <AppointmentStatusFilter 
+                  selectedStatus={filters.status || null}
+                  onChange={handleStatusChange}
+                />
+              </div>
             </CardContent>
           </Card>
         </div>
 
         <Tabs value={currentView} onValueChange={(v) => setCurrentView(v as any)}>
-          <TabsList className="grid grid-cols-4 mb-4">
+          <TabsList className="grid grid-cols-3 mb-4">
             <TabsTrigger value="day">Günlük</TabsTrigger>
             <TabsTrigger value="week">Haftalık</TabsTrigger>
             <TabsTrigger value="month">Aylık</TabsTrigger>
-            <TabsTrigger value="list">Liste</TabsTrigger>
           </TabsList>
 
           <TabsContent value="day">
@@ -130,16 +142,20 @@ export default function Appointments() {
               onDateSelect={handleDateChange}
             />
           </TabsContent>
-
-          <TabsContent value="list">
-            <AppointmentsList 
-              appointments={appointments}
-              isLoading={isLoading}
-              onAppointmentStatusUpdate={updateAppointmentStatus}
-            />
-          </TabsContent>
         </Tabs>
       </div>
+      
+      <Dialog 
+        open={showNewAppointmentDialog} 
+        onOpenChange={setShowNewAppointmentDialog}
+      >
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Yeni Randevu Oluştur</DialogTitle>
+          </DialogHeader>
+          <StaffAppointmentForm onSuccess={handleNewAppointmentCreated} />
+        </DialogContent>
+      </Dialog>
     </StaffLayout>
   );
 }

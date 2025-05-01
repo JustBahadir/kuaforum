@@ -36,8 +36,15 @@ export default function OperationsHistory() {
     queryKey: ['operationsHistory', dateRange.from, dateRange.to],
     queryFn: async () => {
       try {
-        // First try to get from personel_islemleri
-        const data = await personelIslemleriServisi.hepsiniGetir();
+        // Get current dukkan_id to ensure we only get operations for this business
+        const currentDukkanId = await personelIslemleriServisi.getCurrentDukkanId();
+        if (!currentDukkanId) {
+          console.error("Dükkan ID bulunamadı");
+          return [];
+        }
+        
+        // Get operations filtered by current dukkan_id
+        const data = await personelIslemleriServisi.hepsiniGetir(currentDukkanId);
         
         // Filter by date range
         return filterOperationsByDateRange(data);
@@ -89,6 +96,7 @@ export default function OperationsHistory() {
     return matchesSearch;
   });
 
+  // Calculate totals from filtered operations
   const totalRevenue = filteredOperations.reduce((sum, op) => sum + (op.tutar || 0), 0);
   const totalCount = filteredOperations.length;
 
@@ -122,37 +130,6 @@ export default function OperationsHistory() {
     setIsMonthCycleActive(true);
     const { from, to } = createMonthCycleDateRange(day);
     setDateRange({ from, to });
-  };
-  
-  const handleForceRecover = async () => {
-    toast.info("İşlemler yenileniyor...");
-    
-    try {
-      const response = await fetch(`https://xkbjjcizncwkrouvoujw.supabase.co/functions/v1/recover_customer_operations`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhrYmpqY2l6bmN3a3JvdXZvdWp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzk5Njg0NzksImV4cCI6MjA1NTU0NDQ3OX0.RyaC2G1JPHUGQetAcvMgjsTp_nqBB2rZe3U-inU2osw`
-        },
-        body: JSON.stringify({ get_all_shop_operations: true })
-      });
-      
-      if (!response.ok) {
-        throw new Error(`İşlemler yüklenemedi: ${response.statusText}`);
-      }
-      
-      const result = await response.json();
-      
-      if (result.error) {
-        throw new Error(result.error);
-      }
-      
-      toast.success(`${result.count} işlem yüklendi`);
-      refetch();
-    } catch (error) {
-      console.error("Error recovering operations:", error);
-      toast.error("İşlemler yenilenirken hata oluştu");
-    }
   };
 
   const downloadReport = () => {
@@ -279,15 +256,6 @@ export default function OperationsHistory() {
           <div className="flex gap-2">
             <Button 
               variant="outline" 
-              size="sm"
-              onClick={handleForceRecover}
-              className="flex items-center gap-1"
-            >
-              <RefreshCcw size={16} />
-              Yenile
-            </Button>
-            <Button 
-              variant="outline" 
               size="sm" 
               className="flex items-center gap-1"
               onClick={downloadReport}
@@ -307,6 +275,10 @@ export default function OperationsHistory() {
               <div className="flex justify-center p-6">
                 <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
               </div>
+            ) : filteredOperations.length === 0 ? (
+              <div className="text-center p-8 text-muted-foreground">
+                Bu tarih aralığında henüz bir işlem bulunmamaktadır.
+              </div>
             ) : (
               <div className="rounded-md border">
                 <table className="min-w-full divide-y divide-gray-200">
@@ -323,40 +295,32 @@ export default function OperationsHistory() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredOperations.length > 0 ? (
-                      filteredOperations.map((operation) => (
-                        <tr key={operation.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm">
-                            {format(new Date(operation.created_at || ''), 'dd.MM.yyyy', { locale: tr })}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm">
-                            {operation.personel?.ad_soyad || 'Belirtilmemiş'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm">
-                            {operation.musteri 
-                              ? `${operation.musteri.first_name || ''} ${operation.musteri.last_name || ''}`.trim() || 'Belirtilmemiş'
-                              : 'Belirtilmemiş'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm">
-                            {cleanOperationName(operation)}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm">
-                            {formatCurrency(operation.tutar || 0)}
-                          </td>
-                          {showPuntos && (
-                            <td className="px-6 py-4 whitespace-nowrap text-sm">
-                              {operation.puan || 0}
-                            </td>
-                          )}
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={showPuntos ? 6 : 5} className="px-6 py-4 text-center text-sm text-gray-500">
-                          Seçilen filtrelere uygun işlem bulunamadı
+                    {filteredOperations.map((operation) => (
+                      <tr key={operation.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          {format(new Date(operation.created_at || ''), 'dd.MM.yyyy', { locale: tr })}
                         </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          {operation.personel?.ad_soyad || 'Belirtilmemiş'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          {operation.musteri 
+                            ? `${operation.musteri.first_name || ''} ${operation.musteri.last_name || ''}`.trim() || 'Belirtilmemiş'
+                            : 'Belirtilmemiş'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          {cleanOperationName(operation)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          {formatCurrency(operation.tutar || 0)}
+                        </td>
+                        {showPuntos && (
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            {operation.puan || 0}
+                          </td>
+                        )}
                       </tr>
-                    )}
+                    ))}
                   </tbody>
                 </table>
               </div>

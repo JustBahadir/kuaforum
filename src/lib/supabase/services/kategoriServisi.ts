@@ -93,6 +93,8 @@ export const kategoriServisi = {
 
   async ekle(kategori: {kategori_adi: string, sira: number, dukkan_id?: number}): Promise<KategoriDto> {
     try {
+      console.log('Adding category, current data:', kategori);
+      
       if (!kategori.dukkan_id) {
         // Get the current user's dukkan_id if not provided
         kategori.dukkan_id = await this.getCurrentUserDukkanId();
@@ -102,7 +104,7 @@ export const kategoriServisi = {
         throw new Error('İşletme bilgisi bulunamadı');
       }
 
-      console.log('Adding category with data:', kategori);
+      console.log('Adding category with complete data:', kategori);
 
       const { data, error } = await supabase
         .from('islem_kategorileri')
@@ -113,7 +115,11 @@ export const kategoriServisi = {
         }])
         .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Kategori ekle error details:', error);
+        throw error;
+      }
+      
       return data[0];
     } catch (error) {
       console.error('Kategori ekleme hatası:', error);

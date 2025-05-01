@@ -52,6 +52,11 @@ export const randevuServisi = {
     }
   },
   
+  // Add the ekle method to fix StaffAppointmentForm
+  async ekle(randevuVerisi: Partial<Randevu>) {
+    return this.randevuOlustur(randevuVerisi);
+  },
+  
   async randevuOlustur(randevuVerisi: Partial<Randevu>) {
     try {
       if (!randevuVerisi.dukkan_id) {
@@ -120,6 +125,11 @@ export const randevuServisi = {
       console.error('Durum güncelleme hatası:', error);
       throw error;
     }
+  },
+  
+  // Add a method for randevuDurumGuncelle to fix AppointmentsList
+  async randevuDurumGuncelle(id: number, durum: string) {
+    return this.durumGuncelle(id, durum);
   },
   
   async musteriRandevulari(musteriId: number) {
