@@ -43,12 +43,22 @@ export function PhoneInputField({
     onChange(limitedDigits);
   };
 
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Allow only digits and control keys
+    const isDigit = /\d/.test(e.key);
+    const isControlKey = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key);
+    if (!isDigit && !isControlKey) {
+      e.preventDefault();
+    }
+  };
+
   return (
     <div>
       <Input
         id={id}
         value={displayValue}
         onChange={handleInputChange}
+        onKeyPress={handleKeyPress}
         placeholder={placeholder}
         className={error ? "border-red-500" : ""}
         disabled={disabled}

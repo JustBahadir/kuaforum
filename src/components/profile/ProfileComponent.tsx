@@ -1,184 +1,399 @@
 
-import React, { useState } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { toast } from "sonner";
+import { LogOut, Upload } from "lucide-react";
+import { FileUpload } from "@/components/ui/file-upload";
+import { useForm } from "react-hook-form";
 
-interface ProfileComponentProps {
+// Define types for props
+export interface EducationData {
+  ortaokuldurumu: string;
+  lisedurumu: string;
+  liseturu: string;
+  universitedurumu: string;
+  universitebolum: string;
+  meslekibrans: string;
+}
+
+export interface HistoryData {
+  isyerleri: string;
+  gorevpozisyon: string;
+  belgeler: string;
+  yarismalar: string;
+  cv: string;
+}
+
+export interface ProfileComponentProps {
   activeTab?: string;
   userProfile: any;
-  loading: boolean;
-  handleLogout: () => void;
-  handleSave: (data: any) => void;
-  handleAvatarUpload: (file: File) => Promise<void>;
-  isUploading: boolean;
-  educationData: any;
-  historyData: any;
-  setEducationData: React.Dispatch<React.SetStateAction<any>>;
-  setHistoryData: React.Dispatch<React.SetStateAction<any>>;
+  loading?: boolean;
+  handleLogout?: () => void;
+  handleSave?: (data: any) => Promise<void>;
+  handleAvatarUpload?: (file: File | string) => Promise<void>;
+  isUploading?: boolean;
+  educationData?: EducationData;
+  historyData?: HistoryData;
+  setEducationData?: React.Dispatch<React.SetStateAction<EducationData>>;
+  setHistoryData?: React.Dispatch<React.SetStateAction<HistoryData>>;
 }
 
 export function ProfileComponent({
   activeTab = "personal",
   userProfile,
-  loading,
+  loading = false,
   handleLogout,
   handleSave,
   handleAvatarUpload,
-  isUploading,
+  isUploading = false,
   educationData,
   historyData,
   setEducationData,
   setHistoryData
 }: ProfileComponentProps) {
-  const [selectedTab, setSelectedTab] = useState(activeTab);
+  const [currentTab, setCurrentTab] = useState(activeTab);
+  
+  const form = useForm({
+    defaultValues: {
+      first_name: userProfile?.first_name || "",
+      last_name: userProfile?.last_name || "",
+      phone: userProfile?.phone || "",
+      email: userProfile?.email || "",
+      address: userProfile?.address || "",
+      iban: userProfile?.iban || ""
+    }
+  });
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files[0]) {
-      handleAvatarUpload(event.target.files[0]);
+  const onProfileSubmit = async (formData: any) => {
+    try {
+      if (handleSave) {
+        await handleSave(formData);
+        toast.success("Profil başarıyla güncellendi", {
+          position: "bottom-right"
+        });
+      }
+    } catch (error) {
+      toast.error("Profil güncellenirken bir hata oluştu", {
+        position: "bottom-right"
+      });
+      console.error("Profile update error:", error);
     }
   };
 
   return (
-    <div className="container mx-auto p-4 max-w-4xl">
-      <div className="mb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="relative">
-            <Avatar className="h-24 w-24">
-              {userProfile?.avatar_url ? (
-                <AvatarImage src={userProfile.avatar_url} alt={userProfile.ad_soyad || "Profile"} />
-              ) : (
-                <AvatarFallback>{userProfile?.ad_soyad?.charAt(0) || "P"}</AvatarFallback>
-              )}
-            </Avatar>
-            <label htmlFor="avatar-upload" className="absolute bottom-0 right-0 bg-primary text-white rounded-full p-1 cursor-pointer">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-camera"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
-              <input
-                id="avatar-upload"
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleFileChange}
-                disabled={isUploading}
-              />
-            </label>
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold">{userProfile?.ad_soyad || "Profil"}</h2>
-            <p className="text-muted-foreground">{userProfile?.email || ""}</p>
-          </div>
-        </div>
-        <Button variant="outline" onClick={handleLogout}>Çıkış Yap</Button>
+    <div className="container mx-auto p-4 space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Profilim</h1>
+        {handleLogout && (
+          <Button variant="outline" onClick={handleLogout}>
+            <LogOut className="h-4 w-4 mr-2" />
+            Çıkış Yap
+          </Button>
+        )}
       </div>
-
+      
       <Card>
         <CardHeader>
-          <CardTitle>Profil Bilgileri</CardTitle>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <CardTitle>Profil Bilgilerim</CardTitle>
+              <CardDescription>Kişisel ve iletişim bilgilerinizi buradan yönetebilirsiniz.</CardDescription>
+            </div>
+            
+            <div className="flex flex-col items-center space-y-2">
+              <Avatar className="h-24 w-24">
+                <AvatarImage src={userProfile?.avatar_url} alt={userProfile?.first_name} />
+                <AvatarFallback>{userProfile?.first_name?.charAt(0) || "U"}</AvatarFallback>
+              </Avatar>
+              
+              {handleAvatarUpload && (
+                <FileUpload
+                  onUploadComplete={handleAvatarUpload}
+                  currentImageUrl={userProfile?.avatar_url}
+                  label="Profil Fotoğrafı Yükle"
+                  id="avatar-upload"
+                  isUploading={isUploading}
+                >
+                  <Button size="sm" variant="outline" disabled={isUploading}>
+                    <Upload className="h-4 w-4 mr-2" />
+                    {isUploading ? "Yükleniyor..." : "Fotoğraf Yükle"}
+                  </Button>
+                </FileUpload>
+              )}
+            </div>
+          </div>
         </CardHeader>
+        
         <CardContent>
-          <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-            <TabsList className="mb-4">
+          <Tabs value={currentTab} onValueChange={setCurrentTab} defaultValue="personal" className="w-full">
+            <TabsList className="grid grid-cols-3">
               <TabsTrigger value="personal">Kişisel Bilgiler</TabsTrigger>
-              <TabsTrigger value="education">Eğitim</TabsTrigger>
-              <TabsTrigger value="history">Geçmiş</TabsTrigger>
+              <TabsTrigger value="education">Eğitim Bilgileri</TabsTrigger>
+              <TabsTrigger value="history">Geçmiş Bilgileri</TabsTrigger>
             </TabsList>
-            <TabsContent value="personal">
-              <form onSubmit={(e) => {
-                e.preventDefault();
-                handleSave(userProfile);
-              }}>
+            
+            <TabsContent value="personal" className="mt-6">
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onProfileSubmit)} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="first_name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Ad</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Ad" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="last_name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Soyad</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Soyad" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Telefon</FormLabel>
+                          <FormControl>
+                            <Input placeholder="05XX XXX XX XX" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>E-posta</FormLabel>
+                          <FormControl>
+                            <Input placeholder="E-posta" {...field} readOnly />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="address"
+                      render={({ field }) => (
+                        <FormItem className="md:col-span-2">
+                          <FormLabel>Adres</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Adres" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="iban"
+                      render={({ field }) => (
+                        <FormItem className="md:col-span-2">
+                          <FormLabel>IBAN</FormLabel>
+                          <FormControl>
+                            <Input placeholder="IBAN" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <div className="flex justify-end">
+                    <Button type="submit" disabled={loading}>
+                      {loading ? "Kaydediliyor..." : "Değişiklikleri Kaydet"}
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </TabsContent>
+            
+            <TabsContent value="education" className="mt-6">
+              {educationData && (
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label htmlFor="name" className="block text-sm font-medium text-gray-700">Ad Soyad</label>
-                      <input
-                        type="text"
-                        id="name"
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
-                        value={userProfile?.ad_soyad || ""}
-                        onChange={(e) => {
-                          const updatedProfile = { ...userProfile, ad_soyad: e.target.value };
-                          handleSave(updatedProfile);
-                        }}
+                      <Label htmlFor="ortaokuldurumu">Ortaokul Durumu</Label>
+                      <Input
+                        id="ortaokuldurumu"
+                        value={educationData.ortaokuldurumu}
+                        onChange={(e) => setEducationData && setEducationData({
+                          ...educationData,
+                          ortaokuldurumu: e.target.value
+                        })}
                       />
                     </div>
+                    
                     <div>
-                      <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
-                      <input
-                        type="email"
-                        id="email"
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
-                        value={userProfile?.email || ""}
-                        onChange={(e) => {
-                          const updatedProfile = { ...userProfile, email: e.target.value };
-                          handleSave(updatedProfile);
-                        }}
-                        disabled={true}
+                      <Label htmlFor="lisedurumu">Lise Durumu</Label>
+                      <Input
+                        id="lisedurumu"
+                        value={educationData.lisedurumu}
+                        onChange={(e) => setEducationData && setEducationData({
+                          ...educationData,
+                          lisedurumu: e.target.value
+                        })}
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="liseturu">Lise Türü</Label>
+                      <Input
+                        id="liseturu"
+                        value={educationData.liseturu}
+                        onChange={(e) => setEducationData && setEducationData({
+                          ...educationData,
+                          liseturu: e.target.value
+                        })}
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="universitedurumu">Üniversite Durumu</Label>
+                      <Input
+                        id="universitedurumu"
+                        value={educationData.universitedurumu}
+                        onChange={(e) => setEducationData && setEducationData({
+                          ...educationData,
+                          universitedurumu: e.target.value
+                        })}
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="universitebolum">Üniversite Bölüm</Label>
+                      <Input
+                        id="universitebolum"
+                        value={educationData.universitebolum}
+                        onChange={(e) => setEducationData && setEducationData({
+                          ...educationData,
+                          universitebolum: e.target.value
+                        })}
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="meslekibrans">Mesleki Branş</Label>
+                      <Input
+                        id="meslekibrans"
+                        value={educationData.meslekibrans}
+                        onChange={(e) => setEducationData && setEducationData({
+                          ...educationData,
+                          meslekibrans: e.target.value
+                        })}
                       />
                     </div>
                   </div>
+                  
+                  <div className="flex justify-end">
+                    <Button onClick={() => handleSave && handleSave(educationData)} disabled={loading}>
+                      {loading ? "Kaydediliyor..." : "Değişiklikleri Kaydet"}
+                    </Button>
+                  </div>
                 </div>
-              </form>
+              )}
             </TabsContent>
-            <TabsContent value="education">
-              <form onSubmit={(e) => {
-                e.preventDefault();
-                handleSave({ education: educationData });
-              }}>
+            
+            <TabsContent value="history" className="mt-6">
+              {historyData && (
                 <div className="space-y-4">
-                  <div>
-                    <label htmlFor="ortaokuldurumu" className="block text-sm font-medium text-gray-700">Ortaokul Durumu</label>
-                    <input
-                      type="text"
-                      id="ortaokuldurumu"
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
-                      value={educationData?.ortaokuldurumu || ""}
-                      onChange={(e) => setEducationData({ ...educationData, ortaokuldurumu: e.target.value })}
-                    />
+                  <div className="grid grid-cols-1 gap-4">
+                    <div>
+                      <Label htmlFor="isyerleri">İş Yerleri</Label>
+                      <Input
+                        id="isyerleri"
+                        value={historyData.isyerleri}
+                        onChange={(e) => setHistoryData && setHistoryData({
+                          ...historyData,
+                          isyerleri: e.target.value
+                        })}
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="gorevpozisyon">Görev/Pozisyon</Label>
+                      <Input
+                        id="gorevpozisyon"
+                        value={historyData.gorevpozisyon}
+                        onChange={(e) => setHistoryData && setHistoryData({
+                          ...historyData,
+                          gorevpozisyon: e.target.value
+                        })}
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="belgeler">Belgeler</Label>
+                      <Input
+                        id="belgeler"
+                        value={historyData.belgeler}
+                        onChange={(e) => setHistoryData && setHistoryData({
+                          ...historyData,
+                          belgeler: e.target.value
+                        })}
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="yarismalar">Yarışmalar</Label>
+                      <Input
+                        id="yarismalar"
+                        value={historyData.yarismalar}
+                        onChange={(e) => setHistoryData && setHistoryData({
+                          ...historyData,
+                          yarismalar: e.target.value
+                        })}
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="cv">CV</Label>
+                      <Input
+                        id="cv"
+                        value={historyData.cv}
+                        onChange={(e) => setHistoryData && setHistoryData({
+                          ...historyData,
+                          cv: e.target.value
+                        })}
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label htmlFor="lisedurumu" className="block text-sm font-medium text-gray-700">Lise Durumu</label>
-                    <input
-                      type="text"
-                      id="lisedurumu"
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
-                      value={educationData?.lisedurumu || ""}
-                      onChange={(e) => setEducationData({ ...educationData, lisedurumu: e.target.value })}
-                    />
+                  
+                  <div className="flex justify-end">
+                    <Button onClick={() => handleSave && handleSave(historyData)} disabled={loading}>
+                      {loading ? "Kaydediliyor..." : "Değişiklikleri Kaydet"}
+                    </Button>
                   </div>
-                  <Button type="submit" disabled={loading}>Kaydet</Button>
                 </div>
-              </form>
-            </TabsContent>
-            <TabsContent value="history">
-              <form onSubmit={(e) => {
-                e.preventDefault();
-                handleSave({ history: historyData });
-              }}>
-                <div className="space-y-4">
-                  <div>
-                    <label htmlFor="isyerleri" className="block text-sm font-medium text-gray-700">İş Yerleri</label>
-                    <textarea
-                      id="isyerleri"
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
-                      value={historyData?.isyerleri || ""}
-                      onChange={(e) => setHistoryData({ ...historyData, isyerleri: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="gorevpozisyon" className="block text-sm font-medium text-gray-700">Görev/Pozisyon</label>
-                    <input
-                      type="text"
-                      id="gorevpozisyon"
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
-                      value={historyData?.gorevpozisyon || ""}
-                      onChange={(e) => setHistoryData({ ...historyData, gorevpozisyon: e.target.value })}
-                    />
-                  </div>
-                  <Button type="submit" disabled={loading}>Kaydet</Button>
-                </div>
-              </form>
+              )}
             </TabsContent>
           </Tabs>
         </CardContent>

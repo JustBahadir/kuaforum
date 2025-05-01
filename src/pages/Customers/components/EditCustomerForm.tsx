@@ -11,6 +11,8 @@ import { CustomerFormActions } from "./FormFields/CustomerFormActions";
 import { musteriServisi } from "@/lib/supabase";
 import { toast } from "sonner";
 import { Musteri } from "@/lib/supabase/types";
+import { DatePickerField } from "./FormFields/DatePickerField";
+import { useShopData } from "@/hooks/useShopData";
 
 export interface EditCustomerFormProps {
   customer: Musteri;
@@ -27,19 +29,26 @@ export function EditCustomerForm({
   isOpen,
   onOpenChange, 
   onSuccess,
-  dukkanId
+  dukkanId: propDukkanId
 }: EditCustomerFormProps) {
   // Use either open or isOpen prop
   const dialogOpen = open !== undefined ? open : isOpen;
+  const { isletmeData } = useShopData();
   
   const [firstName, setFirstName] = useState(customer.first_name || "");
   const [lastName, setLastName] = useState(customer.last_name || "");
   const [phone, setPhone] = useState(customer.phone || "");
-  const [birthdate, setBirthdate] = useState<string | undefined>(
-    customer.birthdate ? new Date(customer.birthdate).toISOString().split('T')[0] : undefined
+  const [birthdate, setBirthdate] = useState<Date | undefined>(
+    customer.birthdate ? new Date(customer.birthdate) : undefined
+  );
+  const [birthdateText, setBirthdateText] = useState<string>(
+    customer.birthdate ? new Date(customer.birthdate).toLocaleDateString('tr-TR', {day: '2-digit', month: '2-digit', year: 'numeric'}).replace(/\//g, '.') : ''
   );
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  
+  // Use dukkanId from props, customer, or from isletmeData
+  const dukkanId = propDukkanId || customer.dukkan_id || isletmeData?.id;
   
   // Reset form when customer changes
   useEffect(() => {
@@ -47,13 +56,18 @@ export function EditCustomerForm({
     setLastName(customer.last_name || "");
     setPhone(customer.phone || "");
     setBirthdate(
-      customer.birthdate ? new Date(customer.birthdate).toISOString().split('T')[0] : undefined
+      customer.birthdate ? new Date(customer.birthdate) : undefined
+    );
+    setBirthdateText(
+      customer.birthdate ? new Date(customer.birthdate).toLocaleDateString('tr-TR', {day: '2-digit', month: '2-digit', year: 'numeric'}).replace(/\//g, '.') : ''
     );
   }, [customer]);
 
   const handleSave = async () => {
     if (!firstName) {
-      toast.error("Lütfen müşteri adı girin");
+      toast.error("Lütfen müşteri adı girin", {
+        position: "bottom-right"
+      });
       setErrors({ firstName: "Ad alanı zorunludur" });
       return;
     }
@@ -63,12 +77,19 @@ export function EditCustomerForm({
       
       // If dukkanId is not passed, use the customer's existing dukkanId
       const shopId = dukkanId || customer.dukkan_id;
+      
+      if (!shopId) {
+        toast.error("İşletme bilgisi bulunamadı", {
+          position: "bottom-right"
+        });
+        return;
+      }
 
       const updatePayload = {
         first_name: firstName,
         last_name: lastName || null,
         phone: phone || null,
-        birthdate: birthdate || null,
+        birthdate: birthdate ? birthdate.toISOString().split('T')[0] : null,
         dukkan_id: shopId,
       };
 
@@ -76,36 +97,19 @@ export function EditCustomerForm({
 
       await musteriServisi.guncelle(customer.id, updatePayload);
 
-      toast.success("Müşteri bilgileri başarıyla güncellendi");
+      toast.success("Müşteri bilgileri başarıyla güncellendi", {
+        position: "bottom-right"
+      });
       onSuccess();
       onOpenChange(false);
     } catch (error: any) {
       console.error("Müşteri güncellenirken hata:", JSON.stringify(error, null, 2));
-      toast.error("Müşteri bilgileri güncellenemedi: " + (error.message || "Bilinmeyen hata"));
+      toast.error("Müşteri bilgileri güncellenemedi: " + (error.message || "Bilinmeyen hata"), {
+        position: "bottom-right"
+      });
     } finally {
       setLoading(false);
     }
-  };
-
-  // Handle form field changes
-  const handleFirstNameChange = (value: string) => {
-    setFirstName(value);
-    if (errors.firstName) setErrors({ ...errors, firstName: '' });
-  };
-
-  const handleLastNameChange = (value: string) => {
-    setLastName(value);
-    if (errors.lastName) setErrors({ ...errors, lastName: '' });
-  };
-
-  const handlePhoneChange = (value: string) => {
-    setPhone(value);
-    if (errors.phone) setErrors({ ...errors, phone: '' });
-  };
-
-  const handleBirthdateChange = (value: string) => {
-    setBirthdate(value);
-    if (errors.birthdate) setErrors({ ...errors, birthdate: '' });
   };
 
   return (
@@ -119,12 +123,20 @@ export function EditCustomerForm({
           firstName={firstName}
           lastName={lastName}
           phone={phone}
-          birthdate={birthdate}
-          onFirstNameChange={handleFirstNameChange}
-          onLastNameChange={handleLastNameChange}
-          onPhoneChange={handlePhoneChange}
-          onBirthdateChange={handleBirthdateChange}
+          onFirstNameChange={setFirstName}
+          onLastNameChange={setLastName}
+          onPhoneChange={setPhone}
           errors={errors}
+        />
+
+        <DatePickerField
+          value={birthdate}
+          onChange={setBirthdate}
+          textValue={birthdateText}
+          onTextChange={setBirthdateText}
+          label="Doğum Tarihi"
+          id="birthdate"
+          error={errors.birthdate}
         />
 
         <CustomerFormActions
