@@ -53,7 +53,7 @@ export const columns = [
     id: "status",
     header: "Durum",
     cell: (row: any) => (
-      <Badge variant={row.aktif ? "success" : "destructive"}>
+      <Badge variant={row.aktif ? "default" : "destructive"}>
         {row.aktif ? "Aktif" : "Pasif"}
       </Badge>
     ),

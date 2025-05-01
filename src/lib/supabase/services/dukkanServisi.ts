@@ -21,7 +21,7 @@ export const dukkanServisi = {
     const { data, error } = await supabase
       .from('dukkanlar')
       .select('*')
-      .eq('kullanici_id', userId)
+      .eq('sahibi_id', userId)
       .single();
     
     if (error && error.code !== 'PGRST116') { // No rows found
@@ -33,13 +33,65 @@ export const dukkanServisi = {
   },
   
   kullaniciDukkaniniGetir: async () => {
-    const { data: user } = await supabase.auth.getUser();
-    
-    if (!user.user) {
+    try {
+      // First try to get the current user
+      const { data: user } = await supabase.auth.getUser();
+      
+      if (!user.user) {
+        return null;
+      }
+      
+      // First try to get from dukkanlar where the user is the owner
+      const { data: ownedDukkan, error: ownedError } = await supabase
+        .from('dukkanlar')
+        .select('*')
+        .eq('sahibi_id', user.user.id)
+        .single();
+        
+      if (!ownedError && ownedDukkan) {
+        return ownedDukkan;
+      }
+      
+      // Then check if user is staff in a dukkan
+      const { data: staffDukkan, error: staffError } = await supabase
+        .from('personel')
+        .select('dukkan_id')
+        .eq('auth_id', user.user.id)
+        .single();
+        
+      if (!staffError && staffDukkan?.dukkan_id) {
+        const { data: shopData } = await supabase
+          .from('dukkanlar')
+          .select('*')
+          .eq('id', staffDukkan.dukkan_id)
+          .single();
+          
+        return shopData || null;
+      }
+      
+      // Finally check profiles table
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('dukkan_id')
+        .eq('id', user.user.id)
+        .single();
+        
+      if (!profileError && profileData?.dukkan_id) {
+        const { data: profileShopData } = await supabase
+          .from('dukkanlar')
+          .select('*')
+          .eq('id', profileData.dukkan_id)
+          .single();
+          
+        return profileShopData || null;
+      }
+      
+      console.log('No dukkan found for user');
+      return null;
+    } catch (error) {
+      console.error('Error getting user dukkan:', error);
       return null;
     }
-    
-    return await dukkanServisi.kullanicininIsletmesi(user.user.id);
   },
   
   getirByKod: async (kod: string) => {
@@ -76,7 +128,6 @@ export const dukkanServisi = {
     return await dukkanServisi.getirById(data.dukkan_id);
   },
 
-  // Adding methods needed by ShopSettings
   getCurrentUserId: async () => {
     const { data: user } = await supabase.auth.getUser();
     return user?.user?.id;
@@ -110,7 +161,7 @@ export const dukkanServisi = {
       .from('dukkanlar')
       .insert({
         ...data,
-        kullanici_id: user.user.id
+        sahibi_id: user.user.id
       })
       .select()
       .single();
@@ -127,7 +178,6 @@ export const dukkanServisi = {
 // For backward compatibility
 export const isletmeServisi = {
   ...dukkanServisi,
-  // Alias specific methods for backward compatibility
   getCurrentUserId: dukkanServisi.getCurrentUserId,
   update: dukkanServisi.guncelle,
   create: dukkanServisi.olustur

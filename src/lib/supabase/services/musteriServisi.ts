@@ -6,6 +6,7 @@ export const musteriServisi = {
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
+        console.log('No authenticated user found');
         throw new Error('Kullanıcı bulunamadı');
       }
       
@@ -19,11 +20,11 @@ export const musteriServisi = {
         .maybeSingle();
       
       if (dukkanError) {
-        console.error('Dükkan bilgisi sorgulama hatası:', dukkanError);
+        console.log('Error querying dukkanlar:', dukkanError);
       }
       
       if (dukkanlar && dukkanlar.id) {
-        console.log('Dukkan ID (from dukkanlar):', dukkanlar.id);
+        console.log('Found dukkan ID (as owner):', dukkanlar.id);
         return dukkanlar.id;
       }
       
@@ -35,15 +36,15 @@ export const musteriServisi = {
         .maybeSingle();
         
       if (personelError) {
-        console.error('Personel bilgisi sorgulama hatası:', personelError);
+        console.log('Error querying personel:', personelError);
       }
       
       if (personel && personel.dukkan_id) {
-        console.log('Dukkan ID (from personel):', personel.dukkan_id);
+        console.log('Found dukkan ID (as staff):', personel.dukkan_id);
         return personel.dukkan_id;
       }
       
-      // Finally check the profile table
+      // Check profiles table as last resort
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('dukkan_id')
@@ -51,67 +52,26 @@ export const musteriServisi = {
         .maybeSingle();
         
       if (profileError) {
-        console.error('Profil bilgisi sorgulama hatası:', profileError);
+        console.log('Error querying profiles:', profileError);
       }
       
       if (profile && profile.dukkan_id) {
-        console.log('Dukkan ID (from profile):', profile.dukkan_id);
+        console.log('Found dukkan ID (from profile):', profile.dukkan_id);
         return profile.dukkan_id;
       }
       
-      // If no dukkan ID found but current user is an admin, create a new dukkan
-      const { data: userRole } = await supabase.rpc('get_user_role');
-      
-      if (userRole === 'admin') {
-        console.log('User is admin but has no dukkan. Creating a new one.');
-        
-        // Get user's profile info for the name
-        const { data: userProfile } = await supabase
-          .from('profiles')
-          .select('first_name, last_name')
-          .eq('id', user.id)
-          .single();
-          
-        const shopName = userProfile?.first_name 
-          ? `${userProfile.first_name} ${userProfile.last_name || ''} İşletmesi`
-          : 'Yeni İşletme';
-          
-        const shopCode = 'SH' + Math.floor(10000 + Math.random() * 90000);
-        
-        // Create a new dukkan for the admin
-        const { data: newShop, error: newShopError } = await supabase
-          .from('dukkanlar')
-          .insert([{
-            ad: shopName,
-            kod: shopCode,
-            sahibi_id: user.id,
-            active: true
-          }])
-          .select();
-          
-        if (newShopError) {
-          console.error('Yeni dükkan oluşturma hatası:', newShopError);
-          throw newShopError;
-        }
-        
-        if (newShop && newShop.length > 0) {
-          console.log('Yeni dukkan oluşturuldu:', newShop[0].id);
-          
-          // Update the user's profile to link to this dukkan
-          await supabase
-            .from('profiles')
-            .update({ dukkan_id: newShop[0].id })
-            .eq('id', user.id);
-            
-          return newShop[0].id;
-        }
+      // Last-ditch effort - get dukkanId from localstorage if it exists
+      const localDukkanId = localStorage.getItem('dukkanId');
+      if (localDukkanId) {
+        console.log('Found dukkan ID (from localStorage):', localDukkanId);
+        return parseInt(localDukkanId);
       }
       
-      console.log('Dükkan ID bulunamadı');
+      console.log('Could not find a dukkan ID for the user');
       return null;
     } catch (error) {
-      console.error('Kullanıcı dükkanı getirme hatası:', error);
-      throw error;
+      console.error('Error getting dukkan ID:', error);
+      return null;
     }
   },
 
@@ -123,7 +83,18 @@ export const musteriServisi = {
       }
       
       if (!shopId) {
-        throw new Error('Dükkan bilgisi bulunamadı');
+        // Try to load from local storage
+        const localDukkanId = localStorage.getItem('dukkanId');
+        if (localDukkanId) {
+          shopId = parseInt(localDukkanId);
+        } else {
+          throw new Error('Dükkan bilgisi bulunamadı');
+        }
+      }
+      
+      // Store in localStorage for future use
+      if (shopId) {
+        localStorage.setItem('dukkanId', String(shopId));
       }
       
       const { data, error } = await supabase

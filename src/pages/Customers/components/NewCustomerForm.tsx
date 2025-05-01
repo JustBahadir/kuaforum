@@ -28,6 +28,16 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId: propDukkanId }:
   // Use dukkanId from props or from isletmeData
   const dukkanId = propDukkanId || isletmeData?.id;
   
+  // Check for dukkanId in localStorage if not provided
+  useEffect(() => {
+    if (!dukkanId) {
+      const localDukkanId = localStorage.getItem('dukkanId');
+      if (localDukkanId) {
+        console.log('Using dukkanId from localStorage:', localDukkanId);
+      }
+    }
+  }, [dukkanId]);
+  
   // Form validation - Check if any field has a value
   const isFormValid = firstName.trim() !== '' || lastName.trim() !== '' || phone.trim() !== '' || birthdate !== undefined;
 
@@ -46,8 +56,15 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId: propDukkanId }:
       newErrors.firstName = 'İsim alanı zorunludur';
     }
     
-    if (!dukkanId) {
-      newErrors.dukkan = 'Dükkan bilgisi eksik, lütfen sayfayı yenileyip tekrar deneyin';
+    let shopId = dukkanId;
+    if (!shopId) {
+      // Try to load from local storage
+      const localDukkanId = localStorage.getItem('dukkanId');
+      if (localDukkanId) {
+        shopId = parseInt(localDukkanId);
+      } else {
+        newErrors.dukkan = 'Dükkan bilgisi eksik, lütfen sayfayı yenileyip tekrar deneyin';
+      }
     }
     
     if (Object.keys(newErrors).length > 0) {
@@ -66,10 +83,15 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId: propDukkanId }:
         last_name: lastName || null,
         phone: phone ? formatPhoneForSubmission(phone) : null,
         birthdate: birthdate ? format(birthdate, 'yyyy-MM-dd') : null,
-        dukkan_id: dukkanId // Include dukkan_id in the customer data
+        dukkan_id: shopId // Include dukkan_id in the customer data
       };
       
       console.log("Müşteri verileri:", customerData);
+      
+      // Save shopId to localStorage for future use
+      if (shopId) {
+        localStorage.setItem('dukkanId', String(shopId));
+      }
       
       // Call the service to add customer
       const result = await musteriServisi.ekle(customerData);

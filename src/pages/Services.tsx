@@ -1,8 +1,8 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -72,7 +72,9 @@ export default function Services() {
     e.preventDefault();
     
     if (!yeniKategoriAdi.trim()) {
-      toast.error("Kategori adı boş olamaz");
+      toast.error("Kategori adı boş olamaz", {
+        position: "bottom-right"
+      });
       return;
     }
 
@@ -86,10 +88,14 @@ export default function Services() {
       setYeniKategoriAdi("");
       setIsAddingCategory(false);
       await refetchCategories();
-      toast.success("Kategori başarıyla eklendi");
+      toast.success("Kategori başarıyla eklendi", {
+        position: "bottom-right"
+      });
     } catch (error: any) {
       console.error("Kategori eklenirken hata:", error);
-      toast.error(`Kategori eklenirken hata oluştu: ${error.message}`);
+      toast.error(`Kategori eklenirken hata oluştu: ${error.message}`, {
+        position: "bottom-right"
+      });
     }
   };
 
@@ -98,7 +104,9 @@ export default function Services() {
     e.preventDefault();
     
     if (!duzenleKategoriAdi.trim() || !duzenleKategoriId) {
-      toast.error("Kategori adı boş olamaz");
+      toast.error("Kategori adı boş olamaz", {
+        position: "bottom-right"
+      });
       return;
     }
 
@@ -111,10 +119,14 @@ export default function Services() {
       setDuzenleKategoriId(null);
       setKategoriDuzenleDialogAcik(false);
       await refetchCategories();
-      toast.success("Kategori başarıyla güncellendi");
+      toast.success("Kategori başarıyla güncellendi", {
+        position: "bottom-right"
+      });
     } catch (error: any) {
       console.error("Kategori güncellenirken hata:", error);
-      toast.error(`Kategori güncellenirken hata oluştu: ${error.message}`);
+      toast.error(`Kategori güncellenirken hata oluştu: ${error.message}`, {
+        position: "bottom-right"
+      });
     }
   };
 
@@ -123,10 +135,14 @@ export default function Services() {
     try {
       await kategorilerServisi.sil(categoryId);
       refetchCategories();
-      toast.success("Kategori başarıyla silindi");
+      toast.success("Kategori başarıyla silindi", {
+        position: "bottom-right"
+      });
     } catch (error: any) {
       console.error("Kategori silinirken hata:", error);
-      toast.error(`Kategori silinirken hata oluştu: ${error.message}`);
+      toast.error(`Kategori silinirken hata oluştu: ${error.message}`, {
+        position: "bottom-right"
+      });
     }
   };
 
@@ -135,7 +151,9 @@ export default function Services() {
     e.preventDefault();
     
     if (!islemAdi.trim() || !kategoriId) {
-      toast.error("Hizmet adı ve kategori seçimi zorunludur");
+      toast.error("Hizmet adı ve kategori seçimi zorunludur", {
+        position: "bottom-right"
+      });
       return;
     }
 
@@ -149,7 +167,9 @@ export default function Services() {
           puan,
           kategori_id: kategoriId,
         });
-        toast.success("Hizmet başarıyla güncellendi");
+        toast.success("Hizmet başarıyla güncellendi", {
+          position: "bottom-right"
+        });
       } else {
         // Add new service
         await islemServisi.ekle({
@@ -160,7 +180,9 @@ export default function Services() {
           kategori_id: kategoriId,
           dukkan_id: dukkanId,
         });
-        toast.success("Hizmet başarıyla eklendi");
+        toast.success("Hizmet başarıyla eklendi", {
+          position: "bottom-right"
+        });
       }
       
       setIsAddingService(false);
@@ -168,7 +190,9 @@ export default function Services() {
       await refetchServices();
     } catch (error: any) {
       console.error("Hizmet eklenirken/güncellenirken hata:", error);
-      toast.error(`Hizmet işlemi sırasında hata oluştu: ${error.message}`);
+      toast.error(`Hizmet işlemi sırasında hata oluştu: ${error.message}`, {
+        position: "bottom-right"
+      });
     }
   };
 
@@ -188,10 +212,14 @@ export default function Services() {
     try {
       await islemServisi.sil(service.id);
       refetchServices();
-      toast.success("Hizmet başarıyla silindi");
+      toast.success("Hizmet başarıyla silindi", {
+        position: "bottom-right"
+      });
     } catch (error: any) {
       console.error("Hizmet silinirken hata:", error);
-      toast.error(`Hizmet silinirken hata oluştu: ${error.message}`);
+      toast.error(`Hizmet silinirken hata oluştu: ${error.message}`, {
+        position: "bottom-right"
+      });
     }
   };
 
@@ -207,7 +235,9 @@ export default function Services() {
       refetchCategories();
     } catch (error: any) {
       console.error("Kategori sıralaması güncellenirken hata:", error);
-      toast.error("Kategori sıralaması güncellenirken bir hata oluştu");
+      toast.error("Kategori sıralaması güncellenirken bir hata oluştu", {
+        position: "bottom-right"
+      });
     }
   };
 
@@ -223,7 +253,9 @@ export default function Services() {
       refetchServices();
     } catch (error: any) {
       console.error("Hizmet sıralaması güncellenirken hata:", error);
-      toast.error("Hizmet sıralaması güncellenirken bir hata oluştu");
+      toast.error("Hizmet sıralaması güncellenirken bir hata oluştu", {
+        position: "bottom-right"
+      });
     }
   };
 
@@ -239,51 +271,90 @@ export default function Services() {
           </TabsList>
           
           <TabsContent value="services" className="space-y-4">
-            <ServicesContent 
-              isStaff={true}
-              kategoriler={kategoriler}
-              islemler={islemler}
-              dialogAcik={isAddingService}
-              setDialogAcik={setIsAddingService}
-              kategoriDialogAcik={isAddingCategory}
-              setKategoriDialogAcik={setIsAddingCategory}
-              kategoriDuzenleDialogAcik={kategoriDuzenleDialogAcik}
-              setKategoriDuzenleDialogAcik={setKategoriDuzenleDialogAcik}
-              yeniKategoriAdi={yeniKategoriAdi}
-              setYeniKategoriAdi={setYeniKategoriAdi}
-              duzenleKategoriId={duzenleKategoriId}
-              duzenleKategoriAdi={duzenleKategoriAdi}
-              setDuzenleKategoriAdi={setDuzenleKategoriAdi}
-              islemAdi={islemAdi}
-              setIslemAdi={setIslemAdi}
-              fiyat={fiyat}
-              setFiyat={setFiyat}
-              maliyet={maliyet}
-              setMaliyet={setMaliyet}
-              puan={puan}
-              setPuan={setPuan}
-              kategoriId={kategoriId}
-              setKategoriId={setKategoriId}
-              duzenleId={duzenleId}
-              onServiceFormSubmit={handleServiceFormSubmit}
-              onCategoryFormSubmit={handleAddCategory}
-              onCategoryEditFormSubmit={handleEditCategory}
-              onServiceEdit={handleServiceEdit}
-              onServiceDelete={handleServiceDelete}
-              onCategoryDelete={handleDeleteCategory}
-              onCategoryEdit={(category) => {
-                setDuzenleKategoriId(category.id);
-                setDuzenleKategoriAdi(category.kategori_adi);
-                setKategoriDuzenleDialogAcik(true);
-              }}
-              onSiralamaChange={handleServiceOrderChange}
-              onCategoryOrderChange={handleCategoryOrderChange}
-              onRandevuAl={() => {}}
-              formuSifirla={formuSifirla}
-              dukkanId={dukkanId}
-              puanlamaAktif={puanlamaAktif}
-              setPuanlamaAktif={setPuanlamaAktif}
-            />
+            <div className="flex flex-col space-y-4">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center space-x-2">
+                  <Switch id="puanlama-modu" checked={puanlamaAktif} onCheckedChange={setPuanlamaAktif} />
+                  <Label htmlFor="puanlama-modu" className="text-sm">Puanlama Sistemi</Label>
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    className="rounded-full"
+                    onClick={() => setInfoDialogOpen(true)}
+                  >
+                    <Info className="h-4 w-4 text-muted-foreground" />
+                  </Button>
+                </div>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      formuSifirla();
+                      setIsAddingService(true);
+                    }}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Hizmet Ekle
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setIsAddingCategory(true)}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Kategori Ekle
+                  </Button>
+                </div>
+              </div>
+              
+              <Card>
+                <ServicesContent 
+                  isStaff={true}
+                  kategoriler={kategoriler}
+                  islemler={islemler}
+                  dialogAcik={isAddingService}
+                  setDialogAcik={setIsAddingService}
+                  kategoriDialogAcik={isAddingCategory}
+                  setKategoriDialogAcik={setIsAddingCategory}
+                  kategoriDuzenleDialogAcik={kategoriDuzenleDialogAcik}
+                  setKategoriDuzenleDialogAcik={setKategoriDuzenleDialogAcik}
+                  yeniKategoriAdi={yeniKategoriAdi}
+                  setYeniKategoriAdi={setYeniKategoriAdi}
+                  duzenleKategoriId={duzenleKategoriId}
+                  duzenleKategoriAdi={duzenleKategoriAdi}
+                  setDuzenleKategoriAdi={setDuzenleKategoriAdi}
+                  islemAdi={islemAdi}
+                  setIslemAdi={setIslemAdi}
+                  fiyat={fiyat}
+                  setFiyat={setFiyat}
+                  maliyet={maliyet}
+                  setMaliyet={setMaliyet}
+                  puan={puan}
+                  setPuan={setPuan}
+                  kategoriId={kategoriId}
+                  setKategoriId={setKategoriId}
+                  duzenleId={duzenleId}
+                  onServiceFormSubmit={handleServiceFormSubmit}
+                  onCategoryFormSubmit={handleAddCategory}
+                  onCategoryEditFormSubmit={handleEditCategory}
+                  onServiceEdit={handleServiceEdit}
+                  onServiceDelete={handleServiceDelete}
+                  onCategoryDelete={handleDeleteCategory}
+                  onCategoryEdit={(category) => {
+                    setDuzenleKategoriId(category.id);
+                    setDuzenleKategoriAdi(category.kategori_adi);
+                    setKategoriDuzenleDialogAcik(true);
+                  }}
+                  onSiralamaChange={handleServiceOrderChange}
+                  onCategoryOrderChange={handleCategoryOrderChange}
+                  onRandevuAl={() => {}}
+                  formuSifirla={formuSifirla}
+                  dukkanId={dukkanId}
+                  puanlamaAktif={puanlamaAktif}
+                  setPuanlamaAktif={setPuanlamaAktif}
+                  hideTabBar={true}
+                />
+              </Card>
+            </div>
           </TabsContent>
           
           <TabsContent value="workinghours">

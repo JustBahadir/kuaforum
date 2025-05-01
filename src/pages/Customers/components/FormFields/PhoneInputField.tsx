@@ -58,7 +58,7 @@ export function PhoneInputField({
         id={id}
         value={displayValue}
         onChange={handleInputChange}
-        onKeyPress={handleKeyPress}
+        onKeyDown={handleKeyPress}
         placeholder={placeholder}
         className={error ? "border-red-500" : ""}
         disabled={disabled}
