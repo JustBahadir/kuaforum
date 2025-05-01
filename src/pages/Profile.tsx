@@ -5,6 +5,7 @@ import { useProfileManagement } from "@/hooks/useProfileManagement";
 import { useEffect, useState } from "react";
 import { authService } from "@/lib/auth/authService";
 import { toast } from "sonner";
+import { supabase } from "@/lib/supabase/client";
 
 export default function Profile() {
   const [userId, setUserId] = useState<string | undefined>(undefined);
@@ -40,7 +41,7 @@ export default function Profile() {
     if (userId) {
       fetchProfileData();
     }
-  }, [userId, fetchProfileData]);
+  }, [userId]);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -52,6 +53,43 @@ export default function Profile() {
     // This would typically update a form state
     console.log(`Select ${name} changed to ${value}`);
   };
+
+  // Check if buckets exist or create them
+  useEffect(() => {
+    const setupStorage = async () => {
+      try {
+        // Create avatars bucket if it doesn't exist
+        const { error: avatarError } = await supabase.storage
+          .createBucket('avatars', {
+            public: true,
+            fileSizeLimit: 1024 * 1024 * 2 // 2MB
+          });
+          
+        if (avatarError && avatarError.message !== "Bucket already exists") {
+          console.error("Avatar bucket creation error:", avatarError);
+        } else {
+          console.log("Avatar bucket ready");
+        }
+        
+        // Create documents bucket if it doesn't exist
+        const { error: docsError } = await supabase.storage
+          .createBucket('documents', {
+            public: true,
+            fileSizeLimit: 1024 * 1024 * 10 // 10MB
+          });
+          
+        if (docsError && docsError.message !== "Bucket already exists") {
+          console.error("Documents bucket creation error:", docsError);
+        } else {
+          console.log("Documents bucket ready");
+        }
+      } catch (error) {
+        console.error("Storage setup error:", error);
+      }
+    };
+    
+    setupStorage();
+  }, []);
 
   return (
     <StaffLayout>

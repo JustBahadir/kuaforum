@@ -1,10 +1,11 @@
 
 import { useState } from "react";
 import { profileService } from "@/lib/auth/profileService";
-import { dukkanServisi } from "@/lib/supabase"; // Updated import
+import { dukkanServisi } from "@/lib/supabase"; 
 import { authService } from "@/lib/auth/authService";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
+import { Profil } from "@/lib/supabase/types";
 
 /**
  * Hook for managing user profile information
@@ -29,27 +30,31 @@ export function useProfileManagement(userId?: string | undefined) {
       let historyData = null;
       
       try {
-        // Assuming there's a staff_education table with personel_id foreign key
-        const { data: education } = await supabase
-          .from('staff_education')
-          .select('*')
-          .eq('personel_id', profile.personel_id || 0)
-          .single();
-        
-        educationData = education;
+        if (profile?.personel_id) {
+          // Assuming there's a staff_education table with personel_id foreign key
+          const { data: education } = await supabase
+            .from('staff_education')
+            .select('*')
+            .eq('personel_id', profile.personel_id)
+            .maybeSingle();
+          
+          educationData = education;
+        }
       } catch (error) {
         console.log('Education data not found or error', error);
       }
       
       try {
-        // Assuming there's a staff_history table with personel_id foreign key
-        const { data: history } = await supabase
-          .from('staff_history')
-          .select('*')
-          .eq('personel_id', profile.personel_id || 0)
-          .single();
-        
-        historyData = history;
+        if (profile?.personel_id) {
+          // Assuming there's a staff_history table with personel_id foreign key
+          const { data: history } = await supabase
+            .from('staff_history')
+            .select('*')
+            .eq('personel_id', profile.personel_id)
+            .maybeSingle();
+          
+          historyData = history;
+        }
       } catch (error) {
         console.log('History data not found or error', error);
       }
@@ -75,10 +80,7 @@ export function useProfileManagement(userId?: string | undefined) {
     
     setLoading(true);
     try {
-      await profileService.updateProfile({
-        id: userId,
-        ...data
-      });
+      await profileService.updateProfile(userId, data);
       
       toast.success("Profil bilgileri başarıyla güncellendi");
       await fetchProfileData(); // Refresh data
@@ -195,29 +197,39 @@ export function useProfileManagement(userId?: string | undefined) {
       const fileName = `${userId}-${Math.random().toString(36).substring(2)}.${fileExt}`;
       const filePath = `avatars/${fileName}`;
       
+      // Create the bucket if it doesn't exist
+      const { error: bucketError } = await supabase.storage
+        .createBucket('avatars', {
+          public: true,
+          fileSizeLimit: 1024 * 1024 * 2 // 2MB
+        });
+        
+      if (bucketError && bucketError.message !== "Bucket already exists") {
+        console.error("Bucket creation error:", bucketError);
+      }
+      
       // Upload the file
       const { error: uploadError } = await supabase.storage
-        .from('photos')
+        .from('avatars')
         .upload(filePath, file);
       
       if (uploadError) throw uploadError;
       
       // Get the public URL
       const { data } = supabase.storage
-        .from('photos')
+        .from('avatars')
         .getPublicUrl(filePath);
       
       // Update the profile with the new avatar URL
-      await profileService.updateProfile({
-        id: userId,
+      await profileService.updateProfile(userId, {
         avatar_url: data.publicUrl
       });
       
       toast.success("Profil fotoğrafı başarıyla güncellendi");
       await fetchProfileData(); // Refresh data
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error uploading avatar:", error);
-      toast.error("Profil fotoğrafı yüklenirken bir hata oluştu");
+      toast.error("Profil fotoğrafı yüklenirken bir hata oluştu: " + error.message);
     } finally {
       setLoading(false);
     }
@@ -239,16 +251,27 @@ export function useProfileManagement(userId?: string | undefined) {
       const fileName = `cv-${profileData.personel_id}-${Math.random().toString(36).substring(2)}.${fileExt}`;
       const filePath = `documents/${fileName}`;
       
+      // Create the bucket if it doesn't exist
+      const { error: bucketError } = await supabase.storage
+        .createBucket('documents', {
+          public: true,
+          fileSizeLimit: 1024 * 1024 * 10 // 10MB
+        });
+        
+      if (bucketError && bucketError.message !== "Bucket already exists") {
+        console.error("Bucket creation error:", bucketError);
+      }
+      
       // Upload the file
       const { error: uploadError } = await supabase.storage
-        .from('photos')
+        .from('documents')
         .upload(filePath, file);
       
       if (uploadError) throw uploadError;
       
       // Get the public URL
       const { data } = supabase.storage
-        .from('photos')
+        .from('documents')
         .getPublicUrl(filePath);
       
       // Update the staff_history with the CV URL
@@ -278,9 +301,9 @@ export function useProfileManagement(userId?: string | undefined) {
       
       toast.success("CV başarıyla yüklendi");
       await fetchProfileData(); // Refresh data
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error uploading CV:", error);
-      toast.error("CV yüklenirken bir hata oluştu");
+      toast.error("CV yüklenirken bir hata oluştu: " + error.message);
     } finally {
       setLoading(false);
     }

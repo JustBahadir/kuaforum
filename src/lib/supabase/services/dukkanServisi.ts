@@ -1,5 +1,6 @@
 
 import { supabase } from '../client';
+import { Isletme } from '../types';
 
 export const isletmeServisi = {
   getirById: async (id: number) => {
@@ -100,8 +101,8 @@ export const isletmeServisi = {
     }
   },
   
-  // Add missing guncelle method
-  guncelle: async (id: number, updates: any) => {
+  // Add missing methods
+  guncelle: async (id: number, updates: Partial<Isletme>) => {
     try {
       const { data, error } = await supabase
         .from('dukkanlar')
@@ -113,6 +114,21 @@ export const isletmeServisi = {
       return data[0];
     } catch (error) {
       console.error('Dükkan güncelleme hatası:', error);
+      throw error;
+    }
+  },
+  
+  ekle: async (isletmeData: Partial<Isletme>) => {
+    try {
+      const { data, error } = await supabase
+        .from('dukkanlar')
+        .insert([isletmeData])
+        .select();
+
+      if (error) throw error;
+      return data[0];
+    } catch (error) {
+      console.error('İşletme ekleme hatası:', error);
       throw error;
     }
   }

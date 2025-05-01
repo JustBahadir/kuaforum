@@ -4,14 +4,17 @@ import { User } from "@supabase/supabase-js";
 import { Profil } from "../supabase/types";
 
 export const profileService = {
-  async getProfile(user: User | null): Promise<Profil | null> {
-    if (!user) return null;
+  async getProfile(userId: string | User | null): Promise<Profil | null> {
+    if (!userId) return null;
     
     try {
+      // If userId is a User object, extract the id
+      const id = typeof userId === 'string' ? userId : userId.id;
+      
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
-        .eq("id", user.id)
+        .eq("id", id)
         .maybeSingle();
         
       if (error) {

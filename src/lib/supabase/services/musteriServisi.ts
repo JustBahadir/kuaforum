@@ -1,5 +1,6 @@
 
 import { supabase } from '../client';
+import { Musteri } from '../types';
 
 // Define CustomerData interface for type safety
 interface CustomerData {
@@ -29,7 +30,7 @@ export const musteriServisi = {
         const { data, error } = await supabase
           .from('dukkanlar')
           .select('id')
-          .eq('user_id', user.id)
+          .eq('sahibi_id', user.id)
           .single();
           
         if (error) throw error;
@@ -37,7 +38,7 @@ export const musteriServisi = {
       } else if (role === 'staff') {
         // Staff user - get dukkan through personeller
         const { data, error } = await supabase
-          .from('personeller')
+          .from('personel')
           .select('dukkan_id')
           .eq('auth_id', user.id)
           .single();
@@ -46,25 +47,36 @@ export const musteriServisi = {
         return data?.dukkan_id;
       }
       
-      return null;
+      // Try to get from profiles as last resort
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('dukkan_id')
+        .eq('id', user.id)
+        .single();
+        
+      if (error) throw error;
+      return data?.dukkan_id;
     } catch (error) {
       console.error('Dükkan ID getirme hatası:', error);
       return null;
     }
   },
 
-  hepsiniGetir: async (searchText?: string) => {
+  hepsiniGetir: async (dukkanId?: number, searchText?: string) => {
     try {
-      const dukkanId = await musteriServisi.getCurrentUserDukkanId();
+      // If dukkanId is not provided, get it from current user
+      const shopId = dukkanId || await musteriServisi.getCurrentUserDukkanId();
 
-      if (!dukkanId) {
+      if (!shopId) {
         throw new Error("Dükkan bilgisine erişilemedi");
       }
+
+      console.log(`Fetching customers for dukkan_id: ${shopId}, search: ${searchText || 'none'}`);
 
       let query = supabase
         .from('musteriler')
         .select('*')
-        .eq('dukkan_id', dukkanId)
+        .eq('dukkan_id', shopId)
         .order('first_name');
         
       if (searchText) {
@@ -73,7 +85,12 @@ export const musteriServisi = {
 
       const { data, error } = await query;
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching customers:', error);
+        throw error;
+      }
+      
+      console.log(`Retrieved ${data?.length || 0} customers`);
       return data || [];
     } catch (error) {
       console.error('Müşteri listesi getirme hatası:', error);
@@ -81,7 +98,7 @@ export const musteriServisi = {
     }
   },
 
-  getir: async (id: number) => {
+  getir: async (id: number): Promise<Musteri> => {
     try {
       const { data, error } = await supabase
         .from('musteriler')
@@ -102,7 +119,7 @@ export const musteriServisi = {
     return musteriServisi.getir(id);
   },
 
-  ekle: async (customer: CustomerData) => {
+  ekle: async (customer: CustomerData): Promise<Musteri> => {
     try {
       // If dukkan_id is not provided, get the current user's dukkan_id
       if (!customer.dukkan_id) {
@@ -113,14 +130,20 @@ export const musteriServisi = {
         }
       }
 
+      console.log('Adding customer:', customer);
+
       const { data, error } = await supabase
         .from('musteriler')
         .insert(customer)
-        .select()
-        .single();
+        .select();
 
-      if (error) throw error;
-      return data;
+      if (error) {
+        console.error('Customer insert error:', error);
+        throw error;
+      }
+
+      console.log('Added customer:', data[0]);
+      return data[0];
     } catch (error) {
       console.error('Müşteri ekleme hatası:', error);
       throw error;
@@ -133,11 +156,10 @@ export const musteriServisi = {
         .from('musteriler')
         .update(customer)
         .eq('id', id)
-        .select()
-        .single();
+        .select();
 
       if (error) throw error;
-      return data;
+      return data[0];
     } catch (error) {
       console.error('Müşteri güncelleme hatası:', error);
       throw error;

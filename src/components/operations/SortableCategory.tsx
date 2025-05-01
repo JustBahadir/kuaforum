@@ -47,7 +47,7 @@ export function SortableCategory({
     transform: CSS.Transform.toString(transform),
     transition,
     zIndex: isDragging ? 10 : 'auto',
-    position: isDragging ? 'relative' : 'static',
+    position: isDragging ? 'relative' : 'static' as React.CSSProperties["position"],
     opacity: isDragging ? 0.5 : 1,
   };
 

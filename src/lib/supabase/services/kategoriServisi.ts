@@ -1,6 +1,7 @@
 
 import { supabase } from '../client';
 import { toast } from 'sonner';
+import { KategoriDto } from '../types';
 
 export const kategoriServisi = {
   async getCurrentUserDukkanId() {
@@ -90,7 +91,7 @@ export const kategoriServisi = {
     }
   },
 
-  async ekle(kategori: {kategori_adi: string, sira: number, dukkan_id?: number}) {
+  async ekle(kategori: {kategori_adi: string, sira: number, dukkan_id?: number}): Promise<KategoriDto> {
     try {
       if (!kategori.dukkan_id) {
         // Get the current user's dukkan_id if not provided
@@ -101,6 +102,8 @@ export const kategoriServisi = {
         throw new Error('İşletme bilgisi bulunamadı');
       }
 
+      console.log('Adding category with data:', kategori);
+
       const { data, error } = await supabase
         .from('islem_kategorileri')
         .insert([{
@@ -108,11 +111,10 @@ export const kategoriServisi = {
           sira: kategori.sira,
           dukkan_id: kategori.dukkan_id
         }])
-        .select()
-        .single();
+        .select();
 
       if (error) throw error;
-      return data;
+      return data[0];
     } catch (error) {
       console.error('Kategori ekleme hatası:', error);
       throw error;

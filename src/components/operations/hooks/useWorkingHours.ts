@@ -3,9 +3,10 @@ import { useState, useEffect, useCallback } from "react";
 import { calismaSaatleriServisi } from "@/lib/supabase/services/calismaSaatleriServisi";
 import { CalismaSaati } from "@/lib/supabase/types";
 import { gunSiralama } from "../constants/workingDays";
+import { kategoriServisi } from "@/lib/supabase/services/kategoriServisi";
 
 interface UseWorkingHoursProps {
-  dukkanId: number;
+  dukkanId?: number;
   onMutationSuccess?: () => void;
 }
 
@@ -16,13 +17,18 @@ export const useWorkingHours = ({ dukkanId, onMutationSuccess }: UseWorkingHours
   const [error, setError] = useState<Error | null>(null);
   
   const fetchHours = useCallback(async () => {
-    if (!dukkanId) return;
-    
     setIsLoading(true);
     setError(null);
     
     try {
-      const fetchedHours = await calismaSaatleriServisi.dukkanSaatleriGetir(dukkanId);
+      // If dukkanId is not provided, get it from current user
+      const shopId = dukkanId || await kategoriServisi.getCurrentUserDukkanId();
+      
+      if (!shopId) {
+        throw new Error('İşletme bilgisi bulunamadı');
+      }
+      
+      const fetchedHours = await calismaSaatleriServisi.dukkanSaatleriGetir(shopId);
       if (fetchedHours && fetchedHours.length > 0) {
         // Sort by the predefined day order
         const sortedHours = [...fetchedHours].sort((a, b) => {
@@ -33,7 +39,7 @@ export const useWorkingHours = ({ dukkanId, onMutationSuccess }: UseWorkingHours
         setHours(sortedHours);
         setOriginalHours(JSON.parse(JSON.stringify(sortedHours)));
       } else {
-        const defaultHours = generateDefaultHours(dukkanId);
+        const defaultHours = generateDefaultHours(shopId);
         setHours(defaultHours);
         setOriginalHours(JSON.parse(JSON.stringify(defaultHours)));
       }
@@ -75,10 +81,17 @@ export const useWorkingHours = ({ dukkanId, onMutationSuccess }: UseWorkingHours
     setIsLoading(true);
     
     try {
+      // Make sure we have a dukkanId
+      const shopId = dukkanId || await kategoriServisi.getCurrentUserDukkanId();
+      
+      if (!shopId) {
+        throw new Error('İşletme bilgisi bulunamadı');
+      }
+      
       // Make sure all hours have dukkan_id
       const hoursWithDukkanId = hours.map(hour => ({
         ...hour,
-        dukkan_id: dukkanId
+        dukkan_id: shopId
       }));
       
       await calismaSaatleriServisi.guncelle(hoursWithDukkanId);

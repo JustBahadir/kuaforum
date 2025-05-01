@@ -2,6 +2,7 @@
 import { supabase } from '../client';
 import { CalismaSaati } from '../types';
 import { gunSiralama } from '@/components/operations/constants/workingDays';
+import { kategoriServisi } from './kategoriServisi';
 
 export const calismaSaatleriServisi = {
   async hepsiniGetir() {
@@ -23,7 +24,11 @@ export const calismaSaatleriServisi = {
     try {
       if (!dukkanId) {
         console.warn('dukkanSaatleriGetir için dükkan ID belirtilmedi');
-        return [];
+        dukkanId = await kategoriServisi.getCurrentUserDukkanId();
+        
+        if (!dukkanId) {
+          throw new Error('İşletme bilgisi bulunamadı');
+        }
       }
       
       console.log('calismaSaatleriServisi: Fetching hours for shop ID:', dukkanId);

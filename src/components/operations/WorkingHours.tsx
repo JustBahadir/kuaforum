@@ -29,7 +29,7 @@ export function WorkingHours({ isStaff = true, dukkanId }: WorkingHoursProps) {
     hasChanges,
     refetch
   } = useWorkingHours({ 
-    dukkanId: dukkanId || 0,
+    dukkanId: dukkanId,
     onMutationSuccess: () => setEditingMode(false)
   });
 
