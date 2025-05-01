@@ -1,9 +1,17 @@
 
 import { supabase } from '../client';
+import { kategorilerServisi } from './kategoriServisi';
 
 export const islemServisi = {
   async hepsiniGetir(dukkanId = null) {
     try {
+      let actualDukkanId = dukkanId;
+      
+      // If dukkanId is not provided, try to get current user's dukkan_id
+      if (!actualDukkanId) {
+        actualDukkanId = await kategorilerServisi.getCurrentUserDukkanId();
+      }
+      
       let query = supabase
         .from('islemler')
         .select(`
@@ -12,8 +20,8 @@ export const islemServisi = {
         `)
         .order('sira', { ascending: true });
       
-      if (dukkanId) {
-        query = query.eq('dukkan_id', dukkanId);
+      if (actualDukkanId) {
+        query = query.eq('dukkan_id', actualDukkanId);
       }
       
       const { data, error } = await query;
@@ -50,6 +58,15 @@ export const islemServisi = {
       // Ensure we have all required fields
       if (!islem.islem_adi || islem.fiyat === undefined) {
         throw new Error("İşlem adı ve fiyat zorunludur");
+      }
+      
+      // If dukkan_id is not set, try to get current user's dukkan_id
+      if (!islem.dukkan_id) {
+        islem.dukkan_id = await kategorilerServisi.getCurrentUserDukkanId();
+      }
+      
+      if (!islem.dukkan_id) {
+        throw new Error("İşletme bilgisi bulunamadı");
       }
       
       const { data, error } = await supabase
@@ -129,6 +146,47 @@ export const islemServisi = {
       return data || [];
     } catch (err) {
       console.error(`Kategori ID: ${kategoriId} için işlemleri getirirken hata:`, err);
+      throw err;
+    }
+  },
+  
+  // New method to get services by shop ID
+  async dukkanIslemleriniGetir(dukkanId: number) {
+    try {
+      const { data, error } = await supabase
+        .from('islemler')
+        .select(`
+          *,
+          kategori:kategori_id(id, kategori_adi)
+        `)
+        .eq('dukkan_id', dukkanId)
+        .order('sira', { ascending: true });
+      
+      if (error) throw error;
+      return data || [];
+    } catch (err) {
+      console.error(`Dükkan ID: ${dukkanId} için işlemleri getirirken hata:`, err);
+      throw err;
+    }
+  },
+  
+  // Add a method to get services by category for a specific shop
+  async kategoriVeDukkanaGoreGetir(kategoriId: number, dukkanId: number) {
+    try {
+      const { data, error } = await supabase
+        .from('islemler')
+        .select(`
+          *,
+          kategori:kategori_id(id, kategori_adi)
+        `)
+        .eq('kategori_id', kategoriId)
+        .eq('dukkan_id', dukkanId)
+        .order('sira', { ascending: true });
+      
+      if (error) throw error;
+      return data || [];
+    } catch (err) {
+      console.error(`Kategori ID: ${kategoriId}, Dükkan ID: ${dukkanId} için işlemleri getirirken hata:`, err);
       throw err;
     }
   }

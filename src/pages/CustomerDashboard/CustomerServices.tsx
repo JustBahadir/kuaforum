@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,8 +13,8 @@ interface CustomerServicesProps {
 }
 
 export function CustomerServices({}: CustomerServicesProps) {
-  const [activeTab, setActiveTab] = useState("haircut");
-  const { isletmeData } = useShopData();
+  const [activeTab, setActiveTab] = useState("");
+  const { isletmeData } = useShopData(null);
   const dukkanId = isletmeData?.id;
 
   // Fetch categories
@@ -23,7 +24,7 @@ export function CustomerServices({}: CustomerServicesProps) {
     isError: isCategoriesError,
   } = useQuery({
     queryKey: ["categories", dukkanId],
-    queryFn: () => kategorilerServisi.hepsiniGetir(dukkanId),
+    queryFn: () => kategorilerServisi.hepsiniGetir(),
     enabled: !!dukkanId,
   });
 
@@ -34,9 +35,16 @@ export function CustomerServices({}: CustomerServicesProps) {
     isError: isServicesError,
   } = useQuery({
     queryKey: ["services", dukkanId],
-    queryFn: () => islemServisi.hepsiniGetir(dukkanId),
+    queryFn: () => islemServisi.hepsiniGetir(),
     enabled: !!dukkanId,
   });
+  
+  // Set default active tab when categories are loaded
+  useEffect(() => {
+    if (categories && categories.length > 0 && !activeTab) {
+      setActiveTab(categories[0].kategori_adi);
+    }
+  }, [categories, activeTab]);
 
   // Filter services based on the selected category
   const filteredServices = (categoryId: number) =>
@@ -49,7 +57,7 @@ export function CustomerServices({}: CustomerServicesProps) {
       </CardHeader>
       <CardContent>
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
+          <TabsList className="mb-4 overflow-auto flex-nowrap">
             {isCategoriesLoading ? (
               <>
                 <Skeleton className="h-10 w-[100px]" />
@@ -58,42 +66,60 @@ export function CustomerServices({}: CustomerServicesProps) {
               </>
             ) : isCategoriesError ? (
               <div>Kategoriler yüklenirken bir hata oluştu.</div>
-            ) : (
+            ) : categories.length > 0 ? (
               categories.map((category) => (
                 <TabsTrigger value={category.kategori_adi} key={category.id}>
                   {category.kategori_adi}
                 </TabsTrigger>
               ))
+            ) : (
+              <div className="p-2 text-sm text-muted-foreground">Henüz hizmet kategorisi bulunmamaktadır.</div>
             )}
           </TabsList>
-          {isCategoriesLoading ? (
+          
+          {isCategoriesLoading || isServicesLoading ? (
             <>
-              <Skeleton className="h-20 w-full" />
-              <Skeleton className="h-20 w-full" />
+              <Skeleton className="h-20 w-full mb-4" />
+              <Skeleton className="h-20 w-full mb-4" />
               <Skeleton className="h-20 w-full" />
             </>
-          ) : isCategoriesError ? (
-            <div>Hizmetler yüklenirken bir hata oluştu.</div>
-          ) : (
+          ) : isCategoriesError || isServicesError ? (
+            <div className="p-4 bg-red-50 text-red-800 rounded-md">
+              Hizmetler yüklenirken bir hata oluştu.
+            </div>
+          ) : categories.length > 0 ? (
             categories.map((category) => (
               <TabsContent value={category.kategori_adi} key={category.id}>
                 <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                  {filteredServices(category.id).map((service) => (
-                    <Card key={service.id}>
-                      <CardContent>
-                        <CardTitle>{service.islem_adi}</CardTitle>
-                        <div>Fiyat: {service.fiyat} TL</div>
-                        <div>Puan: {service.puan}</div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                  {filteredServices(category.id).length > 0 ? (
+                    filteredServices(category.id).map((service) => (
+                      <Card key={service.id} className="overflow-hidden">
+                        <CardContent className="p-4">
+                          <div className="flex justify-between items-center">
+                            <h3 className="font-medium">{service.islem_adi}</h3>
+                            <div className="text-right">
+                              <p className="font-bold">{service.fiyat} ₺</p>
+                              {service.puan > 0 && <p className="text-xs text-green-600">{service.puan} puan</p>}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))
+                  ) : (
+                    <div className="col-span-full p-4 text-center text-muted-foreground">
+                      Bu kategoride henüz hizmet bulunmamaktadır.
+                    </div>
+                  )}
                 </div>
               </TabsContent>
             ))
+          ) : (
+            <div className="p-4 text-center text-muted-foreground">
+              Henüz hizmet kategorisi bulunmamaktadır.
+            </div>
           )}
         </Tabs>
       </CardContent>
     </Card>
   );
 }
-

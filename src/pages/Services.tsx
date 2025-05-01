@@ -9,20 +9,18 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useQuery } from "@tanstack/react-query";
 import { kategorilerServisi, islemServisi } from "@/lib/supabase";
-import { KategoriDto, IslemDto } from "@/lib/supabase/types";
 import { useShopData } from "@/hooks/useShopData";
 import { toast } from "sonner";
-import { ServiceItem } from "@/components/operations/ServiceItem";
+import { CategoryCard } from "@/components/operations/CategoryCard";
 import { ServiceForm } from "@/components/operations/ServiceForm";
 import { CategoryForm } from "@/components/operations/CategoryForm";
-import { CategoryCard } from "@/components/operations/CategoryCard";
 
 export default function Services() {
   const [activeTab, setActiveTab] = useState("services");
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [isAddingService, setIsAddingService] = useState(false);
   const [kategoriAdi, setKategoriAdi] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<KategoriDto | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<any | null>(null);
   const { isletmeData } = useShopData();
   const dukkanId = isletmeData?.id || 0;
 
@@ -34,7 +32,7 @@ export default function Services() {
     refetch: refetchCategories,
   } = useQuery({
     queryKey: ["categories", dukkanId],
-    queryFn: () => kategorilerServisi.hepsiniGetir(dukkanId),
+    queryFn: () => kategorilerServisi.hepsiniGetir(),
     enabled: !!dukkanId,
   });
 
@@ -46,7 +44,7 @@ export default function Services() {
     refetch: refetchServices,
   } = useQuery({
     queryKey: ["services", dukkanId],
-    queryFn: () => islemServisi.hepsiniGetir(dukkanId),
+    queryFn: () => islemServisi.hepsiniGetir(),
     enabled: !!dukkanId,
   });
 
@@ -89,7 +87,7 @@ export default function Services() {
   };
 
   // Handle selecting a category
-  const handleCategorySelect = (category: KategoriDto) => {
+  const handleCategorySelect = (category: any) => {
     setSelectedCategory(category);
   };
 
@@ -127,14 +125,15 @@ export default function Services() {
                   
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
                     {categories.map((category) => (
-                      <CategoryCard
+                      <div 
                         key={category.id}
-                        category={category}
-                        isSelected={selectedCategory?.id === category.id}
+                        className={`border rounded-lg p-4 cursor-pointer transition-colors ${
+                          selectedCategory?.id === category.id ? 'bg-primary/10 border-primary' : 'bg-white hover:bg-gray-50'
+                        }`}
                         onClick={() => handleCategorySelect(category)}
-                        onUpdate={refetchCategories}
-                        onDelete={refetchCategories}
-                      />
+                      >
+                        <h3 className="font-medium text-center truncate">{category.kategori_adi}</h3>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -159,12 +158,14 @@ export default function Services() {
                   ) : filteredServices.length > 0 ? (
                     <div className="space-y-4">
                       {filteredServices.map((service) => (
-                        <ServiceItem
-                          key={service.id}
-                          service={service}
-                          onUpdate={refetchServices}
-                          onDelete={refetchServices}
-                        />
+                        <Card key={service.id} className="overflow-hidden">
+                          <CardContent className="p-4">
+                            <div className="flex justify-between items-center">
+                              <h3 className="font-medium">{service.islem_adi}</h3>
+                              <p className="font-bold">{service.fiyat} ₺</p>
+                            </div>
+                          </CardContent>
+                        </Card>
                       ))}
                     </div>
                   ) : (
@@ -221,12 +222,24 @@ export default function Services() {
       <ServiceForm 
         isOpen={isAddingService}
         onOpenChange={setIsAddingService}
-        categories={categories}
-        selectedCategoryId={selectedCategory?.id}
+        kategoriler={categories}
+        islemAdi={""}
+        setIslemAdi={(val) => {}}
+        fiyat={0}
+        setFiyat={() => {}}
+        puan={0}
+        setPuan={() => {}}
+        kategoriId={selectedCategory?.id}
+        setKategoriId={() => {}}
+        puanlamaAktif={false}
         onSubmit={async (data) => {
           try {
             await islemServisi.ekle({
-              ...data,
+              islem_adi: data.islem_adi,
+              fiyat: data.fiyat,
+              maliyet: data.maliyet,
+              puan: data.puan,
+              kategori_id: data.kategori_id,
               dukkan_id: dukkanId,
             });
             setIsAddingService(false);

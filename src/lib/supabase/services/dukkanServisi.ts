@@ -1,7 +1,7 @@
 
 import { supabase } from '../client';
 
-export const dukkanServisi = {
+export const isletmeServisi = {
   getirById: async (id: number) => {
     try {
       const { data, error } = await supabase
@@ -42,7 +42,7 @@ export const dukkanServisi = {
       const { data, error } = await supabase
         .from('dukkanlar')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('sahibi_id', user.id)
         .single();
 
       if (error) throw error;
@@ -68,13 +68,12 @@ export const dukkanServisi = {
     }
   },
 
-  // Add missing functions
   kullanicininIsletmesi: async (userId: string) => {
     try {
       const { data, error } = await supabase
         .from('dukkanlar')
         .select('*')
-        .eq('user_id', userId)
+        .eq('sahibi_id', userId)
         .single();
 
       if (error) throw error;
@@ -88,7 +87,7 @@ export const dukkanServisi = {
   personelAuthIdIsletmesi: async (authId: string) => {
     try {
       const { data, error } = await supabase
-        .from('personeller')
+        .from('personel')
         .select('dukkan_id, dukkanlar(*)')
         .eq('auth_id', authId)
         .single();
@@ -99,5 +98,25 @@ export const dukkanServisi = {
       console.error('Personel işletmesini getirme hatası:', error);
       throw error;
     }
+  },
+  
+  // Add missing guncelle method
+  guncelle: async (id: number, updates: any) => {
+    try {
+      const { data, error } = await supabase
+        .from('dukkanlar')
+        .update(updates)
+        .eq('id', id)
+        .select();
+
+      if (error) throw error;
+      return data[0];
+    } catch (error) {
+      console.error('Dükkan güncelleme hatası:', error);
+      throw error;
+    }
   }
 };
+
+// For backward compatibility
+export const dukkanServisi = isletmeServisi;

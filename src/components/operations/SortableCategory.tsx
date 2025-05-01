@@ -31,11 +31,12 @@ export function SortableCategory({
     isDragging,
   } = useSortable({ id });
 
+  // Fix the style object to conform to CSSProperties
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    zIndex: isDragging ? 1 : 0,
-    position: isDragging ? "relative" : "static",
+    zIndex: isDragging ? 1000 : 'auto',  // Use 'auto' instead of 0
+    position: isDragging ? 'relative' : 'static' as const,  // Use 'as const' to fix the type
     opacity: isDragging ? 0.6 : 1,
   };
 

@@ -1,37 +1,58 @@
 
+// Export all Supabase services
 import { supabase } from './client';
-import { dukkanServisi } from './services/dukkanServisi';
+import { authService } from '@/lib/auth/authService';
+
+// Import and export services
 import { islemServisi } from './services/islemServisi';
-import { kategorilerServisi } from './services/kategoriServisi';
+import { kategorilerServisi, kategoriServisi } from './services/kategoriServisi';
+import { randevuServisi } from './services/randevuServisi';
 import { musteriServisi } from './services/musteriServisi';
 import { personelServisi } from './services/personelServisi';
-import { randevuServisi } from './services/randevuServisi';
-import { siralamaServisi } from './services/siralamaServisi';
-import { profilServisi } from './services/profilServisi';
-import { bildirimServisi } from './services/bildirimServisi';
-import { calismaSaatleriServisi } from './services/calismaSaatleriServisi';
+import { isletmeServisi, dukkanServisi } from './services/dukkanServisi';
 import { personelIslemleriServisi } from './services/personelIslemleriServisi';
-import type { Personel, PersonelIslemi } from '@/types/personnel';
+import { calismaSaatleriServisi } from './services/calismaSaatleriServisi';
+import { profileService } from './services/profileService';
+import { notificationsService } from './services/notificationsService';
+import { customerPreferencesService } from './services/customerPreferencesService';
+import { customerPersonalDataService } from './services/customerPersonalDataService';
 
-// Re-export services
+// Import and export types
+import type { 
+  Personel, 
+  PersonelIslemi, 
+  PersonelEgitim, 
+  PersonelGecmis,
+  ProfileUpdateData 
+} from '@/types/personnel';
+
 export {
+  // Client
   supabase,
-  dukkanServisi,
+  
+  // Auth
+  authService,
+  
+  // Services
   islemServisi,
   kategorilerServisi,
+  kategoriServisi,
+  randevuServisi,
   musteriServisi,
   personelServisi,
-  randevuServisi,
-  siralamaServisi,
-  profilServisi,
-  bildirimServisi,
-  calismaSaatleriServisi,
+  isletmeServisi,
+  dukkanServisi,
   personelIslemleriServisi,
+  calismaSaatleriServisi,
+  profileService,
+  notificationsService,
+  customerPreferencesService,
+  customerPersonalDataService,
+  
+  // Types
+  type Personel,
+  type PersonelIslemi,
+  type PersonelEgitim,
+  type PersonelGecmis,
+  type ProfileUpdateData
 };
-
-// Export types
-export type { Personel, PersonelIslemi };
-
-// For backward compatibility
-export const kategoriServisi = kategorilerServisi;
-export const isletmeServisi = dukkanServisi; // Add this line to export dukkanServisi as isletmeServisi

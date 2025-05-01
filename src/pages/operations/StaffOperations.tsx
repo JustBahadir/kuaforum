@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { kategorilerServisi, islemServisi } from "@/lib/supabase";
 import { useShopData } from "@/hooks/useShopData";
 import { ServicesContent } from "@/components/operations/ServicesContent";
+import { WorkingHours } from "@/components/operations/WorkingHours";
 import { toast } from "sonner";
 
 export default function StaffOperations() {
@@ -38,7 +39,7 @@ export default function StaffOperations() {
     refetch: refetchCategories
   } = useQuery({
     queryKey: ["categories", dukkanId],
-    queryFn: () => kategorilerServisi.hepsiniGetir(),
+    queryFn: () => kategorilerServisi.hepsiniGetir(dukkanId),
     enabled: !!dukkanId,
   });
 
@@ -49,7 +50,7 @@ export default function StaffOperations() {
     refetch: refetchServices
   } = useQuery({
     queryKey: ["services", dukkanId],
-    queryFn: () => islemServisi.hepsiniGetir(),
+    queryFn: () => islemServisi.hepsiniGetir(dukkanId),
     enabled: !!dukkanId,
   });
 
@@ -74,7 +75,8 @@ export default function StaffOperations() {
     try {
       await kategorilerServisi.ekle({
         kategori_adi: yeniKategoriAdi,
-        sira: kategoriler.length
+        sira: kategoriler.length,
+        dukkan_id: dukkanId
       });
       
       refetchCategories();
@@ -144,6 +146,7 @@ export default function StaffOperations() {
         maliyet,
         puan,
         kategori_id: kategoriId,
+        dukkan_id: dukkanId
       };
       
       if (duzenleId) {
@@ -240,8 +243,9 @@ export default function StaffOperations() {
         <h1 className="text-2xl font-bold mb-6">İşlem Yönetimi</h1>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="services">Hizmetler</TabsTrigger>
+            <TabsTrigger value="workinghours">Çalışma Saatleri</TabsTrigger>
             <TabsTrigger value="products">Ürünler</TabsTrigger>
           </TabsList>
           
@@ -287,6 +291,10 @@ export default function StaffOperations() {
               puanlamaAktif={puanlamaAktif}
               setPuanlamaAktif={setPuanlamaAktif}
             />
+          </TabsContent>
+          
+          <TabsContent value="workinghours">
+            <WorkingHours isStaff={true} dukkanId={dukkanId} />
           </TabsContent>
           
           <TabsContent value="products">

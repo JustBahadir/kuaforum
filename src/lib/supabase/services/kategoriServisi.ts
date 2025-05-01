@@ -3,7 +3,7 @@ import { supabase } from '../client';
 import { dukkanServisi } from './dukkanServisi';
 
 export const kategorilerServisi = {
-  async _getCurrentUserDukkanId() {
+  async getCurrentUserDukkanId() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
@@ -40,10 +40,16 @@ export const kategorilerServisi = {
     }
   },
 
-  async hepsiniGetir() {
+  async hepsiniGetir(dukkanId = null) {
     try {
-      const dukkanId = await this._getCurrentUserDukkanId();
-      if (!dukkanId) {
+      let actualDukkanId = dukkanId;
+      
+      // If dukkanId is not provided, try to get current user's dukkan_id
+      if (!actualDukkanId) {
+        actualDukkanId = await this.getCurrentUserDukkanId();
+      }
+      
+      if (!actualDukkanId) {
         console.warn("Kullanıcının dükkan bilgisi bulunamadı");
         return [];
       }
@@ -51,7 +57,7 @@ export const kategorilerServisi = {
       const { data, error } = await supabase
         .from('islem_kategorileri')
         .select('*')
-        .eq('dukkan_id', dukkanId)
+        .eq('dukkan_id', actualDukkanId)
         .order('sira', { ascending: true });
       
       if (error) throw error;
@@ -64,7 +70,7 @@ export const kategorilerServisi = {
 
   async getir(id: number) {
     try {
-      const dukkanId = await this._getCurrentUserDukkanId();
+      const dukkanId = await this.getCurrentUserDukkanId();
       if (!dukkanId) {
         throw new Error("Kullanıcının dükkan bilgisi bulunamadı");
       }
@@ -84,9 +90,15 @@ export const kategorilerServisi = {
     }
   },
 
-  async ekle(kategori: { kategori_adi: string; sira?: number }) {
+  async ekle(kategori: { kategori_adi: string; sira?: number; dukkan_id?: number }) {
     try {
-      const dukkanId = await this._getCurrentUserDukkanId();
+      let dukkanId = kategori.dukkan_id;
+      
+      // If dukkan_id is not provided, try to get current user's dukkan_id
+      if (!dukkanId) {
+        dukkanId = await this.getCurrentUserDukkanId();
+      }
+      
       if (!dukkanId) {
         throw new Error("Kullanıcının dükkan bilgisi bulunamadı");
       }
@@ -112,7 +124,7 @@ export const kategorilerServisi = {
 
   async guncelle(id: number, updates: { kategori_adi?: string; sira?: number }) {
     try {
-      const dukkanId = await this._getCurrentUserDukkanId();
+      const dukkanId = await this.getCurrentUserDukkanId();
       if (!dukkanId) {
         throw new Error("Kullanıcının dükkan bilgisi bulunamadı");
       }
@@ -134,7 +146,7 @@ export const kategorilerServisi = {
 
   async sil(id: number) {
     try {
-      const dukkanId = await this._getCurrentUserDukkanId();
+      const dukkanId = await this.getCurrentUserDukkanId();
       if (!dukkanId) {
         throw new Error("Kullanıcının dükkan bilgisi bulunamadı");
       }
@@ -153,10 +165,9 @@ export const kategorilerServisi = {
     }
   },
   
-  // Method to update the order of categories
   async sirayiGuncelle(kategoriler: { id: number; sira: number }[]) {
     try {
-      const dukkanId = await this._getCurrentUserDukkanId();
+      const dukkanId = await this.getCurrentUserDukkanId();
       if (!dukkanId) {
         throw new Error("Kullanıcının dükkan bilgisi bulunamadı");
       }
