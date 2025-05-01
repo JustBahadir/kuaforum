@@ -5,45 +5,31 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { CalismaSaati } from "@/lib/supabase/types";
+import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { calismaSaatleriServisi } from "@/lib/supabase/services/calismaSaatleriServisi";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { gunSiralama } from "./constants/workingDays";
-import { kategoriServisi } from "@/lib/supabase/services/kategoriServisi";
 
 export function WorkingHoursForm() {
-  const [dukkanId, setDukkanId] = useState<number | null>(null);
+  const { dukkanId } = useCustomerAuth();
   const [workingHours, setWorkingHours] = useState<CalismaSaati[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [originalHours, setOriginalHours] = useState<CalismaSaati[]>([]);
 
   useEffect(() => {
-    // Get dukkan id from current user
-    const getDukkanId = async () => {
-      try {
-        const shopId = await kategoriServisi.getCurrentUserDukkanId();
-        if (shopId) {
-          setDukkanId(shopId);
-          loadWorkingHours(shopId);
-        } else {
-          toast.error("İşletme bilgisi bulunamadı");
-        }
-      } catch (error) {
-        console.error("Error getting dukkan ID:", error);
-        toast.error("İşletme bilgisi alınırken bir hata oluştu");
-      }
-    };
-    
-    getDukkanId();
-  }, []);
+    if (dukkanId) {
+      loadWorkingHours();
+    }
+  }, [dukkanId]);
 
-  const loadWorkingHours = async (shopId: number) => {
-    if (!shopId) return;
+  const loadWorkingHours = async () => {
+    if (!dukkanId) return;
     
     try {
       setIsLoading(true);
-      const hours = await calismaSaatleriServisi.dukkanSaatleriGetir(shopId);
+      const hours = await calismaSaatleriServisi.dukkanSaatleriGetir(dukkanId);
       // Sort by day order
       const sortedHours = [...hours].sort((a, b) => {
         return gunSiralama.indexOf(a.gun) - gunSiralama.indexOf(b.gun);
