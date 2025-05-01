@@ -86,22 +86,5 @@ export function DatePickerField({
       e.preventDefault();
     }
   };
-  return <div className="space-y-2">
-      {label}
-      <div className="flex gap-2">
-        <div className="relative flex-grow">
-          
-          {!isValid && !error && <p className="text-sm text-red-500 mt-1">Geçerli bir tarih girin (GG.AA.YYYY)</p>}
-          {error && <p className="text-sm text-red-500 mt-1">{error}</p>}
-        </div>
-        <Popover>
-          <PopoverTrigger asChild>
-            
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="end">
-            <Calendar mode="single" selected={value} onSelect={onChange} initialFocus locale={tr} />
-          </PopoverContent>
-        </Popover>
-      </div>
-    </div>;
+  return;
 }
