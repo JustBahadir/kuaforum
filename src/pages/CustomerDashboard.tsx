@@ -7,7 +7,7 @@ import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import CustomerAppointments from "./CustomerDashboard/CustomerAppointments";
 import CustomerProfile from "./CustomerDashboard/CustomerProfile";
 import CustomerSettings from "./CustomerDashboard/CustomerSettings";
-import CustomerServices from "./CustomerDashboard/CustomerServices";
+import { CustomerServices } from "./CustomerDashboard/CustomerServices";
 import CustomerHome from "./CustomerDashboard/CustomerHome";
 
 export default function CustomerDashboard() {

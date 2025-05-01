@@ -1,4 +1,3 @@
-
 import { supabase } from '../client';
 
 export const musteriServisi = {
@@ -155,6 +154,10 @@ export const musteriServisi = {
       console.error('Müşteri getirme hatası:', error);
       throw error;
     }
+  },
+  
+  async getirById(id: number) {
+    return this.getir(id);
   },
   
   async ekle(musteri: any) {

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,19 +15,19 @@ interface CustomerDetailsProps {
 export function CustomerDetails({ customerId }: CustomerDetailsProps) {
   const { data: customer, isLoading: isCustomerLoading } = useQuery({
     queryKey: ['customer', customerId],
-    queryFn: () => musteriServisi.getirById(customerId),
+    queryFn: () => musteriServisi.getir(customerId),
     enabled: !!customerId,
   });
 
   const { data: appointments = [], isLoading: isAppointmentsLoading } = useQuery({
     queryKey: ['customerAppointments', customerId],
-    queryFn: () => randevuServisi.musteriRandevulari(customerId),
+    queryFn: () => randevuServisi.getirByMusteriId(customerId),
     enabled: !!customerId,
   });
 
   const { data: services = [], isLoading: isServicesLoading } = useQuery({
     queryKey: ['customerServices', customerId],
-    queryFn: () => personelIslemleriServisi.getirByMusteriId(customerId),
+    queryFn: () => personelIslemleriServisi.musteriIslemleriniGetir(customerId),
     enabled: !!customerId,
   });
 

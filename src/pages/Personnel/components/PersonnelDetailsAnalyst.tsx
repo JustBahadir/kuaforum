@@ -14,7 +14,7 @@ export function PersonnelDetailsAnalyst({ personnelId }: PersonnelDetailsAnalyst
     useQuery({
       queryKey: ['personnel-details-operations', personnelId],
       queryFn: async () => {
-        return await personelIslemleriServisi.personelIslemleriGetir(personnelId);
+        return await personelIslemleriServisi.personelIslemleriniGetir(personnelId);
       },
       enabled: !!personnelId,
       staleTime: 0 // Force refetch every time to ensure fresh data

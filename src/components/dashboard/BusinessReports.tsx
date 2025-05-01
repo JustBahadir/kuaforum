@@ -14,12 +14,12 @@ export function BusinessReports() {
 
   const { data: islemler = [] } = useQuery({
     queryKey: ['islemler'],
-    queryFn: islemServisi.hepsiniGetir
+    queryFn: async () => islemServisi.hepsiniGetir()
   });
 
   const { data: randevular = [] } = useQuery({
     queryKey: ['randevular'],
-    queryFn: randevuServisi.hepsiniGetir
+    queryFn: async () => randevuServisi.hepsiniGetir()
   });
 
   const { data: personelIslemleri = [] } = useQuery({

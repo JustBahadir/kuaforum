@@ -1,10 +1,10 @@
-
 import React from 'react';
 import { Input } from './input';
 import { Label } from './label';
 import { cn } from '@/lib/utils';
 
-interface FormFieldProps {
+// Form Field component
+export interface FormFieldProps {
   id: string;
   label: string;
   type?: string;
@@ -45,7 +45,8 @@ export function FormField({
   );
 }
 
-interface FormTextareaProps {
+// Form Textarea component
+export interface FormTextareaProps {
   id: string;
   label: string;
   placeholder?: string;
@@ -87,4 +88,17 @@ export function FormTextarea({
       {error && <p className="text-red-500 text-xs">{error}</p>}
     </div>
   );
+}
+
+// Adding the missing components
+export function FormGroup({ children, className }: { children: React.ReactNode, className?: string }) {
+  return <div className={cn('space-y-2', className)}>{children}</div>;
+}
+
+export function FormLabel({ children }: { children: React.ReactNode }) {
+  return <Label>{children}</Label>;
+}
+
+export function FormMessage({ children }: { children: React.ReactNode }) {
+  return <p className="text-sm text-red-500 mt-1">{children}</p>;
 }

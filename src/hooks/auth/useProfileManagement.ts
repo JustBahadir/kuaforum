@@ -54,12 +54,10 @@ export function useProfileManagement(
         try {
           // Use dukkanServisi instead of isletmeServisi
           const staffShop = await dukkanServisi.personelAuthIdIsletmesi(user.id);
-          if (staffShop) {
-            // Make sure we're properly handling the returned data
-            if (typeof staffShop === 'object' && staffShop !== null) {
-              setDukkanId(staffShop.id);
-              setDukkanAdi(staffShop.ad);
-            }
+          // Fix: Check if staffShop exists and is an object, not an array
+          if (staffShop && typeof staffShop === 'object' && staffShop !== null) {
+            setDukkanId(staffShop.id);
+            setDukkanAdi(staffShop.ad);
           } else if (location.pathname.includes('/personnel')) {
             toast.error("İşletme bilgileriniz bulunamadı. Lütfen yönetici ile iletişime geçin.");
           }
