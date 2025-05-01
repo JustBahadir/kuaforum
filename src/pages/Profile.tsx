@@ -1,6 +1,6 @@
 
 import { StaffLayout } from "@/components/ui/staff-layout";
-import { ProfileTabs } from "./ProfileTabs";
+import ProfileTabs from "./ProfileTabs";
 
 export default function Profile() {
   return (

@@ -11,6 +11,7 @@ import { profilServisi } from './services/profilServisi';
 import { bildirimServisi } from './services/bildirimServisi';
 import { calismaSaatleriServisi } from './services/calismaSaatleriServisi';
 import { personelIslemleriServisi } from './services/personelIslemleriServisi';
+import { Personel, PersonelIslemi } from '@/types/personnel';
 
 // Re-export services
 export {
@@ -25,7 +26,10 @@ export {
   profilServisi,
   bildirimServisi,
   calismaSaatleriServisi,
-  personelIslemleriServisi
+  personelIslemleriServisi,
+  // Export types
+  Personel,
+  PersonelIslemi
 };
 
 // For backward compatibility

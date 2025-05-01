@@ -2,107 +2,102 @@
 import { supabase } from '../client';
 
 export const dukkanServisi = {
-  async getirById(id: number) {
+  getirById: async (id: number) => {
     try {
       const { data, error } = await supabase
         .from('dukkanlar')
         .select('*')
         .eq('id', id)
-        .maybeSingle();
-      
-      if (error) {
-        console.error(`ID ${id} dükkan getirme hatası:`, error);
-        throw error;
-      }
-      
+        .single();
+
+      if (error) throw error;
       return data;
-    } catch (err) {
-      console.error(`ID ${id} dükkan getirme sırasında hata:`, err);
-      throw err;
+    } catch (error) {
+      console.error('Dükkan getirme hatası:', error);
+      throw error;
     }
   },
-  
-  async getirByKod(kod: string) {
+
+  getirByKod: async (kod: string) => {
     try {
       const { data, error } = await supabase
         .from('dukkanlar')
         .select('*')
         .eq('kod', kod)
-        .maybeSingle();
-      
-      if (error) {
-        console.error(`Kod ${kod} dükkan getirme hatası:`, error);
-        throw error;
-      }
-      
+        .single();
+
+      if (error) throw error;
       return data;
-    } catch (err) {
-      console.error(`Kod ${kod} dükkan getirme sırasında hata:`, err);
-      throw err;
+    } catch (error) {
+      console.error('Dükkan kod ile getirme hatası:', error);
+      throw error;
     }
   },
-  
-  async kullaniciDukkaniniGetir() {
+
+  kullaniciDukkaniniGetir: async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return null;
-      
-      // Check if user is an owner
-      const { data: dukkanData, error: dukkanError } = await supabase
+      if (!user) throw new Error('Kullanıcı bulunamadı');
+
+      const { data, error } = await supabase
         .from('dukkanlar')
         .select('*')
-        .eq('sahibi_id', user.id)
-        .maybeSingle();
-      
-      if (dukkanData) return dukkanData;
-      
-      // If not an owner, check if user is staff
-      const { data: personelData, error: personelError } = await supabase
-        .from('personel')
-        .select('dukkan_id')
-        .eq('auth_id', user.id)
-        .maybeSingle();
-      
-      if (personelData?.dukkan_id) {
-        const { data: dukkan } = await this.getirById(personelData.dukkan_id);
-        return dukkan;
-      }
-      
-      // Check profiles table
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('dukkan_id')
-        .eq('id', user.id)
-        .maybeSingle();
-      
-      if (profileData?.dukkan_id) {
-        const { data: dukkan } = await this.getirById(profileData.dukkan_id);
-        return dukkan;
-      }
-      
-      return null;
-    } catch (err) {
-      console.error("Kullanıcı dükkan bilgisi getirme hatası:", err);
-      return null;
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Kullanıcı dükkanını getirme hatası:', error);
+      throw error;
     }
   },
-  
-  async hepsiniGetir() {
+
+  hepsiniGetir: async () => {
     try {
       const { data, error } = await supabase
         .from('dukkanlar')
         .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) {
-        console.error("Dükkanları getirme hatası:", error);
-        throw error;
-      }
-      
+        .order('ad');
+
+      if (error) throw error;
       return data || [];
-    } catch (err) {
-      console.error("Dükkanları getirme sırasında hata:", err);
-      return [];
+    } catch (error) {
+      console.error('Tüm dükkanları getirme hatası:', error);
+      throw error;
+    }
+  },
+
+  // Add missing functions
+  kullanicininIsletmesi: async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('dukkanlar')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Kullanıcının işletmesini getirme hatası:', error);
+      throw error;
+    }
+  },
+
+  personelAuthIdIsletmesi: async (authId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('personeller')
+        .select('dukkan_id, dukkanlar(*)')
+        .eq('auth_id', authId)
+        .single();
+
+      if (error) throw error;
+      return data?.dukkanlar;
+    } catch (error) {
+      console.error('Personel işletmesini getirme hatası:', error);
+      throw error;
     }
   }
 };

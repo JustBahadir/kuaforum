@@ -31,4 +31,14 @@ export interface PersonelIslemi {
   musteri_id?: number | null;
   randevu_id?: number | null;
   created_at: string;
+  musteri?: {
+    id: number;
+    first_name: string;
+    last_name?: string;
+  };
+  islem?: {
+    id: number;
+    islem_adi: string;
+    aciklama?: string;
+  };
 }
