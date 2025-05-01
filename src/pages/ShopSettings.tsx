@@ -1,13 +1,15 @@
+
 import { useState, useEffect } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { isletmeServisi } from "@/lib/supabase";
+import { isletmeServisi, dukkanServisi } from "@/lib/supabase";
 import { useShopData } from "@/hooks/useShopData";
 import { useNavigate } from "react-router-dom";
 import { ShopProfilePhotoUpload } from "@/components/shop/ShopProfilePhotoUpload";
+import { useQuery } from "@tanstack/react-query";
 
 export default function ShopSettings() {
   const [shopName, setShopName] = useState("");
@@ -15,7 +17,16 @@ export default function ShopSettings() {
   const [shopPhone, setShopPhone] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
-  const { isletmeData, loading, error, refetch } = useShopData();
+  
+  // Use ReactQuery directly for refetch capability
+  const { data: isletmeData, isLoading: loading, error, refetch } = useQuery({
+    queryKey: ['isletme'],
+    queryFn: async () => {
+      const user = await isletmeServisi.getCurrentUserId();
+      if (!user) return null;
+      return await dukkanServisi.kullanicininIsletmesi(user);
+    }
+  });
 
   useEffect(() => {
     if (isletmeData) {
@@ -28,8 +39,8 @@ export default function ShopSettings() {
   const handleSave = async () => {
     setIsSubmitting(true);
     try {
-      // Fix here - change isletmeServisi.guncelle to isletmeServisi.update
-      const result = await isletmeServisi.update(isletmeData.id, {
+      // Use dukkanServisi methods instead
+      const result = await dukkanServisi.guncelle(isletmeData.id, {
         ad: shopName,
         acik_adres: shopAddress,
         telefon: shopPhone
@@ -58,7 +69,8 @@ export default function ShopSettings() {
   const handleCreate = async () => {
     setIsSubmitting(true);
     try {
-      const result = await isletmeServisi.create({
+      // Use dukkanServisi methods instead
+      const result = await dukkanServisi.olustur({
         ad: shopName,
         acik_adres: shopAddress,
         telefon: shopPhone,
@@ -87,7 +99,7 @@ export default function ShopSettings() {
   const handleLogoUpload = async (url: string) => {
     try {
       if (isletmeData) {
-        await isletmeServisi.update(isletmeData.id, { logo_url: url });
+        await dukkanServisi.guncelle(isletmeData.id, { logo_url: url });
         toast.success("Logo başarıyla güncellendi", {
           position: "bottom-right"
         });
@@ -117,7 +129,7 @@ export default function ShopSettings() {
         <div className="container mx-auto p-6">
           <div className="text-center">
             <h2 className="text-2xl font-semibold mb-4">Bir hata oluştu</h2>
-            <p className="text-red-500 mb-4">{error}</p>
+            <p className="text-red-500 mb-4">{String(error)}</p>
           </div>
         </div>
       </StaffLayout>
@@ -195,7 +207,19 @@ export default function ShopSettings() {
               dukkanId={isletmeData?.id}
               onSuccess={handleLogoUpload}
               currentImageUrl={isletmeData?.logo_url}
-            />
+            >
+              {isletmeData?.logo_url ? (
+                <img 
+                  src={isletmeData.logo_url} 
+                  alt="İşletme Logosu"
+                  className="w-32 h-32 object-cover rounded-full border-2 border-gray-200 cursor-pointer"
+                />
+              ) : (
+                <div className="w-32 h-32 bg-gray-200 rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-300 transition-colors">
+                  <span className="text-gray-500">Logo Yükle</span>
+                </div>
+              )}
+            </ShopProfilePhotoUpload>
           </CardContent>
         </Card>
       </div>

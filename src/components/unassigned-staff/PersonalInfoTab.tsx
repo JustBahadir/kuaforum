@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -123,7 +122,6 @@ export const PersonalInfoTab = ({
                   acceptedFileTypes="image/*"
                   label="Profil Fotoğrafı Yükle"
                   currentImageUrl={formData.avatarUrl}
-                  useCamera={false}
                   isUploading={isUploading}
                 />
               </div>

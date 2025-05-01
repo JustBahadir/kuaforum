@@ -1,87 +1,134 @@
 
-import { supabase } from '@/lib/supabase/client';
-import { authService } from '@/lib/auth/authService';
+import { supabase } from '../client';
 
-// Define the dukkanServisi object with its methods
 export const dukkanServisi = {
-  getirById: async function(id: number) {
-    try {
-      const { data, error } = await supabase
-        .from('dukkanlar')
-        .select('*')
-        .eq('id', id)
-        .single();
-        
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Dükkan getirme hatası:', error);
+  getirById: async (id: number) => {
+    const { data, error } = await supabase
+      .from('dukkanlar')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (error) {
+      console.error('Error fetching dukkan:', error);
       throw error;
     }
+    
+    return data;
   },
   
-  kullanicininIsletmesi: async function(userId: string) {
-    try {
-      const { data, error } = await supabase
-        .from('dukkanlar')
-        .select('*')
-        .eq('sahibi_id', userId)
-        .single();
-      
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Kullanıcının işletmesi getirme hatası:', error);
+  kullanicininIsletmesi: async (userId: string) => {
+    const { data, error } = await supabase
+      .from('dukkanlar')
+      .select('*')
+      .eq('kullanici_id', userId)
+      .single();
+    
+    if (error && error.code !== 'PGRST116') { // No rows found
+      console.error('Error fetching user dukkan:', error);
+      throw error;
+    }
+    
+    return data || null;
+  },
+  
+  kullaniciDukkaniniGetir: async () => {
+    const { data: user } = await supabase.auth.getUser();
+    
+    if (!user.user) {
       return null;
     }
+    
+    return await dukkanServisi.kullanicininIsletmesi(user.user.id);
+  },
+  
+  getirByKod: async (kod: string) => {
+    const { data, error } = await supabase
+      .from('dukkanlar')
+      .select('*')
+      .eq('kod', kod)
+      .single();
+    
+    if (error) {
+      console.error('Error fetching dukkan by code:', error);
+      throw error;
+    }
+    
+    return data;
+  },
+  
+  personelAuthIdIsletmesi: async (authId: string) => {
+    const { data, error } = await supabase
+      .from('personel')
+      .select('dukkan_id')
+      .eq('auth_id', authId)
+      .single();
+    
+    if (error) {
+      console.error('Error fetching staff dukkan:', error);
+      return null;
+    }
+    
+    if (!data || !data.dukkan_id) {
+      return null;
+    }
+    
+    return await dukkanServisi.getirById(data.dukkan_id);
   },
 
-  // Get current user's shop
-  kullaniciDukkaniniGetir: async function() {
-    try {
-      const user = await authService.getCurrentUser();
-      if (!user) return null;
-      
-      return this.kullanicininIsletmesi(user.id);
-    } catch (error) {
-      console.error('Kullanıcı dükkanı getirme hatası:', error);
-      return null;
-    }
+  // Adding methods needed by ShopSettings
+  getCurrentUserId: async () => {
+    const { data: user } = await supabase.auth.getUser();
+    return user?.user?.id;
   },
-
-  // Get shop by code
-  getirByKod: async function(kod: string) {
-    try {
-      const { data, error } = await supabase
-        .from('dukkanlar')
-        .select('*')
-        .eq('kod', kod)
-        .single();
-        
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Kod ile dükkan getirme hatası:', error);
-      return null;
+  
+  guncelle: async (id: number, data: any) => {
+    const { data: result, error } = await supabase
+      .from('dukkanlar')
+      .update(data)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error updating dukkan:', error);
+      throw error;
     }
+    
+    return result;
   },
-
-  personelAuthIdIsletmesi: async function(authId: string) {
-    try {
-      const { data, error } = await supabase
-        .from('personel')
-        .select('dukkan_id, dukkanlar:dukkan_id(*)')
-        .eq('auth_id', authId)
-        .single();
-      
-      if (error) throw error;
-      return data?.dukkanlar;
-    } catch (error) {
-      console.error('Personel işletmesi getirme hatası:', error);
-      return null;
+  
+  olustur: async (data: any) => {
+    // Get current user ID to set as owner
+    const { data: user } = await supabase.auth.getUser();
+    
+    if (!user.user) {
+      throw new Error('User not authenticated');
     }
+    
+    const { data: result, error } = await supabase
+      .from('dukkanlar')
+      .insert({
+        ...data,
+        kullanici_id: user.user.id
+      })
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error creating dukkan:', error);
+      throw error;
+    }
+    
+    return result;
   }
 };
 
-// Create an alias for backward compatibility
-export const isletmeServisi = dukkanServisi;
+// For backward compatibility
+export const isletmeServisi = {
+  ...dukkanServisi,
+  // Alias specific methods for backward compatibility
+  getCurrentUserId: dukkanServisi.getCurrentUserId,
+  update: dukkanServisi.guncelle,
+  create: dukkanServisi.olustur
+};
