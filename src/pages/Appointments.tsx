@@ -3,7 +3,6 @@ import { useState } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { CalendarDatePicker } from "@/components/appointments/CalendarDatePicker";
 import { AppointmentStatusFilter } from "@/components/appointments/AppointmentStatusFilter";
 import { AppointmentCalendarView } from "@/components/appointments/AppointmentCalendarView";
 import { AppointmentWeekView } from "@/components/appointments/AppointmentWeekView";
@@ -56,7 +55,7 @@ export default function Appointments() {
   // Update appointment status
   const updateAppointmentStatus = async (appointmentId: number, newStatus: string) => {
     try {
-      await randevuServisi.randevuDurumGuncelle(appointmentId, newStatus);
+      await randevuServisi.durumGuncelle(appointmentId, newStatus as RandevuDurumu);
       toast.success("Randevu durumu güncellendi");
       refetch();
     } catch (error) {
@@ -86,24 +85,9 @@ export default function Appointments() {
           )}
         </div>
         
-        <div className="grid gap-4 grid-cols-1 md:grid-cols-4 mb-6">
-          <Card className="md:col-span-3">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Tarih Seçimi</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <CalendarDatePicker 
-                date={selectedDate}
-                onDateChange={handleDateChange}
-              />
-            </CardContent>
-          </Card>
-          
+        <div className="mb-6">
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Randevu Durumu</CardTitle>
-            </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
               <AppointmentStatusFilter 
                 value={statusFilter}
                 onChange={handleStatusChange}
@@ -125,6 +109,7 @@ export default function Appointments() {
               isLoading={isLoading}
               selectedDate={selectedDate}
               onAppointmentStatusUpdate={updateAppointmentStatus}
+              onDateChange={handleDateChange}
             />
           </TabsContent>
 

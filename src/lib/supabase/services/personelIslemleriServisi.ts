@@ -23,11 +23,8 @@ export const personelIslemleriServisi = {
         .from('personel_islemleri')
         .select(`
           *,
-          personel!inner:personel_id (*),
-          islem:islem_id (*),
-          musteri:musteri_id (*)
+          personel:personel_id (*)
         `)
-        .eq('personel.dukkan_id', shopId)
         .order('created_at', { ascending: false });
         
       if (error) throw error;
@@ -102,7 +99,7 @@ export const personelIslemleriServisi = {
   },
   
   async ekle(islem: any) {
-    try {      
+    try {
       const { data, error } = await supabase
         .from('personel_islemleri')
         .insert([islem])
@@ -111,7 +108,7 @@ export const personelIslemleriServisi = {
       if (error) throw error;
       return data[0];
     } catch (error) {
-      console.error('İşlem ekleme hatası:', error);
+      console.error('Personel işlemi ekleme hatası:', error);
       throw error;
     }
   },
@@ -127,7 +124,7 @@ export const personelIslemleriServisi = {
       if (error) throw error;
       return data[0];
     } catch (error) {
-      console.error('İşlem güncelleme hatası:', error);
+      console.error('Personel işlemi güncelleme hatası:', error);
       throw error;
     }
   },
@@ -142,7 +139,7 @@ export const personelIslemleriServisi = {
       if (error) throw error;
       return true;
     } catch (error) {
-      console.error('İşlem silme hatası:', error);
+      console.error('Personel işlemi silme hatası:', error);
       throw error;
     }
   }

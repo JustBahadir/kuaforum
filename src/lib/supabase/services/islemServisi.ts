@@ -20,10 +20,7 @@ export const islemServisi = {
       
       const { data, error } = await supabase
         .from('islemler')
-        .select(`
-          *,
-          kategori:kategori_id (id, kategori_adi)
-        `)
+        .select('*')
         .eq('dukkan_id', shopId)
         .order('sira', { ascending: true });
         
@@ -39,10 +36,7 @@ export const islemServisi = {
     try {
       const { data, error } = await supabase
         .from('islemler')
-        .select(`
-          *,
-          kategori:kategori_id (id, kategori_adi)
-        `)
+        .select('*')
         .eq('id', id)
         .single();
         
@@ -54,28 +48,18 @@ export const islemServisi = {
     }
   },
   
-  async kategoriIdyeGoreGetir(kategoriId: number, dukkanId?: number) {
+  async kategoriIslemleriniGetir(kategoriId: number) {
     try {
-      let shopId = dukkanId;
-      if (!shopId) {
-        shopId = await this.getCurrentDukkanId();
-      }
-      
-      let query = supabase
+      const { data, error } = await supabase
         .from('islemler')
-        .select(`*`)
-        .eq('kategori_id', kategoriId);
-      
-      if (shopId) {
-        query = query.eq('dukkan_id', shopId);
-      }
-      
-      const { data, error } = await query.order('sira', { ascending: true });
-      
+        .select('*')
+        .eq('kategori_id', kategoriId)
+        .order('sira', { ascending: true });
+        
       if (error) throw error;
       return data || [];
     } catch (error) {
-      console.error('Kategoriye göre işlem getirme hatası:', error);
+      console.error('Kategori işlemlerini getirme hatası:', error);
       throw error;
     }
   },
@@ -90,12 +74,11 @@ export const islemServisi = {
         throw new Error('Dükkan bilgisi bulunamadı');
       }
       
-      // Get the current max sira for the category
+      // Get the current max sira
       const { data: existingItems } = await supabase
         .from('islemler')
         .select('sira')
         .eq('kategori_id', islem.kategori_id)
-        .eq('dukkan_id', islem.dukkan_id)
         .order('sira', { ascending: false })
         .limit(1);
       
@@ -145,7 +128,7 @@ export const islemServisi = {
     }
   },
   
-  async siralamaGuncelle(items: any[]) {
+  async sirayiGuncelle(items: any[]) {
     try {
       const updates = items.map(item => ({
         id: item.id,
@@ -160,46 +143,6 @@ export const islemServisi = {
       return true;
     } catch (error) {
       console.error('İşlem sıralama güncelleme hatası:', error);
-      throw error;
-    }
-  },
-  
-  async personelIslemleriGetir(personelId: number | null = null, filters: any = {}) {
-    try {
-      const dukkanId = await this.getCurrentDukkanId();
-      
-      if (!dukkanId) {
-        throw new Error('Dükkan bilgisi bulunamadı');
-      }
-      
-      let query = supabase
-        .from('personel_islemleri')
-        .select(`
-          *,
-          personel:personel_id (*),
-          islem:islem_id (*),
-          musteri:musteri_id (*)
-        `);
-      
-      if (personelId) {
-        query = query.eq('personel_id', personelId);
-      }
-      
-      // Apply date filters if provided
-      if (filters.startDate) {
-        query = query.gte('created_at', filters.startDate);
-      }
-      
-      if (filters.endDate) {
-        query = query.lte('created_at', filters.endDate);
-      }
-      
-      const { data, error } = await query.order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error('Personel işlemleri getirme hatası:', error);
       throw error;
     }
   }

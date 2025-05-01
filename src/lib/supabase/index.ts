@@ -13,15 +13,17 @@ import { isletmeServisi, dukkanServisi } from './services/dukkanServisi';
 import { personelIslemleriServisi } from './services/personelIslemleriServisi';
 import { calismaSaatleriServisi } from './services/calismaSaatleriServisi';
 import { profileService } from './services/profileService';
-import { notificationsService } from './services/notificationsService';
+import { notificationsService, notificationServisi } from './services/notificationsService';
+import { customerServisi } from './services/customerServisi';
 
 // Import and export types
 import type { 
   PersonelIslemi, 
   PersonelEgitim, 
   PersonelGecmis,
-  ProfileUpdateData 
-} from '@/types/personnel';
+  ProfileUpdateData,
+  RandevuDurumu
+} from './types';
 
 export {
   // Client
@@ -43,10 +45,13 @@ export {
   calismaSaatleriServisi,
   profileService,
   notificationsService,
+  notificationServisi,
+  customerServisi,
   
   // Types
   type PersonelIslemi,
   type PersonelEgitim,
   type PersonelGecmis,
-  type ProfileUpdateData
+  type ProfileUpdateData,
+  type RandevuDurumu
 };

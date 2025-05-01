@@ -45,3 +45,6 @@ export const notificationsService = {
     return true;
   }
 };
+
+// For backward compatibility
+export const notificationServisi = notificationsService;

@@ -1,314 +1,310 @@
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Check, CirclePlus, X } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
+import { CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
-import { CalendarIcon } from "lucide-react";
-import { randevuServisi, musteriServisi, personelServisi, islemServisi } from "@/lib/supabase";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
+import { personelServisi, islemServisi, kategorilerServisi, musteriServisi, randevuServisi } from "@/lib/supabase";
 
-export function StaffAppointmentForm({ onSuccess }: { onSuccess?: () => void }) {
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
-  const [selectedTime, setSelectedTime] = useState("");
-  const [selectedCustomer, setSelectedCustomer] = useState<string>("");
-  const [selectedStaff, setSelectedStaff] = useState<string>("");
-  const [notes, setNotes] = useState("");
-  const [selectedServices, setSelectedServices] = useState<number[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  // Fetch customers
-  const { data: customers = [], isLoading: isCustomersLoading } = useQuery({
-    queryKey: ['customers'],
-    queryFn: async () => {
-      const data = await musteriServisi.hepsiniGetir();
-      return data;
+// Schema definition
+const FormSchema = z.object({
+  musteri_id: z.string().min(1, { message: "Müşteri seçiniz" }),
+  personel_id: z.string().min(1, { message: "Personel seçiniz" }),
+  kategori_id: z.string().min(1, { message: "Kategori seçiniz" }),
+  islem_id: z.string().min(1, { message: "Hizmet seçiniz" }),
+  tarih: z.date({ required_error: "Tarih seçiniz" }),
+  saat: z.string().min(1, { message: "Saat seçiniz" }),
+  notlar: z.string().optional(),
+});
+
+type FormValues = z.infer<typeof FormSchema>;
+
+export interface StaffAppointmentFormProps {
+  onSubmit: (data: FormValues) => void;
+  onCancel: () => void;
+  initialData?: Partial<FormValues>;
+}
+
+export function StaffAppointmentForm({ onSubmit, onCancel, initialData }: StaffAppointmentFormProps) {
+  const [selectedKategoriId, setSelectedKategoriId] = useState<string | null>(null);
+  const [timeSlots, setTimeSlots] = useState<string[]>([]);
+
+  // Form definition
+  const form = useForm<FormValues>({
+    resolver: zodResolver(FormSchema),
+    defaultValues: {
+      musteri_id: initialData?.musteri_id || "",
+      personel_id: initialData?.personel_id || "",
+      kategori_id: initialData?.kategori_id || "",
+      islem_id: initialData?.islem_id || "",
+      tarih: initialData?.tarih || new Date(),
+      saat: initialData?.saat || "",
+      notlar: initialData?.notlar || "",
     },
   });
 
-  // Fetch staff members
-  const { data: staff = [], isLoading: isStaffLoading } = useQuery({
-    queryKey: ['staff'],
-    queryFn: async () => {
-      const data = await personelServisi.hepsiniGetir();
-      return data;
-    },
+  // Queries
+  const { data: musteriler = [], isLoading: isLoadingMusteriler } = useQuery({
+    queryKey: ['musteriler'],
+    queryFn: () => musteriServisi.hepsiniGetir(),
   });
 
-  // Fetch services for the service select
-  const { data: services = [], isLoading: isServicesLoading } = useQuery({
-    queryKey: ['services'],
-    queryFn: async () => {
-      const data = await islemServisi.hepsiniGetir();
-      return data;
-    },
+  const { data: personel = [], isLoading: isLoadingPersonel } = useQuery({
+    queryKey: ['personel'],
+    queryFn: () => personelServisi.hepsiniGetir(),
   });
 
-  const handleServiceSelect = (serviceId: string) => {
-    const id = parseInt(serviceId, 10);
-    setSelectedServices((prev) => {
-      if (prev.includes(id)) {
-        return prev.filter((s) => s !== id);
-      } else {
-        return [...prev, id];
+  const { data: kategoriler = [], isLoading: isLoadingKategoriler } = useQuery({
+    queryKey: ['kategoriler'],
+    queryFn: () => kategorilerServisi.hepsiniGetir(),
+  });
+
+  const { data: islemler = [], isLoading: isLoadingIslemler } = useQuery({
+    queryKey: ['islemler', selectedKategoriId],
+    queryFn: () => islemServisi.hepsiniGetir(),
+    enabled: !!selectedKategoriId,
+  });
+
+  // Generate time slots
+  useEffect(() => {
+    const slots = [];
+    for (let hour = 9; hour <= 19; hour++) {
+      for (let min = 0; min < 60; min += 30) {
+        slots.push(`${hour.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`);
+      }
+    }
+    setTimeSlots(slots);
+  }, []);
+
+  // Handle kategori change
+  useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      if (name === "kategori_id") {
+        setSelectedKategoriId(value.kategori_id as string || null);
+        form.setValue("islem_id", "");
       }
     });
-  };
+    return () => subscription.unsubscribe();
+  }, [form]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!selectedDate) {
-      toast.error("Lütfen bir tarih seçin");
-      return;
-    }
-    
-    if (!selectedTime) {
-      toast.error("Lütfen bir saat seçin");
-      return;
-    }
-    
-    if (!selectedCustomer) {
-      toast.error("Lütfen bir müşteri seçin");
-      return;
-    }
-    
-    if (!selectedStaff) {
-      toast.error("Lütfen bir personel seçin");
-      return;
-    }
-    
+  // Submit handler
+  const handleSubmit = (values: FormValues) => {
     try {
-      setIsSubmitting(true);
-      
-      // Format date as YYYY-MM-DD
-      const formattedDate = format(selectedDate, "yyyy-MM-dd");
-      
-      const appointmentData = {
-        musteri_id: parseInt(selectedCustomer),
-        personel_id: parseInt(selectedStaff),
-        tarih: formattedDate,
-        saat: selectedTime,
-        durum: "onaylandi",
-        islemler: selectedServices,
-        notlar: notes || undefined
-      };
-      
-      const result = await randevuServisi.ekle(appointmentData);
-      
-      if (result) {
-        toast.success("Randevu başarıyla oluşturuldu");
-        
-        // Reset form
-        setSelectedDate(undefined);
-        setSelectedTime("");
-        setSelectedCustomer("");
-        setSelectedStaff("");
-        setNotes("");
-        setSelectedServices([]);
-        
-        // Call success callback if provided
-        if (onSuccess) {
-          onSuccess();
-        }
-      } else {
-        toast.error("Randevu oluşturulurken bir hata oluştu");
-      }
+      onSubmit(values);
     } catch (error) {
-      console.error("Error creating appointment:", error);
+      console.error("Form submission error:", error);
       toast.error("Randevu oluşturulurken bir hata oluştu");
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
-  // Create array of available time slots (30 min intervals between 9:00 - 21:00)
-  const timeSlots = [];
-  for (let i = 9; i <= 21; i++) {
-    for (let j = 0; j < 60; j += 30) {
-      timeSlots.push(`${i.toString().padStart(2, '0')}:${j.toString().padStart(2, '0')}`);
-    }
-  }
+  const filteredIslemler = selectedKategoriId 
+    ? islemler.filter(islem => islem.kategori_id.toString() === selectedKategoriId)
+    : [];
 
-  // Get service name by id
-  const getServiceName = (id: number) => {
-    const service = services.find((s: any) => s.id === id);
-    return service ? service.islem_adi : "Bilinmeyen Hizmet";
-  };
-  
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle>Yeni Randevu Oluştur</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Tarih</label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !selectedDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {selectedDate ? (
-                      format(selectedDate, "PPP", { locale: tr })
-                    ) : (
-                      <span>Bir tarih seçin</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={setSelectedDate}
-                    initialFocus
-                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                    locale={tr}
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-            
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Saat</label>
-              <Select value={selectedTime} onValueChange={setSelectedTime}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Bir saat seçin" />
-                </SelectTrigger>
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="musteri_id"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Müşteri Seçin</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Müşteri seçin" />
+                  </SelectTrigger>
+                </FormControl>
                 <SelectContent>
-                  {timeSlots.map((time) => (
-                    <SelectItem key={time} value={time}>
-                      {time}
+                  {musteriler.map((musteri) => (
+                    <SelectItem key={musteri.id} value={musteri.id.toString()}>
+                      {musteri.first_name} {musteri.last_name || ""}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Müşteri</label>
-              <Select value={selectedCustomer} onValueChange={setSelectedCustomer}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Müşteri seçin" />
-                </SelectTrigger>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="personel_id"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Personel Seçin</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Personel seçin" />
+                  </SelectTrigger>
+                </FormControl>
                 <SelectContent>
-                  {isCustomersLoading ? (
-                    <SelectItem value="loading" disabled>Yükleniyor...</SelectItem>
-                  ) : customers.length === 0 ? (
-                    <SelectItem value="empty" disabled>Müşteri bulunamadı</SelectItem>
-                  ) : (
-                    customers.map((customer: any) => (
-                      <SelectItem key={customer.id} value={customer.id.toString()}>
-                        {customer.first_name} {customer.last_name || ""}
-                      </SelectItem>
-                    ))
-                  )}
+                  {personel.map((p) => (
+                    <SelectItem key={p.id} value={p.id.toString()}>
+                      {p.ad_soyad}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Personel</label>
-              <Select value={selectedStaff} onValueChange={setSelectedStaff}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Personel seçin" />
-                </SelectTrigger>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="kategori_id"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Kategori Seçin</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Kategori seçin" />
+                  </SelectTrigger>
+                </FormControl>
                 <SelectContent>
-                  {isStaffLoading ? (
-                    <SelectItem value="loading" disabled>Yükleniyor...</SelectItem>
-                  ) : staff.length === 0 ? (
-                    <SelectItem value="empty" disabled>Personel bulunamadı</SelectItem>
-                  ) : (
-                    staff.map((person: any) => (
-                      <SelectItem key={person.id} value={person.id.toString()}>
-                        {person.ad_soyad}
-                      </SelectItem>
-                    ))
-                  )}
+                  {kategoriler.map((kategori) => (
+                    <SelectItem key={kategori.id} value={kategori.id.toString()}>
+                      {kategori.kategori_adi}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
-            </div>
-          </div>
-          
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Hizmetler</label>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-              {isServicesLoading ? (
-                <div className="col-span-full text-center py-4">Hizmetler yükleniyor...</div>
-              ) : (
-                services.map((service: any) => (
-                  <Button
-                    key={service.id}
-                    type="button"
-                    variant={selectedServices.includes(service.id) ? "default" : "outline"}
-                    className="justify-start"
-                    onClick={() => handleServiceSelect(service.id.toString())}
-                  >
-                    {selectedServices.includes(service.id) ? (
-                      <Check className="mr-2 h-4 w-4" />
-                    ) : (
-                      <CirclePlus className="mr-2 h-4 w-4" />
-                    )}
-                    {service.islem_adi}
-                  </Button>
-                ))
-              )}
-            </div>
-            
-            {selectedServices.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-2">
-                {selectedServices.map((serviceId) => (
-                  <Badge 
-                    key={serviceId}
-                    variant="secondary"
-                    className="flex items-center gap-1"
-                  >
-                    {getServiceName(serviceId)}
-                    <X 
-                      className="h-3 w-3 cursor-pointer" 
-                      onClick={() => handleServiceSelect(serviceId.toString())}
-                    />
-                  </Badge>
-                ))}
-              </div>
-            )}
-          </div>
-          
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Notlar</label>
-            <Textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Randevu için notlar ekleyin..."
-              className="resize-none"
-              rows={3}
-            />
-          </div>
-        </form>
-      </CardContent>
-      <CardFooter className="flex justify-end">
-        <Button type="submit" onClick={handleSubmit} disabled={isSubmitting}>
-          {isSubmitting ? "Kaydediliyor..." : "Randevu Oluştur"}
-        </Button>
-      </CardFooter>
-    </Card>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="islem_id"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Hizmet Seçin</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!selectedKategoriId}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Hizmet seçin" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {filteredIslemler.map((islem) => (
+                    <SelectItem key={islem.id} value={islem.id.toString()}>
+                      {islem.islem_adi} - {islem.fiyat} ₺
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="tarih"
+          render={({ field }) => (
+            <FormItem className="flex flex-col">
+              <FormLabel>Tarih</FormLabel>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <FormControl>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-full pl-3 text-left font-normal",
+                        !field.value && "text-muted-foreground"
+                      )}
+                    >
+                      {field.value ? (
+                        format(field.value, "PPP", { locale: tr })
+                      ) : (
+                        <span>Tarih seçin</span>
+                      )}
+                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                    </Button>
+                  </FormControl>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={field.value}
+                    onSelect={field.onChange}
+                    disabled={(date) =>
+                      date < new Date(new Date().setHours(0, 0, 0, 0))
+                    }
+                    initialFocus
+                    locale={tr}
+                  />
+                </PopoverContent>
+              </Popover>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="saat"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Saat</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Saat seçin" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {timeSlots.map((slot) => (
+                    <SelectItem key={slot} value={slot}>
+                      {slot}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="notlar"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Notlar (opsiyonel)</FormLabel>
+              <FormControl>
+                <Textarea placeholder="Randevu için notlar..." {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <div className="flex justify-end space-x-2 pt-4">
+          <Button type="button" variant="outline" onClick={onCancel}>
+            İptal
+          </Button>
+          <Button type="submit">Randevu Oluştur</Button>
+        </div>
+      </form>
+    </Form>
   );
 }

@@ -6,7 +6,6 @@ import { format, isSameDay, parseISO, addDays } from "date-fns";
 import { tr } from "date-fns/locale";
 import { CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { randevuServisi } from "@/lib/supabase";
 import { Randevu, RandevuDurumu } from "@/lib/supabase/types";
 import { toast } from "sonner";
 
@@ -15,13 +14,15 @@ interface AppointmentDayViewProps {
   isLoading: boolean;
   selectedDate: Date;
   onAppointmentStatusUpdate: (id: number, status: string) => Promise<void>;
+  onDateChange?: (date: Date) => void;
 }
 
 export function AppointmentDayView({
   appointments,
   isLoading,
   selectedDate,
-  onAppointmentStatusUpdate
+  onAppointmentStatusUpdate,
+  onDateChange
 }: AppointmentDayViewProps) {
   const [filteredAppointments, setFilteredAppointments] = useState<Randevu[]>([]);
   
@@ -147,7 +148,7 @@ export function AppointmentDayView({
                   key={appointment.id}
                   className={cn(
                     "border rounded-lg overflow-hidden",
-                    getStatusBackgroundColor(appointment.durum)
+                    getStatusBackgroundColor(appointment.durum as RandevuDurumu)
                   )}
                 >
                   <div className="grid grid-cols-12 gap-2">
@@ -155,8 +156,8 @@ export function AppointmentDayView({
                       <div className="text-lg font-medium">
                         {appointment.saat.substring(0, 5)}
                       </div>
-                      <span className={`text-xs px-2 py-1 rounded-full border ${getStatusBadgeColor(appointment.durum)}`}>
-                        {getStatusText(appointment.durum)}
+                      <span className={`text-xs px-2 py-1 rounded-full border ${getStatusBadgeColor(appointment.durum as RandevuDurumu)}`}>
+                        {getStatusText(appointment.durum as RandevuDurumu)}
                       </span>
                     </div>
                     

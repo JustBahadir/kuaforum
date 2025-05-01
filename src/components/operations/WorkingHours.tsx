@@ -1,136 +1,93 @@
 
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { toast } from "sonner";
-import { CalismaSaati } from "@/lib/supabase/types";
-import { useWorkingHours } from "./hooks/useWorkingHours";
-import { WorkingHoursTable } from "./working-hours/WorkingHoursTable";
-import { WorkingHoursActions } from "./working-hours/WorkingHoursActions";
-import { WorkingHoursLoadingState } from "./working-hours/WorkingHoursLoadingState";
-import { WorkingHoursErrorState } from "./working-hours/WorkingHoursErrorState";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { WorkingHoursForm } from "./WorkingHoursForm";
+import { useQuery } from "@tanstack/react-query";
+import { calismaSaatleriServisi } from "@/lib/supabase";
 
 interface WorkingHoursProps {
-  isStaff?: boolean;
   dukkanId?: number;
 }
 
-export function WorkingHours({ isStaff = true, dukkanId }: WorkingHoursProps) {
-  const [editingMode, setEditingMode] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-
-  const {
-    hours,
-    updateDay,
-    saveHours,
-    resetHours,
-    isLoading,
-    error,
-    isError,
-    hasChanges,
-    refetch
-  } = useWorkingHours({ 
-    dukkanId: dukkanId,
-    onMutationSuccess: () => setEditingMode(false)
+export function WorkingHours({ dukkanId }: WorkingHoursProps) {
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  
+  const { data: hours = [], isLoading, refetch } = useQuery({
+    queryKey: ['workingHours', dukkanId],
+    queryFn: () => calismaSaatleriServisi.hepsiniGetir(dukkanId),
+    enabled: !!dukkanId,
   });
 
-  const handleEdit = () => {
-    setEditingMode(true);
+  const handleEditClick = () => {
+    setIsFormOpen(true);
   };
 
-  const handleCancel = () => {
-    resetHours();
-    setEditingMode(false);
+  const handleSuccess = () => {
+    refetch();
   };
 
-  const handleSave = async () => {
-    try {
-      setIsSaving(true);
-      
-      // Validate times
-      for (const saat of hours) {
-        if (!saat.kapali) {
-          if (!saat.acilis || !saat.kapanis) {
-            toast.error("Açık günler için açılış ve kapanış saatleri gereklidir");
-            setIsSaving(false);
-            return;
-          }
-          
-          // Parse times and check if opening is before closing
-          const acilis = saat.acilis.split(':').map(Number);
-          const kapanis = saat.kapanis.split(':').map(Number);
-          
-          const acilisDakika = acilis[0] * 60 + acilis[1];
-          const kapanisDakika = kapanis[0] * 60 + kapanis[1];
-          
-          if (acilisDakika >= kapanisDakika) {
-            toast.error(`${saat.gun} için açılış saati kapanış saatinden önce olmalıdır`);
-            setIsSaving(false);
-            return;
-          }
-        }
-      }
-      
-      await saveHours();
-      toast.success("Çalışma saatleri başarıyla güncellendi");
-    } catch (error) {
-      console.error("Error saving working hours:", error);
-      toast.error("Güncelleme sırasında bir hata oluştu");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleTimeChange = (index: number, field: "acilis" | "kapanis", value: string) => {
-    updateDay(index, { [field]: value });
-  };
-
-  const handleStatusChange = (index: number, value: boolean) => {
-    const updates: Partial<CalismaSaati> = { kapali: value };
-    
-    // Clear times if closed
-    if (value) {
-      updates.acilis = null;
-      updates.kapanis = null;
-    } else {
-      // Set default times if opening
-      updates.acilis = "09:00";
-      updates.kapanis = "19:00";
-    }
-    
-    updateDay(index, updates);
-  };
-
-  if (isLoading) {
-    return <WorkingHoursLoadingState />;
-  }
-
-  if (isError) {
-    return <WorkingHoursErrorState onRetry={refetch} />;
-  }
+  // Sort hours by gun_sira
+  const sortedHours = [...hours].sort((a, b) => a.gun_sira - b.gun_sira);
 
   return (
-    <Card className="w-full">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Çalışma Saatleri</CardTitle>
-        <div className="flex space-x-2">
-          <WorkingHoursActions
-            editingMode={editingMode}
-            onEdit={handleEdit}
-            onCancel={handleCancel}
-            onSave={handleSave}
-            isSaving={isSaving}
-            hasChanges={hasChanges()}
-          />
-        </div>
-      </CardHeader>
-      <CardContent>
-        <WorkingHoursTable
-          hours={hours}
-          editingMode={editingMode}
-          onTimeChange={handleTimeChange}
-          onStatusChange={handleStatusChange}
-        />
-      </CardContent>
-    </Card>
+    <>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Çalışma Saatleri</CardTitle>
+          <Button variant="outline" onClick={handleEditClick}>Düzenle</Button>
+        </CardHeader>
+        <CardContent>
+          <div className="relative">
+            {isLoading ? (
+              <div className="flex justify-center items-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-600"></div>
+              </div>
+            ) : sortedHours.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr>
+                      <th className="text-left px-4 py-2">Gün</th>
+                      <th className="text-left px-4 py-2">Açılış</th>
+                      <th className="text-left px-4 py-2">Kapanış</th>
+                      <th className="text-left px-4 py-2">Durum</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sortedHours.map((hour) => (
+                      <tr key={hour.id || hour.gun} className="border-t">
+                        <td className="px-4 py-3">{hour.gun}</td>
+                        <td className="px-4 py-3">{hour.kapali ? "-" : hour.acilis}</td>
+                        <td className="px-4 py-3">{hour.kapali ? "-" : hour.kapanis}</td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex px-2 py-1 text-xs rounded-full ${hour.kapali ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"}`}>
+                            {hour.kapali ? "Kapalı" : "Açık"}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                Çalışma saatleri ayarlanmamış
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+        <DialogContent className="sm:max-w-[550px]">
+          <DialogHeader>
+            <DialogTitle>Çalışma Saatlerini Düzenle</DialogTitle>
+          </DialogHeader>
+          <WorkingHoursForm onClose={() => setIsFormOpen(false)} onSave={handleSuccess} />
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

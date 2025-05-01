@@ -1,45 +1,42 @@
+
 import { useState, useEffect, useMemo } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { format, isSameDay, subMonths, addMonths } from "date-fns";
 import { tr } from "date-fns/locale";
-import { useQuery } from "@tanstack/react-query";
 import { randevuServisi } from "@/lib/supabase";
 import { Randevu, RandevuDurumu } from "@/lib/supabase/types";
 import { toast } from "sonner";
 
-export function AppointmentCalendarView() {
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+interface AppointmentCalendarViewProps {
+  appointments: Randevu[];
+  isLoading: boolean;
+  selectedDate: Date;
+  onDateSelect: (date: Date) => void;
+}
+
+export function AppointmentCalendarView({ 
+  appointments, 
+  isLoading, 
+  selectedDate,
+  onDateSelect
+}: AppointmentCalendarViewProps) {
   const [loading, setLoading] = useState(false);
-  const [appointments, setAppointments] = useState<Randevu[]>([]);
   
-  const { refetch: fetchAppointments } = useQuery({
-    queryKey: ['appointments', selectedDate],
-    queryFn: () => randevuServisi.tariheGoreGetir(format(selectedDate, "yyyy-MM-dd")),
-    onSuccess: (data) => {
-      setAppointments(data || []);
-    },
-    refetchOnWindowFocus: false,
-    enabled: false
-  });
-  
-  const handleFetchAppointments = async (date: Date) => {
-    setSelectedDate(date);
-    await fetchAppointments();
-  };
+  // Filter appointments for the selected date
+  const appointmentsForDay = useMemo(() => {
+    return appointments.filter(appointment => {
+      const appointmentDate = new Date(appointment.tarih);
+      return isSameDay(appointmentDate, selectedDate);
+    });
+  }, [appointments, selectedDate]);
 
   const handleStatusChange = async (id: number, newStatus: RandevuDurumu) => {
     try {
       setLoading(true);
-      const result = await randevuServisi.durumGuncelle(id, newStatus);
-      
-      if (result) {
-        await handleFetchAppointments(selectedDate);
-        toast.success(`Randevu durumu güncellendi: ${getStatusText(newStatus)}`);
-      } else {
-        toast.error("Randevu durumu güncellenirken bir hata oluştu");
-      }
+      await randevuServisi.durumGuncelle(id, newStatus);
+      toast.success(`Randevu durumu güncellendi: ${getStatusText(newStatus)}`);
     } catch (error) {
       console.error("Error updating appointment status:", error);
       toast.error("Randevu durumu güncellenirken bir hata oluştu");
@@ -49,7 +46,7 @@ export function AppointmentCalendarView() {
   };
 
   const handleCancelAppointment = (id: number) => {
-    handleStatusChange(id, "iptal");
+    handleStatusChange(id, "iptal" as RandevuDurumu);
   };
 
   const getStatusText = (status: RandevuDurumu): string => {
@@ -70,20 +67,16 @@ export function AppointmentCalendarView() {
   };
 
   const goToPreviousMonth = () => {
-    setSelectedDate(subMonths(selectedDate, 1));
+    onDateSelect(subMonths(selectedDate, 1));
   };
 
   const goToNextMonth = () => {
-    setSelectedDate(addMonths(selectedDate, 1));
+    onDateSelect(addMonths(selectedDate, 1));
   };
-
-  useEffect(() => {
-    handleFetchAppointments(selectedDate);
-  }, []);
 
   const appointmentsByHour = useMemo(() => {
     // Group appointments by hour
-    return appointments.reduce((acc, appointment) => {
+    return appointmentsForDay.reduce((acc, appointment) => {
       const hour = appointment.saat.substring(0, 2);
       
       if (!acc[hour]) {
@@ -93,7 +86,7 @@ export function AppointmentCalendarView() {
       acc[hour].push(appointment);
       return acc;
     }, {} as Record<string, Randevu[]>);
-  }, [appointments]);
+  }, [appointmentsForDay]);
 
   const renderStatusBadge = (status: RandevuDurumu) => {
     let badgeColor = "bg-gray-100 text-gray-800 border-gray-200";
@@ -142,7 +135,7 @@ export function AppointmentCalendarView() {
       <Calendar
         mode="single"
         selected={selectedDate}
-        onSelect={handleFetchAppointments}
+        onSelect={(date) => date && onDateSelect(date)}
         initialFocus
         locale={tr}
         className="rounded-md border"
@@ -169,7 +162,7 @@ export function AppointmentCalendarView() {
                                   {appointment.musteri?.first_name}{' '}
                                   {appointment.musteri?.last_name || ''}
                                 </span>
-                                {renderStatusBadge(appointment.durum)}
+                                {renderStatusBadge(appointment.durum as RandevuDurumu)}
                               </div>
                               <div className="text-sm text-gray-500">
                                 {appointment.saat.substring(0, 5)}
@@ -185,7 +178,7 @@ export function AppointmentCalendarView() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => handleStatusChange(appointment.id, "tamamlandi")}
+                                  onClick={() => handleStatusChange(appointment.id, "tamamlandi" as RandevuDurumu)}
                                   disabled={loading}
                                 >
                                   Tamamlandı
