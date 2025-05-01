@@ -20,3 +20,6 @@ export function CustomerServices() {
     </div>
   );
 }
+
+// Also add default export for compatibility
+export default CustomerServices;

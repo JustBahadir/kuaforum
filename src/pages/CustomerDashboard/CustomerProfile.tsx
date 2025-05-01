@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,26 +12,135 @@ import { supabase } from '@/lib/supabase/client';
 
 export default function CustomerProfile() {
   const { userId } = useCustomerAuth();
-  const { profileData, loading, updateProfile, uploadAvatar } = useProfileManagement(userId);
+  const { dukkanId, dukkanAdi, refreshProfile, resetProfile } = useProfileManagement(userId || '', null, () => {});
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState('personal');
+  const [loading, setLoading] = useState(false);
+  const [profileData, setProfileData] = useState<any>(null);
 
-  if (loading) {
-    return <div className="flex justify-center items-center h-96">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
-    </div>;
-  }
+  // Load profile data when the component mounts
+  React.useEffect(() => {
+    const fetchProfileData = async () => {
+      setLoading(true);
+      try {
+        // Fetch profile data here
+        const { data: user } = await supabase.auth.getUser();
+        if (user) {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.user.id)
+            .single();
+            
+          if (error) throw error;
+          setProfileData({
+            firstName: data?.first_name || "",
+            lastName: data?.last_name || "",
+            email: user.user.email || "",
+            phone: data?.phone || "",
+            gender: data?.gender || null,
+            birthdate: data?.birthdate || "",
+            avatarUrl: data?.avatar_url || "",
+            address: data?.address || "",
+            role: data?.role || ""
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching profile:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchProfileData();
+  }, []);
 
   const handleSaveProfile = async (formData: any) => {
-    await updateProfile(formData);
-    setIsEditing(false);
+    try {
+      setLoading(true);
+      // Update profile logic here
+      const { data: user } = await supabase.auth.getUser();
+      if (user) {
+        const { error } = await supabase
+          .from('profiles')
+          .update({
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+            phone: formData.phone,
+            gender: formData.gender,
+            birthdate: formData.birthdate,
+            address: formData.address
+          })
+          .eq('id', user.user.id);
+          
+        if (error) throw error;
+        
+        // Refresh profile data
+        setProfileData({
+          ...profileData,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          phone: formData.phone,
+          gender: formData.gender,
+          birthdate: formData.birthdate,
+          address: formData.address
+        });
+      }
+    } catch (error) {
+      console.error("Error updating profile:", error);
+    } finally {
+      setLoading(false);
+      setIsEditing(false);
+    }
   };
 
   // Wrapper function to handle File upload
   const handleAvatarUpload = async (file: File): Promise<void> => {
-    await uploadAvatar(file);
-    return;
+    try {
+      setLoading(true);
+      const { data: user } = await supabase.auth.getUser();
+      if (!user) throw new Error("No authenticated user");
+      
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.user.id}-avatar.${fileExt}`;
+      
+      // Upload to Storage
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file, { upsert: true });
+        
+      if (uploadError) throw uploadError;
+      
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileName);
+        
+      // Update profile with URL
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: urlData.publicUrl })
+        .eq('id', user.user.id);
+        
+      if (updateError) throw updateError;
+      
+      // Update local state
+      setProfileData({
+        ...profileData,
+        avatarUrl: urlData.publicUrl
+      });
+    } catch (error) {
+      console.error("Error uploading avatar:", error);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  if (loading && !profileData) {
+    return <div className="flex justify-center items-center h-96">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+    </div>;
+  }
 
   // Format profile data to match expected props
   const formattedProfile = {
