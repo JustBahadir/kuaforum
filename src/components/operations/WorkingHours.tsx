@@ -1,136 +1,186 @@
 
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { ClockIcon } from "lucide-react";
+import { useWorkingHours } from "../operations/hooks/useWorkingHours";
+import { useWorkingHoursMutation } from "../operations/hooks/useWorkingHoursMutation";
 import { toast } from "sonner";
-import { CalismaSaati } from "@/lib/supabase/types";
-import { useWorkingHours } from "./hooks/useWorkingHours";
-import { WorkingHoursTable } from "./working-hours/WorkingHoursTable";
-import { WorkingHoursActions } from "./working-hours/WorkingHoursActions";
-import { WorkingHoursLoadingState } from "./working-hours/WorkingHoursLoadingState";
-import { WorkingHoursErrorState } from "./working-hours/WorkingHoursErrorState";
 
 interface WorkingHoursProps {
-  isStaff?: boolean;
   dukkanId?: number;
+  isStaff?: boolean;
 }
 
-export function WorkingHours({ isStaff = true, dukkanId }: WorkingHoursProps) {
-  const [editingMode, setEditingMode] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+export function WorkingHours({ dukkanId, isStaff = false }: WorkingHoursProps) {
+  // Local state for managing working hours
+  const [localHours, setLocalHours] = useState<any[]>([]);
+  const [hasChanges, setHasChanges] = useState(false);
 
-  const {
-    hours,
-    updateDay,
-    saveHours,
-    resetHours,
-    isLoading,
-    error,
-    isError,
-    hasChanges,
-    refetch
-  } = useWorkingHours({ 
+  // Fetch working hours data
+  const { workingHours, isLoading, error, refetch } = useWorkingHours(dukkanId);
+  
+  // Mutation for saving hours
+  const { saveHours, isLoading: isSaving } = useWorkingHoursMutation({
     dukkanId: dukkanId || 0,
-    onMutationSuccess: () => setEditingMode(false)
+    onMutationSuccess: () => {
+      toast.success("Çalışma saatleri başarıyla kaydedildi");
+      refetch();
+      setHasChanges(false);
+    }
   });
-
-  const handleEdit = () => {
-    setEditingMode(true);
-  };
-
-  const handleCancel = () => {
-    resetHours();
-    setEditingMode(false);
-  };
-
-  const handleSave = async () => {
-    try {
-      setIsSaving(true);
-      
-      // Validate times
-      for (const saat of hours) {
-        if (!saat.kapali) {
-          if (!saat.acilis || !saat.kapanis) {
-            toast.error("Açık günler için açılış ve kapanış saatleri gereklidir");
-            setIsSaving(false);
-            return;
-          }
-          
-          // Parse times and check if opening is before closing
-          const acilis = saat.acilis.split(':').map(Number);
-          const kapanis = saat.kapanis.split(':').map(Number);
-          
-          const acilisDakika = acilis[0] * 60 + acilis[1];
-          const kapanisDakika = kapanis[0] * 60 + kapanis[1];
-          
-          if (acilisDakika >= kapanisDakika) {
-            toast.error(`${saat.gun} için açılış saati kapanış saatinden önce olmalıdır`);
-            setIsSaving(false);
-            return;
-          }
-        }
-      }
-      
-      await saveHours();
-      toast.success("Çalışma saatleri başarıyla güncellendi");
-    } catch (error) {
-      console.error("Error saving working hours:", error);
-      toast.error("Güncelleme sırasında bir hata oluştu");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleTimeChange = (index: number, field: "acilis" | "kapanis", value: string) => {
-    updateDay(index, { [field]: value });
-  };
-
-  const handleStatusChange = (index: number, value: boolean) => {
-    const updates: Partial<CalismaSaati> = { kapali: value };
-    
-    // Clear times if closed
-    if (value) {
-      updates.acilis = null;
-      updates.kapanis = null;
+  
+  // Initialize local hours when workingHours loads
+  useEffect(() => {
+    if (workingHours && workingHours.length > 0) {
+      setLocalHours([...workingHours]);
     } else {
-      // Set default times if opening
-      updates.acilis = "09:00";
-      updates.kapanis = "19:00";
+      // Default hours if none exist
+      setLocalHours([
+        { gun: "Pazartesi", gun_sira: 1, kapali: false, acilis: "09:00", kapanis: "18:00" },
+        { gun: "Salı", gun_sira: 2, kapali: false, acilis: "09:00", kapanis: "18:00" },
+        { gun: "Çarşamba", gun_sira: 3, kapali: false, acilis: "09:00", kapanis: "18:00" },
+        { gun: "Perşembe", gun_sira: 4, kapali: false, acilis: "09:00", kapanis: "18:00" },
+        { gun: "Cuma", gun_sira: 5, kapali: false, acilis: "09:00", kapanis: "18:00" },
+        { gun: "Cumartesi", gun_sira: 6, kapali: false, acilis: "09:00", kapanis: "17:00" },
+        { gun: "Pazar", gun_sira: 7, kapali: true, acilis: "09:00", kapanis: "17:00" }
+      ]);
     }
-    
-    updateDay(index, updates);
+  }, [workingHours]);
+  
+  // Update a specific day's hours
+  const updateDay = (index: number, field: 'acilis' | 'kapanis' | 'kapali', value: string | boolean) => {
+    const newHours = [...localHours];
+    newHours[index] = {
+      ...newHours[index],
+      [field]: value
+    };
+    setLocalHours(newHours);
+    setHasChanges(true);
   };
-
-  if (isLoading) {
-    return <WorkingHoursLoadingState />;
+  
+  // Handle save
+  const handleSave = async () => {
+    await saveHours(localHours);
+  };
+  
+  // Reset hours to last saved state
+  const resetHours = () => {
+    if (workingHours && workingHours.length > 0) {
+      setLocalHours([...workingHours]);
+    }
+    setHasChanges(false);
+  };
+  
+  // Generate hour options (6:00 to 23:30 in 30-minute increments)
+  const hourOptions = [];
+  for (let hour = 6; hour < 24; hour++) {
+    for (let minute of [0, 30]) {
+      hourOptions.push(
+        `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`
+      );
+    }
   }
 
-  if (isError) {
-    return <WorkingHoursErrorState onRetry={refetch} />;
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-4 text-center">
+        <p className="text-destructive">Çalışma saatleri yüklenirken bir hata oluştu.</p>
+        <Button onClick={() => refetch()} className="mt-2">Tekrar Dene</Button>
+      </div>
+    );
   }
 
   return (
-    <Card className="w-full">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Çalışma Saatleri</CardTitle>
-        <div className="flex space-x-2">
-          <WorkingHoursActions
-            editingMode={editingMode}
-            onEdit={handleEdit}
-            onCancel={handleCancel}
-            onSave={handleSave}
-            isSaving={isSaving}
-            hasChanges={hasChanges()}
-          />
-        </div>
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center">
+          <ClockIcon className="h-5 w-5 mr-2" /> Çalışma Saatleri
+        </CardTitle>
       </CardHeader>
       <CardContent>
-        <WorkingHoursTable
-          hours={hours}
-          editingMode={editingMode}
-          onTimeChange={handleTimeChange}
-          onStatusChange={handleStatusChange}
-        />
+        <div className="space-y-4">
+          {localHours.map((day, index) => (
+            <div key={day.gun} className="flex items-center space-x-4 p-2 hover:bg-muted/50 rounded-md">
+              <div className="w-32">
+                <p className="font-medium">{day.gun}</p>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Switch 
+                  checked={!day.kapali} 
+                  onCheckedChange={(checked) => updateDay(index, 'kapali', !checked)}
+                />
+                <Label>Açık</Label>
+              </div>
+              {!day.kapali && (
+                <>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label className="text-xs mb-1 block">Açılış</Label>
+                      <Select
+                        value={day.acilis || "09:00"}
+                        onValueChange={(value) => updateDay(index, 'acilis', value)}
+                      >
+                        <SelectTrigger className="h-8">
+                          <SelectValue placeholder="Açılış saati" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {hourOptions.map(time => (
+                            <SelectItem key={`open-${day.gun}-${time}`} value={time}>
+                              {time}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-xs mb-1 block">Kapanış</Label>
+                      <Select
+                        value={day.kapanis || "18:00"}
+                        onValueChange={(value) => updateDay(index, 'kapanis', value)}
+                      >
+                        <SelectTrigger className="h-8">
+                          <SelectValue placeholder="Kapanış saati" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {hourOptions.map(time => (
+                            <SelectItem key={`close-${day.gun}-${time}`} value={time}>
+                              {time}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          ))}
+        </div>
       </CardContent>
+      {(hasChanges || isStaff) && (
+        <CardFooter className="flex justify-end space-x-2 border-t p-4">
+          {hasChanges && (
+            <Button variant="outline" onClick={resetHours} disabled={isSaving}>
+              Değişiklikleri İptal Et
+            </Button>
+          )}
+          <Button onClick={handleSave} disabled={!hasChanges || isSaving}>
+            {isSaving ? "Kaydediliyor..." : "Değişiklikleri Kaydet"}
+          </Button>
+        </CardFooter>
+      )}
     </Card>
   );
 }

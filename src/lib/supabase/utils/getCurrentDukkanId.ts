@@ -11,7 +11,7 @@ export const getCurrentDukkanId = async (): Promise<number | null> => {
       return null;
     }
     
-    console.log("User found, getting dukkan ID");
+    console.log("User found:", user.id);
     
     // First, check user metadata
     if (user.user_metadata?.dukkan_id) {

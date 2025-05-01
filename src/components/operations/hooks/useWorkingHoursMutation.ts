@@ -1,80 +1,59 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
-import { calismaSaatleriServisi } from "@/lib/supabase";
-import { CalismaSaati } from "@/lib/supabase/types";
 
-export interface UpdateWorkingHour {
-  id: number;
-  gun: string;
-  acilis_saati: string;
-  kapanis_saati: string;
-  dukkan_id: number;
+import { useState } from 'react';
+import { toast } from 'sonner';
+import { calismaSaatleriServisi } from '@/lib/supabase';
+import { CalismaSaati } from '@/lib/supabase/types';
+
+interface UseWorkingHoursMutationProps {
+  dukkanId: number;
+  onMutationSuccess?: () => void;
 }
 
-export const useWorkingHoursMutation = () => {
-  const queryClient = useQueryClient();
+export const useWorkingHoursMutation = ({ dukkanId, onMutationSuccess }: UseWorkingHoursMutationProps) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const createWorkingHour = useMutation({
-    mutationFn: async (newWorkingHour: Omit<CalismaSaati, "id">) => {
-      return calismaSaatleriServisi.ekle(newWorkingHour);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["working-hours"] });
-      toast.success("Çalışma saati başarıyla oluşturuldu");
-    },
-    onError: (error: any) => {
-      toast.error(
-        `Çalışma saati oluşturulurken bir hata oluştu: ${
-          error.message || "Bilinmeyen hata"
-        }`
-      );
-    },
-  });
+  const saveHours = async (hours: Partial<CalismaSaati>[]) => {
+    try {
+      setIsLoading(true);
+      setError(null);
 
-  const deleteWorkingHour = useMutation({
-    mutationFn: async (id: number) => {
-      return calismaSaatleriServisi.sil(id);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["working-hours"] });
-      toast.success("Çalışma saati başarıyla silindi");
-    },
-    onError: (error: any) => {
-      toast.error(
-        `Çalışma saati silinirken bir hata oluştu: ${
-          error.message || "Bilinmeyen hata"
-        }`
-      );
-    },
-  });
+      // Prepare hours with dukkan_id
+      const preparedHours = hours.map(hour => ({
+        ...hour,
+        dukkan_id: dukkanId
+      }));
 
-  const updateSingleWorkingHour = useMutation({
-    mutationFn: async ({
-      id,
-      updates,
-    }: {
-      id: number;
-      updates: Partial<CalismaSaati>;
-    }) => {
-      // Use guncelle instead of tekGuncelle since that's the available method
-      return calismaSaatleriServisi.guncelle([{ ...updates, id }]);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["working-hours"] });
-      toast.success("Çalışma saati başarıyla güncellendi");
-    },
-    onError: (error: any) => {
-      toast.error(
-        `Çalışma saati güncellenirken bir hata oluştu: ${
-          error.message || "Bilinmeyen hata"
-        }`
-      );
-    },
-  });
+      // Check if any hours have existing IDs
+      const existingHours = preparedHours.filter(hour => hour.id);
+      const newHours = preparedHours.filter(hour => !hour.id);
+
+      // Update existing hours
+      if (existingHours.length > 0) {
+        await calismaSaatleriServisi.guncelle(existingHours as CalismaSaati[]);
+      }
+
+      // Create new hours
+      if (newHours.length > 0) {
+        await calismaSaatleriServisi.dukkanSaatleriKaydet(newHours);
+      }
+
+      if (onMutationSuccess) {
+        onMutationSuccess();
+      }
+    } catch (err: any) {
+      console.error('Error saving working hours:', err);
+      setError(err.message || 'Çalışma saatleri kaydedilirken bir hata oluştu');
+      toast.error(err.message || 'Çalışma saatleri kaydedilirken bir hata oluştu');
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return {
-    createWorkingHour,
-    deleteWorkingHour,
-    updateSingleWorkingHour,
+    saveHours,
+    isLoading,
+    error
   };
 };

@@ -1,38 +1,38 @@
 
 import { supabase } from '../client';
-import { KategoriDto } from '../types';
 import { getCurrentDukkanId } from '../utils/getCurrentDukkanId';
 
 export const kategoriServisi = {
-  getCurrentDukkanId,
+  async getCurrentDukkanId() {
+    return getCurrentDukkanId();
+  },
   
-  hepsiniGetir: async (dukkanId?: number) => {
+  async hepsiniGetir(dukkanId?: number) {
     try {
-      console.log("kategoriServisi.hepsiniGetir called with dukkanId:", dukkanId);
+      let dId = dukkanId;
       
-      let id = dukkanId;
-      if (!id) {
-        id = await getCurrentDukkanId();
-        console.log("Fetched current dukkanId:", id);
+      // Get current dukkan ID if not provided
+      if (!dId) {
+        dId = await this.getCurrentDukkanId();
+        if (!dId) {
+          console.error('getCurrentDukkanId returned null');
+          throw new Error('İşletme bilgisi bulunamadı');
+        }
       }
       
-      if (!id) {
-        console.error("No dukkan ID available");
-        throw new Error('İşletme bilgisi bulunamadı');
-      }
-      
+      console.log('Getting categories for dukkanId:', dId);
+
       const { data, error } = await supabase
         .from('islem_kategorileri')
         .select('*')
-        .eq('dukkan_id', id)
-        .order('sira');
+        .order('sira', { ascending: true });
 
       if (error) {
-        console.error("Error fetching categories:", error);
+        console.error('Error fetching categories:', error);
         throw error;
       }
       
-      console.log(`Found ${data?.length || 0} categories`);
+      console.log('Categories fetched:', data ? data.length : 0);
       return data || [];
     } catch (error) {
       console.error('Kategori listesi getirme hatası:', error);
@@ -40,7 +40,7 @@ export const kategoriServisi = {
     }
   },
 
-  getir: async (id: number) => {
+  async getir(id: number) {
     try {
       const { data, error } = await supabase
         .from('islem_kategorileri')
@@ -56,31 +56,14 @@ export const kategoriServisi = {
     }
   },
 
-  ekle: async (kategoriData: Partial<KategoriDto>) => {
+  async ekle(kategori: any) {
     try {
-      console.log("Adding category with data:", kategoriData);
-      
-      // Make sure we have a dukkan_id
-      if (!kategoriData.dukkan_id) {
-        const dukkanId = await getCurrentDukkanId();
-        if (!dukkanId) {
-          console.error("No dukkan ID available for adding category");
-          throw new Error('İşletme bilgisi bulunamadı');
-        }
-        kategoriData.dukkan_id = dukkanId;
-      }
-      
       const { data, error } = await supabase
         .from('islem_kategorileri')
-        .insert([kategoriData])
+        .insert([kategori])
         .select();
 
-      if (error) {
-        console.error("Error adding category:", error);
-        throw error;
-      }
-      
-      console.log("Category added:", data[0]);
+      if (error) throw error;
       return data[0];
     } catch (error) {
       console.error('Kategori ekleme hatası:', error);
@@ -88,11 +71,11 @@ export const kategoriServisi = {
     }
   },
 
-  guncelle: async (id: number, updates: Partial<KategoriDto>) => {
+  async guncelle(id: number, kategori: any) {
     try {
       const { data, error } = await supabase
         .from('islem_kategorileri')
-        .update(updates)
+        .update(kategori)
         .eq('id', id)
         .select();
 
@@ -104,7 +87,7 @@ export const kategoriServisi = {
     }
   },
 
-  sil: async (id: number) => {
+  async sil(id: number) {
     try {
       const { error } = await supabase
         .from('islem_kategorileri')
@@ -115,25 +98,6 @@ export const kategoriServisi = {
       return true;
     } catch (error) {
       console.error('Kategori silme hatası:', error);
-      throw error;
-    }
-  },
-
-  sirayiGuncelle: async (items: { id: number; sira: number }[]) => {
-    try {
-      // Update each item in sequence to avoid race conditions
-      for (const item of items) {
-        const { error } = await supabase
-          .from('islem_kategorileri')
-          .update({ sira: item.sira })
-          .eq('id', item.id);
-
-        if (error) throw error;
-      }
-
-      return true;
-    } catch (error) {
-      console.error('Kategori sıralaması güncelleme hatası:', error);
       throw error;
     }
   }

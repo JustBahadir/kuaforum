@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Form,
   FormControl,
@@ -21,7 +20,6 @@ import {
   kategoriServisi, 
   islemServisi 
 } from "@/lib/supabase";
-import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import {
   Select,
   SelectContent,
@@ -38,6 +36,7 @@ import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { RandevuDurumu } from "@/lib/supabase/types";
 
 interface NewAppointmentDialogProps {
   open: boolean;
@@ -63,9 +62,29 @@ export function NewAppointmentDialog({
   onOpenChange,
   onSuccess 
 }: NewAppointmentDialogProps) {
-  const { dukkanId } = useCustomerAuth();
+  const { dukkanId } = getCurrentDukkanId();
   const [selectedKategoriId, setSelectedKategoriId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Helper function to get dukkan id for the component
+  async function getCurrentDukkanId() {
+    const [id, setId] = useState<number | null>(null);
+    
+    useEffect(() => {
+      const fetchDukkanId = async () => {
+        try {
+          const dukkanId = await randevuServisi.getCurrentDukkanId();
+          setId(dukkanId);
+        } catch (error) {
+          console.error("Error fetching dukkan ID:", error);
+        }
+      };
+      
+      fetchDukkanId();
+    }, []);
+    
+    return { dukkanId: id };
+  }
   
   const form = useForm<z.infer<typeof appointmentSchema>>({
     resolver: zodResolver(appointmentSchema),
@@ -142,7 +161,7 @@ export function NewAppointmentDialog({
         personel_id: parseInt(data.personnelId),
         tarih: format(data.date, "yyyy-MM-dd"),
         saat: data.time,
-        durum: "onaylandi" as RandevuDurumu,  // Type cast to RandevuDurumu
+        durum: "onaylandi" as RandevuDurumu,
         notlar: data.notes || "",
         islemler: JSON.stringify([parseInt(data.serviceId)]),
       };

@@ -2,56 +2,66 @@
 import { supabase } from '../client';
 
 export const notificationServisi = {
-  async getUnread() {
+  async getUserNotifications(userId: string) {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Kullanıcı bulunamadı');
-
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
-        .eq('user_id', user.id)
-        .eq('read', false)
+        .eq('user_id', userId)
         .order('created_at', { ascending: false });
-
+      
       if (error) throw error;
       return data || [];
     } catch (error) {
-      console.error('Bildirim getirme hatası:', error);
+      console.error('Error fetching notifications:', error);
       return [];
     }
   },
-
+  
   async markAsRead(notificationId: number) {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('notifications')
         .update({ read: true })
-        .eq('id', notificationId);
-
+        .eq('id', notificationId)
+        .select();
+      
       if (error) throw error;
-      return true;
+      return data;
     } catch (error) {
-      console.error('Bildirim güncelleme hatası:', error);
-      return false;
+      console.error('Error marking notification as read:', error);
+      return null;
     }
   },
-
-  async markAllAsRead() {
+  
+  async markAllAsRead(userId: string) {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Kullanıcı bulunamadı');
-
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('notifications')
         .update({ read: true })
-        .eq('user_id', user.id)
-        .eq('read', false);
-
+        .eq('user_id', userId)
+        .eq('read', false)
+        .select();
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+      return null;
+    }
+  },
+  
+  async deleteNotification(notificationId: number) {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('id', notificationId);
+      
       if (error) throw error;
       return true;
     } catch (error) {
-      console.error('Bildirimleri okundu işaretleme hatası:', error);
+      console.error('Error deleting notification:', error);
       return false;
     }
   }

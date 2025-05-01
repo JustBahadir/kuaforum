@@ -4,24 +4,25 @@ import { getCurrentDukkanId } from '../utils/getCurrentDukkanId';
 
 export const islemServisi = {
   async getCurrentDukkanId() {
-    return await getCurrentDukkanId();
+    return getCurrentDukkanId();
   },
 
   async hepsiniGetir(dukkanId?: number) {
     try {
-      const currentDukkanId = dukkanId || await this.getCurrentDukkanId();
-      if (!currentDukkanId) {
-        throw new Error('Dükkan bilgisi bulunamadı');
+      let dId = dukkanId;
+      if (!dId) {
+        dId = await this.getCurrentDukkanId();
       }
 
       const { data, error } = await supabase
         .from('islemler')
-        .select('*');
+        .select('*')
+        .order('sira', { ascending: true });
 
       if (error) throw error;
       return data || [];
     } catch (error) {
-      console.error('İşlemleri getirme hatası:', error);
+      console.error('İşlemler getirme hatası:', error);
       throw error;
     }
   },
@@ -44,84 +45,50 @@ export const islemServisi = {
 
   async kategoriIdyeGoreGetir(kategoriId: number, dukkanId?: number) {
     try {
+      let dId = dukkanId;
+      if (!dId) {
+        dId = await this.getCurrentDukkanId();
+      }
+
       const { data, error } = await supabase
         .from('islemler')
         .select('*')
-        .eq('kategori_id', kategoriId);
+        .eq('kategori_id', kategoriId)
+        .order('sira', { ascending: true });
 
       if (error) throw error;
       return data || [];
     } catch (error) {
-      console.error('Kategoriye göre işlemleri getirme hatası:', error);
-      return [];
+      console.error('Kategori işlemleri getirme hatası:', error);
+      throw error;
     }
   },
 
-  async musteriIslemleriniGetir(musteriId: number) {
-    try {
-      const { data, error } = await supabase
-        .from('personel_islemleri')
-        .select(`
-          *,
-          personel:personel_id(id, ad_soyad)
-        `)
-        .eq('musteri_id', musteriId)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error('Müşteri işlemleri getirme hatası:', error);
-      return [];
-    }
-  },
-
-  async personelIslemleriniGetir(personelId: number) {
-    try {
-      const { data, error } = await supabase
-        .from('personel_islemleri')
-        .select(`
-          *,
-          musteri:musteri_id(id, first_name, last_name)
-        `)
-        .eq('personel_id', personelId)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error('Personel işlemleri getirme hatası:', error);
-      return [];
-    }
-  },
-
-  async ekle(islemData: any) {
+  async ekle(islem: any) {
     try {
       const { data, error } = await supabase
         .from('islemler')
-        .insert(islemData)
-        .select()
-        .single();
+        .insert([islem])
+        .select();
 
       if (error) throw error;
-      return data;
+      return data[0];
     } catch (error) {
       console.error('İşlem ekleme hatası:', error);
       throw error;
     }
   },
 
-  async guncelle(id: number, updates: any) {
+  async guncelle(id: number, islem: any) {
     try {
       const { data, error } = await supabase
         .from('islemler')
-        .update(updates)
+        .update(islem)
         .eq('id', id)
-        .select()
-        .single();
+        .select();
 
       if (error) throw error;
-      return data;
+      return data[0];
     } catch (error) {
       console.error('İşlem güncelleme hatası:', error);
       throw error;
