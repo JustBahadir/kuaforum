@@ -8,33 +8,32 @@ import { AppointmentStatusFilter } from "@/components/appointments/AppointmentSt
 import { AppointmentCalendarView } from "@/components/appointments/AppointmentCalendarView";
 import { AppointmentWeekView } from "@/components/appointments/AppointmentWeekView";
 import { AppointmentDayView } from "@/components/appointments/AppointmentDayView";
-import { AppointmentsList } from "@/components/appointments/AppointmentsList";
 import { useAppointments } from "@/hooks/useAppointments";
 import { useAuth } from "@/hooks/useAuth";
-import { randevuServisi } from "@/lib/supabase/services/randevuServisi";
+import { randevuServisi } from "@/lib/supabase";
 import { useShopData } from "@/hooks/useShopData";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { PlusCircle } from "lucide-react";
+import { RandevuDurumu } from "@/lib/supabase/types";
+import { NewAppointmentDialog } from "@/components/appointments/NewAppointmentDialog";
 
 export default function Appointments() {
   // State for the view tab
-  const [currentView, setCurrentView] = useState<"day" | "week" | "month" | "list">("day");
+  const [currentView, setCurrentView] = useState<"day" | "week" | "month">("day");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [statusFilter, setStatusFilter] = useState<RandevuDurumu | 'all'>('all');
   const { user } = useAuth();
   const { isletmeData } = useShopData();
   const dukkanId = isletmeData?.id;
   const userRole = user?.user_metadata?.role || "customer";
   const isStaff = userRole === "staff" || userRole === "admin";
+  const [isNewAppointmentDialogOpen, setIsNewAppointmentDialogOpen] = useState(false);
   
-  // Get personel_id from user metadata for staff members
-  const currentPersonelId = user?.user_metadata?.personel_id 
-    ? Number(user.user_metadata.personel_id) 
-    : undefined;
-
-  // Get appointments with initial filters by status and date
+  // Get appointments with initial filters by date
   const { 
     appointments, 
     isLoading, 
-    isError, 
     refetch, 
     filters, 
     setFilters 
@@ -49,8 +48,9 @@ export default function Appointments() {
   };
 
   // Set appointment status filter
-  const handleStatusChange = (status: string | null) => {
-    setFilters(prev => ({ ...prev, status }));
+  const handleStatusChange = (status: RandevuDurumu | 'all') => {
+    setStatusFilter(status);
+    setFilters(prev => ({ ...prev, status: status === 'all' ? null : status }));
   };
 
   // Update appointment status
@@ -65,13 +65,29 @@ export default function Appointments() {
     }
   };
 
+  const handleNewAppointmentSuccess = () => {
+    refetch();
+    setIsNewAppointmentDialogOpen(false);
+    toast.success("Randevu başarıyla oluşturuldu");
+  };
+
   return (
     <StaffLayout>
       <div className="container p-4 mx-auto">
-        <h1 className="text-2xl font-bold mb-6">Randevular</h1>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+          <h1 className="text-2xl font-bold mb-2 md:mb-0">Randevular</h1>
+          {isStaff && (
+            <Button 
+              onClick={() => setIsNewAppointmentDialogOpen(true)}
+              className="flex items-center"
+            >
+              <PlusCircle className="mr-2 h-4 w-4" /> Yeni Randevu
+            </Button>
+          )}
+        </div>
         
-        <div className="grid gap-4 grid-cols-1 md:grid-cols-3 mb-6">
-          <Card className="md:col-span-2">
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-4 mb-6">
+          <Card className="md:col-span-3">
             <CardHeader className="pb-2">
               <CardTitle className="text-lg">Tarih Seçimi</CardTitle>
             </CardHeader>
@@ -85,23 +101,22 @@ export default function Appointments() {
           
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Durum Filtresi</CardTitle>
+              <CardTitle className="text-lg">Randevu Durumu</CardTitle>
             </CardHeader>
             <CardContent>
               <AppointmentStatusFilter 
-                selectedStatus={filters.status || null}
+                value={statusFilter}
                 onChange={handleStatusChange}
               />
             </CardContent>
           </Card>
         </div>
 
-        <Tabs value={currentView} onValueChange={(v) => setCurrentView(v as any)}>
-          <TabsList className="grid grid-cols-4 mb-4">
+        <Tabs value={currentView} onValueChange={(v) => setCurrentView(v as any)} className="space-y-4">
+          <TabsList>
             <TabsTrigger value="day">Günlük</TabsTrigger>
             <TabsTrigger value="week">Haftalık</TabsTrigger>
             <TabsTrigger value="month">Aylık</TabsTrigger>
-            <TabsTrigger value="list">Liste</TabsTrigger>
           </TabsList>
 
           <TabsContent value="day">
@@ -130,16 +145,14 @@ export default function Appointments() {
               onDateSelect={handleDateChange}
             />
           </TabsContent>
-
-          <TabsContent value="list">
-            <AppointmentsList 
-              appointments={appointments}
-              isLoading={isLoading}
-              onAppointmentStatusUpdate={updateAppointmentStatus}
-            />
-          </TabsContent>
         </Tabs>
       </div>
+
+      <NewAppointmentDialog
+        isOpen={isNewAppointmentDialogOpen}
+        onOpenChange={setIsNewAppointmentDialogOpen}
+        onSuccess={handleNewAppointmentSuccess}
+      />
     </StaffLayout>
   );
 }

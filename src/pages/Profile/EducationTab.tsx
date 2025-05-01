@@ -1,206 +1,140 @@
 
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Loader2 } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { LoadingButton } from "@/components/ui/loading-button";
 
-interface EducationTabProps {
-  educationData?: any;
-  updateEducation?: (data: any) => Promise<void>;
-  isLoading?: boolean;
+export interface EducationTabProps {
+  educationData: {
+    ortaokuldurumu: string;
+    liseturu: string;
+    lisedurumu: string;
+    universitedurumu: string;
+    universitebolum: string;
+    meslekibrans: string;
+  };
+  onEducationChange: (data: any) => void;
+  onSave: () => void;
+  isLoading: boolean;
 }
 
-export default function EducationTab({
-  educationData = {},
-  updateEducation = async () => {},
-  isLoading = false,
-}: EducationTabProps) {
-  const [formData, setFormData] = useState({
-    ortaokuldurumu: educationData.ortaokuldurumu || '',
-    lisedurumu: educationData.lisedurumu || '',
-    liseturu: educationData.liseturu || '',
-    universitedurumu: educationData.universitedurumu || '',
-    universitebolum: educationData.universitebolum || '',
-    meslekibrans: educationData.meslekibrans || '',
-  });
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+export default function EducationTab({ educationData, onEducationChange, onSave, isLoading }: EducationTabProps) {
+  const handleChange = (field: string, value: string) => {
+    onEducationChange({ ...educationData, [field]: value });
   };
-
-  const handleSelectChange = (name: string, value: string) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await updateEducation(formData);
-  };
-
-  const egitimDurumuOptions = [
-    { value: 'mezun', label: 'Mezun' },
-    { value: 'devam_ediyor', label: 'Devam Ediyor' },
-    { value: 'tamamlanmadi', label: 'Tamamlanmadı' },
-  ];
-
-  const liseTuruOptions = [
-    { value: 'genel_lise', label: 'Genel Lise' },
-    { value: 'meslek_lisesi', label: 'Meslek Lisesi' },
-    { value: 'anadolu_lisesi', label: 'Anadolu Lisesi' },
-    { value: 'fen_lisesi', label: 'Fen Lisesi' },
-    { value: 'diger', label: 'Diğer' },
-  ];
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div>
-        <h3 className="text-lg font-medium">Temel Eğitim</h3>
-        <Separator className="my-2" />
-        
-        <div className="space-y-4 mt-4">
-          <div className="space-y-2">
-            <Label htmlFor="ortaokuldurumu">Ortaokul Durumu</Label>
-            <Select 
-              value={formData.ortaokuldurumu} 
-              onValueChange={(value) => handleSelectChange('ortaokuldurumu', value)}
-              disabled={isLoading}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Ortaokul eğitim durumunuzu seçin" />
-              </SelectTrigger>
-              <SelectContent>
-                {egitimDurumuOptions.map(option => (
-                  <SelectItem key={`ortaokul-${option.value}`} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="lisedurumu">Lise Durumu</Label>
-            <Select 
-              value={formData.lisedurumu} 
-              onValueChange={(value) => handleSelectChange('lisedurumu', value)}
-              disabled={isLoading}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Lise eğitim durumunuzu seçin" />
-              </SelectTrigger>
-              <SelectContent>
-                {egitimDurumuOptions.map(option => (
-                  <SelectItem key={`lise-${option.value}`} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {formData.lisedurumu && formData.lisedurumu !== 'tamamlanmadi' && (
+    <Card>
+      <CardHeader>
+        <CardTitle>Eğitim Bilgileri</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="liseturu">Lise Türü</Label>
-              <Select 
-                value={formData.liseturu} 
-                onValueChange={(value) => handleSelectChange('liseturu', value)}
-                disabled={isLoading}
+              <Label htmlFor="ortaokuldurumu">Ortaokul Durumu</Label>
+              <Select
+                value={educationData?.ortaokuldurumu || ""}
+                onValueChange={(value) => handleChange("ortaokuldurumu", value)}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Lise türünü seçin" />
+                <SelectTrigger id="ortaokuldurumu">
+                  <SelectValue placeholder="Seçim yapınız" />
                 </SelectTrigger>
                 <SelectContent>
-                  {liseTuruOptions.map(option => (
-                    <SelectItem key={`liseturu-${option.value}`} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="mezun">Mezun</SelectItem>
+                  <SelectItem value="devamediyor">Devam Ediyor</SelectItem>
+                  <SelectItem value="terketmis">Terk Etmiş</SelectItem>
+                  <SelectItem value="yok">Eğitim Yok</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-          )}
-        </div>
-      </div>
 
-      <div>
-        <h3 className="text-lg font-medium">Yüksek Öğrenim</h3>
-        <Separator className="my-2" />
-        
-        <div className="space-y-4 mt-4">
-          <div className="space-y-2">
-            <Label htmlFor="universitedurumu">Üniversite Durumu</Label>
-            <Select 
-              value={formData.universitedurumu} 
-              onValueChange={(value) => handleSelectChange('universitedurumu', value)}
-              disabled={isLoading}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Üniversite eğitim durumunuzu seçin" />
-              </SelectTrigger>
-              <SelectContent>
-                {egitimDurumuOptions.map(option => (
-                  <SelectItem key={`universite-${option.value}`} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-                <SelectItem value="yok">Üniversite Eğitimim Yok</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {formData.universitedurumu && formData.universitedurumu !== 'yok' && formData.universitedurumu !== 'tamamlanmadi' && (
             <div className="space-y-2">
-              <Label htmlFor="universitebolum">Üniversite Bölümü</Label>
+              <Label htmlFor="liseturu">Lise Türü</Label>
+              <Select
+                value={educationData?.liseturu || ""}
+                onValueChange={(value) => handleChange("liseturu", value)}
+              >
+                <SelectTrigger id="liseturu">
+                  <SelectValue placeholder="Seçim yapınız" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="duz">Düz Lise</SelectItem>
+                  <SelectItem value="anadolu">Anadolu Lisesi</SelectItem>
+                  <SelectItem value="meslek">Meslek Lisesi</SelectItem>
+                  <SelectItem value="fen">Fen Lisesi</SelectItem>
+                  <SelectItem value="sosyal">Sosyal Bilimler Lisesi</SelectItem>
+                  <SelectItem value="diger">Diğer</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="lisedurumu">Lise Durumu</Label>
+              <Select
+                value={educationData?.lisedurumu || ""}
+                onValueChange={(value) => handleChange("lisedurumu", value)}
+              >
+                <SelectTrigger id="lisedurumu">
+                  <SelectValue placeholder="Seçim yapınız" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="mezun">Mezun</SelectItem>
+                  <SelectItem value="devamediyor">Devam Ediyor</SelectItem>
+                  <SelectItem value="terketmis">Terk Etmiş</SelectItem>
+                  <SelectItem value="yok">Eğitim Yok</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="universitedurumu">Üniversite Durumu</Label>
+              <Select
+                value={educationData?.universitedurumu || ""}
+                onValueChange={(value) => handleChange("universitedurumu", value)}
+              >
+                <SelectTrigger id="universitedurumu">
+                  <SelectValue placeholder="Seçim yapınız" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="mezun">Mezun</SelectItem>
+                  <SelectItem value="devamediyor">Devam Ediyor</SelectItem>
+                  <SelectItem value="terketmis">Terk Etmiş</SelectItem>
+                  <SelectItem value="yok">Eğitim Yok</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="universitebolum">Üniversite Bölüm</Label>
               <Input
                 id="universitebolum"
-                name="universitebolum"
-                value={formData.universitebolum}
-                onChange={handleChange}
-                placeholder="Üniversite bölümünüzü yazınız"
-                disabled={isLoading}
+                placeholder="Üniversite bölümünüz"
+                value={educationData?.universitebolum || ""}
+                onChange={(e) => handleChange("universitebolum", e.target.value)}
               />
             </div>
-          )}
-        </div>
-      </div>
 
-      <div>
-        <h3 className="text-lg font-medium">Mesleki Bilgiler</h3>
-        <Separator className="my-2" />
-        
-        <div className="space-y-4 mt-4">
-          <div className="space-y-2">
-            <Label htmlFor="meslekibrans">Mesleki Branş</Label>
-            <Textarea
-              id="meslekibrans"
-              name="meslekibrans"
-              value={formData.meslekibrans}
-              onChange={handleChange}
-              placeholder="Uzmanlık alanlarınızı yazınız"
-              disabled={isLoading}
-              rows={3}
-            />
+            <div className="space-y-2">
+              <Label htmlFor="meslekibrans">Mesleki Branş</Label>
+              <Input
+                id="meslekibrans"
+                placeholder="Mesleki branşınız"
+                value={educationData?.meslekibrans || ""}
+                onChange={(e) => handleChange("meslekibrans", e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end mt-4">
+            <LoadingButton onClick={onSave} isLoading={isLoading}>
+              Kaydet
+            </LoadingButton>
           </div>
         </div>
-      </div>
-
-      <div className="flex justify-end">
-        <Button type="submit" disabled={isLoading}>
-          {isLoading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Kaydediliyor
-            </>
-          ) : (
-            'Bilgileri Kaydet'
-          )}
-        </Button>
-      </div>
-    </form>
+      </CardContent>
+    </Card>
   );
 }

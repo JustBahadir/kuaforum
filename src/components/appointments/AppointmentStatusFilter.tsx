@@ -28,7 +28,7 @@ export function AppointmentStatusFilter({
           <CheckCircle className="h-4 w-4 mr-2" />
           Tamamlandı
         </ToggleGroupItem>
-        <ToggleGroupItem value="iptal_edildi" aria-label="İptal Edildi" className="bg-red-50 data-[state=on]:bg-red-200">
+        <ToggleGroupItem value="iptal" aria-label="İptal Edildi" className="bg-red-50 data-[state=on]:bg-red-200">
           <XCircle className="h-4 w-4 mr-2" />
           İptal
         </ToggleGroupItem>

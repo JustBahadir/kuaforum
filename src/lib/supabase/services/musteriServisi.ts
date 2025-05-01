@@ -1,111 +1,41 @@
 
 import { supabase } from '../client';
-import { Musteri } from '../types';
-
-// Define CustomerData interface for type safety
-interface CustomerData {
-  first_name: string;
-  last_name: string | null;
-  phone: string | null;
-  birthdate: string | null;
-  dukkan_id: number | null;
-  email?: string | null;
-  address?: string | null;
-  gender?: string | null;
-  notes?: string | null;
-}
 
 export const musteriServisi = {
-  // Get current user's dukkan ID - renamed to be consistent with randevuServisi
-  getCurrentUserDukkanId: async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Kullanıcı bulunamadı');
-      
-      // Check if user is admin
-      const role = user.user_metadata?.role;
-      
-      if (role === 'admin') {
-        // Admin user - get dukkan by user_id
-        const { data, error } = await supabase
-          .from('dukkanlar')
-          .select('id')
-          .eq('sahibi_id', user.id)
-          .single();
-          
-        if (error) throw error;
-        return data?.id;
-      } else if (role === 'staff') {
-        // Staff user - get dukkan through personeller
-        const { data, error } = await supabase
-          .from('personel')
-          .select('dukkan_id')
-          .eq('auth_id', user.id)
-          .single();
-          
-        if (error) throw error;
-        return data?.dukkan_id;
-      }
-      
-      // Try to get from profiles as last resort
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('dukkan_id')
-        .eq('id', user.id)
-        .single();
-        
-      if (error) throw error;
-      return data?.dukkan_id;
-    } catch (error) {
-      console.error('Dükkan ID getirme hatası:', error);
-      return null;
-    }
-  },
-
-  hepsiniGetir: async (dukkanId?: number, searchText?: string) => {
+  async hepsiniGetir(dukkanId?: number) {
     try {
       // If dukkanId is not provided, get it from current user
-      const shopId = dukkanId || await musteriServisi.getCurrentUserDukkanId();
-
+      let shopId = dukkanId;
       if (!shopId) {
-        throw new Error("Dükkan bilgisine erişilemedi");
+        shopId = await this.getCurrentUserDukkanId();
       }
-
-      console.log(`Fetching customers for dukkan_id: ${shopId}, search: ${searchText || 'none'}`);
-
-      let query = supabase
+      
+      if (!shopId) {
+        throw new Error('Dükkan bilgisi bulunamadı');
+      }
+      
+      const { data, error } = await supabase
         .from('musteriler')
         .select('*')
         .eq('dukkan_id', shopId)
-        .order('first_name');
+        .order('first_name', { ascending: true });
         
-      if (searchText) {
-        query = query.or(`first_name.ilike.%${searchText}%,last_name.ilike.%${searchText}%,phone.ilike.%${searchText}%`);
-      }
-
-      const { data, error } = await query;
-
-      if (error) {
-        console.error('Error fetching customers:', error);
-        throw error;
-      }
-      
-      console.log(`Retrieved ${data?.length || 0} customers`);
+      if (error) throw error;
       return data || [];
     } catch (error) {
       console.error('Müşteri listesi getirme hatası:', error);
       throw error;
     }
   },
-
-  getir: async (id: number): Promise<Musteri> => {
+  
+  async getir(id: number) {
     try {
       const { data, error } = await supabase
         .from('musteriler')
         .select('*')
         .eq('id', id)
         .single();
-
+        
       if (error) throw error;
       return data;
     } catch (error) {
@@ -114,50 +44,37 @@ export const musteriServisi = {
     }
   },
   
-  // Method renamed to getirById for compatibility
-  getirById: async (id: number) => {
-    return musteriServisi.getir(id);
-  },
-
-  ekle: async (customer: CustomerData): Promise<Musteri> => {
+  async ekle(musteri: any) {
     try {
-      // If dukkan_id is not provided, get the current user's dukkan_id
-      if (!customer.dukkan_id) {
-        customer.dukkan_id = await musteriServisi.getCurrentUserDukkanId();
-        
-        if (!customer.dukkan_id) {
-          throw new Error("Dükkan bilgisine erişilemedi");
-        }
+      if (!musteri.dukkan_id) {
+        musteri.dukkan_id = await this.getCurrentUserDukkanId();
       }
-
-      console.log('Adding customer:', customer);
-
+      
+      if (!musteri.dukkan_id) {
+        throw new Error('Dükkan bilgisi bulunamadı');
+      }
+      
       const { data, error } = await supabase
         .from('musteriler')
-        .insert(customer)
+        .insert([musteri])
         .select();
-
-      if (error) {
-        console.error('Customer insert error:', error);
-        throw error;
-      }
-
-      console.log('Added customer:', data[0]);
+        
+      if (error) throw error;
       return data[0];
     } catch (error) {
       console.error('Müşteri ekleme hatası:', error);
       throw error;
     }
   },
-
-  guncelle: async (id: number, customer: Partial<CustomerData>) => {
+  
+  async guncelle(id: number, updates: any) {
     try {
       const { data, error } = await supabase
         .from('musteriler')
-        .update(customer)
+        .update(updates)
         .eq('id', id)
         .select();
-
+        
       if (error) throw error;
       return data[0];
     } catch (error) {
@@ -165,14 +82,14 @@ export const musteriServisi = {
       throw error;
     }
   },
-
-  sil: async (id: number) => {
+  
+  async sil(id: number) {
     try {
       const { error } = await supabase
         .from('musteriler')
         .delete()
         .eq('id', id);
-
+        
       if (error) throw error;
       return true;
     } catch (error) {
@@ -180,26 +97,60 @@ export const musteriServisi = {
       throw error;
     }
   },
-
-  ara: async (searchText: string) => {
+  
+  async getCurrentUserDukkanId() {
     try {
-      const dukkanId = await musteriServisi.getCurrentUserDukkanId();
+      const { data: { user } } = await supabase.auth.getUser();
       
-      if (!dukkanId) {
-        throw new Error("Dükkan bilgisine erişilemedi");
+      if (!user) {
+        throw new Error('Kullanıcı oturum açmamış');
       }
-
+      
+      // First try to get from user metadata
+      if (user.user_metadata?.dukkan_id) {
+        return Number(user.user_metadata.dukkan_id);
+      }
+      
+      // If not found in metadata, try to get from profiles table
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('dukkan_id')
+        .eq('id', user.id)
+        .single();
+        
+      if (error) {
+        console.error('Profil bilgisi getirilemedi:', error);
+        throw error;
+      }
+      
+      if (!profile || !profile.dukkan_id) {
+        console.error('Kullanıcının dükkan bilgisi bulunamadı');
+        throw new Error('Dükkan bilgisi bulunamadı');
+      }
+      
+      return profile.dukkan_id;
+    } catch (error) {
+      console.error('Dükkan ID getirme hatası:', error);
+      throw error;
+    }
+  },
+  
+  async musteriIslemleriniGetir(musteriId: number) {
+    try {
       const { data, error } = await supabase
-        .from('musteriler')
-        .select('*')
-        .eq('dukkan_id', dukkanId)
-        .or(`first_name.ilike.%${searchText}%,last_name.ilike.%${searchText}%,phone.ilike.%${searchText}%`)
-        .order('first_name');
-
+        .from('personel_islemleri')
+        .select(`
+          *,
+          personel:personel_id (*),
+          islem:islem_id (*)
+        `)
+        .eq('musteri_id', musteriId)
+        .order('created_at', { ascending: false });
+        
       if (error) throw error;
       return data || [];
     } catch (error) {
-      console.error('Müşteri arama hatası:', error);
+      console.error('Müşteri işlemleri getirme hatası:', error);
       throw error;
     }
   }

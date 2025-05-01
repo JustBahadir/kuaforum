@@ -1,77 +1,83 @@
-import { useState, useEffect, useMemo } from "react";
+
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { format, isSameDay, startOfWeek, addDays, endOfWeek, isWithinInterval } from "date-fns";
+import { format, isSameDay, parseISO, addDays } from "date-fns";
 import { tr } from "date-fns/locale";
 import { CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { useQuery } from "@tanstack/react-query";
 import { randevuServisi } from "@/lib/supabase";
 import { Randevu, RandevuDurumu } from "@/lib/supabase/types";
 import { toast } from "sonner";
-import { useCustomerAuth } from "@/hooks/useCustomerAuth";
-import { calismaSaatleriServisi } from "@/lib/supabase/services/calismaSaatleriServisi";
 
-export function AppointmentDayView() {
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [loading, setLoading] = useState(false);
-  const { dukkanId } = useCustomerAuth();
-  const [workingHours, setWorkingHours] = useState<any[]>([]);
-  const [isHoursLoading, setIsHoursLoading] = useState(true);
+interface AppointmentDayViewProps {
+  appointments: Randevu[];
+  isLoading: boolean;
+  selectedDate: Date;
+  onAppointmentStatusUpdate: (id: number, status: string) => Promise<void>;
+}
 
-  const { data: appointments = [], refetch: handleFetchAppointments } = useQuery({
-    queryKey: ['appointments', selectedDate],
-    queryFn: async () => {
-      if (!selectedDate) return [];
-      const formattedDate = format(selectedDate, 'yyyy-MM-dd');
-      const data = await randevuServisi.tarihGetir(formattedDate);
-      return data;
-    },
-  });
-
+export function AppointmentDayView({
+  appointments,
+  isLoading,
+  selectedDate,
+  onAppointmentStatusUpdate
+}: AppointmentDayViewProps) {
+  const [filteredAppointments, setFilteredAppointments] = useState<Randevu[]>([]);
+  
+  // Sort and filter appointments based on selected date
   useEffect(() => {
-    const fetchWorkingHours = async () => {
-      if (!dukkanId) return;
-      setIsHoursLoading(true);
-      try {
-        const formattedDate = format(selectedDate, 'yyyy-MM-dd');
-        const dayOfWeek = format(selectedDate, 'eeee', { locale: tr }).toLowerCase();
-        const hours = await calismaSaatleriServisi.dukkanSaatleriGetir(dukkanId);
-        const todaysHours = hours.find(h => h.gun.toLowerCase() === dayOfWeek);
-        setWorkingHours(todaysHours);
-      } catch (error) {
-        console.error("Çalışma saatleri yüklenirken hata:", error);
-        toast.error("Çalışma saatleri yüklenirken bir hata oluştu");
-      } finally {
-        setIsHoursLoading(false);
-      }
-    };
-
-    fetchWorkingHours();
-  }, [selectedDate, dukkanId]);
-
-  const handleStatusChange = async (id: number, newStatus: RandevuDurumu) => {
-    try {
-      setLoading(true);
-      const result = await randevuServisi.durumGuncelle(id, newStatus);
+    if (appointments && selectedDate) {
+      const filtered = appointments
+        .filter((appointment) => {
+          const appointmentDate = new Date(appointment.tarih);
+          return isSameDay(appointmentDate, selectedDate);
+        })
+        .sort((a, b) => {
+          // Sort by time
+          const timeA = a.saat.split(':');
+          const timeB = b.saat.split(':');
+          
+          return (parseInt(timeA[0]) * 60 + parseInt(timeA[1])) - 
+                (parseInt(timeB[0]) * 60 + parseInt(timeB[1]));
+        });
       
-      if (result) {
-        await handleFetchAppointments(selectedDate);
-        toast.success(`Randevu durumu güncellendi: ${getStatusText(newStatus)}`);
-      } else {
-        toast.error("Randevu durumu güncellenirken bir hata oluştu");
-      }
-    } catch (error) {
-      console.error("Error updating appointment status:", error);
-      toast.error("Randevu durumu güncellenirken bir hata oluştu");
-    } finally {
-      setLoading(false);
+      setFilteredAppointments(filtered);
+    }
+  }, [appointments, selectedDate]);
+
+  const handlePreviousDay = () => {
+    const prevDay = addDays(selectedDate, -1);
+    if (onDateChange) {
+      onDateChange(prevDay);
     }
   };
 
-  const getStatusText = (status: RandevuDurumu): string => {
+  const handleNextDay = () => {
+    const nextDay = addDays(selectedDate, 1);
+    if (onDateChange) {
+      onDateChange(nextDay);
+    }
+  };
+
+  // Helper function to determine card background color based on status
+  const getStatusBackgroundColor = (status: RandevuDurumu) => {
+    switch (status) {
+      case "tamamlandi":
+        return "bg-green-50 border-green-200";
+      case "beklemede":
+        return "bg-yellow-50 border-yellow-200";
+      case "iptal":
+      case "iptal_edildi":
+        return "bg-red-50 border-red-200";
+      case "onaylandi":
+        return "bg-blue-50 border-blue-200";
+      default:
+        return "bg-white";
+    }
+  };
+
+  const getStatusText = (status: RandevuDurumu) => {
     switch (status) {
       case "beklemede":
         return "Beklemede";
@@ -87,150 +93,121 @@ export function AppointmentDayView() {
         return "Bilinmeyen";
     }
   };
-  
-  const handleDateSelect = (date: Date) => {
-    setSelectedDate(date);
-  };
 
-  const handlePrevDay = () => {
-    setSelectedDate(prev => {
-      const newDate = new Date(prev);
-      newDate.setDate(prev.getDate() - 1);
-      return newDate;
-    });
-  };
-
-  const handleNextDay = () => {
-    setSelectedDate(prev => {
-      const newDate = new Date(prev);
-      newDate.setDate(prev.getDate() + 1);
-      return newDate;
-    });
-  };
-
-  // Create a timeline of appointments (grouped by hours)
-  const timeSlots = useMemo(() => {
-    if (!workingHours || isHoursLoading) {
-      return [];
+  const getStatusBadgeColor = (status: RandevuDurumu) => {
+    switch (status) {
+      case 'beklemede':
+        return 'bg-amber-100 text-amber-800 border-amber-200';
+      case 'onaylandi':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'iptal':
+      case 'iptal_edildi':
+        return 'bg-red-100 text-red-800 border-red-200';
+      case 'tamamlandi':
+        return 'bg-green-100 text-green-800 border-green-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
     }
+  };
 
-    const startTime = workingHours.acilis ? parseInt(workingHours.acilis.split(':')[0]) : 9;
-    const endTime = workingHours.kapanis ? parseInt(workingHours.kapanis.split(':')[0]) : 18;
-    const interval = 30; // minutes
-
-    const slots = [];
-    let currentTime = startTime * 60; // Convert to minutes
-
-    while (currentTime < endTime * 60) {
-      const hour = Math.floor(currentTime / 60);
-      const minute = currentTime % 60;
-      const time = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
-      slots.push(time);
-      currentTime += interval;
-    }
-
-    return slots;
-  }, [appointments, workingHours, isHoursLoading, selectedDate]);
-
-  const renderAppointment = (appointment: Randevu) => {
-    const getStatusBadgeColor = (status: RandevuDurumu) => {
-      switch (status) {
-        case 'beklemede':
-          return 'bg-amber-100 text-amber-800 border-amber-200';
-        case 'onaylandi':
-          return 'bg-green-100 text-green-800 border-green-200';
-        case 'iptal':
-        case 'iptal_edildi':
-          return 'bg-red-100 text-red-800 border-red-200';
-        case 'tamamlandi':
-          return 'bg-blue-100 text-blue-800 border-blue-200';
-        default:
-          return 'bg-gray-100 text-gray-800 border-gray-200';
-      }
-    };
-
+  if (isLoading) {
     return (
-      <div className="bg-white rounded-lg border shadow-sm p-3">
-        <div className="flex flex-col space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="font-medium">{appointment.musteri?.first_name} {appointment.musteri?.last_name || ''}</div>
-            <span className={`text-xs px-2 py-1 rounded-full border ${getStatusBadgeColor(appointment.durum)}`}>
-              {getStatusText(appointment.durum)}
-            </span>
-          </div>
-          <div className="text-sm text-gray-500">
-            Personel: {appointment.personel?.ad_soyad || 'Belirtilmemiş'}
-          </div>
-          {appointment.notlar && (
-            <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
-              Not: {appointment.notlar}
-            </div>
-          )}
-          {appointment.durum !== 'tamamlandi' && appointment.durum !== 'iptal' && (
-            <div className="flex space-x-2 pt-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 text-xs"
-                onClick={() => handleStatusChange(appointment.id, 'tamamlandi')}
-              >
-                Tamamlandı
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 text-xs"
-                onClick={() => handleStatusChange(appointment.id, 'iptal')}
-              >
-                İptal
-              </Button>
-            </div>
-          )}
-        </div>
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-600"></div>
       </div>
     );
-  };
+  }
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="space-y-6">
       <Card>
-        <CardHeader className="flex items-center justify-between">
-          <Button variant="ghost" size="sm" onClick={handlePrevDay}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <CardTitle className="text-lg font-semibold">
-            {format(selectedDate, 'PPP', { locale: tr })}
-          </CardTitle>
-          <Button variant="ghost" size="sm" onClick={handleNextDay}>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <div className="flex">
-              <div className="w-24 flex-shrink-0 p-2">
-                {timeSlots.map((time) => (
-                  <div key={time} className="h-12 flex items-center justify-center border-b">
-                    {time}
-                  </div>
-                ))}
-              </div>
-              <div className="flex-1">
-                {timeSlots.map((time) => {
-                  const appointmentsForTime = appointments.filter(
-                    (appointment) => appointment.saat.substring(0, 5) === time
-                  );
-                  return (
-                    <div key={time} className="h-12 p-2 border-b">
-                      {appointmentsForTime.map((appointment) => (
-                        renderAppointment(appointment)
-                      ))}
-                    </div>
-                  );
-                })}
-              </div>
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <div className="flex items-center space-x-2">
+            <Button variant="ghost" size="icon" onClick={handlePreviousDay}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <div className="flex items-center">
+              <CalendarIcon className="mr-2 h-5 w-5 text-muted-foreground" />
+              <CardTitle>{format(selectedDate, "d MMMM yyyy, EEEE", { locale: tr })}</CardTitle>
             </div>
+            <Button variant="ghost" size="icon" onClick={handleNextDay}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
           </div>
+        </CardHeader>
+        <CardContent>
+          {filteredAppointments.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              Bu güne ait randevu bulunmamaktadır.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredAppointments.map((appointment) => (
+                <div
+                  key={appointment.id}
+                  className={cn(
+                    "border rounded-lg overflow-hidden",
+                    getStatusBackgroundColor(appointment.durum)
+                  )}
+                >
+                  <div className="grid grid-cols-12 gap-2">
+                    <div className="col-span-2 p-4 flex flex-col justify-center items-center bg-gray-50">
+                      <div className="text-lg font-medium">
+                        {appointment.saat.substring(0, 5)}
+                      </div>
+                      <span className={`text-xs px-2 py-1 rounded-full border ${getStatusBadgeColor(appointment.durum)}`}>
+                        {getStatusText(appointment.durum)}
+                      </span>
+                    </div>
+                    
+                    <div className="col-span-10 p-4">
+                      <div className="flex justify-between">
+                        <div>
+                          <div className="font-medium">
+                            {appointment.musteri?.first_name} {appointment.musteri?.last_name || ''}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            Personel: {appointment.personel?.ad_soyad || 'Belirtilmemiş'}
+                          </div>
+                          <div className="text-sm mt-2">
+                            Hizmetler: {Array.isArray(appointment.islemler) && appointment.islemler.length > 0 
+                              ? `${appointment.islemler.length} hizmet` 
+                              : 'Hizmet detayı yok'}
+                          </div>
+                          {appointment.notlar && (
+                            <div className="text-xs text-gray-500 mt-2 bg-gray-50 p-2 rounded">
+                              Not: {appointment.notlar}
+                            </div>
+                          )}
+                        </div>
+                        
+                        {appointment.durum !== 'tamamlandi' && appointment.durum !== 'iptal' && (
+                          <div className="flex space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 text-xs"
+                              onClick={() => onAppointmentStatusUpdate(appointment.id, 'tamamlandi')}
+                            >
+                              Tamamlandı
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 text-xs text-destructive hover:text-destructive"
+                              onClick={() => onAppointmentStatusUpdate(appointment.id, 'iptal')}
+                            >
+                              İptal
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -7,7 +7,10 @@ export const randevuServisi = {
   async hepsiniGetir(dukkanId?: number) {
     try {
       // If dukkanId is not provided, get it from current user
-      const shopId = dukkanId || await musteriServisi.getCurrentUserDukkanId();
+      let shopId = dukkanId;
+      if (!shopId) {
+        shopId = await this.getCurrentDukkanId();
+      }
       
       if (!shopId) {
         throw new Error('Dükkan bilgisi bulunamadı');
@@ -55,7 +58,7 @@ export const randevuServisi = {
   async randevuOlustur(randevuVerisi: Partial<Randevu>) {
     try {
       if (!randevuVerisi.dukkan_id) {
-        randevuVerisi.dukkan_id = await musteriServisi.getCurrentUserDukkanId() as number;
+        randevuVerisi.dukkan_id = await this.getCurrentDukkanId();
       }
       
       if (!randevuVerisi.dukkan_id) {
@@ -106,7 +109,7 @@ export const randevuServisi = {
     }
   },
   
-  async durumGuncelle(id: number, durum: string) {
+  async randevuDurumGuncelle(id: number, durum: string) {
     try {
       const { data, error } = await supabase
         .from('randevular')
@@ -143,16 +146,18 @@ export const randevuServisi = {
     }
   },
   
-  async tariheGoreGetir(tarih: Date) {
+  async tariheGoreGetir(tarih: string | Date) {
     try {
-      const dukkanId = await musteriServisi.getCurrentUserDukkanId();
+      const dukkanId = await this.getCurrentDukkanId();
       
       if (!dukkanId) {
         throw new Error('Dükkan bilgisi bulunamadı');
       }
       
       // Format date to YYYY-MM-DD
-      const formattedDate = tarih.toISOString().split('T')[0];
+      const formattedDate = typeof tarih === 'string' 
+        ? tarih 
+        : tarih.toISOString().split('T')[0];
       
       const { data, error } = await supabase
         .from('randevular')
@@ -173,7 +178,89 @@ export const randevuServisi = {
     }
   },
   
-  async tarihGetir(tarih: Date) {
+  async tarihGetir(tarih: string | Date) {
     return this.tariheGoreGetir(tarih);
+  },
+
+  async kendiRandevulariniGetir(customerFilters = null) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error('Kullanıcı oturum açmamış');
+      }
+      
+      const { data, error } = await supabase
+        .from('randevular')
+        .select(`
+          *,
+          musteri:musteri_id (*),
+          personel:personel_id (*)
+        `)
+        .eq('customer_id', user.id)
+        .order('tarih', { ascending: true })
+        .order('saat', { ascending: true });
+        
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Kendi randevularını getirme hatası:', error);
+      throw error;
+    }
+  },
+
+  async dukkanRandevulariniGetir(filters = null) {
+    try {
+      const dukkanId = await this.getCurrentDukkanId();
+      
+      if (!dukkanId) {
+        throw new Error('Dükkan bilgisi bulunamadı');
+      }
+      
+      let query = supabase
+        .from('randevular')
+        .select(`
+          *,
+          musteri:musteri_id (*),
+          personel:personel_id (*)
+        `)
+        .eq('dukkan_id', dukkanId);
+      
+      // Apply filters if provided
+      if (filters) {
+        if (filters.tarih) {
+          query = query.eq('tarih', filters.tarih);
+        }
+        if (filters.durum) {
+          query = query.eq('durum', filters.durum);
+        }
+        if (filters.personel_id) {
+          query = query.eq('personel_id', filters.personel_id);
+        }
+      }
+      
+      const { data, error } = await query
+        .order('tarih', { ascending: true })
+        .order('saat', { ascending: true });
+        
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Dükkan randevularını getirme hatası:', error);
+      throw error;
+    }
+  },
+
+  async durumGuncelle(id: number, durum: string) {
+    return this.randevuDurumGuncelle(id, durum);
+  },
+  
+  async getCurrentDukkanId() {
+    try {
+      return await musteriServisi.getCurrentUserDukkanId();
+    } catch (error) {
+      console.error('Dükkan ID getirme hatası:', error);
+      throw error;
+    }
   }
 };
