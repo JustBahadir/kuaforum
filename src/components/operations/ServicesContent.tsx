@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogC
 import { Info, Plus } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WorkingHours } from "./WorkingHours";
+
 interface ServicesContentProps {
   isStaff: boolean;
   kategoriler: any[];
@@ -100,9 +101,14 @@ export function ServicesContent({
   const [openCategories, setOpenCategories] = useState<string[]>([]);
   const [infoDialogOpen, setInfoDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("hizmetler");
-  const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, {
-    coordinateGetter: sortableKeyboardCoordinates
-  }));
+  
+  const sensors = useSensors(
+    useSensor(PointerSensor), 
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates
+    })
+  );
+
   const handleCategoryToggle = (value: string) => {
     setOpenCategories(prev => {
       if (prev.includes(value)) {
@@ -111,11 +117,9 @@ export function ServicesContent({
       return [value];
     });
   };
+
   const handleDragEnd = (event: DragEndEvent) => {
-    const {
-      active,
-      over
-    } = event;
+    const { active, over } = event;
     if (over && active.id !== over.id) {
       const oldIndex = kategoriler.findIndex(k => k.id === active.id);
       const newIndex = kategoriler.findIndex(k => k.id === over.id);
@@ -127,42 +131,51 @@ export function ServicesContent({
       }
     }
   };
+
   return <>
       {isStaff && <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">Hizmet Yönetimi</h1>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <div className="flex items-center space-x-2">
-              <Switch id="puanlama-modu" checked={puanlamaAktif} onCheckedChange={setPuanlamaAktif} className="font-normal" />
+              <Switch id="puanlama-modu" checked={puanlamaAktif} onCheckedChange={setPuanlamaAktif} />
               <Label htmlFor="puanlama-modu" className="text-sm">Puanlama Sistemi</Label>
-              <Button variant="ghost" size="icon" className="h-8 w-8 p-0" onClick={() => setInfoDialogOpen(true)}>
-                <Info className="h-4 w-4" />
-                <span className="sr-only">Puanlama Sistemi Bilgisi</span>
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 p-0" onClick={() => setInfoDialogOpen(true)}>
+                      <Info className="h-4 w-4" />
+                      <span className="sr-only">Puanlama Sistemi Bilgisi</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="w-64">Puanlama sistemi hakkında daha fazla bilgi almak için tıklayın.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
-          </div>
-        </div>}
-      
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        
-        
-        <TabsContent value="hizmetler" className="space-y-4">
-          <div className="flex justify-end">
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => {
-              formuSifirla();
-              setDialogAcik(true);
-            }}>
+                formuSifirla();
+                setDialogAcik(true);
+              }}>
                 <Plus className="mr-2 h-4 w-4" />
                 Hizmet Ekle
               </Button>
-              
               <Button variant="outline" onClick={() => setKategoriDialogAcik(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Kategori Ekle
               </Button>
             </div>
           </div>
-          
+        </div>}
+      
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="hizmetler">Hizmetler</TabsTrigger>
+          <TabsTrigger value="calisma-saatleri">Çalışma Saatleri</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="hizmetler" className="space-y-4">
           <div className="space-y-6">
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <SortableContext items={kategoriler.map(k => k.id)} strategy={verticalListSortingStrategy}>

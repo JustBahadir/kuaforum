@@ -1,5 +1,4 @@
 
-import { ButtonGroup } from "../ui/button-group";
 import { Button } from "../ui/button";
 import { RandevuDurumu } from "@/lib/supabase/types";
 
@@ -30,16 +29,6 @@ export function AppointmentStatusFilter({ value, onChange }: AppointmentStatusFi
         >
           <span className="rounded-full w-2 h-2 bg-yellow-500"></span>
           <span className="hidden sm:inline">Beklemede</span>
-        </Button>
-        
-        <Button 
-          variant={value === 'onaylandi' ? 'default' : 'outline'} 
-          size="sm"
-          onClick={() => onChange('onaylandi')}
-          className="flex items-center gap-2"
-        >
-          <span className="rounded-full w-2 h-2 bg-blue-500"></span>
-          <span className="hidden sm:inline">Onaylandı</span>
         </Button>
         
         <Button 

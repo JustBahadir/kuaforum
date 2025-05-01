@@ -9,7 +9,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { calismaSaatleriServisi } from "@/lib/supabase";
 import { toast } from "sonner";
 import { useShopData } from "@/hooks/useShopData";
-import { musteriServisi } from "@/lib/supabase";
 
 interface WorkingHoursFormProps {
   onClose: () => void;
@@ -30,9 +29,9 @@ export function WorkingHoursForm({ onClose, onSave }: WorkingHoursFormProps) {
         
         let dukkanId = isletmeData?.id;
         
-        // If we don't have dukkanId from isletmeData, try to get it from getCurrentUserDukkanId
+        // If we don't have dukkanId from isletmeData, try to get it from getCurrentDukkanId
         if (!dukkanId) {
-          dukkanId = await musteriServisi.getCurrentUserDukkanId();
+          dukkanId = await calismaSaatleriServisi.getCurrentDukkanId();
         }
         
         if (!dukkanId) {
@@ -41,10 +40,7 @@ export function WorkingHoursForm({ onClose, onSave }: WorkingHoursFormProps) {
 
         const data = await calismaSaatleriServisi.hepsiniGetir(dukkanId);
         
-        // Sort by gun_sira
-        const sortedData = [...data].sort((a, b) => a.gun_sira - b.gun_sira);
-        
-        // Make sure we have all days
+        // Make sure we have all days with proper Turkish capitalization
         const days = [
           { gun: "Pazartesi", gun_sira: 0 },
           { gun: "Salı", gun_sira: 1 },
@@ -55,11 +51,27 @@ export function WorkingHoursForm({ onClose, onSave }: WorkingHoursFormProps) {
           { gun: "Pazar", gun_sira: 6 },
         ];
         
-        // Fill in missing days
+        // Create an object with entries for existing days
+        const existingDays = {};
+        data.forEach(day => {
+          // Find the canonical day name
+          const canonicalDay = days.find(d => 
+            d.gun.toLowerCase() === day.gun.toLowerCase() || 
+            d.gun_sira === day.gun_sira
+          );
+          
+          if (canonicalDay) {
+            existingDays[canonicalDay.gun] = {
+              ...day,
+              gun: canonicalDay.gun // Use properly capitalized name
+            };
+          }
+        });
+        
+        // Fill in missing days with default values
         const hoursWithAllDays = days.map(day => {
-          const existingDay = sortedData.find(h => h.gun === day.gun);
-          if (existingDay) {
-            return existingDay;
+          if (existingDays[day.gun]) {
+            return existingDays[day.gun];
           } else {
             return {
               id: undefined,
@@ -91,9 +103,9 @@ export function WorkingHoursForm({ onClose, onSave }: WorkingHoursFormProps) {
       
       let dukkanId = isletmeData?.id;
       
-      // If we don't have dukkanId from isletmeData, try to get it from getCurrentUserDukkanId
+      // If we don't have dukkanId from isletmeData, try to get it from getCurrentDukkanId
       if (!dukkanId) {
-        dukkanId = await musteriServisi.getCurrentUserDukkanId();
+        dukkanId = await calismaSaatleriServisi.getCurrentDukkanId();
       }
       
       if (!dukkanId) {

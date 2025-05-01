@@ -36,8 +36,57 @@ export function WorkingHours({ dukkanId }: WorkingHoursProps) {
     refetch();
   };
 
-  // Sort hours by gun_sira
-  const sortedHours = [...hours].sort((a, b) => a.gun_sira - b.gun_sira);
+  // Process hours to ensure we have only one entry per day with proper Turkish capitalized names
+  const processedHours = () => {
+    const days = [
+      { gun: "Pazartesi", gun_sira: 0 },
+      { gun: "Salı", gun_sira: 1 },
+      { gun: "Çarşamba", gun_sira: 2 },
+      { gun: "Perşembe", gun_sira: 3 },
+      { gun: "Cuma", gun_sira: 4 },
+      { gun: "Cumartesi", gun_sira: 5 },
+      { gun: "Pazar", gun_sira: 6 },
+    ];
+    
+    // Create an object with one entry per day
+    const daysMap = {};
+    
+    // Process sorted hours and take the most recent entry for each day
+    [...hours].sort((a, b) => a.gun_sira - b.gun_sira).forEach(hour => {
+      // Normalize day name to match our canonical names
+      const normalizedName = days.find(d => 
+        d.gun.toLowerCase() === hour.gun.toLowerCase() || 
+        d.gun_sira === hour.gun_sira
+      )?.gun;
+      
+      if (normalizedName) {
+        daysMap[normalizedName] = hour;
+      }
+    });
+    
+    // Convert back to array using our canonical day order
+    return days.map(day => {
+      if (daysMap[day.gun]) {
+        return {
+          ...daysMap[day.gun],
+          gun: day.gun // Use the properly capitalized name
+        };
+      } else {
+        // Provide default if we don't have data for this day
+        return {
+          gun: day.gun,
+          gun_sira: day.gun_sira,
+          acilis: "09:00",
+          kapanis: "18:00",
+          kapali: false,
+          dukkan_id: dukkanId
+        };
+      }
+    });
+  };
+
+  // Get processed hours with normalized day names and no duplicates
+  const sortedHours = processedHours();
 
   return (
     <>
@@ -65,7 +114,7 @@ export function WorkingHours({ dukkanId }: WorkingHoursProps) {
                   </thead>
                   <tbody>
                     {sortedHours.map((hour) => (
-                      <tr key={hour.id || hour.gun} className="border-t">
+                      <tr key={hour.gun} className="border-t">
                         <td className="px-4 py-3">{hour.gun}</td>
                         <td className="px-4 py-3">{hour.kapali ? "-" : hour.acilis}</td>
                         <td className="px-4 py-3">{hour.kapali ? "-" : hour.kapanis}</td>

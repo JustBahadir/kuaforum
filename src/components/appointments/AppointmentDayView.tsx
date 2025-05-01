@@ -119,19 +119,22 @@ export function AppointmentDayView({
     );
   }
 
+  // Format date to display: "3 Mayıs 2025, Cumartesi"
+  const formattedDate = format(selectedDate, "d MMMM yyyy, EEEE", { locale: tr });
+
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <div className="flex items-center space-x-2">
-            <Button variant="ghost" size="icon" onClick={handlePreviousDay}>
+          <div className="flex items-center">
+            <Button variant="ghost" size="icon" onClick={handlePreviousDay} className="mr-2">
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <div className="flex items-center">
               <CalendarIcon className="mr-2 h-5 w-5 text-muted-foreground" />
-              <CardTitle>{format(selectedDate, "d MMMM yyyy, EEEE", { locale: tr })}</CardTitle>
+              <CardTitle className="min-w-[220px]">{formattedDate}</CardTitle>
             </div>
-            <Button variant="ghost" size="icon" onClick={handleNextDay}>
+            <Button variant="ghost" size="icon" onClick={handleNextDay} className="ml-2">
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
