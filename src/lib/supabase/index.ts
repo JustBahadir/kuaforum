@@ -5,7 +5,7 @@ import { authService } from '@/lib/auth/authService';
 
 // Import and export services
 import { islemServisi } from './services/islemServisi';
-import { kategorilerServisi, kategoriServisi } from './services/kategoriServisi';
+import { kategoriServisi } from './services/kategoriServisi';
 import { randevuServisi } from './services/randevuServisi';
 import { musteriServisi } from './services/musteriServisi';
 import { personelServisi } from './services/personelServisi';
@@ -32,7 +32,6 @@ export {
   
   // Services
   islemServisi,
-  kategorilerServisi,
   kategoriServisi,
   randevuServisi,
   musteriServisi,
