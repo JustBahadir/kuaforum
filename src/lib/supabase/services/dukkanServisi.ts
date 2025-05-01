@@ -35,6 +35,11 @@ export const isletmeServisi = {
     }
   },
 
+  // Add this method for compatibility
+  kodaGoreGetir: async (kod: string) => {
+    return isletmeServisi.getirByKod(kod);
+  },
+
   kullaniciDukkaniniGetir: async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();

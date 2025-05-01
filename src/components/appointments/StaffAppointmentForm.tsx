@@ -1,457 +1,433 @@
-
 import { useState, useEffect } from "react";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle 
-} from "@/components/ui/dialog";
-import { 
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { toast } from "sonner";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
-import { cn } from "@/lib/utils";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
-import { useQuery } from "@tanstack/react-query";
-import { musteriServisi, personelServisi, islemServisi, randevuServisi, kategorilerServisi } from "@/lib/supabase";
-import { useAuth } from "@/hooks/useAuth";
-import { RandevuDurumu } from "@/lib/supabase/types";
 import { CalendarIcon } from "lucide-react";
-
-// Define form schema with zod
-const formSchema = z.object({
-  musteri_id: z.coerce.number({
-    required_error: "Müşteri seçimi zorunludur",
-  }),
-  kategori_id: z.coerce.number({
-    required_error: "Kategori seçimi zorunludur",
-  }),
-  islem_id: z.coerce.number({
-    required_error: "İşlem seçimi zorunludur",
-  }),
-  personel_id: z.coerce.number({
-    required_error: "Personel seçimi zorunludur",
-  }),
-  tarih: z.date({
-    required_error: "Tarih seçimi zorunludur",
-  }),
-  saat: z.string({
-    required_error: "Saat seçimi zorunludur",
-  }),
-  durum: z.string().default("beklemede"),
-  notlar: z.string().optional(),
-});
-
-type FormValues = z.infer<typeof formSchema>;
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { musteriServisi } from "@/lib/supabase/services/musteriServisi";
+import { personelServisi } from "@/lib/supabase/services/personelServisi";
+import { randevuServisi } from "@/lib/supabase/services/randevuServisi";
+import { kategoriServisi } from "@/lib/supabase/services/kategoriServisi";
+import { islemServisi } from "@/lib/supabase/services/islemServisi";
+import { supabase } from '@/lib/supabase/client';
 
 interface StaffAppointmentFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
+  editAppointmentId?: number;
   defaultDate?: Date;
 }
 
-export function StaffAppointmentForm({ 
-  open, 
-  onOpenChange, 
+export function StaffAppointmentForm({
+  open,
+  onOpenChange,
   onSuccess,
-  defaultDate = new Date() 
+  editAppointmentId,
+  defaultDate = new Date(),
 }: StaffAppointmentFormProps) {
-  const { user } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
-  const [selectedKategori, setSelectedKategori] = useState<number | null>(null);
-
-  // Initialize form
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      tarih: defaultDate,
-      durum: "beklemede",
-      notlar: "",
-    },
-  });
+  const queryClient = useQueryClient();
   
-  // Get customers
-  const { data: customers = [] } = useQuery({
+  const [customerId, setCustomerId] = useState<string>("");
+  const [personnelId, setPersonnelId] = useState<string>("");
+  const [categoryId, setCategoryId] = useState<string>("");
+  const [serviceId, setServiceId] = useState<string>("");
+  const [date, setDate] = useState<Date>(defaultDate);
+  const [time, setTime] = useState<string>("09:00");
+  const [notes, setNotes] = useState<string>("");
+  const [availableTimes, setAvailableTimes] = useState<string[]>([]);
+
+  const resetForm = () => {
+    setCustomerId("");
+    setPersonnelId("");
+    setCategoryId("");
+    setServiceId("");
+    setDate(defaultDate);
+    setTime("09:00");
+    setNotes("");
+  };
+
+  const { data: customers = [], isLoading: isLoadingCustomers } = useQuery({
     queryKey: ["customers"],
     queryFn: async () => {
       try {
         return await musteriServisi.hepsiniGetir();
       } catch (error) {
         console.error("Error fetching customers:", error);
-        return [];
-      }
-    },
-  });
-  
-  // Get categories
-  const { data: categories = [] } = useQuery({
-    queryKey: ["categories"],
-    queryFn: async () => {
-      try {
-        return await kategorilerServisi.hepsiniGetir();
-      } catch (error) {
-        console.error("Error fetching categories:", error);
+        toast.error("Müşteri listesi alınamadı");
         return [];
       }
     },
   });
 
-  // Get services based on category
-  const { data: services = [] } = useQuery({
-    queryKey: ["services", selectedKategori],
-    queryFn: async () => {
-      if (!selectedKategori) return [];
-      try {
-        const allServices = await islemServisi.hepsiniGetir();
-        return allServices.filter(service => service.kategori_id === selectedKategori);
-      } catch (error) {
-        console.error("Error fetching services:", error);
-        return [];
-      }
-    },
-    enabled: !!selectedKategori,
-  });
-  
-  // Get personnel
-  const { data: personnel = [] } = useQuery({
+  const { data: personnel = [], isLoading: isLoadingPersonnel } = useQuery({
     queryKey: ["personnel"],
     queryFn: async () => {
       try {
         return await personelServisi.hepsiniGetir();
       } catch (error) {
         console.error("Error fetching personnel:", error);
+        toast.error("Personel listesi alınamadı");
         return [];
       }
     },
   });
-  
-  // Handle category change
-  const handleCategoryChange = (value: string) => {
-    const categoryId = parseInt(value, 10);
-    setSelectedKategori(categoryId);
-    // Reset service selection when category changes
-    form.setValue("islem_id", 0);
-  };
 
-  // Generate available time slots
-  const generateTimeSlots = () => {
-    const slots = [];
-    for (let hour = 9; hour < 20; hour++) {
-      for (let min = 0; min < 60; min += 30) {
-        const hourStr = hour.toString().padStart(2, "0");
-        const minStr = min.toString().padStart(2, "0");
-        slots.push(`${hourStr}:${minStr}`);
+  // Add query for categories
+  const { data: categories = [], isLoading: isLoadingCategories } = useQuery({
+    queryKey: ["categories"],
+    queryFn: async () => {
+      try {
+        return await kategoriServisi.hepsiniGetir();
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+        toast.error("Kategori listesi alınamadı");
+        return [];
       }
-    }
-    return slots;
-  };
+    },
+  });
 
-  // Handle form submission
-  const onSubmit = async (data: FormValues) => {
-    try {
-      setIsLoading(true);
-      
-      // Format date as YYYY-MM-DD
-      const formattedDate = format(data.tarih, "yyyy-MM-dd");
-      
-      const appointmentData = {
-        musteri_id: data.musteri_id,
-        personel_id: data.personel_id,
-        tarih: formattedDate,
-        saat: data.saat,
-        durum: data.durum as RandevuDurumu, // Use the correct type
-        islemler: [data.islem_id], // Convert to array for the API
-        notlar: data.notlar || ""
+  // Add query for services based on selected category
+  const { data: services = [], isLoading: isLoadingServices } = useQuery({
+    queryKey: ["services", categoryId],
+    queryFn: async () => {
+      if (!categoryId) return [];
+      try {
+        const { data, error } = await supabase
+          .from('islemler')
+          .select('*')
+          .eq('kategori_id', parseInt(categoryId))
+          .order('sira', { ascending: true });
+
+        if (error) throw error;
+        return data || [];
+      } catch (error) {
+        console.error("Error fetching services:", error);
+        toast.error("Hizmet listesi alınamadı");
+        return [];
+      }
+    },
+    enabled: !!categoryId,
+  });
+
+  useEffect(() => {
+    if (open && editAppointmentId) {
+      // Fetch the appointment data if editing
+      const fetchAppointment = async () => {
+        try {
+          const appointmentData = await randevuServisi.getir(editAppointmentId);
+          if (appointmentData) {
+            setCustomerId(appointmentData.musteri_id.toString());
+            setPersonnelId(appointmentData.personel_id.toString());
+            setDate(new Date(appointmentData.tarih));
+            setTime(appointmentData.saat.substring(0, 5));
+            setNotes(appointmentData.notlar || "");
+          }
+        } catch (error) {
+          console.error("Error fetching appointment:", error);
+          toast.error("Randevu bilgileri alınamadı");
+        }
       };
       
-      await randevuServisi.ekle(appointmentData);
+      fetchAppointment();
+    } else {
+      // Reset form when opening new appointment
+      resetForm();
+    }
+  }, [open, editAppointmentId]);
+
+  // Generate available times
+  useEffect(() => {
+    const times = [];
+    let hour = 9;
+    let minute = 0;
+    
+    while (hour < 20) {
+      times.push(`${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`);
+      minute += 30;
       
-      toast.success("Randevu başarıyla oluşturuldu.");
-      form.reset();
-      onOpenChange(false);
+      if (minute === 60) {
+        hour += 1;
+        minute = 0;
+      }
+    }
+    
+    setAvailableTimes(times);
+  }, []);
+
+  // Create or update appointment
+  const { mutate: saveAppointment, isPending: isSaving } = useMutation({
+    mutationFn: async () => {
+      if (!customerId || !personnelId || !date || !time || !serviceId) {
+        throw new Error("Lütfen tüm alanları doldurun");
+      }
+      
+      const appointmentData = {
+        musteri_id: parseInt(customerId),
+        personel_id: parseInt(personnelId),
+        tarih: format(date, "yyyy-MM-dd"),
+        saat: time,
+        durum: "beklemede",
+        notlar: notes,
+        islemler: [parseInt(serviceId)],
+      };
+      
+      if (editAppointmentId) {
+        return await randevuServisi.randevuGuncelle(editAppointmentId, appointmentData);
+      } else {
+        return await randevuServisi.randevuOlustur(appointmentData);
+      }
+    },
+    onSuccess: () => {
+      toast.success(
+        editAppointmentId
+          ? "Randevu başarıyla güncellendi"
+          : "Randevu başarıyla oluşturuldu"
+      );
+      
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
       
       if (onSuccess) {
         onSuccess();
       }
-    } catch (error: any) {
-      console.error("Error creating appointment:", error);
-      toast.error(`Randevu oluşturulamadı: ${error.message || "Beklenmeyen bir hata oluştu."}`);
-    } finally {
-      setIsLoading(false);
-    }
+      
+      onOpenChange(false);
+    },
+    onError: (error: any) => {
+      console.error("Error saving appointment:", error);
+      toast.error(
+        `Randevu ${editAppointmentId ? "güncellenirken" : "oluşturulurken"} bir hata oluştu: ${error.message}`
+      );
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    saveAppointment();
   };
-  
-  // Reset form when dialog closes
-  useEffect(() => {
-    if (!open) {
-      form.reset({
-        tarih: defaultDate,
-        durum: "beklemede",
-        notlar: "",
-      });
-      setSelectedKategori(null);
-    }
-  }, [open, form, defaultDate]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Yeni Randevu Oluştur</DialogTitle>
+          <DialogTitle>
+            {editAppointmentId ? "Randevu Düzenle" : "Yeni Randevu Oluştur"}
+          </DialogTitle>
+          <DialogDescription>
+            Lütfen randevu detaylarını girin.
+          </DialogDescription>
         </DialogHeader>
         
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-2">
-            <FormField
-              control={form.control}
-              name="musteri_id"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Müşteri Seçin</FormLabel>
-                  <Select
-                    disabled={isLoading}
-                    onValueChange={field.onChange}
-                    defaultValue={field.value?.toString()}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Müşteri seçin" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {customers.map((customer) => (
-                        <SelectItem key={customer.id} value={customer.id.toString()}>
-                          {customer.first_name} {customer.last_name || ""}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="customer">Müşteri Seçin</Label>
+            <Select
+              value={customerId}
+              onValueChange={setCustomerId}
+              disabled={isSaving}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Müşteri seçin" />
+              </SelectTrigger>
+              <SelectContent>
+                {isLoadingCustomers ? (
+                  <SelectItem value="loading" disabled>
+                    Yükleniyor...
+                  </SelectItem>
+                ) : customers.length === 0 ? (
+                  <SelectItem value="empty" disabled>
+                    Müşteri bulunamadı
+                  </SelectItem>
+                ) : (
+                  customers.map((customer) => (
+                    <SelectItem key={customer.id} value={customer.id.toString()}>
+                      {customer.first_name} {customer.last_name || ""}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+          </div>
 
-            <FormField
-              control={form.control}
-              name="kategori_id"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Kategori Seçin</FormLabel>
-                  <Select
-                    disabled={isLoading}
-                    onValueChange={(value) => {
-                      field.onChange(value);
-                      handleCategoryChange(value);
-                    }}
-                    defaultValue={field.value?.toString()}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Önce kategori seçin" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {categories.map((category) => (
-                        <SelectItem key={category.id} value={category.id.toString()}>
-                          {category.kategori_adi}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="islem_id"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Hizmet Seçin</FormLabel>
-                  <Select
-                    disabled={isLoading || !selectedKategori}
-                    onValueChange={field.onChange}
-                    defaultValue={field.value?.toString()}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder={selectedKategori ? "Hizmet seçin" : "Önce kategori seçin"} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {services.map((service) => (
-                        <SelectItem key={service.id} value={service.id.toString()}>
-                          {service.islem_adi} ({service.fiyat} ₺)
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="personel_id"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Personel Seçin</FormLabel>
-                  <Select
-                    disabled={isLoading}
-                    onValueChange={field.onChange}
-                    defaultValue={field.value?.toString()}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Personel seçin" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {personnel.map((staff) => (
-                        <SelectItem key={staff.id} value={staff.id.toString()}>
-                          {staff.ad_soyad}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="tarih"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Tarih Seçin</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, "dd MMMM yyyy", { locale: tr })
-                            ) : (
-                              <span>Tarih seçin</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                          initialFocus
-                          locale={tr}
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
+          <div className="space-y-2">
+            <Label htmlFor="category">Kategori Seçin</Label>
+            <Select
+              value={categoryId}
+              onValueChange={(value) => {
+                setCategoryId(value);
+                setServiceId(""); // Reset service when category changes
+              }}
+              disabled={isSaving}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Önce kategori seçin" />
+              </SelectTrigger>
+              <SelectContent>
+                {isLoadingCategories ? (
+                  <SelectItem value="loading" disabled>
+                    Yükleniyor...
+                  </SelectItem>
+                ) : categories.length === 0 ? (
+                  <SelectItem value="empty" disabled>
+                    Kategori bulunamadı
+                  </SelectItem>
+                ) : (
+                  categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id.toString()}>
+                      {category.kategori_adi}
+                    </SelectItem>
+                  ))
                 )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="saat"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Saat Seçin</FormLabel>
-                    <Select
-                      disabled={isLoading}
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Saat seçin" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {generateTimeSlots().map((time) => (
-                          <SelectItem key={time} value={time}>
-                            {time}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="service">Hizmet Seçin</Label>
+            <Select
+              value={serviceId}
+              onValueChange={setServiceId}
+              disabled={isSaving || !categoryId}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={categoryId ? "Hizmet seçin" : "Önce kategori seçin"} />
+              </SelectTrigger>
+              <SelectContent>
+                {!categoryId ? (
+                  <SelectItem value="nocategory" disabled>
+                    Önce kategori seçin
+                  </SelectItem>
+                ) : isLoadingServices ? (
+                  <SelectItem value="loading" disabled>
+                    Yükleniyor...
+                  </SelectItem>
+                ) : services.length === 0 ? (
+                  <SelectItem value="empty" disabled>
+                    Hizmet bulunamadı
+                  </SelectItem>
+                ) : (
+                  services.map((service) => (
+                    <SelectItem key={service.id} value={service.id.toString()}>
+                      {service.islem_adi}
+                    </SelectItem>
+                  ))
                 )}
-              />
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="personnel">Personel Seçin</Label>
+            <Select
+              value={personnelId}
+              onValueChange={setPersonnelId}
+              disabled={isSaving}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Personel seçin" />
+              </SelectTrigger>
+              <SelectContent>
+                {isLoadingPersonnel ? (
+                  <SelectItem value="loading" disabled>
+                    Yükleniyor...
+                  </SelectItem>
+                ) : personnel.length === 0 ? (
+                  <SelectItem value="empty" disabled>
+                    Personel bulunamadı
+                  </SelectItem>
+                ) : (
+                  personnel.map((person) => (
+                    <SelectItem key={person.id} value={person.id.toString()}>
+                      {person.ad_soyad}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="date">Tarih Seçin</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !date && "text-muted-foreground"
+                    )}
+                    disabled={isSaving}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {date ? (
+                      format(date, "d MMMM yyyy", { locale: tr })
+                    ) : (
+                      <span>Tarih seçin</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={date}
+                    onSelect={(date) => date && setDate(date)}
+                    initialFocus
+                    disabled={(date) => date < new Date()}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             
-            <FormField
-              control={form.control}
-              name="notlar"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Notlar (Opsiyonel)</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Randevu hakkında notlar..."
-                      className="resize-none"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+            <div className="space-y-2">
+              <Label htmlFor="time">Saat Seçin</Label>
+              <Select value={time} onValueChange={setTime} disabled={isSaving}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Saat seçin" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableTimes.map((timeOption) => (
+                    <SelectItem key={timeOption} value={timeOption}>
+                      {timeOption}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="notes">Notlar (Opsiyonel)</Label>
+            <Textarea
+              id="notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Randevu hakkında notlar..."
+              disabled={isSaving}
             />
-            
-            <DialogFooter>
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => onOpenChange(false)}
-                disabled={isLoading}
-              >
-                İptal
-              </Button>
-              <Button 
-                type="submit" 
-                disabled={isLoading}
-                className="bg-purple-600 hover:bg-purple-700"
-              >
-                {isLoading ? "Oluşturuluyor..." : "Randevu Oluştur"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+          </div>
+          
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={isSaving || !customerId || !personnelId || !date || !time || !serviceId}
+          >
+            {isSaving
+              ? "Kaydediliyor..."
+              : editAppointmentId
+              ? "Randevu Güncelle"
+              : "Randevu Oluştur"}
+          </Button>
+        </form>
       </DialogContent>
     </Dialog>
   );

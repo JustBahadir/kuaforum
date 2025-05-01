@@ -1,139 +1,115 @@
-
-import React, { useState, useEffect } from 'react';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { format } from 'date-fns';
-import { tr } from 'date-fns/locale';
-import { personelIslemleriServisi } from '@/lib/supabase/services/personelIslemleriServisi';
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { islemServisi } from "@/lib/supabase/services/islemServisi";
+import { format } from "date-fns";
+import { tr } from "date-fns/locale";
+import { formatCurrency } from "@/utils/currencyFormatter";
+import { Button } from "@/components/ui/button";
 
 interface PersonnelHistoryTableProps {
-  personelId: number;
-  limit?: number;
-  showHeader?: boolean;
+  personnelId: number;
 }
 
-export function PersonnelHistoryTable({ personelId, limit = 5, showHeader = true }: PersonnelHistoryTableProps) {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-  const [operations, setOperations] = useState<any[]>([]);
+export function PersonnelHistoryTable({ personnelId }: PersonnelHistoryTableProps) {
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(10);
 
+  const {
+    data: allOperations = [],
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey: ["personnelOperations", personnelId],
+    queryFn: async () => {
+      return await islemServisi.personelIslemleriniGetir(personnelId);
+    },
+    enabled: !!personnelId,
+  });
+
+  // Reset page when personnelId changes
   useEffect(() => {
-    const loadOperations = async () => {
-      try {
-        setLoading(true);
-        const data = await personelIslemleriServisi.personelIslemleriGetir(personelId);
-        
-        // Apply limit if needed
-        const limitedData = limit ? data.slice(0, limit) : data;
-        setOperations(limitedData);
-        setError(null);
-      } catch (err: any) {
-        console.error("Error fetching personnel operations:", err);
-        setError(err);
-      } finally {
-        setLoading(false);
-      }
-    };
+    setPage(1);
+  }, [personnelId]);
 
-    if (personelId) {
-      loadOperations();
-    }
-  }, [personelId, limit]);
+  // Calculate pagination
+  const totalPages = Math.ceil(allOperations.length / pageSize);
+  const paginatedOperations = allOperations.slice(
+    (page - 1) * pageSize,
+    page * pageSize
+  );
 
-  // Function to format currency
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(amount);
-  };
-
-  if (loading) {
-    return (
-      <Card>
-        {showHeader && (
-          <CardHeader>
-            <CardTitle>İşlem Geçmişi</CardTitle>
-          </CardHeader>
-        )}
-        <CardContent>
-          <div className="animate-pulse space-y-4">
-            <div className="h-6 bg-gray-200 rounded"></div>
-            <div className="h-6 bg-gray-200 rounded"></div>
-            <div className="h-6 bg-gray-200 rounded"></div>
-          </div>
-        </CardContent>
-      </Card>
-    );
+  if (isLoading) {
+    return <div>Yükleniyor...</div>;
   }
 
-  if (error) {
-    return (
-      <Card>
-        {showHeader && (
-          <CardHeader>
-            <CardTitle>İşlem Geçmişi</CardTitle>
-          </CardHeader>
-        )}
-        <CardContent>
-          <div className="text-red-500">Hata: {error.message}</div>
-        </CardContent>
-      </Card>
-    );
+  if (isError) {
+    return <div>Bir hata oluştu. Lütfen daha sonra tekrar deneyin.</div>;
+  }
+
+  if (allOperations.length === 0) {
+    return <div>İşlem geçmişi bulunamadı.</div>;
   }
 
   return (
-    <Card>
-      {showHeader && (
-        <CardHeader>
-          <CardTitle>İşlem Geçmişi</CardTitle>
-        </CardHeader>
+    <div>
+      <div className="border rounded-md">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Tarih</TableHead>
+              <TableHead>Müşteri</TableHead>
+              <TableHead>İşlem</TableHead>
+              <TableHead className="text-right">Tutar</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {paginatedOperations.map((operation) => (
+              <TableRow key={operation.id}>
+                <TableCell>
+                  {format(new Date(operation.created_at), "d MMMM yyyy", {
+                    locale: tr,
+                  })}
+                </TableCell>
+                <TableCell>
+                  {operation.musteri
+                    ? `${operation.musteri.first_name} ${operation.musteri.last_name || ""}`
+                    : "Bilinmiyor"}
+                </TableCell>
+                <TableCell>{operation.aciklama}</TableCell>
+                <TableCell className="text-right font-medium">
+                  {formatCurrency(operation.tutar || 0)}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-end space-x-2 py-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage((p) => Math.max(p - 1, 1))}
+            disabled={page === 1}
+          >
+            Önceki
+          </Button>
+          <div className="text-sm">
+            Sayfa {page} / {totalPages}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
+            disabled={page === totalPages}
+          >
+            Sonraki
+          </Button>
+        </div>
       )}
-      <CardContent>
-        {operations.length > 0 ? (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Tarih</TableHead>
-                  <TableHead>İşlem</TableHead>
-                  <TableHead>Müşteri</TableHead>
-                  <TableHead className="text-right">Tutar</TableHead>
-                  <TableHead className="text-right">Ödenen</TableHead>
-                  <TableHead className="text-right">Durum</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {operations.map((operation) => (
-                  <TableRow key={operation.id}>
-                    <TableCell className="font-medium">
-                      {format(new Date(operation.created_at), 'dd MMM yyyy', {locale: tr})}
-                    </TableCell>
-                    <TableCell>{operation.islem?.islem_adi || operation.aciklama}</TableCell>
-                    <TableCell>
-                      {operation.musteri ? 
-                        `${operation.musteri.first_name} ${operation.musteri.last_name || ''}` : 
-                        'N/A'
-                      }
-                    </TableCell>
-                    <TableCell className="text-right">{formatCurrency(operation.tutar)}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(operation.odenen)}</TableCell>
-                    <TableCell className="text-right">
-                      {operation.tutar <= operation.odenen ? (
-                        <Badge variant="outline" className="bg-green-50 text-green-700 hover:bg-green-100">Ödendi</Badge>
-                      ) : (
-                        <Badge variant="outline" className="bg-red-50 text-red-700 hover:bg-red-100">Ödenmedi</Badge>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        ) : (
-          <div className="py-8 text-center text-muted-foreground">
-            <p>Bu personel için işlem kaydı bulunamadı.</p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+    </div>
   );
 }

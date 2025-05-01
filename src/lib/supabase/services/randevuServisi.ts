@@ -158,6 +158,30 @@ export const randevuServisi = {
     }
   },
   
+  async kendiRandevulariniGetir() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Kullanıcı bulunamadı');
+      
+      const { data, error } = await supabase
+        .from('randevular')
+        .select(`
+          *,
+          musteri:musteri_id (*),
+          personel:personel_id (*)
+        `)
+        .eq('customer_id', user.id)
+        .order('tarih', { ascending: false })
+        .order('saat', { ascending: false });
+        
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Kendi randevularını getirme hatası:', error);
+      throw error;
+    }
+  },
+  
   async tariheGoreGetir(tarih: Date) {
     try {
       const dukkanId = await musteriServisi.getCurrentUserDukkanId();

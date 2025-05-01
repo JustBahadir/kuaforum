@@ -61,6 +61,8 @@ export const kategoriServisi = {
         throw new Error('İşletme bilgisi bulunamadı');
       }
 
+      console.log("Kategori hepsiniGetir, dukkanId:", shopId);
+
       const { data, error } = await supabase
         .from('islem_kategorileri')
         .select('*')
@@ -101,20 +103,25 @@ export const kategoriServisi = {
       if (!kategori.dukkan_id) {
         throw new Error('İşletme bilgisi bulunamadı');
       }
+
+      console.log("Kategori ekle, dukkanId:", kategori.dukkan_id);
       
-      // Manually insert using the RPC endpoint which accepts dukkan_id
-      const { data, error } = await supabase.rpc('add_kategori', {
-        p_kategori_adi: kategori.kategori_adi,
-        p_sira: kategori.sira,
-        p_dukkan_id: kategori.dukkan_id
-      });
+      // Since we might have issues with the function, let's directly insert
+      const { data, error } = await supabase
+        .from('islem_kategorileri')
+        .insert({
+          kategori_adi: kategori.kategori_adi,
+          sira: kategori.sira,
+          dukkan_id: kategori.dukkan_id
+        })
+        .select();
 
       if (error) {
         console.error('Kategori ekle error details:', error);
         throw error;
       }
       
-      return data;
+      return data[0];
     } catch (error) {
       console.error('Kategori ekleme hatası:', error);
       throw error;
