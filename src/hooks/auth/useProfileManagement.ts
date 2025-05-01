@@ -1,93 +1,131 @@
 
 import { useState } from "react";
-import { profileService } from "@/lib/auth/profileService";
-import { dukkanServisi } from "@/lib/supabase"; // Updated import
-import { authService } from "@/lib/auth/authService";
+import { supabase } from "@/lib/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { profileServisi } from "@/lib/supabase/services/profileServisi";
+import { uiStore } from "@/stores/uiStore";
 
-/**
- * Hook for managing user profile information
- */
-export function useProfileManagement(
-  userRole: string | null,
-  isAuthenticated: boolean,
-  setUserName: (name: string) => void
-) {
-  const [dukkanId, setDukkanId] = useState<number | null>(null);
-  const [dukkanAdi, setDukkanAdi] = useState<string | null>(null);
+export function useProfileManagement() {
+  const { user } = useAuth();
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [profileData, setProfileData] = useState({
+    first_name: "",
+    last_name: "",
+    phone: "",
+    address: "",
+    birthdate: "",
+    iban: "",
+    gender: "",
+  });
+  const [isSaving, setIsSaving] = useState(false);
+  const {setIsProfileCompleted} = uiStore();
 
-  /**
-   * Refreshes user profile information
-   */
-  const refreshProfile = async () => {
+  const updateProfileField = (field: string, value: string) => {
+    setProfileData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const loadProfileData = async () => {
     try {
-      const user = await authService.getCurrentUser();
-      
-      if (!user) {
-        setUserName("Değerli Müşterimiz");
-        return;
-      }
+      if (!user?.id) return;
 
-      // Get role from user metadata for reliable role checking
-      const role = user.user_metadata?.role || await profileService.getUserRole();
+      // Get profile data
+      const profile = await profileServisi.getir(user.id);
       
-      if (role === 'admin') {
-        try {
-          // Use dukkanServisi instead of isletmeServisi
-          const userShop = await dukkanServisi.kullanicininIsletmesi(user.id);
-          if (userShop) {
-            setDukkanId(userShop.id);
-            setDukkanAdi(userShop.ad);
-          } else if (location.pathname.includes('/personnel') || location.pathname.includes('/appointments')) {
-            // Önce toast göster, sonra işletme oluşturma sayfasına yönlendir
-            toast.error("İşletme bilgileriniz bulunamadı. Lütfen işletme bilgilerinizi oluşturun.");
-            
-            // Kısa bir gecikme ekleyelim ki toast görülebilsin
-            setTimeout(() => {
-              window.location.href = "/create-shop";
-            }, 2000);
-          }
-        } catch (error) {
-          console.error("İşletme bilgisi alınırken hata:", error);
-        }
-      } else if (role === 'staff') {
-        try {
-          // Use dukkanServisi instead of isletmeServisi
-          const staffShop = await dukkanServisi.personelAuthIdIsletmesi(user.id);
-          if (staffShop) {
-            // Make sure we're properly handling the returned data
-            if (typeof staffShop === 'object' && staffShop !== null) {
-              setDukkanId(staffShop.id);
-              setDukkanAdi(staffShop.ad);
-            }
-          } else if (location.pathname.includes('/personnel')) {
-            toast.error("İşletme bilgileriniz bulunamadı. Lütfen yönetici ile iletişime geçin.");
-          }
-        } catch (error) {
-          console.error("Personel işletme bilgisi alınırken hata:", error);
-        }
+      if (profile) {
+        setProfileData({
+          first_name: profile.first_name || "",
+          last_name: profile.last_name || "",
+          phone: profile.phone || "",
+          address: profile.address || "",
+          birthdate: profile.birthdate ? new Date(profile.birthdate).toISOString().split('T')[0] : "",
+          iban: profile.iban || "",
+          gender: profile.gender || "",
+        });
+        
+        setAvatarUrl(profile.avatar_url || null);
+        
+        // Check if profile is completed
+        const isComplete = Boolean(profile.first_name && profile.phone);
+        setIsProfileCompleted(isComplete);
       }
-      
-      const name = await profileService.getUserNameWithTitle();
-      setUserName(name);
-      
     } catch (error) {
-      console.error("Error refreshing profile:", error);
+      console.error("Error loading profile data:", error);
+      toast.error("Profil bilgileri yüklenemedi");
     }
   };
 
-  /**
-   * Reset all profile information
-   */
-  const resetProfile = () => {
-    setDukkanId(null);
-    setDukkanAdi(null);
+  const saveProfile = async () => {
+    try {
+      if (!user?.id) {
+        throw new Error("Kullanıcı kimliği bulunamadı");
+      }
+      
+      setIsSaving(true);
+      
+      // Fix: Use the profileServisi to update the profile
+      await profileServisi.guncelle(user.id, {
+        ...profileData,
+        updated_at: new Date().toISOString(),
+      });
+      
+      // Check if profile is completed
+      const isComplete = Boolean(profileData.first_name && profileData.phone);
+      setIsProfileCompleted(isComplete);
+      
+      toast.success("Profil bilgileri başarıyla güncellendi");
+    } catch (error) {
+      console.error("Error saving profile:", error);
+      toast.error("Profil kaydedilirken bir hata oluştu");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const uploadAvatar = async (file: File) => {
+    try {
+      if (!user?.id) {
+        throw new Error("Kullanıcı kimliği bulunamadı");
+      }
+      
+      setIsUploadingAvatar(true);
+      
+      // Upload file to storage
+      const filePath = `avatars/${user.id}/${file.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(filePath, file, { upsert: true });
+      
+      if (uploadError) throw uploadError;
+      
+      // Get public URL
+      const { data } = supabase.storage.from("avatars").getPublicUrl(filePath);
+      const publicUrl = data.publicUrl;
+      
+      // Update profile with avatar URL
+      await profileServisi.guncelle(user.id, {
+        avatar_url: publicUrl,
+      });
+      
+      setAvatarUrl(publicUrl);
+      toast.success("Profil fotoğrafı güncellendi");
+    } catch (error: any) {
+      console.error("Error uploading avatar:", error);
+      toast.error(`Profil fotoğrafı yüklenirken bir hata oluştu - ${error.message || "Bilinmeyen hata"}`);
+    } finally {
+      setIsUploadingAvatar(false);
+    }
   };
 
   return {
-    dukkanId,
-    dukkanAdi,
-    refreshProfile,
-    resetProfile
+    profileData,
+    updateProfileField,
+    loadProfileData,
+    saveProfile,
+    isSaving,
+    uploadAvatar,
+    isUploadingAvatar,
+    avatarUrl,
   };
 }

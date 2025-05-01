@@ -1,6 +1,6 @@
 
 import { supabase } from '../client';
-import { Randevu } from '../types';
+import { Randevu, RandevuDurumu } from '../types';
 import { musteriServisi } from './musteriServisi';
 
 export const randevuServisi = {
@@ -52,12 +52,7 @@ export const randevuServisi = {
     }
   },
   
-  // Add the ekle method to fix StaffAppointmentForm
   async ekle(randevuVerisi: Partial<Randevu>) {
-    return this.randevuOlustur(randevuVerisi);
-  },
-  
-  async randevuOlustur(randevuVerisi: Partial<Randevu>) {
     try {
       if (!randevuVerisi.dukkan_id) {
         randevuVerisi.dukkan_id = await musteriServisi.getCurrentUserDukkanId() as number;
@@ -78,6 +73,10 @@ export const randevuServisi = {
       console.error('Randevu oluşturma hatası:', error);
       throw error;
     }
+  },
+  
+  async randevuOlustur(randevuVerisi: Partial<Randevu>) {
+    return this.ekle(randevuVerisi);
   },
   
   async randevuGuncelle(id: number, updates: Partial<Randevu>) {
@@ -127,13 +126,18 @@ export const randevuServisi = {
     }
   },
   
-  // Add a method for randevuDurumGuncelle to fix AppointmentsList
   async randevuDurumGuncelle(id: number, durum: string) {
     return this.durumGuncelle(id, durum);
   },
   
   async musteriRandevulari(musteriId: number) {
     try {
+      const dukkanId = await musteriServisi.getCurrentUserDukkanId();
+      
+      if (!dukkanId) {
+        throw new Error('Dükkan bilgisi bulunamadı');
+      }
+      
       const { data, error } = await supabase
         .from('randevular')
         .select(`
@@ -142,6 +146,7 @@ export const randevuServisi = {
           personel:personel_id (*)
         `)
         .eq('musteri_id', musteriId)
+        .eq('dukkan_id', dukkanId)  // Ensure we only get appointments for the current shop
         .order('tarih', { ascending: false })
         .order('saat', { ascending: false });
         

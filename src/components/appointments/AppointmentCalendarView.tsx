@@ -46,17 +46,23 @@ export function AppointmentCalendarView({ appointments, isLoading, selectedDate,
       isSameDay(appointmentDate, date)
     ).length;
     
-    return hasAppointments ? (
-      <div className="relative w-full h-full flex justify-center">
-        <div>{date.getDate()}</div>
-        <Badge 
-          variant="secondary" 
-          className="absolute bottom-0 text-[10px] px-1"
-        >
-          {countAppointments}
-        </Badge>
-      </div>
-    ) : date.getDate();
+    // Fix: Return React element instead of number | Element
+    if (hasAppointments) {
+      return (
+        <div className="relative w-full h-full flex justify-center">
+          <div>{date.getDate()}</div>
+          <Badge 
+            variant="secondary" 
+            className="absolute bottom-0 text-[10px] px-1"
+          >
+            {countAppointments}
+          </Badge>
+        </div>
+      );
+    }
+    
+    // Return just the date number wrapped in a div
+    return <div>{date.getDate()}</div>;
   };
 
   return (
