@@ -1,3 +1,4 @@
+
 import { CategoryCard } from "./CategoryCard";
 import { ServiceForm } from "./ServiceForm";
 import { CategoryForm } from "./CategoryForm";
@@ -57,6 +58,7 @@ interface ServicesContentProps {
   puanlamaAktif: boolean;
   setPuanlamaAktif: (value: boolean) => void;
 }
+
 export function ServicesContent({
   isStaff,
   kategoriler,
@@ -132,8 +134,10 @@ export function ServicesContent({
     }
   };
 
-  return <>
-      {isStaff && <div className="flex justify-between items-center mb-6">
+  return (
+    <>
+      {isStaff && (
+        <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">Hizmet Yönetimi</h1>
           <div className="flex items-center gap-2">
             <div className="flex items-center space-x-2">
@@ -167,7 +171,8 @@ export function ServicesContent({
               </Button>
             </div>
           </div>
-        </div>}
+        </div>
+      )}
       
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-2">
@@ -180,7 +185,22 @@ export function ServicesContent({
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <SortableContext items={kategoriler.map(k => k.id)} strategy={verticalListSortingStrategy}>
                 <Accordion type="single" collapsible className="w-full space-y-4" value={openCategories.length > 0 ? openCategories[0] : undefined} onValueChange={handleCategoryToggle}>
-                  {kategoriler.map(kategori => <SortableCategory key={kategori.id} id={kategori.id} kategori={kategori} islemler={islemler.filter((islem: any) => islem.kategori_id === kategori.id)} isStaff={isStaff} onServiceEdit={onServiceEdit} onServiceDelete={onServiceDelete} onCategoryDelete={onCategoryDelete} onCategoryEdit={onCategoryEdit} onSiralamaChange={onSiralamaChange} onRandevuAl={onRandevuAl} puanlamaAktif={puanlamaAktif} />)}
+                  {kategoriler.map(kategori => (
+                    <SortableCategory 
+                      key={kategori.id} 
+                      id={kategori.id} 
+                      kategori={kategori} 
+                      islemler={islemler.filter((islem: any) => islem.kategori_id === kategori.id)} 
+                      isStaff={isStaff} 
+                      onServiceEdit={onServiceEdit} 
+                      onServiceDelete={onServiceDelete} 
+                      onCategoryDelete={onCategoryDelete} 
+                      onCategoryEdit={onCategoryEdit} 
+                      onSiralamaChange={onSiralamaChange} 
+                      onRandevuAl={onRandevuAl} 
+                      puanlamaAktif={puanlamaAktif} 
+                    />
+                  ))}
                 </Accordion>
               </SortableContext>
             </DndContext>
@@ -192,11 +212,41 @@ export function ServicesContent({
         </TabsContent>
       </Tabs>
       
-      <CategoryForm isOpen={kategoriDialogAcik} onOpenChange={setKategoriDialogAcik} kategoriAdi={yeniKategoriAdi} setKategoriAdi={setYeniKategoriAdi} onSubmit={onCategoryFormSubmit} />
+      <CategoryForm 
+        isOpen={kategoriDialogAcik} 
+        onOpenChange={setKategoriDialogAcik} 
+        kategoriAdi={yeniKategoriAdi} 
+        setKategoriAdi={setYeniKategoriAdi} 
+        onSubmit={onCategoryFormSubmit} 
+      />
       
-      <CategoryEditForm isOpen={kategoriDuzenleDialogAcik} onOpenChange={setKategoriDuzenleDialogAcik} kategoriAdi={duzenleKategoriAdi} setKategoriAdi={setDuzenleKategoriAdi} onSubmit={onCategoryEditFormSubmit} />
+      <CategoryEditForm 
+        isOpen={kategoriDuzenleDialogAcik} 
+        onOpenChange={setKategoriDuzenleDialogAcik} 
+        kategoriAdi={duzenleKategoriAdi} 
+        setKategoriAdi={setDuzenleKategoriAdi} 
+        onSubmit={onCategoryEditFormSubmit} 
+      />
       
-      <ServiceForm isOpen={dialogAcik} onOpenChange={setDialogAcik} kategoriler={kategoriler} islemAdi={islemAdi} setIslemAdi={setIslemAdi} fiyat={fiyat} setFiyat={setFiyat} maliyet={maliyet} setMaliyet={setMaliyet} puan={puan} setPuan={setPuan} kategoriId={kategoriId} setKategoriId={setKategoriId} duzenleId={duzenleId} onSubmit={onServiceFormSubmit} onReset={formuSifirla} puanlamaAktif={puanlamaAktif} />
+      <ServiceForm 
+        isOpen={dialogAcik} 
+        onOpenChange={setDialogAcik} 
+        kategoriler={kategoriler} 
+        islemAdi={islemAdi} 
+        setIslemAdi={setIslemAdi} 
+        fiyat={fiyat} 
+        setFiyat={setFiyat} 
+        maliyet={maliyet} 
+        setMaliyet={setMaliyet} 
+        puan={puan} 
+        setPuan={setPuan} 
+        kategoriId={kategoriId} 
+        setKategoriId={setKategoriId} 
+        duzenleId={duzenleId} 
+        onSubmit={onServiceFormSubmit} 
+        onReset={formuSifirla} 
+        puanlamaAktif={puanlamaAktif} 
+      />
       
       {/* Information Dialog */}
       <Dialog open={infoDialogOpen} onOpenChange={setInfoDialogOpen}>
@@ -219,5 +269,6 @@ export function ServicesContent({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>;
+    </>
+  );
 }

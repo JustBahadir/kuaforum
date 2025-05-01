@@ -10,6 +10,8 @@ export const musteriServisi = {
         throw new Error('Kullanıcı bulunamadı');
       }
       
+      console.log('Getting dukkan ID for user:', user.id);
+      
       // First check if user is an admin (dukkan owner)
       const { data: dukkanlar, error: dukkanError } = await supabase
         .from('dukkanlar')
@@ -56,6 +58,54 @@ export const musteriServisi = {
       if (profile && profile.dukkan_id) {
         console.log('Dukkan ID (from profile):', profile.dukkan_id);
         return profile.dukkan_id;
+      }
+      
+      // If no dukkan ID found but current user is an admin, create a new dukkan
+      const { data: userRole } = await supabase.rpc('get_user_role');
+      
+      if (userRole === 'admin') {
+        console.log('User is admin but has no dukkan. Creating a new one.');
+        
+        // Get user's profile info for the name
+        const { data: userProfile } = await supabase
+          .from('profiles')
+          .select('first_name, last_name')
+          .eq('id', user.id)
+          .single();
+          
+        const shopName = userProfile?.first_name 
+          ? `${userProfile.first_name} ${userProfile.last_name || ''} İşletmesi`
+          : 'Yeni İşletme';
+          
+        const shopCode = 'SH' + Math.floor(10000 + Math.random() * 90000);
+        
+        // Create a new dukkan for the admin
+        const { data: newShop, error: newShopError } = await supabase
+          .from('dukkanlar')
+          .insert([{
+            ad: shopName,
+            kod: shopCode,
+            sahibi_id: user.id,
+            active: true
+          }])
+          .select();
+          
+        if (newShopError) {
+          console.error('Yeni dükkan oluşturma hatası:', newShopError);
+          throw newShopError;
+        }
+        
+        if (newShop && newShop.length > 0) {
+          console.log('Yeni dukkan oluşturuldu:', newShop[0].id);
+          
+          // Update the user's profile to link to this dukkan
+          await supabase
+            .from('profiles')
+            .update({ dukkan_id: newShop[0].id })
+            .eq('id', user.id);
+            
+          return newShop[0].id;
+        }
       }
       
       console.log('Dükkan ID bulunamadı');

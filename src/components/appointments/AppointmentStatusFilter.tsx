@@ -1,6 +1,7 @@
 
 import { Button } from "../ui/button";
 import { RandevuDurumu } from "@/lib/supabase/types";
+import { ButtonGroup } from "../ui/button-group";
 
 interface AppointmentStatusFilterProps {
   value: RandevuDurumu | 'all';
@@ -11,7 +12,7 @@ export function AppointmentStatusFilter({ value, onChange }: AppointmentStatusFi
   return (
     <div>
       <h2 className="text-sm font-medium mb-3">Randevu Durumu</h2>
-      <div className="flex flex-wrap gap-2">
+      <ButtonGroup>
         <Button 
           variant={value === 'all' ? 'default' : 'outline'} 
           size="sm"
@@ -50,7 +51,7 @@ export function AppointmentStatusFilter({ value, onChange }: AppointmentStatusFi
           <span className="rounded-full w-2 h-2 bg-red-500"></span>
           <span className="hidden sm:inline">İptal</span>
         </Button>
-      </div>
+      </ButtonGroup>
     </div>
   );
 }

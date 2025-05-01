@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { AppointmentStatusFilter } from "@/components/appointments/AppointmentStatusFilter";
 import { AppointmentCalendarView } from "@/components/appointments/AppointmentCalendarView";
 import { AppointmentWeekView } from "@/components/appointments/AppointmentWeekView";
@@ -16,6 +16,8 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { RandevuDurumu } from "@/lib/supabase/types";
 import { NewAppointmentDialog } from "@/components/appointments/NewAppointmentDialog";
+import { format } from "date-fns";
+import { tr } from "date-fns/locale";
 
 export default function Appointments() {
   // State for the view tab
@@ -69,6 +71,8 @@ export default function Appointments() {
     setIsNewAppointmentDialogOpen(false);
     toast.success("Randevu başarıyla oluşturuldu");
   };
+  
+  const formattedDate = format(selectedDate, "d MMMM yyyy, EEEE", { locale: tr });
 
   return (
     <StaffLayout>

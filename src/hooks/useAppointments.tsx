@@ -4,9 +4,10 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from './useAuth';
 import { randevuServisi } from '@/lib/supabase';
 import { toast } from 'sonner';
+import { RandevuDurumu } from '@/lib/supabase/types';
 
 export type AppointmentFilters = {
-  status?: string | null;
+  status?: RandevuDurumu | null;
   date?: Date | null;
   personnelId?: number | null;
   customerId?: number | null;
@@ -54,7 +55,7 @@ export function useAppointments(initialFilters: AppointmentFilters = {}) {
     isError,
     refetch
   } = useQuery({
-    queryKey: ['appointments', userRole, user?.id],
+    queryKey: ['appointments', userRole, user?.id, filters],
     queryFn: fetchAppointments,
     enabled: !!user,
     staleTime: 60000, // 1 minute

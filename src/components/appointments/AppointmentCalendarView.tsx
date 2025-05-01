@@ -40,40 +40,40 @@ export function AppointmentCalendarView({
         <CardTitle>{format(selectedDate, "MMMM yyyy", { locale: tr })}</CardTitle>
       </CardHeader>
       <CardContent className="pt-0">
-        <div className="p-3">
-          <Calendar
-            mode="single"
-            selected={selectedDate}
-            onSelect={(date) => date && onDateSelect?.(date)}
-            className="border-0"
-            locale={tr}
-            month={selectedDate}
-            modifiers={{
-              appointment: appointmentDates,
-            }}
-            modifiersStyles={{
-              appointment: { 
-                fontWeight: 'bold',
-                backgroundColor: 'rgba(79, 70, 229, 0.1)',
-              },
-              selected: {
-                backgroundColor: 'rgb(79, 70, 229)',
-                color: 'white'
-              },
-            }}
-            disabled={{ before: new Date('2020-01-01') }}
-          />
-        </div>
-
-        {isLoading ? (
-          <div className="flex justify-center items-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-600"></div>
+        <div className="flex flex-col md:flex-row justify-center">
+          <div className="p-3">
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={(date) => date && onDateSelect?.(date)}
+              className="border-0"
+              locale={tr}
+              month={selectedDate}
+              modifiers={{
+                appointment: appointmentDates,
+              }}
+              modifiersStyles={{
+                appointment: { 
+                  fontWeight: 'bold',
+                  backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                },
+                selected: {
+                  backgroundColor: 'rgb(79, 70, 229)',
+                  color: 'white'
+                },
+              }}
+              disabled={{ before: new Date('2020-01-01') }}
+            />
           </div>
-        ) : (
-          <div className="pt-4">
+
+          <div className="flex-1 md:max-w-md md:ml-4 mt-4 md:mt-0">
             <h3 className="font-medium text-base mb-3">{format(selectedDate, "d MMMM yyyy, EEEE", { locale: tr })}</h3>
             
-            {appointmentsByDate[format(selectedDate, 'yyyy-MM-dd')] ? (
+            {isLoading ? (
+              <div className="flex justify-center items-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-600"></div>
+              </div>
+            ) : appointmentsByDate[format(selectedDate, 'yyyy-MM-dd')] ? (
               <div className="space-y-3">
                 {appointmentsByDate[format(selectedDate, 'yyyy-MM-dd')].map((appointment) => (
                   <div key={appointment.id} className="p-3 border rounded-md bg-white">
@@ -112,7 +112,7 @@ export function AppointmentCalendarView({
               </div>
             )}
           </div>
-        )}
+        </div>
       </CardContent>
     </Card>
   );

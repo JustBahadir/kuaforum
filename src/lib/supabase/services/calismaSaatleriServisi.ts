@@ -65,7 +65,7 @@ export const calismaSaatleriServisi = {
     }
   },
   
-  async ekle(calismaSaati: CalismaSaati) {
+  async ekle(calismaSaati: Partial<CalismaSaati>) {
     try {
       if (!calismaSaati.dukkan_id) {
         calismaSaati.dukkan_id = await this.getCurrentDukkanId();
