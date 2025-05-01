@@ -22,9 +22,19 @@ export default function Profile() {
   const { 
     profileData, 
     loading,
+    fetchProfileData,
     updateProfile,
-    uploadAvatar
+    updateEducation,
+    updateHistory,
+    uploadAvatar,
+    uploadCv
   } = useProfileManagement(userId);
+  
+  useEffect(() => {
+    if (userId) {
+      fetchProfileData();
+    }
+  }, [userId]);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -36,12 +46,6 @@ export default function Profile() {
     // This would typically update a form state
     console.log(`Select ${name} changed to ${value}`);
   };
-  
-  const handleAvatarUpload = async (file: File) => {
-    if (uploadAvatar) {
-      await uploadAvatar(file);
-    }
-  };
 
   return (
     <StaffLayout>
@@ -51,11 +55,14 @@ export default function Profile() {
           profile={profileData}
           handleChange={handleChange}
           handleSelectChange={handleSelectChange}
-          handleAvatarUpload={handleAvatarUpload}
+          handleAvatarUpload={uploadAvatar}
           isLoading={loading}
           updateProfile={updateProfile}
           educationData={profileData?.education}
+          updateEducation={updateEducation}
           historyData={profileData?.history}
+          updateHistory={updateHistory}
+          uploadCv={uploadCv}
         />
       </div>
     </StaffLayout>

@@ -1,300 +1,299 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { profileService } from "@/lib/auth/profileService";
 import { dukkanServisi } from "@/lib/supabase"; // Updated import
 import { authService } from "@/lib/auth/authService";
 import { toast } from "sonner";
-import { profilServisi } from "@/lib/supabase/services/profilServisi";
 import { supabase } from "@/lib/supabase/client";
-
-type GenderType = "erkek" | "kadın" | null;
-
-type ProfileData = {
-  firstName?: string;
-  lastName?: string;
-  email?: string;
-  phone?: string;
-  gender?: GenderType;
-  birthdate?: string;
-  avatarUrl?: string;
-  iban?: string;
-  address?: string;
-  role?: string;
-  education?: {
-    ortaokuldurumu: string;
-    lisedurumu: string;
-    liseturu: string;
-    meslekibrans: string;
-    universitedurumu: string;
-    universitebolum: string;
-  };
-  history?: {
-    isyerleri: string;
-    gorevpozisyon: string;
-    belgeler: string;
-    yarismalar: string;
-    cv: string;
-  };
-};
 
 /**
  * Hook for managing user profile information
  */
-export function useProfileManagement(userId?: string) {
-  const [profileData, setProfileData] = useState<ProfileData | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [dukkanId, setDukkanId] = useState<number | null>(null);
-  const [dukkanAdi, setDukkanAdi] = useState<string | null>(null);
-
-  // Fetch profile data
-  useEffect(() => {
-    if (!userId) {
-      setLoading(false);
-      return;
-    }
-
-    const fetchProfile = async () => {
+export function useProfileManagement(userId?: string | undefined) {
+  const [profileData, setProfileData] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  
+  /**
+   * Fetches the user profile data
+   */
+  const fetchProfileData = async () => {
+    if (!userId) return;
+    
+    setLoading(true);
+    try {
+      // Fetch profile data
+      const profile = await profileService.getProfile(userId);
+      
+      // Get education and work history data
+      let educationData = null;
+      let historyData = null;
+      
       try {
-        setLoading(true);
-        // Get user auth data for email
-        const { data: authUser } = await supabase.auth.getUser();
-        const userEmail = authUser?.user?.email || '';
-        
-        // Get profile data
-        const profile = await profilServisi.getir(userId);
-        
-        // Fetch education and history data
-        const { data: educationData } = await supabase
+        // Assuming there's a staff_education table with personel_id foreign key
+        const { data: education } = await supabase
           .from('staff_education')
           .select('*')
-          .eq('personel_id', userId)
-          .maybeSingle();
-          
-        const { data: historyData } = await supabase
+          .eq('personel_id', profile.personel_id || 0)
+          .single();
+        
+        educationData = education;
+      } catch (error) {
+        console.log('Education data not found or error', error);
+      }
+      
+      try {
+        // Assuming there's a staff_history table with personel_id foreign key
+        const { data: history } = await supabase
           .from('staff_history')
           .select('*')
-          .eq('personel_id', userId)
-          .maybeSingle();
-
-        // Cast gender to the correct type
-        const typedProfile: ProfileData = {
-          ...profile,
-          firstName: profile.first_name || authUser?.user?.user_metadata?.first_name || '',
-          lastName: profile.last_name || authUser?.user?.user_metadata?.last_name || '',
-          email: userEmail,
-          gender: (profile.gender as GenderType) || null,
-          avatarUrl: profile.avatar_url,
-          education: educationData || {
-            ortaokuldurumu: "",
-            lisedurumu: "",
-            liseturu: "",
-            meslekibrans: "",
-            universitedurumu: "",
-            universitebolum: "",
-          },
-          history: historyData || {
-            isyerleri: "",
-            gorevpozisyon: "",
-            belgeler: "",
-            yarismalar: "",
-            cv: "",
-          }
-        };
+          .eq('personel_id', profile.personel_id || 0)
+          .single();
         
-        setProfileData(typedProfile);
-        console.log("Profile data loaded:", typedProfile);
+        historyData = history;
       } catch (error) {
-        console.error("Error fetching profile:", error);
-      } finally {
-        setLoading(false);
+        console.log('History data not found or error', error);
       }
-    };
-
-    fetchProfile();
-  }, [userId]);
-
-  /**
-   * Update user profile
-   */
-  const updateProfile = async (data: Partial<ProfileData>) => {
-    if (!userId) {
-      toast.error("Kullanıcı bulunamadı");
-      return;
+      
+      setProfileData({
+        ...profile,
+        education: educationData,
+        history: historyData
+      });
+    } catch (error) {
+      console.error("Error fetching profile:", error);
+      toast.error("Profil bilgileri alınırken bir hata oluştu");
+    } finally {
+      setLoading(false);
     }
-
+  };
+  
+  /**
+   * Updates the user profile
+   */
+  const updateProfile = async (data: any) => {
+    if (!userId) return;
+    
+    setLoading(true);
     try {
-      setLoading(true);
-      
-      // Prepare data for the profiles table
-      const profileUpdate = {
+      await profileService.updateProfile({
         id: userId,
-        first_name: data.firstName,
-        last_name: data.lastName,
-        phone: data.phone,
-        gender: data.gender,
-        birthdate: data.birthdate,
-        iban: data.iban,
-        address: data.address
-      };
+        ...data
+      });
       
-      await profilServisi.guncelle(profileUpdate);
-      
-      // Update profile data in state
-      setProfileData(prev => prev ? { ...prev, ...data } : data);
-      toast.success("Profil başarıyla güncellendi");
+      toast.success("Profil bilgileri başarıyla güncellendi");
+      await fetchProfileData(); // Refresh data
     } catch (error) {
       console.error("Error updating profile:", error);
       toast.error("Profil güncellenirken bir hata oluştu");
-      throw error;
     } finally {
       setLoading(false);
     }
   };
-
+  
   /**
-   * Upload avatar
+   * Updates the education data
    */
-  const uploadAvatar = async (file: File): Promise<string> => {
-    if (!userId) {
-      toast.error("Kullanıcı bulunamadı");
-      throw new Error("User ID not found");
+  const updateEducation = async (data: any) => {
+    if (!profileData?.personel_id) {
+      toast.error("Personel bilgisi bulunamadı");
+      return;
     }
-
+    
+    setLoading(true);
     try {
-      setLoading(true);
+      const educationData = {
+        ...data,
+        personel_id: profileData.personel_id
+      };
       
-      // Check if profile-photos bucket exists
-      const { data: buckets } = await supabase.storage.listBuckets();
-      const bucketExists = buckets?.some(bucket => bucket.name === 'profile-photos');
+      // Check if education record exists
+      const { data: existingData } = await supabase
+        .from('staff_education')
+        .select('*')
+        .eq('personel_id', profileData.personel_id)
+        .maybeSingle();
       
-      if (!bucketExists) {
-        // Create a more user-friendly error message
-        toast.error("Profil fotoğrafı yükleme sistemi hazır değil. Lütfen sistem yöneticisiyle iletişime geçin.");
-        throw new Error("Storage bucket 'profile-photos' not found");
-      }
-      
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${userId}-${Date.now()}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
-
-      // Upload file to Storage
-      const { error: uploadError, data } = await supabase.storage
-        .from('profile-photos')
-        .upload(filePath, file);
-
-      if (uploadError) {
-        throw uploadError;
-      }
-
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('profile-photos')
-        .getPublicUrl(filePath);
-
-      const avatarUrl = urlData.publicUrl;
-
-      // Update profile with avatar URL
-      await profilServisi.guncelle({
-        id: userId,
-        avatar_url: avatarUrl
-      });
-      
-      // Update profile data in state
-      setProfileData(prev => {
-        if (prev) {
-          return { ...prev, avatarUrl };
-        }
-        return { avatarUrl };
-      });
-      
-      toast.success("Profil fotoğrafı güncellendi");
-      return avatarUrl;
-    } catch (error: any) {
-      console.error("Error uploading avatar:", error);
-      
-      if (error.message?.includes("Bucket not found")) {
-        toast.error("Profil fotoğrafı yükleme alanı bulunamadı. Sistem yöneticisiyle iletişime geçin.");
+      if (existingData) {
+        // Update existing record
+        await supabase
+          .from('staff_education')
+          .update(educationData)
+          .eq('personel_id', profileData.personel_id);
       } else {
-        toast.error("Profil fotoğrafı yüklenirken bir hata oluştu");
+        // Insert new record
+        await supabase
+          .from('staff_education')
+          .insert([educationData]);
       }
       
-      throw error;
+      toast.success("Eğitim bilgileri başarıyla güncellendi");
+      await fetchProfileData(); // Refresh data
+    } catch (error) {
+      console.error("Error updating education:", error);
+      toast.error("Eğitim bilgileri güncellenirken bir hata oluştu");
     } finally {
       setLoading(false);
     }
   };
-
+  
   /**
-   * Refreshes user profile information
+   * Updates the work history data
    */
-  const refreshProfile = async () => {
+  const updateHistory = async (data: any) => {
+    if (!profileData?.personel_id) {
+      toast.error("Personel bilgisi bulunamadı");
+      return;
+    }
+    
+    setLoading(true);
     try {
-      const user = await authService.getCurrentUser();
-
-      if (!user) {
-        setDukkanId(null);
-        setDukkanAdi(null);
-        setProfileData(null);
-        return;
-      }
-
-      // Fetch profile data
-      const profile = await profilServisi.getir(user.id);
+      const historyData = {
+        ...data,
+        personel_id: profileData.personel_id
+      };
       
-      // Cast gender to the correct type
-      setProfileData({
-        ...profile,
-        gender: (profile.gender as any) || null
-      });
-
-      // Get role from user metadata for reliable role checking
-      const role = user.user_metadata?.role || (await profileService.getUserRole());
-
-      if (role === "admin") {
-        try {
-          // Use dukkanServisi instead of isletmeServisi
-          const userShop = await dukkanServisi.kullanicininIsletmesi(user.id);
-          if (userShop && typeof userShop === 'object') {
-            setDukkanId(userShop.id);
-            setDukkanAdi(userShop.ad);
-          }
-        } catch (error) {
-          console.error("İşletme bilgisi alınırken hata:", error);
-        }
-      } else if (role === "staff") {
-        try {
-          // Use dukkanServisi instead of isletmeServisi
-          const staffShop = await dukkanServisi.personelAuthIdIsletmesi(user.id);
-          if (staffShop && typeof staffShop === 'object') {
-            setDukkanId(staffShop.id);
-            setDukkanAdi(staffShop.ad);
-          }
-        } catch (error) {
-          console.error("Personel işletme bilgisi alınırken hata:", error);
-        }
+      // Check if history record exists
+      const { data: existingData } = await supabase
+        .from('staff_history')
+        .select('*')
+        .eq('personel_id', profileData.personel_id)
+        .maybeSingle();
+      
+      if (existingData) {
+        // Update existing record
+        await supabase
+          .from('staff_history')
+          .update(historyData)
+          .eq('personel_id', profileData.personel_id);
+      } else {
+        // Insert new record
+        await supabase
+          .from('staff_history')
+          .insert([historyData]);
       }
+      
+      toast.success("İş geçmişi bilgileri başarıyla güncellendi");
+      await fetchProfileData(); // Refresh data
     } catch (error) {
-      console.error("Error refreshing profile:", error);
+      console.error("Error updating history:", error);
+      toast.error("İş geçmişi bilgileri güncellenirken bir hata oluştu");
+    } finally {
+      setLoading(false);
     }
   };
-
+  
   /**
-   * Reset all profile information
+   * Uploads avatar image
    */
-  const resetProfile = () => {
-    setDukkanId(null);
-    setDukkanAdi(null);
-    setProfileData(null);
+  const uploadAvatar = async (file: File) => {
+    if (!userId) return;
+    
+    setLoading(true);
+    try {
+      // Create a unique file name
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${userId}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+      
+      // Upload the file
+      const { error: uploadError } = await supabase.storage
+        .from('photos')
+        .upload(filePath, file);
+      
+      if (uploadError) throw uploadError;
+      
+      // Get the public URL
+      const { data } = supabase.storage
+        .from('photos')
+        .getPublicUrl(filePath);
+      
+      // Update the profile with the new avatar URL
+      await profileService.updateProfile({
+        id: userId,
+        avatar_url: data.publicUrl
+      });
+      
+      toast.success("Profil fotoğrafı başarıyla güncellendi");
+      await fetchProfileData(); // Refresh data
+    } catch (error) {
+      console.error("Error uploading avatar:", error);
+      toast.error("Profil fotoğrafı yüklenirken bir hata oluştu");
+    } finally {
+      setLoading(false);
+    }
   };
-
+  
+  /**
+   * Uploads CV file
+   */
+  const uploadCv = async (file: File) => {
+    if (!profileData?.personel_id) {
+      toast.error("Personel bilgisi bulunamadı");
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      // Create a unique file name
+      const fileExt = file.name.split('.').pop();
+      const fileName = `cv-${profileData.personel_id}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `documents/${fileName}`;
+      
+      // Upload the file
+      const { error: uploadError } = await supabase.storage
+        .from('photos')
+        .upload(filePath, file);
+      
+      if (uploadError) throw uploadError;
+      
+      // Get the public URL
+      const { data } = supabase.storage
+        .from('photos')
+        .getPublicUrl(filePath);
+      
+      // Update the staff_history with the CV URL
+      const { data: historyData } = await supabase
+        .from('staff_history')
+        .select('*')
+        .eq('personel_id', profileData.personel_id)
+        .maybeSingle();
+      
+      if (historyData) {
+        await supabase
+          .from('staff_history')
+          .update({ cv: data.publicUrl })
+          .eq('personel_id', profileData.personel_id);
+      } else {
+        await supabase
+          .from('staff_history')
+          .insert([{
+            personel_id: profileData.personel_id,
+            cv: data.publicUrl,
+            isyerleri: '',
+            gorevpozisyon: '',
+            belgeler: '',
+            yarismalar: ''
+          }]);
+      }
+      
+      toast.success("CV başarıyla yüklendi");
+      await fetchProfileData(); // Refresh data
+    } catch (error) {
+      console.error("Error uploading CV:", error);
+      toast.error("CV yüklenirken bir hata oluştu");
+    } finally {
+      setLoading(false);
+    }
+  };
+  
   return {
     profileData,
     loading,
+    fetchProfileData,
     updateProfile,
+    updateEducation,
+    updateHistory,
     uploadAvatar,
-    dukkanId,
-    dukkanAdi,
-    refreshProfile,
-    resetProfile,
+    uploadCv
   };
 }

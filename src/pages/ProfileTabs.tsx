@@ -2,9 +2,9 @@
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
-import { StaffPersonalInfoTab } from "./Profile/StaffPersonalInfoTab";
-import { HistoryTab } from "./Profile/HistoryTab";
-import { EducationTab } from "./Profile/EducationTab";
+import StaffPersonalInfoTab from "./Profile/StaffPersonalInfoTab";
+import HistoryTab from "./Profile/HistoryTab";
+import EducationTab from "./Profile/EducationTab";
 
 export interface ProfileTabsProps {
   profile?: any;
