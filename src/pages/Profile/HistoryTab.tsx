@@ -1,116 +1,170 @@
 
-import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { FormField } from "@/components/ui/form-elements";
 import { LoadingButton } from "@/components/ui/loading-button";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export interface HistoryTabProps {
-  historyData: {
-    isyerleri: string;
-    gorevpozisyon: string;
-    yarismalar: string;
-    belgeler: string;
-    cv: string;
-  };
-  onHistoryChange: (data: any) => void;
-  onSave: () => void;
-  isLoading: boolean;
+  historyData?: any;
+  updateHistory?: (data: any) => Promise<void>;
+  isLoading?: boolean;
+  uploadCv?: (file: File) => Promise<void>;
 }
 
-export default function HistoryTab({ historyData, onHistoryChange, onSave, isLoading }: HistoryTabProps) {
-  const [activeTab, setActiveTab] = useState("experience");
+export default function HistoryTab({ 
+  historyData = {}, 
+  updateHistory = async () => {}, 
+  isLoading = false,
+  uploadCv = async () => {}
+}: HistoryTabProps) {
+  const [formData, setFormData] = useState({
+    experience: historyData.experience || '',
+    certifications: historyData.certifications || '',
+    competitions: historyData.competitions || '',
+    socialMediaLinks: historyData.socialMediaLinks || { 
+      instagram: '', 
+      facebook: '', 
+      twitter: '',
+      youtube: '',
+      tiktok: ''
+    },
+    previousWorkplace: historyData.previousWorkplace || '',
+    specialties: historyData.specialties || '',
+  });
 
-  const handleChange = (field: string, value: string) => {
-    onHistoryChange({ ...historyData, [field]: value });
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    
+    // Handle nested objects like socialMediaLinks
+    if (name.includes('.')) {
+      const [parent, child] = name.split('.');
+      setFormData(prev => ({
+        ...prev,
+        [parent]: {
+          ...prev[parent],
+          [child]: value
+        }
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   };
 
+  const handleSubmit = async () => {
+    try {
+      await updateHistory(formData);
+    } catch (error) {
+      console.error("Error updating history:", error);
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    
+    try {
+      const file = e.target.files[0];
+      await uploadCv(file);
+    } catch (error) {
+      console.error("Error uploading CV:", error);
+    }
+  };
+  
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Özgeçmiş & Sertifikalar</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid grid-cols-3 w-full">
-            <TabsTrigger value="experience">İş Deneyimi</TabsTrigger>
-            <TabsTrigger value="certificates">Sertifikalar</TabsTrigger>
-            <TabsTrigger value="competitions">Yarışmalar</TabsTrigger>
-          </TabsList>
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold">İş Geçmişi</h2>
+      
+      <FormField
+        id="experience"
+        label="Deneyim"
+        placeholder="Yıl olarak deneyiminiz"
+        value={formData.experience}
+        onChange={handleChange}
+      />
+      
+      <FormField
+        id="certifications"
+        label="Sertifikalar"
+        placeholder="Sahip olduğunuz sertifikalar"
+        value={formData.certifications}
+        onChange={handleChange}
+      />
+      
+      <FormField
+        id="competitions"
+        label="Katıldığınız Yarışmalar"
+        placeholder="Ödül aldığınız ya da katıldığınız yarışmalar"
+        value={formData.competitions}
+        onChange={handleChange}
+      />
 
-          <TabsContent value="experience" className="space-y-4">
-            <div className="grid gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="isyerleri">Çalıştığı Yerler</Label>
-                <Textarea
-                  id="isyerleri"
-                  placeholder="Önceki iş deneyimlerinizi buraya yazın"
-                  value={historyData?.isyerleri || ""}
-                  onChange={(e) => handleChange("isyerleri", e.target.value)}
-                  className="min-h-[150px]"
-                />
-              </div>
+      <FormField
+        id="previousWorkplace"
+        label="Önceki İş Yeri"
+        placeholder="Daha önce çalıştığınız yer"
+        value={formData.previousWorkplace}
+        onChange={handleChange}
+      />
 
-              <div className="space-y-2">
-                <Label htmlFor="gorevpozisyon">Görev ve Pozisyonlar</Label>
-                <Textarea
-                  id="gorevpozisyon"
-                  placeholder="Görev ve pozisyonlarınızı buraya yazın"
-                  value={historyData?.gorevpozisyon || ""}
-                  onChange={(e) => handleChange("gorevpozisyon", e.target.value)}
-                  className="min-h-[150px]"
-                />
-              </div>
-            </div>
-          </TabsContent>
+      <FormField
+        id="specialties"
+        label="Uzmanlık Alanları"
+        placeholder="Uzmanlık alanlarınız (örn: Renklendirme, Kesim, vb.)"
+        value={formData.specialties}
+        onChange={handleChange}
+      />
+      
+      <h3 className="text-xl font-semibold">Sosyal Medya</h3>
+      
+      <FormField
+        id="socialMediaLinks.instagram"
+        label="Instagram"
+        placeholder="Instagram kullanıcı adınız"
+        value={formData.socialMediaLinks.instagram}
+        onChange={handleChange}
+      />
+      
+      <FormField
+        id="socialMediaLinks.facebook"
+        label="Facebook"
+        placeholder="Facebook kullanıcı adınız"
+        value={formData.socialMediaLinks.facebook}
+        onChange={handleChange}
+      />
+      
+      <FormField
+        id="socialMediaLinks.youtube"
+        label="Youtube"
+        placeholder="Youtube kanalınız"
+        value={formData.socialMediaLinks.youtube}
+        onChange={handleChange}
+      />
+      
+      <FormField
+        id="socialMediaLinks.tiktok"
+        label="TikTok"
+        placeholder="TikTok kullanıcı adınız"
+        value={formData.socialMediaLinks.tiktok}
+        onChange={handleChange}
+      />
+      
+      <div className="space-y-2">
+        <label className="block text-sm font-medium">CV Yükle</label>
+        <Input type="file" onChange={handleFileChange} accept=".pdf,.doc,.docx" />
+        <p className="text-xs text-gray-500">PDF, DOC veya DOCX formatında CV'nizi yükleyin</p>
+      </div>
 
-          <TabsContent value="certificates" className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="belgeler">Sertifikalar ve Belgeler</Label>
-              <Textarea
-                id="belgeler"
-                placeholder="Sahip olduğunuz sertifikaları ve belgeleri buraya yazın"
-                value={historyData?.belgeler || ""}
-                onChange={(e) => handleChange("belgeler", e.target.value)}
-                className="min-h-[200px]"
-              />
-            </div>
-          </TabsContent>
-
-          <TabsContent value="competitions" className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="yarismalar">Katıldığı Yarışmalar</Label>
-              <Textarea
-                id="yarismalar"
-                placeholder="Katıldığınız yarışmaları ve sonuçlarını buraya yazın"
-                value={historyData?.yarismalar || ""}
-                onChange={(e) => handleChange("yarismalar", e.target.value)}
-                className="min-h-[200px]"
-              />
-            </div>
-          </TabsContent>
-        </Tabs>
-
-        <div className="mt-6">
-          <Label htmlFor="cv">Özgeçmiş</Label>
-          <Textarea
-            id="cv"
-            placeholder="Özgeçmişinizi buraya yazın"
-            value={historyData?.cv || ""}
-            onChange={(e) => handleChange("cv", e.target.value)}
-            className="min-h-[150px] mt-2"
-          />
-        </div>
-
-        <div className="flex justify-end mt-6">
-          <LoadingButton onClick={onSave} isLoading={isLoading}>
-            Kaydet
-          </LoadingButton>
-        </div>
-      </CardContent>
-    </Card>
+      <div className="flex justify-end">
+        <LoadingButton 
+          onClick={handleSubmit} 
+          loading={isLoading}
+        >
+          Kaydet
+        </LoadingButton>
+      </div>
+    </div>
   );
 }

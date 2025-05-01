@@ -18,3 +18,12 @@ export const formatPhoneNumber = (value: string): string => {
     return `${numbers.slice(0, 4)} ${numbers.slice(4, 7)} ${numbers.slice(7, 9)} ${numbers.slice(9, 11)}`;
   }
 };
+
+/**
+ * Validates a phone number to ensure it's in the correct format
+ * Only allows numeric input
+ */
+export const validatePhoneNumber = (value: string): boolean => {
+  // Check if the value contains only digits
+  return /^\d+$/.test(value.replace(/\s/g, ''));
+};

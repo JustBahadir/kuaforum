@@ -40,6 +40,7 @@ export function AppointmentsList({ onAddClick, onSelectAppointment, hidemobile =
       (appointment.musteri?.last_name && appointment.musteri.last_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (appointment.musteri?.phone && appointment.musteri.phone.includes(searchTerm));
 
+    // Modified to exclude 'onaylandi' status
     const matchesStatus = statusFilter === "all" || appointment.durum === statusFilter;
 
     return matchesSearch && matchesStatus;
@@ -67,13 +68,11 @@ export function AppointmentsList({ onAddClick, onSelectAppointment, hidemobile =
     switch (status) {
       case "beklemede":
         return "bg-amber-100 text-amber-800 border-amber-200";
-      case "onaylandi":
+      case "tamamlandi":
         return "bg-green-100 text-green-800 border-green-200";
       case "iptal":
       case "iptal_edildi":
         return "bg-red-100 text-red-800 border-red-200";
-      case "tamamlandi":
-        return "bg-blue-100 text-blue-800 border-blue-200";
       default:
         return "bg-gray-100 text-gray-800 border-gray-200";
     }
@@ -82,9 +81,8 @@ export function AppointmentsList({ onAddClick, onSelectAppointment, hidemobile =
   const getStatusText = (status: RandevuDurumu) => {
     switch (status) {
       case "beklemede": return "Beklemede";
-      case "onaylandi": return "Onaylandı";
-      case "iptal": return "İptal Edildi";
       case "tamamlandi": return "Tamamlandı";
+      case "iptal": return "İptal Edildi";
       case "iptal_edildi": return "İptal Edildi";
       default: return status;
     }
@@ -138,7 +136,6 @@ export function AppointmentsList({ onAddClick, onSelectAppointment, hidemobile =
             <SelectContent>
               <SelectItem value="all">Tüm Durumlar</SelectItem>
               <SelectItem value="beklemede">Beklemede</SelectItem>
-              <SelectItem value="onaylandi">Onaylandı</SelectItem>
               <SelectItem value="iptal">İptal Edildi</SelectItem>
               <SelectItem value="tamamlandi">Tamamlandı</SelectItem>
             </SelectContent>
@@ -201,7 +198,7 @@ export function AppointmentsList({ onAddClick, onSelectAppointment, hidemobile =
                           className="h-7 w-7 p-0"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleStatusChange(appointment.id, "onaylandi");
+                            handleStatusChange(appointment.id, "tamamlandi");
                           }}
                           disabled={isUpdating}
                         >

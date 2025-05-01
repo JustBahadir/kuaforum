@@ -54,8 +54,8 @@ export function useProfileManagement(
         try {
           // Use dukkanServisi instead of isletmeServisi
           const staffShop = await dukkanServisi.personelAuthIdIsletmesi(user.id);
-          // Fix: Check if staffShop exists and has expected properties
-          if (staffShop && typeof staffShop === 'object' && staffShop.id && staffShop.ad) {
+          // Fix: Check if staffShop exists before accessing properties
+          if (staffShop && typeof staffShop === 'object') {
             setDukkanId(staffShop.id);
             setDukkanAdi(staffShop.ad);
           } else if (location.pathname.includes('/personnel')) {

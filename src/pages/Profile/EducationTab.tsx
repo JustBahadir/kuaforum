@@ -1,140 +1,176 @@
 
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState } from "react";
+import { FormField } from "@/components/ui/form-elements";
 import { LoadingButton } from "@/components/ui/loading-button";
 
 export interface EducationTabProps {
-  educationData: {
-    ortaokuldurumu: string;
-    liseturu: string;
-    lisedurumu: string;
-    universitedurumu: string;
-    universitebolum: string;
-    meslekibrans: string;
-  };
-  onEducationChange: (data: any) => void;
-  onSave: () => void;
-  isLoading: boolean;
+  educationData?: any;
+  updateEducation?: (data: any) => Promise<void>;
+  isLoading?: boolean;
 }
 
-export default function EducationTab({ educationData, onEducationChange, onSave, isLoading }: EducationTabProps) {
-  const handleChange = (field: string, value: string) => {
-    onEducationChange({ ...educationData, [field]: value });
+export default function EducationTab({ 
+  educationData = {}, 
+  updateEducation = async () => {},
+  isLoading = false 
+}: EducationTabProps) {
+  const [formData, setFormData] = useState({
+    highestEducation: educationData.highestEducation || '',
+    schoolName: educationData.schoolName || '',
+    graduationYear: educationData.graduationYear || '',
+    fieldOfStudy: educationData.fieldOfStudy || '',
+    additionalCourses: educationData.additionalCourses || '',
+    specialTrainings: educationData.specialTrainings || '',
+    languages: educationData.languages || {
+      english: educationData.languages?.english || '',
+      german: educationData.languages?.german || '',
+      french: educationData.languages?.french || '',
+      spanish: educationData.languages?.spanish || '',
+      other: educationData.languages?.other || ''
+    },
+    skills: educationData.skills || ''
+  });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    
+    // Handle nested objects like languages
+    if (name.includes('.')) {
+      const [parent, child] = name.split('.');
+      setFormData(prev => ({
+        ...prev,
+        [parent]: {
+          ...prev[parent],
+          [child]: value
+        }
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+  };
+
+  const handleSubmit = async () => {
+    try {
+      await updateEducation(formData);
+    } catch (error) {
+      console.error("Error updating education:", error);
+    }
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Eğitim Bilgileri</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid gap-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="ortaokuldurumu">Ortaokul Durumu</Label>
-              <Select
-                value={educationData?.ortaokuldurumu || ""}
-                onValueChange={(value) => handleChange("ortaokuldurumu", value)}
-              >
-                <SelectTrigger id="ortaokuldurumu">
-                  <SelectValue placeholder="Seçim yapınız" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="mezun">Mezun</SelectItem>
-                  <SelectItem value="devamediyor">Devam Ediyor</SelectItem>
-                  <SelectItem value="terketmis">Terk Etmiş</SelectItem>
-                  <SelectItem value="yok">Eğitim Yok</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="liseturu">Lise Türü</Label>
-              <Select
-                value={educationData?.liseturu || ""}
-                onValueChange={(value) => handleChange("liseturu", value)}
-              >
-                <SelectTrigger id="liseturu">
-                  <SelectValue placeholder="Seçim yapınız" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="duz">Düz Lise</SelectItem>
-                  <SelectItem value="anadolu">Anadolu Lisesi</SelectItem>
-                  <SelectItem value="meslek">Meslek Lisesi</SelectItem>
-                  <SelectItem value="fen">Fen Lisesi</SelectItem>
-                  <SelectItem value="sosyal">Sosyal Bilimler Lisesi</SelectItem>
-                  <SelectItem value="diger">Diğer</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="lisedurumu">Lise Durumu</Label>
-              <Select
-                value={educationData?.lisedurumu || ""}
-                onValueChange={(value) => handleChange("lisedurumu", value)}
-              >
-                <SelectTrigger id="lisedurumu">
-                  <SelectValue placeholder="Seçim yapınız" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="mezun">Mezun</SelectItem>
-                  <SelectItem value="devamediyor">Devam Ediyor</SelectItem>
-                  <SelectItem value="terketmis">Terk Etmiş</SelectItem>
-                  <SelectItem value="yok">Eğitim Yok</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="universitedurumu">Üniversite Durumu</Label>
-              <Select
-                value={educationData?.universitedurumu || ""}
-                onValueChange={(value) => handleChange("universitedurumu", value)}
-              >
-                <SelectTrigger id="universitedurumu">
-                  <SelectValue placeholder="Seçim yapınız" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="mezun">Mezun</SelectItem>
-                  <SelectItem value="devamediyor">Devam Ediyor</SelectItem>
-                  <SelectItem value="terketmis">Terk Etmiş</SelectItem>
-                  <SelectItem value="yok">Eğitim Yok</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="universitebolum">Üniversite Bölüm</Label>
-              <Input
-                id="universitebolum"
-                placeholder="Üniversite bölümünüz"
-                value={educationData?.universitebolum || ""}
-                onChange={(e) => handleChange("universitebolum", e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="meslekibrans">Mesleki Branş</Label>
-              <Input
-                id="meslekibrans"
-                placeholder="Mesleki branşınız"
-                value={educationData?.meslekibrans || ""}
-                onChange={(e) => handleChange("meslekibrans", e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end mt-4">
-            <LoadingButton onClick={onSave} isLoading={isLoading}>
-              Kaydet
-            </LoadingButton>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold">Eğitim Bilgileri</h2>
+      
+      <FormField
+        id="highestEducation"
+        label="En Yüksek Eğitim Seviyesi"
+        placeholder="Örn: Lise, Üniversite, Master, vb."
+        value={formData.highestEducation}
+        onChange={handleChange}
+      />
+      
+      <FormField
+        id="schoolName"
+        label="Okul/Kurum Adı"
+        placeholder="Mezun olduğunuz okul"
+        value={formData.schoolName}
+        onChange={handleChange}
+      />
+      
+      <FormField
+        id="graduationYear"
+        label="Mezuniyet Yılı"
+        placeholder="Örn: 2015"
+        type="number"
+        value={formData.graduationYear}
+        onChange={handleChange}
+      />
+      
+      <FormField
+        id="fieldOfStudy"
+        label="Çalışma Alanı"
+        placeholder="Örn: Kuaförlük, Güzellik Uzmanlığı, vb."
+        value={formData.fieldOfStudy}
+        onChange={handleChange}
+      />
+      
+      <FormField
+        id="additionalCourses"
+        label="Ek Kurslar"
+        placeholder="Katıldığınız ek kurslar"
+        value={formData.additionalCourses}
+        onChange={handleChange}
+      />
+      
+      <FormField
+        id="specialTrainings"
+        label="Özel Eğitimler"
+        placeholder="Aldığınız özel eğitimler"
+        value={formData.specialTrainings}
+        onChange={handleChange}
+      />
+      
+      <h3 className="text-xl font-semibold">Yabancı Dil Bilgisi</h3>
+      
+      <FormField
+        id="languages.english"
+        label="İngilizce"
+        placeholder="Seviyeniz (A1, A2, B1, B2, C1, C2)"
+        value={formData.languages.english}
+        onChange={handleChange}
+      />
+      
+      <FormField
+        id="languages.german"
+        label="Almanca"
+        placeholder="Seviyeniz (A1, A2, B1, B2, C1, C2)"
+        value={formData.languages.german}
+        onChange={handleChange}
+      />
+      
+      <FormField
+        id="languages.french"
+        label="Fransızca"
+        placeholder="Seviyeniz (A1, A2, B1, B2, C1, C2)"
+        value={formData.languages.french}
+        onChange={handleChange}
+      />
+      
+      <FormField
+        id="languages.spanish"
+        label="İspanyolca"
+        placeholder="Seviyeniz (A1, A2, B1, B2, C1, C2)"
+        value={formData.languages.spanish}
+        onChange={handleChange}
+      />
+      
+      <FormField
+        id="languages.other"
+        label="Diğer"
+        placeholder="Diğer diller ve seviyeleri"
+        value={formData.languages.other}
+        onChange={handleChange}
+      />
+      
+      <FormField
+        id="skills"
+        label="Beceriler"
+        placeholder="Sahip olduğunuz diğer beceriler"
+        value={formData.skills}
+        onChange={handleChange}
+      />
+      
+      <div className="flex justify-end">
+        <LoadingButton 
+          onClick={handleSubmit} 
+          loading={isLoading}
+        >
+          Kaydet
+        </LoadingButton>
+      </div>
+    </div>
   );
 }

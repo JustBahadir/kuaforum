@@ -1,11 +1,12 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { nanoid } from 'nanoid';
 import { toast } from "sonner";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { authService } from "@/lib/auth/authService";
+import { setupStorageBuckets } from "@/lib/supabase/setupStorage";
 
 interface ShopProfilePhotoUploadProps {
   children: React.ReactNode;
@@ -29,6 +30,11 @@ export function ShopProfilePhotoUpload({
   acceptVideoFiles = false
 }: ShopProfilePhotoUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
+
+  // Ensure buckets exist on component mount
+  useEffect(() => {
+    setupStorageBuckets().catch(console.error);
+  }, []);
 
   const handleClick = () => {
     const input = document.createElement('input');
@@ -69,72 +75,67 @@ export function ShopProfilePhotoUpload({
     try {
       setIsUploading(true);
       
+      // Ensure storage buckets exist before uploading
+      await setupStorageBuckets();
+      
       const fileExt = file.name.split('.').pop();
-      // First check if bucket exists, if not create it
-      try {
-        // Check if profile-photos bucket exists, create it if not
-        const { data: buckets } = await supabase.storage.listBuckets();
-        const bucketName = galleryMode ? 'shop-photos' : 'profile-photos';
-        
-        if (!buckets?.some(bucket => bucket.name === bucketName)) {
-          console.log(`Creating storage bucket: ${bucketName}`);
-          // Bucket needs to be created via Supabase admin - handle gracefully
-          toast.error(`Profil fotoğrafı yüklenemiyor: Depolama alanı '${bucketName}' bulunamadı`);
-          setIsUploading(false);
-          return;
-        }
-        
-        const filePath = `${dukkanId ? `shops/${dukkanId}/` : ''}${nanoid()}.${fileExt}`;
-        
-        const { data, error } = await supabase.storage
-          .from(bucketName)
-          .upload(filePath, file, {
-            cacheControl: '3600',
-            upsert: false
-          });
-        
-        if (error) throw error;
-        
-        const { data: publicUrl } = supabase.storage
-          .from(bucketName)
-          .getPublicUrl(data.path);
-        
-        if (galleryMode) {
-          onSuccess(publicUrl.publicUrl);
-          toast.success(isVideo ? 'Galeri videosu başarıyla yüklendi' : 'Galeri fotoğrafı başarıyla yüklendi');
-        } else {
-          // Only update shop logo for images, not videos
-          if (dukkanId) {
-            const { error: updateError } = await supabase
-              .from('dukkanlar')
-              .update({ logo_url: publicUrl.publicUrl })
-              .eq('id', dukkanId);
-            
-            if (updateError) throw updateError;
-          }
-  
-          // Also update user profile avatar if needed
-          if (updateUserProfile) {
-            try {
-              const user = await authService.getCurrentUser();
-              if (user) {
-                await supabase
-                  .from('profiles')
-                  .update({ avatar_url: publicUrl.publicUrl })
-                  .eq('id', user.id);
-              }
-            } catch (err) {
-              console.error('Profil avatar güncellenemedi:', err);
-              // Don't show error toast here since the shop logo was still updated
-            }
-          }
+      const bucketName = galleryMode ? 'shop-photos' : 'profile-photos';
+      
+      const filePath = `${dukkanId ? `shops/${dukkanId}/` : ''}${nanoid()}.${fileExt}`;
+      
+      const { data, error } = await supabase.storage
+        .from(bucketName)
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+      
+      if (error) {
+        console.error("Upload error:", error);
+        toast.error(`Yükleme hatası: ${error.message}`);
+        return;
+      }
+      
+      const { data: publicUrl } = supabase.storage
+        .from(bucketName)
+        .getPublicUrl(data.path);
+      
+      if (galleryMode) {
+        onSuccess(publicUrl.publicUrl);
+        toast.success(isVideo ? 'Galeri videosu başarıyla yüklendi' : 'Galeri fotoğrafı başarıyla yüklendi');
+      } else {
+        // Only update shop logo for images, not videos
+        if (dukkanId) {
+          const { error: updateError } = await supabase
+            .from('dukkanlar')
+            .update({ logo_url: publicUrl.publicUrl })
+            .eq('id', dukkanId);
           
-          onSuccess(publicUrl.publicUrl);
-          toast.success('Profil fotoğrafı başarıyla güncellendi');
+          if (updateError) {
+            console.error("Logo update error:", updateError);
+            toast.error(`Logo güncellenemedi: ${updateError.message}`);
+            return;
+          }
         }
-      } catch (bucketError) {
-        console.error("Storage bucket error:", bucketError);
-        toast.error("Depolama alanı erişim hatası. Lütfen sistem yöneticisine başvurun.");
+
+        // Also update user profile avatar if needed
+        if (updateUserProfile) {
+          try {
+            const user = await authService.getCurrentUser();
+            if (user) {
+              await supabase
+                .from('profiles')
+                .update({ avatar_url: publicUrl.publicUrl })
+                .eq('id', user.id);
+            }
+          } catch (err) {
+            console.error('Profil avatar güncellenemedi:', err);
+            // Don't show error toast here since the shop logo was still updated
+          }
+        }
+        
+        onSuccess(publicUrl.publicUrl);
+        toast.success('Profil fotoğrafı başarıyla güncellendi');
       }
     } catch (error: any) {
       console.error('Yükleme işlemi sırasında hata:', error);

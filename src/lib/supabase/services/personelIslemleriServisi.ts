@@ -61,7 +61,7 @@ export const personelIslemleriServisi = {
     }
   },
   
-  // Alias for personelIslemleriniGetir to fix the naming inconsistency
+  // Ensure we're using consistent naming
   personelIslemleriGetir: async function(personelId: number) {
     return this.personelIslemleriniGetir(personelId);
   },

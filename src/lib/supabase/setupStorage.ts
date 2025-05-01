@@ -19,8 +19,9 @@ export async function setupStorageBuckets() {
     
     // Create profile-photos bucket if it doesn't exist
     if (!existingBuckets.includes('profile-photos')) {
+      console.log("Creating profile-photos bucket");
       try {
-        const { error } = await supabase.storage.createBucket('profile-photos', {
+        const { data, error } = await supabase.storage.createBucket('profile-photos', {
           public: true,
           fileSizeLimit: 20971520, // 20MB
           allowedMimeTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/gif']
@@ -29,13 +30,7 @@ export async function setupStorageBuckets() {
         if (error) {
           console.error("Error creating profile-photos bucket:", error);
         } else {
-          console.log("Created profile-photos bucket");
-          
-          // Add public policy after bucket creation
-          const { error: policyError } = await supabase.storage.from('profile-photos').createSignedUploadUrl('test.jpg');
-          if (policyError) {
-            console.warn("Note: May need to set up bucket policies manually:", policyError);
-          }
+          console.log("Created profile-photos bucket successfully", data);
         }
       } catch (err) {
         console.error("Failed to create profile-photos bucket:", err);
@@ -44,8 +39,9 @@ export async function setupStorageBuckets() {
     
     // Create shop-photos bucket if it doesn't exist
     if (!existingBuckets.includes('shop-photos')) {
+      console.log("Creating shop-photos bucket");
       try {
-        const { error } = await supabase.storage.createBucket('shop-photos', {
+        const { data, error } = await supabase.storage.createBucket('shop-photos', {
           public: true,
           fileSizeLimit: 20971520, // 20MB
           allowedMimeTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/gif']
@@ -54,13 +50,7 @@ export async function setupStorageBuckets() {
         if (error) {
           console.error("Error creating shop-photos bucket:", error);
         } else {
-          console.log("Created shop-photos bucket");
-          
-          // Add public policy after bucket creation
-          const { error: policyError } = await supabase.storage.from('shop-photos').createSignedUploadUrl('test.jpg');
-          if (policyError) {
-            console.warn("Note: May need to set up bucket policies manually:", policyError);
-          }
+          console.log("Created shop-photos bucket successfully", data);
         }
       } catch (err) {
         console.error("Failed to create shop-photos bucket:", err);
@@ -72,4 +62,9 @@ export async function setupStorageBuckets() {
     console.error("Error setting up storage buckets:", error);
     return false;
   }
+}
+
+// Initialize storage buckets during application startup
+export async function initializeStorage() {
+  await setupStorageBuckets();
 }

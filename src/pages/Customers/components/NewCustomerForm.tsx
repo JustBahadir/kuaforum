@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { musteriServisi } from "@/lib/supabase";
@@ -23,22 +23,9 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFo
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   
-  // Form validation
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-    
-    if (!firstName.trim()) {
-      newErrors.firstName = 'İsim alanı zorunludur';
-    }
-    
-    if (!dukkanId) {
-      newErrors.dukkan = 'Dükkan bilgisi eksik, lütfen sayfayı yenileyip tekrar deneyin';
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-  
+  // Form validation - Check if any field has a value
+  const isFormValid = firstName.trim() !== '' || lastName.trim() !== '' || phone.trim() !== '' || birthdate !== undefined;
+
   // Format phone for submission
   const formatPhoneForSubmission = (value: string) => {
     return value.replace(/\D/g, '');
@@ -48,7 +35,18 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFo
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) {
+    // Validate required fields
+    const newErrors: Record<string, string> = {};
+    if (!firstName.trim()) {
+      newErrors.firstName = 'İsim alanı zorunludur';
+    }
+    
+    if (!dukkanId) {
+      newErrors.dukkan = 'Dükkan bilgisi eksik, lütfen sayfayı yenileyip tekrar deneyin';
+    }
+    
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
     
@@ -68,7 +66,7 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFo
       
       console.log("Müşteri verileri:", customerData);
       
-      // Call the service to add customer with a single argument
+      // Call the service to add customer
       const result = await musteriServisi.ekle(customerData);
       
       if (result) {
@@ -120,7 +118,7 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFo
       <CustomerFormActions
         isSubmitting={isSubmitting}
         onCancel={onCancel}
-        disabled={!dukkanId}
+        disabled={!isFormValid} // Enable button if any field has a value
       />
     </form>
   );
