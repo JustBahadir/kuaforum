@@ -1,86 +1,148 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { islemServisi, personelIslemleriServisi } from "@/lib/supabase";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatCurrency } from "@/utils/currencyFormatter";
-import { DataTable } from "@/components/ui/table";
-import { format } from "date-fns";
-import { tr } from "date-fns/locale";
+import { Card, CardContent } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { personelIslemleriServisi } from "@/lib/supabase";
+import { formatCurrency } from "@/lib/utils";
+import { CalendarDays, Clock } from "lucide-react";
+import { DateControlBar } from "@/components/ui/date-control-bar";
+import { addDays, startOfDay, endOfDay } from "date-fns";
+import { createMonthCycleDateRange } from "@/utils/dateUtils";
 
 interface OperationsHistoryTabProps {
   personnelId: number;
+  showPoints?: boolean;
 }
 
-export function OperationsHistoryTab({ personnelId }: OperationsHistoryTabProps) {
+export function OperationsHistoryTab({ personnelId, showPoints = false }: OperationsHistoryTabProps) {
+  const [dateRange, setDateRange] = useState({
+    from: addDays(new Date(), -30),
+    to: new Date()
+  });
+  
+  const [isMonthCycleActive, setIsMonthCycleActive] = useState(false);
+
   const { data: operations = [], isLoading } = useQuery({
-    queryKey: ["personnel-operations", personnelId],
-    queryFn: async () => {
-      if (!personnelId) return [];
-      try {
-        // Use personelIslemleriServisi to get operations
-        const data = await personelIslemleriServisi.personelIslemleriniGetir(personnelId);
-        return data;
-      } catch (error) {
-        console.error("Personnel operations fetch error:", error);
-        return [];
-      }
-    },
-    enabled: !!personnelId,
+    queryKey: ['personel-islemleri', personnelId, dateRange],
+    queryFn: () => personelIslemleriServisi.personelIslemleriGetir(personnelId),
+    refetchOnWindowFocus: false,
   });
 
-  if (isLoading) {
-    return <div>Yükleniyor...</div>;
-  }
+  const filteredOperations = operations.filter((op: any) => {
+    if (!op.created_at) return false;
+    const date = new Date(op.created_at);
+    return date >= dateRange.from && date <= dateRange.to;
+  });
+  
+  const handleDateRangeChange = (newRange: {from: Date, to: Date}) => {
+    setDateRange(newRange);
+    setIsMonthCycleActive(false);
+  };
+  
+  const handleMonthCycleChange = (day: number, cycleDate: Date) => {
+    setIsMonthCycleActive(true);
+    const { from, to } = createMonthCycleDateRange(day);
+    setDateRange({ from, to });
+  };
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return "-";
+    return new Date(dateString).toLocaleDateString('tr-TR');
+  };
+
+  const formatTime = (dateString: string | null) => {
+    if (!dateString) return "-";
+    return new Date(dateString).toLocaleTimeString('tr-TR', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+  };
+
+  const cleanOperationName = (operation: any) => {
+    if (operation.islem?.islem_adi) return operation.islem.islem_adi;
+    if (!operation.aciklama) return '';
+    return operation.aciklama.split(' hizmeti verildi')[0];
+  };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <Card>
-        <CardHeader>
-          <CardTitle>İşlem Geçmişi</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {operations.length > 0 ? (
-            <div className="overflow-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Tarih
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      İşlem
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Müşteri
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Tutar
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Puan
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {operations.map((op: any) => (
-                    <tr key={op.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        {format(new Date(op.created_at), "dd MMMM yyyy HH:mm", { locale: tr })}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">{op.aciklama}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        {op.musteri?.first_name} {op.musteri?.last_name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">{formatCurrency(op.tutar)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">{op.puan}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        <CardContent className="p-6">
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold mb-2">İşlem Geçmişi</h3>
+            <div className="flex justify-between items-center">
+              <DateControlBar
+                dateRange={dateRange}
+                onDateRangeChange={handleDateRangeChange}
+                onMonthCycleChange={handleMonthCycleChange}
+              />
+              <div className="text-sm text-muted-foreground">
+                Toplam: {filteredOperations.length} işlem
+              </div>
+            </div>
+          </div>
+          
+          {isLoading ? (
+            <div className="flex justify-center py-4">
+              <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
+            </div>
+          ) : filteredOperations.length === 0 ? (
+            <div className="text-center py-6 text-muted-foreground">
+              Bu tarih aralığında işlem geçmişi bulunmuyor.
             </div>
           ) : (
-            <p className="text-muted-foreground">Henüz işlem kaydı bulunmamaktadır.</p>
+            <div className="border rounded-md overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Tarih</TableHead>
+                    <TableHead>Müşteri</TableHead>
+                    <TableHead>Hizmet</TableHead>
+                    <TableHead className="text-right">Tutar</TableHead>
+                    <TableHead className="text-right">Komisyon</TableHead>
+                    {showPoints && <TableHead className="text-right">Puan</TableHead>}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredOperations.map((operation: any) => (
+                    <TableRow key={operation.id}>
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <div className="flex items-center">
+                            <CalendarDays className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+                            <span>{formatDate(operation.created_at)}</span>
+                          </div>
+                          <div className="flex items-center text-xs text-muted-foreground">
+                            <Clock className="h-3 w-3 mr-1" />
+                            <span>{formatTime(operation.created_at)}</span>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {operation.musteri ? 
+                          `${operation.musteri.first_name} ${operation.musteri.last_name || ''}` : 
+                          'Belirtilmemiş'}
+                      </TableCell>
+                      <TableCell>
+                        {cleanOperationName(operation)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(operation.tutar || 0)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(operation.odenen || 0)}
+                      </TableCell>
+                      {showPoints && (
+                        <TableCell className="text-right">
+                          {operation.puan || 0}
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>

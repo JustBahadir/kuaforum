@@ -1,101 +1,99 @@
 
-import React from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { X } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PersonalInfoTab } from "./personnel-detail-tabs/PersonalInfoTab";
-import { EducationTab } from "./personnel-detail-tabs/EducationTab";
-import { HistoryTab } from "./personnel-detail-tabs/HistoryTab";
-import { OperationsHistoryTab } from "./personnel-detail-tabs/OperationsHistoryTab"; 
+import { WorkInfoTab } from "./personnel-detail-tabs/WorkInfoTab";
+import { OperationsHistoryTab } from "./personnel-detail-tabs/OperationsHistoryTab";
+import { PerformanceTab } from "./personnel-detail-tabs/PerformanceTab";
+import { cn } from "@/lib/utils";
 
-interface PersonnelDetailsDialogProps {
-  personel: any;
-  open: boolean;
+export interface PersonnelDetailsDialogProps {
+  personnel: any;
+  open: boolean; // Added for compatibility
   onOpenChange: (open: boolean) => void;
   onRefresh?: () => void;
 }
 
 export function PersonnelDetailsDialog({
-  personel,
   open,
   onOpenChange,
-  onRefresh,
+  personnel,
+  onRefresh = () => {}
 }: PersonnelDetailsDialogProps) {
-  const [activeTab, setActiveTab] = React.useState("personal");
+  const [activeTab, setActiveTab] = React.useState("personal-info");
+  const dialogContentRef = useRef<HTMLDivElement>(null);
 
-  const handleCancelChanges = () => {
-    setActiveTab("personal");
-    onOpenChange(false);
-  };
-
-  // Reset active tab when dialog opens
   React.useEffect(() => {
-    if (open) {
-      setActiveTab("personal");
-    }
-  }, [open]);
+    const handlePopState = () => {
+      if (open) onOpenChange(false);
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [open, onOpenChange]);
+
+  const handlePointerDownOutside = useCallback(
+    (event: CustomEvent<{ originalEvent: PointerEvent }>) => {
+      onOpenChange(false);
+    },
+    [onOpenChange]
+  );
+
+  if (!personnel) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[800px] h-[700px] flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="text-xl">
-            {personel?.ad_soyad} - {personel?.personel_no}
-          </DialogTitle>
-        </DialogHeader>
-
-        <Tabs
-          value={activeTab}
-          onValueChange={setActiveTab}
-          className="flex-1 flex flex-col"
+    <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay
+          className="fixed inset-0 bg-black/50"
+          onPointerDown={() => onOpenChange(false)}
+        />
+        <DialogPrimitive.Content
+          ref={dialogContentRef}
+          onPointerDownOutside={handlePointerDownOutside}
+          className="fixed left-[50%] top-[50%] z-50 max-w-4xl max-h-[90vh] w-full overflow-y-auto rounded-lg bg-background p-6 shadow-lg transform -translate-x-1/2 -translate-y-1/2 focus:outline-none"
         >
-          <TabsList className="grid grid-cols-4 mb-4">
-            <TabsTrigger value="personal">Kişisel Bilgiler</TabsTrigger>
-            <TabsTrigger value="operations">İşlem Geçmişi</TabsTrigger>
-            <TabsTrigger value="education">Eğitim Bilgileri</TabsTrigger>
-            <TabsTrigger value="history">Geçmiş</TabsTrigger>
-          </TabsList>
-
-          <TabsContent
-            value="personal"
-            className="flex-1 overflow-y-auto pt-2"
+          <DialogPrimitive.Close
+            aria-label="Kapat"
+            className="absolute right-4 top-4 rounded-md p-1 text-gray-500 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:ring-offset-2"
           >
-            <PersonalInfoTab
-              personel={personel}
-            />
-          </TabsContent>
+            <X className="h-5 w-5" />
+          </DialogPrimitive.Close>
 
-          <TabsContent
-            value="operations"
-            className="flex-1 overflow-y-auto pt-2"
-          >
-            <OperationsHistoryTab personnelId={personel?.id} />
-          </TabsContent>
+          <div className="text-xl font-semibold flex items-center gap-2 mb-4">
+            <div className="h-8 w-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center select-none">
+              {personnel.ad_soyad?.substring(0, 1) || "P"}
+            </div>
+            {personnel.ad_soyad || "Personel Detayları"}
+          </div>
 
-          <TabsContent
-            value="education"
-            className="flex-1 overflow-y-auto pt-2"
-          >
-            <EducationTab
-              personnel={personel}
-              onRefresh={onRefresh}
-              onClose={handleCancelChanges}
-            />
-          </TabsContent>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
+            <TabsList className="w-full">
+              <TabsTrigger value="personal-info">Kişisel Bilgiler</TabsTrigger>
+              <TabsTrigger value="work-info">Çalışma Bilgileri</TabsTrigger>
+              <TabsTrigger value="operations-history">İşlem Geçmişi</TabsTrigger>
+              <TabsTrigger value="performance">Performans</TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="history" className="flex-1 overflow-y-auto pt-2">
-            <HistoryTab
-              personel={personel}
-              onRefresh={onRefresh}
-              onClose={handleCancelChanges}
-            />
-          </TabsContent>
-        </Tabs>
-      </DialogContent>
-    </Dialog>
+            <TabsContent value="personal-info" className="mt-4">
+              <PersonalInfoTab personnel={personnel} onEdit={onRefresh} />
+            </TabsContent>
+
+            <TabsContent value="work-info" className="mt-4">
+              <WorkInfoTab personnel={personnel} onEdit={onRefresh} />
+            </TabsContent>
+
+            <TabsContent value="operations-history" className="mt-4">
+              <OperationsHistoryTab personnelId={personnel.id} />
+            </TabsContent>
+
+            <TabsContent value="performance" className="mt-4">
+              <PerformanceTab personnelId={personnel.id} />
+            </TabsContent>
+          </Tabs>
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   );
 }

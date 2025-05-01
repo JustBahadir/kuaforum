@@ -5,31 +5,45 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { CalismaSaati } from "@/lib/supabase/types";
-import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { calismaSaatleriServisi } from "@/lib/supabase/services/calismaSaatleriServisi";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { gunSiralama } from "./constants/workingDays";
+import { kategoriServisi } from "@/lib/supabase/services/kategoriServisi";
 
 export function WorkingHoursForm() {
-  const { dukkanId } = useCustomerAuth();
+  const [dukkanId, setDukkanId] = useState<number | null>(null);
   const [workingHours, setWorkingHours] = useState<CalismaSaati[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [originalHours, setOriginalHours] = useState<CalismaSaati[]>([]);
 
   useEffect(() => {
-    if (dukkanId) {
-      loadWorkingHours();
-    }
-  }, [dukkanId]);
+    // Get dukkan id from current user
+    const getDukkanId = async () => {
+      try {
+        const shopId = await kategoriServisi.getCurrentUserDukkanId();
+        if (shopId) {
+          setDukkanId(shopId);
+          loadWorkingHours(shopId);
+        } else {
+          toast.error("İşletme bilgisi bulunamadı");
+        }
+      } catch (error) {
+        console.error("Error getting dukkan ID:", error);
+        toast.error("İşletme bilgisi alınırken bir hata oluştu");
+      }
+    };
+    
+    getDukkanId();
+  }, []);
 
-  const loadWorkingHours = async () => {
-    if (!dukkanId) return;
+  const loadWorkingHours = async (shopId: number) => {
+    if (!shopId) return;
     
     try {
       setIsLoading(true);
-      const hours = await calismaSaatleriServisi.dukkanSaatleriGetir(dukkanId);
+      const hours = await calismaSaatleriServisi.dukkanSaatleriGetir(shopId);
       // Sort by day order
       const sortedHours = [...hours].sort((a, b) => {
         return gunSiralama.indexOf(a.gun) - gunSiralama.indexOf(b.gun);
@@ -62,7 +76,7 @@ export function WorkingHoursForm() {
         dukkan_id: dukkanId
       }));
       
-      const result = await calismaSaatleriServisi.dukkanSaatleriKaydet(hoursWithShopId);
+      const result = await calismaSaatleriServisi.guncelle(hoursWithShopId);
       
       if (result && result.length > 0) {
         toast.success("Çalışma saatleri başarıyla güncellendi");

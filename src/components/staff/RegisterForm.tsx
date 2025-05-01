@@ -1,169 +1,300 @@
 
-import { useState } from "react";
-import { supabase } from "@/lib/supabase/client";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { LoaderCircle } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { FormGroup, FormLabel, FormMessage } from "@/components/ui/form-elements";
+import { InfoIcon, Loader2 } from "lucide-react";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { dukkanServisi, personelServisi } from "@/lib/supabase";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
 
-export function RegisterForm() {
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
+export function RegisterForm({ onSuccess }: { onSuccess?: () => void }) {
+  const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const navigate = useNavigate();
-
-  const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-
-    if (!firstName || !email || !password) {
-      setError("Lütfen tüm zorunlu alanları doldurun");
-      return;
-    }
-
-    if (password.length < 6) {
-      setError("Şifre en az 6 karakter olmalıdır");
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-
-      const {
-        data: { user },
-        error: signUpError,
-      } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            first_name: firstName,
-            last_name: lastName || "",
-            role: "admin", // Default role for shop owners
-          },
-        },
-      });
-
-      if (signUpError) throw signUpError;
-
-      if (user) {
-        // Update profile
-        const { error: profileError } = await supabase
-          .from("profiles")
-          .upsert({
-            id: user.id,
-            first_name: firstName,
-            last_name: lastName || "",
-            phone: phone || null,
-            role: "admin",
-            updated_at: new Date().toISOString(),
-          });
-
-        if (profileError) throw profileError;
-
-        toast.success("Kayıt işlemi başarılı! Giriş yapıyorsunuz...");
-        navigate("/shop-home");
+  const [email, setEmail] = useState("");
+  const [address, setAddress] = useState("");
+  const [birthDate, setBirthDate] = useState("");
+  const [percentage, setPercentage] = useState<number>(0);
+  const [salary, setSalary] = useState<number>(0);
+  const [personnelNumber, setPersonnelNumber] = useState("");
+  const [system, setSystem] = useState("");
+  const [shopCode, setShopCode] = useState("");
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState<{[key: string]: string}>({});
+  
+  // Loading state for shop code
+  const [isLoadingShopCode, setIsLoadingShopCode] = useState(true);
+  const [userShopCode, setUserShopCode] = useState<string | null>(null);
+  
+  // Fetch user's shop code if they are an admin
+  useEffect(() => {
+    const fetchUserShop = async () => {
+      setIsLoadingShopCode(true);
+      try {
+        const userShop = await dukkanServisi.kullaniciDukkaniniGetir();
+        if (userShop) {
+          setUserShopCode(userShop.kod);
+          setShopCode(userShop.kod);
+        }
+      } catch (error) {
+        console.error("İşletme kodu yüklenirken hata:", error);
+      } finally {
+        setIsLoadingShopCode(false);
       }
+    };
+    
+    fetchUserShop();
+  }, []);
+  
+  const validateForm = () => {
+    const newErrors: {[key: string]: string} = {};
+    
+    if (!name) newErrors.name = "Ad soyad zorunludur";
+    if (!phone) newErrors.phone = "Telefon zorunludur";
+    if (!email) newErrors.email = "E-posta zorunludur";
+    if (email && !isValidEmail(email)) newErrors.email = "Geçerli bir e-posta adresi giriniz";
+    if (!address) newErrors.address = "Adres zorunludur";
+    if (!birthDate) newErrors.birthDate = "Doğum tarihi zorunludur";
+    if (!personnelNumber) newErrors.personnelNumber = "Personel no zorunludur";
+    if (!system) newErrors.system = "Çalışma sistemi zorunludur";
+    if (!shopCode) newErrors.shopCode = "İşletme kodu zorunludur";
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+  
+  const isValidEmail = (email: string) => {
+    return /\S+@\S+\.\S+/.test(email);
+  };
+  
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) return;
+    
+    setIsLoading(true);
+    
+    try {
+      let shop;
+      
+      try {
+        // First check if shop exists with the given code
+        shop = await dukkanServisi.getirByKod(shopCode);
+      } catch (error) {
+        // Handle shop not found
+        setErrors({
+          shopCode: "İşletme bulunamadı. Lütfen geçerli bir işletme kodu giriniz."
+        });
+        setIsLoading(false);
+        return;
+      }
+      
+      if (!shop) {
+        setErrors({
+          shopCode: "İşletme bulunamadı. Lütfen geçerli bir işletme kodu giriniz."
+        });
+        setIsLoading(false);
+        return;
+      }
+      
+      // Now register the staff member
+      await personelServisi.register({
+        ad_soyad: name,
+        telefon: phone,
+        eposta: email,
+        adres: address,
+        birth_date: birthDate,
+        prim_yuzdesi: percentage,
+        maas: salary,
+        personel_no: personnelNumber,
+        calisma_sistemi: system,
+        dukkan_id: shop.id,
+        dukkan_kod: shopCode
+      });
+      
+      setShowSuccessModal(true);
     } catch (error: any) {
       console.error("Registration error:", error);
-      setError(
-        error.message === "User already registered"
-          ? "Bu e-posta adresi zaten kayıtlı"
-          : error.message || "Kayıt işlemi sırasında bir hata oluştu"
-      );
+      toast.error(`Kayıt sırasında bir hata oluştu: ${error.message}`);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
-
+  
+  const handleCloseSuccessModal = () => {
+    setShowSuccessModal(false);
+    if (onSuccess) onSuccess();
+  };
+  
   return (
-    <form onSubmit={handleRegister} className="space-y-4">
-      <div className="grid gap-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="first-name">Ad *</Label>
-            <Input
-              id="first-name"
-              placeholder="Adınız"
-              required
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
+    <>
+      <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+        <FormGroup>
+          <FormLabel>Ad Soyad</FormLabel>
+          <Input 
+            value={name} 
+            onChange={(e) => setName(e.target.value)} 
+            placeholder="Ad Soyad"
+          />
+          {errors.name && <FormMessage>{errors.name}</FormMessage>}
+        </FormGroup>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormGroup>
+            <FormLabel>Telefon</FormLabel>
+            <Input 
+              value={phone} 
+              onChange={(e) => setPhone(e.target.value)} 
+              placeholder="05XX XXX XX XX"
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="last-name">Soyad</Label>
-            <Input
-              id="last-name"
-              placeholder="Soyadınız"
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
+            {errors.phone && <FormMessage>{errors.phone}</FormMessage>}
+          </FormGroup>
+          
+          <FormGroup>
+            <FormLabel>E-Posta</FormLabel>
+            <Input 
+              value={email} 
+              onChange={(e) => setEmail(e.target.value)} 
+              placeholder="ornek@email.com"
+              type="email"
             />
-          </div>
+            {errors.email && <FormMessage>{errors.email}</FormMessage>}
+          </FormGroup>
         </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="email">E-posta *</Label>
-          <Input
-            id="email"
-            type="email"
-            placeholder="ornek@email.com"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+        
+        <FormGroup>
+          <FormLabel>Adres</FormLabel>
+          <Input 
+            value={address} 
+            onChange={(e) => setAddress(e.target.value)} 
+            placeholder="Adres"
           />
+          {errors.address && <FormMessage>{errors.address}</FormMessage>}
+        </FormGroup>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormGroup>
+            <FormLabel>Doğum Tarihi</FormLabel>
+            <Input 
+              value={birthDate} 
+              onChange={(e) => setBirthDate(e.target.value)} 
+              placeholder="YYYY-MM-DD"
+              type="date"
+            />
+            {errors.birthDate && <FormMessage>{errors.birthDate}</FormMessage>}
+          </FormGroup>
+          
+          <FormGroup>
+            <FormLabel>Prim Yüzdesi (%)</FormLabel>
+            <Input 
+              value={percentage} 
+              onChange={(e) => setPercentage(Number(e.target.value) || 0)} 
+              placeholder="0"
+              type="number"
+              min="0"
+              max="100"
+            />
+          </FormGroup>
         </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="phone">Telefon</Label>
-          <Input
-            id="phone"
-            type="tel"
-            placeholder="05XX XXX XX XX"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-          />
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormGroup>
+            <FormLabel>Maaş (₺)</FormLabel>
+            <Input 
+              value={salary} 
+              onChange={(e) => setSalary(Number(e.target.value) || 0)} 
+              placeholder="0"
+              type="number"
+              min="0"
+            />
+          </FormGroup>
+          
+          <FormGroup>
+            <FormLabel>Personel No</FormLabel>
+            <Input 
+              value={personnelNumber} 
+              onChange={(e) => setPersonnelNumber(e.target.value)} 
+              placeholder="Personel No"
+            />
+            {errors.personnelNumber && <FormMessage>{errors.personnelNumber}</FormMessage>}
+          </FormGroup>
         </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="password">Şifre *</Label>
-          <Input
-            id="password"
-            type="password"
-            required
-            minLength={6}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <p className="text-xs text-muted-foreground">
-            Şifreniz en az 6 karakter olmalıdır
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormGroup>
+            <FormLabel>Çalışma Sistemi</FormLabel>
+            <Select value={system} onValueChange={setSystem}>
+              <SelectTrigger>
+                <SelectValue placeholder="Çalışma Sistemi Seçin" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="tam_zamanli">Tam Zamanlı</SelectItem>
+                <SelectItem value="yarim_zamanli">Yarı Zamanlı</SelectItem>
+                <SelectItem value="sozlesmeli">Sözleşmeli</SelectItem>
+                <SelectItem value="stajyer">Stajyer</SelectItem>
+              </SelectContent>
+            </Select>
+            {errors.system && <FormMessage>{errors.system}</FormMessage>}
+          </FormGroup>
+          
+          <FormGroup>
+            <FormLabel>İşletme Kodu</FormLabel>
+            {isLoadingShopCode ? (
+              <div className="flex items-center space-x-2 h-10 px-3 rounded-md border border-input">
+                <span className="text-sm text-muted-foreground">Yükleniyor...</span>
+                <Loader2 className="h-4 w-4 animate-spin ml-auto" />
+              </div>
+            ) : userShopCode ? (
+              <div className="flex items-center space-x-2 h-10 px-3 rounded-md border border-input">
+                <span>{userShopCode}</span>
+              </div>
+            ) : (
+              <Input 
+                value={shopCode} 
+                onChange={(e) => setShopCode(e.target.value)} 
+                placeholder="İşletme Kodu"
+              />
+            )}
+            {errors.shopCode && <FormMessage>{errors.shopCode}</FormMessage>}
+          </FormGroup>
+        </div>
+        
+        <Alert>
+          <InfoIcon className="h-4 w-4" />
+          <AlertDescription>
+            Personel kaydı oluştuktan sonra, personele davetiye e-postası gönderilecektir. Personel için hesap oluşturulması ve sisteme girişi için bu adımın tamamlanması gereklidir.
+          </AlertDescription>
+        </Alert>
+        
+        <Button type="submit" className="w-full" disabled={isLoading}>
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Kaydediliyor
+            </>
+          ) : (
+            'Personel Ekle'
+          )}
+        </Button>
+      </form>
+      
+      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Personel Kaydı Başarılı</DialogTitle>
+          </DialogHeader>
+          <p className="py-4">
+            Personel kaydı başarıyla oluşturulmuştur. Personelin sisteme giriş yapabilmesi için hesabını oluşturması gerekmektedir. Bu işlem için bir davetiye e-postası gönderilmiştir.
           </p>
-        </div>
-      </div>
-
-      {error && (
-        <div className="bg-red-50 text-red-500 p-3 rounded-md text-sm">
-          {error}
-        </div>
-      )}
-
-      <Button type="submit" className="w-full" disabled={loading}>
-        {loading && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
-        Kaydol
-      </Button>
-
-      <p className="text-center text-sm text-muted-foreground">
-        Zaten hesabınız var mı?{" "}
-        <a href="/login" className="text-primary hover:underline">
-          Giriş Yap
-        </a>
-      </p>
-    </form>
+          <DialogFooter>
+            <Button onClick={handleCloseSuccessModal} className="w-full">
+              Tamam
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

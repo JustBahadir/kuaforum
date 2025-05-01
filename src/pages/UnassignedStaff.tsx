@@ -1,90 +1,148 @@
 
 import React, { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useUnassignedStaffData } from "@/hooks/useUnassignedStaffData";
-import { UnassignedStaffMain } from "@/components/unassigned-staff/UnassignedStaffMain";
+import UnassignedStaffMain from "@/components/unassigned-staff/UnassignedStaffMain";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
 
 export default function UnassignedStaff() {
+  const [activeTab, setActiveTab] = useState("personal");
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-  const { joinRequests, shop, isLoading, refreshData } = useUnassignedStaffData();
+  const [isUploading, setIsUploading] = useState(false);
+  
+  const {
+    loading,
+    error,
+    userProfile,
+    educationData,
+    setEducationData,
+    historyData,
+    setHistoryData,
+    handleLogout,
+    handleSave,
+    loadUserAndStaffData,
+    personelId
+  } = useUnassignedStaffData();
 
   useEffect(() => {
-    // Check if user has a shop already
-    const checkUserShop = async () => {
+    const loadData = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          navigate('/login');
-          return;
-        }
-        
-        const userRole = user.user_metadata?.role;
-        
-        // If user is admin, they should be redirected to admin dashboard
-        if (userRole === 'admin') {
-          navigate('/admin/dashboard');
-          return;
-        }
-        
-        // Check if this staff is already assigned to a shop
-        const { data: staffData } = await supabase
-          .from('personel')
-          .select('dukkan_id')
-          .eq('auth_id', user.id)
-          .maybeSingle();
-          
-        if (staffData && staffData.dukkan_id) {
-          navigate('/staff/dashboard');
-        }
+        await loadUserAndStaffData();
       } catch (error) {
-        console.error('Error checking user shop:', error);
+        console.error("Failed to load user data:", error);
       }
     };
-    
-    checkUserShop();
-  }, [navigate]);
+    loadData();
+  }, []);
 
-  const logout = async () => {
-    setLoading(true);
+  const handleAvatarUpload = async (url: string) => {
+    if (!url) {
+      toast.error("Avatar URL is empty");
+      return;
+    }
+    
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      navigate('/login');
+      setIsUploading(true);
+      
+      // Update supabase auth user metadata
+      const { error: authUpdateError } = await supabase.auth.updateUser({
+        data: { avatar_url: url }
+      });
+
+      if (authUpdateError) {
+        throw authUpdateError;
+      }
+
+      // Update the profile in our DB
+      if (personelId) {
+        const { error: profileUpdateError } = await supabase
+          .from('personel')
+          .update({ avatar_url: url })
+          .eq('id', personelId);
+          
+        if (profileUpdateError) {
+          throw profileUpdateError;
+        }
+      }
+
+      // Update local state
+      await handleSave({
+        ...userProfile,
+        avatarUrl: url
+      });
+
+      toast.success("Profil fotoğrafı başarıyla güncellendi");
     } catch (error) {
-      toast.error('Çıkış yaparken hata oluştu');
+      console.error("Avatar yükleme hatası:", error);
+      toast.error("Profil fotoğrafı yüklenirken bir hata oluştu");
     } finally {
-      setLoading(false);
+      setIsUploading(false);
     }
   };
 
-  if (isLoading) {
+  if (loading && !userProfile) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+      <div className="flex items-center justify-center h-screen bg-white">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Bilgileriniz yükleniyor...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-white">
+        <div className="text-center p-6 bg-white rounded-lg shadow-md max-w-md">
+          <div className="text-red-500 text-5xl mb-4">⚠️</div>
+          <h2 className="text-xl font-semibold mb-2">Bir hata oluştu</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button 
+            onClick={loadUserAndStaffData}
+            className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
+          >
+            Tekrar Dene
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!userProfile) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-white">
+        <div className="text-center p-6 bg-white rounded-lg shadow-md max-w-md">
+          <h2 className="text-xl font-semibold mb-2">Profil bulunamadı</h2>
+          <p className="text-gray-600 mb-4">Profil bilgileriniz bulunamadı. Lütfen tekrar giriş yapın.</p>
+          <button 
+            onClick={handleLogout}
+            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+          >
+            Çıkış Yap
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="border-b bg-background px-4 py-3 shadow-sm">
-        <div className="container flex items-center justify-between">
-          <h1 className="text-xl font-semibold">Kuaför Yönetim Sistemi</h1>
-          <Button variant="outline" onClick={logout} disabled={loading}>
-            {loading ? "Çıkış Yapılıyor..." : "Çıkış Yap"}
-          </Button>
-        </div>
-      </header>
-
-      <UnassignedStaffMain 
-        joinRequests={joinRequests} 
-        shop={shop}
-        onRefresh={refreshData}
-      />
-    </div>
+    <UnassignedStaffMain
+      activeTab={activeTab}
+      setActiveTab={setActiveTab}
+      userProfile={userProfile}
+      educationData={educationData}
+      setEducationData={setEducationData}
+      historyData={historyData}
+      setHistoryData={setHistoryData}
+      handleLogout={handleLogout}
+      handleSave={handleSave}
+      handleAvatarUpload={handleAvatarUpload}
+      loading={loading}
+      isUploading={isUploading}
+      navigate={navigate}
+      personelId={personelId}
+    />
   );
 }

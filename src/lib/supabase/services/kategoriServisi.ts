@@ -1,38 +1,73 @@
 
 import { supabase } from '../client';
-import { getCurrentDukkanId } from '../utils/getCurrentDukkanId';
+import { toast } from 'sonner';
+import { KategoriDto } from '../types';
 
 export const kategoriServisi = {
-  async getCurrentDukkanId() {
-    return getCurrentDukkanId();
+  async getCurrentUserDukkanId() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Kullanıcı bulunamadı');
+      
+      // Check if user is admin
+      const role = user.user_metadata?.role;
+      
+      if (role === 'admin') {
+        // Admin user - get dukkan by user_id
+        const { data, error } = await supabase
+          .from('dukkanlar')
+          .select('id')
+          .eq('sahibi_id', user.id)
+          .single();
+          
+        if (error) throw error;
+        if (!data?.id) throw new Error('İşletme bilgisi bulunamadı');
+        return data?.id;
+      } else if (role === 'staff') {
+        // Staff user - get dukkan through personeller
+        const { data, error } = await supabase
+          .from('personel')
+          .select('dukkan_id')
+          .eq('auth_id', user.id)
+          .single();
+          
+        if (error) throw error;
+        if (!data?.dukkan_id) throw new Error('İşletme bilgisi bulunamadı');
+        return data?.dukkan_id;
+      }
+      
+      // Try to get from profiles as last resort
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('dukkan_id')
+        .eq('id', user.id)
+        .single();
+        
+      if (error) throw error;
+      if (!data?.dukkan_id) throw new Error('İşletme bilgisi bulunamadı');
+      return data?.dukkan_id;
+    } catch (error: any) {
+      console.error('Dükkan ID getirme hatası:', error);
+      throw error;
+    }
   },
   
   async hepsiniGetir(dukkanId?: number) {
     try {
-      let dId = dukkanId;
+      // If dukkanId is not provided, get it from the current user
+      const shopId = dukkanId || await this.getCurrentUserDukkanId();
       
-      // Get current dukkan ID if not provided
-      if (!dId) {
-        dId = await this.getCurrentDukkanId();
-        if (!dId) {
-          console.error('getCurrentDukkanId returned null');
-          throw new Error('İşletme bilgisi bulunamadı');
-        }
+      if (!shopId) {
+        throw new Error('İşletme bilgisi bulunamadı');
       }
-      
-      console.log('Getting categories for dukkanId:', dId);
 
       const { data, error } = await supabase
         .from('islem_kategorileri')
         .select('*')
-        .order('sira', { ascending: true });
+        .eq('dukkan_id', shopId)
+        .order('sira');
 
-      if (error) {
-        console.error('Error fetching categories:', error);
-        throw error;
-      }
-      
-      console.log('Categories fetched:', data ? data.length : 0);
+      if (error) throw error;
       return data || [];
     } catch (error) {
       console.error('Kategori listesi getirme hatası:', error);
@@ -56,11 +91,26 @@ export const kategoriServisi = {
     }
   },
 
-  async ekle(kategori: any) {
+  async ekle(kategori: {kategori_adi: string, sira: number, dukkan_id?: number}): Promise<KategoriDto> {
     try {
+      if (!kategori.dukkan_id) {
+        // Get the current user's dukkan_id if not provided
+        kategori.dukkan_id = await this.getCurrentUserDukkanId();
+      }
+      
+      if (!kategori.dukkan_id) {
+        throw new Error('İşletme bilgisi bulunamadı');
+      }
+
+      console.log('Adding category with data:', kategori);
+
       const { data, error } = await supabase
         .from('islem_kategorileri')
-        .insert([kategori])
+        .insert([{
+          kategori_adi: kategori.kategori_adi,
+          sira: kategori.sira,
+          dukkan_id: kategori.dukkan_id
+        }])
         .select();
 
       if (error) throw error;
@@ -71,16 +121,17 @@ export const kategoriServisi = {
     }
   },
 
-  async guncelle(id: number, kategori: any) {
+  async guncelle(id: number, updates: Partial<{kategori_adi: string, sira: number}>) {
     try {
       const { data, error } = await supabase
         .from('islem_kategorileri')
-        .update(kategori)
+        .update(updates)
         .eq('id', id)
-        .select();
+        .select()
+        .single();
 
       if (error) throw error;
-      return data[0];
+      return data;
     } catch (error) {
       console.error('Kategori güncelleme hatası:', error);
       throw error;
@@ -100,5 +151,24 @@ export const kategoriServisi = {
       console.error('Kategori silme hatası:', error);
       throw error;
     }
+  },
+
+  async sirayiGuncelle(items: {id: number, sira: number}[]) {
+    try {
+      for (const item of items) {
+        const { error } = await supabase
+          .from('islem_kategorileri')
+          .update({ sira: item.sira })
+          .eq('id', item.id);
+
+        if (error) throw error;
+      }
+      return true;
+    } catch (error) {
+      console.error('Sıra güncelleme hatası:', error);
+      throw error;
+    }
   }
 };
+
+export const kategorilerServisi = kategoriServisi;

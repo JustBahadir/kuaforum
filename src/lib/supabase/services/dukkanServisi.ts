@@ -35,62 +35,19 @@ export const isletmeServisi = {
     }
   },
 
-  // Add this method for compatibility
-  kodaGoreGetir: async (kod: string) => {
-    return isletmeServisi.getirByKod(kod);
-  },
-
   kullaniciDukkaniniGetir: async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Kullanıcı bulunamadı');
 
-      // First try to get as owner (admin)
-      const { data: ownerData, error: ownerError } = await supabase
+      const { data, error } = await supabase
         .from('dukkanlar')
         .select('*')
         .eq('sahibi_id', user.id)
         .single();
 
-      if (!ownerError && ownerData) {
-        console.log("Dükkan found as admin:", ownerData);
-        return ownerData;
-      }
-      
-      // If not owner, try as staff
-      const { data: staffData, error: staffError } = await supabase
-        .from('personel')
-        .select('dukkan_id, dukkanlar(*)')
-        .eq('auth_id', user.id)
-        .single();
-
-      if (!staffError && staffData?.dukkanlar) {
-        console.log("Dükkan found as staff:", staffData.dukkanlar);
-        return staffData.dukkanlar;
-      }
-      
-      // Try to get from profiles as last resort
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('dukkan_id')
-        .eq('id', user.id)
-        .single();
-        
-      if (!profileError && profileData?.dukkan_id) {
-        const { data: dukkanData, error: dukkanError } = await supabase
-          .from('dukkanlar')
-          .select('*')
-          .eq('id', profileData.dukkan_id)
-          .single();
-          
-        if (!dukkanError && dukkanData) {
-          console.log("Dükkan found from profile:", dukkanData);
-          return dukkanData;
-        }
-      }
-
-      console.log("No dükkan found for user", user.id);
-      throw new Error('İşletme bulunamadı. Lütfen önce işletme bilgilerinizi oluşturun.');
+      if (error) throw error;
+      return data;
     } catch (error) {
       console.error('Kullanıcı dükkanını getirme hatası:', error);
       throw error;

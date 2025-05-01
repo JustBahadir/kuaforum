@@ -1,184 +1,190 @@
 
-import { useState, useEffect } from 'react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
-import { format } from 'date-fns';
-import { tr } from 'date-fns/locale';
-import { useQuery } from '@tanstack/react-query';
-import { islemServisi } from '@/lib/supabase/services/islemServisi';
-import { formatCurrency } from '@/utils/currencyFormatter';
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { personelIslemleriServisi, personelServisi } from "@/lib/supabase";
+import { formatCurrency } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
+import { DateControlBar } from "@/components/ui/date-control-bar";
+import { createMonthCycleDateRange } from "@/utils/dateUtils";
+import { startOfDay, endOfDay } from "date-fns";
 
 interface PersonnelOperationsTableProps {
-  personnelId: number;
-  period?: 'today' | 'this-week' | 'this-month' | 'all';
+  personnelId?: number;
 }
 
 export function PersonnelOperationsTable({ 
-  personnelId, 
-  period = 'all'
+  personnelId 
 }: PersonnelOperationsTableProps) {
-  const [selectedPeriod, setSelectedPeriod] = useState<string>(period);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(10);
+  const [dateRange, setDateRange] = useState({
+    from: new Date(new Date().setDate(new Date().getDate() - 30)),
+    to: new Date()
+  });
+  
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isMonthCycleActive, setIsMonthCycleActive] = useState(false);
 
-  // Reset to page 1 when personnelId changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [personnelId]);
+  const handleDateRangeChange = (newRange: {from: Date, to: Date}) => {
+    setDateRange(newRange);
+    setIsMonthCycleActive(false);
+  };
+
+  const handleSingleDateSelect = (date: Date) => {
+    // For single day selection, set from to start of day and to to end of day
+    setDateRange({
+      from: startOfDay(date),
+      to: endOfDay(date)
+    });
+    setIsMonthCycleActive(false);
+  };
+
+  const handleMonthCycleChange = (day: number, cycleDate: Date) => {
+    setIsMonthCycleActive(true);
+    const { from, to } = createMonthCycleDateRange(day);
+    setDateRange({ from, to });
+  };
 
   const { data: operations = [], isLoading } = useQuery({
-    queryKey: ['personnelOperations', personnelId],
+    queryKey: ['personnel-operations', personnelId, dateRange.from, dateRange.to],
     queryFn: async () => {
-      if (!personnelId) return [];
-      return await islemServisi.personelIslemleriniGetir(personnelId);
+      try {
+        const data = personnelId
+          ? await personelIslemleriServisi.personelIslemleriGetir(personnelId)
+          : await personelIslemleriServisi.hepsiniGetir();
+        
+        return data.filter(op => {
+          if (!op.created_at) return false;
+          const date = new Date(op.created_at);
+          return date >= dateRange.from && date <= dateRange.to;
+        });
+      } catch (error) {
+        console.error("Failed to fetch operations:", error);
+        return [];
+      }
     },
-    enabled: !!personnelId
+    enabled: true,
   });
 
-  // Filter operations based on selected period
+  const { data: personnelData = [] } = useQuery({
+    queryKey: ['personnel-list-for-table'],
+    queryFn: () => personelServisi.hepsiniGetir(),
+  });
+
   const filteredOperations = operations.filter(op => {
-    if (selectedPeriod === 'all') return true;
+    if (!searchTerm) return true;
     
-    const opDate = new Date(op.created_at);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const searchLower = searchTerm.toLowerCase();
+    const personnelName = personnelData.find(p => p.id === op.personel_id)?.ad_soyad?.toLowerCase() || '';
+    const customerName = op.musteri 
+      ? `${op.musteri.first_name || ''} ${op.musteri.last_name || ''}`.toLowerCase()
+      : '';
+    const operationName = op.islem?.islem_adi?.toLowerCase() || op.aciklama?.toLowerCase() || '';
     
-    const opDay = opDate.getDay();
-    const opWeek = Math.floor(opDate.getDate() / 7);
-    const opMonth = opDate.getMonth();
-    const opYear = opDate.getFullYear();
-    
-    const todayDay = today.getDay();
-    const todayWeek = Math.floor(today.getDate() / 7);
-    const todayMonth = today.getMonth();
-    const todayYear = today.getFullYear();
-    
-    switch(selectedPeriod) {
-      case 'today':
-        return opDate >= today;
-      case 'this-week':
-        // Get the first day of the week (Monday)
-        const firstDay = new Date(today);
-        const dayOfWeek = today.getDay();
-        const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-        firstDay.setDate(diff);
-        firstDay.setHours(0, 0, 0, 0);
-        return opDate >= firstDay;
-      case 'this-month':
-        // Get first day of the current month
-        const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-        return opDate >= firstDayOfMonth;
-      default:
-        return true;
-    }
+    return personnelName.includes(searchLower) || 
+           customerName.includes(searchLower) || 
+           operationName.includes(searchLower);
   });
 
-  // Calculate pagination
-  const totalFilteredItems = filteredOperations.length;
-  const totalPages = Math.ceil(totalFilteredItems / pageSize);
-  const paginatedOperations = filteredOperations.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  );
-  
-  // Calculate stats
   const totalRevenue = filteredOperations.reduce((sum, op) => sum + (op.tutar || 0), 0);
-  
+  const operationCount = filteredOperations.length;
+  const totalCommission = filteredOperations.reduce((sum, op) => sum + (op.odenen || 0), 0);
+
   return (
-    <div>
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-4 gap-4">
-        <div>
-          <h3 className="font-medium">
-            İşlem Listesi 
-            <span className="ml-2 text-sm text-muted-foreground">
-              (Toplam: {filteredOperations.length} işlem, {formatCurrency(totalRevenue)} ciro)
-            </span>
-          </h3>
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row justify-between gap-4 flex-wrap">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative sm:w-64">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Ara: Müşteri, İşlem..."
+              className="pl-8"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          
+          <DateControlBar 
+            dateRange={dateRange}
+            onDateRangeChange={handleDateRangeChange}
+            onSingleDateChange={handleSingleDateSelect}
+            onMonthCycleChange={handleMonthCycleChange}
+          />
         </div>
-        <div className="w-full sm:w-48">
-          <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Dönem seçin" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="today">Bugün</SelectItem>
-              <SelectItem value="this-week">Bu Hafta</SelectItem>
-              <SelectItem value="this-month">Bu Ay</SelectItem>
-              <SelectItem value="all">Tüm Zamanlar</SelectItem>
-            </SelectContent>
-          </Select>
+        
+        <div className="flex flex-wrap gap-2 text-xs sm:text-sm">
+          <div className="bg-gray-100 p-2 rounded-md">
+            <span className="font-medium">Toplam İşlem:</span> 
+            <span className="ml-1">{operationCount}</span>
+          </div>
+          <div className="bg-gray-100 p-2 rounded-md">
+            <span className="font-medium">Toplam Ciro:</span> 
+            <span className="ml-1 text-green-600">{formatCurrency(totalRevenue)}</span>
+          </div>
+          <div className="bg-gray-100 p-2 rounded-md">
+            <span className="font-medium">Toplam Prim:</span> 
+            <span className="ml-1 text-blue-600">{formatCurrency(totalCommission)}</span>
+          </div>
         </div>
       </div>
-
-      {isLoading ? (
-        <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">İşlemler yükleniyor...</p>
-        </div>
-      ) : filteredOperations.length === 0 ? (
-        <div className="text-center py-8 border rounded-md">
-          <p className="text-muted-foreground">Bu dönem için işlem bulunamadı.</p>
-        </div>
-      ) : (
-        <>
-          <div className="border rounded-md">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Tarih</TableHead>
-                  <TableHead>Müşteri</TableHead>
-                  <TableHead>İşlem</TableHead>
-                  <TableHead className="text-right">Tutar</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginatedOperations.map(operation => (
-                  <TableRow key={operation.id}>
-                    <TableCell>
-                      {format(new Date(operation.created_at), "d MMMM yyyy", { locale: tr })}
-                    </TableCell>
-                    <TableCell>
-                      {operation.musteri 
-                        ? `${operation.musteri.first_name} ${operation.musteri.last_name || ''}`
-                        : 'Bilinmiyor'
-                      }
-                    </TableCell>
-                    <TableCell>{operation.aciklama}</TableCell>
-                    <TableCell className="text-right font-medium">
-                      {formatCurrency(operation.tutar || 0)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-
-          {totalPages > 1 && (
-            <div className="flex items-center justify-end space-x-2 py-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-              >
-                Önceki
-              </Button>
-              <div className="text-sm">
-                Sayfa {currentPage} / {totalPages}
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
-              >
-                Sonraki
-              </Button>
-            </div>
-          )}
-        </>
-      )}
+      
+      <div className="rounded-md border overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tarih</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Personel</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Müşteri</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlem</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prim %</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tutar</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ödenen</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {isLoading ? (
+              <tr>
+                <td colSpan={7} className="px-6 py-4">
+                  <div className="flex justify-center">
+                    <div className="animate-spin h-5 w-5 border-2 border-t-purple-500 border-purple-200 rounded-full"></div>
+                  </div>
+                </td>
+              </tr>
+            ) : filteredOperations.length > 0 ? (
+              filteredOperations.map((op) => (
+                <tr key={op.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {op.created_at ? new Date(op.created_at).toLocaleDateString('tr-TR') : '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {personnelData?.find(p => p.id === op.personel_id)?.ad_soyad || '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {op.musteri ? `${op.musteri.first_name || ''} ${op.musteri.last_name || ''}` : '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {op.islem?.islem_adi || (op.aciklama ? op.aciklama.split(' hizmeti verildi')[0] : '-')}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {op.prim_yuzdesi > 0 ? `%${op.prim_yuzdesi}` : "-"}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
+                    {formatCurrency(op.tutar || 0)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-medium">
+                    {op.prim_yuzdesi > 0 ? formatCurrency(op.odenen || 0) : "-"}
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">
+                  {searchTerm ? "Arama kriterleriyle eşleşen işlem bulunamadı" : "Bu personel için işlem bulunmamaktadır"}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

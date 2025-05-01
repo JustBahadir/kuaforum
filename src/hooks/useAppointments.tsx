@@ -24,8 +24,22 @@ export function useAppointments(initialFilters: AppointmentFilters = {}) {
     }
 
     try {
-      // Use hepsiniGetir for all roles - it internally handles filtering by dukkan_id
-      const appointments = await randevuServisi.hepsiniGetir();
+      let appointments = [];
+
+      if (userRole === 'admin') {
+        // Admin sees all appointments for their shop
+        console.log('Fetching appointments for admin');
+        appointments = await randevuServisi.dukkanRandevulariniGetir(null);
+      } else if (userRole === 'staff') {
+        // Staff sees all appointments for their shop
+        console.log('Fetching appointments for staff');
+        appointments = await randevuServisi.dukkanRandevulariniGetir(null);
+      } else {
+        // Customers see only their own appointments
+        console.log('Fetching appointments for customer');
+        appointments = await randevuServisi.kendiRandevulariniGetir(null);
+      }
+
       return appointments;
     } catch (error) {
       console.error('Error fetching appointments:', error);

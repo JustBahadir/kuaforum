@@ -1,104 +1,93 @@
 
-import { useState } from 'react';
-import { supabase } from '@/lib/supabase/client';
-import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
-import { useUIStore } from '@/stores/uiStore';
+import { useState } from "react";
+import { profileService } from "@/lib/auth/profileService";
+import { dukkanServisi } from "@/lib/supabase"; // Updated import
+import { authService } from "@/lib/auth/authService";
+import { toast } from "sonner";
 
-export function useProfileManagement() {
-  const [loading, setLoading] = useState(false);
-  const [profileData, setProfileData] = useState({
-    first_name: '',
-    last_name: '',
-    phone: '',
-    iban: '',
-    address: '',
-    birthdate: '',
-    avatar_url: '',
-  });
+/**
+ * Hook for managing user profile information
+ */
+export function useProfileManagement(
+  userRole: string | null,
+  isAuthenticated: boolean,
+  setUserName: (name: string) => void
+) {
+  const [dukkanId, setDukkanId] = useState<number | null>(null);
+  const [dukkanAdi, setDukkanAdi] = useState<string | null>(null);
 
-  const navigate = useNavigate();
-
-  const fetchProfile = async () => {
+  /**
+   * Refreshes user profile information
+   */
+  const refreshProfile = async () => {
     try {
-      setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await authService.getCurrentUser();
       
       if (!user) {
-        navigate('/login');
+        setUserName("Değerli Müşterimiz");
         return;
       }
 
-      // Get profile data
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-
-      if (error) {
-        console.error('Error fetching profile:', error);
-        toast.error('Profil bilgileri alınamadı');
-        return;
+      // Get role from user metadata for reliable role checking
+      const role = user.user_metadata?.role || await profileService.getUserRole();
+      
+      if (role === 'admin') {
+        try {
+          // Use dukkanServisi instead of isletmeServisi
+          const userShop = await dukkanServisi.kullanicininIsletmesi(user.id);
+          if (userShop) {
+            setDukkanId(userShop.id);
+            setDukkanAdi(userShop.ad);
+          } else if (location.pathname.includes('/personnel') || location.pathname.includes('/appointments')) {
+            // Önce toast göster, sonra işletme oluşturma sayfasına yönlendir
+            toast.error("İşletme bilgileriniz bulunamadı. Lütfen işletme bilgilerinizi oluşturun.");
+            
+            // Kısa bir gecikme ekleyelim ki toast görülebilsin
+            setTimeout(() => {
+              window.location.href = "/create-shop";
+            }, 2000);
+          }
+        } catch (error) {
+          console.error("İşletme bilgisi alınırken hata:", error);
+        }
+      } else if (role === 'staff') {
+        try {
+          // Use dukkanServisi instead of isletmeServisi
+          const staffShop = await dukkanServisi.personelAuthIdIsletmesi(user.id);
+          if (staffShop) {
+            // Make sure we're properly handling the returned data
+            if (typeof staffShop === 'object' && staffShop !== null) {
+              setDukkanId(staffShop.id);
+              setDukkanAdi(staffShop.ad);
+            }
+          } else if (location.pathname.includes('/personnel')) {
+            toast.error("İşletme bilgileriniz bulunamadı. Lütfen yönetici ile iletişime geçin.");
+          }
+        } catch (error) {
+          console.error("Personel işletme bilgisi alınırken hata:", error);
+        }
       }
-
-      if (data) {
-        setProfileData({
-          first_name: data.first_name || '',
-          last_name: data.last_name || '',
-          phone: data.phone || '',
-          iban: data.iban || '',
-          address: data.address || '',
-          birthdate: data.birthdate || '',
-          avatar_url: data.avatar_url || '',
-        });
-      }
+      
+      const name = await profileService.getUserNameWithTitle();
+      setUserName(name);
+      
     } catch (error) {
-      console.error('Profile fetch error:', error);
-      toast.error('Profil bilgileri alınamadı');
-    } finally {
-      setLoading(false);
+      console.error("Error refreshing profile:", error);
     }
   };
 
-  const updateProfile = async (updates: Partial<typeof profileData>) => {
-    try {
-      setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        navigate('/login');
-        return false;
-      }
-
-      const { error } = await supabase
-        .from('profiles')
-        .update(updates)
-        .eq('id', user.id);
-
-      if (error) {
-        console.error('Error updating profile:', error);
-        toast.error('Profil güncellenemedi');
-        return false;
-      }
-
-      toast.success('Profil başarıyla güncellendi');
-      setProfileData((prev) => ({ ...prev, ...updates }));
-      return true;
-    } catch (error) {
-      console.error('Profile update error:', error);
-      toast.error('Profil güncellenemedi');
-      return false;
-    } finally {
-      setLoading(false);
-    }
+  /**
+   * Reset all profile information
+   */
+  const resetProfile = () => {
+    setDukkanId(null);
+    setDukkanAdi(null);
   };
 
   return {
-    profileData,
-    setProfileData,
-    loading,
-    fetchProfile,
-    updateProfile
+    dukkanId,
+    dukkanAdi,
+    refreshProfile,
+    resetProfile
   };
 }

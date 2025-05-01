@@ -21,7 +21,7 @@ export default function CustomerAppointments() {
     queryFn: async () => {
       if (!user) return [];
       try {
-        // Use the kendiRandevulariniGetir method we just added
+        // Use the new method to get user's appointments
         return await randevuServisi.kendiRandevulariniGetir();
       } catch (error) {
         console.error("Error fetching appointments:", error);
