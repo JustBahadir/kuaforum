@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { profileService } from "@/lib/auth/profileService";
-import { isletmeServisi } from "@/lib/supabase/services/dukkanServisi";
+import { dukkanServisi } from "@/lib/supabase"; // Updated import
 import { authService } from "@/lib/auth/authService";
 import { toast } from "sonner";
 import { profilServisi } from "@/lib/supabase/services/profilServisi";
@@ -243,7 +243,7 @@ export function useProfileManagement(userId?: string) {
       // Cast gender to the correct type
       setProfileData({
         ...profile,
-        gender: (profile.gender as GenderType) || null
+        gender: (profile.gender as any) || null
       });
 
       // Get role from user metadata for reliable role checking
@@ -251,7 +251,8 @@ export function useProfileManagement(userId?: string) {
 
       if (role === "admin") {
         try {
-          const userShop = await isletmeServisi.kullanicininIsletmesi(user.id);
+          // Use dukkanServisi instead of isletmeServisi
+          const userShop = await dukkanServisi.kullanicininIsletmesi(user.id);
           if (userShop) {
             setDukkanId(userShop.id);
             setDukkanAdi(userShop.ad);
@@ -261,7 +262,8 @@ export function useProfileManagement(userId?: string) {
         }
       } else if (role === "staff") {
         try {
-          const staffShop = await isletmeServisi.personelAuthIdIsletmesi(user.id);
+          // Use dukkanServisi instead of isletmeServisi
+          const staffShop = await dukkanServisi.personelAuthIdIsletmesi(user.id);
           if (staffShop) {
             setDukkanId(staffShop.id);
             setDukkanAdi(staffShop.ad);
@@ -291,11 +293,7 @@ export function useProfileManagement(userId?: string) {
     uploadAvatar,
     dukkanId,
     dukkanAdi,
-    refreshProfile: async () => {}, // Simplified for now
-    resetProfile: () => {
-      setDukkanId(null);
-      setDukkanAdi(null);
-      setProfileData(null);
-    },
+    refreshProfile,
+    resetProfile,
   };
 }

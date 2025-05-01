@@ -12,7 +12,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useShopData } from "@/hooks/useShopData";
 import { toast } from "sonner";
-import { isletmeServisi } from "@/lib/supabase";
+import { isletmeServisi } from "@/lib/supabase"; // This import should now work with our fix
 
 interface PersonnelDialogProps {
   open: boolean;
@@ -38,7 +38,7 @@ export function PersonnelDialog({ open, onOpenChange }: PersonnelDialogProps) {
       if (isletmeData?.kod) {
         setBusinessCode(isletmeData.kod);
       } else {
-        const dukkanData = await isletmeServisi.getir(isletmeData.id);
+        const dukkanData = await isletmeServisi.getirById(isletmeData.id);
         if (dukkanData?.kod) {
           setBusinessCode(dukkanData.kod);
         }

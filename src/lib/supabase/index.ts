@@ -30,3 +30,4 @@ export {
 
 // For backward compatibility
 export const kategoriServisi = kategorilerServisi;
+export const isletmeServisi = dukkanServisi; // Add this line to export dukkanServisi as isletmeServisi

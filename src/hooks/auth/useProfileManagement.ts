@@ -1,9 +1,7 @@
 
-// Fix method calls and imports to use isletmeServisi and correct method names
-
 import { useState } from "react";
 import { profileService } from "@/lib/auth/profileService";
-import { isletmeServisi } from "@/lib/supabase/services/dukkanServisi";
+import { dukkanServisi } from "@/lib/supabase"; // Updated import
 import { authService } from "@/lib/auth/authService";
 import { toast } from "sonner";
 
@@ -35,8 +33,8 @@ export function useProfileManagement(
       
       if (role === 'admin') {
         try {
-          // Correct method name kullanıcının işletmesi
-          const userShop = await isletmeServisi.kullanicininIsletmesi(user.id);
+          // Use dukkanServisi instead of isletmeServisi
+          const userShop = await dukkanServisi.kullanicininIsletmesi(user.id);
           if (userShop) {
             setDukkanId(userShop.id);
             setDukkanAdi(userShop.ad);
@@ -54,8 +52,8 @@ export function useProfileManagement(
         }
       } else if (role === 'staff') {
         try {
-          // Correct method name personelAuthIdIsletmesi
-          const staffShop = await isletmeServisi.personelAuthIdIsletmesi(user.id);
+          // Use dukkanServisi instead of isletmeServisi
+          const staffShop = await dukkanServisi.personelAuthIdIsletmesi(user.id);
           if (staffShop) {
             setDukkanId(staffShop.id);
             setDukkanAdi(staffShop.ad);

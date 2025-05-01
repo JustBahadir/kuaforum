@@ -1,6 +1,7 @@
 
-import { supabase } from "../client";
-import { isletmeServisi } from "./dukkanServisi";
+import { supabase } from '../client';
+import { PersonelIslemi } from '../../types/personnel';
+import { dukkanServisi } from "./dukkanServisi"; // Updated import
 
 export const personelIslemleriServisi = {
   // Helper function to get the current user's dukkan_id

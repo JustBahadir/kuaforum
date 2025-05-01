@@ -1,10 +1,15 @@
 
 import { supabase } from '../client';
-import { Musteri } from '../types';
-import { toast } from 'sonner';
+
+export interface CustomerData {
+  first_name: string;
+  last_name?: string | null;
+  phone?: string | null;
+  birthdate?: string | null;
+  dukkan_id?: number | null;
+}
 
 export const musteriServisi = {
-  // Helper function to get the current user's dukkan_id
   async _getCurrentUserDukkanId() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -14,16 +19,16 @@ export const musteriServisi = {
       const dukkanIdFromMeta = user?.user_metadata?.dukkan_id;
       if (dukkanIdFromMeta) return dukkanIdFromMeta;
       
-      // If not in metadata, try profiles table
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('dukkan_id')
-        .eq('id', user.id)
+      // Check if user is a shop owner
+      const { data: shopData } = await supabase
+        .from('dukkanlar')
+        .select('id')
+        .eq('sahibi_id', user.id)
         .maybeSingle();
       
-      if (profileData?.dukkan_id) return profileData.dukkan_id;
+      if (shopData?.id) return shopData.id;
       
-      // Try personel table
+      // Check if user is staff
       const { data: personelData } = await supabase
         .from('personel')
         .select('dukkan_id')
@@ -32,131 +37,90 @@ export const musteriServisi = {
       
       if (personelData?.dukkan_id) return personelData.dukkan_id;
       
-      // As fallback, try to get shop ID where user is owner
-      const { data: shopData } = await supabase
-        .from('dukkanlar')
-        .select('id')
-        .eq('sahibi_id', user.id)
+      // Check profiles table
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('dukkan_id')
+        .eq('id', user.id)
         .maybeSingle();
       
-      return shopData?.id || null;
+      return profileData?.dukkan_id || null;
     } catch (error) {
       console.error("Error getting dukkan_id:", error);
       return null;
     }
   },
   
-  async getCurrentUserDukkanId() {
-    return this._getCurrentUserDukkanId();
-  },
-  
-  async hepsiniGetir(dukkanId?: number | null) {
+  async hepsiniGetir(searchText?: string) {
     try {
-      // Get the current user's dukkanId if one isn't provided
-      const userDukkanId = dukkanId || await this._getCurrentUserDukkanId();
-      if (!userDukkanId) {
-        console.error("Kullanıcının işletme bilgisi bulunamadı");
+      const dukkanId = await this._getCurrentUserDukkanId();
+      if (!dukkanId) {
+        console.warn("Kullanıcının dükkan bilgisi bulunamadı");
         return [];
       }
       
-      console.log(`Dükkan ID ${userDukkanId} için müşteriler getiriliyor`);
-      
-      const { data, error } = await supabase
+      let query = supabase
         .from('musteriler')
         .select('*')
-        .eq('dukkan_id', userDukkanId)
-        .order('first_name', { ascending: true });
+        .eq('dukkan_id', dukkanId);
+      
+      if (searchText) {
+        query = query.or(`first_name.ilike.%${searchText}%,last_name.ilike.%${searchText}%,phone.ilike.%${searchText}%`);
+      }
+      
+      const { data, error } = await query.order('first_name', { ascending: true });
       
       if (error) {
-        console.error("Müşteriler getirme hatası:", error);
+        console.error("Müşteri listesi getirme hatası:", error);
         throw error;
       }
       
-      console.log(`${data?.length || 0} müşteri başarıyla getirildi:`, data);
       return data || [];
-    } catch (err) {
-      console.error("Müşteriler getirme sırasında hata:", err);
+    } catch (error) {
+      console.error("Müşterileri getirme sırasında hata:", error);
       return [];
     }
   },
   
-  async getirById(id: number): Promise<Musteri | null> {
+  async getir(id: number) {
     try {
       const dukkanId = await this._getCurrentUserDukkanId();
-      if (!dukkanId) {
-        console.error("Kullanıcının işletme bilgisi bulunamadı");
-        return null;
-      }
       
-      console.log(`Müşteri ID ${id} ve Dükkan ID ${dukkanId} için müşteri getiriliyor`);
-      
-      // Get the customer data with shop isolation
       const { data, error } = await supabase
         .from('musteriler')
         .select('*')
         .eq('id', id)
-        .eq('dukkan_id', dukkanId) // Strict shop isolation
         .single();
       
-      if (error) {
-        console.error(`ID ${id} müşteri getirme hatası:`, error);
+      if (error) throw error;
+      
+      // Verify this customer belongs to the current user's shop
+      if (dukkanId && data.dukkan_id !== dukkanId) {
+        console.warn("Requested customer does not belong to user's dukkan");
         return null;
       }
       
-      // If we have customer data, create a complete customer object with auth_id
-      if (data) {
-        // Simply use the customer ID as the auth_id for now
-        let customer = { 
-          ...data,
-          auth_id: id.toString()
-        } as Musteri;
-        
-        return customer;
-      }
-      
-      return null;
-    } catch (err) {
-      console.error(`ID ${id} müşteri getirme sırasında hata:`, err);
+      return data;
+    } catch (error) {
+      console.error("Müşteri getirme hatası:", error);
       return null;
     }
   },
   
-  async ekle(musteriData: any) {
+  async ekle(customer: CustomerData) {
     try {
-      console.log("Müşteri ekleme başladı, gelen veriler:", musteriData);
-
-      // Try to get the user's dukkan_id
-      let dukkanId = musteriData.dukkan_id;
-      
-      // If we don't have a dukkan_id, try to get from current user
-      if (!dukkanId) {
-        dukkanId = await this._getCurrentUserDukkanId();
+      // If dukkan_id is not provided, get the current user's dukkan_id
+      if (!customer.dukkan_id) {
+        const dukkanId = await this._getCurrentUserDukkanId();
+        if (!dukkanId) {
+          throw new Error("Kullanıcının dükkan bilgisi bulunamadı");
+        }
+        customer.dukkan_id = dukkanId;
       }
       
-      if (!dukkanId) {
-        throw new Error("Kullanıcının işletme bilgisi bulunamadı");
-      }
-      
-      // Set the correct dukkan_id
-      musteriData.dukkan_id = dukkanId;
-      
-      console.log("Eklenecek müşteri:", musteriData);
-      
-      // Explicitly set optional fields to null if undefined to ensure DB has values
-      const dataForInsert = {
-        first_name: musteriData.first_name,
-        last_name: musteriData.last_name || null,
-        phone: musteriData.phone || null,
-        birthdate: musteriData.birthdate || null,
-        dukkan_id: dukkanId,
-      };
-
-      console.log("İşletme ID:", dukkanId);
-      console.log("Eklenecek veri:", dataForInsert);
-
       const { data, error } = await supabase
         .from('musteriler')
-        .insert([dataForInsert])
+        .insert(customer)
         .select();
       
       if (error) {
@@ -164,88 +128,76 @@ export const musteriServisi = {
         throw error;
       }
       
-      console.log("Eklenen müşteri:", data?.[0]);
-      return data?.[0];
-    } catch (err) {
-      console.error("Müşteri eklenirken hata:", err);
-      toast.error("Müşteri eklenirken bir hata oluştu: " + (err instanceof Error ? err.message : "Bilinmeyen hata"));
-      throw err;
+      return data[0];
+    } catch (error) {
+      console.error("Müşteri ekleme sırasında hata:", error);
+      throw error;
     }
   },
   
-  async guncelle(id: number, updates: Partial<Musteri>) {
+  async guncelle(id: number, customer: Partial<CustomerData>) {
     try {
       const dukkanId = await this._getCurrentUserDukkanId();
-      if (!dukkanId) {
-        throw new Error("Kullanıcının işletme bilgisi bulunamadı");
-      }
       
-      // First verify this customer belongs to our business
-      const { data: customerData } = await supabase
-        .from('musteriler')
-        .select('dukkan_id')
-        .eq('id', id)
-        .single();
+      // First check if customer belongs to this shop
+      if (dukkanId) {
+        const { data: existingCustomer } = await supabase
+          .from('musteriler')
+          .select('dukkan_id')
+          .eq('id', id)
+          .single();
         
-      if (customerData?.dukkan_id !== dukkanId) {
-        throw new Error("Bu müşteri sizin işletmenize ait değil");
+        if (existingCustomer && existingCustomer.dukkan_id !== dukkanId) {
+          throw new Error("Bu müşteriyi güncelleme yetkiniz yok");
+        }
       }
-      
-      // Don't allow changing dukkan_id
-      delete updates.dukkan_id;
       
       const { data, error } = await supabase
         .from('musteriler')
-        .update(updates)
+        .update(customer)
         .eq('id', id)
-        .eq('dukkan_id', dukkanId) // Additional safety filter
         .select();
       
-      if (error) {
-        console.error("Müşteri güncelleme hatası:", error);
-        throw error;
-      }
-      
-      return data?.[0];
-    } catch (err) {
-      console.error(`ID ${id} müşteri güncellenirken hata:`, err);
-      throw err;
+      if (error) throw error;
+      return data[0];
+    } catch (error) {
+      console.error("Müşteri güncelleme hatası:", error);
+      throw error;
     }
   },
   
   async sil(id: number) {
     try {
       const dukkanId = await this._getCurrentUserDukkanId();
-      if (!dukkanId) {
-        throw new Error("Kullanıcının işletme bilgisi bulunamadı");
-      }
       
-      // First verify this customer belongs to our business
-      const { data: customerData } = await supabase
-        .from('musteriler')
-        .select('dukkan_id')
-        .eq('id', id)
-        .single();
+      // First check if customer belongs to this shop
+      if (dukkanId) {
+        const { data: existingCustomer } = await supabase
+          .from('musteriler')
+          .select('dukkan_id')
+          .eq('id', id)
+          .single();
         
-      if (customerData?.dukkan_id !== dukkanId) {
-        throw new Error("Bu müşteri sizin işletmenize ait değil");
+        if (existingCustomer && existingCustomer.dukkan_id !== dukkanId) {
+          throw new Error("Bu müşteriyi silme yetkiniz yok");
+        }
       }
       
       const { error } = await supabase
         .from('musteriler')
         .delete()
-        .eq('id', id)
-        .eq('dukkan_id', dukkanId); // Additional safety filter
+        .eq('id', id);
       
-      if (error) {
-        console.error("Müşteri silme hatası:", error);
-        throw error;
-      }
-      
+      if (error) throw error;
       return true;
-    } catch (err) {
-      console.error(`ID ${id} müşteri silinirken hata:`, err);
-      throw err;
+    } catch (error) {
+      console.error("Müşteri silme hatası:", error);
+      throw error;
     }
+  },
+  
+  // Add a method to search customers
+  async ara(searchText: string) {
+    return this.hepsiniGetir(searchText);
   }
 };

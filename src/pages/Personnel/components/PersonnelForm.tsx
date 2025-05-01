@@ -1,5 +1,6 @@
+
 import { useState, useEffect } from "react";
-import { Personel } from "@/lib/supabase";
+import { Personel } from "@/types/personnel"; // Updated import path
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,7 +14,7 @@ import {
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { authService } from "@/lib/auth/authService";
 import { toast } from "sonner";
-import { isletmeServisi } from "@/lib/supabase/services/dukkanServisi";
+import { dukkanServisi } from "@/lib/supabase"; // Updated import
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
