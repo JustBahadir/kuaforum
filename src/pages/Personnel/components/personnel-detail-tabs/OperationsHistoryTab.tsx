@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { personelIslemServisi } from "@/lib/supabase/services/personelIslemleriServisi";
+import { personelIslemleriServisi } from "@/lib/supabase/services/personelIslemleriServisi";
 import {
   Table,
   TableBody,
@@ -27,7 +27,7 @@ export function OperationsHistoryTab({ personnelId }: OperationsHistoryTabProps)
     queryKey: ["personnel-operations", personnelId, timeframe],
     queryFn: async () => {
       try {
-        return await personelIslemServisi.personelIslemleriniGetir(personnelId);
+        return await personelIslemleriServisi.personelIslemleriniGetir(personnelId);
       } catch (error) {
         console.error("Error fetching operations:", error);
         return [];
