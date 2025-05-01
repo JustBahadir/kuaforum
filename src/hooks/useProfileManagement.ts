@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { profileService } from "@/lib/auth/profileService";
 import { dukkanServisi } from "@/lib/supabase"; // Updated import
@@ -253,7 +254,7 @@ export function useProfileManagement(userId?: string) {
         try {
           // Use dukkanServisi instead of isletmeServisi
           const userShop = await dukkanServisi.kullanicininIsletmesi(user.id);
-          if (userShop) {
+          if (userShop && typeof userShop === 'object') {
             setDukkanId(userShop.id);
             setDukkanAdi(userShop.ad);
           }
@@ -264,7 +265,7 @@ export function useProfileManagement(userId?: string) {
         try {
           // Use dukkanServisi instead of isletmeServisi
           const staffShop = await dukkanServisi.personelAuthIdIsletmesi(user.id);
-          if (staffShop) {
+          if (staffShop && typeof staffShop === 'object') {
             setDukkanId(staffShop.id);
             setDukkanAdi(staffShop.ad);
           }

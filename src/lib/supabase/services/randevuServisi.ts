@@ -150,5 +150,55 @@ export const randevuServisi = {
       console.error('Dükkan ID getirme hatası:', error);
       return null;
     }
+  },
+
+  // Add missing methods referenced in error messages
+  randevuDurumGuncelle: async (id: number, durum: string) => {
+    return randevuServisi.randevuGuncelle(id, { durum });
+  },
+  
+  durumGuncelle: async (id: number, durum: string) => {
+    return randevuServisi.randevuGuncelle(id, { durum });
+  },
+  
+  musteriRandevulari: async (musteriId: string | number) => {
+    try {
+      const { data, error } = await supabase
+        .from('randevular')
+        .select(`
+          *,
+          dukkan:dukkan_id(*),
+          personel:personel_id(*),
+          islem:islem_id(*)
+        `)
+        .eq('musteri_id', musteriId)
+        .order('tarih', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Müşteri randevularını getirme hatası:', error);
+      throw error;
+    }
+  },
+  
+  hepsiniGetir: async () => {
+    try {
+      const { data, error } = await supabase
+        .from('randevular')
+        .select(`
+          *,
+          musteri:musteri_id(*),
+          personel:personel_id(*),
+          islem:islem_id(*)
+        `)
+        .order('tarih', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Tüm randevuları getirme hatası:', error);
+      throw error;
+    }
   }
-};
+}

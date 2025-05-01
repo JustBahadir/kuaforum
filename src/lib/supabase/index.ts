@@ -11,7 +11,7 @@ import { profilServisi } from './services/profilServisi';
 import { bildirimServisi } from './services/bildirimServisi';
 import { calismaSaatleriServisi } from './services/calismaSaatleriServisi';
 import { personelIslemleriServisi } from './services/personelIslemleriServisi';
-import { Personel, PersonelIslemi } from '@/types/personnel';
+import type { Personel, PersonelIslemi } from '@/types/personnel';
 
 // Re-export services
 export {
@@ -27,10 +27,10 @@ export {
   bildirimServisi,
   calismaSaatleriServisi,
   personelIslemleriServisi,
-  // Export types
-  Personel,
-  PersonelIslemi
 };
+
+// Export types
+export type { Personel, PersonelIslemi };
 
 // For backward compatibility
 export const kategoriServisi = kategorilerServisi;
