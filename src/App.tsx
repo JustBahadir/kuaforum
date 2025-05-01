@@ -1,11 +1,9 @@
 
 import React from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { Toaster } from "@/components/ui/sonner";
 import { RouteProtection } from "@/components/auth/RouteProtection";
-import { ThemeProvider } from "@/components/ui/theme-provider";
 import HomePage from "./pages/HomePage";
 import Login from "./pages/Login";
 import ProfileSetup from "./pages/ProfileSetup";
@@ -32,62 +30,46 @@ import UnassignedStaff from "./pages/UnassignedStaff";
 import StaffJoinRequest from "./pages/StaffJoinRequest";
 import PendingStaffRequests from "./pages/Personnel/PendingStaffRequests";
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      retry: 1,
-      gcTime: 0, // Replace cacheTime with gcTime (garbage collection time)
-    },
-  },
-});
-
 function App() {
   return (
-    <ThemeProvider defaultTheme="light">
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <RouteProtection>
-            <Routes>
-              {/* Landing Page */}
-              <Route path="/" element={<HomePage />} />
-              
-              {/* Auth Routes */}
-              <Route path="/login" element={<Login />} />
-              <Route path="/auth" element={<CustomerAuth />} />
-              <Route path="/profile-setup" element={<ProfileSetup />} />
-              <Route path="/auth-google-callback" element={<AuthGoogleCallback />} />
+    <RouteProtection>
+      <Routes>
+        {/* Landing Page */}
+        <Route path="/" element={<HomePage />} />
+        
+        {/* Auth Routes */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/auth" element={<CustomerAuth />} />
+        <Route path="/profile-setup" element={<ProfileSetup />} />
+        <Route path="/auth-google-callback" element={<AuthGoogleCallback />} />
 
-              {/* Shop/Staff Routes */}
-              <Route path="/personnel" element={<Personnel />} />
-              <Route path="/personnel/pending-requests" element={<PendingStaffRequests />} />
-              <Route path="/shop-home" element={<ShopHomePage />} />
-              <Route path="/shop-settings" element={<ShopSettings />} />
-              <Route path="/shop-statistics" element={<ShopStatistics />} />
-              <Route path="/operations-history" element={<OperationsHistory />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/staff-profile" element={<StaffProfile />} />
-              <Route path="/unassigned-staff" element={<UnassignedStaff />} />
-              <Route path="/staff-join-request" element={<StaffJoinRequest />} />
-              <Route path="/customers" element={<Customers />} />
-              <Route path="/settings" element={<Settings />} />
-              
-              {/* Admin Operations Routes */}
-              <Route path="/admin/operations" element={<StaffOperations />} />
-              <Route path="/admin/customers/new" element={<Customers />} />
-              
-              {/* Public Routes */}
-              <Route path="/services" element={<CustomerOperations />} />
-              <Route path="/appointments" element={<Appointments />} />
-              
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </RouteProtection>
-        </BrowserRouter>
-        <ReactQueryDevtools />
-        <Toaster />
-      </QueryClientProvider>
-    </ThemeProvider>
+        {/* Shop/Staff Routes */}
+        <Route path="/personnel" element={<Personnel />} />
+        <Route path="/personnel/pending-requests" element={<PendingStaffRequests />} />
+        <Route path="/shop-home" element={<ShopHomePage />} />
+        <Route path="/shop-settings" element={<ShopSettings />} />
+        <Route path="/shop-statistics" element={<ShopStatistics />} />
+        <Route path="/operations-history" element={<OperationsHistory />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/staff-profile" element={<StaffProfile />} />
+        <Route path="/unassigned-staff" element={<UnassignedStaff />} />
+        <Route path="/staff-join-request" element={<StaffJoinRequest />} />
+        <Route path="/customers" element={<Customers />} />
+        <Route path="/settings" element={<Settings />} />
+        
+        {/* Admin Operations Routes */}
+        <Route path="/admin/operations" element={<StaffOperations />} />
+        <Route path="/admin/customers/new" element={<Customers />} />
+        
+        {/* Public Routes */}
+        <Route path="/services" element={<CustomerOperations />} />
+        <Route path="/appointments" element={<Appointments />} />
+        
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+      <ReactQueryDevtools />
+      <Toaster />
+    </RouteProtection>
   );
 }
 

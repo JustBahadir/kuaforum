@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Route, Routes, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { SidebarNav } from "@/components/customer-dashboard/SidebarNav";
 import { MobileNav } from "@/components/customer-dashboard/MobileNav";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
