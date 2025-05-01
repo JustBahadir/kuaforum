@@ -8,7 +8,7 @@ import { BrowserRouter } from "react-router-dom";
 import { Toaster } from './components/ui/sonner'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
-import { setupStorageBuckets } from './lib/supabase/setupStorage.ts'
+import { initializeStorage } from './lib/supabase/setupStorage.ts'
 
 // Create a client
 const queryClient = new QueryClient({
@@ -22,7 +22,7 @@ const queryClient = new QueryClient({
 })
 
 // Initialize storage buckets on app startup
-setupStorageBuckets().catch(console.error);
+initializeStorage().catch(console.error);
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
@@ -31,7 +31,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <QueryClientProvider client={queryClient}>
           <App />
           <ReactQueryDevtools initialIsOpen={false} />
-          <Toaster position="bottom-right" />
+          <Toaster position="bottom-center" />
         </QueryClientProvider>
       </ThemeProvider>
     </BrowserRouter>

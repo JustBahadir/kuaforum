@@ -57,13 +57,3 @@ export async function setupStorageBuckets() {
     console.error("Error in setupStorageBuckets:", err);
   }
 }
-
-// Export this function for use in main.tsx
-export const initializeStorage = async () => {
-  try {
-    await setupStorageBuckets();
-    console.log("Storage buckets initialized");
-  } catch (error) {
-    console.error("Error initializing storage:", error);
-  }
-};

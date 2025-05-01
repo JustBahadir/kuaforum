@@ -3,13 +3,13 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { nanoid } from 'nanoid';
 import { toast } from "sonner";
-import { Trash2, Upload } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { authService } from "@/lib/auth/authService";
 import { setupStorageBuckets } from "@/lib/supabase/setupStorage";
 
 interface ShopProfilePhotoUploadProps {
-  children?: React.ReactNode;
+  children: React.ReactNode;
   dukkanId: number;
   galleryMode?: boolean;
   onSuccess: (url: string) => void;
@@ -207,21 +207,13 @@ export function ShopProfilePhotoUpload({
     }
   };
 
-  // Default upload UI if no children are provided
-  const defaultUploadUI = (
-    <div className="w-32 h-32 bg-gray-200 rounded-full flex flex-col items-center justify-center hover:bg-gray-300 transition-colors">
-      <Upload className="h-8 w-8 text-gray-500 mb-1" />
-      <span className="text-gray-500 text-sm">Dosya Yükle</span>
-    </div>
-  );
-
   return (
     <div className={className}>
       <div 
         onClick={handleClick}
         className={`${isUploading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} relative`}
       >
-        {children || defaultUploadUI}
+        {children}
         {isUploading && (
           <span className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-20 rounded-full">
             <div className="w-5 h-5 border-2 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>

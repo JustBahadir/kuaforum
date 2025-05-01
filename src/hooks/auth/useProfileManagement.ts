@@ -36,13 +36,10 @@ export function useProfileManagement(
           // Use dukkanServisi instead of isletmeServisi
           const userShop = await dukkanServisi.kullanicininIsletmesi(user.id);
           if (userShop) {
-            // Type casting to ensure we're assigning the correct types
-            setDukkanId(userShop.id ? Number(userShop.id) : null);
-            setDukkanAdi(userShop.ad ? String(userShop.ad) : null);
+            setDukkanId(userShop.id);
+            setDukkanAdi(userShop.ad);
           } else if (location.pathname.includes('/personnel') || location.pathname.includes('/appointments')) {
-            toast.error("İşletme bilgileriniz bulunamadı. Lütfen işletme bilgilerinizi oluşturun.", {
-              position: "bottom-right"
-            });
+            toast.error("İşletme bilgileriniz bulunamadı. Lütfen işletme bilgilerinizi oluşturun.");
             
             setTimeout(() => {
               window.location.href = "/create-shop";
@@ -57,13 +54,10 @@ export function useProfileManagement(
           const staffShop = await dukkanServisi.personelAuthIdIsletmesi(user.id);
           // Ensure staffShop exists and is an object with id and ad properties
           if (staffShop && typeof staffShop === 'object' && 'id' in staffShop && 'ad' in staffShop) {
-            // Type casting to ensure we're assigning the correct types
-            setDukkanId(staffShop.id ? Number(staffShop.id) : null);
-            setDukkanAdi(staffShop.ad ? String(staffShop.ad) : null);
+            setDukkanId(staffShop.id);
+            setDukkanAdi(staffShop.ad);
           } else if (location.pathname.includes('/personnel')) {
-            toast.error("İşletme bilgileriniz bulunamadı. Lütfen yönetici ile iletişime geçin.", {
-              position: "bottom-right"
-            });
+            toast.error("İşletme bilgileriniz bulunamadı. Lütfen yönetici ile iletişime geçin.");
           }
         } catch (error) {
           console.error("Personel işletme bilgisi alınırken hata:", error);
