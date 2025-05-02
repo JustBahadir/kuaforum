@@ -90,7 +90,7 @@ export const dukkanServisi = {
         .update(updates)
         .eq('id', id)
         .select();
-        
+      
       if (error) throw error;
       return data[0];
     } catch (error) {
@@ -100,5 +100,4 @@ export const dukkanServisi = {
   }
 };
 
-// Create an alias for backward compatibility
 export const isletmeServisi = dukkanServisi;

@@ -126,7 +126,6 @@ export const islemServisi = {
     }
   },
   
-  // Add missing sirayiGuncelle method
   async sirayiGuncelle(items: any[]) {
     try {
       const updates = items.map(item => ({

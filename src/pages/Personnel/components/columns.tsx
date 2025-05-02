@@ -1,17 +1,18 @@
 
 import { ColumnDef } from "@tanstack/react-table";
-import { Button } from "@/components/ui/button";
-import { ArrowUpDown, MoreHorizontal } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
+import { Button } from "@/components/ui/button";
+import { ArrowUp, ArrowDown, MoreHorizontal } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+// Define the Personnel data structure
 export type Personnel = {
   id: number;
   ad_soyad: string;
@@ -19,7 +20,7 @@ export type Personnel = {
   eposta: string;
   maas: number;
   prim_yuzdesi: number;
-  avatar_url?: string;
+  personel_no: string;
 }
 
 export const columns: ColumnDef<Personnel>[] = [
@@ -28,7 +29,7 @@ export const columns: ColumnDef<Personnel>[] = [
     header: ({ table }) => (
       <Checkbox
         checked={
-          table.getIsAllPageRowsSelected() ||
+          table.getIsAllPageRowsSelected() || 
           (table.getIsSomePageRowsSelected() && "indeterminate")
         }
         onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
@@ -39,7 +40,7 @@ export const columns: ColumnDef<Personnel>[] = [
       <Checkbox
         checked={row.getIsSelected()}
         onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label="Satırı seç"
+        aria-label="Seç"
       />
     ),
     enableSorting: false,
@@ -47,82 +48,42 @@ export const columns: ColumnDef<Personnel>[] = [
   },
   {
     accessorKey: "ad_soyad",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Ad Soyad
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      )
-    },
-    cell: ({ row }) => {
-      return (
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center">
-            {row.original.avatar_url ? (
-              <img src={row.original.avatar_url} alt={row.original.ad_soyad} className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-sm">{row.original.ad_soyad.charAt(0)}</span>
-            )}
-          </div>
-          <div>
-            {row.getValue("ad_soyad")}
-          </div>
-        </div>
-      )
-    }
+    header: "Adı Soyadı",
   },
   {
     accessorKey: "telefon",
     header: "Telefon",
-    cell: ({ row }) => {
-      return <div>{row.getValue("telefon")}</div>
-    }
   },
   {
     accessorKey: "eposta",
     header: "E-posta",
-    cell: ({ row }) => {
-      return <div>{row.getValue("eposta")}</div>
-    }
   },
   {
     accessorKey: "maas",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Maaş
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      )
-    },
+    header: "Maaş",
     cell: ({ row }) => {
-      const amount = parseFloat(row.getValue("maas"))
+      const amount = parseFloat(row.getValue("maas"));
       const formatted = new Intl.NumberFormat("tr-TR", {
         style: "currency",
         currency: "TRY",
-      }).format(amount)
+      }).format(amount);
       
-      return <div className="text-right font-medium">{formatted}</div>
-    }
+      return <div className="font-medium">{formatted}</div>;
+    },
   },
   {
     accessorKey: "prim_yuzdesi",
-    header: "Prim Oranı",
+    header: "Prim Yüzdesi",
     cell: ({ row }) => {
-      return <div className="text-center">%{row.getValue("prim_yuzdesi")}</div>
-    }
+      const percent = parseFloat(row.getValue("prim_yuzdesi"));
+      
+      return <div className="font-medium">%{percent}</div>;
+    },
   },
   {
     id: "actions",
     cell: ({ row }) => {
-      const personnel = row.original
+      const personnel = row.original;
       
       return (
         <DropdownMenu>
@@ -134,17 +95,17 @@ export const columns: ColumnDef<Personnel>[] = [
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>İşlemler</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(personnel.id.toString())}
-            >
+            <DropdownMenuItem onClick={() => navigator.clipboard.writeText(personnel.id.toString())}>
               ID Kopyala
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem>Düzenle</DropdownMenuItem>
-            <DropdownMenuItem className="text-red-600">Sil</DropdownMenuItem>
+            <DropdownMenuItem className="text-red-600">
+              Sil
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      )
-    }
-  }
-]
+      );
+    },
+  },
+];
