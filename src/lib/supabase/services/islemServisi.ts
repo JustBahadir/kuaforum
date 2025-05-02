@@ -1,16 +1,17 @@
 
-import { supabase } from '../client';
-import { musteriServisi } from './musteriServisi';
+import { supabase } from "../client";
+import { kategoriServisi } from "./kategoriServisi";
 
 export const islemServisi = {
   async getCurrentDukkanId() {
-    return musteriServisi.getCurrentUserDukkanId();
+    return kategoriServisi.getCurrentDukkanId();
   },
-  
+
   async hepsiniGetir(dukkanId?: number) {
     try {
       let shopId = dukkanId;
-      if (shopId === undefined) {
+      
+      if (!shopId) {
         shopId = await this.getCurrentDukkanId();
       }
       
@@ -20,8 +21,7 @@ export const islemServisi = {
       
       const { data, error } = await supabase
         .from('islemler')
-        .select('*')
-        .eq('dukkan_id', shopId)
+        .select('*, islem_kategorileri(id, kategori_adi)')
         .order('sira', { ascending: true });
         
       if (error) throw error;
@@ -36,7 +36,7 @@ export const islemServisi = {
     try {
       const { data, error } = await supabase
         .from('islemler')
-        .select('*')
+        .select('*, islem_kategorileri(*)')
         .eq('id', id)
         .single();
         
@@ -59,48 +59,20 @@ export const islemServisi = {
       if (error) throw error;
       return data || [];
     } catch (error) {
-      console.error('Kategori işlemlerini getirme hatası:', error);
-      throw error;
-    }
-  },
-  
-  async kategoriIdyeGoreGetir(kategoriId: number, dukkanId?: number) {
-    try {
-      let shopId = dukkanId;
-      if (shopId === undefined) {
-        shopId = await this.getCurrentDukkanId();
-      }
-      
-      if (!shopId) {
-        throw new Error('Dükkan bilgisi bulunamadı');
-      }
-      
-      const { data, error } = await supabase
-        .from('islemler')
-        .select('*')
-        .eq('kategori_id', kategoriId)
-        .eq('dukkan_id', shopId)
-        .order('sira', { ascending: true });
-        
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error('Kategori işlemlerini getirme hatası:', error);
+      console.error('Kategori işlemleri getirme hatası:', error);
       throw error;
     }
   },
   
   async ekle(islem: any) {
     try {
-      if (!islem.dukkan_id) {
-        islem.dukkan_id = await this.getCurrentDukkanId();
-      }
+      const dukkanId = await this.getCurrentDukkanId();
       
-      if (!islem.dukkan_id) {
+      if (!dukkanId) {
         throw new Error('Dükkan bilgisi bulunamadı');
       }
       
-      // Get the current max sira
+      // Get the current max sira for this category
       const { data: existingItems } = await supabase
         .from('islemler')
         .select('sira')
@@ -154,6 +126,7 @@ export const islemServisi = {
     }
   },
   
+  // Add missing sirayiGuncelle method
   async sirayiGuncelle(items: any[]) {
     try {
       const updates = items.map(item => ({
@@ -173,3 +146,6 @@ export const islemServisi = {
     }
   }
 };
+
+// Alias for backward compatibility
+export const islemlerServisi = islemServisi;

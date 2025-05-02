@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { StaffLayout } from "@/components/ui/staff-layout";
@@ -6,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { kategorilerServisi, islemServisi } from "@/lib/supabase";
 import { useShopData } from "@/hooks/useShopData";
 import { ServicesContent } from "@/components/operations/ServicesContent";
-import { WorkingHours } from "@/components/operations/WorkingHours";
+import { WorkingHoursCard } from "@/components/operations/WorkingHoursCard";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -320,7 +319,7 @@ export default function StaffOperations() {
           </TabsContent>
           
           <TabsContent value="workinghours">
-            <WorkingHours dukkanId={dukkanId} />
+            <WorkingHoursCard dukkanId={dukkanId} />
           </TabsContent>
         </Tabs>
       </div>

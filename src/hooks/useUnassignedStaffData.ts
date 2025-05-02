@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from "react";
 import { profileService } from "@/lib/auth/profileService";
 import { authService } from "@/lib/auth/authService";
@@ -78,7 +77,8 @@ export const useUnassignedStaffData = () => {
 
   const handleLogout = async () => {
     try {
-      await authService.logout();
+      // Replace authService.logout() with supabase.auth.signOut()
+      await supabase.auth.signOut();
       window.location.href = "/login";
     } catch (err: any) {
       console.error("Error logging out:", err);

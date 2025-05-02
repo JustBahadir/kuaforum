@@ -1,29 +1,52 @@
 
 /**
- * Formats a phone number as 05XX XXX XX XX
- * For Turkish mobile numbers
+ * Format a phone number string in Turkish format (05xx xxx xx xx)
+ * @param digits The string of digits to format
+ * @returns Formatted phone number string
  */
-export const formatPhoneNumber = (value: string): string => {
-  // Sadece rakamları al
-  const numbers = value.replace(/\D/g, '');
+export const formatPhoneNumber = (digits: string): string => {
+  // Remove any non-digit characters
+  const cleanDigits = digits.replace(/\D/g, '');
   
-  // Format: 05XX XXX XX XX
-  if (numbers.length <= 4) {
-    return numbers;
-  } else if (numbers.length <= 7) {
-    return `${numbers.slice(0, 4)} ${numbers.slice(4)}`;
-  } else if (numbers.length <= 9) {
-    return `${numbers.slice(0, 4)} ${numbers.slice(4, 7)} ${numbers.slice(7)}`;
-  } else {
-    return `${numbers.slice(0, 4)} ${numbers.slice(4, 7)} ${numbers.slice(7, 9)} ${numbers.slice(9, 11)}`;
+  // If empty, return empty string
+  if (!cleanDigits) {
+    return '';
   }
+  
+  // Format according to Turkish mobile phone format
+  let formattedNumber = '';
+  
+  if (cleanDigits.length <= 3) {
+    // First 3 digits (area code)
+    formattedNumber = cleanDigits;
+  } else if (cleanDigits.length <= 6) {
+    // First 3 digits + space + next 3
+    formattedNumber = `${cleanDigits.slice(0, 3)} ${cleanDigits.slice(3)}`;
+  } else if (cleanDigits.length <= 8) {
+    // First 3 digits + space + next 3 + space + next 2
+    formattedNumber = `${cleanDigits.slice(0, 3)} ${cleanDigits.slice(3, 6)} ${cleanDigits.slice(6)}`;
+  } else {
+    // Full format: 05xx xxx xx xx
+    formattedNumber = `${cleanDigits.slice(0, 3)} ${cleanDigits.slice(3, 6)} ${cleanDigits.slice(6, 8)} ${cleanDigits.slice(8, 10)}`;
+  }
+  
+  return formattedNumber;
 };
 
 /**
- * Validates a phone number to ensure it's in the correct format
- * Only allows numeric input
+ * Validate that the input string contains only digits
+ * @param input The string to validate
+ * @returns True if the string contains only digits
  */
-export const validatePhoneNumber = (value: string): boolean => {
-  // Check if the value contains only digits
-  return /^\d+$/.test(value.replace(/\s/g, ''));
+export const validatePhoneNumber = (input: string): boolean => {
+  return /^\d*$/.test(input);
+};
+
+/**
+ * Clean a phone number by removing all non-digit characters
+ * @param phoneNumber The phone number string to clean
+ * @returns Clean phone number with only digits
+ */
+export const cleanPhoneNumber = (phoneNumber: string): string => {
+  return phoneNumber.replace(/\D/g, '');
 };

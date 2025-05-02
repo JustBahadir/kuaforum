@@ -1,6 +1,7 @@
 
 import { FormField } from "@/components/ui/form-elements";
 import { PhoneInputField } from "./PhoneInputField";
+import { NameInputField } from "./NameInputField";
 
 interface CustomerFormFieldsProps {
   firstName: string;

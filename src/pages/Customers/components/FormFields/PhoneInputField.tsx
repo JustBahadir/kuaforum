@@ -35,7 +35,7 @@ export function PhoneInputField({
     const digitsOnly = rawInput.replace(/\D/g, '');
     
     // Limit to 11 digits (Turkish phone number format)
-    const limitedDigits = digitsOnly.substring(0, 11);
+    const limitedDigits = digitsOnly.substring(0, 10);
     
     // Update the formatted display value
     setDisplayValue(formatPhoneNumber(limitedDigits));

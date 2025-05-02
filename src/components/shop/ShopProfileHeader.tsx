@@ -5,8 +5,15 @@ import { ShopProfilePhotoUpload } from "./ShopProfilePhotoUpload";
 import { toast } from "sonner";
 import { useState } from "react";
 
-interface ShopProfileHeaderProps {
-  shopData: {
+export interface ShopProfileHeaderProps {
+  shopData?: {
+    id: number;
+    ad: string;
+    logo_url?: string;
+    telefon?: string;
+    adres?: string;
+  };
+  isletmeData?: {  // Add isletmeData as optional prop with same structure as shopData
     id: number;
     ad: string;
     logo_url?: string;
@@ -14,15 +21,25 @@ interface ShopProfileHeaderProps {
     adres?: string;
   };
   isOwner?: boolean;
+  userRole?: string; // Add userRole prop
   onLogoUpdated?: (url: string) => Promise<void> | void;
 }
 
 export function ShopProfileHeader({ 
   shopData, 
-  isOwner = false, 
+  isletmeData,  // Accept isletmeData prop
+  isOwner = false,
+  userRole,     // Accept userRole prop 
   onLogoUpdated 
 }: ShopProfileHeaderProps) {
   const [isUploading, setIsUploading] = useState(false);
+  
+  // Use isletmeData if provided, otherwise use shopData
+  const data = isletmeData || shopData;
+  
+  if (!data) {
+    return <div>İşletme bilgisi bulunamadı</div>;
+  }
 
   // Handle logo upload success
   const handleLogoUploadSuccess = (url: string) => {
@@ -48,21 +65,21 @@ export function ShopProfileHeader({
           <div className="relative">
             {isOwner ? (
               <ShopProfilePhotoUpload 
-                dukkanId={shopData.id}
+                dukkanId={data.id}
                 onSuccess={handleLogoUploadSuccess}
-                currentImageUrl={shopData.logo_url}
+                currentImageUrl={data.logo_url}
               >
                 <div className="w-32 h-32 rounded-full border-4 border-background overflow-hidden bg-white">
-                  {shopData.logo_url ? (
+                  {data.logo_url ? (
                     <img 
-                      src={shopData.logo_url} 
-                      alt={shopData.ad} 
+                      src={data.logo_url} 
+                      alt={data.ad} 
                       className="w-full h-full object-cover"
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400">
                       <div className="text-2xl font-bold">
-                        {shopData.ad?.charAt(0) || 'İ'}
+                        {data.ad?.charAt(0) || 'İ'}
                       </div>
                     </div>
                   )}
@@ -70,16 +87,16 @@ export function ShopProfileHeader({
               </ShopProfilePhotoUpload>
             ) : (
               <div className="w-32 h-32 rounded-full border-4 border-background overflow-hidden bg-white">
-                {shopData.logo_url ? (
+                {data.logo_url ? (
                   <img 
-                    src={shopData.logo_url} 
-                    alt={shopData.ad} 
+                    src={data.logo_url} 
+                    alt={data.ad} 
                     className="w-full h-full object-cover"
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400">
                     <div className="text-2xl font-bold">
-                      {shopData.ad?.charAt(0) || 'İ'}
+                      {data.ad?.charAt(0) || 'İ'}
                     </div>
                   </div>
                 )}
@@ -91,18 +108,18 @@ export function ShopProfileHeader({
           <div className="flex-1 bg-card rounded-lg p-6 shadow-sm">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <h1 className="text-2xl font-bold">{shopData.ad}</h1>
+                <h1 className="text-2xl font-bold">{data.ad}</h1>
                 <div className="mt-2 space-y-1 text-muted-foreground">
-                  {shopData.telefon && (
+                  {data.telefon && (
                     <div className="flex items-center gap-2">
                       <Phone className="h-4 w-4" />
-                      <span>{shopData.telefon}</span>
+                      <span>{data.telefon}</span>
                     </div>
                   )}
-                  {shopData.adres && (
+                  {data.adres && (
                     <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4" />
-                      <span>{shopData.adres}</span>
+                      <span>{data.adres}</span>
                     </div>
                   )}
                 </div>

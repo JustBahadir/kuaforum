@@ -93,34 +93,14 @@ export default function ShopSettings() {
         adres: shopAddress
       };
       
-      // Update shop data function
-      const updateShopData = async () => {
-        // Check if dukkanServisi.guncelle exists, if not use a custom implementation
-        if (typeof dukkanServisi.guncelle === 'function') {
-          return await dukkanServisi.guncelle(shopData.id, updateData);
-        } else {
-          // Implement custom update function using Supabase directly
-          const { supabase } = await import("@/lib/supabase/client");
-          const { data, error } = await supabase
-            .from('dukkanlar')
-            .update(updateData)
-            .eq('id', shopData.id)
-            .select()
-            .single();
-            
-          if (error) throw error;
-          return data;
-        }
-      };
-      
-      // Call the update function
-      const updatedShop = await updateShopData();
+      // Update shop data
+      const updatedShop = await dukkanServisi.guncelle(shopData.id, updateData);
       
       // Update local state
       setShopData({...shopData, ...updateData});
       
       // Invalidate and refetch relevant queries
-      queryClient.invalidateQueries(["dukkan"]);
+      queryClient.invalidateQueries({ queryKey: ["dukkan"] });
       
       toast.success("İşletme bilgileri güncellendi");
     } catch (error: any) {
@@ -132,10 +112,27 @@ export default function ShopSettings() {
   };
 
   // Handle logo updated event
-  const handleLogoUpdated = (url: string) => {
-    setShopData({...shopData, logo_url: url});
-    // Here we would normally save to DB as well
-    queryClient.invalidateQueries(["dukkan"]);
+  const handleLogoUpdated = async (url: string) => {
+    try {
+      if (!shopData || !shopData.id) {
+        toast.error("İşletme bilgisi bulunamadı");
+        return;
+      }
+      
+      // Update shop data with new logo URL
+      await dukkanServisi.guncelle(shopData.id, { logo_url: url });
+      
+      // Update local state
+      setShopData({...shopData, logo_url: url});
+      
+      // Invalidate relevant queries
+      queryClient.invalidateQueries({ queryKey: ["dukkan"] });
+      
+      toast.success("İşletme logosu güncellendi");
+    } catch (error: any) {
+      console.error("Error updating shop logo:", error);
+      toast.error(`Logo güncellenirken bir hata oluştu: ${error.message}`);
+    }
   };
 
   if (loading) {

@@ -80,6 +80,23 @@ export const dukkanServisi = {
       console.error('Personel işletmesi getirme hatası:', error);
       return null;
     }
+  },
+
+  // Add missing guncelle method
+  guncelle: async function(id: number, updates: any) {
+    try {
+      const { data, error } = await supabase
+        .from('dukkanlar')
+        .update(updates)
+        .eq('id', id)
+        .select();
+        
+      if (error) throw error;
+      return data[0];
+    } catch (error) {
+      console.error('Dükkan güncelleme hatası:', error);
+      throw error;
+    }
   }
 };
 

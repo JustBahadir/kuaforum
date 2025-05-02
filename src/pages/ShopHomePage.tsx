@@ -19,7 +19,7 @@ export default function ShopHomePage() {
   // Ensure profile is fully loaded on initial render
   useEffect(() => {
     refreshProfile();
-  }, []);
+  }, [refreshProfile]);
 
   // Yükleme sürecini kontrol et! loading true ise hiçbir şey render etme
   useEffect(() => {
@@ -118,7 +118,7 @@ export default function ShopHomePage() {
 
           <div className="lg:col-span-8 space-y-6">
             <ShopGalleryCard
-              isletmeId={isletmeData.id}
+              shopId={isletmeData.id}
               userRole={userRole}
               queryClient={queryClient}
             />

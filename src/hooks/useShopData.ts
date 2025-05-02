@@ -1,68 +1,68 @@
 
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { dukkanServisi, personelServisi } from "@/lib/supabase";
-import { calismaSaatleriServisi } from "@/lib/supabase/services/calismaSaatleriServisi";
-import { toast } from "sonner";
+import { dukkanServisi } from "@/lib/supabase/services/dukkanServisi";
+import { personelServisi } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
 
 export const useShopData = (dukkanId?: number | null) => {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [isletmeData, setIsletmeData] = useState<any>(null);
   const [personelListesi, setPersonelListesi] = useState<any[]>([]);
-  const [calisma_saatleri, setCalismaSaatleri] = useState<any[]>([]);
-
-  const { data: dukkan, isLoading: dukkanLoading, error: dukkanError } = useQuery({
-    queryKey: ["dukkan", dukkanId],
-    queryFn: () => (dukkanId ? dukkanServisi.getirById(dukkanId) : null),
-    enabled: !!dukkanId,
-  });
-
-  const { data: personeller, isLoading: personelLoading } = useQuery({
-    queryKey: ["personeller"],
-    queryFn: () => personelServisi.hepsiniGetir(),
-    enabled: !!dukkanId, // Only fetch if we have a dukkan ID
-  });
-
-  const { data: saatler, isLoading: saatlerLoading } = useQuery({
-    queryKey: ["calisma_saatleri", dukkanId],
-    queryFn: () =>
-      dukkanId ? calismaSaatleriServisi.hepsiniGetir(dukkanId) : [], // Using hepsiniGetir instead of dukkanSaatleriGetir
-    enabled: !!dukkanId,
-  });
+  const [calisma_saatleri, setCalisma_saatleri] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (dukkanError) {
-      setError((dukkanError as Error).message);
-      toast.error("İşletme bilgileri alınırken bir hata oluştu");
-    }
-  }, [dukkanError]);
-
-  useEffect(() => {
-    if (!dukkanLoading && !personelLoading && !saatlerLoading) {
-      setLoading(false);
-      setIsletmeData(dukkan);
-      
-      // Only set personnel data if we have valid data from the same shop
-      if (personeller && Array.isArray(personeller)) {
-        // Double check that personnel belongs to this shop
-        const filteredPersonnel = personeller.filter(
-          (p) => p.dukkan_id === dukkanId
-        );
-        setPersonelListesi(filteredPersonnel);
+    async function loadShopData() {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        if (!dukkanId) {
+          setLoading(false);
+          setError("Dükkan ID bulunamadı");
+          return;
+        }
+        
+        // Load shop data
+        const shopData = await dukkanServisi.getirById(dukkanId);
+        if (!shopData) {
+          throw new Error("İşletme bulunamadı");
+        }
+        setIsletmeData(shopData);
+        
+        // Load personnel list
+        const personnelData = await personelServisi.hepsiniGetir(dukkanId);
+        setPersonelListesi(personnelData || []);
+        
+        // Load working hours
+        // Since dukkanSaatleriGetir doesn't exist, use direct Supabase query
+        const { data: workingHoursData, error: whError } = await supabase
+          .from('calisma_saatleri')
+          .select('*')
+          .eq('dukkan_id', dukkanId)
+          .order('gun_sira', { ascending: true });
+          
+        if (whError) {
+          throw whError;
+        }
+        
+        setCalisma_saatleri(workingHoursData || []);
+      } catch (err: any) {
+        console.error("Shop data loading error:", err);
+        setError(err.message || "İşletme bilgileri yüklenirken bir hata oluştu");
+      } finally {
+        setLoading(false);
       }
-      
-      if (saatler && Array.isArray(saatler)) {
-        setCalismaSaatleri(saatler);
-      }
     }
-  }, [dukkan, personeller, saatler, dukkanLoading, personelLoading, saatlerLoading, dukkanId]);
-
+    
+    loadShopData();
+  }, [dukkanId]);
+  
   return {
     isletmeData,
-    loading,
-    error,
     personelListesi,
     calisma_saatleri,
+    loading,
+    error
   };
 };
