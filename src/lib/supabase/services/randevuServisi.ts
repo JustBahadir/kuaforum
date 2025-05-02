@@ -1,4 +1,3 @@
-
 import { supabase } from '@/lib/supabase/client';
 import { authService } from '@/lib/auth/authService';
 
@@ -142,6 +141,7 @@ export const randevuServisi = {
     }
   },
 
+  // Add method for creating a new appointment (make sure this exists)
   randevuOlustur: async function(randevuData: any) {
     try {
       const { data, error } = await supabase
@@ -155,6 +155,11 @@ export const randevuServisi = {
       console.error('Randevu oluşturma hatası:', error);
       throw error;
     }
+  },
+
+  // Alias the method with another name for backward compatibility
+  ekle: async function(randevuData: any) {
+    return this.randevuOlustur(randevuData);
   },
 
   // Add method for tarihe göre randevular

@@ -111,8 +111,8 @@ export interface CalismaSaati {
   dukkan_id?: number;
   gun: string;
   gun_sira: number;
-  acilis: string;
-  kapanis: string;
+  acilis: string | null;
+  kapanis: string | null;
   kapali: boolean;
 }
 

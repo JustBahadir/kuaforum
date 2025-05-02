@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -154,7 +153,8 @@ export function NewAppointmentDialog({
         durum: "onaylandi"
       };
 
-      await randevuServisi.ekle(randevuData);
+      // Change from ekle to randevuOlustur which exists in the service
+      await randevuServisi.randevuOlustur(randevuData);
       toast.success("Randevu başarıyla oluşturuldu");
       
       if (onSuccess) {
