@@ -5,6 +5,66 @@ import { createDefaultWorkingHours, sortWorkingHours } from '@/components/operat
 import { authService } from '@/lib/auth/authService';
 
 export const calismaSaatleriServisi = {
+  async getCurrentDukkanId(): Promise<number> {
+    try {
+      const user = await authService.getCurrentUser();
+      
+      if (!user) {
+        throw new Error('Kullanıcı oturumu bulunamadı');
+      }
+      
+      // First check if user has a dukkan (is an owner)
+      const { data: dukkan, error: dukkanError } = await supabase
+        .from('dukkanlar')
+        .select('id')
+        .eq('sahibi_id', user.id)
+        .maybeSingle();
+      
+      if (dukkanError) {
+        console.error('Dükkan ID alma hatası:', dukkanError);
+      }
+      
+      if (dukkan && dukkan.id) {
+        return dukkan.id;
+      }
+      
+      // If not found as owner, check personel table
+      const { data: personel, error: personelError } = await supabase
+        .from('personel')
+        .select('dukkan_id')
+        .eq('auth_id', user.id)
+        .maybeSingle();
+      
+      if (personelError) {
+        console.error('Personel dükkan ID alma hatası:', personelError);
+      }
+      
+      if (personel && personel.dukkan_id) {
+        return personel.dukkan_id;
+      }
+      
+      // Last resort: check profiles table
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('dukkan_id')
+        .eq('id', user.id)
+        .maybeSingle();
+      
+      if (profileError) {
+        console.error('Profil dükkan ID alma hatası:', profileError);
+      }
+      
+      if (profile && profile.dukkan_id) {
+        return profile.dukkan_id;
+      }
+      
+      throw new Error('Dükkan bilgisi bulunamadı');
+    } catch (error) {
+      console.error('getCurrentDukkanId hatası:', error);
+      throw error;
+    }
+  },
+
   async dukkanSaatleriGetir(dukkanId: number): Promise<CalismaSaati[]> {
     try {
       if (!dukkanId) {
@@ -31,6 +91,11 @@ export const calismaSaatleriServisi = {
       console.error('Çalışma saatlerini getirme hatası:', error);
       throw error;
     }
+  },
+
+  // Alias for dukkanSaatleriGetir to maintain backward compatibility
+  async hepsiniGetir(dukkanId: number): Promise<CalismaSaati[]> {
+    return this.dukkanSaatleriGetir(dukkanId);
   },
 
   async saatleriKaydet(saatler: CalismaSaati[]): Promise<CalismaSaati[]> {
@@ -67,6 +132,47 @@ export const calismaSaatleriServisi = {
       return data || [];
     } catch (error) {
       console.error('Çalışma saatlerini kaydetme hatası:', error);
+      throw error;
+    }
+  },
+
+  // Method to update a single working hour record
+  async guncelle(id: number, updates: Partial<CalismaSaati>): Promise<CalismaSaati> {
+    try {
+      const { data, error } = await supabase
+        .from('calisma_saatleri')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Çalışma saati güncelleme hatası:', error);
+      throw error;
+    }
+  },
+
+  // Method to add a new working hour record
+  async ekle(saat: Partial<CalismaSaati>): Promise<CalismaSaati> {
+    try {
+      const { data, error } = await supabase
+        .from('calisma_saatleri')
+        .insert(saat)
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Çalışma saati ekleme hatası:', error);
       throw error;
     }
   },

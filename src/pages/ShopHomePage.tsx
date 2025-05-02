@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { StaffLayout } from "@/components/ui/staff-layout";
@@ -11,6 +10,7 @@ import { ShopPersonnelCard } from "@/components/shop/ShopPersonnelCard";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
 import { dukkanServisi } from "@/lib/supabase";
+import { Button } from "@/components/ui/button"; // Add the missing Button import
 
 export default function ShopHomePage() {
   const { userRole, userId, loading: authLoading } = useCustomerAuth();
