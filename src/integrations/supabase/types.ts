@@ -198,18 +198,21 @@ export type Database = {
       islem_kategorileri: {
         Row: {
           created_at: string
+          dukkan_id: number | null
           id: number
           kategori_adi: string
           sira: number | null
         }
         Insert: {
           created_at?: string
+          dukkan_id?: number | null
           id?: number
           kategori_adi: string
           sira?: number | null
         }
         Update: {
           created_at?: string
+          dukkan_id?: number | null
           id?: number
           kategori_adi?: string
           sira?: number | null
@@ -783,6 +786,10 @@ export type Database = {
               p_islemler: Json
               p_customer_id: string
             }
+        Returns: Json
+      }
+      create_category: {
+        Args: { p_dukkan_id: number; p_kategori_adi: string }
         Returns: Json
       }
       get_appointments_by_dukkan: {

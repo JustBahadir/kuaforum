@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { StaffLayout } from "@/components/ui/staff-layout";
@@ -5,12 +6,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { kategorilerServisi, islemServisi } from "@/lib/supabase";
 import { useShopData } from "@/hooks/useShopData";
 import { ServicesContent } from "@/components/operations/ServicesContent";
-import { WorkingHoursCard } from "@/components/operations/WorkingHoursCard";
+import { WorkingHours } from "@/components/operations/WorkingHours";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Plus } from "lucide-react";
 
 export default function StaffOperations() {
   const [activeTab, setActiveTab] = useState("services");
@@ -77,7 +74,6 @@ export default function StaffOperations() {
     try {
       await kategorilerServisi.ekle({
         kategori_adi: yeniKategoriAdi,
-        sira: kategoriler.length,
         dukkan_id: dukkanId
       });
       
@@ -235,7 +231,6 @@ export default function StaffOperations() {
   
   // Handle appointment from service
   const handleRandevuAl = (islemId: number) => {
-    // Placeholder for randevu functionality
     console.log("Randevu alınıyor, islem ID:", islemId);
   };
   
@@ -251,29 +246,6 @@ export default function StaffOperations() {
           </TabsList>
           
           <TabsContent value="services" className="space-y-4">
-            <div className="flex justify-between items-center mb-6">
-              <h1 className="text-2xl font-bold">Hizmet Yönetimi</h1>
-              <div className="flex items-center gap-2">
-                <div className="flex items-center space-x-2">
-                  <Switch id="puanlama-modu" checked={puanlamaAktif} onCheckedChange={setPuanlamaAktif} />
-                  <Label htmlFor="puanlama-modu" className="text-sm">Puanlama Sistemi</Label>
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => {
-                    formuSifirla();
-                    setDialogAcik(true);
-                  }}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Hizmet Ekle
-                  </Button>
-                  <Button variant="outline" onClick={() => setKategoriDialogAcik(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Kategori Ekle
-                  </Button>
-                </div>
-              </div>
-            </div>
-            
             <ServicesContent
               isStaff={true}
               kategoriler={kategoriler}
@@ -319,7 +291,7 @@ export default function StaffOperations() {
           </TabsContent>
           
           <TabsContent value="workinghours">
-            <WorkingHoursCard dukkanId={dukkanId} />
+            <WorkingHours dukkanId={dukkanId} />
           </TabsContent>
         </Tabs>
       </div>

@@ -125,3 +125,23 @@ export interface Musteri {
   dukkan_id?: number;
   created_at?: string;
 }
+
+export interface Kategori {
+  id: number;
+  kategori_adi: string;
+  sira: number;
+  dukkan_id: number;
+  created_at?: string;
+}
+
+export interface Islem {
+  id: number;
+  islem_adi: string;
+  fiyat: number;
+  maliyet?: number;
+  puan: number;
+  kategori_id: number;
+  sira: number;
+  dukkan_id: number;
+  created_at?: string;
+}

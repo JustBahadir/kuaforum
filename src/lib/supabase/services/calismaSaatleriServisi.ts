@@ -1,139 +1,78 @@
 
 import { supabase } from '../client';
+import { CalismaSaati } from '@/lib/supabase/types';
+import { createDefaultWorkingHours, sortWorkingHours } from '@/components/operations/utils/workingHoursUtils';
 import { authService } from '@/lib/auth/authService';
 
 export const calismaSaatleriServisi = {
-  async getCurrentDukkanId() {
+  async dukkanSaatleriGetir(dukkanId: number): Promise<CalismaSaati[]> {
     try {
-      const user = await authService.getCurrentUser();
-      
-      if (!user) {
-        throw new Error('Kullanıcı bulunamadı');
+      if (!dukkanId) {
+        throw new Error('Dükkan ID gereklidir');
       }
-      
-      const { data: dukkanlar, error } = await supabase
-        .from('dukkanlar')
-        .select('id')
-        .eq('sahibi_id', user.id)
-        .maybeSingle();
-      
+
+      const { data, error } = await supabase
+        .from('calisma_saatleri')
+        .select('*')
+        .eq('dukkan_id', dukkanId);
+
       if (error) {
-        console.error('Dükkan ID alma hatası:', error);
-        
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('dukkan_id')
-          .eq('id', user.id)
-          .maybeSingle();
-        
-        return profiles?.dukkan_id;
+        throw error;
       }
-      
-      return dukkanlar?.id;
-    } catch (error) {
-      console.error('Dükkan ID alma hatası:', error);
-      return null;
-    }
-  },
-  
-  async hepsiniGetir(dukkanId?: number) {
-    try {
-      let shopId = dukkanId;
-      
-      if (!shopId) {
-        shopId = await this.getCurrentDukkanId();
+
+      // If no hours found for the shop, create defaults
+      if (!data || data.length === 0) {
+        const defaultHours = createDefaultWorkingHours(dukkanId);
+        return defaultHours;
       }
-      
-      if (!shopId) {
-        throw new Error('Dükkan bilgisi bulunamadı');
-      }
-      
-      const { data, error } = await supabase
-        .from('calisma_saatleri')
-        .select('*')
-        .eq('dukkan_id', shopId)
-        .order('gun_sira', { ascending: true });
-        
-      if (error) throw error;
-      return data || [];
+
+      return sortWorkingHours(data);
     } catch (error) {
-      console.error('Çalışma saatleri getirme hatası:', error);
-      throw error;
-    }
-  },
-  
-  async getir(id: number) {
-    try {
-      const { data, error } = await supabase
-        .from('calisma_saatleri')
-        .select('*')
-        .eq('id', id)
-        .single();
-        
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Çalışma saati getirme hatası:', error);
-      throw error;
-    }
-  },
-  
-  async ekle(saat: any) {
-    try {
-      if (!saat.dukkan_id) {
-        saat.dukkan_id = await this.getCurrentDukkanId();
-      }
-      
-      if (!saat.dukkan_id) {
-        throw new Error('Dükkan bilgisi bulunamadı');
-      }
-      
-      const { data, error } = await supabase
-        .from('calisma_saatleri')
-        .insert([saat])
-        .select();
-        
-      if (error) throw error;
-      return data[0];
-    } catch (error) {
-      console.error('Çalışma saati ekleme hatası:', error);
-      throw error;
-    }
-  },
-  
-  async guncelle(id: number, updates: any) {
-    try {
-      const { data, error } = await supabase
-        .from('calisma_saatleri')
-        .update(updates)
-        .eq('id', id)
-        .select();
-        
-      if (error) throw error;
-      return data[0];
-    } catch (error) {
-      console.error('Çalışma saati güncelleme hatası:', error);
-      throw error;
-    }
-  },
-  
-  async sil(id: number) {
-    try {
-      const { error } = await supabase
-        .from('calisma_saatleri')
-        .delete()
-        .eq('id', id);
-        
-      if (error) throw error;
-      return true;
-    } catch (error) {
-      console.error('Çalışma saati silme hatası:', error);
+      console.error('Çalışma saatlerini getirme hatası:', error);
       throw error;
     }
   },
 
-  // Add the dukkanSaatleriGetir method to fix the missing method error
-  async dukkanSaatleriGetir(dukkanId: number) {
-    return this.hepsiniGetir(dukkanId);
+  async saatleriKaydet(saatler: CalismaSaati[]): Promise<CalismaSaati[]> {
+    try {
+      if (!saatler || saatler.length === 0) {
+        throw new Error('Geçersiz çalışma saatleri');
+      }
+
+      const dukkanId = saatler[0].dukkan_id;
+      if (!dukkanId) {
+        throw new Error('Dükkan ID bulunamadı');
+      }
+
+      // First, delete all existing hours for this shop to prevent duplicates
+      const { error: deleteError } = await supabase
+        .from('calisma_saatleri')
+        .delete()
+        .eq('dukkan_id', dukkanId);
+
+      if (deleteError) {
+        throw deleteError;
+      }
+
+      // Now insert the new hours
+      const { data, error } = await supabase
+        .from('calisma_saatleri')
+        .insert(saatler)
+        .select();
+
+      if (error) {
+        throw error;
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Çalışma saatlerini kaydetme hatası:', error);
+      throw error;
+    }
+  },
+
+  async saatleriGuncelle(saatler: CalismaSaati[]): Promise<CalismaSaati[]> {
+    // We're implementing this as a complete replace operation to avoid any inconsistencies
+    return this.saatleriKaydet(saatler);
   }
 };

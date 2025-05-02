@@ -11,27 +11,55 @@ export const kategoriServisi = {
         throw new Error('Kullanıcı oturumu bulunamadı');
       }
       
-      const { data, error } = await supabase
+      // First check if user has a dukkan (is an owner)
+      const { data: dukkan, error: dukkanError } = await supabase
         .from('dukkanlar')
         .select('id')
         .eq('sahibi_id', user.id)
-        .single();
+        .maybeSingle();
       
-      if (error) {
-        console.error('Dükkan ID alma hatası:', error);
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('dukkan_id')
-          .eq('id', user.id)
-          .single();
-          
-        return profileData?.dukkan_id;
+      if (dukkanError) {
+        console.error('Dükkan ID alma hatası:', dukkanError);
       }
       
-      return data?.id;
+      if (dukkan && dukkan.id) {
+        return dukkan.id;
+      }
+      
+      // If not found as owner, check personel table
+      const { data: personel, error: personelError } = await supabase
+        .from('personel')
+        .select('dukkan_id')
+        .eq('auth_id', user.id)
+        .maybeSingle();
+      
+      if (personelError) {
+        console.error('Personel dükkan ID alma hatası:', personelError);
+      }
+      
+      if (personel && personel.dukkan_id) {
+        return personel.dukkan_id;
+      }
+      
+      // Last resort: check profiles table
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('dukkan_id')
+        .eq('id', user.id)
+        .maybeSingle();
+      
+      if (profileError) {
+        console.error('Profil dükkan ID alma hatası:', profileError);
+      }
+      
+      if (profile && profile.dukkan_id) {
+        return profile.dukkan_id;
+      }
+      
+      throw new Error('Dükkan bilgisi bulunamadı');
     } catch (error) {
       console.error('getCurrentDukkanId hatası:', error);
-      return null;
+      throw error;
     }
   },
   
@@ -79,50 +107,29 @@ export const kategoriServisi = {
   
   async ekle(kategori: any) {
     try {
-      if (!kategori.dukkan_id) {
-        const dukkanId = await this.getCurrentDukkanId();
-        
-        if (!dukkanId) {
-          // Try to get from profile if user is staff
-          const user = await authService.getCurrentUser();
-          
-          if (user) {
-            const { data: profileData } = await supabase
-              .from('profiles')
-              .select('dukkan_id')
-              .eq('id', user.id)
-              .single();
-              
-            if (profileData?.dukkan_id) {
-              kategori.dukkan_id = profileData.dukkan_id;
-            }
-          }
-          
-          if (!kategori.dukkan_id) {
-            throw new Error('Dükkan bilgisi bulunamadı');
-          }
-        } else {
-          kategori.dukkan_id = dukkanId;
-        }
+      let dukkanId = kategori.dukkan_id;
+      
+      if (!dukkanId) {
+        dukkanId = await this.getCurrentDukkanId();
       }
       
-      // Get the current max sira
-      const { data: existingItems } = await supabase
-        .from('islem_kategorileri')
-        .select('sira')
-        .eq('dukkan_id', kategori.dukkan_id)
-        .order('sira', { ascending: false })
-        .limit(1);
+      if (!dukkanId) {
+        throw new Error('Dükkan bilgisi bulunamadı');
+      }
       
-      const nextSira = existingItems && existingItems.length > 0 ? existingItems[0].sira + 1 : 0;
-      
+      // Call the create_category function
       const { data, error } = await supabase
-        .from('islem_kategorileri')
-        .insert([{ ...kategori, sira: nextSira }])
-        .select();
-        
-      if (error) throw error;
-      return data[0];
+        .rpc('create_category', {
+          p_dukkan_id: dukkanId,
+          p_kategori_adi: kategori.kategori_adi
+        });
+      
+      if (error) {
+        console.error('Create category RPC error:', error);
+        throw error;
+      }
+      
+      return data;
     } catch (error) {
       console.error('Kategori ekleme hatası:', error);
       throw error;
