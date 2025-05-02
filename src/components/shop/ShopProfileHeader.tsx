@@ -1,9 +1,10 @@
 
 import { Button } from "@/components/ui/button";
-import { Edit, MapPin, Phone } from "lucide-react";
+import { Edit, MapPin, Phone, Trash } from "lucide-react";
 import { ShopProfilePhotoUpload } from "./ShopProfilePhotoUpload";
 import { toast } from "sonner";
 import { useState } from "react";
+import { supabase } from "@/lib/supabase/client";
 
 export interface ShopProfileHeaderProps {
   shopData?: {
@@ -33,6 +34,7 @@ export function ShopProfileHeader({
   onLogoUpdated 
 }: ShopProfileHeaderProps) {
   const [isUploading, setIsUploading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   // Use isletmeData if provided, otherwise use shopData
   const data = isletmeData || shopData;
@@ -51,6 +53,47 @@ export function ShopProfileHeader({
       }
     }
   };
+
+  // Handle logo delete
+  const handleDeleteLogo = async () => {
+    if (!data.id || !data.logo_url || isDeleting) return;
+    
+    try {
+      setIsDeleting(true);
+      
+      // Extract filename from URL
+      const urlParts = data.logo_url.split('/');
+      const fileNameWithParams = urlParts[urlParts.length - 1];
+      const fileName = fileNameWithParams.split('?')[0];
+      
+      // Delete from storage
+      const { error: storageError } = await supabase.storage
+        .from('shop-photos')
+        .remove([`shop-logos/${data.id}/${fileName}`]);
+        
+      if (storageError) throw storageError;
+      
+      // Update dukkan record
+      const { error: updateError } = await supabase
+        .from('dukkanlar')
+        .update({ logo_url: null })
+        .eq('id', data.id);
+        
+      if (updateError) throw updateError;
+      
+      // Update local state via callback
+      if (onLogoUpdated) {
+        await onLogoUpdated('');
+      }
+      
+      toast.success('Logo başarıyla kaldırıldı');
+    } catch (error) {
+      console.error('Logo silme hatası:', error);
+      toast.error('Logo silinirken bir hata oluştu');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
   
   return (
     <div className="relative rounded-lg overflow-hidden">
@@ -64,27 +107,48 @@ export function ShopProfileHeader({
           {/* Logo/Avatar */}
           <div className="relative">
             {isOwner ? (
-              <ShopProfilePhotoUpload 
-                dukkanId={data.id}
-                onSuccess={handleLogoUploadSuccess}
-                currentImageUrl={data.logo_url}
-              >
-                <div className="w-32 h-32 rounded-full border-4 border-background overflow-hidden bg-white">
-                  {data.logo_url ? (
-                    <img 
-                      src={data.logo_url} 
-                      alt={data.ad} 
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400">
-                      <div className="text-2xl font-bold">
-                        {data.ad?.charAt(0) || 'İ'}
+              <div className="relative">
+                <ShopProfilePhotoUpload 
+                  dukkanId={data.id}
+                  onSuccess={handleLogoUploadSuccess}
+                  currentImageUrl={data.logo_url}
+                >
+                  <div className="w-32 h-32 rounded-full border-4 border-background overflow-hidden bg-white">
+                    {data.logo_url ? (
+                      <img 
+                        src={data.logo_url} 
+                        alt={data.ad} 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400">
+                        <div className="text-2xl font-bold">
+                          {data.ad?.charAt(0) || 'İ'}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
+                </ShopProfilePhotoUpload>
+                
+                {/* Logo actions buttons */}
+                <div className="flex gap-1 mt-2 justify-center">
+                  <Button variant="outline" size="sm" className="flex-1" onClick={() => document.getElementById('logo-upload-trigger')?.click()}>
+                    <Edit className="h-3 w-3 mr-1" />
+                    Düzenle
+                  </Button>
+                  
+                  <Button 
+                    variant="destructive" 
+                    size="sm" 
+                    className="flex-1"
+                    onClick={handleDeleteLogo}
+                    disabled={!data.logo_url || isDeleting}
+                  >
+                    <Trash className="h-3 w-3 mr-1" />
+                    Kaldır
+                  </Button>
                 </div>
-              </ShopProfilePhotoUpload>
+              </div>
             ) : (
               <div className="w-32 h-32 rounded-full border-4 border-background overflow-hidden bg-white">
                 {data.logo_url ? (

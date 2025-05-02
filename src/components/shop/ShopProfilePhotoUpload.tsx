@@ -57,7 +57,7 @@ export function ShopProfilePhotoUpload({
   };
   
   return (
-    <label className="cursor-pointer relative">
+    <label className="cursor-pointer relative" id="logo-upload-trigger">
       {isUploading && (
         <div className="absolute inset-0 bg-black/20 rounded-full flex items-center justify-center">
           <div className="w-8 h-8 border-4 border-t-white border-white/30 rounded-full animate-spin"></div>

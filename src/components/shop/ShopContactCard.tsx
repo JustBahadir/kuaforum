@@ -41,6 +41,17 @@ export function ShopContactCard({ isletmeData }: ShopContactCardProps) {
     toast.success("Telefon numarası kopyalandı");
   };
 
+  const copyAddress = () => {
+    const address = isletmeData.acik_adres || isletmeData.adres;
+    if (!address) {
+      toast.error("Adres bilgisi bulunamadı");
+      return;
+    }
+    
+    navigator.clipboard.writeText(address);
+    toast.success("Adres kopyalandı");
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -57,16 +68,31 @@ export function ShopContactCard({ isletmeData }: ShopContactCardProps) {
           </div>
         </div>
         
-        {isletmeData.acik_adres && (
-          <Button 
-            variant="outline" 
-            size="sm"
-            className="w-full flex items-center gap-2" 
-            onClick={openInMaps}
-          >
-            <ExternalLink className="h-4 w-4" />
-            Haritada Göster
-          </Button>
+        {/* Address action buttons */}
+        {isletmeData.adres && (
+          <div className="flex gap-2">
+            {isletmeData.acik_adres && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="flex-1 flex items-center gap-2" 
+                onClick={openInMaps}
+              >
+                <ExternalLink className="h-4 w-4" />
+                Haritada Göster
+              </Button>
+            )}
+            
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="flex-1 flex items-center gap-2" 
+              onClick={copyAddress}
+            >
+              <Copy className="h-4 w-4" />
+              Kopyala
+            </Button>
+          </div>
         )}
         
         <div className="flex items-start gap-3">
@@ -78,6 +104,7 @@ export function ShopContactCard({ isletmeData }: ShopContactCardProps) {
           </span>
         </div>
         
+        {/* Phone action buttons */}
         {isletmeData.telefon && (
           <div className="flex gap-2">
             <Button 

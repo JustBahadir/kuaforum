@@ -1,184 +1,178 @@
 
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { calismaSaatleriServisi } from "@/lib/supabase/services/calismaSaatleriServisi";
-import { toast } from "sonner";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { useQuery } from "@tanstack/react-query";
-import { Skeleton } from "@/components/ui/skeleton";
-import { gunIsimleri } from "./constants/workingDays";
+import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { CalismaSaati } from "@/lib/supabase/types";
+import { calismaSaatleriServisi } from "@/lib/supabase";
+import { WorkingHoursTable } from "./working-hours/WorkingHoursTable";
+import { sortWorkingHours } from "./utils/workingHoursUtils";
+import { toast } from "sonner";
 
-export interface WorkingHoursProps {
-  dukkanId: number | null;
-}
-
-export function WorkingHoursCard({ dukkanId }: WorkingHoursProps) {
-  const [editing, setEditing] = useState<boolean>(false);
-  const [workingHours, setWorkingHours] = useState<any[]>([]);
-
-  const { data: calisma_saatleri = [], isLoading, refetch } = useQuery({
-    queryKey: ['calisma_saatleri', dukkanId],
-    queryFn: async () => {
-      if (!dukkanId) return [];
-      
-      try {
-        return await calismaSaatleriServisi.hepsiniGetir(dukkanId);
-      } catch (error) {
-        console.error("Çalışma saatleri alınırken hata:", error);
-        toast.error("Çalışma saatleri alınamadı");
-        return [];
-      }
-    },
-    enabled: !!dukkanId,
-  });
-
+export function WorkingHoursCard() {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [hours, setHours] = useState<CalismaSaati[]>([]);
+  const [editingMode, setEditingMode] = useState(false);
+  const navigate = useNavigate();
+  
   useEffect(() => {
-    if (calisma_saatleri.length > 0) {
-      setWorkingHours(calisma_saatleri);
-    } else if (!isLoading && dukkanId) {
-      // Initialize default working hours if none exist
-      const defaultHours = [
-        { gun: "Pazartesi", gun_sira: 1, acilis: "09:00", kapanis: "18:00", kapali: false, dukkan_id: dukkanId },
-        { gun: "Salı", gun_sira: 2, acilis: "09:00", kapanis: "18:00", kapali: false, dukkan_id: dukkanId },
-        { gun: "Çarşamba", gun_sira: 3, acilis: "09:00", kapanis: "18:00", kapali: false, dukkan_id: dukkanId },
-        { gun: "Perşembe", gun_sira: 4, acilis: "09:00", kapanis: "18:00", kapali: false, dukkan_id: dukkanId },
-        { gun: "Cuma", gun_sira: 5, acilis: "09:00", kapanis: "18:00", kapali: false, dukkan_id: dukkanId },
-        { gun: "Cumartesi", gun_sira: 6, acilis: "09:00", kapanis: "18:00", kapali: false, dukkan_id: dukkanId },
-        { gun: "Pazar", gun_sira: 0, acilis: "09:00", kapanis: "18:00", kapali: true, dukkan_id: dukkanId },
-      ];
-      setWorkingHours(defaultHours);
-    }
-  }, [calisma_saatleri, isLoading, dukkanId]);
-
-  const handleInputChange = (index: number, field: string, value: any) => {
-    const updatedHours = [...workingHours];
-    updatedHours[index] = { ...updatedHours[index], [field]: value };
-    setWorkingHours(updatedHours);
+    const fetchWorkingHours = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const dukkanId = await calismaSaatleriServisi.getCurrentDukkanId();
+        const fetchedHours = await calismaSaatleriServisi.hepsiniGetir(dukkanId);
+        
+        setHours(sortWorkingHours(fetchedHours));
+      } catch (err: any) {
+        console.error("Error fetching working hours:", err);
+        setError(err?.message || "Çalışma saatleri yüklenirken bir hata oluştu");
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchWorkingHours();
+  }, []);
+  
+  const handleTimeChange = (index: number, field: "acilis" | "kapanis", value: string) => {
+    setHours(prevHours => {
+      const newHours = [...prevHours];
+      newHours[index] = { ...newHours[index], [field]: value };
+      return newHours;
+    });
   };
-
+  
+  const handleStatusChange = (index: number, value: boolean) => {
+    setHours(prevHours => {
+      const newHours = [...prevHours];
+      newHours[index] = { ...newHours[index], kapali: value };
+      return newHours;
+    });
+  };
+  
   const handleSave = async () => {
     try {
-      if (!dukkanId) {
-        toast.error("İşletme bilgisi bulunamadı");
-        return;
-      }
-
-      for (const hours of workingHours) {
-        if (hours.id) {
-          await calismaSaatleriServisi.guncelle(hours.id, {
-            acilis: hours.acilis,
-            kapanis: hours.kapanis,
-            kapali: hours.kapali,
-          });
+      setLoading(true);
+      
+      // Update existing hours or add new ones
+      for (const hour of hours) {
+        if (hour.id) {
+          await calismaSaatleriServisi.guncelle(hour.id, hour);
         } else {
-          await calismaSaatleriServisi.ekle({
-            gun: hours.gun,
-            gun_sira: hours.gun_sira,
-            acilis: hours.acilis,
-            kapanis: hours.kapanis,
-            kapali: hours.kapali,
-            dukkan_id: dukkanId,
-          });
+          await calismaSaatleriServisi.ekle(hour);
         }
       }
-
-      toast.success("Çalışma saatleri kaydedildi");
-      setEditing(false);
-      refetch();
+      
+      toast.success("Çalışma saatleri başarıyla kaydedildi");
+      setEditingMode(false);
     } catch (error) {
-      console.error("Çalışma saatleri kaydedilirken hata:", error);
-      toast.error("Çalışma saatleri kaydedilemedi");
+      console.error("Failed to save working hours:", error);
+      toast.error("Çalışma saatlerini kaydederken bir hata oluştu");
+    } finally {
+      setLoading(false);
     }
   };
-
-  const handleReset = () => {
-    setWorkingHours(calisma_saatleri);
-    setEditing(false);
+  
+  const handleCancel = () => {
+    // Reload hours from server to discard changes
+    setEditingMode(false);
+    fetchWorkingHours();
   };
-
-  if (isLoading) {
+  
+  const fetchWorkingHours = async () => {
+    try {
+      setLoading(true);
+      const dukkanId = await calismaSaatleriServisi.getCurrentDukkanId();
+      const fetchedHours = await calismaSaatleriServisi.hepsiniGetir(dukkanId);
+      setHours(sortWorkingHours(fetchedHours));
+    } catch (err) {
+      console.error("Error fetching working hours:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Çalışma Saatleri</CardTitle>
+        </CardHeader>
+        <CardContent className="flex justify-center p-10">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  if (error) {
     return (
       <Card>
         <CardHeader>
           <CardTitle>Çalışma Saatleri</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
+          <div className="text-center p-6">
+            <p className="text-red-500">{error}</p>
+            <Button onClick={() => fetchWorkingHours()} className="mt-4">
+              Yeniden Dene
+            </Button>
           </div>
         </CardContent>
       </Card>
     );
   }
-
+  
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Çalışma Saatleri</CardTitle>
-        {!editing ? (
-          <Button variant="outline" onClick={() => setEditing(true)}>Düzenle</Button>
-        ) : (
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={handleReset}>İptal</Button>
-            <Button onClick={handleSave}>Kaydet</Button>
-          </div>
-        )}
+        <div>
+          <CardTitle>Çalışma Saatleri</CardTitle>
+          <CardDescription>
+            İşletmenizin çalışma saatlerini düzenleyebilirsiniz.
+          </CardDescription>
+        </div>
+        <div className="flex gap-2">
+          {editingMode ? (
+            <>
+              <Button 
+                variant="destructive" 
+                size="sm"
+                onClick={handleCancel}
+                disabled={loading}
+              >
+                İptal
+              </Button>
+              <Button 
+                variant="default" 
+                size="sm"
+                onClick={handleSave}
+                disabled={loading}
+              >
+                Kaydet
+              </Button>
+            </>
+          ) : (
+            <Button 
+              variant="default" 
+              size="sm"
+              onClick={() => setEditingMode(true)}
+            >
+              Düzenle
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {workingHours.map((hours, index) => (
-            <div key={index} className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 py-2 border-b">
-              <div className="font-medium w-28">{hours.gun}</div>
-              <div className="flex items-center gap-4 flex-1">
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id={`closed-${index}`}
-                    checked={!hours.kapali}
-                    onCheckedChange={(checked) => handleInputChange(index, 'kapali', !checked)}
-                    disabled={!editing}
-                  />
-                  <Label htmlFor={`closed-${index}`}>{hours.kapali ? 'Kapalı' : 'Açık'}</Label>
-                </div>
-                {!hours.kapali && (
-                  <div className="flex flex-1 items-center gap-2 flex-wrap">
-                    <div className="flex items-center gap-2">
-                      <Label htmlFor={`open-${index}`} className="whitespace-nowrap">Açılış:</Label>
-                      <Input
-                        id={`open-${index}`}
-                        type="time"
-                        value={hours.acilis || ''}
-                        onChange={(e) => handleInputChange(index, 'acilis', e.target.value)}
-                        disabled={!editing}
-                        className="w-32"
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Label htmlFor={`close-${index}`} className="whitespace-nowrap">Kapanış:</Label>
-                      <Input
-                        id={`close-${index}`}
-                        type="time"
-                        value={hours.kapanis || ''}
-                        onChange={(e) => handleInputChange(index, 'kapanis', e.target.value)}
-                        disabled={!editing}
-                        className="w-32"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
+        <WorkingHoursTable 
+          hours={hours}
+          editingMode={editingMode}
+          onTimeChange={handleTimeChange}
+          onStatusChange={handleStatusChange}
+        />
       </CardContent>
     </Card>
   );

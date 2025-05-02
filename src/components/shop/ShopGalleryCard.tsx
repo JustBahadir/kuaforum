@@ -113,11 +113,27 @@ export function ShopGalleryCard({
   
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>İşletme Galerisi</CardTitle>
-        <CardDescription>
-          İşletmenize ait resimler müşterilerinize görüntülenecektir.
-        </CardDescription>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle>İşletme Galerisi</CardTitle>
+          <CardDescription>
+            İşletmenize ait resimler müşterilerinize görüntülenecektir.
+          </CardDescription>
+        </div>
+        {isAdmin && (
+          <Button variant="outline" size="sm" onClick={() => document.getElementById('gallery-upload')?.click()}>
+            <Plus className="h-4 w-4 mr-2" />
+            Resim Ekle
+            <input
+              id="gallery-upload"
+              type="file"
+              className="hidden"
+              onChange={handleFileChange}
+              accept="image/jpeg,image/png,image/gif"
+              disabled={isUploading}
+            />
+          </Button>
+        )}
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

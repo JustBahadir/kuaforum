@@ -1,83 +1,93 @@
 
-import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { CalismaSaati } from "@/lib/supabase/types";
 import { calismaSaatleriServisi } from "@/lib/supabase";
 import { toast } from "sonner";
+import { useState } from "react";
 
-export function useWorkingHoursMutation() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
+export function useWorkingHoursMutation(initialHours: CalismaSaati[] = []) {
+  const [hours, setHours] = useState<CalismaSaati[]>(initialHours);
+  const queryClient = useQueryClient();
   
-  const saveHours = async (hours: any[]) => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      console.log("Attempting to save working hours:", hours);
-      
-      let dukkanId = hours[0]?.dukkan_id;
-      
-      // If we don't have dukkanId from hours, try to get it
-      if (!dukkanId) {
-        console.log("No dukkan_id in hours data, retrieving...");
-        dukkanId = await calismaSaatleriServisi.getCurrentDukkanId();
-      }
-      
-      if (!dukkanId) {
-        console.error("No dukkan_id found for working hours");
-        throw new Error("İşletme bilgisi bulunamadı");
-      }
-      
-      console.log("Using dukkan_id:", dukkanId);
-      
-      // Process each hour
-      for (const hour of hours) {
-        const hourData = {
-          ...hour,
-          dukkan_id: dukkanId,
-        };
-        
-        console.log("Processing hour:", hourData);
-        
-        if (hour.id) {
-          // Update existing
-          console.log("Updating existing hour:", hour.id);
-          await calismaSaatleriServisi.guncelle(hour.id, {
-            acilis: hour.acilis,
-            kapanis: hour.kapanis,
-            kapali: hour.kapali,
-            dukkan_id: dukkanId,
-          });
-          console.log("Hour updated successfully");
-        } else {
-          // Create new
-          console.log("Creating new hour");
-          await calismaSaatleriServisi.ekle({
-            gun: hour.gun,
-            gun_sira: hour.gun_sira,
-            dukkan_id: dukkanId,
-            acilis: hour.acilis,
-            kapanis: hour.kapanis,
-            kapali: hour.kapali,
-          });
-          console.log("Hour created successfully");
+  const { mutate: saveHours, isLoading } = useMutation({
+    mutationFn: async (saatler: CalismaSaati[]) => {
+      try {
+        // If hours do not have dukkan_id, get the current dukkan id
+        if (saatler.length > 0 && !saatler[0].dukkan_id) {
+          const dukkanId = await calismaSaatleriServisi.getCurrentDukkanId();
+          
+          // Add dukkan_id to all hours
+          saatler = saatler.map(saat => ({
+            ...saat,
+            dukkan_id: dukkanId
+          }));
         }
+        
+        return calismaSaatleriServisi.saatleriKaydet(saatler);
+      } catch (error) {
+        console.error("Error saving working hours:", error);
+        throw error;
       }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workingHours'] });
+      toast.success("Çalışma saatleri başarıyla kaydedildi");
+    },
+    onError: (error: any) => {
+      toast.error(`Çalışma saatlerini kaydetme hatası: ${error?.message || 'Bilinmeyen hata'}`);
+    }
+  });
+  
+  const updateHour = async (id: number, updates: Partial<CalismaSaati>) => {
+    try {
+      await calismaSaatleriServisi.guncelle(id, updates);
       
-      toast.success("Çalışma saatleri güncellendi");
-      return true;
-    } catch (error: any) {
-      console.error("Error saving working hours:", error);
-      setError(error);
-      toast.error(`Çalışma saatleri kaydedilemedi: ${error.message}`);
-      throw error;
-    } finally {
-      setIsLoading(false);
+      // Update local state
+      setHours(prevHours => 
+        prevHours.map(hour => 
+          hour.id === id ? { ...hour, ...updates } : hour
+        )
+      );
+      
+      queryClient.invalidateQueries({ queryKey: ['workingHours'] });
+    } catch (error) {
+      console.error("Error updating hour:", error);
     }
   };
   
+  const addHour = async (hour: Partial<CalismaSaati>) => {
+    try {
+      await calismaSaatleriServisi.ekle(hour);
+      queryClient.invalidateQueries({ queryKey: ['workingHours'] });
+    } catch (error) {
+      console.error("Error adding hour:", error);
+    }
+  };
+  
+  const handleTimeChange = (index: number, field: "acilis" | "kapanis", value: string) => {
+    setHours(prevHours => {
+      const newHours = [...prevHours];
+      newHours[index] = { ...newHours[index], [field]: value };
+      return newHours;
+    });
+  };
+  
+  const handleStatusChange = (index: number, value: boolean) => {
+    setHours(prevHours => {
+      const newHours = [...prevHours];
+      newHours[index] = { ...newHours[index], kapali: value };
+      return newHours;
+    });
+  };
+  
   return {
+    hours,
+    setHours,
     saveHours,
     isLoading,
-    error
+    updateHour,
+    addHour,
+    handleTimeChange,
+    handleStatusChange
   };
 }

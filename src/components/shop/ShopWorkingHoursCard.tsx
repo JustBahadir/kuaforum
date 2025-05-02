@@ -48,7 +48,7 @@ export function ShopWorkingHoursCard({
   }, [initialHours, dukkanId]);
 
   const formatTime = (time: string | null) => {
-    if (!time) return "";
+    if (!time) return "-";
     return time;
   };
 
