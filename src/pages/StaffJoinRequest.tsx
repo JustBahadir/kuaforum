@@ -1,154 +1,139 @@
 
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Card, CardContent } from "@/components/ui/card";
+import { useEffect, useState } from "react";
+import { StaffLayout } from "@/components/ui/staff-layout";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
+import { useUnassignedStaffData } from "@/hooks/useUnassignedStaffData";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
-import { shopService } from "@/lib/auth/services/shopService";
-import { LoadingButton } from "@/components/ui/loading-button";
-import { useUnassignedStaffData } from "@/hooks/useUnassignedStaffData";
 
 export default function StaffJoinRequest() {
-  const [shopCode, setShopCode] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { personelId, loadUserAndStaffData } = useUnassignedStaffData();
-  const [validating, setValidating] = useState(false);
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [joinCode, setJoinCode] = useState("");
+  
+  const { 
+    userProfile, 
+    loadUserAndStaffData,
+    personelId = null
+  } = useUnassignedStaffData();
 
   useEffect(() => {
     loadUserAndStaffData();
   }, [loadUserAndStaffData]);
 
-  const handleJoinShop = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!shopCode.trim()) {
-      toast.error("İşletme kodu giriniz");
+    if (!joinCode.trim()) {
+      toast.error("Lütfen katılım kodu girin");
       return;
     }
 
     try {
-      setValidating(true);
-      const shop = await shopService.verifyShopCode(shopCode.trim());
+      setLoading(true);
       
-      if (!shop) {
-        toast.error("Geçersiz işletme kodu. Lütfen kontrol ediniz.");
-        setValidating(false);
+      // Fetch shop by code
+      const { data: dukkan, error: dukkanError } = await supabase
+        .from('dukkanlar')
+        .select('id, ad')
+        .eq('kod', joinCode)
+        .single();
+      
+      if (dukkanError || !dukkan) {
+        toast.error("Geçersiz katılım kodu. Lütfen tekrar kontrol edin.");
         return;
       }
 
+      // Insert join request
       if (!personelId) {
-        toast.error("Personel bilgileriniz bulunamadı. Lütfen tekrar giriş yapınız.");
-        setValidating(false);
+        toast.error("Personel bilgileriniz bulunamadı");
         return;
       }
 
-      setIsLoading(true);
-      
-      // Check if there is already a pending request
-      const { data: existingRequests, error: checkError } = await supabase
+      const { error: requestError } = await supabase
         .from('staff_join_requests')
-        .select('*')
-        .eq('personel_id', personelId)
-        .eq('durum', 'pending');
-
-      if (checkError) {
-        console.error("Error checking existing requests:", checkError);
-        toast.error("İşlem sırasında bir hata oluştu");
-        setIsLoading(false);
-        setValidating(false);
-        return;
-      }
-
-      if (existingRequests && existingRequests.length > 0) {
-        toast.warning("Zaten bekleyen bir katılım talebiniz bulunuyor. İşletme yöneticisinin onayını bekleyiniz.");
-        setIsLoading(false);
-        setValidating(false);
-        return;
-      }
-
-      // Create join request
-      const { error: joinError } = await supabase
-        .from('staff_join_requests')
-        .insert([{
+        .insert({
           personel_id: personelId,
-          dukkan_id: shop.id,
+          dukkan_id: dukkan.id,
           durum: 'pending'
-        }]);
-
-      if (joinError) {
-        console.error("Error creating join request:", joinError);
-        toast.error("İşletmeye katılım talebi oluşturulurken bir hata oluştu");
-      } else {
-        toast.success(`"${shop.ad}" işletmesine katılım talebiniz oluşturuldu. Yönetici onayı bekleniyor.`);
-        setTimeout(() => {
-          navigate("/");
-        }, 2000);
+        });
+      
+      if (requestError) {
+        console.error("Join request error:", requestError);
+        toast.error("Katılım isteği gönderilirken bir hata oluştu");
+        return;
       }
+
+      toast.success(`"${dukkan.ad}" işletmesine katılım isteğiniz gönderildi`);
+      
+      // Redirect to waiting page or profile
+      setTimeout(() => {
+        navigate("/profile");
+      }, 2000);
+      
     } catch (error) {
-      console.error("Error verifying shop code:", error);
-      toast.error("İşletme kodu doğrulanırken bir hata oluştu");
+      console.error("Error sending join request:", error);
+      toast.error("İşlem sırasında bir hata oluştu");
     } finally {
-      setIsLoading(false);
-      setValidating(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100 py-12 px-4">
-      <Card className="w-full max-w-md">
-        <CardContent className="pt-6">
-          <div className="text-center mb-6">
-            <h1 className="text-2xl font-bold">İşletmeye Katıl</h1>
-            <p className="text-gray-600 mt-2">
-              Bağlanmak istediğiniz işletmenin yöneticisinden aldığınız kodu giriniz. 
-              Kodun doğruluğunu kontrol ediniz.
-            </p>
-          </div>
-
-          <form onSubmit={handleJoinShop} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="shopCode">İşletme Kodu</Label>
-              <Input
-                id="shopCode"
-                placeholder="İşletme kodunu buraya giriniz..."
-                value={shopCode}
-                onChange={(e) => {
-                  // Only allow alphanumeric characters
-                  const alphanumericValue = e.target.value.replace(/[^a-zA-Z0-9-]/g, '');
-                  setShopCode(alphanumericValue);
-                }}
-                className="text-base"
-                disabled={validating || isLoading}
-              />
+    <StaffLayout>
+      <div className="container mx-auto py-8 max-w-md">
+        <Card className="shadow-md">
+          <CardHeader>
+            <CardTitle className="text-center">İşletmeye Katıl</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center mb-6">
+              <p className="text-muted-foreground">
+                İşletme sahibinden aldığınız katılım kodunu girerek mevcut bir işletmeye personel olarak katılabilirsiniz.
+              </p>
             </div>
-
-            <div className="pt-2">
-              <LoadingButton 
+            
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="joinCode" className="text-sm font-medium">
+                  Katılım Kodu
+                </label>
+                <input
+                  id="joinCode"
+                  type="text"
+                  className="w-full p-2 border rounded-md"
+                  value={joinCode}
+                  onChange={(e) => setJoinCode(e.target.value)}
+                  placeholder="ABC123"
+                  required
+                />
+              </div>
+              
+              <Button 
                 type="submit" 
-                className="w-full bg-purple-600 hover:bg-purple-700 text-white"
-                loading={validating || isLoading}
+                className="w-full" 
+                disabled={loading}
               >
-                İşletmeye Katıl
-              </LoadingButton>
-            </div>
-
-            <div className="text-center mt-4">
-              <Button
-                variant="link"
-                onClick={() => navigate("/")}
-                className="text-gray-500 hover:text-gray-700"
-                disabled={validating || isLoading}
+                {loading ? "İstek Gönderiliyor..." : "Katılım İsteği Gönder"}
+              </Button>
+            </form>
+            
+            <div className="mt-4 text-center">
+              <Button 
+                variant="link" 
+                onClick={() => navigate("/profile")} 
+                className="text-sm"
               >
                 İptal
               </Button>
             </div>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+          </CardContent>
+        </Card>
+      </div>
+    </StaffLayout>
   );
 }

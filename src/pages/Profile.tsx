@@ -20,7 +20,7 @@ export default function Profile() {
     loadUserAndStaffData,
     handleAvatarUpload,
     isUploading = false
-  } = useUnassignedStaffData() as any; // Type assertion to fix the issue temporarily
+  } = useUnassignedStaffData();
 
   useEffect(() => {
     loadUserAndStaffData();

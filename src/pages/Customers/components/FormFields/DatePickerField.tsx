@@ -1,21 +1,27 @@
 
 import { useState, useEffect } from "react";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
-import { format } from "date-fns";
-import { tr } from "date-fns/locale";
+import { Calendar as CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Input } from "@/components/ui/input";
+import { format, parse, isValid } from "date-fns";
+import { tr } from "date-fns/locale";
 
 interface DatePickerFieldProps {
-  value?: Date;
+  value: Date | undefined;
   onChange: (date: Date | undefined) => void;
   textValue: string;
   onTextChange: (value: string) => void;
-  label?: string;
+  label: string;
   id?: string;
+  placeholder?: string;
   error?: string;
 }
 
@@ -24,118 +30,114 @@ export function DatePickerField({
   onChange,
   textValue,
   onTextChange,
-  label = "Tarih",
+  label,
   id = "date",
+  placeholder = "GG.AA.YYYY",
   error
 }: DatePickerFieldProps) {
-  const [isValid, setIsValid] = useState(true);
-  
+  const [open, setOpen] = useState(false);
+
+  // Format date as DD.MM.YYYY when it changes
   useEffect(() => {
-    // Format the date value if it exists and is valid
-    if (value && !isNaN(value.getTime())) {
+    if (value) {
       onTextChange(format(value, "dd.MM.yyyy"));
     }
   }, [value, onTextChange]);
-  
-  const handleDateInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const inputValue = e.target.value;
-    onTextChange(inputValue);
 
-    // Validate and parse the date
-    if (inputValue) {
-      const dateParts = inputValue.split('.');
-      if (dateParts.length === 3) {
-        const day = parseInt(dateParts[0], 10);
-        const month = parseInt(dateParts[1], 10) - 1; // Month is 0-indexed
-        const year = parseInt(dateParts[2], 10);
-
-        // Basic date validation
-        const isValidDay = day >= 1 && day <= 31;
-        const isValidMonth = month >= 0 && month <= 11;
-        const isValidYear = year >= 1900 && year <= 2100 && dateParts[2].length === 4 && (dateParts[2].startsWith('19') || dateParts[2].startsWith('20'));
-        
-        if (isValidDay && isValidMonth && isValidYear) {
-          const parsedDate = new Date(year, month, day);
-          setIsValid(true);
+  // Parse date from text input 
+  const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const text = e.target.value;
+    onTextChange(text);
+    
+    // Try to parse the date if text matches format pattern
+    if (/^\d{2}\.\d{2}\.\d{4}$/.test(text)) {
+      try {
+        const parsedDate = parse(text, "dd.MM.yyyy", new Date());
+        if (isValid(parsedDate)) {
           onChange(parsedDate);
-        } else {
-          setIsValid(false);
         }
-      } else {
-        setIsValid(inputValue === '');
+      } catch (error) {
+        console.log("Invalid date format");
       }
-    } else {
-      setIsValid(true);
-      onChange(undefined);
-    }
-  };
-
-  // Function to format the input as the user types
-  const formatDateInput = (input: string): string => {
-    // Remove non-digits
-    const digits = input.replace(/\D/g, '');
-
-    // Format as DD.MM.YYYY
-    if (digits.length <= 2) {
-      return digits;
-    } else if (digits.length <= 4) {
-      return `${digits.slice(0, 2)}.${digits.slice(2)}`;
-    } else {
-      return `${digits.slice(0, 2)}.${digits.slice(2, 4)}.${digits.slice(4, 8)}`;
     }
   };
   
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    // Allow only digits and control keys
-    const isDigit = /\d/.test(e.key);
-    const isControlKey = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key);
-    if (!isDigit && !isControlKey && e.key !== '.') {
-      e.preventDefault();
+  // Format the input as user types
+  const handleKeyUp = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    const input = e.currentTarget;
+    const cursorPosition = input.selectionStart || 0;
+    
+    // Only handle numeric input
+    const value = input.value.replace(/[^\d]/g, '');
+    
+    if (value.length > 0) {
+      let formattedText = '';
+      
+      // Format as DD.MM.YYYY
+      if (value.length <= 2) {
+        formattedText = value;
+      } else if (value.length <= 4) {
+        formattedText = `${value.slice(0, 2)}.${value.slice(2)}`;
+      } else {
+        formattedText = `${value.slice(0, 2)}.${value.slice(2, 4)}.${value.slice(4, 8)}`;
+      }
+      
+      // Update only if different to avoid cursor jumping
+      if (formattedText !== input.value) {
+        const newCursorPosition = cursorPosition + (formattedText.length - input.value.length);
+        onTextChange(formattedText);
+        
+        // Restore cursor position
+        setTimeout(() => {
+          input.selectionStart = newCursorPosition;
+          input.selectionEnd = newCursorPosition;
+        }, 0);
+      }
     }
   };
 
   return (
-    <div className="space-y-2">
-      <label htmlFor={id} className="block text-sm font-medium text-gray-700">
-        {label}
-      </label>
-      <div className="flex w-full">
-        <Popover>
+    <div className="space-y-1.5">
+      <Label htmlFor={id}>{label}</Label>
+      <div className="relative">
+        <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
-            <Button
-              variant={"outline"}
-              className={cn(
-                "w-[240px] justify-start text-left font-normal",
-                !value && "text-muted-foreground"
-              )}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {value ? format(value, "PP", { locale: tr }) : <span>Tarih seçin</span>}
-            </Button>
+            <div className="relative w-full">
+              <Input
+                id={id}
+                value={textValue}
+                onChange={handleTextChange}
+                onKeyUp={handleKeyUp}
+                placeholder={placeholder}
+                className={cn(error ? "border-red-500" : "", "pr-10")}
+                maxLength={10} // DD.MM.YYYY = 10 chars
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="absolute right-0 top-0 h-full px-2"
+                onClick={() => setOpen(true)}
+              >
+                <CalendarIcon className="h-4 w-4" />
+              </Button>
+            </div>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-0">
+          <PopoverContent className="w-auto p-0" align="start">
             <Calendar
               mode="single"
               selected={value}
-              onSelect={onChange}
+              onSelect={(date) => {
+                onChange(date);
+                setOpen(false);
+              }}
+              locale={tr}
               initialFocus
             />
           </PopoverContent>
         </Popover>
-        <Input
-          type="text"
-          id={id}
-          placeholder="gg.aa.yyyy"
-          value={textValue}
-          onChange={handleDateInputChange}
-          onKeyPress={handleKeyPress}
-          className={cn("ml-2", !isValid && "border-red-500")}
-        />
       </div>
       {error && <p className="text-sm text-red-500">{error}</p>}
-      {!isValid && !error && (
-        <p className="text-sm text-red-500">Geçersiz tarih formatı</p>
-      )}
     </div>
   );
 }

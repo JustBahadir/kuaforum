@@ -36,7 +36,7 @@ export interface ProfileEditFormProps {
   };
   handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
   handleSelectChange: (name: string, value: string) => void;
-  handleAvatarUpload: (file: File) => Promise<void | string>; // Updated to support both void and string returns
+  handleAvatarUpload: (file: File) => Promise<void>;
   handleSave: (formData: any) => Promise<void>;
   isSaving: boolean;
   isUploading: boolean;
@@ -165,23 +165,9 @@ export function ProfileEditForm({
     handleSelectChange(name, value);
   };
 
-  // Wrapper for avatar upload
-  const handleLocalAvatarUpload = async (url: string) => {
-    try {
-      // Update local form state
-      setFormData({
-        ...formData,
-        avatarUrl: url
-      });
-      
-      // Call the parent handler
-      await handleAvatarUpload(new File([], "dummy")); // Just to match the expected signature
-      
-      return url;
-    } catch (error) {
-      console.error("Error uploading avatar:", error);
-      throw error;
-    }
+  // Wrapper for avatar upload that adapts the return type
+  const handleLocalAvatarUpload = (file: File): Promise<void> => {
+    return handleAvatarUpload(file);
   };
 
   // Local save handler
@@ -219,7 +205,7 @@ export function ProfileEditForm({
             <div className="w-32 h-32 flex-shrink-0 relative rounded-full overflow-hidden border order-1 md:order-2">
               <ShopProfilePhotoUpload
                 dukkanId={0}
-                onSuccess={handleLocalAvatarUpload}
+                onSuccess={() => Promise.resolve()}
                 currentImageUrl={formData.avatarUrl}
               >
                 {formData.avatarUrl ? (

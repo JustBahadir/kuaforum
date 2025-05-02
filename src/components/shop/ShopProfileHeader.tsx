@@ -1,141 +1,117 @@
 
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2, ImagePlus } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { supabase } from "@/lib/supabase/client";
+import { Edit, MapPin, Phone } from "lucide-react";
+import { ShopProfilePhotoUpload } from "./ShopProfilePhotoUpload";
 import { toast } from "sonner";
 import { useState } from "react";
-import { ShopProfilePhotoUpload } from "@/components/shop/ShopProfilePhotoUpload";
 
 interface ShopProfileHeaderProps {
-  isletmeData: any;
-  userRole: string;
+  shopData: {
+    id: number;
+    ad: string;
+    logo_url?: string;
+    telefon?: string;
+    adres?: string;
+  };
+  isOwner?: boolean;
+  onLogoUpdated?: (url: string) => Promise<void> | void;
 }
 
-export function ShopProfileHeader({
-  isletmeData,
-  userRole
+export function ShopProfileHeader({ 
+  shopData, 
+  isOwner = false, 
+  onLogoUpdated 
 }: ShopProfileHeaderProps) {
-  const navigate = useNavigate();
-  const [removing, setRemoving] = useState(false);
-  
-  const handleRemovePhoto = async () => {
-    if (!isletmeData?.id || !isletmeData?.logo_url) return;
-    try {
-      setRemoving(true);
+  const [isUploading, setIsUploading] = useState(false);
 
-      // Extract the path from the URL
-      const urlParts = isletmeData.logo_url.split('/');
-      const bucketName = urlParts[urlParts.indexOf('shop-photos') - 1];
-      const pathParts = urlParts.slice(urlParts.indexOf('shop-photos'));
-      const filePath = pathParts.join('/');
-
-      // Remove the file from storage
-      const {
-        error: removeError
-      } = await supabase.storage.from(bucketName).remove([filePath]);
-      if (removeError) throw removeError;
-
-      // Update the isletme record
-      const {
-        error: updateError
-      } = await supabase.from('dukkanlar').update({
-        logo_url: null
-      }).eq('id', isletmeData.id);
-      if (updateError) throw updateError;
-      toast.success('İşletme logosu başarıyla kaldırıldı');
-
-      // Reload the page to reflect changes
-      window.location.reload();
-    } catch (error) {
-      console.error('Logo kaldırma hatası:', error);
-      toast.error('Logo kaldırılırken bir hata oluştu');
-    } finally {
-      setRemoving(false);
+  // Handle logo upload success
+  const handleLogoUploadSuccess = (url: string) => {
+    if (onLogoUpdated) {
+      try {
+        onLogoUpdated(url);
+      } catch (error) {
+        console.error("Error updating logo:", error);
+      }
     }
   };
   
-  // Determine business name display
-  const businessName = isletmeData?.ad && isletmeData.ad.trim() !== "" 
-    ? isletmeData.ad 
-    : "İşletme Adı Girilmemiş";
-  
   return (
-    <div className="bg-gradient-to-r from-pink-50 to-purple-50 p-8 rounded-lg shadow-sm">
-      <div className="flex flex-col md:flex-row items-start gap-8">
-        {/* Logo section with larger size and better button placement */}
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-28 h-28 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center border-2 border-purple-200">
-            {isletmeData?.logo_url ? (
-              <img 
-                src={isletmeData.logo_url} 
-                alt={businessName} 
-                className="w-full h-full object-cover" 
-              />
+    <div className="relative rounded-lg overflow-hidden">
+      {/* Cover photo - static gradient for now */}
+      <div 
+        className="h-40 md:h-60 bg-gradient-to-r from-purple-600 to-blue-500"
+      ></div>
+      
+      <div className="container relative z-10 px-4 -mt-16 md:-mt-20">
+        <div className="flex flex-col md:flex-row gap-6 items-start">
+          {/* Logo/Avatar */}
+          <div className="relative">
+            {isOwner ? (
+              <ShopProfilePhotoUpload 
+                dukkanId={shopData.id}
+                onSuccess={handleLogoUploadSuccess}
+                currentImageUrl={shopData.logo_url}
+              >
+                <div className="w-32 h-32 rounded-full border-4 border-background overflow-hidden bg-white">
+                  {shopData.logo_url ? (
+                    <img 
+                      src={shopData.logo_url} 
+                      alt={shopData.ad} 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400">
+                      <div className="text-2xl font-bold">
+                        {shopData.ad?.charAt(0) || 'İ'}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </ShopProfilePhotoUpload>
             ) : (
-              <div className="text-3xl font-bold text-purple-500">
-                {businessName[0].toUpperCase()}
+              <div className="w-32 h-32 rounded-full border-4 border-background overflow-hidden bg-white">
+                {shopData.logo_url ? (
+                  <img 
+                    src={shopData.logo_url} 
+                    alt={shopData.ad} 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400">
+                    <div className="text-2xl font-bold">
+                      {shopData.ad?.charAt(0) || 'İ'}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
           
-          {userRole === 'admin' && (
-            <div className="flex gap-2">
-              <ShopProfilePhotoUpload 
-                dukkanId={isletmeData?.id} 
-                onSuccess={() => window.location.reload()} 
-                acceptVideoFiles={false} 
-                galleryMode={false}
-              >
-                <Button size="sm" variant="secondary" className="whitespace-nowrap">
-                  <ImagePlus className="h-4 w-4 mr-1" />
-                  {isletmeData?.logo_url ? 'Logoyu Değiştir' : 'Logo Ekle'}
-                </Button>
-              </ShopProfilePhotoUpload>
-
-              {isletmeData?.logo_url && (
-                <Button 
-                  variant="destructive" 
-                  size="sm" 
-                  onClick={handleRemovePhoto} 
-                  disabled={removing}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-          )}
-        </div>
-        
-        {/* Info section */}
-        <div className="flex-1">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h1 className="font-bold text-gray-800 text-3xl text-center md:text-left">
-                {businessName}
-              </h1>
-              {isletmeData?.adres && (
-                <p className="text-muted-foreground text-center md:text-left text-xl">{isletmeData.adres}</p>
-              )}
-            </div>
-            
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Button 
-                size="lg" 
-                onClick={() => navigate("/appointments")} 
-                className="bg-purple-600 hover:bg-purple-700 text-white px-[4px] py-[12px]"
-              >
-                Hemen Randevu Al
-              </Button>
+          {/* Shop info */}
+          <div className="flex-1 bg-card rounded-lg p-6 shadow-sm">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h1 className="text-2xl font-bold">{shopData.ad}</h1>
+                <div className="mt-2 space-y-1 text-muted-foreground">
+                  {shopData.telefon && (
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4" />
+                      <span>{shopData.telefon}</span>
+                    </div>
+                  )}
+                  {shopData.adres && (
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4" />
+                      <span>{shopData.adres}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
               
-              {userRole === 'admin' && (
-                <Button 
-                  variant="outline" 
-                  onClick={() => navigate("/shop-settings")} 
-                  className="px-0 py-[14px]"
-                >
-                  <Edit className="mr-2 h-4 w-4" />
-                  İşletme Bilgilerini Düzenle
+              {isOwner && (
+                <Button variant="outline" className="md:self-start">
+                  <Edit className="h-4 w-4 mr-2" />
+                  Düzenle
                 </Button>
               )}
             </div>

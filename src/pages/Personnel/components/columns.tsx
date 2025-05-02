@@ -56,7 +56,7 @@ export const columns: ColumnDef<Personnel>[] = [
   {
     accessorKey: "telefon",
     header: "Telefon",
-    cell: ({ row }) => formatPhoneNumber(row.getValue("telefon") || ""),
+    cell: ({ row }) => formatPhoneNumber(String(row.getValue("telefon") || "")),
   },
   {
     accessorKey: "calisma_sistemi",
@@ -69,7 +69,7 @@ export const columns: ColumnDef<Personnel>[] = [
         case "gunluk_maas": return "Günlük";
         case "komisyon": return "Komisyon";
         case "prim_komisyon": return "Prim + Komisyon";
-        default: return system;
+        default: return String(system);
       }
     },
   },
@@ -78,8 +78,8 @@ export const columns: ColumnDef<Personnel>[] = [
     header: "Maaş / Komisyon",
     cell: ({ row }) => {
       const system = row.getValue("calisma_sistemi");
-      const maas = parseFloat(row.getValue("maas") || 0);
-      const prim = parseFloat(row.getValue("prim_yuzdesi") || 0);
+      const maas = parseFloat(String(row.getValue("maas") || 0));
+      const prim = parseFloat(String(row.getValue("prim_yuzdesi") || 0));
       
       if (system === "komisyon" || system === "prim_komisyon") {
         return `%${prim}`;

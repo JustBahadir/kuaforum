@@ -16,6 +16,7 @@ import { Toaster } from "sonner";
 import { useShopData } from "@/hooks/useShopData";
 import { Musteri } from "@/lib/supabase/types";
 import { useAuth } from "@/hooks/useAuth";
+import { dukkanServisi } from "@/lib/supabase";
 
 export default function Customers() {
   const [searchText, setSearchText] = useState("");
@@ -25,6 +26,7 @@ export default function Customers() {
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const [currentDukkanId, setCurrentDukkanId] = useState<number | null>(null);
   
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
@@ -37,17 +39,33 @@ export default function Customers() {
   }, [location, navigate]);
 
   // Get the current shop ID
-  const getCurrentShopId = async () => {
-    if (isletmeData?.id) return isletmeData.id;
-    
-    // Try to get from user metadata
-    if (user?.user_metadata?.dukkan_id) {
-      return user.user_metadata.dukkan_id;
+  useEffect(() => {
+    async function getCurrentShopId() {
+      try {
+        if (isletmeData?.id) {
+          setCurrentDukkanId(isletmeData.id);
+          return;
+        }
+      
+        // Try to get from dukkanServisi
+        const dukkan = await dukkanServisi.kullaniciDukkaniniGetir();
+        if (dukkan && dukkan.id) {
+          setCurrentDukkanId(dukkan.id);
+          return;
+        }
+        
+        // If that fails, try to get it directly from musteriServisi
+        const shopId = await musteriServisi.getCurrentUserDukkanId();
+        if (shopId) {
+          setCurrentDukkanId(shopId);
+        }
+      } catch (err) {
+        console.error("Shop ID fetch error:", err);
+      }
     }
     
-    // If no shop ID yet, try to get it directly from musteriServisi
-    return await musteriServisi.getCurrentUserDukkanId();
-  };
+    getCurrentShopId();
+  }, [isletmeData, user]);
   
   const { 
     data: customers = [], 
@@ -55,10 +73,10 @@ export default function Customers() {
     refetch,
     isRefetching
   } = useQuery({
-    queryKey: ['musteriler'],
+    queryKey: ['musteriler', currentDukkanId],
     queryFn: async () => {
       try {
-        const shopId = await getCurrentShopId();
+        const shopId = currentDukkanId;
         console.log("Using shop ID for customer fetch:", shopId);
         
         if (!shopId) {
@@ -76,7 +94,7 @@ export default function Customers() {
       }
     },
     refetchOnWindowFocus: false,
-    staleTime: 0, // Always fetch fresh data
+    enabled: !!currentDukkanId,
     retry: 2
   });
 
@@ -184,7 +202,7 @@ export default function Customers() {
             <NewCustomerForm 
               onSuccess={handleCustomerAdded} 
               onCancel={handleCloseNewCustomerModal} 
-              dukkanId={isletmeData?.id}
+              dukkanId={currentDukkanId || undefined}
             />
           </DialogContent>
         </Dialog>

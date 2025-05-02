@@ -1,158 +1,175 @@
 
 import { useState, useCallback } from "react";
-import { authService } from "@/lib/auth/authService";
 import { profileService } from "@/lib/auth/profileService";
+import { authService } from "@/lib/auth/authService";
 import { staffService } from "@/lib/auth/services/staffService";
-import { useNavigate } from "react-router-dom";
-import { uploadToSupabase } from "@/lib/supabase/storage";
+import { supabase } from "@/lib/supabase/client";
+import { toast } from "sonner";
 
-// Define types for education and history data
-export interface EducationData {
-  ortaokuldurumu: string;
-  meslekibrans: string;
-  universitedurumu: string;
-  universitebolum: string;
-  liseturu: string;
-  lisedurumu: string;
-}
+export type EducationData = {
+  ortaokuldurumu?: string;
+  lisedurumu?: string;
+  liseturu?: string;
+  universitedurumu?: string;
+  universitebolum?: string;
+  meslekibrans?: string;
+};
 
-export interface HistoryData {
-  isyerleri: string[];
-  gorevpozisyon: string[];
-  belgeler: string[];
-  yarismalar: string[];
-  cv: string;
-}
+export type HistoryData = {
+  isyerleri?: string;
+  gorevpozisyon?: string;
+  belgeler?: string;
+  yarismalar?: string;
+  cv?: string;
+};
 
-export function useUnassignedStaffData() {
-  const navigate = useNavigate();
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string>("");
+export const useUnassignedStaffData = () => {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [userProfile, setUserProfile] = useState<any>(null);
-  const [educationData, setEducationData] = useState<EducationData>({
-    ortaokuldurumu: "",
-    meslekibrans: "",
-    universitedurumu: "",
-    universitebolum: "",
-    liseturu: "",
-    lisedurumu: "",
-  });
-  const [historyData, setHistoryData] = useState<HistoryData>({
-    isyerleri: [],
-    gorevpozisyon: [],
-    belgeler: [],
-    yarismalar: [],
-    cv: "",
-  });
-  const [isUploading, setIsUploading] = useState<boolean>(false);
+  const [personelId, setPersonelId] = useState<number | null>(null);
+  const [educationData, setEducationData] = useState<EducationData>({});
+  const [historyData, setHistoryData] = useState<HistoryData>({});
+  const [isUploading, setIsUploading] = useState(false);
 
   const loadUserAndStaffData = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
 
-      // Load user profile
-      const userData = await profileService.getCurrentUserProfile();
-      setUserProfile(userData);
-
-      // Load education and history data
-      if (userData?.id) {
-        const staffId = await staffService.getPersonelIdByAuthId(userData.id);
-        if (staffId) {
-          const [education, history] = await Promise.all([
-            staffService.getEducation(staffId),
-            staffService.getHistory(staffId),
-          ]);
-
-          if (education) {
-            setEducationData(education);
-          }
-
-          if (history) {
-            // Parse array fields from string if necessary
-            const parsedHistory = {
-              ...history,
-              isyerleri: parseArrayField(history.isyerleri),
-              gorevpozisyon: parseArrayField(history.gorevpozisyon),
-              belgeler: parseArrayField(history.belgeler),
-              yarismalar: parseArrayField(history.yarismalar),
-              cv: history.cv || "",
-            };
-            setHistoryData(parsedHistory);
-          }
-        }
+      // Get user's profile
+      const user = await authService.getCurrentUser();
+      
+      if (!user) {
+        throw new Error("User not authenticated");
       }
-    } catch (err) {
-      console.error("Error loading staff data:", err);
-      setError("Personel bilgileri yüklenirken bir hata oluştu.");
+
+      // Get profile
+      const profile = await profileService.getProfile(user);
+      setUserProfile(profile);
+
+      // Get staff data
+      try {
+        const staffData = await staffService.getStaffData();
+        
+        if (staffData && staffData.id) {
+          setPersonelId(staffData.id);
+          
+          // Load education data
+          const education = await staffService.getEducationData(staffData.id);
+          setEducationData(education || {});
+          
+          // Load history data
+          const history = await staffService.getHistoryData(staffData.id);
+          setHistoryData(history || {});
+        }
+      } catch (staffError) {
+        console.warn("Staff data not found:", staffError);
+        // This is normal for non-staff users
+      }
+
+    } catch (err: any) {
+      console.error("Error loading user and staff data:", err);
+      setError(err.message || "Failed to load profile data");
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // Parse string fields that should be arrays
-  const parseArrayField = (field: string | string[]): string[] => {
-    if (Array.isArray(field)) return field;
-    if (!field) return [];
-    try {
-      // Try to parse as JSON if it's a string
-      const parsed = JSON.parse(field);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch (e) {
-      // If not JSON, split by commas or return as single item
-      return field.includes(",") ? field.split(",").map(item => item.trim()) : [field];
-    }
-  };
-
   const handleLogout = async () => {
     try {
-      await authService.signOut();
-      navigate("/login");
-    } catch (error) {
-      console.error("Logout error:", error);
+      await authService.logout();
+      window.location.href = "/login";
+    } catch (err: any) {
+      console.error("Error logging out:", err);
+      toast.error("Çıkış yapılırken bir hata oluştu");
     }
   };
 
-  // Save user data function
   const saveUserData = async (updatedData: any) => {
     try {
       setLoading(true);
+      const user = await authService.getCurrentUser();
       
-      // Update profile data
-      if (userProfile?.id) {
-        await profileService.updateUserProfile(userProfile.id, updatedData);
+      if (!user) {
+        throw new Error("User not authenticated");
+      }
+
+      // Determine what type of data is being updated
+      if (updatedData.education) {
+        // Save education data
+        if (personelId) {
+          await staffService.saveEducationData(personelId, updatedData.education);
+          setEducationData(updatedData.education);
+        }
+      } else if (updatedData.history) {
+        // Save history data
+        if (personelId) {
+          await staffService.saveHistoryData(personelId, updatedData.history);
+          setHistoryData(updatedData.history);
+        }
+      } else {
+        // Save profile data
+        await profileService.updateProfile(user.id, updatedData);
         setUserProfile({ ...userProfile, ...updatedData });
       }
-      
+
       return true;
-    } catch (error) {
-      console.error("Error saving user data:", error);
-      throw error;
+    } catch (err: any) {
+      console.error("Error saving user data:", err);
+      toast.error(`Veri kaydedilirken bir hata oluştu: ${err.message}`);
+      throw err;
     } finally {
       setLoading(false);
     }
   };
 
-  // Handle avatar upload
-  const handleAvatarUpload = async (file: File) => {
-    if (!userProfile?.id) return;
-    
+  const handleAvatarUpload = async (file: File): Promise<void> => {
     try {
       setIsUploading(true);
+      const user = await authService.getCurrentUser();
       
-      // Upload image to Supabase storage
-      const folderPath = `avatars/${userProfile.id}`;
-      const fileName = `avatar-${Date.now()}`;
-      const url = await uploadToSupabase(file, folderPath, fileName);
-      
-      // Update profile with new avatar URL
-      await profileService.updateUserProfile(userProfile.id, { avatar_url: url });
-      setUserProfile({ ...userProfile, avatar_url: url });
-      
-      return url;
-    } catch (error) {
-      console.error("Avatar upload error:", error);
-      throw error;
+      if (!user) {
+        throw new Error("User not authenticated");
+      }
+
+      // Create unique filename
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+
+      // Upload to storage
+      const { error: uploadError } = await supabase.storage
+        .from('shop-photos')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      // Get public URL
+      const { data: publicUrlData } = supabase.storage
+        .from('shop-photos')
+        .getPublicUrl(filePath);
+
+      // Update user avatar URL in database
+      await profileService.updateProfile(user.id, { 
+        avatar_url: publicUrlData.publicUrl 
+      });
+
+      // Update local state
+      setUserProfile({
+        ...userProfile,
+        avatar_url: publicUrlData.publicUrl
+      });
+
+      toast.success("Profil fotoğrafı güncellendi");
+    } catch (err: any) {
+      console.error("Avatar upload error:", err);
+      toast.error(`Yükleme hatası: ${err.message}`);
     } finally {
       setIsUploading(false);
     }
@@ -162,14 +179,15 @@ export function useUnassignedStaffData() {
     loading,
     error,
     userProfile,
+    personelId,
     educationData,
     setEducationData,
     historyData,
     setHistoryData,
     handleLogout,
-    loadUserAndStaffData,
     saveUserData,
+    loadUserAndStaffData,
     handleAvatarUpload,
     isUploading
   };
-}
+};

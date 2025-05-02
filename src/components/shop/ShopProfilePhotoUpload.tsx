@@ -5,7 +5,7 @@ import { uploadToSupabase } from "@/lib/supabase/storage";
 
 export interface ShopProfilePhotoUploadProps {
   dukkanId: number;
-  onSuccess: (url: string) => Promise<void>;
+  onSuccess: (url: string) => Promise<void> | void;
   currentImageUrl?: string;
   children: React.ReactNode; // Required children prop
 }
@@ -38,14 +38,16 @@ export function ShopProfilePhotoUpload({
     setIsUploading(true);
     try {
       // Create a folder path for shop logos
-      const folderPath = `shop-logos/${dukkanId}`;
+      const folderPath = `shop-logos/${dukkanId || 'profile'}`;
       const fileName = `logo-${Date.now()}`;
       
       // Upload the file to Supabase Storage
       const url = await uploadToSupabase(file, folderPath, fileName);
       
       // Call the onSuccess callback with the uploaded URL
-      await onSuccess(url);
+      if (onSuccess) {
+        await Promise.resolve(onSuccess(url));
+      }
     } catch (error) {
       console.error("Logo yükleme hatası:", error);
       toast.error(`Yükleme hatası: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`);

@@ -7,6 +7,8 @@ import { DatePickerField } from "./FormFields/DatePickerField";
 import { PhoneInputField } from "./FormFields/PhoneInputField";
 import { CustomerFormActions } from "./FormFields/CustomerFormActions";
 import { CustomerFormFields } from "./FormFields/CustomerFormFields";
+import { useAuth } from "@/hooks/useAuth";
+import { dukkanServisi } from "@/lib/supabase";
 
 interface NewCustomerFormProps {
   onSuccess: () => void;
@@ -22,6 +24,26 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFo
   const [birthdateText, setBirthdateText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [currentDukkanId, setCurrentDukkanId] = useState<number | undefined>(dukkanId);
+  const { user } = useAuth();
+  
+  // If dukkanId was not provided, try to get it
+  useEffect(() => {
+    async function fetchDukkanId() {
+      if (!currentDukkanId && user) {
+        try {
+          const dukkan = await dukkanServisi.kullaniciDukkaniniGetir();
+          if (dukkan && dukkan.id) {
+            setCurrentDukkanId(dukkan.id);
+          }
+        } catch (error) {
+          console.error("Dükkan ID alınırken hata:", error);
+        }
+      }
+    }
+    
+    fetchDukkanId();
+  }, [currentDukkanId, user]);
   
   // Form validation - Check if any field has a value
   const isFormValid = firstName.trim() !== '' || lastName.trim() !== '' || phone.trim() !== '' || birthdate !== undefined;
@@ -41,7 +63,7 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFo
       newErrors.firstName = 'İsim alanı zorunludur';
     }
     
-    if (!dukkanId) {
+    if (!currentDukkanId) {
       newErrors.dukkan = 'Dükkan bilgisi eksik, lütfen sayfayı yenileyip tekrar deneyin';
     }
     
@@ -61,7 +83,7 @@ export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFo
         last_name: lastName || null,
         phone: phone ? formatPhoneForSubmission(phone) : null,
         birthdate: birthdate ? format(birthdate, 'yyyy-MM-dd') : null,
-        dukkan_id: dukkanId // Include dukkan_id in the customer data
+        dukkan_id: currentDukkanId // Include dukkan_id in the customer data
       };
       
       console.log("Müşteri verileri:", customerData);

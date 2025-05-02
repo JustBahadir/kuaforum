@@ -13,12 +13,6 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Plus } from "lucide-react";
 
-// Define the WorkingHoursProps interface to match what WorkingHours expects
-interface WorkingHoursProps {
-  dukkanId: number | null;
-  // Add any other props that WorkingHours needs
-}
-
 export default function StaffOperations() {
   const [activeTab, setActiveTab] = useState("services");
   const { isletmeData } = useShopData();
@@ -206,7 +200,7 @@ export default function StaffOperations() {
         sira: index
       }));
       
-      await islemServisi.sirayiGuncelle(updatedItems); // Corrected method name
+      await islemServisi.sirayiGuncelle(updatedItems);
       refetchServices();
     } catch (error: any) {
       console.error("Sıralama güncellenirken hata:", error);
@@ -326,7 +320,6 @@ export default function StaffOperations() {
           </TabsContent>
           
           <TabsContent value="workinghours">
-            {/* Remove the isStaff prop since it's not in the component interface */}
             <WorkingHours dukkanId={dukkanId} />
           </TabsContent>
         </Tabs>
