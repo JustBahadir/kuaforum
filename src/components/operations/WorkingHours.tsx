@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { CalismaSaati } from "@/lib/supabase/types";
 import { calismaSaatleriServisi } from "@/lib/supabase";
 import { useWorkingHours } from "./hooks/useWorkingHours";
-import { useWorkingHoursMutation } from "./hooks/useWorkingHoursMutation";
 import { WorkingHoursTable } from "./working-hours/WorkingHoursTable";
 import { sortWorkingHours } from "./utils/workingHoursUtils";
 

@@ -1,18 +1,12 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { Info, Plus } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { kategorilerServisi, islemServisi } from "@/lib/supabase";
 import { useShopData } from "@/hooks/useShopData";
 import { ServicesContent } from "@/components/operations/ServicesContent";
 import { WorkingHours } from "@/components/operations/WorkingHours";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
 export default function Services() {
@@ -23,7 +17,6 @@ export default function Services() {
   const [kategoriDuzenleDialogAcik, setKategoriDuzenleDialogAcik] = useState(false);
   const [duzenleKategoriId, setDuzenleKategoriId] = useState<number | null>(null);
   const [duzenleKategoriAdi, setDuzenleKategoriAdi] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<any | null>(null);
   const [islemAdi, setIslemAdi] = useState("");
   const [fiyat, setFiyat] = useState(0);
   const [maliyet, setMaliyet] = useState(0);
@@ -291,28 +284,6 @@ export default function Services() {
           </TabsContent>
         </Tabs>
       </div>
-      
-      {/* Information Dialog */}
-      <Dialog open={infoDialogOpen} onOpenChange={setInfoDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Puanlama Sistemi Hakkında</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-2 py-4">
-            <p>
-              Puanlama sayesinde sizin belirleyeceğiniz sayıda puana ulaşan müşterilerinize indirim, 
-              hediye veya sizin seçeceğiniz bir ödül sistemi olarak kullanmak için ekledik. 
-              Aynı şekilde bunu personellerinize prim vermek için de kullanabilirsiniz.
-              Bu sistemin kullanımı tamamen sizin tercihlerinize bağlıdır.
-            </p>
-          </div>
-          <DialogFooter className="flex justify-center">
-            <DialogClose asChild>
-              <Button type="button" variant="default">Kapat</Button>
-            </DialogClose>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </StaffLayout>
   );
 }

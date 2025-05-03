@@ -139,38 +139,8 @@ export function ServicesContent({
   const renderServicesContent = () => {
     return (
       <div className="space-y-6">
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={kategoriler.map(k => k.id)} strategy={verticalListSortingStrategy}>
-            <Accordion type="single" collapsible className="w-full space-y-4" value={openCategories.length > 0 ? openCategories[0] : undefined} onValueChange={handleCategoryToggle}>
-              {kategoriler.map(kategori => (
-                <SortableCategory 
-                  key={kategori.id} 
-                  id={kategori.id} 
-                  kategori={kategori} 
-                  islemler={islemler.filter((islem: any) => islem.kategori_id === kategori.id)} 
-                  isStaff={isStaff} 
-                  onServiceEdit={onServiceEdit} 
-                  onServiceDelete={onServiceDelete} 
-                  onCategoryDelete={onCategoryDelete} 
-                  onCategoryEdit={onCategoryEdit} 
-                  onSiralamaChange={onSiralamaChange} 
-                  onRandevuAl={onRandevuAl} 
-                  puanlamaAktif={puanlamaAktif} 
-                />
-              ))}
-            </Accordion>
-          </SortableContext>
-        </DndContext>
-      </div>
-    );
-  };
-
-  return (
-    <>
-      {isStaff && !hideTabBar && (
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Hizmet Yönetimi</h1>
-          <div className="flex items-center gap-2">
+        {isStaff && (
+          <div className="flex justify-between items-center mb-2">
             <div className="flex items-center space-x-2">
               <Switch id="puanlama-modu" checked={puanlamaAktif} onCheckedChange={setPuanlamaAktif} />
               <Label htmlFor="puanlama-modu" className="text-sm">Puanlama Sistemi</Label>
@@ -202,9 +172,36 @@ export function ServicesContent({
               </Button>
             </div>
           </div>
-        </div>
-      )}
-      
+        )}
+        
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={kategoriler.map(k => k.id)} strategy={verticalListSortingStrategy}>
+            <Accordion type="single" collapsible className="w-full space-y-4" value={openCategories.length > 0 ? openCategories[0] : undefined} onValueChange={handleCategoryToggle}>
+              {kategoriler.map(kategori => (
+                <SortableCategory 
+                  key={kategori.id} 
+                  id={kategori.id} 
+                  kategori={kategori} 
+                  islemler={islemler.filter((islem: any) => islem.kategori_id === kategori.id)} 
+                  isStaff={isStaff} 
+                  onServiceEdit={onServiceEdit} 
+                  onServiceDelete={onServiceDelete} 
+                  onCategoryDelete={onCategoryDelete} 
+                  onCategoryEdit={onCategoryEdit} 
+                  onSiralamaChange={onSiralamaChange} 
+                  onRandevuAl={onRandevuAl} 
+                  puanlamaAktif={puanlamaAktif} 
+                />
+              ))}
+            </Accordion>
+          </SortableContext>
+        </DndContext>
+      </div>
+    );
+  };
+
+  return (
+    <>
       {!hideTabBar ? (
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-2">
