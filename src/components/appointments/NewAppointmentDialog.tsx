@@ -280,7 +280,7 @@ export function NewAppointmentDialog({
                 <SelectValue placeholder="Personel seçin (isteğe bağlı)" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Belirtilmedi</SelectItem>
+                <SelectItem value="none">Belirtilmedi</SelectItem>
                 {staff.map((person) => (
                   <SelectItem key={person.id} value={person.id.toString()}>
                     {person.ad_soyad}
