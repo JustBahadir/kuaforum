@@ -110,13 +110,9 @@ export function ServicesContent({
     coordinateGetter: sortableKeyboardCoordinates
   }));
 
-  const handleCategoryToggle = (value: string) => {
-    setOpenCategories(prev => {
-      if (prev.includes(value)) {
-        return prev.filter(item => item !== value);
-      }
-      return [...prev, value];
-    });
+  // Updated to handle string[] instead of string
+  const handleCategoryToggle = (value: string[]) => {
+    setOpenCategories(value);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {

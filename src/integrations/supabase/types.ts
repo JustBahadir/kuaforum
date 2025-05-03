@@ -167,7 +167,7 @@ export type Database = {
           kod: string
           logo_url: string | null
           sahibi_id: string
-          telefon: string | null
+          telefon: number | null
         }
         Insert: {
           acik_adres?: string | null
@@ -179,7 +179,7 @@ export type Database = {
           kod: string
           logo_url?: string | null
           sahibi_id: string
-          telefon?: string | null
+          telefon?: number | null
         }
         Update: {
           acik_adres?: string | null
@@ -191,7 +191,7 @@ export type Database = {
           kod?: string
           logo_url?: string | null
           sahibi_id?: string
-          telefon?: string | null
+          telefon?: number | null
         }
         Relationships: []
       }
