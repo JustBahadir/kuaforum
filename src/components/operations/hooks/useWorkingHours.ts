@@ -22,7 +22,7 @@ export function useWorkingHours(dukkanId?: number) {
           throw new Error("İşletme bilgisi bulunamadı");
         }
         
-        return calismaSaatleriServisi.hepsiniGetir(shopId);
+        return calismaSaatleriServisi.dukkanSaatleriGetir(shopId);
       } catch (error) {
         console.error("Error fetching working hours:", error);
         throw error;

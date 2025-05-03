@@ -14,7 +14,7 @@ export interface ShopProfileHeaderProps {
     telefon?: string;
     adres?: string;
   };
-  isletmeData?: {  // Add isletmeData as optional prop with same structure as shopData
+  isletmeData?: {
     id: number;
     ad: string;
     logo_url?: string;
@@ -22,15 +22,15 @@ export interface ShopProfileHeaderProps {
     adres?: string;
   };
   isOwner?: boolean;
-  userRole?: string; // Add userRole prop
+  userRole?: string;
   onLogoUpdated?: (url: string) => Promise<void> | void;
 }
 
 export function ShopProfileHeader({ 
   shopData, 
-  isletmeData,  // Accept isletmeData prop
+  isletmeData, 
   isOwner = false,
-  userRole,     // Accept userRole prop 
+  userRole,
   onLogoUpdated 
 }: ShopProfileHeaderProps) {
   const [isUploading, setIsUploading] = useState(false);

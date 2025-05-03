@@ -9,7 +9,7 @@ export function useWorkingHoursMutation(initialHours: CalismaSaati[] = []) {
   const [hours, setHours] = useState<CalismaSaati[]>(initialHours);
   const queryClient = useQueryClient();
   
-  const { mutate: saveHours, isLoading } = useMutation({
+  const { mutate: saveHours, isPending: isLoading } = useMutation({
     mutationFn: async (saatler: CalismaSaati[]) => {
       try {
         // If hours do not have dukkan_id, get the current dukkan id

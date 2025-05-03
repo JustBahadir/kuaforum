@@ -10,14 +10,14 @@ import { uploadToSupabase } from "@/lib/supabase/storage";
 
 export interface ShopGalleryCardProps {
   shopId?: number;
-  isletmeId?: number;  // Add isletmeId as alternative prop
-  userRole?: string;   // Add userRole prop
+  isletmeId?: number;  // Alternative prop
+  userRole?: string;   
   queryClient?: QueryClient;
 }
 
 export function ShopGalleryCard({ 
   shopId, 
-  isletmeId,  // Accept isletmeId prop
+  isletmeId,
   userRole = "staff", 
   queryClient 
 }: ShopGalleryCardProps) {
@@ -28,7 +28,7 @@ export function ShopGalleryCard({
   // Use either shopId or isletmeId
   const dukkanId = shopId || isletmeId;
 
-  // Dummy images for now, can be replaced with actual gallery images
+  // Check if user has admin rights
   const isAdmin = userRole === "admin";
   
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {

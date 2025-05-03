@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { formatPhoneNumber } from "@/utils/phoneFormatter";
 
 interface ShopContactCardProps {
-  isletmeData: any; // changed prop name from dukkanData to isletmeData
+  isletmeData: any; // Changed prop name from dukkanData to isletmeData
 }
 
 export function ShopContactCard({ isletmeData }: ShopContactCardProps) {

@@ -10,7 +10,7 @@ import { ShopPersonnelCard } from "@/components/shop/ShopPersonnelCard";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
 import { dukkanServisi } from "@/lib/supabase";
-import { Button } from "@/components/ui/button"; // Add the missing Button import
+import { Button } from "@/components/ui/button";
 
 export default function ShopHomePage() {
   const { userRole, userId, loading: authLoading } = useCustomerAuth();
