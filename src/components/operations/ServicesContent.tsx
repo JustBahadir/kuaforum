@@ -132,7 +132,7 @@ export function ServicesContent({
   const renderServicesContent = () => {
     return <div className="space-y-6">
         {isStaff && <div className="flex justify-between items-center mb-2">
-            <div className="flex items-center space-x-2 my-0 px-0 mx-[400px]">
+            <div className="flex items-center space-x-2 my-0 px-0 mx-0">
               <Switch id="puanlama-modu" checked={puanlamaAktif} onCheckedChange={setPuanlamaAktif} />
               <Label htmlFor="puanlama-modu" className="text-sm">Puanlama Sistemi</Label>
               <TooltipProvider>
