@@ -1,8 +1,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { CalismaSaati } from "@/lib/supabase/types";
 import { calismaSaatleriServisi } from "@/lib/supabase";
 import { WorkingHoursTable } from "./working-hours/WorkingHoursTable";
@@ -14,7 +13,6 @@ export function WorkingHoursCard() {
   const [error, setError] = useState<string | null>(null);
   const [hours, setHours] = useState<CalismaSaati[]>([]);
   const [editingMode, setEditingMode] = useState(false);
-  const navigate = useNavigate();
   
   useEffect(() => {
     const fetchWorkingHours = async () => {

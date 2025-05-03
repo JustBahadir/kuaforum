@@ -1,55 +1,54 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MapPin, Phone, ExternalLink, Copy, PhoneCall } from "lucide-react";
+import { MapPin, Phone, Copy, Map, PhoneCall } from "lucide-react";
 import { toast } from "sonner";
-import { formatPhoneNumber } from "@/utils/phoneFormatter";
 
 interface ShopContactCardProps {
-  isletmeData: any; // Changed prop name from dukkanData to isletmeData
+  isletmeData?: {
+    ad?: string;
+    telefon?: string;
+    adres?: string;
+  };
+  shopData?: {
+    ad?: string;
+    telefon?: string;
+    adres?: string;
+  };
 }
 
-export function ShopContactCard({ isletmeData }: ShopContactCardProps) {
-  const openInMaps = () => {
-    if (!isletmeData?.acik_adres) {
-      toast.error("Haritada göstermek için bir açık adres girilmelidir");
-      return;
-    }
+export function ShopContactCard({ isletmeData, shopData }: ShopContactCardProps) {
+  // Use either isletmeData or shopData, whichever is provided
+  const data = isletmeData || shopData || {};
+
+  // Handle copy to clipboard
+  const copyToClipboard = (text: string, type: string) => {
+    if (!text) return;
     
-    const encodedAddress = encodeURIComponent(isletmeData.acik_adres);
-    window.open(`https://www.google.com/maps/search/?api=1&query=${encodedAddress}`, '_blank');
+    navigator.clipboard.writeText(text)
+      .then(() => {
+        toast.success(`${type} başarıyla kopyalandı`);
+      })
+      .catch(() => {
+        toast.error(`${type} kopyalanamadı`);
+      });
   };
 
-  const callPhone = () => {
-    if (!isletmeData?.telefon) {
-      toast.error("Telefon numarası bulunamadı");
-      return;
-    }
+  // Handle map open
+  const openInMaps = (address: string) => {
+    if (!address) return;
     
-    // Format for tel: link - remove all non-digit characters
-    const phoneNumber = isletmeData.telefon.replace(/\D/g, '');
-    window.location.href = `tel:${phoneNumber}`;
+    // Create a Google Maps URL with the address
+    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+    window.open(mapsUrl, '_blank');
   };
 
-  const copyPhoneNumber = () => {
-    if (!isletmeData?.telefon) {
-      toast.error("Telefon numarası bulunamadı");
-      return;
-    }
+  // Handle phone call
+  const callPhone = (phoneNumber: string) => {
+    if (!phoneNumber) return;
     
-    navigator.clipboard.writeText(isletmeData.telefon);
-    toast.success("Telefon numarası kopyalandı");
-  };
-
-  const copyAddress = () => {
-    const address = isletmeData.acik_adres || isletmeData.adres;
-    if (!address) {
-      toast.error("Adres bilgisi bulunamadı");
-      return;
-    }
-    
-    navigator.clipboard.writeText(address);
-    toast.success("Adres kopyalandı");
+    // Create a tel: URL
+    window.location.href = `tel:${phoneNumber.replace(/\s/g, '')}`;
   };
 
   return (
@@ -58,75 +57,76 @@ export function ShopContactCard({ isletmeData }: ShopContactCardProps) {
         <CardTitle>İletişim Bilgileri</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex items-start gap-3">
-          <MapPin className="h-5 w-5 text-purple-600 flex-shrink-0 mt-0.5" />
-          <div>
-            <div>{isletmeData.adres || "Adres bilgisi bulunmuyor"}</div>
-            {isletmeData.acik_adres && (
-              <div className="text-gray-500 text-sm mt-1">{isletmeData.acik_adres}</div>
-            )}
-          </div>
-        </div>
-        
-        {/* Address action buttons */}
-        {isletmeData.adres && (
-          <div className="flex gap-2">
-            {isletmeData.acik_adres && (
-              <Button 
-                variant="outline" 
-                size="sm"
-                className="flex-1 flex items-center gap-2" 
-                onClick={openInMaps}
-              >
-                <ExternalLink className="h-4 w-4" />
-                Haritada Göster
-              </Button>
-            )}
-            
-            <Button 
-              variant="outline" 
-              size="sm"
-              className="flex-1 flex items-center gap-2" 
-              onClick={copyAddress}
-            >
-              <Copy className="h-4 w-4" />
-              Kopyala
-            </Button>
+        {data.adres && (
+          <div className="space-y-2">
+            <div className="flex items-start">
+              <MapPin className="h-5 w-5 mr-2 text-primary mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-medium">Adres</p>
+                <p className="text-sm text-muted-foreground">{data.adres}</p>
+                
+                <div className="flex mt-2 space-x-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-8 text-xs"
+                    onClick={() => openInMaps(data.adres || "")}
+                  >
+                    <Map className="h-3.5 w-3.5 mr-1" />
+                    Haritada Göster
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-8 text-xs"
+                    onClick={() => copyToClipboard(data.adres || "", "Adres")}
+                  >
+                    <Copy className="h-3.5 w-3.5 mr-1" />
+                    Kopyala
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
-        
-        <div className="flex items-start gap-3">
-          <Phone className="h-5 w-5 text-purple-600 flex-shrink-0 mt-0.5" />
-          <span>
-            {isletmeData.telefon 
-              ? formatPhoneNumber(isletmeData.telefon) 
-              : "Telefon bilgisi bulunmuyor"}
-          </span>
-        </div>
-        
-        {/* Phone action buttons */}
-        {isletmeData.telefon && (
-          <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              size="sm"
-              className="flex-1 flex items-center gap-2" 
-              onClick={callPhone}
-            >
-              <PhoneCall className="h-4 w-4" />
-              Ara
-            </Button>
-            
-            <Button 
-              variant="outline" 
-              size="sm"
-              className="flex-1 flex items-center gap-2" 
-              onClick={copyPhoneNumber}
-            >
-              <Copy className="h-4 w-4" />
-              Kopyala
-            </Button>
+
+        {data.telefon && (
+          <div className="space-y-2">
+            <div className="flex items-start">
+              <Phone className="h-5 w-5 mr-2 text-primary mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-medium">Telefon</p>
+                <p className="text-sm text-muted-foreground">{data.telefon}</p>
+                
+                <div className="flex mt-2 space-x-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-8 text-xs"
+                    onClick={() => callPhone(data.telefon || "")}
+                  >
+                    <PhoneCall className="h-3.5 w-3.5 mr-1" />
+                    Ara
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-8 text-xs"
+                    onClick={() => copyToClipboard(data.telefon || "", "Telefon")}
+                  >
+                    <Copy className="h-3.5 w-3.5 mr-1" />
+                    Kopyala
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
+        )}
+
+        {!data.adres && !data.telefon && (
+          <p className="text-center text-muted-foreground py-2">
+            İletişim bilgisi bulunamadı
+          </p>
         )}
       </CardContent>
     </Card>

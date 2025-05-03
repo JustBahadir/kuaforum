@@ -1,15 +1,10 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
-import { format } from "date-fns";
-import { tr } from "date-fns/locale";
-import { CalendarIcon } from "lucide-react";
 import { toast } from "sonner";
 import { randevuServisi } from "@/lib/supabase/services/randevuServisi";
 import { islemServisi } from "@/lib/supabase/services/islemServisi";
@@ -32,19 +27,19 @@ export function NewAppointmentDialog({
   dukkanId,
   onSuccess 
 }: NewAppointmentDialogProps) {
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [selectedKategori, setSelectedKategori] = useState<string>("");
   const [selectedIslem, setSelectedIslem] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
-  const [selectedPersonel, setSelectedPersonel] = useState<string>("");
+  const [selectedPersonel, setSelectedPersonel] = useState<string>("none");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Fetch categories for the given shop
   const { data: categories = [] } = useQuery({
     queryKey: ['categories', dukkanId],
     queryFn: () => kategorilerServisi.hepsiniGetir(dukkanId || undefined),
-    enabled: !!dukkanId,
+    enabled: !!dukkanId && isOpen,
   });
 
   // Fetch services for the selected category
@@ -53,14 +48,13 @@ export function NewAppointmentDialog({
     queryFn: async () => {
       if (!selectedKategori) return [];
       try {
-        // Fix the method call to kategoriIslemleriniGetir
         return await islemServisi.kategoriIslemleriniGetir(parseInt(selectedKategori));
       } catch (error) {
         console.error("Error fetching services:", error);
         return [];
       }
     },
-    enabled: !!selectedKategori
+    enabled: !!selectedKategori && isOpen
   });
 
   // Fetch staff for the shop
@@ -76,7 +70,7 @@ export function NewAppointmentDialog({
         return [];
       }
     },
-    enabled: !!dukkanId
+    enabled: !!dukkanId && isOpen
   });
 
   // Reset form when dialog opens or closes
@@ -88,11 +82,11 @@ export function NewAppointmentDialog({
 
   // Reset form fields
   const resetForm = () => {
-    setSelectedDate(undefined);
+    setSelectedDate("");
     setSelectedTime("");
     setSelectedKategori("");
     setSelectedIslem("");
-    setSelectedPersonel("");
+    setSelectedPersonel("none");
     setNotes("");
   };
 
@@ -136,7 +130,7 @@ export function NewAppointmentDialog({
       }
 
       const randevuData = {
-        tarih: format(selectedDate, 'yyyy-MM-dd'),
+        tarih: selectedDate,
         saat: selectedTime,
         islemler: [
           {
@@ -148,12 +142,11 @@ export function NewAppointmentDialog({
         musteri_id: null, // Legacy field
         customer_id: customerId,
         dukkan_id: dukkanId,
-        personel_id: selectedPersonel ? parseInt(selectedPersonel) : null,
+        personel_id: selectedPersonel !== "none" ? parseInt(selectedPersonel) : null,
         notlar: notes,
         durum: "onaylandi"
       };
 
-      // Change from ekle to randevuOlustur which exists in the service
       await randevuServisi.randevuOlustur(randevuData);
       toast.success("Randevu başarıyla oluşturuldu");
       
@@ -192,50 +185,32 @@ export function NewAppointmentDialog({
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="grid gap-4 py-4">
-          <div className="grid grid-cols-2 gap-4">
-            {/* Date Selection */}
-            <div className="flex flex-col space-y-1.5">
-              <Label htmlFor="date">Tarih</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    id="date"
-                    variant={"outline"}
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !selectedDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {selectedDate ? format(selectedDate, 'PPP', { locale: tr }) : <span>Tarih seçin</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 pointer-events-auto">
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={setSelectedDate}
-                    initialFocus
-                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-            
-            {/* Time Selection */}
-            <div className="flex flex-col space-y-1.5">
-              <Label htmlFor="time">Saat</Label>
-              <Select value={selectedTime} onValueChange={setSelectedTime}>
-                <SelectTrigger id="time">
-                  <SelectValue placeholder="Saat seçin" />
-                </SelectTrigger>
-                <SelectContent>
-                  {getTimeSlots().map((time) => (
-                    <SelectItem key={time} value={time}>{time}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          {/* Date Selection */}
+          <div className="flex flex-col space-y-1.5">
+            <Label htmlFor="date">Tarih</Label>
+            <Input
+              id="date"
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              min={new Date().toISOString().split('T')[0]}
+              required
+            />
+          </div>
+          
+          {/* Time Selection */}
+          <div className="flex flex-col space-y-1.5">
+            <Label htmlFor="time">Saat</Label>
+            <Select value={selectedTime} onValueChange={setSelectedTime}>
+              <SelectTrigger id="time">
+                <SelectValue placeholder="Saat seçin" />
+              </SelectTrigger>
+              <SelectContent>
+                {getTimeSlots().map((time) => (
+                  <SelectItem key={time} value={time}>{time}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           
           {/* Category Selection */}

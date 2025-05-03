@@ -76,17 +76,33 @@ export function ShopWorkingHoursCard({
             Henüz çalışma saati tanımlanmamış
           </p>
         ) : (
-          <div className="space-y-2">
-            {calismaSaatleri.map((saat) => (
-              <div key={saat.id} className="flex justify-between py-1 border-b last:border-b-0">
-                <span className="font-medium">{gunIsimleri[saat.gun]}</span>
-                <span>
-                  {saat.kapali 
-                    ? "Kapalı" 
-                    : `${formatTime(saat.acilis)} - ${formatTime(saat.kapanis)}`}
-                </span>
-              </div>
-            ))}
+          <div className="border rounded-md overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-muted/50">
+                <tr>
+                  <th className="text-left p-2 w-1/3">Gün</th>
+                  <th className="text-left p-2 w-1/3">Açılış</th>
+                  <th className="text-left p-2 w-1/3">Kapanış</th>
+                </tr>
+              </thead>
+              <tbody>
+                {calismaSaatleri.map((saat) => (
+                  <tr key={saat.id} className="border-t hover:bg-muted/20">
+                    <td className="p-2 font-medium">{gunIsimleri[saat.gun]}</td>
+                    {saat.kapali ? (
+                      <td colSpan={2} className="p-2 text-center font-medium text-red-600">
+                        KAPALI
+                      </td>
+                    ) : (
+                      <>
+                        <td className="p-2">{formatTime(saat.acilis)}</td>
+                        <td className="p-2">{formatTime(saat.kapanis)}</td>
+                      </>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </CardContent>
