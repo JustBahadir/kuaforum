@@ -10,17 +10,25 @@ import { WorkingHoursTable } from "./working-hours/WorkingHoursTable";
 import { sortWorkingHours } from "./utils/workingHoursUtils";
 
 interface WorkingHoursProps {
-  dukkanId?: number;
+  dukkanId?: number | null;
 }
 
 export function WorkingHours({ dukkanId }: WorkingHoursProps) {
   const [editingMode, setEditingMode] = useState(false);
   const { hours: fetchedHours, isLoading, isError, refetch } = useWorkingHours(dukkanId);
   const [hours, setHours] = useState<CalismaSaati[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [originalHours, setOriginalHours] = useState<CalismaSaati[]>([]);
+
+  console.log("WorkingHours component render - dukkanId:", dukkanId);
+  console.log("Fetched hours:", fetchedHours);
   
   useEffect(() => {
-    if (fetchedHours) {
-      setHours(sortWorkingHours(fetchedHours));
+    if (fetchedHours && fetchedHours.length > 0) {
+      console.log("Setting hours from fetchedHours:", fetchedHours);
+      const sortedHours = sortWorkingHours(fetchedHours);
+      setHours(sortedHours);
+      setOriginalHours(sortedHours);
     }
   }, [fetchedHours]);
 
@@ -39,9 +47,41 @@ export function WorkingHours({ dukkanId }: WorkingHoursProps) {
       return newHours;
     });
   };
+
+  const hasChanges = () => {
+    if (hours.length !== originalHours.length) return true;
+    
+    return hours.some((hour, index) => {
+      const original = originalHours[index];
+      return (
+        hour.acilis !== original.acilis ||
+        hour.kapanis !== original.kapanis ||
+        hour.kapali !== original.kapali
+      );
+    });
+  };
   
   const handleSave = async () => {
     try {
+      setSaving(true);
+      console.log("Saving hours:", hours);
+      
+      if (!dukkanId) {
+        const shopId = await calismaSaatleriServisi.getCurrentDukkanId();
+        console.log("Retrieved dukkanId:", shopId);
+        
+        if (!shopId) {
+          toast.error("İşletme bilgisi bulunamadı");
+          setSaving(false);
+          return;
+        }
+        
+        // Update each hour with shop ID
+        for (const hour of hours) {
+          hour.dukkan_id = shopId;
+        }
+      }
+      
       // Update or create hours
       for (const hour of hours) {
         if (hour.id) {
@@ -58,9 +98,14 @@ export function WorkingHours({ dukkanId }: WorkingHoursProps) {
       toast.success("Çalışma saatleri başarıyla kaydedildi");
       setEditingMode(false);
       refetch();
+      
+      // Update original hours to current state to reset change detection
+      setOriginalHours([...hours]);
     } catch (error) {
       console.error("Failed to save working hours:", error);
       toast.error("Çalışma saatlerini kaydetme hatası");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -100,10 +145,9 @@ export function WorkingHours({ dukkanId }: WorkingHoursProps) {
                 onClick={() => {
                   setEditingMode(false);
                   // Reset to original data
-                  if (fetchedHours) {
-                    setHours(sortWorkingHours(fetchedHours));
-                  }
+                  setHours([...originalHours]);
                 }}
+                disabled={saving}
               >
                 İptal
               </Button>
@@ -111,8 +155,9 @@ export function WorkingHours({ dukkanId }: WorkingHoursProps) {
                 variant="default" 
                 size="sm"
                 onClick={handleSave}
+                disabled={saving || !hasChanges()}
               >
-                Kaydet
+                {saving ? "Kaydediliyor..." : "Kaydet"}
               </Button>
             </>
           ) : (

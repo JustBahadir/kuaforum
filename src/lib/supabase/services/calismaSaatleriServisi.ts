@@ -7,11 +7,15 @@ import { authService } from '@/lib/auth/authService';
 export const calismaSaatleriServisi = {
   async getCurrentDukkanId(): Promise<number> {
     try {
+      console.log("calismaSaatleriServisi: Getting current dukkan ID");
       const user = await authService.getCurrentUser();
       
       if (!user) {
+        console.error("calismaSaatleriServisi: No user found");
         throw new Error('Kullanıcı oturumu bulunamadı');
       }
+      
+      console.log("calismaSaatleriServisi: User ID:", user.id);
       
       // First check if user has a dukkan (is an owner)
       const { data: dukkan, error: dukkanError } = await supabase
@@ -21,10 +25,11 @@ export const calismaSaatleriServisi = {
         .maybeSingle();
       
       if (dukkanError) {
-        console.error('Dükkan ID alma hatası:', dukkanError);
+        console.error('calismaSaatleriServisi: Dükkan ID alma hatası:', dukkanError);
       }
       
       if (dukkan && dukkan.id) {
+        console.log("calismaSaatleriServisi: Found dukkan as owner:", dukkan.id);
         return dukkan.id;
       }
       
@@ -36,10 +41,11 @@ export const calismaSaatleriServisi = {
         .maybeSingle();
       
       if (personelError) {
-        console.error('Personel dükkan ID alma hatası:', personelError);
+        console.error('calismaSaatleriServisi: Personel dükkan ID alma hatası:', personelError);
       }
       
       if (personel && personel.dukkan_id) {
+        console.log("calismaSaatleriServisi: Found dukkan as personel:", personel.dukkan_id);
         return personel.dukkan_id;
       }
       
@@ -51,22 +57,25 @@ export const calismaSaatleriServisi = {
         .maybeSingle();
       
       if (profileError) {
-        console.error('Profil dükkan ID alma hatası:', profileError);
+        console.error('calismaSaatleriServisi: Profil dükkan ID alma hatası:', profileError);
       }
       
       if (profile && profile.dukkan_id) {
+        console.log("calismaSaatleriServisi: Found dukkan from profile:", profile.dukkan_id);
         return profile.dukkan_id;
       }
       
+      console.error("calismaSaatleriServisi: No dukkan found for user");
       throw new Error('Dükkan bilgisi bulunamadı');
     } catch (error) {
-      console.error('getCurrentDukkanId hatası:', error);
+      console.error('calismaSaatleriServisi: getCurrentDukkanId hatası:', error);
       throw error;
     }
   },
 
   async dukkanSaatleriGetir(dukkanId: number): Promise<CalismaSaati[]> {
     try {
+      console.log("calismaSaatleriServisi: Getting working hours for dukkanId:", dukkanId);
       if (!dukkanId) {
         throw new Error('Dükkan ID gereklidir');
       }
@@ -77,18 +86,22 @@ export const calismaSaatleriServisi = {
         .eq('dukkan_id', dukkanId);
 
       if (error) {
+        console.error("calismaSaatleriServisi: Error fetching working hours:", error);
         throw error;
       }
 
+      console.log("calismaSaatleriServisi: Fetched working hours:", data?.length || 0, "records");
+      
       // If no hours found for the shop, create defaults
       if (!data || data.length === 0) {
+        console.log("calismaSaatleriServisi: Creating default hours");
         const defaultHours = createDefaultWorkingHours(dukkanId);
         return defaultHours;
       }
 
       return sortWorkingHours(data);
     } catch (error) {
-      console.error('Çalışma saatlerini getirme hatası:', error);
+      console.error('calismaSaatleriServisi: Çalışma saatlerini getirme hatası:', error);
       throw error;
     }
   },
@@ -139,9 +152,12 @@ export const calismaSaatleriServisi = {
   // Method to update a single working hour record
   async guncelle(id: number, updates: Partial<CalismaSaati>): Promise<CalismaSaati> {
     try {
+      // Remove id from updates to avoid conflicts
+      const { id: _, ...updateData } = updates;
+      
       const { data, error } = await supabase
         .from('calisma_saatleri')
-        .update(updates)
+        .update(updateData)
         .eq('id', id)
         .select()
         .single();
@@ -160,6 +176,10 @@ export const calismaSaatleriServisi = {
   // Method to add a new working hour record
   async ekle(saat: Partial<CalismaSaati>): Promise<CalismaSaati> {
     try {
+      if (!saat.dukkan_id) {
+        saat.dukkan_id = await this.getCurrentDukkanId();
+      }
+      
       const { data, error } = await supabase
         .from('calisma_saatleri')
         .insert(saat)

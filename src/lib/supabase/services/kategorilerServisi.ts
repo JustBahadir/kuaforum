@@ -1,3 +1,4 @@
+
 import { supabase } from '../client';
 import { authService } from '@/lib/auth/authService';
 
@@ -9,7 +10,7 @@ export const kategorilerServisi = {
       
       if (!user) {
         console.error('No user found when getting dukkan ID');
-        return null;
+        throw new Error('Kullanıcı oturumu bulunamadı');
       }
       
       console.log('Getting dukkan ID for user:', user.id);
@@ -64,10 +65,10 @@ export const kategorilerServisi = {
       
       // If we reach here, no dukkan was found
       console.error('No dukkan found for user');
-      return null;
+      throw new Error('İşletme bilgisi bulunamadı');
     } catch (error) {
       console.error('Error in getCurrentDukkanId:', error);
-      return null;
+      throw error;
     }
   },
 
@@ -92,6 +93,8 @@ export const kategorilerServisi = {
         .order('sira', { ascending: true });
         
       if (error) throw error;
+      
+      console.log('Retrieved categories:', data?.length || 0);
       return data || [];
     } catch (error) {
       console.error('Kategori listesi getirme hatası:', error);
@@ -111,6 +114,8 @@ export const kategorilerServisi = {
         kategori.dukkan_id = dukkanId;
       }
       
+      console.log('Adding category with dukkanId:', kategori.dukkan_id);
+      
       // Get the current max sira
       const { data: existingItems } = await supabase
         .from('islem_kategorileri')
@@ -126,7 +131,11 @@ export const kategorilerServisi = {
         .insert([{ ...kategori, sira: nextSira }])
         .select();
         
-      if (error) throw error;
+      if (error) {
+        console.error('Category insertion error:', error);
+        throw error;
+      }
+      
       return data[0];
     } catch (error) {
       console.error('Kategori ekleme hatası:', error);

@@ -6,7 +6,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { kategorilerServisi, islemServisi } from "@/lib/supabase";
 import { useShopData } from "@/hooks/useShopData";
 import { ServicesContent } from "@/components/operations/ServicesContent";
-import { WorkingHours } from "@/components/operations/WorkingHours";
 import { toast } from "sonner";
 
 export default function StaffOperations() {
@@ -38,7 +37,14 @@ export default function StaffOperations() {
     refetch: refetchCategories
   } = useQuery({
     queryKey: ["categories", dukkanId],
-    queryFn: () => kategorilerServisi.hepsiniGetir(dukkanId),
+    queryFn: async () => {
+      console.log("Fetching categories for dukkanId:", dukkanId);
+      if (!dukkanId) {
+        console.warn("DukkanId is missing for category fetch");
+        return [];
+      }
+      return kategorilerServisi.hepsiniGetir(dukkanId);
+    },
     enabled: !!dukkanId,
   });
 
@@ -49,16 +55,25 @@ export default function StaffOperations() {
     refetch: refetchServices
   } = useQuery({
     queryKey: ["services", dukkanId],
-    queryFn: () => islemServisi.hepsiniGetir(dukkanId),
+    queryFn: async () => {
+      console.log("Fetching services for dukkanId:", dukkanId);
+      if (!dukkanId) {
+        console.warn("DukkanId is missing for service fetch");
+        return [];
+      }
+      return islemServisi.hepsiniGetir(dukkanId);
+    },
     enabled: !!dukkanId,
   });
 
   // Update state when data is fetched
   useEffect(() => {
+    console.log("Categories updated:", fetchedCategories);
     setKategoriler(fetchedCategories);
   }, [fetchedCategories]);
 
   useEffect(() => {
+    console.log("Services updated:", fetchedServices);
     setIslemler(fetchedServices);
   }, [fetchedServices]);
   
@@ -72,6 +87,7 @@ export default function StaffOperations() {
     }
     
     try {
+      console.log("Adding category with dukkanId:", dukkanId);
       await kategorilerServisi.ekle({
         kategori_adi: yeniKategoriAdi,
         dukkan_id: dukkanId
@@ -237,63 +253,49 @@ export default function StaffOperations() {
   return (
     <StaffLayout>
       <div className="container p-4 mx-auto">
-        <h1 className="text-2xl font-bold mb-6">İşlem Yönetimi</h1>
+        <h1 className="text-2xl font-bold mb-6">Hizmet Yönetimi</h1>
         
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="services">Hizmetler</TabsTrigger>
-            <TabsTrigger value="workinghours">Çalışma Saatleri</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="services" className="space-y-4">
-            <ServicesContent
-              isStaff={true}
-              kategoriler={kategoriler}
-              islemler={islemler}
-              dialogAcik={dialogAcik}
-              setDialogAcik={setDialogAcik}
-              kategoriDialogAcik={kategoriDialogAcik}
-              setKategoriDialogAcik={setKategoriDialogAcik}
-              kategoriDuzenleDialogAcik={kategoriDuzenleDialogAcik}
-              setKategoriDuzenleDialogAcik={setKategoriDuzenleDialogAcik}
-              yeniKategoriAdi={yeniKategoriAdi}
-              setYeniKategoriAdi={setYeniKategoriAdi}
-              duzenleKategoriId={duzenleKategoriId}
-              duzenleKategoriAdi={duzenleKategoriAdi}
-              setDuzenleKategoriAdi={setDuzenleKategoriAdi}
-              islemAdi={islemAdi}
-              setIslemAdi={setIslemAdi}
-              fiyat={fiyat}
-              setFiyat={setFiyat}
-              maliyet={maliyet}
-              setMaliyet={setMaliyet}
-              puan={puan}
-              setPuan={setPuan}
-              kategoriId={kategoriId}
-              setKategoriId={setKategoriId}
-              duzenleId={duzenleId}
-              onServiceFormSubmit={handleServiceFormSubmit}
-              onCategoryFormSubmit={handleAddCategory}
-              onCategoryEditFormSubmit={handleUpdateCategory}
-              onServiceEdit={handleServiceEdit}
-              onServiceDelete={handleServiceDelete}
-              onCategoryDelete={handleDeleteCategory}
-              onCategoryEdit={handleEditCategory}
-              onSiralamaChange={handleServiceOrderChange}
-              onCategoryOrderChange={handleCategoryOrderChange}
-              onRandevuAl={handleRandevuAl}
-              formuSifirla={formuSifirla}
-              dukkanId={dukkanId}
-              puanlamaAktif={puanlamaAktif}
-              setPuanlamaAktif={setPuanlamaAktif}
-              hideTabBar={true} // Hide the inner tab bar
-            />
-          </TabsContent>
-          
-          <TabsContent value="workinghours">
-            <WorkingHours dukkanId={dukkanId} />
-          </TabsContent>
-        </Tabs>
+        <ServicesContent
+          isStaff={true}
+          kategoriler={kategoriler}
+          islemler={islemler}
+          dialogAcik={dialogAcik}
+          setDialogAcik={setDialogAcik}
+          kategoriDialogAcik={kategoriDialogAcik}
+          setKategoriDialogAcik={setKategoriDialogAcik}
+          kategoriDuzenleDialogAcik={kategoriDuzenleDialogAcik}
+          setKategoriDuzenleDialogAcik={setKategoriDuzenleDialogAcik}
+          yeniKategoriAdi={yeniKategoriAdi}
+          setYeniKategoriAdi={setYeniKategoriAdi}
+          duzenleKategoriId={duzenleKategoriId}
+          duzenleKategoriAdi={duzenleKategoriAdi}
+          setDuzenleKategoriAdi={setDuzenleKategoriAdi}
+          islemAdi={islemAdi}
+          setIslemAdi={setIslemAdi}
+          fiyat={fiyat}
+          setFiyat={setFiyat}
+          maliyet={maliyet}
+          setMaliyet={setMaliyet}
+          puan={puan}
+          setPuan={setPuan}
+          kategoriId={kategoriId}
+          setKategoriId={setKategoriId}
+          duzenleId={duzenleId}
+          onServiceFormSubmit={handleServiceFormSubmit}
+          onCategoryFormSubmit={handleAddCategory}
+          onCategoryEditFormSubmit={handleUpdateCategory}
+          onServiceEdit={handleServiceEdit}
+          onServiceDelete={handleServiceDelete}
+          onCategoryDelete={handleDeleteCategory}
+          onCategoryEdit={handleEditCategory}
+          onSiralamaChange={handleServiceOrderChange}
+          onCategoryOrderChange={handleCategoryOrderChange}
+          onRandevuAl={handleRandevuAl}
+          formuSifirla={formuSifirla}
+          dukkanId={dukkanId}
+          puanlamaAktif={puanlamaAktif}
+          setPuanlamaAktif={setPuanlamaAktif}
+        />
       </div>
     </StaffLayout>
   );

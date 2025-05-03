@@ -7,9 +7,8 @@ import {
   TableBody, 
   TableCell 
 } from "@/components/ui/table";
-import { Label } from "@/components/ui/label";
 import { CalismaSaati } from "@/lib/supabase/types";
-import { gunSiralama, gunIsimleri } from "../constants/workingDays";
+import { gunIsimleri } from "../constants/workingDays";
 import { WorkingHoursItem } from "./WorkingHoursItem";
 
 interface WorkingHoursTableProps {
@@ -40,7 +39,7 @@ export function WorkingHoursTable({
           {hours.length > 0 ? (
             hours.map((saat, index) => (
               <WorkingHoursItem
-                key={index}
+                key={saat.id || index}
                 saat={saat}
                 index={index}
                 editingMode={editingMode}
@@ -49,14 +48,14 @@ export function WorkingHoursTable({
               />
             ))
           ) : (
-            gunSiralama.map((gun) => (
-              <TableRow key={gun} className="hover:bg-gray-50">
-                <TableCell className="font-medium">{gunIsimleri[gun]}</TableCell>
+            Array.from({ length: 7 }).map((_, index) => (
+              <TableRow key={index} className="hover:bg-gray-50">
+                <TableCell className="font-medium">{gunIsimleri[index.toString()] || 'Gün ' + index}</TableCell>
                 <TableCell>09:00</TableCell>
                 <TableCell>19:00</TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end space-x-2">
-                    <Label>Açık</Label>
+                    <span>Açık</span>
                     <div className="h-4 w-4 rounded-full bg-green-500"></div>
                   </div>
                 </TableCell>

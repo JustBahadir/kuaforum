@@ -2,7 +2,6 @@
 import { CalismaSaati } from "@/lib/supabase/types";
 import { gunIsimleri } from "../constants/workingDays";
 import { TableRow, TableCell } from "@/components/ui/table";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 
@@ -52,11 +51,10 @@ export function WorkingHoursItem({
         </TableCell>
         <TableCell className="text-right">
           <div className="flex items-center justify-end space-x-2">
-            <Label htmlFor={`closed-${index}`}>
+            <span>
               {saat.kapali ? "Kapalı" : "Açık"}
-            </Label>
+            </span>
             <Switch
-              id={`closed-${index}`}
               checked={saat.kapali}
               onCheckedChange={(value) => onStatusChange(index, value)}
             />
@@ -83,9 +81,9 @@ export function WorkingHoursItem({
       )}
       <TableCell className="text-right">
         <div className="flex items-center justify-end space-x-2">
-          <Label htmlFor={`status-${index}`}>
+          <span>
             {saat.kapali ? "Kapalı" : "Açık"}
-          </Label>
+          </span>
           <div className={`h-4 w-4 rounded-full ${
             saat.kapali ? "bg-red-500" : "bg-green-500"
           }`}></div>

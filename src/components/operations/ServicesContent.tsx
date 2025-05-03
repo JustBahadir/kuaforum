@@ -1,3 +1,4 @@
+
 import { CategoryCard } from "./CategoryCard";
 import { ServiceForm } from "./ServiceForm";
 import { CategoryForm } from "./CategoryForm";
@@ -15,6 +16,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogC
 import { Info, Plus } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WorkingHours } from "./WorkingHours";
+
 interface ServicesContentProps {
   isStaff: boolean;
   kategoriler: any[];
@@ -57,6 +59,7 @@ interface ServicesContentProps {
   setPuanlamaAktif: (value: boolean) => void;
   hideTabBar?: boolean;
 }
+
 export function ServicesContent({
   isStaff,
   kategoriler,
@@ -105,6 +108,7 @@ export function ServicesContent({
   const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, {
     coordinateGetter: sortableKeyboardCoordinates
   }));
+
   const handleCategoryToggle = (value: string) => {
     setOpenCategories(prev => {
       if (prev.includes(value)) {
@@ -113,11 +117,9 @@ export function ServicesContent({
       return [value];
     });
   };
+
   const handleDragEnd = (event: DragEndEvent) => {
-    const {
-      active,
-      over
-    } = event;
+    const { active, over } = event;
     if (over && active.id !== over.id) {
       const oldIndex = kategoriler.findIndex(k => k.id === active.id);
       const newIndex = kategoriler.findIndex(k => k.id === over.id);
@@ -129,9 +131,12 @@ export function ServicesContent({
       }
     }
   };
+
   const renderServicesContent = () => {
-    return <div className="space-y-6">
-        {isStaff && <div className="flex justify-between items-center mb-2">
+    return (
+      <div className="space-y-6">
+        {isStaff && (
+          <div className="flex justify-between items-center mb-2">
             <div className="flex items-center space-x-2 my-0 px-0 mx-0">
               <Switch id="puanlama-modu" checked={puanlamaAktif} onCheckedChange={setPuanlamaAktif} />
               <Label htmlFor="puanlama-modu" className="text-sm">Puanlama Sistemi</Label>
@@ -151,9 +156,9 @@ export function ServicesContent({
             </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => {
-            formuSifirla();
-            setDialogAcik(true);
-          }}>
+                formuSifirla();
+                setDialogAcik(true);
+              }}>
                 <Plus className="mr-2 h-4 w-4" />
                 Hizmet Ekle
               </Button>
@@ -162,19 +167,39 @@ export function ServicesContent({
                 Kategori Ekle
               </Button>
             </div>
-          </div>}
+          </div>
+        )}
         
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={kategoriler.map(k => k.id)} strategy={verticalListSortingStrategy}>
             <Accordion type="single" collapsible className="w-full space-y-4" value={openCategories.length > 0 ? openCategories[0] : undefined} onValueChange={handleCategoryToggle}>
-              {kategoriler.map(kategori => <SortableCategory key={kategori.id} id={kategori.id} kategori={kategori} islemler={islemler.filter((islem: any) => islem.kategori_id === kategori.id)} isStaff={isStaff} onServiceEdit={onServiceEdit} onServiceDelete={onServiceDelete} onCategoryDelete={onCategoryDelete} onCategoryEdit={onCategoryEdit} onSiralamaChange={onSiralamaChange} onRandevuAl={onRandevuAl} puanlamaAktif={puanlamaAktif} />)}
+              {kategoriler.map(kategori => (
+                <SortableCategory 
+                  key={kategori.id} 
+                  id={kategori.id} 
+                  kategori={kategori} 
+                  islemler={islemler.filter((islem: any) => islem.kategori_id === kategori.id)} 
+                  isStaff={isStaff} 
+                  onServiceEdit={onServiceEdit} 
+                  onServiceDelete={onServiceDelete} 
+                  onCategoryDelete={onCategoryDelete} 
+                  onCategoryEdit={onCategoryEdit} 
+                  onSiralamaChange={onSiralamaChange} 
+                  onRandevuAl={onRandevuAl} 
+                  puanlamaAktif={puanlamaAktif} 
+                />
+              ))}
             </Accordion>
           </SortableContext>
         </DndContext>
-      </div>;
+      </div>
+    );
   };
-  return <>
-      {!hideTabBar ? <Tabs value={activeTab} onValueChange={setActiveTab}>
+
+  return (
+    <>
+      {!hideTabBar ? (
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="hizmetler">Hizmetler</TabsTrigger>
             <TabsTrigger value="calisma-saatleri">Çalışma Saatleri</TabsTrigger>
@@ -187,15 +212,47 @@ export function ServicesContent({
           <TabsContent value="calisma-saatleri">
             <WorkingHours dukkanId={dukkanId} />
           </TabsContent>
-        </Tabs> :
-    // If hideTabBar is true, just render the content directly
-    renderServicesContent()}
+        </Tabs>
+      ) : (
+        // If hideTabBar is true, just render the content directly
+        renderServicesContent()
+      )}
       
-      <CategoryForm isOpen={kategoriDialogAcik} onOpenChange={setKategoriDialogAcik} kategoriAdi={yeniKategoriAdi} setKategoriAdi={setYeniKategoriAdi} onSubmit={onCategoryFormSubmit} />
+      <CategoryForm 
+        isOpen={kategoriDialogAcik} 
+        onOpenChange={setKategoriDialogAcik} 
+        kategoriAdi={yeniKategoriAdi} 
+        setKategoriAdi={setYeniKategoriAdi} 
+        onSubmit={onCategoryFormSubmit} 
+      />
       
-      <CategoryEditForm isOpen={kategoriDuzenleDialogAcik} onOpenChange={setKategoriDuzenleDialogAcik} kategoriAdi={duzenleKategoriAdi} setKategoriAdi={setDuzenleKategoriAdi} onSubmit={onCategoryEditFormSubmit} />
+      <CategoryEditForm 
+        isOpen={kategoriDuzenleDialogAcik} 
+        onOpenChange={setKategoriDuzenleDialogAcik} 
+        kategoriAdi={duzenleKategoriAdi} 
+        setKategoriAdi={setDuzenleKategoriAdi} 
+        onSubmit={onCategoryEditFormSubmit} 
+      />
       
-      <ServiceForm isOpen={dialogAcik} onOpenChange={setDialogAcik} kategoriler={kategoriler} islemAdi={islemAdi} setIslemAdi={setIslemAdi} fiyat={fiyat} setFiyat={setFiyat} maliyet={maliyet} setMaliyet={setMaliyet} puan={puan} setPuan={setPuan} kategoriId={kategoriId} setKategoriId={setKategoriId} duzenleId={duzenleId} onSubmit={onServiceFormSubmit} onReset={formuSifirla} puanlamaAktif={puanlamaAktif} />
+      <ServiceForm 
+        isOpen={dialogAcik} 
+        onOpenChange={setDialogAcik} 
+        kategoriler={kategoriler} 
+        islemAdi={islemAdi} 
+        setIslemAdi={setIslemAdi} 
+        fiyat={fiyat} 
+        setFiyat={setFiyat} 
+        maliyet={maliyet} 
+        setMaliyet={setMaliyet} 
+        puan={puan} 
+        setPuan={setPuan} 
+        kategoriId={kategoriId} 
+        setKategoriId={setKategoriId} 
+        duzenleId={duzenleId} 
+        onSubmit={onServiceFormSubmit} 
+        onReset={formuSifirla} 
+        puanlamaAktif={puanlamaAktif} 
+      />
       
       {/* Information Dialog */}
       <Dialog open={infoDialogOpen} onOpenChange={setInfoDialogOpen}>
@@ -218,5 +275,6 @@ export function ServicesContent({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>;
+    </>
+  );
 }
