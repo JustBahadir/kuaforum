@@ -94,7 +94,7 @@ export const calismaSaatleriServisi = {
       
       // If no hours found for the shop, create defaults
       if (!data || data.length === 0) {
-        console.log("calismaSaatleriServisi: Creating default hours");
+        console.log("calismaSaatleriServisi: No records found, creating default hours");
         const defaultHours = createDefaultWorkingHours(dukkanId);
         return defaultHours;
       }
@@ -113,6 +113,8 @@ export const calismaSaatleriServisi = {
 
   async saatleriKaydet(saatler: CalismaSaati[]): Promise<CalismaSaati[]> {
     try {
+      console.log("calismaSaatleriServisi: Saving working hours:", saatler);
+      
       if (!saatler || saatler.length === 0) {
         throw new Error('Geçersiz çalışma saatleri');
       }
@@ -129,6 +131,7 @@ export const calismaSaatleriServisi = {
         .eq('dukkan_id', dukkanId);
 
       if (deleteError) {
+        console.error("calismaSaatleriServisi: Error deleting existing hours:", deleteError);
         throw deleteError;
       }
 
@@ -139,9 +142,11 @@ export const calismaSaatleriServisi = {
         .select();
 
       if (error) {
+        console.error("calismaSaatleriServisi: Error inserting new hours:", error);
         throw error;
       }
 
+      console.log("calismaSaatleriServisi: Successfully saved hours:", data?.length || 0, "records");
       return data || [];
     } catch (error) {
       console.error('Çalışma saatlerini kaydetme hatası:', error);

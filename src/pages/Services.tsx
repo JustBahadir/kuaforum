@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -28,6 +27,8 @@ export default function Services() {
   const { isletmeData } = useShopData();
   const dukkanId = isletmeData?.id || 0;
 
+  console.log("Services component - dukkanId:", dukkanId);
+
   // Fetch categories
   const {
     data: kategoriler = [],
@@ -35,7 +36,17 @@ export default function Services() {
     refetch: refetchCategories,
   } = useQuery({
     queryKey: ["categories", dukkanId],
-    queryFn: () => kategorilerServisi.hepsiniGetir(dukkanId),
+    queryFn: async () => {
+      console.log("Fetching categories with dukkanId:", dukkanId);
+      try {
+        const data = await kategorilerServisi.hepsiniGetir(dukkanId);
+        console.log("Fetched categories:", data.length);
+        return data;
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+        return [];
+      }
+    },
     enabled: !!dukkanId,
   });
 
@@ -46,7 +57,17 @@ export default function Services() {
     refetch: refetchServices,
   } = useQuery({
     queryKey: ["services", dukkanId],
-    queryFn: () => islemServisi.hepsiniGetir(dukkanId),
+    queryFn: async () => {
+      console.log("Fetching services with dukkanId:", dukkanId);
+      try {
+        const data = await islemServisi.hepsiniGetir(dukkanId);
+        console.log("Fetched services:", data.length);
+        return data;
+      } catch (error) {
+        console.error("Error fetching services:", error);
+        return [];
+      }
+    },
     enabled: !!dukkanId,
   });
 
@@ -65,24 +86,30 @@ export default function Services() {
     e.preventDefault();
     
     if (!yeniKategoriAdi.trim()) {
-      toast.error("Kategori adı boş olamaz");
+      toast.error("Kategori adı boş olamaz", {
+        position: "bottom-right"
+      });
       return;
     }
 
     try {
+      console.log("Adding category with dukkanId:", dukkanId);
       await kategorilerServisi.ekle({
         kategori_adi: yeniKategoriAdi,
-        sira: kategoriler.length,
         dukkan_id: dukkanId,
       });
       
       setYeniKategoriAdi("");
       setIsAddingCategory(false);
       await refetchCategories();
-      toast.success("Kategori başarıyla eklendi");
+      toast.success("Kategori başarıyla eklendi", {
+        position: "bottom-right"
+      });
     } catch (error: any) {
       console.error("Kategori eklenirken hata:", error);
-      toast.error(`Kategori eklenirken hata oluştu: ${error.message}`);
+      toast.error(`Kategori eklenirken hata oluştu: ${error.message}`, {
+        position: "bottom-right"
+      });
     }
   };
 
@@ -91,7 +118,9 @@ export default function Services() {
     e.preventDefault();
     
     if (!duzenleKategoriAdi.trim() || !duzenleKategoriId) {
-      toast.error("Kategori adı boş olamaz");
+      toast.error("Kategori adı boş olamaz", {
+        position: "bottom-right"
+      });
       return;
     }
 
@@ -104,10 +133,14 @@ export default function Services() {
       setDuzenleKategoriId(null);
       setKategoriDuzenleDialogAcik(false);
       await refetchCategories();
-      toast.success("Kategori başarıyla güncellendi");
+      toast.success("Kategori başarıyla güncellendi", {
+        position: "bottom-right"
+      });
     } catch (error: any) {
       console.error("Kategori güncellenirken hata:", error);
-      toast.error(`Kategori güncellenirken hata oluştu: ${error.message}`);
+      toast.error(`Kategori güncellenirken hata oluştu: ${error.message}`, {
+        position: "bottom-right"
+      });
     }
   };
 
@@ -116,10 +149,14 @@ export default function Services() {
     try {
       await kategorilerServisi.sil(categoryId);
       refetchCategories();
-      toast.success("Kategori başarıyla silindi");
+      toast.success("Kategori başarıyla silindi", {
+        position: "bottom-right"
+      });
     } catch (error: any) {
       console.error("Kategori silinirken hata:", error);
-      toast.error(`Kategori silinirken hata oluştu: ${error.message}`);
+      toast.error(`Kategori silinirken hata oluştu: ${error.message}`, {
+        position: "bottom-right"
+      });
     }
   };
 
@@ -128,7 +165,9 @@ export default function Services() {
     e.preventDefault();
     
     if (!islemAdi.trim() || !kategoriId) {
-      toast.error("Hizmet adı ve kategori seçimi zorunludur");
+      toast.error("Hizmet adı ve kategori seçimi zorunludur", {
+        position: "bottom-right"
+      });
       return;
     }
 
@@ -142,7 +181,9 @@ export default function Services() {
           puan,
           kategori_id: kategoriId,
         });
-        toast.success("Hizmet başarıyla güncellendi");
+        toast.success("Hizmet başarıyla güncellendi", {
+          position: "bottom-right"
+        });
       } else {
         // Add new service
         await islemServisi.ekle({
@@ -153,7 +194,9 @@ export default function Services() {
           kategori_id: kategoriId,
           dukkan_id: dukkanId,
         });
-        toast.success("Hizmet başarıyla eklendi");
+        toast.success("Hizmet başarıyla eklendi", {
+          position: "bottom-right"
+        });
       }
       
       setIsAddingService(false);
@@ -161,7 +204,9 @@ export default function Services() {
       await refetchServices();
     } catch (error: any) {
       console.error("Hizmet eklenirken/güncellenirken hata:", error);
-      toast.error(`Hizmet işlemi sırasında hata oluştu: ${error.message}`);
+      toast.error(`Hizmet işlemi sırasında hata oluştu: ${error.message}`, {
+        position: "bottom-right"
+      });
     }
   };
 
@@ -181,10 +226,14 @@ export default function Services() {
     try {
       await islemServisi.sil(service.id);
       refetchServices();
-      toast.success("Hizmet başarıyla silindi");
+      toast.success("Hizmet başarıyla silindi", {
+        position: "bottom-right"
+      });
     } catch (error: any) {
       console.error("Hizmet silinirken hata:", error);
-      toast.error(`Hizmet silinirken hata oluştu: ${error.message}`);
+      toast.error(`Hizmet silinirken hata oluştu: ${error.message}`, {
+        position: "bottom-right"
+      });
     }
   };
 
@@ -269,8 +318,34 @@ export default function Services() {
                 setDuzenleKategoriAdi(category.kategori_adi);
                 setKategoriDuzenleDialogAcik(true);
               }}
-              onSiralamaChange={handleServiceOrderChange}
-              onCategoryOrderChange={handleCategoryOrderChange}
+              onSiralamaChange={(items) => {
+                // İşlemler için sıralama değişikliği
+                try {
+                  const updatedItems = items.map((item, index) => ({
+                    id: item.id,
+                    sira: index
+                  }));
+                  
+                  islemServisi.sirayiGuncelle(updatedItems);
+                  refetchServices();
+                } catch (error) {
+                  console.error("İşlem sıralaması güncellenirken hata:", error);
+                }
+              }}
+              onCategoryOrderChange={(items) => {
+                // Kategoriler için sıralama değişikliği
+                try {
+                  const updatedItems = items.map((item, index) => ({
+                    id: item.id,
+                    sira: index
+                  }));
+                  
+                  kategorilerServisi.sirayiGuncelle(updatedItems);
+                  refetchCategories();
+                } catch (error) {
+                  console.error("Kategori sıralaması güncellenirken hata:", error);
+                }
+              }}
               onRandevuAl={() => {}}
               formuSifirla={formuSifirla}
               dukkanId={dukkanId}

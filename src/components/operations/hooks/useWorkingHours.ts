@@ -8,7 +8,8 @@ export function useWorkingHours(dukkanId?: number | null) {
     data: hours = [], 
     isLoading, 
     isError, 
-    refetch 
+    refetch,
+    error
   } = useQuery({
     queryKey: ['workingHours', dukkanId],
     queryFn: async () => {
@@ -32,7 +33,9 @@ export function useWorkingHours(dukkanId?: number | null) {
         // If no hours found, create defaults
         if (!data || data.length === 0) {
           console.log("useWorkingHours: Creating default working hours");
-          return createDefaultWorkingHours(shopId);
+          const defaultHours = createDefaultWorkingHours(shopId);
+          await calismaSaatleriServisi.saatleriKaydet(defaultHours);
+          return defaultHours;
         }
         
         return data;
@@ -41,10 +44,10 @@ export function useWorkingHours(dukkanId?: number | null) {
         throw error;
       }
     },
-    staleTime: 30000, // 30 seconds
-    retry: 2,
+    staleTime: 5000, // 5 seconds
+    retry: 3,
     retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30000)
   });
   
-  return { hours, isLoading, isError, refetch };
+  return { hours, isLoading, isError, refetch, error };
 }

@@ -66,44 +66,43 @@ export function WorkingHours({ dukkanId }: WorkingHoursProps) {
       setSaving(true);
       console.log("Saving hours:", hours);
       
-      if (!dukkanId) {
-        const shopId = await calismaSaatleriServisi.getCurrentDukkanId();
+      let shopId = dukkanId;
+      
+      if (!shopId) {
+        shopId = await calismaSaatleriServisi.getCurrentDukkanId();
         console.log("Retrieved dukkanId:", shopId);
         
         if (!shopId) {
-          toast.error("İşletme bilgisi bulunamadı");
+          toast.error("İşletme bilgisi bulunamadı", {
+            position: "bottom-right"
+          });
           setSaving(false);
           return;
         }
-        
-        // Update each hour with shop ID
-        for (const hour of hours) {
-          hour.dukkan_id = shopId;
-        }
       }
+      
+      // Update each hour with shop ID
+      const updatedHours = hours.map(hour => ({
+        ...hour,
+        dukkan_id: shopId
+      }));
       
       // Update or create hours
-      for (const hour of hours) {
-        if (hour.id) {
-          await calismaSaatleriServisi.guncelle(hour.id, hour);
-        } else {
-          const shopId = dukkanId || await calismaSaatleriServisi.getCurrentDukkanId();
-          await calismaSaatleriServisi.ekle({
-            ...hour,
-            dukkan_id: shopId
-          });
-        }
-      }
+      await calismaSaatleriServisi.saatleriKaydet(updatedHours);
       
-      toast.success("Çalışma saatleri başarıyla kaydedildi");
+      toast.success("Çalışma saatleri başarıyla kaydedildi", {
+        position: "bottom-right"
+      });
       setEditingMode(false);
-      refetch();
+      await refetch();
       
       // Update original hours to current state to reset change detection
       setOriginalHours([...hours]);
     } catch (error) {
       console.error("Failed to save working hours:", error);
-      toast.error("Çalışma saatlerini kaydetme hatası");
+      toast.error("Çalışma saatlerini kaydetme hatası", {
+        position: "bottom-right"
+      });
     } finally {
       setSaving(false);
     }
@@ -140,7 +139,7 @@ export function WorkingHours({ dukkanId }: WorkingHoursProps) {
           {editingMode ? (
             <>
               <Button 
-                variant="destructive" 
+                variant="outline" 
                 size="sm"
                 onClick={() => {
                   setEditingMode(false);

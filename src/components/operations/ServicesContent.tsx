@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogC
 import { Info, Plus } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WorkingHours } from "./WorkingHours";
+import { toast } from "sonner";
 
 interface ServicesContentProps {
   isStaff: boolean;
@@ -112,9 +113,9 @@ export function ServicesContent({
   const handleCategoryToggle = (value: string) => {
     setOpenCategories(prev => {
       if (prev.includes(value)) {
-        return [];
+        return prev.filter(item => item !== value);
       }
-      return [value];
+      return [...prev, value];
     });
   };
 
@@ -135,25 +136,25 @@ export function ServicesContent({
   const renderServicesContent = () => {
     return (
       <div className="space-y-6">
-        {isStaff && (
-          <div className="flex justify-between items-center mb-2">
-            <div className="flex items-center space-x-2 my-0 px-0 mx-0">
-              <Switch id="puanlama-modu" checked={puanlamaAktif} onCheckedChange={setPuanlamaAktif} />
-              <Label htmlFor="puanlama-modu" className="text-sm">Puanlama Sistemi</Label>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 p-0" onClick={() => setInfoDialogOpen(true)}>
-                      <Info className="h-4 w-4" />
-                      <span className="sr-only">Puanlama Sistemi Bilgisi</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="w-64">Puanlama sistemi hakkında daha fazla bilgi almak için tıklayın.</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
+        <div className="flex justify-between items-center mb-2">
+          <div className="flex items-center space-x-2">
+            <Switch id="puanlama-modu" checked={puanlamaAktif} onCheckedChange={setPuanlamaAktif} />
+            <Label htmlFor="puanlama-modu" className="text-sm">Puanlama Sistemi</Label>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 p-0" onClick={() => setInfoDialogOpen(true)}>
+                    <Info className="h-4 w-4" />
+                    <span className="sr-only">Puanlama Sistemi Bilgisi</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="w-64">Puanlama sistemi hakkında daha fazla bilgi almak için tıklayın.</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+          {isStaff && (
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => {
                 formuSifirla();
@@ -167,12 +168,12 @@ export function ServicesContent({
                 Kategori Ekle
               </Button>
             </div>
-          </div>
-        )}
+          )}
+        </div>
         
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={kategoriler.map(k => k.id)} strategy={verticalListSortingStrategy}>
-            <Accordion type="single" collapsible className="w-full space-y-4" value={openCategories.length > 0 ? openCategories[0] : undefined} onValueChange={handleCategoryToggle}>
+            <Accordion type="multiple" className="w-full space-y-4" value={openCategories} onValueChange={handleCategoryToggle}>
               {kategoriler.map(kategori => (
                 <SortableCategory 
                   key={kategori.id} 
@@ -214,7 +215,6 @@ export function ServicesContent({
           </TabsContent>
         </Tabs>
       ) : (
-        // If hideTabBar is true, just render the content directly
         renderServicesContent()
       )}
       
@@ -254,7 +254,6 @@ export function ServicesContent({
         puanlamaAktif={puanlamaAktif} 
       />
       
-      {/* Information Dialog */}
       <Dialog open={infoDialogOpen} onOpenChange={setInfoDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
