@@ -64,12 +64,13 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
             .eq('auth_id', session.user.id)
             .maybeSingle();
           
-          if (!personelData?.dukkan_id) {
+          // Add null check to prevent TS errors
+          if (personelData && !personelData.dukkan_id) {
             if (location.pathname !== '/unassigned-staff') {
               navigate('/unassigned-staff');
               return;
             }
-          } else if (location.pathname === '/unassigned-staff') {
+          } else if (personelData && personelData.dukkan_id && location.pathname === '/unassigned-staff') {
             navigate('/shop-home');
             return;
           }

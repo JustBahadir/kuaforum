@@ -2,119 +2,132 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/lib/supabase/client";
-import AccountNotFound from "@/components/auth/AccountNotFound";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function AuthGoogleCallback() {
   const [loading, setLoading] = useState(true);
-  const [accountNotFound, setAccountNotFound] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
   useEffect(() => {
-    const handleOAuthCallback = async () => {
-      setLoading(true);
-
+    const handleCallback = async () => {
       try {
-        // Get the current session
-        const { data, error: sessionError } = await supabase.auth.getSession();
-        const session = data?.session ?? null;
-        const user = session?.user ?? null;
+        setLoading(true);
 
+        // Get the current session
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        
         if (sessionError) {
           console.error("Session error:", sessionError);
-          setAccountNotFound(true);
+          setError("Oturum bilgilerinize erişilemedi. Lütfen tekrar giriş yapın.");
+          setLoading(false);
+          return;
+        }
+        
+        const session = sessionData?.session;
+        const user = session?.user;
+
+        // Check if we have a user
+        if (!user) {
+          console.log("No user found in session");
+          setError("Kullanıcı bilgilerinize erişilemedi. Lütfen tekrar giriş yapın.");
           setLoading(false);
           return;
         }
 
         // Get the auth mode (login/register)
         const mode = searchParams.get("mode");
+        console.log("Auth callback mode:", mode, "User:", user.email);
 
-        console.log("Auth callback mode:", mode);
-        console.log("User exists:", !!user);
+        // Check if the profile exists
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("id, role, first_name, last_name")
+          .eq("id", user.id)
+          .maybeSingle();
 
-        // For login mode - if no user or session, show account not found
-        if (!user && mode === "login") {
-          console.log("No user found in the session, showing account not found");
-          setAccountNotFound(true);
+        // If error fetching profile (not "not found" error)
+        if (profileError && profileError.code !== "PGRST116") {
+          console.error("Profile error:", profileError);
+          setError("Profil bilgilerinize erişilemedi. Lütfen tekrar deneyin.");
           setLoading(false);
           return;
         }
-        
-        if (mode === "register") {
-          // For registration, directly go to profile setup
+
+        // First time login or registration - redirect to profile setup
+        if (!profile) {
+          console.log("No profile found, redirecting to profile setup");
           navigate("/profile-setup");
           return;
         }
 
-        // Check if user profile exists
-        if (user) {
-          const { data: profileData, error: profileError } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", user.id)
-            .maybeSingle();
-            
-          if (!profileData || profileError) {
-            console.log("No profile found for user:", user.id);
-            setAccountNotFound(true);
-            setLoading(false);
-            return;
-          }
-          
-          // User exists and logged in successfully
-          const role = profileData.role;
-          
-          if (role === "admin") {
-            navigate("/shop-home");
-          } else if (role === "staff") {
-            // Check if staff has a dukkan_id
-            const { data: staffData } = await supabase
-              .from('personel')
-              .select('dukkan_id')
-              .eq('auth_id', user.id)
-              .maybeSingle();
+        // Profile exists but first_name and last_name are empty - redirect to profile setup
+        if ((!profile.first_name || !profile.last_name) && profile.first_name !== "0" && profile.last_name !== "0") {
+          console.log("Profile exists but incomplete, redirecting to profile setup");
+          navigate("/profile-setup");
+          return;
+        }
 
-            if (!staffData?.dukkan_id) {
-              console.log("Staff has no dukkan_id, redirecting to unassigned-staff");
-              navigate("/unassigned-staff");
-            } else {
-              navigate("/staff-profile");
-            }
+        // Profile complete, redirect based on role
+        if (profile.role === "admin") {
+          navigate("/isletme-anasayfa");
+        } else if (profile.role === "staff") {
+          // Check if staff is assigned to a business
+          const { data: personnelData } = await supabase
+            .from('personel')
+            .select('dukkan_id')
+            .eq('auth_id', user.id)
+            .maybeSingle();
+
+          if (!personnelData || !personnelData.dukkan_id) {
+            navigate("/atanmamis-personel");
           } else {
-            // Default redirection for other roles
-            navigate("/");
+            navigate("/isletme-anasayfa"); // Temporary destination for staff with assigned business
           }
         } else {
-          // No user found - show account not found screen
-          setAccountNotFound(true);
+          // Default for customer role
+          navigate("/");
         }
       } catch (error: any) {
         console.error("Auth callback error:", error);
-        setAccountNotFound(true); // Show the account not found screen on error instead of toast
-        setLoading(false);
+        setError("Bir hata oluştu: " + error.message);
       } finally {
         setLoading(false);
       }
     };
 
-    handleOAuthCallback();
+    handleCallback();
   }, [navigate, searchParams]);
 
-  if (accountNotFound) {
-    return <AccountNotFound />;
-  }
-
-  if (loading) {
+  if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center p-6 bg-white rounded-md shadow-md">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-purple-600 mx-auto mb-4"></div>
-          <p>Giriş bilgileri doğrulanıyor...</p>
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+          <Button 
+            onClick={() => navigate("/")} 
+            className="w-full"
+          >
+            Ana Sayfaya Dön
+          </Button>
         </div>
       </div>
     );
   }
 
-  return null;
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center p-8">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600 mx-auto mb-4"></div>
+        <p className="text-lg">Giriş yapılıyor...</p>
+        <p className="text-sm text-gray-500">Lütfen bekleyin, yönlendiriliyorsunuz.</p>
+      </div>
+    </div>
+  );
 }
