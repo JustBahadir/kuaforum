@@ -1,89 +1,100 @@
 
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { Toaster } from 'sonner';
-import { RouteProtection } from '@/components/auth/RouteProtection';
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/sonner";
 
-// Core pages
-import Landing from './pages/Landing';
-import Login from './pages/Login';
-import Auth from './pages/Auth';
-import AuthCallbackPage from './pages/AuthCallbackPage';
-import AuthGoogleCallback from './pages/AuthGoogleCallback';
-import ProfileSetup from './pages/ProfileSetup';
+// Sayfa içe aktarmaları
+import Landing from "@/pages/Landing";
+import Login from "@/pages/Login";
+import ProfilKurulum from "@/pages/ProfilKurulum";
+import AuthCallbackPage from "@/pages/AuthCallbackPage";
 
-// Create a placeholder component for disabled features
-const DisabledFeature = () => (
-  <div className="min-h-screen flex items-center justify-center">
-    <div className="text-center p-8">
-      <h1 className="text-2xl font-bold mb-4">Bu Özellik Geçici Olarak Devre Dışı</h1>
-      <p>Bu bölüm şu anda geliştirme aşamasındadır.</p>
-    </div>
-  </div>
-);
+// Geçici olarak devre dışı bırakılmış bileşenler
+import { 
+  IsletmeSahibiSayfasi, 
+  PersonelSayfasi, 
+  DevreDisiBilesenSayfa 
+} from "@/components/utils/DisabledComponents";
 
-// Temporary Placeholders for Profile Flows
-const IsletmeAnasayfa = () => (
-  <div className="min-h-screen flex items-center justify-center">
-    <div className="text-center p-8">
-      <h1 className="text-2xl font-bold mb-4">İşletme Anasayfası</h1>
-      <p>İşletme yönetim bileşenleri burada görüntülenecek</p>
-    </div>
-  </div>
-);
+// Rota koruması
+import { RouteProtection } from "@/components/auth/RouteProtection";
 
-const AtanmamisPersonel = () => (
-  <div className="min-h-screen flex items-center justify-center">
-    <div className="text-center p-8">
-      <h1 className="text-2xl font-bold mb-4">Atanmamış Personel Sayfası</h1>
-      <p>Henüz bir işletmeye atanmadınız</p>
-    </div>
-  </div>
-);
-
-function App() {
+export function App() {
   return (
-    <>
-      <Toaster position="top-right" />
+    <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
       <Router>
-        <RouteProtection>
-          <Routes>
-            {/* Public Routes - Focus on these for now */}
-            <Route path="/" element={<Landing />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/auth-callback" element={<AuthCallbackPage />} />
-            <Route path="/auth-google-callback" element={<AuthGoogleCallback />} />
-            <Route path="/profile-setup" element={<ProfileSetup />} />
-            
-            {/* Temporary Business Owner Routes */}
-            <Route path="/isletme-anasayfa" element={<IsletmeAnasayfa />} />
-            <Route path="/isletme/anasayfa" element={<IsletmeAnasayfa />} />
-            <Route path="/isletme/olustur" element={<IsletmeAnasayfa />} />
-            
-            {/* Temporary Staff Routes */}
-            <Route path="/atanmamis-personel" element={<AtanmamisPersonel />} />
-            <Route path="/personel/atanmamis" element={<AtanmamisPersonel />} />
-            <Route path="/personel/beklemede" element={<AtanmamisPersonel />} />
-            
-            {/* Disabled Features */}
-            <Route path="/shop-home" element={<DisabledFeature />} />
-            <Route path="/shop-settings" element={<DisabledFeature />} />
-            <Route path="/shop-statistics" element={<DisabledFeature />} />
-            <Route path="/admin/services" element={<DisabledFeature />} />
-            <Route path="/operations-history" element={<DisabledFeature />} />
-            <Route path="/admin/appointments" element={<DisabledFeature />} />
-            <Route path="/personnel" element={<DisabledFeature />} />
-            <Route path="/customer-dashboard" element={<DisabledFeature />} />
-            <Route path="/staff-profile" element={<DisabledFeature />} />
-            <Route path="/unassigned-staff" element={<DisabledFeature />} />
-            
-            {/* Fallback route */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </RouteProtection>
+        <Routes>
+          {/* Genel erişime açık sayfalar */}
+          <Route path="/" element={<Landing />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/auth" element={<Login />} />
+          <Route path="/auth-google-callback" element={<AuthCallbackPage />} />
+          <Route path="/profil-kurulum" element={<ProfilKurulum />} />
+
+          {/* İşletme sahibi korumalı sayfalar */}
+          <Route
+            path="/isletme/anasayfa"
+            element={
+              <RouteProtection allowedRoles={["isletme_sahibi"]}>
+                <IsletmeSahibiSayfasi />
+              </RouteProtection>
+            }
+          />
+          <Route
+            path="/isletme/olustur"
+            element={
+              <RouteProtection allowedRoles={["isletme_sahibi"]}>
+                <IsletmeSahibiSayfasi />
+              </RouteProtection>
+            }
+          />
+
+          {/* Personel korumalı sayfalar */}
+          <Route
+            path="/personel/atanmamis"
+            element={
+              <RouteProtection allowedRoles={["personel"]}>
+                <PersonelSayfasi durum="atanmamis" />
+              </RouteProtection>
+            }
+          />
+          <Route
+            path="/personel/beklemede"
+            element={
+              <RouteProtection allowedRoles={["personel"]}>
+                <PersonelSayfasi durum="beklemede" />
+              </RouteProtection>
+            }
+          />
+          <Route
+            path="/personel/onaylandi"
+            element={
+              <RouteProtection allowedRoles={["personel"]}>
+                <PersonelSayfasi durum="onaylandi" />
+              </RouteProtection>
+            }
+          />
+
+          {/* Diğer geçici olarak devre dışı sayfalar */}
+          <Route
+            path="/dashboard/*"
+            element={<DevreDisiBilesenSayfa />}
+          />
+          <Route
+            path="/personel/*"
+            element={<DevreDisiBilesenSayfa />}
+          />
+          <Route
+            path="/shop/*"
+            element={<DevreDisiBilesenSayfa />}
+          />
+
+          {/* Bilinmeyen rotaları ana sayfaya yönlendir */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+        <Toaster position="bottom-right" />
       </Router>
-    </>
+    </ThemeProvider>
   );
 }
 

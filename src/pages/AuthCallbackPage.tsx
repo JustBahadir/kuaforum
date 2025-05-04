@@ -1,128 +1,142 @@
 
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 
 export default function AuthCallbackPage() {
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [error, setError] = useState<string | null>(null);
-
+  const [hata, setHata] = useState<string | null>(null);
+  const [yukleniyor, setYukleniyor] = useState(true);
+  
+  // Google'dan dönen auth bilgisini işle
   useEffect(() => {
-    const handleCallback = async () => {
+    const oturumKontrol = async () => {
       try {
-        const { data, error } = await supabase.auth.getUser();
+        setYukleniyor(true);
         
-        if (error) {
-          console.error("Auth callback error:", error);
-          setError(error.message);
+        // Mevcut oturumu kontrol et
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session) {
+          setHata("Kullanıcı bilgilerinize erişilemedi. Lütfen tekrar giriş yapın.");
           return;
         }
-
-        if (data?.user) {
-          // Check if user exists in our database
-          const { data: existingUser, error: userCheckError } = await supabase
-            .from('kullanicilar')
-            .select('kimlik')
-            .eq('kimlik', data.user.id)
-            .single();
+        
+        const kullaniciId = session.user.id;
+        
+        // Kullanıcının mevcut profilini kontrol et
+        const { data: kullanici, error: kullaniciHatasi } = await supabase
+          .from("kullanicilar")
+          .select("*")
+          .eq("kimlik", kullaniciId)
+          .maybeSingle();
+        
+        if (kullaniciHatasi) {
+          console.error("Kullanıcı verileri alınamadı:", kullaniciHatasi);
+        }
+        
+        if (!kullanici) {
+          // Kullanıcı daha önce kaydedilmemiş, yeni profil oluştur
+          const { error: profilHatasi } = await supabase
+            .from("kullanicilar")
+            .insert([
+              { 
+                kimlik: kullaniciId,
+                ad: session.user.user_metadata?.full_name?.split(' ')[0] || '',
+                soyad: session.user.user_metadata?.full_name?.split(' ').slice(1).join(' ') || '',
+                eposta: session.user.email,
+                profil_tamamlandi: false
+              }
+            ]);
           
-          if (userCheckError && userCheckError.code !== 'PGRST116') {
-            console.error("User check error:", userCheckError);
-            setError("Kullanıcı bilgileri kontrol edilirken bir hata oluştu.");
+          if (profilHatasi) {
+            console.error("Profil oluşturma hatası:", profilHatasi);
+            setHata("Profiliniz oluşturulurken bir sorun oluştu. Lütfen tekrar deneyin.");
             return;
           }
           
-          // If user doesn't exist, create a new user record
-          if (!existingUser) {
-            const { error: insertError } = await supabase
-              .from('kullanicilar')
-              .insert({
-                kimlik: data.user.id,
-                ad: data.user.user_metadata?.name?.split(' ')[0] || '',
-                soyad: data.user.user_metadata?.name?.split(' ').slice(1).join(' ') || '',
-                eposta: data.user.email || '',
-                profil_tamamlandi: false,
-                rol: 'personel' // Default role, will be updated in profile setup
-              });
-              
-            if (insertError) {
-              console.error("User creation error:", insertError);
-              setError("Kullanıcı kaydı oluşturulurken bir hata oluştu.");
-              return;
-            }
+          // Profil oluşturuldu, profil kurulum sayfasına yönlendir
+          navigate("/profil-kurulum", { replace: true });
+          return;
+        }
+        
+        if (!kullanici.profil_tamamlandi) {
+          // Profil mevcut ama tamamlanmamış, profil kurulum sayfasına yönlendir
+          navigate("/profil-kurulum", { replace: true });
+          return;
+        }
+        
+        // Profil tamamlanmışsa kullanıcı rolüne göre yönlendir
+        if (kullanici.rol === "isletme_sahibi") {
+          navigate("/isletme/anasayfa", { replace: true });
+        } else if (kullanici.rol === "personel") {
+          // Personelin atama durumunu kontrol et
+          const { data: personel, error: personelHatasi } = await supabase
+            .from("personeller")
+            .select("*")
+            .eq("kullanici_kimlik", kullaniciId)
+            .maybeSingle();
+          
+          if (personelHatasi || !personel) {
+            navigate("/personel/atanmamis", { replace: true });
+            return;
           }
           
-          // Fetch user profile to check if it's completed
-          const { data: kullanici } = await supabase
-            .from('kullanicilar')
-            .select('rol, profil_tamamlandi')
-            .eq('kimlik', data.user.id)
-            .single();
-
-          if (kullanici?.profil_tamamlandi) {
-            // User profile is complete, redirect based on role
-            if (kullanici.rol === 'isletme_sahibi') {
-              navigate('/isletme/anasayfa', { replace: true });
-            } else if (kullanici.rol === 'personel') {
-              // Check if personnel is assigned to a business
-              const { data: personel } = await supabase
-                .from('personeller')
-                .select('isletme_kimlik, durum')
-                .eq('kullanici_kimlik', data.user.id)
-                .single();
-              
-              if (personel?.isletme_kimlik && personel.durum === "onaylandi") {
-                navigate('/personel/anasayfa', { replace: true });
-              } else if (personel?.durum === "beklemede") {
-                navigate('/personel/beklemede', { replace: true });
-              } else {
-                navigate('/personel/atanmamis', { replace: true });
-              }
-            } else {
-              navigate('/', { replace: true });
-            }
+          if (personel.durum === "atanmadi") {
+            navigate("/personel/atanmamis", { replace: true });
+          } else if (personel.durum === "beklemede") {
+            navigate("/personel/beklemede", { replace: true });
+          } else if (personel.durum === "onaylandi") {
+            navigate("/personel/onaylandi", { replace: true });
           } else {
-            // User profile is not complete, redirect to profile setup page
-            navigate('/profil-olustur', { replace: true });
+            navigate("/personel/atanmamis", { replace: true });
           }
         } else {
-          navigate('/', { replace: true });
+          // Default olarak ana sayfaya yönlendir
+          navigate("/", { replace: true });
         }
-      } catch (err) {
-        console.error("Auth callback error:", err);
-        setError("Kimlik doğrulama sırasında bir hata oluştu.");
+      } catch (error) {
+        console.error("Auth callback hatası:", error);
+        setHata("Bir hata oluştu. Lütfen tekrar giriş yapmayı deneyin.");
+      } finally {
+        setYukleniyor(false);
       }
     };
-
-    handleCallback();
-  }, [navigate]);
-
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-semibold mb-2">Hata</h2>
-          <p className="text-red-500">{error}</p>
-          <button 
-            onClick={() => navigate('/')} 
-            className="mt-4 px-4 py-2 bg-primary text-white rounded"
-          >
-            Ana Sayfaya Dön
-          </button>
-        </div>
-      </div>
-    );
-  }
+    
+    oturumKontrol();
+  }, [navigate, searchParams]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="text-center">
-        <h2 className="text-2xl font-semibold mb-2">Giriş Yapılıyor</h2>
-        <p className="text-muted-foreground">Lütfen bekleyin, yönlendiriliyorsunuz...</p>
-        <div className="mt-4 flex justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary" />
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
+      {yukleniyor ? (
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-solid border-primary border-r-transparent mb-4"></div>
+          <p className="text-lg">Giriş bilgileriniz işleniyor...</p>
         </div>
-      </div>
+      ) : hata ? (
+        <div className="max-w-md w-full">
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{hata}</AlertDescription>
+          </Alert>
+          
+          <Button 
+            className="w-full" 
+            onClick={() => navigate("/login")}
+          >
+            Giriş Sayfasına Dön
+          </Button>
+        </div>
+      ) : (
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-solid border-primary border-r-transparent mb-4"></div>
+          <p className="text-lg">Yönlendiriliyor...</p>
+        </div>
+      )}
     </div>
   );
 }

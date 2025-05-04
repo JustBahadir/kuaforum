@@ -1,117 +1,127 @@
 
-import React, { ReactNode, useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { supabase } from '@/lib/supabase/client';
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/lib/supabase/client";
+import { DevreDisiBilesenSayfa } from "../utils/DisabledComponents";
 
+// Rol türü tanımı
+type KullaniciRol = "isletme_sahibi" | "personel" | null;
+
+// Route koruması için prop tipi
 interface RouteProtectionProps {
-  children: ReactNode;
+  children: React.ReactNode;
+  allowedRoles?: KullaniciRol[];
+  redirectPath?: string;
 }
 
-export const RouteProtection = ({ children }: RouteProtectionProps) => {
-  const location = useLocation();
+export const RouteProtection = ({
+  children,
+  allowedRoles = [],
+  redirectPath = "/login"
+}: RouteProtectionProps) => {
   const navigate = useNavigate();
-  const [checking, setChecking] = useState(true);
-
-  // Public pages that don't require authentication
-  const publicPages = [
-    "/", 
-    "/login", 
-    "/staff-login", 
-    "/services", 
-    "/appointments", 
-    "/auth", 
-    "/auth-google-callback", 
-    "/profile-setup"
-  ];
+  const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<KullaniciRol>(null);
+  const [profilOK, setProfilOK] = useState(false);
 
   useEffect(() => {
-    let isMounted = true;
-    let timeout: NodeJS.Timeout;
-    
-    const checkSession = async () => {
+    const checkAuth = async () => {
       try {
-        // Check if current page is public
-        const isPublicPage = publicPages.some(page => 
-          location.pathname === page || location.pathname.startsWith(`${page}/`)
-        );
-        
-        if (isPublicPage) {
-          if (isMounted) setChecking(false);
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (!session) {
+          navigate(redirectPath, { replace: true });
           return;
         }
 
-        // Get current session
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        // Redirect to login if no session
-        if (!session) {
-          if (isMounted) {
-            navigate('/login');
-          }
+        setUserId(session.user.id);
+
+        // Kullanıcı profilini kontrol et
+        const { data: kullaniciData, error: kullaniciError } = await supabase
+          .from("kullanicilar")
+          .select("rol, profil_tamamlandi")
+          .eq("kimlik", session.user.id)
+          .single();
+
+        if (kullaniciError || !kullaniciData) {
+          // Profil oluşturulmamış, profil kurulum sayfasına yönlendir
+          navigate("/profil-kurulum", { replace: true });
           return;
         }
-        
-        // Get user role from metadata
-        const userRole = session.user.user_metadata?.role;
-        
-        // Admin route check
-        if (userRole === 'admin') {
-          if (location.pathname === '/login' || location.pathname === '/staff-login') {
-            navigate('/shop-home');
-            return;
-          }
+
+        setUserRole(kullaniciData.rol as KullaniciRol);
+        setProfilOK(kullaniciData.profil_tamamlandi || false);
+
+        // Profil tamamlanmamışsa profil kurulum sayfasına yönlendir
+        if (!kullaniciData.profil_tamamlandi) {
+          navigate("/profil-kurulum", { replace: true });
+          return;
         }
-        
-        // Staff route check
-        if (userRole === 'staff') {
-          // Safely check personel data with null checks
-          const { data: personelData } = await supabase
-            .from('personel')
-            .select('dukkan_id')
-            .eq('auth_id', session.user.id)
-            .maybeSingle();
-          
-          // Add null check to prevent TypeScript errors
+
+        // Personel bilgilerini kontrol et
+        if (kullaniciData.rol === "personel") {
+          const { data: personelData, error: personelError } = await supabase
+            .from("personeller")
+            .select("*")
+            .eq("kullanici_kimlik", session.user.id)
+            .single();
+
+          if (personelError) {
+            console.error("Personel verileri alınamadı:", personelError);
+            // Bu bir hata durumu, yine de devam et
+          }
+
+          // personelData null kontrolü eklendi
           if (personelData) {
-            // If personel not assigned to a dukkan, redirect to unassigned staff page
-            if (!personelData.dukkan_id && location.pathname !== '/unassigned-staff') {
-              navigate('/unassigned-staff');
+            if (!personelData.dukkan_id) {
+              navigate("/personel/atanmamis", { replace: true });
               return;
-            } else if (personelData.dukkan_id && location.pathname === '/unassigned-staff') {
-              // If personel assigned to a dukkan, redirect away from unassigned staff page
-              navigate('/shop-home');
+            }
+
+            // Personelin başvuruları kontrol edilebilir
+            const { data: basvuruData } = await supabase
+              .from("personel_basvurulari")
+              .select("*")
+              .eq("kullanici_kimlik", session.user.id)
+              .eq("durum", "beklemede");
+
+            if (basvuruData && basvuruData.length > 0) {
+              navigate("/personel/beklemede", { replace: true });
               return;
             }
           }
         }
-        
-        if (isMounted) setChecking(false);
+
+        // Kullanıcının rolü sayfaya erişim için uygun mu kontrol et
+        if (allowedRoles.length > 0 && !allowedRoles.includes(kullaniciData.rol as KullaniciRol)) {
+          // Rol yetkisiz, ana sayfaya yönlendir
+          navigate("/", { replace: true });
+          return;
+        }
+
+        setLoading(false);
       } catch (error) {
-        console.error("RouteProtection: Unexpected error", error);
-        if (isMounted) setChecking(false);
+        console.error("Kimlik doğrulama hatası:", error);
+        navigate(redirectPath, { replace: true });
       }
     };
-    
-    checkSession();
-    
-    // Fallback timeout in case something goes wrong
-    timeout = setTimeout(() => {
-      if (isMounted) setChecking(false);
-    }, 2000);
-    
-    return () => {
-      isMounted = false;
-      clearTimeout(timeout);
-    };
-  }, [location.pathname, navigate]);
 
-  if (checking && !publicPages.includes(location.pathname)) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
-      </div>
-    );
+    checkAuth();
+  }, [navigate, redirectPath, allowedRoles]);
+
+  if (loading) {
+    return <div>Yükleniyor...</div>;
   }
 
-  return <>{children}</>;
+  // Şimdilik sadece profil tamamlanmışsa ve rol uygunsa erişime izin ver
+  // Bu yapı yeni tip eklemeleri için uygun olacak
+  if (userRole && profilOK) {
+    if (allowedRoles.length === 0 || allowedRoles.includes(userRole)) {
+      return <>{children}</>;
+    }
+  }
+
+  // Geliştirme aşamasında geçici olarak içeriği göster
+  return <DevreDisiBilesenSayfa />;
 };

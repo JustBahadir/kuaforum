@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase/client";
@@ -10,7 +11,7 @@ interface GoogleAuthButtonProps {
 }
 
 export function GoogleAuthButton({ 
-  redirectTo = window.location.origin + "/profile-setup",
+  redirectTo = window.location.origin + "/profil-kurulum",
   className = "",
   text = "Google ile Devam Et"
 }: GoogleAuthButtonProps) {
