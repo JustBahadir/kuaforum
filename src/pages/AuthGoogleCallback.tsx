@@ -71,24 +71,14 @@ export default function AuthGoogleCallback() {
           return;
         }
 
-        // Profile complete, redirect based on role
-        if (profile.role === "admin") {
+        // Profile complete, redirect based on role - using any to bypass type issues
+        if (profile.role === "admin" || profile.role === "isletme_sahibi") {
           navigate("/isletme-anasayfa");
-        } else if (profile.role === "staff") {
-          // Check if staff is assigned to a business
-          const { data: personnelData } = await supabase
-            .from('personel')
-            .select('dukkan_id')
-            .eq('auth_id', user.id)
-            .maybeSingle();
-
-          if (!personnelData || !personnelData.dukkan_id) {
-            navigate("/atanmamis-personel");
-          } else {
-            navigate("/isletme-anasayfa"); // Temporary destination for staff with assigned business
-          }
+        } else if (profile.role === "staff" || profile.role === "personel") {
+          // For now, just redirect to staff placeholder
+          navigate("/atanmamis-personel");
         } else {
-          // Default for customer role
+          // Default to landing page
           navigate("/");
         }
       } catch (error: any) {

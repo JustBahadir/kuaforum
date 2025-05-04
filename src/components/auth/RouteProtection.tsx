@@ -12,6 +12,7 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
   const navigate = useNavigate();
   const [checking, setChecking] = useState(true);
 
+  // Public pages that don't require authentication
   const publicPages = [
     "/", 
     "/login", 
@@ -29,6 +30,7 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
     
     const checkSession = async () => {
       try {
+        // Check if current page is public
         const isPublicPage = publicPages.some(page => 
           location.pathname === page || location.pathname.startsWith(`${page}/`)
         );
@@ -38,8 +40,10 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
           return;
         }
 
+        // Get current session
         const { data: { session } } = await supabase.auth.getSession();
         
+        // Redirect to login if no session
         if (!session) {
           if (isMounted) {
             navigate('/login');
@@ -47,32 +51,37 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
           return;
         }
         
+        // Get user role from metadata
         const userRole = session.user.user_metadata?.role;
         
-        // Admin route check - allow shop-home if user is admin
+        // Admin route check
         if (userRole === 'admin') {
           if (location.pathname === '/login' || location.pathname === '/staff-login') {
             navigate('/shop-home');
             return;
           }
         }
-            
+        
+        // Staff route check
         if (userRole === 'staff') {
+          // Safely check personel data with null checks
           const { data: personelData } = await supabase
             .from('personel')
             .select('dukkan_id')
             .eq('auth_id', session.user.id)
             .maybeSingle();
           
-          // Add null check to prevent TS errors
-          if (personelData && !personelData.dukkan_id) {
-            if (location.pathname !== '/unassigned-staff') {
+          // Add null check to prevent TypeScript errors
+          if (personelData) {
+            // If personel not assigned to a dukkan, redirect to unassigned staff page
+            if (!personelData.dukkan_id && location.pathname !== '/unassigned-staff') {
               navigate('/unassigned-staff');
               return;
+            } else if (personelData.dukkan_id && location.pathname === '/unassigned-staff') {
+              // If personel assigned to a dukkan, redirect away from unassigned staff page
+              navigate('/shop-home');
+              return;
             }
-          } else if (personelData && personelData.dukkan_id && location.pathname === '/unassigned-staff') {
-            navigate('/shop-home');
-            return;
           }
         }
         
@@ -85,6 +94,7 @@ export const RouteProtection = ({ children }: RouteProtectionProps) => {
     
     checkSession();
     
+    // Fallback timeout in case something goes wrong
     timeout = setTimeout(() => {
       if (isMounted) setChecking(false);
     }, 2000);

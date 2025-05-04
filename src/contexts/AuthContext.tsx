@@ -3,7 +3,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { Session, User } from "@supabase/supabase-js";
 import { toast } from "sonner";
-import { KullaniciRol } from "@/lib/supabase/types";
+import { KullaniciRol } from "@/lib/supabase/temporaryTypes";
 
 interface AuthContextType {
   session: Session | null;
@@ -73,7 +73,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      setUserRole(kullanici?.rol || null);
+      // Add null check to prevent TypeScript errors
+      if (kullanici) {
+        setUserRole(kullanici.rol || null);
+      }
     } catch (error) {
       console.error("Role loading error:", error);
     }

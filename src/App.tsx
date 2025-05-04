@@ -12,16 +12,31 @@ import AuthCallbackPage from './pages/AuthCallbackPage';
 import AuthGoogleCallback from './pages/AuthGoogleCallback';
 import ProfileSetup from './pages/ProfileSetup';
 
-// Temporary pages for testing auth flow
-import IsletmeAnasayfa from './pages/IsletmeAnasayfa';
-import AtanmamisPersonel from './pages/AtanmamisPersonel';
-
 // Create a placeholder component for disabled features
 const DisabledFeature = () => (
   <div className="min-h-screen flex items-center justify-center">
     <div className="text-center p-8">
       <h1 className="text-2xl font-bold mb-4">Bu Özellik Geçici Olarak Devre Dışı</h1>
       <p>Bu bölüm şu anda geliştirme aşamasındadır.</p>
+    </div>
+  </div>
+);
+
+// Temporary Placeholders for Profile Flows
+const IsletmeAnasayfa = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <div className="text-center p-8">
+      <h1 className="text-2xl font-bold mb-4">İşletme Anasayfası</h1>
+      <p>İşletme yönetim bileşenleri burada görüntülenecek</p>
+    </div>
+  </div>
+);
+
+const AtanmamisPersonel = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <div className="text-center p-8">
+      <h1 className="text-2xl font-bold mb-4">Atanmamış Personel Sayfası</h1>
+      <p>Henüz bir işletmeye atanmadınız</p>
     </div>
   </div>
 );
@@ -33,7 +48,7 @@ function App() {
       <Router>
         <RouteProtection>
           <Routes>
-            {/* Public Routes */}
+            {/* Public Routes - Focus on these for now */}
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/auth" element={<Auth />} />
@@ -41,13 +56,17 @@ function App() {
             <Route path="/auth-google-callback" element={<AuthGoogleCallback />} />
             <Route path="/profile-setup" element={<ProfileSetup />} />
             
-            {/* Business Owner Routes */}
+            {/* Temporary Business Owner Routes */}
             <Route path="/isletme-anasayfa" element={<IsletmeAnasayfa />} />
+            <Route path="/isletme/anasayfa" element={<IsletmeAnasayfa />} />
+            <Route path="/isletme/olustur" element={<IsletmeAnasayfa />} />
             
-            {/* Staff Routes */}
+            {/* Temporary Staff Routes */}
             <Route path="/atanmamis-personel" element={<AtanmamisPersonel />} />
+            <Route path="/personel/atanmamis" element={<AtanmamisPersonel />} />
+            <Route path="/personel/beklemede" element={<AtanmamisPersonel />} />
             
-            {/* Fallback for all disabled features */}
+            {/* Disabled Features */}
             <Route path="/shop-home" element={<DisabledFeature />} />
             <Route path="/shop-settings" element={<DisabledFeature />} />
             <Route path="/shop-statistics" element={<DisabledFeature />} />
