@@ -21,13 +21,13 @@ export const formatPhoneNumber = (digits: string): string => {
     formattedNumber = cleanDigits;
   } else if (cleanDigits.length <= 6) {
     // First 3 digits + space + next 3
-    formattedNumber = `${cleanDigits.slice(0, 3)} ${cleanDigits.slice(3)}`;
+    formattedNumber = `${cleanDigits.slice(0, 4)} ${cleanDigits.slice(4)}`;
   } else if (cleanDigits.length <= 8) {
     // First 3 digits + space + next 3 + space + next 2
-    formattedNumber = `${cleanDigits.slice(0, 3)} ${cleanDigits.slice(3, 6)} ${cleanDigits.slice(6)}`;
+    formattedNumber = `${cleanDigits.slice(0, 4)} ${cleanDigits.slice(4, 7)} ${cleanDigits.slice(7)}`;
   } else {
     // Full format: 05xx xxx xx xx
-    formattedNumber = `${cleanDigits.slice(0, 3)} ${cleanDigits.slice(3, 6)} ${cleanDigits.slice(6, 8)} ${cleanDigits.slice(8, 10)}`;
+    formattedNumber = `${cleanDigits.slice(0, 4)} ${cleanDigits.slice(4, 7)} ${cleanDigits.slice(7, 9)} ${cleanDigits.slice(9, 10)}`;
   }
   
   return formattedNumber;

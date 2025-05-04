@@ -83,20 +83,7 @@ export default function ProfileSetupPage() {
           if (kullanici.rol === "isletme_sahibi") {
             navigate("/isletme/anasayfa", { replace: true });
           } else if (kullanici.rol === "personel") {
-            // Check if personel is assigned to a business
-            const { data: personel } = await supabase
-              .from("personeller")
-              .select("isletme_kimlik, durum")
-              .eq("kullanici_kimlik", session.session.user.id)
-              .single();
-            
-            if (personel?.isletme_kimlik && personel.durum === "onaylandi") {
-              navigate("/personel/anasayfa", { replace: true });
-            } else if (personel?.durum === "beklemede") {
-              navigate("/personel/beklemede", { replace: true });
-            } else {
-              navigate("/personel/atanmamis", { replace: true });
-            }
+            navigate("/personel/atanmamis", { replace: true });
           }
         } else if (kullanici) {
           // Pre-fill form data if available
@@ -236,7 +223,7 @@ export default function ProfileSetupPage() {
           description: "İşletme bilgilerinizi tamamlamak için yönlendiriliyorsunuz."
         });
         
-        navigate("/isletme/olustur", { replace: true });
+        navigate("/isletme/anasayfa", { replace: true });
       } else if (formData.rol === "personel") {
         // Create personnel record
         const { error: personnelError } = await supabase
