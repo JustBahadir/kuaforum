@@ -2,10 +2,11 @@
 import { ReactNode, useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { KullaniciRol } from "@/lib/supabase/types";
 
 interface ProtectedRouteProps {
   children: ReactNode;
-  allowedRoles: string[];
+  allowedRoles: KullaniciRol[];
 }
 
 const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {

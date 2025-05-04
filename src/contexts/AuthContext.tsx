@@ -3,13 +3,12 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { Session, User } from "@supabase/supabase-js";
 import { toast } from "sonner";
-
-type KullaniciRol = "isletme_sahibi" | "personel" | null;
+import { KullaniciRol } from "@/lib/supabase/types";
 
 interface AuthContextType {
   session: Session | null;
   user: User | null;
-  userRole: KullaniciRol;
+  userRole: KullaniciRol | null;
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -20,23 +19,14 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [userRole, setUserRole] = useState<KullaniciRol>(null);
+  const [userRole, setUserRole] = useState<KullaniciRol | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadUserAndSession() {
       try {
-        // Mevcut oturum bilgisini al
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
-        setSession(currentSession);
-
-        if (currentSession?.user) {
-          setUser(currentSession.user);
-          await loadUserRole(currentSession.user.id);
-        }
-
-        // Oturum değişikliklerini dinle
-        const { data: { subscription } } = await supabase.auth.onAuthStateChange(
+        // Set up auth state listener FIRST
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
           async (event, newSession) => {
             console.log("Auth event:", event);
             setSession(newSession);
@@ -49,6 +39,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
           }
         );
+
+        // THEN check for existing session
+        const { data: sessionData } = await supabase.auth.getSession();
+        setSession(sessionData.session);
+        
+        if (sessionData.session?.user) {
+          setUser(sessionData.session.user);
+          await loadUserRole(sessionData.session.user.id);
+        }
 
         setLoading(false);
         return () => subscription.unsubscribe();

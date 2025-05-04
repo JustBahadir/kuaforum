@@ -8,8 +8,8 @@ import ProfileSetupPage from "./pages/ProfileSetupPage";
 import IsletmeAnasayfa from "./pages/isletme/IsletmeAnasayfa";
 import IsletmeOlustur from "./pages/isletme/IsletmeOlustur";
 import ProtectedRoute from "./components/ProtectedRoute";
+import LoginPage from "./pages/LoginPage";
 
-// Oturum durumunu kontrol eden bileşen
 function App() {
   return (
     <AuthProvider>
@@ -17,6 +17,7 @@ function App() {
         <Routes>
           {/* Public routes */}
           <Route path="/" element={<HomePage />} />
+          <Route path="/giris" element={<LoginPage />} />
           <Route path="/auth-callback" element={<AuthCallbackPage />} />
           <Route path="/profil-olustur" element={<ProfileSetupPage />} />
 

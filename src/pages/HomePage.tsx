@@ -2,23 +2,18 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
-import { Scissors, Search, User } from "lucide-react";
+import { Scissors, LogIn } from "lucide-react";
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const { signInWithGoogle, user, userRole, loading } = useAuth();
+  const { user, loading } = useAuth();
 
   React.useEffect(() => {
     if (!loading && user) {
-      if (userRole === "isletme_sahibi") {
-        navigate("/isletme/anasayfa", { replace: true });
-      } else if (userRole === "personel") {
-        navigate("/personel/anasayfa", { replace: true });
-      }
+      navigate("/profil-olustur", { replace: true });
     }
-  }, [user, userRole, loading, navigate]);
+  }, [user, loading, navigate]);
 
   if (loading) {
     return (
@@ -29,12 +24,12 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
       <div className="container mx-auto px-4 py-8">
         <div className="grid md:grid-cols-2 gap-8 items-center min-h-[calc(100vh-4rem)]">
           <div className="space-y-8">
-            <h1 className="text-4xl font-bold text-center">
-              Güzellik Merkeziniz İçin Tek Adres
+            <h1 className="text-4xl font-bold text-center md:text-left">
+              Güzellik Hizmetleriniz için Tek Adres
             </h1>
             <p className="text-lg text-muted-foreground">
               Online randevu sistemi ile güzellik hizmetlerinizi kolayca yönetin
@@ -59,31 +54,23 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="space-y-8">
-            <div className="space-y-4">
-              <div className="flex gap-4">
-                <Button className="flex-1 h-12" onClick={() => signInWithGoogle()}>
-                  <User className="mr-2" />
-                  Google ile Giriş Yap
+          <div className="flex flex-col items-center justify-center space-y-6">
+            <div className="w-full max-w-md aspect-square bg-white rounded-lg shadow-xl overflow-hidden relative">
+              <img 
+                src="/lovable-uploads/cf8eae5c-65fd-4218-ac7d-a65fbc142889.png" 
+                alt="Salon görüntüsü"
+                className="w-full h-full object-cover opacity-75"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent flex flex-col items-center justify-end p-8">
+                <h3 className="text-white text-2xl font-bold mb-4">Kuaför Yönetim Sistemi</h3>
+                <Button 
+                  size="lg"
+                  onClick={() => navigate("/giris")}
+                  className="bg-primary hover:bg-primary/90 text-white px-8 py-6 text-lg"
+                >
+                  <LogIn className="mr-2 h-5 w-5" />
+                  Kuaför Girişi
                 </Button>
-              </div>
-
-              <div className="p-6 bg-card rounded-lg shadow-lg">
-                <h3 className="text-lg font-semibold mb-4">Hizmet Ara</h3>
-                <div className="space-y-4">
-                  <div className="flex gap-2">
-                    <div className="flex-1">
-                      <Input placeholder="Hizmet veya salon adı" />
-                    </div>
-                    <div className="flex-1">
-                      <Input placeholder="Şehir seçin" />
-                    </div>
-                  </div>
-                  <Button className="w-full">
-                    <Search className="mr-2" />
-                    Ara
-                  </Button>
-                </div>
               </div>
             </div>
           </div>
