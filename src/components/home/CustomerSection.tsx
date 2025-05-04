@@ -1,3 +1,4 @@
+
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { CityDistrictSelector } from "./CityDistrictSelector";
@@ -51,13 +52,6 @@ export const CustomerSection = ({
         />
         
         <div className="mt-4 flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
-          <Button 
-            onClick={handleCustomerLoginClick} 
-            className="w-full sm:w-auto"
-          >
-            Müşteri Girişi
-          </Button>
-          
           <Button 
             onClick={() => navigate("/staff-login")}
             variant="outline" 
