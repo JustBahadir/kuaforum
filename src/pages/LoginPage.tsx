@@ -1,50 +1,139 @@
 
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
-import { ArrowLeft } from "lucide-react";
+import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Home, InfoIcon, AlertTriangle } from "lucide-react";
 
-export default function LoginPage() {
+export default function Login() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
-  const [loading, setLoading] = useState(false);
-
-  const handleGoogleLogin = async () => {
-    try {
-      setLoading(true);
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/auth-callback`,
-        },
-      });
-
-      if (error) {
-        toast.error("Google ile giriş başarısız");
-        console.error("Google login error:", error);
-      }
-    } catch (error) {
-      toast.error("Giriş yapılamadı");
-      console.error("Sign in error:", error);
-    } finally {
-      setLoading(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [redirecting, setRedirecting] = useState(false);
+  
+  // Set initial active tab based on URL parameter
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab === "register") {
+      setActiveTab("register");
     }
+    
+    // Check for error parameters in URL
+    const errorParam = searchParams.get("error");
+    if (errorParam === "account-not-found") {
+      setErrorMessage("Bu hesap bulunamadı. Lütfen kayıt olun veya farklı bir hesapla giriş yapın.");
+    } else if (errorParam === "unexpected") {
+      setErrorMessage("Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.");
+    } else if (errorParam === "account-exists") {
+      setErrorMessage("Bu hesap zaten kayıtlı. Otomatik giriş yapılıyor...");
+      setRedirecting(true);
+      // Redirect to auth page after 2 seconds
+      setTimeout(() => {
+        navigate("/auth-google-callback?mode=login");
+      }, 2000);
+    }
+  }, [searchParams, navigate]);
+
+  // Admin login states
+  const [adminEmail, setAdminEmail] = useState("");
+  const [adminPassword, setAdminPassword] = useState("");
+  const [adminLoading, setAdminLoading] = useState(false);
+  const [adminError, setAdminError] = useState<string | null>(null);
+
+  // Admin login handler (independent below tabs)
+  const handleAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAdminError(null);
+    if (!adminEmail || !adminPassword) {
+      setAdminError("E-posta ve şifre gerekli.");
+      return;
+    }
+    setAdminLoading(true);
+    try {
+      if (adminEmail === "ergun@gmail.com" || adminEmail === "nimet@gmail.com") {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: adminEmail,
+          password: adminPassword
+        });
+        if (error) {
+          setAdminError("Giriş yapılamadı: " + error.message);
+          setAdminLoading(false);
+          return;
+        }
+        setAdminError(null);
+        toast.success("Giriş başarılı!");
+
+        const { data: sessionData } = await supabase.auth.getSession();
+        const user = sessionData?.session?.user;
+        const role = user?.user_metadata?.role;
+
+        if (role === "staff") {
+          const { data: staffData } = await supabase
+            .from('personel')
+            .select('dukkan_id')
+            .eq('auth_id', user.id)
+            .maybeSingle();
+
+          if (!staffData || !staffData.dukkan_id) {
+            toast.success("Başarıyla giriş yapıldı. Henüz bir işletmeye bağlı değilsiniz.");
+            navigate("/unassigned-staff", { replace: true });
+          } else {
+            toast.success("Başarıyla giriş yapıldı.");
+            navigate("/shop-home", { replace: true });
+          }
+        } else if (role === "admin") {
+          toast.success("Yönetici olarak giriş başarılı!");
+          navigate("/shop-home");
+        } else {
+          setAdminError("Bu e-posta ile yönetici/işletmeci veya personel erişimi yok.");
+        }
+      } else {
+        setAdminError("Bu e-posta ile giriş yapamazsınız. Lütfen Google ile giriş yapın.");
+      }
+    } catch (error: any) {
+      setAdminError("Giriş yapılırken hata oluştu: " + error.message);
+    } finally {
+      setAdminLoading(false);
+    }
+  };
+
+  const handleRedirectToRegister = () => {
+    setActiveTab("register");
+    // Update URL without full page reload
+    const url = new URL(window.location.href);
+    url.searchParams.set("tab", "register");
+    window.history.pushState({}, "", url);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-r from-blue-50 to-indigo-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-md shadow-xl border-0">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-semibold">Kuaförüm</CardTitle>
-          <CardDescription>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-xl text-center font-semibold">
+            Kuaför Randevu Sistemi
+          </CardTitle>
+          <CardDescription className="text-center">
             Giriş yapın veya hesap oluşturun
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {errorMessage && (
+            <Alert variant={redirecting ? "default" : "destructive"} className={redirecting ? "border-blue-500 bg-blue-50" : "border-red-500 bg-red-50"}>
+              {redirecting ? <InfoIcon className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+              <AlertDescription className={redirecting ? "text-blue-700" : "text-red-700"}>
+                {errorMessage}
+              </AlertDescription>
+            </Alert>
+          )}
+          
           <Tabs value={activeTab} onValueChange={v => setActiveTab(v as "login" | "register")} className="space-y-6">
             <TabsList className="grid w-full grid-cols-2 rounded-full bg-gray-200 p-1">
               <TabsTrigger value="login" className={`flex items-center justify-center gap-2 rounded-full text-sm font-semibold transition-colors ${activeTab === "login" ? "bg-white text-purple-700 shadow-md" : "text-gray-500"}`}>
@@ -56,43 +145,68 @@ export default function LoginPage() {
             </TabsList>
 
             <TabsContent value="login" className="space-y-4">
-              <Button 
-                className="w-full flex items-center justify-center gap-2"
-                variant="outline" 
-                disabled={loading}
-                onClick={handleGoogleLogin}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18">
-                  <path fill="#4285F4" d="M17.785 9.169c0-.738-.06-1.276-.189-1.834h-8.42v3.328h4.942c-.1.828-.638 2.073-1.834 2.91l-.016.112 2.662 2.063.185.018c1.694-1.565 2.67-3.867 2.67-6.597"/>
-                  <path fill="#34A853" d="M9.175 17.938c2.422 0 4.455-.797 5.94-2.172l-2.83-2.193c-.758.528-1.774.897-3.11.897-2.372 0-4.385-1.564-5.102-3.727l-.105.01-2.769 2.142-.036.1c1.475 2.93 4.504 4.943 8.012 4.943"/>
-                  <path fill="#FBBC05" d="M4.073 10.743c-.19-.558-.3-1.156-.3-1.774 0-.618.11-1.216.29-1.774l-.005-.119-2.811-2.18-.092.044C.547 6.09.142 7.59.142 9.171c0 1.58.405 3.081 1.102 4.33l2.83-2.758"/>
-                  <path fill="#EB4335" d="M9.175 3.636c1.683 0 2.82.728 3.47 1.335l2.531-2.471C13.62.9 11.598 0 9.175 0 5.667 0 2.638 2.013 1.163 4.943l2.9 2.258c.72-2.164 2.734-3.565 5.112-3.565"/>
-                </svg>
-                <span>{loading ? "Yükleniyor..." : "Google ile Giriş Yap"}</span>
-              </Button>
+              <div className="text-center mb-4 font-semibold text-gray-700">
+                GOOGLE İLE GİRİŞ YAP
+              </div>
+              <GoogleAuthButton 
+                text="Google ile Giriş Yap"
+                className="w-full bg-white text-gray-800 hover:bg-gray-100 border border-gray-300"
+                redirectTo={window.location.origin + "/auth-google-callback?mode=login"}
+              />
+              
+              <Alert className="bg-blue-50 border-blue-200">
+                <InfoIcon className="h-4 w-4 text-blue-500" />
+                <AlertDescription className="text-blue-700">
+                  Yakında Apple ile giriş özelliği de eklenecektir.
+                </AlertDescription>
+              </Alert>
             </TabsContent>
 
             <TabsContent value="register" className="space-y-4">
-              <Button 
-                className="w-full flex items-center justify-center gap-2"
-                variant="outline" 
-                disabled={loading}
-                onClick={handleGoogleLogin}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18">
-                  <path fill="#4285F4" d="M17.785 9.169c0-.738-.06-1.276-.189-1.834h-8.42v3.328h4.942c-.1.828-.638 2.073-1.834 2.91l-.016.112 2.662 2.063.185.018c1.694-1.565 2.67-3.867 2.67-6.597"/>
-                  <path fill="#34A853" d="M9.175 17.938c2.422 0 4.455-.797 5.94-2.172l-2.83-2.193c-.758.528-1.774.897-3.11.897-2.372 0-4.385-1.564-5.102-3.727l-.105.01-2.769 2.142-.036.1c1.475 2.93 4.504 4.943 8.012 4.943"/>
-                  <path fill="#FBBC05" d="M4.073 10.743c-.19-.558-.3-1.156-.3-1.774 0-.618.11-1.216.29-1.774l-.005-.119-2.811-2.18-.092.044C.547 6.09.142 7.59.142 9.171c0 1.58.405 3.081 1.102 4.33l2.83-2.758"/>
-                  <path fill="#EB4335" d="M9.175 3.636c1.683 0 2.82.728 3.47 1.335l2.531-2.471C13.62.9 11.598 0 9.175 0 5.667 0 2.638 2.013 1.163 4.943l2.9 2.258c.72-2.164 2.734-3.565 5.112-3.565"/>
-                </svg>
-                <span>{loading ? "Yükleniyor..." : "Google ile Kayıt Ol"}</span>
-              </Button>
+              <div className="text-center mb-4 font-semibold text-gray-700">
+                GOOGLE İLE KAYIT OL
+              </div>
+              <GoogleAuthButton 
+                text="Google ile Kayıt Ol"
+                className="w-full bg-white text-gray-800 hover:bg-gray-100 border border-gray-300"
+                redirectTo={window.location.origin + "/auth-google-callback?mode=register"}
+              />
+              
+              <Alert className="bg-blue-50 border-blue-200">
+                <InfoIcon className="h-4 w-4 text-blue-500" />
+                <AlertDescription className="text-blue-700">
+                  Yakında Apple ile kayıt özelliği de eklenecektir.
+                </AlertDescription>
+              </Alert>
             </TabsContent>
           </Tabs>
+
+          {/* Admin Login Section */}
+          <div className="mt-8">
+            <div className="text-center mb-2 font-semibold text-gray-700">
+              Sadece yönetici girişi
+            </div>
+            <form onSubmit={handleAdminLogin} className="space-y-3 max-w-md mx-auto">
+              {adminError && <div className="bg-red-50 text-red-700 p-3 rounded text-center text-sm">
+                {adminError}
+              </div>}
+              <div>
+                <Label htmlFor="adminEmail">E-posta</Label>
+                <Input id="adminEmail" type="email" value={adminEmail} onChange={e => setAdminEmail(e.target.value)} placeholder="admin@example.com" required />
+              </div>
+              <div>
+                <Label htmlFor="adminPassword">Şifre</Label>
+                <Input id="adminPassword" type="password" value={adminPassword} onChange={e => setAdminPassword(e.target.value)} placeholder="********" required />
+              </div>
+              <Button type="submit" variant="outline" className="w-full" disabled={adminLoading}>
+                {adminLoading ? "Giriş yapılıyor..." : "Yönetici Girişi"}
+              </Button>
+            </form>
+          </div>
         </CardContent>
         <CardFooter className="flex justify-center">
           <Button variant="ghost" onClick={() => navigate("/")} className="flex items-center gap-2">
-            <ArrowLeft size={16} />
+            <Home size={16} />
             Ana Sayfaya Dön
           </Button>
         </CardFooter>
