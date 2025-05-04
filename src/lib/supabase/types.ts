@@ -97,6 +97,21 @@ export interface PersonelBasvuru {
   tarih: string;
 }
 
+// Adding RandevuDurumu alias for compatibility with existing code
+export type RandevuDurumu = RandevuDurum;
+
+// Adding CalismaSaati type for compatibility
+export interface CalismaSaati {
+  id: string;
+  dukkan_id: string;
+  gun: string;
+  acilis: string;
+  kapanis: string;
+  kapali: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 // Tam adları göstermek için yardımcı fonksiyon
 export const durum = {
   randevu: {
@@ -115,3 +130,6 @@ export const durum = {
     reddedildi: "Reddedildi"
   }
 };
+
+// For Supabase client
+export interface Database {}
