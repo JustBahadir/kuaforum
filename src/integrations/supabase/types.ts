@@ -219,47 +219,6 @@ export type Database = {
         }
         Relationships: []
       }
-      islemler: {
-        Row: {
-          created_at: string
-          fiyat: number
-          id: number
-          islem_adi: string
-          kategori_id: number | null
-          maliyet: number | null
-          puan: number
-          sira: number | null
-        }
-        Insert: {
-          created_at?: string
-          fiyat: number
-          id?: number
-          islem_adi: string
-          kategori_id?: number | null
-          maliyet?: number | null
-          puan: number
-          sira?: number | null
-        }
-        Update: {
-          created_at?: string
-          fiyat?: number
-          id?: number
-          islem_adi?: string
-          kategori_id?: number | null
-          maliyet?: number | null
-          puan?: number
-          sira?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "islemler_kategori_id_fkey"
-            columns: ["kategori_id"]
-            isOneToOne: false
-            referencedRelation: "islem_kategorileri"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       musteriler: {
         Row: {
           birthdate: string | null
@@ -453,13 +412,6 @@ export type Database = {
             columns: ["musteri_id"]
             isOneToOne: false
             referencedRelation: "musteriler"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "personel_islemleri_islem_id_fkey"
-            columns: ["islem_id"]
-            isOneToOne: false
-            referencedRelation: "islemler"
             referencedColumns: ["id"]
           },
           {

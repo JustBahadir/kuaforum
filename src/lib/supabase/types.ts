@@ -1,147 +1,250 @@
 
-export type RandevuDurumu = 'beklemede' | 'onaylandi' | 'iptal' | 'tamamlandi' | 'iptal_edildi';
-
-export interface Randevu {
-  id: number;
-  musteri_id?: number;
-  personel_id?: number;
-  dukkan_id?: number;
-  tarih: string;
-  saat: string;
-  durum: RandevuDurumu;
-  notlar?: string;
-  islemler: any[];
-  customer_id?: string;
-  created_at: string;
-  musteri?: any;
-  personel?: any;
-}
-
-export interface Isletme {
-  id: number;
-  ad: string;
-  adres?: string;
-  acik_adres?: string;
-  telefon?: string;
-  logo_url?: string;
-  kod: string;
-  sahibi_id: string;
-  active?: boolean;
-  created_at: string;
-}
-
-export interface ProfileUpdateData {
-  first_name?: string;
-  last_name?: string;
-  phone?: string;
-  iban?: string;
-  address?: string;
-  avatar_url?: string;
-  birthdate?: string;
-  gender?: string;
-}
-
-export interface PersonelIslemi {
-  id: number;
-  personel_id?: number;
-  islem_id?: number;
-  musteri_id?: number;
-  randevu_id?: number;
-  tutar: number;
-  odenen: number;
-  prim_yuzdesi: number;
-  aciklama: string;
-  puan: number;
-  notlar?: string;
-  photos?: string[];
-  created_at?: string;
-  musteri?: any;
-  islem?: any;
-  personel?: any;
-}
-
-export interface PersonelEgitim {
-  personel_id: number;
-  ortaokuldurumu: string;
-  liseturu: string;
-  lisedurumu: string;
-  universitedurumu: string;
-  universitebolum: string;
-  meslekibrans: string;
-}
-
-export interface PersonelGecmis {
-  personel_id: number;
-  isyerleri: string;
-  gorevpozisyon: string;
-  yarismalar: string;
-  cv: string;
-  belgeler: string;
-}
-
-export interface Profil {
-  id: string;
-  first_name?: string;
-  last_name?: string;
-  avatar_url?: string;
-  phone?: string;
-  role?: string;
-  dukkan_id?: number;
-}
-
-export interface Personel {
-  id: number;
-  ad_soyad: string;
-  telefon: string;
-  eposta: string;
-  adres: string;
-  personel_no: string;
-  maas: number;
-  prim_yuzdesi: number;
-  dukkan_id: number;
-  calisma_sistemi: string;
-  auth_id?: string;
-  birth_date?: Date;
-  iban?: string;
-  avatar_url?: string;
-}
-
-export interface CalismaSaati {
-  id?: number;
-  dukkan_id?: number;
-  gun: string;
-  gun_sira: number;
-  acilis: string | null;
-  kapanis: string | null;
-  kapali: boolean;
-}
-
-export interface Musteri {
-  id: number;
-  first_name: string;
-  last_name?: string;
-  phone?: string;
-  birthdate?: string;
-  dukkan_id?: number;
-  created_at?: string;
-}
-
-export interface Kategori {
-  id: number;
-  kategori_adi: string;
-  sira: number;
-  dukkan_id: number;
-  created_at?: string;
-}
-
-export interface Islem {
-  id: number;
-  islem_adi: string;
-  fiyat: number;
-  maliyet?: number;
-  puan: number;
-  kategori_id: number;
-  sira: number;
-  dukkan_id: number;
-  created_at?: string;
-}
+export type Database = {
+  public: {
+    Tables: {
+      kullanicilar: {
+        Row: {
+          kimlik: string;
+          ad: string | null;
+          soyad: string | null;
+          eposta: string;
+          telefon: string | null;
+          rol: 'isletme_sahibi' | 'personel';
+          profil_tamamlandi: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          kimlik: string;
+          ad?: string | null;
+          soyad?: string | null;
+          eposta: string;
+          telefon?: string | null;
+          rol?: 'isletme_sahibi' | 'personel';
+          profil_tamamlandi?: boolean;
+        };
+        Update: {
+          kimlik?: string;
+          ad?: string | null;
+          soyad?: string | null;
+          eposta?: string;
+          telefon?: string | null;
+          rol?: 'isletme_sahibi' | 'personel';
+          profil_tamamlandi?: boolean;
+        };
+      };
+      isletmeler: {
+        Row: {
+          kimlik: string;
+          isletme_adi: string;
+          isletme_kodu: string;
+          adres: string | null;
+          telefon: string | null;
+          sahip_kimlik: string | null;
+          aciklama: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          kimlik?: string;
+          isletme_adi: string;
+          isletme_kodu: string;
+          adres?: string | null;
+          telefon?: string | null;
+          sahip_kimlik?: string | null;
+          aciklama?: string | null;
+        };
+        Update: {
+          kimlik?: string;
+          isletme_adi?: string;
+          isletme_kodu?: string;
+          adres?: string | null;
+          telefon?: string | null;
+          sahip_kimlik?: string | null;
+          aciklama?: string | null;
+        };
+      };
+      personel: {
+        Row: {
+          kimlik: string;
+          kullanici_kimlik: string | null;
+          isletme_kimlik: string | null;
+          okul_gecmisi: string | null;
+          deneyim: string | null;
+          uzmanlik_alani: string | null;
+          durum: 'atanmadi' | 'beklemede' | 'onaylandi';
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          kimlik?: string;
+          kullanici_kimlik?: string | null;
+          isletme_kimlik?: string | null;
+          okul_gecmisi?: string | null;
+          deneyim?: string | null;
+          uzmanlik_alani?: string | null;
+          durum?: 'atanmadi' | 'beklemede' | 'onaylandi';
+        };
+        Update: {
+          kimlik?: string;
+          kullanici_kimlik?: string | null;
+          isletme_kimlik?: string | null;
+          okul_gecmisi?: string | null;
+          deneyim?: string | null;
+          uzmanlik_alani?: string | null;
+          durum?: 'atanmadi' | 'beklemede' | 'onaylandi';
+        };
+      };
+      islem_kategorileri: {
+        Row: {
+          kimlik: string;
+          isletme_kimlik: string | null;
+          baslik: string;
+          aciklama: string | null;
+          siralama: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          kimlik?: string;
+          isletme_kimlik?: string | null;
+          baslik: string;
+          aciklama?: string | null;
+          siralama?: number;
+        };
+        Update: {
+          kimlik?: string;
+          isletme_kimlik?: string | null;
+          baslik?: string;
+          aciklama?: string | null;
+          siralama?: number;
+        };
+      };
+      hizmetler: {
+        Row: {
+          kimlik: string;
+          kategori_kimlik: string | null;
+          isletme_kimlik: string | null;
+          hizmet_adi: string;
+          sure_dakika: number;
+          fiyat: number;
+          siralama: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          kimlik?: string;
+          kategori_kimlik?: string | null;
+          isletme_kimlik?: string | null;
+          hizmet_adi: string;
+          sure_dakika?: number;
+          fiyat?: number;
+          siralama?: number;
+        };
+        Update: {
+          kimlik?: string;
+          kategori_kimlik?: string | null;
+          isletme_kimlik?: string | null;
+          hizmet_adi?: string;
+          sure_dakika?: number;
+          fiyat?: number;
+          siralama?: number;
+        };
+      };
+      musteriler: {
+        Row: {
+          kimlik: string;
+          isletme_kimlik: string | null;
+          ad: string;
+          soyad: string | null;
+          telefon: string | null;
+          dogum_tarihi: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          kimlik?: string;
+          isletme_kimlik?: string | null;
+          ad: string;
+          soyad?: string | null;
+          telefon?: string | null;
+          dogum_tarihi?: string | null;
+        };
+        Update: {
+          kimlik?: string;
+          isletme_kimlik?: string | null;
+          ad?: string;
+          soyad?: string | null;
+          telefon?: string | null;
+          dogum_tarihi?: string | null;
+        };
+      };
+      randevular: {
+        Row: {
+          kimlik: string;
+          musteri_kimlik: string | null;
+          isletme_kimlik: string | null;
+          personel_kimlik: string | null;
+          kategori_kimlik: string | null;
+          hizmet_kimlik: string | null;
+          tarih: string;
+          saat: string;
+          notlar: string | null;
+          durum: 'planlandi' | 'iptal' | 'tamamlandi';
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          kimlik?: string;
+          musteri_kimlik?: string | null;
+          isletme_kimlik?: string | null;
+          personel_kimlik?: string | null;
+          kategori_kimlik?: string | null;
+          hizmet_kimlik?: string | null;
+          tarih: string;
+          saat: string;
+          notlar?: string | null;
+          durum?: 'planlandi' | 'iptal' | 'tamamlandi';
+        };
+        Update: {
+          kimlik?: string;
+          musteri_kimlik?: string | null;
+          isletme_kimlik?: string | null;
+          personel_kimlik?: string | null;
+          kategori_kimlik?: string | null;
+          hizmet_kimlik?: string | null;
+          tarih?: string;
+          saat?: string;
+          notlar?: string | null;
+          durum?: 'planlandi' | 'iptal' | 'tamamlandi';
+        };
+      };
+      personel_basvurulari: {
+        Row: {
+          kimlik: string;
+          kullanici_kimlik: string | null;
+          isletme_kodu: string;
+          durum: 'beklemede' | 'kabul' | 'reddedildi';
+          aciklama: string | null;
+          tarih: string;
+        };
+        Insert: {
+          kimlik?: string;
+          kullanici_kimlik?: string | null;
+          isletme_kodu: string;
+          durum?: 'beklemede' | 'kabul' | 'reddedildi';
+          aciklama?: string | null;
+          tarih?: string;
+        };
+        Update: {
+          kimlik?: string;
+          kullanici_kimlik?: string | null;
+          isletme_kodu?: string;
+          durum?: 'beklemede' | 'kabul' | 'reddedildi';
+          aciklama?: string | null;
+          tarih?: string;
+        };
+      };
+    };
+  };
+};
