@@ -58,7 +58,7 @@ export default function Landing() {
                   onClick={() => navigate("/auth")}
                 >
                   <Scissors className="mr-2" />
-                  İşletme Girişi
+                  Kuaför Girişi
                 </Button>
               </div>
             </div>

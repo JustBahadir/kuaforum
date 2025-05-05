@@ -1,159 +1,167 @@
 
-export type KullaniciRol = "isletme_sahibi" | "personel";
-export type PersonelDurum = "atanmadi" | "beklemede" | "onaylandi";
-export type RandevuDurum = "planlandi" | "iptal" | "tamamlandi";
-export type BasvuruDurum = "beklemede" | "kabul" | "reddedildi";
+// Enum definitions
+export type KullaniciRol = "isletme_sahibi" | "personel" | "musteri";
+export type PersonelDurum = "aktif" | "izinli" | "cikti";
+export type RandevuDurum = "bekliyor" | "onaylandi" | "iptal" | "tamamlandi";
+export type BasvuruDurum = "beklemede" | "onaylandi" | "reddedildi";
 
-export interface Kullanici {
+// Base entity with common properties for all entities
+interface BaseEntity {
+  created_at?: string;
+  updated_at?: string;
+}
+
+// Main entities
+export interface Kullanici extends BaseEntity {
   kimlik: string;
   ad: string;
   soyad: string;
   eposta: string;
-  telefon: string | null;
+  telefon?: string;
   rol: KullaniciRol;
   profil_tamamlandi: boolean;
-  created_at: string;
-  updated_at: string;
+  cinsiyet?: string;
 }
 
-export interface Isletme {
+export interface Isletme extends BaseEntity {
   kimlik: string;
-  isletme_adi: string;
-  isletme_kodu: string;
-  adres: string | null;
-  telefon: string | null;
-  sahip_kimlik: string;
-  aciklama: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Personel {
-  kimlik: string;
-  kullanici_kimlik: string;
-  isletme_kimlik: string | null;
-  okul_gecmisi: string | null;
-  deneyim: string | null;
-  uzmanlik_alani: string | null;
-  durum: PersonelDurum;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface IslemKategorisi {
-  kimlik: string;
-  isletme_kimlik: string;
-  baslik: string;
-  aciklama: string | null;
-  siralama: number;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Hizmet {
-  kimlik: string;
-  kategori_kimlik: string;
-  isletme_kimlik: string;
-  hizmet_adi: string;
-  sure_dakika: number;
-  fiyat: number;
-  siralama: number;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Musteri {
-  kimlik: string;
-  isletme_kimlik: string;
+  kod: string;
   ad: string;
-  soyad: string | null;
-  telefon: string | null;
-  dogum_tarihi: string | null;
-  created_at: string;
-  updated_at: string;
-  first_name?: string;
-  last_name?: string;
-  phone?: string;
-  birthdate?: string;
-  id?: string;
-  isletme_id?: string;
+  adres?: string;
+  telefon?: string;
+  website?: string;
+  aciklama?: string;
+  logo_url?: string;
+  kapak_url?: string;
+  sahip_kimlik: string;
+  il?: string;
+  ilce?: string;
+  puan?: number;
+  sosyal_medya?: any;
+  detaylar?: any;
+  durum?: string;
 }
 
-export interface Randevu {
+export interface Personel extends BaseEntity {
   kimlik: string;
-  musteri_kimlik: string | null;
-  isletme_kimlik: string;
-  personel_kimlik: string | null;
-  kategori_kimlik: string | null;
-  hizmet_kimlik: string | null;
-  tarih: string; // YYYY-MM-DD
-  saat: string; // HH:MM
-  notlar: string | null;
-  durum: RandevuDurum;
-  created_at: string;
-  updated_at: string;
-  isletme_id?: string;
-  id?: string;
-  personel?: string;
-  islemler?: any[];
+  id: string | number; // ID can be string or number depending on context
+  kullanici_kimlik?: string;
+  isletme_id: string;
+  ad_soyad: string;
+  telefon?: string;
+  eposta?: string;
+  adres?: string;
+  unvan?: string;
+  gorev?: string;
+  maas?: number;
+  prim_yuzdesi?: number;
+  durum: PersonelDurum;
+  izin_baslangic?: string;
+  izin_bitis?: string;
+  dogum_tarihi?: string;
+  ise_baslama_tarihi?: string;
+  personel_no?: string;
+  calisma_sistemi?: string;
 }
 
-export interface PersonelBasvuru {
+export interface IslemKategorisi extends BaseEntity {
+  id: string | number;
+  kategori_adi: string;
+  aciklama?: string;
+  isletme_id: string;
+  sira?: number;
+}
+
+export interface Hizmet extends BaseEntity {
+  id: string | number;
+  islem_adi: string;
+  aciklama?: string;
+  fiyat: number;
+  suresi?: number;
+  kategori_id: string | number;
+  isletme_id: string;
+  aktif: boolean;
+  puan?: number;
+  resim_url?: string;
+}
+
+export interface Musteri extends BaseEntity {
   kimlik: string;
-  kullanici_kimlik: string;
-  isletme_kodu: string;
-  durum: BasvuruDurum;
-  aciklama: string | null;
+  id?: string | number;
+  isletme_id: string;
+  ad_soyad: string;
+  telefon?: string;
+  eposta?: string;
+  dogum_tarihi?: string;
+  cinsiyet?: string;
+  notlar?: string;
+  adres?: string;
+  puan?: number;
+  son_ziyaret?: string;
+  kayit_tarihi?: string;
+}
+
+export interface Randevu extends BaseEntity {
+  id: string | number;
+  isletme_id: string;
+  musteri_id: string | number;
+  personel_id: string | number;
   tarih: string;
+  saat: string;
+  bitis_saat?: string;
+  durum: RandevuDurum;
+  notlar?: string;
+  islemler: any[];
+  toplam_tutar?: number;
+  customer_id?: string; // Auth user ID reference
 }
 
-// CalismaSaati interface updated to use isletme_id instead of dukkan_id
-export interface CalismaSaati {
-  id: string;
+export interface PersonelBasvuru extends BaseEntity {
+  id: string | number;
+  kullanici_kimlik: string;
+  isletme_id?: string;
+  isletme_kodu?: string;
+  durum: BasvuruDurum;
+  tarih: string;
+  onay_tarihi?: string;
+  ret_tarihi?: string;
+  ret_nedeni?: string;
+}
+
+export interface CalismaSaati extends BaseEntity {
+  id: string | number;
   isletme_id: string;
   gun: string;
   acilis: string;
   kapanis: string;
   kapali: boolean;
-  created_at: string;
-  updated_at: string;
 }
 
-// Profil interface
-export interface Profil {
-  id: string;
-  first_name?: string;
-  last_name?: string;
-  phone?: string;
-  gender?: string;
-  shopname?: string;
-  role?: string;
-  birthdate?: string;
+export interface Profil extends BaseEntity {
+  kimlik?: string;
+  id?: string;
+  ad?: string;
+  soyad?: string;
+  telefon?: string;
+  eposta?: string;
   avatar_url?: string;
-  address?: string;
-  iban?: string;
-  created_at?: string;
-  updated_at?: string;
+  website?: string;
+  cinsiyet?: string;
+  dogum_tarihi?: string;
+  rol?: KullaniciRol;
+  durum?: string;
 }
 
-// Durum labels
-export const durum = {
-  randevu: {
-    planlandi: "Planlandı",
-    iptal: "İptal",
-    tamamlandi: "Tamamlandı"
-  },
-  personel: {
-    atanmadi: "Atanmadı",
-    beklemede: "Beklemede",
-    onaylandi: "Onaylandı"
-  },
-  basvuru: {
-    beklemede: "Beklemede",
-    kabul: "Kabul",
-    reddedildi: "Reddedildi"
-  }
-};
-
-// For Supabase client
-export interface Database {}
+export interface PersonelIslemi extends BaseEntity {
+  id: string | number;
+  personel_id: string | number;
+  islem_id: string | number;
+  musteri_id: string | number;
+  randevu_id?: string | number;
+  tutar: number;
+  odenen: number;
+  prim_yuzdesi: number;
+  puan?: number;
+  aciklama?: string;
+  tarih?: string;
+}

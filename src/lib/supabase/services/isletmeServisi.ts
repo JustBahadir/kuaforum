@@ -27,7 +27,7 @@ export const isletmeServisi = {
       const { data, error } = await supabase
         .from('isletmeler')
         .select('*')
-        .eq('isletme_kodu', isletmeKodu)
+        .eq('kod', isletmeKodu)
         .single();
       
       if (error) throw error;
@@ -85,6 +85,60 @@ export const isletmeServisi = {
     } catch (error) {
       console.error('Kullanıcı işletme kimliği getirilirken hata:', error);
       return null;
+    }
+  },
+  
+  // İşletme güncelle
+  async guncelle(isletmeKimlik: string, guncelBilgiler: Partial<Isletme>): Promise<Isletme | null> {
+    try {
+      const { data, error } = await supabase
+        .from('isletmeler')
+        .update(guncelBilgiler)
+        .eq('kimlik', isletmeKimlik)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      return data as Isletme;
+    } catch (error) {
+      console.error('İşletme güncellenirken hata:', error);
+      return null;
+    }
+  },
+  
+  // Yeni işletme oluştur
+  async olustur(isletme: Partial<Isletme>): Promise<Isletme | null> {
+    try {
+      const { data, error } = await supabase
+        .from('isletmeler')
+        .insert([isletme])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      return data as Isletme;
+    } catch (error) {
+      console.error('İşletme oluşturulurken hata:', error);
+      return null;
+    }
+  },
+  
+  // İşletme sil
+  async sil(isletmeKimlik: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('isletmeler')
+        .delete()
+        .eq('kimlik', isletmeKimlik);
+      
+      if (error) throw error;
+      
+      return true;
+    } catch (error) {
+      console.error('İşletme silinirken hata:', error);
+      return false;
     }
   }
 };

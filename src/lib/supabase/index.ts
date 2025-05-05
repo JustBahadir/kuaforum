@@ -18,12 +18,12 @@ export type {
   Randevu,
   PersonelBasvuru,
   CalismaSaati,
-  Profil
+  Profil,
+  PersonelIslemi
 } from './types';
 
 // Import temporary types while migration is in progress
 export type {
-  PersonelIslemi,
   PersonelEgitim,
   PersonelGecmis,
   ProfileUpdateData,
@@ -40,5 +40,7 @@ export { musteriServisi } from './services/musteriServisi';
 export { randevuServisi } from './services/randevuServisi';
 export { personelIslemleriServisi } from './services/personelIslemleriServisi';
 export { profilServisi } from './services/profilServisi';
+export { staffServisi } from './services/staffServisi';
+
 // Geriye dönük uyumluluk için dukkanServisi
 export { isletmeServisi as dukkanServisi } from './services/isletmeServisi';

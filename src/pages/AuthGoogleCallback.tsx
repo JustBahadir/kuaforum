@@ -3,12 +3,15 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/lib/supabase/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import AccountNotFound from "@/components/auth/AccountNotFound";
 
 export default function AuthGoogleCallback() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [accountNotFound, setAccountNotFound] = useState(false);
+  const [accountExists, setAccountExists] = useState(false);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
@@ -33,7 +36,8 @@ export default function AuthGoogleCallback() {
         // Check if we have a user
         if (!user) {
           console.log("No user found in session");
-          navigate("/auth");
+          setAccountNotFound(true);
+          setLoading(false);
           return;
         }
 
@@ -46,9 +50,37 @@ export default function AuthGoogleCallback() {
           .eq("kimlik", user.id)
           .maybeSingle();
 
-        // Kullanıcı profili tamamlanmamışsa doğrudan profil kurulum sayfasına yönlendir
-        if (!kullanici || !kullanici.profil_tamamlandi) {
-          console.log("Profil tamamlanmamış, profil-kurulum sayfasına yönlendiriliyor");
+        if (kullaniciError && kullaniciError.code !== 'PGRST116') {
+          console.error("Error fetching user profile:", kullaniciError);
+          setError("Kullanıcı bilgileriniz alınırken bir hata oluştu.");
+          setLoading(false);
+          return;
+        }
+        
+        // If user doesn't exist in kullanicilar table yet
+        if (!kullanici) {
+          // Check if user exists in profiles table first (older DB structure)
+          const { data: existingProfile } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("id", user.id)
+            .maybeSingle();
+            
+          if (existingProfile) {
+            setAccountExists(true);
+            setLoading(false);
+            return;
+          }
+          
+          // No profile found - redirect to AccountNotFound component
+          setAccountNotFound(true);
+          setLoading(false);
+          return;
+        }
+
+        // If profile exists but is not completed, redirect to profile setup
+        if (!kullanici.profil_tamamlandi) {
+          console.log("Profile not completed, redirecting to profile setup");
           navigate("/profil-kurulum", { replace: true });
           return;
         }
@@ -62,15 +94,15 @@ export default function AuthGoogleCallback() {
 
         if (kullaniciRol?.rol === "isletme_sahibi") {
           navigate("/isletme/anasayfa", { replace: true });
-        } else {
+        } else if (kullaniciRol?.rol === "personel") {
           navigate("/personel/anasayfa", { replace: true });
+        } else {
+          navigate("/musteri/anasayfa", { replace: true });
         }
 
       } catch (error: any) {
         console.error("Auth callback error:", error);
-        // Hata olursa da profil kurulum sayfasına yönlendir
-        navigate("/profil-kurulum", { replace: true });
-      } finally {
+        setError("İşlem sırasında bir hata oluştu");
         setLoading(false);
       }
     };
@@ -78,12 +110,20 @@ export default function AuthGoogleCallback() {
     handleCallback();
   }, [navigate, searchParams]);
 
+  if (accountNotFound) {
+    return <AccountNotFound />;
+  }
+  
+  if (accountExists) {
+    return <AccountNotFound accountExists={true} />;
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-r from-purple-50 to-blue-50">
       <div className="max-w-md w-full space-y-6 p-8 bg-white shadow-lg rounded-lg">
         {loading ? (
           <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto"></div>
+            <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
             <p className="mt-4 text-gray-600">Giriş işlemi tamamlanıyor...</p>
           </div>
         ) : error ? (

@@ -1,64 +1,61 @@
 
-// Temporary types to support migration
-export interface ProfileUpdateData {
-  id?: string;
-  first_name?: string;
-  last_name?: string;
-  phone?: string;
-  gender?: string;
-  shopname?: string;
-  role?: string;
-  birthdate?: string;
-  avatar_url?: string;
-  address?: string;
-  iban?: string;
-}
+// These types are used during the migration process
+// Once the application is fully migrated, these should be moved to the main types.ts file
 
 export interface PersonelIslemi {
-  id: number;
-  personel_id: number;
-  islem_id: number;
+  id: string | number;
+  personel_id: string | number;
+  islem_id: string | number;
+  musteri_id: string | number;
+  randevu_id?: string | number;
   tutar: number;
   odenen: number;
   prim_yuzdesi: number;
-  puan: number;
-  aciklama: string;
-  musteri_id?: number;
-  randevu_id?: number;
-  notlar?: string;
-  photos?: string[];
-  created_at: string;
+  puan?: number;
+  aciklama?: string;
+  tarih?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface PersonelEgitim {
-  personel_id: number;
-  ortaokuldurumu: string;
-  lisedurumu: string;
-  liseturu: string;
-  universitedurumu: string;
-  universitebolum: string;
-  meslekibrans: string;
+  id: string | number;
+  personel_id: string | number;
+  egitim_adi: string;
+  kurum: string;
+  baslangic: string;
+  bitis?: string;
+  aciklama?: string;
   created_at?: string;
   updated_at?: string;
 }
 
 export interface PersonelGecmis {
-  personel_id: number;
-  isyerleri: string;
-  gorevpozisyon: string;
-  belgeler: string;
-  yarismalar: string;
-  cv: string;
+  id: string | number;
+  personel_id: string | number;
+  isyeri_adi: string;
+  pozisyon: string;
+  baslangic: string;
+  bitis?: string;
+  aciklama?: string;
   created_at?: string;
   updated_at?: string;
 }
 
-export interface StaffJoinRequest {
-  id: string;
-  shopCode: string;
-  status: string;
-  userId: string;
-  createdAt: string;
-  description?: string;
+export interface ProfileUpdateData {
+  ad?: string;
+  soyad?: string;
+  telefon?: string;
+  avatar_url?: string;
+  website?: string;
+  eposta?: string;
 }
 
+export interface StaffJoinRequest {
+  id: string | number;
+  personel_id: string | number;
+  isletme_id: string;
+  durum: "pending" | "approved" | "rejected";
+  created_at?: string;
+  updated_at?: string;
+}

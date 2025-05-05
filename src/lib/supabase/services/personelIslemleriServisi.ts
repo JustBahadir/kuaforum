@@ -1,16 +1,15 @@
 
 import { supabase } from '../client';
-import { PersonelIslemi } from '../temporaryTypes';
+import { PersonelIslemi } from '../types';
 
 export const personelIslemleriServisi = {
-  // Personele göre işlemleri getir
+  // Personele göre işlem listesi
   async personeleGoreGetir(personelId: number): Promise<PersonelIslemi[]> {
     try {
       const { data, error } = await supabase
         .from('personel_islemleri')
         .select('*')
-        .eq('personel_id', personelId)
-        .order('created_at', { ascending: false });
+        .eq('personel_id', personelId);
       
       if (error) throw error;
       
@@ -21,14 +20,13 @@ export const personelIslemleriServisi = {
     }
   },
   
-  // Müşteriye göre işlemleri getir
-  async musteriyeGoreGetir(musteriId: number | string): Promise<PersonelIslemi[]> {
+  // Müşteriye göre işlem listesi
+  async musteriyeGoreGetir(musteriId: string | number): Promise<PersonelIslemi[]> {
     try {
       const { data, error } = await supabase
         .from('personel_islemleri')
         .select('*')
-        .eq('musteri_id', musteriId)
-        .order('created_at', { ascending: false });
+        .eq('musteri_id', musteriId);
       
       if (error) throw error;
       
@@ -44,7 +42,7 @@ export const personelIslemleriServisi = {
     try {
       const { data, error } = await supabase
         .from('personel_islemleri')
-        .insert(islem)
+        .insert([islem])
         .select()
         .single();
       
@@ -52,7 +50,7 @@ export const personelIslemleriServisi = {
       
       return data as PersonelIslemi;
     } catch (error) {
-      console.error('Personel işlemi oluşturulurken hata:', error);
+      console.error('İşlem oluşturulurken hata:', error);
       return null;
     }
   },
@@ -71,7 +69,7 @@ export const personelIslemleriServisi = {
       
       return data as PersonelIslemi;
     } catch (error) {
-      console.error('Personel işlemi güncellenirken hata:', error);
+      console.error('İşlem güncellenirken hata:', error);
       return null;
     }
   },
@@ -88,13 +86,34 @@ export const personelIslemleriServisi = {
       
       return true;
     } catch (error) {
-      console.error('Personel işlemi silinirken hata:', error);
+      console.error('İşlem silinirken hata:', error);
       return false;
     }
   },
-
-  // Geriye dönük uyumluluk için
-  async musteriIslemleriniGetir(musteriId: number | string): Promise<PersonelIslemi[]> {
-    return this.musteriyeGoreGetir(String(musteriId));
+  
+  // Müşteri işlemlerini getir
+  async musteriIslemleriniGetir(musteriId: string | number): Promise<PersonelIslemi[]> {
+    return this.musteriyeGoreGetir(musteriId);
+  },
+  
+  // Personel işlemlerini getir (compatibility with older code)
+  async personelIslemleriniGetir(personelId: number): Promise<PersonelIslemi[]> {
+    return this.personeleGoreGetir(personelId);
+  },
+  
+  // Tüm işlemleri getir
+  async hepsiniGetir(): Promise<PersonelIslemi[]> {
+    try {
+      const { data, error } = await supabase
+        .from('personel_islemleri')
+        .select('*');
+      
+      if (error) throw error;
+      
+      return data as PersonelIslemi[];
+    } catch (error) {
+      console.error('Tüm işlemler getirilirken hata:', error);
+      return [];
+    }
   }
 };
