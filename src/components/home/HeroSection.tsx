@@ -19,7 +19,7 @@ export const HeroSection = () => {
             className="bg-white text-gray-800 hover:bg-gray-100"
           />
           <Button onClick={() => navigate("/login")} className="w-full sm:w-auto">
-            Giriş Seçenekleri
+            Kuaför Girişi
           </Button>
         </div>
       </div>

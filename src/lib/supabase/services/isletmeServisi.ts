@@ -18,27 +18,35 @@ export const isletmeServisi = {
     const { data, error } = await supabase
       .from('isletmeler')
       .select('*')
-      .eq('isletme_kodu', isletmeKodu)
+      .eq('kod', isletmeKodu)
       .single();
       
     if (error) throw error;
     return data;
   },
   
-  kullaniciIsletmesiniGetir: async (): Promise<Isletme> => {
-    // Get the current user's business
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) throw new Error('Oturum açmış kullanıcı bulunamadı');
-    
-    const { data, error } = await supabase
-      .from('isletmeler')
-      .select('*')
-      .eq('sahip_kimlik', user.id)
-      .single();
+  kullaniciIsletmesiniGetir: async (): Promise<Isletme | null> => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
       
-    if (error) throw error;
-    return data;
+      const { data, error } = await supabase
+        .from('isletmeler')
+        .select('*')
+        .eq('sahip_kimlik', user.id)
+        .maybeSingle();
+        
+      if (error && error.code !== 'PGRST116') throw error;
+      return data || null;
+    } catch (error) {
+      console.error('Kullanıcı işletmesi getirme hatası:', error);
+      return null;
+    }
+  },
+
+  // For backward compatibility
+  kullaniciDukkaniniGetir: async (): Promise<Isletme | null> => {
+    return isletmeServisi.kullaniciIsletmesiniGetir();
   },
   
   olustur: async (isletme: Partial<Isletme>): Promise<Isletme> => {
@@ -73,11 +81,15 @@ export const isletmeServisi = {
     if (error) throw error;
   },
   
-  // For backward compatibility
-  getirById: async (isletmeId: string): Promise<Isletme> => {
-    return isletmeServisi.getir(isletmeId);
-  },
+  // Backward compatibility methods
+  getirById: async (isletmeId: string | number): Promise<Isletme> => {
+    const { data, error } = await supabase
+      .from('isletmeler')
+      .select('*')
+      .eq('id', isletmeId)
+      .single();
+      
+    if (error) throw error;
+    return data;
+  }
 };
-
-// For backward compatibility
-export const dukkanServisi = isletmeServisi;

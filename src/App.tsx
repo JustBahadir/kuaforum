@@ -7,7 +7,7 @@ import { Toaster } from "@/components/ui/sonner";
 import Landing from "@/pages/Landing";
 import Login from "@/pages/Login";
 import ProfilKurulum from "@/pages/ProfilKurulum";
-import AuthCallbackPage from "@/pages/AuthCallbackPage";
+import AuthGoogleCallback from "@/pages/AuthGoogleCallback";
 
 // Geçici olarak devre dışı bırakılmış bileşenler
 import { 
@@ -28,7 +28,7 @@ export function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
           <Route path="/auth" element={<Login />} />
-          <Route path="/auth-google-callback" element={<AuthCallbackPage />} />
+          <Route path="/auth-google-callback" element={<AuthGoogleCallback />} />
           <Route path="/profil-kurulum" element={<ProfilKurulum />} />
 
           {/* İşletme sahibi korumalı sayfalar */}

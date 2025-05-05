@@ -66,7 +66,7 @@ export default function AuthGoogleCallback() {
           console.error("Error fetching user from kullanicilar:", kullaniciError);
         }
         
-        // If user doesn't exist in either table
+        // If user doesn't exist in either table, redirect to profile setup
         if (!profile && !kullanici) {
           console.log("No profile found in either table");
           setAccountNotFound(true);
