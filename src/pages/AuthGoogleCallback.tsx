@@ -14,12 +14,13 @@ export default function AuthGoogleCallback() {
   const [accountExists, setAccountExists] = useState(false);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const mode = searchParams.get("mode") || "login";
 
   useEffect(() => {
     const handleCallback = async () => {
       try {
         setLoading(true);
-        console.log("Handling auth callback");
+        console.log("Handling auth callback, mode:", mode);
 
         // Get the current session
         const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
@@ -37,7 +38,7 @@ export default function AuthGoogleCallback() {
         // Check if we have a user
         if (!user) {
           console.log("No user found in session");
-          setAccountNotFound(true);
+          setError("Giriş bilgileri alınamadı. Lütfen tekrar giriş yapın.");
           setLoading(false);
           return;
         }
@@ -66,12 +67,20 @@ export default function AuthGoogleCallback() {
           console.error("Error fetching user from kullanicilar:", kullaniciError);
         }
         
-        // If user doesn't exist in either table, redirect to profile setup
+        // If user doesn't exist in either table and came from registration flow
         if (!profile && !kullanici) {
-          console.log("No profile found in either table");
-          setAccountNotFound(true);
-          setLoading(false);
-          return;
+          console.log("No profile found, mode:", mode);
+          
+          if (mode === "register") {
+            // Directly redirect to profile setup
+            navigate("/profil-kurulum", { replace: true });
+            return;
+          } else {
+            // Show account not found for login attempts
+            setAccountNotFound(true);
+            setLoading(false);
+            return;
+          }
         }
         
         // If account exists in profiles (older structure)
@@ -132,7 +141,7 @@ export default function AuthGoogleCallback() {
     };
 
     handleCallback();
-  }, [navigate, searchParams]);
+  }, [navigate, searchParams, mode]);
 
   if (accountNotFound) {
     return <AccountNotFound />;

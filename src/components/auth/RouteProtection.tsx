@@ -29,7 +29,7 @@ export function RouteProtection({ children, allowedRoles = [] }: RouteProtection
         
         if (!session) {
           // Oturum yok, login sayfasına yönlendir
-          navigate('/auth', { replace: true });
+          navigate('/login', { replace: true });
           return;
         }
         
@@ -42,15 +42,56 @@ export function RouteProtection({ children, allowedRoles = [] }: RouteProtection
           .eq("kimlik", session.user.id)
           .maybeSingle();
         
-        if (kullaniciHata) {
+        if (kullaniciHata && kullaniciHata.code !== 'PGRST116') {
           console.error("Kullanıcı verileri alınamadı:", kullaniciHata);
-          setError("Kullanıcı bilgilerinize erişilemedi. Lütfen tekrar giriş yapın.");
+          
+          // Try the older profiles table if kullanicilar fails
+          const { data: profile, error: profileError } = await supabase
+            .from("profiles")
+            .select("role, profil_tamamlandi")
+            .eq("id", session.user.id)
+            .maybeSingle();
+            
+          if (profileError) {
+            console.error("Profil verileri alınamadı:", profileError);
+            setError("Kullanıcı bilgilerinize erişilemedi. Lütfen tekrar giriş yapın.");
+            return;
+          }
+          
+          // If profile exists in the older table
+          if (profile) {
+            setUserRole(profile.role);
+            
+            // If profile is not completed, redirect to setup
+            if (!profile.profil_tamamlandi) {
+              navigate('/profil-kurulum', { replace: true });
+              return;
+            }
+            
+            // Check allowed roles
+            if (allowedRoles.length > 0 && !allowedRoles.includes(profile.role)) {
+              setError("Bu sayfaya erişim izniniz bulunmamaktadır.");
+              return;
+            }
+            
+            // Everything is fine
+            setLoading(false);
+            return;
+          }
+          
+          // If neither table has the user, redirect to profile setup
+          navigate('/profil-kurulum', { replace: true });
           return;
         }
         
-        // Kullanıcı profili yoksa veya tamamlanmamışsa, profil kuruluma yönlendir
-        if (!kullanici || !kullanici.profil_tamamlandi) {
-          // Profil yoksa veya tamamlanmamışsa kurulum sayfasına yönlendir
+        // Kullanıcı profili yoksa kurulum sayfasına yönlendir
+        if (!kullanici) {
+          navigate('/profil-kurulum', { replace: true });
+          return;
+        }
+        
+        // Profil tamamlanmamışsa kurulum sayfasına yönlendir
+        if (!kullanici.profil_tamamlandi) {
           navigate('/profil-kurulum', { replace: true });
           return;
         }
@@ -114,7 +155,7 @@ export function RouteProtection({ children, allowedRoles = [] }: RouteProtection
           </Alert>
           
           <Button 
-            onClick={() => navigate('/auth')} 
+            onClick={() => navigate('/login')} 
             className="w-full"
           >
             Giriş Sayfasına Git

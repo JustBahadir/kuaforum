@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { StaffLayout } from "@/components/ui/staff-layout";
@@ -10,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-elements";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
-import { ShopProfileHeader } from "@/components/shop/ShopProfileHeader";
+import ShopProfileHeader from "@/components/shop/ShopProfileHeader";
 import { ShopGalleryCard } from "@/components/shop/ShopGalleryCard";
 
 export default function ShopSettings() {

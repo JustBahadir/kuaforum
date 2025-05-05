@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { StaffLayout } from "@/components/ui/staff-layout";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
-import { ShopProfileHeader } from "@/components/shop/ShopProfileHeader";
+import ShopProfileHeader from "@/components/shop/ShopProfileHeader";
 import { ShopContactCard } from "@/components/shop/ShopContactCard";
 import { ShopWorkingHoursCard } from "@/components/shop/ShopWorkingHoursCard";
 import { ShopGalleryCard } from "@/components/shop/ShopGalleryCard";

@@ -65,8 +65,24 @@ export const islemServisi = {
       
     if (error) throw error;
   },
+  
+  // Add missing functions
+  getir: async (islemKimlik: string): Promise<Hizmet> => {
+    const { data, error } = await supabase
+      .from('islemler')
+      .select('*')
+      .eq('kimlik', islemKimlik)
+      .single();
+      
+    if (error) throw error;
+    return data;
+  },
 
-  // Add missing sirayiGuncelle function
+  ekle: async (islem: Partial<Hizmet>): Promise<Hizmet> => {
+    // This is an alias for olustur for backward compatibility
+    return islemServisi.olustur(islem);
+  },
+
   sirayiGuncelle: async (islemId: string, yeniSira: number): Promise<void> => {
     const { error } = await supabase
       .from('islemler')
