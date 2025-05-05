@@ -1,121 +1,118 @@
 
-import { useState } from "react";
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
-import { Card, CardContent } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import React from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Musteri } from "@/lib/supabase/types";
-import { format } from "date-fns";
-import { tr } from "date-fns/locale";
 import { formatPhoneNumber } from "@/utils/phoneFormatter";
 
 interface CustomerListProps {
   customers: Musteri[];
-  isLoading: boolean;
-  onSelectCustomer?: (customer: Musteri) => void;
+  loading: boolean;
+  onSelectCustomer: (customer: Musteri) => void;
+  onAddCustomer?: () => void;
 }
 
-export function CustomerList({ customers, isLoading, onSelectCustomer }: CustomerListProps) {
-  // Show loading state
-  if (isLoading) {
+export function CustomerList({ customers, loading, onSelectCustomer, onAddCustomer }: CustomerListProps) {
+  if (loading) {
     return (
-      <Card>
-        <CardContent className="p-4 md:p-6">
-          <div className="space-y-4">
-            {Array(3).fill(0).map((_, i) => (
-              <div key={i} className="flex items-center gap-3 md:gap-4">
-                <Skeleton className="h-10 w-10 md:h-12 md:w-12 rounded-full" />
-                <div className="space-y-2">
-                  <Skeleton className="h-3 md:h-4 w-[150px] md:w-[200px]" />
-                  <Skeleton className="h-3 md:h-4 w-[100px] md:w-[150px]" />
-                </div>
-              </div>
-            ))}
+      <Card className="mb-5">
+        <CardContent className="p-5">
+          <div className="text-center py-4">Müşteriler yükleniyor...</div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (customers.length === 0) {
+    return (
+      <Card className="mb-5">
+        <CardContent className="p-5">
+          <div className="text-center py-4">
+            <p className="mb-4">Henüz müşteri bulunmuyor</p>
+            {onAddCustomer && (
+              <Button onClick={onAddCustomer}>
+                Yeni Müşteri Ekle
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
     );
   }
 
-  // Format date for display
-  const formatDate = (dateString?: string | null) => {
-    if (!dateString) return "-";
+  const getInitials = (customer: Musteri) => {
+    // Backwards compatibility with different field names
+    const fullName = customer.ad_soyad || `${customer.first_name || customer.ad || ''} ${customer.last_name || customer.soyad || ''}`;
+    return fullName
+      .split(' ')
+      .map(name => name[0])
+      .join('')
+      .toUpperCase();
+  };
+
+  const formatPhone = (customer: Musteri) => {
+    // Backwards compatibility with different field names
+    const phone = customer.telefon || customer.phone || '';
+    return formatPhoneNumber(phone);
+  };
+
+  const formatBirthDate = (date?: string) => {
+    if (!date) return "Belirtilmemiş";
+    
     try {
-      return format(new Date(dateString), "dd.MM.yyyy", { locale: tr });
-    } catch (error) {
-      return "-";
+      const d = new Date(date);
+      return d.toLocaleDateString('tr-TR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      });
+    } catch (e) {
+      return "Geçersiz Tarih";
     }
   };
 
-  // Mobile card view for customers
-  const MobileCustomerCard = ({ customer }: { customer: Musteri }) => (
-    <div 
-      className="p-3 border-b last:border-0 flex items-center gap-3"
-      onClick={() => onSelectCustomer && onSelectCustomer(customer)}
-    >
-      <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 font-medium text-sm">
-        {customer.first_name?.[0] || "?"}{customer.last_name?.[0] || ""}
-      </div>
-      <div>
-        <div className="font-medium text-sm">
-          {customer.first_name} {customer.last_name || ""}
-        </div>
-        <div className="text-xs text-gray-500">
-          {customer.phone ? formatPhoneNumber(customer.phone) : "-"}
-        </div>
-        <div className="text-xs text-gray-500">
-          Kayıt: {formatDate(customer.created_at)}
-        </div>
-      </div>
-    </div>
-  );
-
-  // Show empty state or customer list
   return (
-    <Card>
-      <CardContent className={customers.length === 0 ? "p-4 md:p-6 text-center text-muted-foreground" : "p-0"}>
-        {customers.length === 0 ? (
-          <div className="py-6 md:py-8">
-            <p className="text-base md:text-lg mb-2">Müşteri bulunamadı</p>
-            <p className="text-xs md:text-sm">Hiç müşteri kaydı mevcut değil veya arama kriterlerinize uygun sonuç yok.</p>
-          </div>
-        ) : (
-          <>
-            {/* Mobile view */}
-            <div className="md:hidden">
-              {customers.map((customer) => (
-                <MobileCustomerCard key={customer.id} customer={customer} />
-              ))}
-            </div>
-
-            {/* Desktop view */}
-            <div className="hidden md:block">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>İsim Soyisim</TableHead>
-                    <TableHead>Telefon</TableHead>
-                    <TableHead>Doğum Tarihi</TableHead>
-                    <TableHead>Kayıt Tarihi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {customers.map((customer) => (
-                    <TableRow key={customer.id} 
-                      className="cursor-pointer hover:bg-gray-50"
-                      onClick={() => onSelectCustomer && onSelectCustomer(customer)}>
-                      <TableCell className="font-medium">
-                        {customer.first_name} {customer.last_name || ""}
-                      </TableCell>
-                      <TableCell>{customer.phone ? formatPhoneNumber(customer.phone) : "-"}</TableCell>
-                      <TableCell>{formatDate(customer.birthdate)}</TableCell>
-                      <TableCell>{formatDate(customer.created_at)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </>
-        )}
+    <Card className="mb-5">
+      <CardHeader className="pb-2">
+        <CardTitle>Müşteriler</CardTitle>
+      </CardHeader>
+      <CardContent className="p-0">
+        <ul className="divide-y">
+          {customers.map((customer) => (
+            <li 
+              key={customer.id}
+              className="p-4 hover:bg-gray-50 cursor-pointer"
+              onClick={() => onSelectCustomer(customer)}
+            >
+              <div className="flex items-center space-x-4">
+                <div className="flex-shrink-0 h-10 w-10 rounded-full bg-primary text-white flex items-center justify-center">
+                  {getInitials(customer)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">
+                    {customer.ad_soyad || `${customer.first_name || customer.ad || ''} ${customer.last_name || customer.soyad || ''}`}
+                  </p>
+                  <p className="text-sm text-gray-500 truncate">
+                    {formatPhone(customer)}
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    Doğum: {formatBirthDate(customer.dogum_tarihi || customer.birthdate)}
+                  </p>
+                </div>
+                <Button 
+                  variant="ghost"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSelectCustomer(customer);
+                  }}
+                  className="flex-shrink-0"
+                >
+                  Görüntüle
+                </Button>
+              </div>
+            </li>
+          ))}
+        </ul>
       </CardContent>
     </Card>
   );

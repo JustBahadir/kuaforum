@@ -1,140 +1,132 @@
-
-import { useEffect, useState } from "react";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle 
-} from "@/components/ui/dialog";
-import { CustomerFormFields } from "./FormFields/CustomerFormFields";
-import { CustomerFormActions } from "./FormFields/CustomerFormActions";
-import { musteriServisi } from "@/lib/supabase";
-import { toast } from "sonner";
+import React, { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Musteri } from "@/lib/supabase/types";
+import { musteriServisi, isletmeServisi } from "@/lib/supabase";
+import { toast } from "sonner";
+import { formatPhoneNumber } from "@/utils/phoneFormatter";
 
-export interface EditCustomerFormProps {
+interface EditCustomerFormProps {
   customer: Musteri;
-  open?: boolean; // Support both open and isOpen
-  isOpen?: boolean; // Support both open and isOpen
-  onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
-  dukkanId?: number;
+  onSave: () => void;
+  onCancel: () => void;
 }
 
-export function EditCustomerForm({ 
-  customer, 
-  open, 
-  isOpen,
-  onOpenChange, 
-  onSuccess,
-  dukkanId
-}: EditCustomerFormProps) {
-  // Use either open or isOpen prop
-  const dialogOpen = open !== undefined ? open : isOpen;
-  
-  const [firstName, setFirstName] = useState(customer.first_name || "");
-  const [lastName, setLastName] = useState(customer.last_name || "");
-  const [phone, setPhone] = useState(customer.phone || "");
-  const [birthdate, setBirthdate] = useState<string | undefined>(
-    customer.birthdate ? new Date(customer.birthdate).toISOString().split('T')[0] : undefined
-  );
+export function EditCustomerForm({ customer, onSave, onCancel }: EditCustomerFormProps) {
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [formData, setFormData] = useState({
+    ad_soyad: customer.ad_soyad || `${customer.ad || customer.first_name || ''} ${customer.soyad || customer.last_name || ''}`,
+    telefon: customer.telefon || customer.phone || '',
+    dogum_tarihi: customer.dogum_tarihi || customer.birthdate || '',
+    // Use customer.adres if exists or fallback to customer.address
+    adres: customer.adres || customer.address || ''
+  });
   
-  // Reset form when customer changes
-  useEffect(() => {
-    setFirstName(customer.first_name || "");
-    setLastName(customer.last_name || "");
-    setPhone(customer.phone || "");
-    setBirthdate(
-      customer.birthdate ? new Date(customer.birthdate).toISOString().split('T')[0] : undefined
-    );
-  }, [customer]);
-
-  const handleSave = async () => {
-    if (!firstName) {
-      toast.error("Lütfen müşteri adı girin");
-      setErrors({ firstName: "Ad alanı zorunludur" });
-      return;
-    }
-
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    
     try {
-      setLoading(true);
+      // Convert customer.id to string since that's what the API expects
+      await musteriServisi.guncelle(String(customer.id), {
+        ad_soyad: formData.ad_soyad,
+        telefon: formData.telefon,
+        dogum_tarihi: formData.dogum_tarihi,
+        adres: formData.adres,
+        isletme_id: customer.isletme_id // Use isletme_id instead of dukkan_id
+      });
       
-      // If dukkanId is not passed, use the customer's existing dukkanId
-      const shopId = dukkanId || customer.dukkan_id;
-
-      const updatePayload = {
-        first_name: firstName,
-        last_name: lastName || null,
-        phone: phone || null,
-        birthdate: birthdate || null,
-        dukkan_id: shopId,
-      };
-
-      console.log("Güncelleme verisi:", updatePayload);
-
-      await musteriServisi.guncelle(customer.id, updatePayload);
-
-      toast.success("Müşteri bilgileri başarıyla güncellendi");
-      onSuccess();
-      onOpenChange(false);
-    } catch (error: any) {
-      console.error("Müşteri güncellenirken hata:", JSON.stringify(error, null, 2));
-      toast.error("Müşteri bilgileri güncellenemedi: " + (error.message || "Bilinmeyen hata"));
+      toast.success("Müşteri bilgileri güncellendi");
+      onSave();
+    } catch (error) {
+      console.error("Müşteri güncelleme hatası:", error);
+      toast.error("Müşteri bilgileri güncellenemedi");
     } finally {
       setLoading(false);
     }
   };
-
-  // Handle form field changes
-  const handleFirstNameChange = (value: string) => {
-    setFirstName(value);
-    if (errors.firstName) setErrors({ ...errors, firstName: '' });
+  
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
-
-  const handleLastNameChange = (value: string) => {
-    setLastName(value);
-    if (errors.lastName) setErrors({ ...errors, lastName: '' });
-  };
-
-  const handlePhoneChange = (value: string) => {
-    setPhone(value);
-    if (errors.phone) setErrors({ ...errors, phone: '' });
-  };
-
-  const handleBirthdateChange = (value: string) => {
-    setBirthdate(value);
-    if (errors.birthdate) setErrors({ ...errors, birthdate: '' });
-  };
-
+  
   return (
-    <Dialog open={dialogOpen} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Müşteri Düzenle</DialogTitle>
-        </DialogHeader>
+    <form onSubmit={handleSubmit}>
+      <div className="grid gap-4">
+        <div>
+          <label htmlFor="ad_soyad" className="block text-sm font-medium text-gray-700">
+            Ad Soyad
+          </label>
+          <Input
+            type="text"
+            name="ad_soyad"
+            id="ad_soyad"
+            value={formData.ad_soyad}
+            onChange={handleChange}
+            className="mt-1 block w-full"
+          />
+        </div>
+        
+        <div>
+          <label htmlFor="telefon" className="block text-sm font-medium text-gray-700">
+            Telefon
+          </label>
+          <Input
+            type="tel"
+            name="telefon"
+            id="telefon"
+            value={formData.telefon}
+            onChange={handleChange}
+            className="mt-1 block w-full"
+          />
+        </div>
+        
+        <div>
+          <label htmlFor="dogum_tarihi" className="block text-sm font-medium text-gray-700">
+            Doğum Tarihi
+          </label>
+          <Input
+            type="date"
+            name="dogum_tarihi"
+            id="dogum_tarihi"
+            value={formData.dogum_tarihi}
+            onChange={handleChange}
+            className="mt-1 block w-full"
+          />
+        </div>
 
-        <CustomerFormFields
-          firstName={firstName}
-          lastName={lastName}
-          phone={phone}
-          birthdate={birthdate}
-          onFirstNameChange={handleFirstNameChange}
-          onLastNameChange={handleLastNameChange}
-          onPhoneChange={handlePhoneChange}
-          onBirthdateChange={handleBirthdateChange}
-          errors={errors}
-        />
-
-        <CustomerFormActions
-          onCancel={() => onOpenChange(false)}
-          actionText="Güncelle"
-          isSubmitting={loading}
-          disabled={!firstName}
-          onSave={handleSave}
-        />
-      </DialogContent>
-    </Dialog>
+        <div>
+          <label htmlFor="adres" className="block text-sm font-medium text-gray-700">
+            Adres
+          </label>
+          <Input
+            type="text"
+            name="adres"
+            id="adres"
+            value={formData.adres}
+            onChange={handleChange}
+            className="mt-1 block w-full"
+          />
+        </div>
+        
+        <div className="flex justify-end gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={onCancel}
+            disabled={loading}
+          >
+            İptal
+          </Button>
+          <Button
+            type="submit"
+            disabled={loading}
+          >
+            {loading ? "Kaydediliyor..." : "Kaydet"}
+          </Button>
+        </div>
+      </div>
+    </form>
   );
 }

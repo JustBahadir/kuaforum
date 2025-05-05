@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -15,7 +14,7 @@ import { formatPhoneNumber } from "@/utils/phoneFormatter";
 
 interface CustomerPersonalInfoProps {
   customer: Musteri;
-  customerId: number;
+  onUpdate: (data: Partial<Musteri>) => void;
   editMode?: boolean;
 }
 
@@ -84,7 +83,7 @@ const getZodiacSign = (day: number, month: number): { sign: string, description:
   }
 };
 
-export function CustomerPersonalInfo({ customer, customerId, editMode = false }: CustomerPersonalInfoProps) {
+export function CustomerPersonalInfo({ customer, onUpdate, editMode = false }: CustomerPersonalInfoProps) {
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [personalData, setPersonalData] = useState({
@@ -97,7 +96,7 @@ export function CustomerPersonalInfo({ customer, customerId, editMode = false }:
   const [newChildName, setNewChildName] = useState("");
 
   // Convert customerId to string for query key consistency
-  const customerIdStr = String(customerId);
+  const customerIdStr = String(customer.id);
 
   const { data: existingPersonalData, isLoading } = useQuery({
     queryKey: ['customer_personal_data', customerIdStr],
@@ -184,8 +183,8 @@ export function CustomerPersonalInfo({ customer, customerId, editMode = false }:
 
   // Get zodiac sign if birthdate exists
   const getHoroscopeInfo = () => {
-    if (customer.birthdate) {
-      const birthDate = new Date(customer.birthdate);
+    if (customer.dogum_tarihi) {
+      const birthDate = new Date(customer.dogum_tarihi);
       const day = birthDate.getDate();
       const month = birthDate.getMonth() + 1; // getMonth is 0-indexed
       const zodiacInfo = getZodiacSign(day, month);
@@ -226,13 +225,13 @@ export function CustomerPersonalInfo({ customer, customerId, editMode = false }:
           <div>
             <Label>Telefon</Label>
             <div className="p-2 border rounded mt-1 bg-gray-50">
-              {customer.phone ? formatPhoneNumber(customer.phone) : "Belirtilmemiş"}
+              {customer.telefon ? formatPhoneNumber(customer.telefon) : "Belirtilmemiş"}
             </div>
           </div>
           <div>
             <Label>Doğum Tarihi</Label>
             <div className="p-2 border rounded mt-1 bg-gray-50">
-              {customer.birthdate ? format(new Date(customer.birthdate), "dd MMMM yyyy", { locale: tr }) : "Belirtilmemiş"}
+              {customer.dogum_tarihi ? format(new Date(customer.dogum_tarihi), "dd MMMM yyyy", { locale: tr }) : "Belirtilmemiş"}
             </div>
           </div>
         </div>
@@ -396,7 +395,7 @@ export function CustomerPersonalInfo({ customer, customerId, editMode = false }:
       <Separator />
 
       {/* Horoscope Information */}
-      {customer.birthdate && horoscopeInfo && (
+      {customer.dogum_tarihi && horoscopeInfo && (
         <div className="space-y-4">
           <h3 className="text-lg font-medium">Burç Bilgisi</h3>
           <div className="p-4 border rounded bg-purple-50">
@@ -411,7 +410,7 @@ export function CustomerPersonalInfo({ customer, customerId, editMode = false }:
         </div>
       )}
       
-      {!customer.birthdate && (
+      {!customer.dogum_tarihi && (
         <div className="space-y-4">
           <h3 className="text-lg font-medium">Burç Bilgisi</h3>
           <div className="p-4 border rounded bg-gray-50">

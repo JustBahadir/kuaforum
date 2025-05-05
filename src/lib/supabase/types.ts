@@ -21,6 +21,13 @@ export interface Kullanici extends BaseEntity {
   rol: KullaniciRol;
   profil_tamamlandi: boolean;
   cinsiyet?: string;
+  
+  // Backward compatibility fields
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  phone?: string;
+  role?: string;
 }
 
 export interface Isletme extends BaseEntity {
@@ -109,6 +116,16 @@ export interface Musteri extends BaseEntity {
   puan?: number;
   son_ziyaret?: string;
   kayit_tarihi?: string;
+  
+  // Backward compatibility fields for customer components
+  ad?: string;
+  soyad?: string;
+  first_name?: string;
+  last_name?: string;
+  phone?: string;
+  birthdate?: string;
+  address?: string;
+  email?: string;
 }
 
 export interface Randevu extends BaseEntity {
@@ -118,6 +135,7 @@ export interface Randevu extends BaseEntity {
   musteri_id: string | number;
   musteri_kimlik: string;
   personel_id: string | number;
+  personel_kimlik?: string;
   tarih: string;
   saat: string;
   bitis_saat?: string;
@@ -125,7 +143,10 @@ export interface Randevu extends BaseEntity {
   notlar?: string;
   islemler: any[];
   toplam_tutar?: number;
-  customer_id?: string; // Auth user ID reference
+  customer_id?: string;
+  
+  // Backward compatibility fields
+  hizmet_kimlik?: string; // For compatibility with customer dashboard
 }
 
 export interface PersonelBasvuru extends BaseEntity {
@@ -162,6 +183,14 @@ export interface Profil extends BaseEntity {
   dogum_tarihi?: string;
   rol?: KullaniciRol;
   durum?: string;
+  
+  // Backward compatibility fields
+  first_name?: string;
+  last_name?: string;
+  phone?: string;
+  address?: string;
+  role?: string;
+  birthdate?: string;
 }
 
 export interface PersonelIslemi extends BaseEntity {

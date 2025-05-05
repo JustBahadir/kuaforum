@@ -1,147 +1,153 @@
-
-import { useState, useEffect } from "react";
-import { format } from "date-fns";
+import React, { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { musteriServisi, isletmeServisi } from "@/lib/supabase";
 import { toast } from "sonner";
-import { musteriServisi } from "@/lib/supabase";
-import { DatePickerField } from "./FormFields/DatePickerField";
-import { PhoneInputField } from "./FormFields/PhoneInputField";
-import { CustomerFormActions } from "./FormFields/CustomerFormActions";
-import { CustomerFormFields } from "./FormFields/CustomerFormFields";
-import { useAuth } from "@/hooks/useAuth";
-import { dukkanServisi } from "@/lib/supabase";
+import { formatPhoneNumber } from "@/utils/phoneFormatter";
 
 interface NewCustomerFormProps {
-  onSuccess: () => void;
+  onSave: () => void;
   onCancel: () => void;
-  dukkanId?: number;
 }
 
-export function NewCustomerForm({ onSuccess, onCancel, dukkanId }: NewCustomerFormProps) {
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [birthdate, setBirthdate] = useState<Date | undefined>(undefined);
-  const [birthdateText, setBirthdateText] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [currentDukkanId, setCurrentDukkanId] = useState<number | undefined>(dukkanId);
-  const { user } = useAuth();
+export function NewCustomerForm({ onSave, onCancel }: NewCustomerFormProps) {
+  const [loading, setLoading] = useState(false);
+  const [shopLoading, setShopLoading] = useState(true);
+  const [isletmeId, setIsletmeId] = useState<string>('');
+  const [formData, setFormData] = useState({
+    ad_soyad: '',
+    telefon: '',
+    dogum_tarihi: '',
+    adres: ''
+  });
   
-  // If dukkanId was not provided, try to get it
+  // Get the current user's shop
   useEffect(() => {
-    async function fetchDukkanId() {
-      if (!currentDukkanId && user) {
-        try {
-          const dukkan = await dukkanServisi.kullaniciDukkaniniGetir();
-          if (dukkan && dukkan.id) {
-            setCurrentDukkanId(dukkan.id);
-          }
-        } catch (error) {
-          console.error("Dükkan ID alınırken hata:", error);
+    const getCurrentShop = async () => {
+      try {
+        const isletme = await isletmeServisi.kullaniciIsletmesiniGetir(); // Use the correct function name
+        if (isletme) {
+          setIsletmeId(isletme.id);
         }
+      } catch (error) {
+        console.error("İşletme bilgileri alınamadı:", error);
+      } finally {
+        setShopLoading(false);
       }
-    }
+    };
     
-    fetchDukkanId();
-  }, [currentDukkanId, user]);
+    getCurrentShop();
+  }, []);
   
-  // Form validation - Check if any field has a value
-  const isFormValid = firstName.trim() !== '' || lastName.trim() !== '' || phone.trim() !== '' || birthdate !== undefined;
-
-  // Format phone for submission
-  const formatPhoneForSubmission = (value: string) => {
-    return value.replace(/\D/g, '');
-  };
-
-  // Form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
     
-    // Validate required fields
-    const newErrors: Record<string, string> = {};
-    if (!firstName.trim()) {
-      newErrors.firstName = 'İsim alanı zorunludur';
-    }
-    
-    if (!currentDukkanId) {
-      newErrors.dukkan = 'Dükkan bilgisi eksik, lütfen sayfayı yenileyip tekrar deneyin';
-    }
-    
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
+    if (!isletmeId) {
+      toast.error("İşletme bilgisi bulunamadı");
+      setLoading(false);
       return;
     }
     
-    setIsSubmitting(true);
-    
     try {
-      console.log("Form onaylandı, müşteri ekleme işlemi başlatılıyor...");
+      await musteriServisi.ekle({
+        ad_soyad: formData.ad_soyad,
+        telefon: formData.telefon,
+        dogum_tarihi: formData.dogum_tarihi,
+        adres: formData.adres,
+        isletme_id: isletmeId
+      });
       
-      // Prepare customer data
-      const customerData = {
-        first_name: firstName,
-        last_name: lastName || null,
-        phone: phone ? formatPhoneForSubmission(phone) : null,
-        birthdate: birthdate ? format(birthdate, 'yyyy-MM-dd') : null,
-        dukkan_id: currentDukkanId // Include dukkan_id in the customer data
-      };
-      
-      console.log("Müşteri verileri:", customerData);
-      
-      // Call the service to add customer
-      const result = await musteriServisi.ekle(customerData);
-      
-      if (result) {
-        toast.success("Müşteri başarıyla eklendi");
-        
-        // Reset form and notify parent
-        setFirstName('');
-        setLastName('');
-        setPhone('');
-        setBirthdate(undefined);
-        setBirthdateText('');
-        setErrors({});
-        onSuccess();
-      } else {
-        toast.error("Müşteri eklenirken bir hata oluştu");
-      }
-    } catch (error: any) {
-      console.error("Müşteri ekleme hatası (form):", error);
-      toast.error(`Müşteri eklenemedi: ${error.message || "Bir hata oluştu"}`);
+      toast.success("Yeni müşteri eklendi");
+      onSave();
+    } catch (error) {
+      console.error("Müşteri ekleme hatası:", error);
+      toast.error("Müşteri eklenemedi");
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
+  };
+  
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
   
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {/* Customer form fields */}
-      <CustomerFormFields 
-        firstName={firstName}
-        lastName={lastName}
-        phone={phone}
-        onFirstNameChange={setFirstName}
-        onLastNameChange={setLastName}
-        onPhoneChange={setPhone}
-        errors={errors}
-      />
+      <div>
+        <label htmlFor="ad_soyad" className="block text-sm font-medium text-gray-700">
+          Ad Soyad
+        </label>
+        <Input
+          type="text"
+          name="ad_soyad"
+          id="ad_soyad"
+          value={formData.ad_soyad}
+          onChange={handleChange}
+          placeholder="Ad Soyad"
+          required
+        />
+      </div>
       
-      <DatePickerField
-        value={birthdate}
-        onChange={setBirthdate}
-        textValue={birthdateText}
-        onTextChange={setBirthdateText}
-        label="Doğum Tarihi"
-        id="birthdate"
-      />
+      <div>
+        <label htmlFor="telefon" className="block text-sm font-medium text-gray-700">
+          Telefon
+        </label>
+        <Input
+          type="tel"
+          name="telefon"
+          id="telefon"
+          value={formData.telefon}
+          onChange={handleChange}
+          placeholder="05XX XXX XX XX"
+          required
+        />
+      </div>
       
-      {errors.dukkan && <p className="text-red-500 text-sm mt-1">{errors.dukkan}</p>}
+      <div>
+        <label htmlFor="dogum_tarihi" className="block text-sm font-medium text-gray-700">
+          Doğum Tarihi
+        </label>
+        <Input
+          type="date"
+          name="dogum_tarihi"
+          id="dogum_tarihi"
+          value={formData.dogum_tarihi}
+          onChange={handleChange}
+          placeholder="Doğum Tarihi"
+        />
+      </div>
       
-      <CustomerFormActions
-        isSubmitting={isSubmitting}
-        onCancel={onCancel}
-        disabled={!isFormValid} // Enable button if any field has a value
-      />
+      <div>
+        <label htmlFor="adres" className="block text-sm font-medium text-gray-700">
+          Adres
+        </label>
+        <Input
+          type="text"
+          name="adres"
+          id="adres"
+          value={formData.adres}
+          onChange={handleChange}
+          placeholder="Adres"
+        />
+      </div>
+      
+      <div className="flex justify-end gap-2">
+        <Button
+          variant="ghost"
+          onClick={onCancel}
+          disabled={loading}
+        >
+          İptal
+        </Button>
+        <Button
+          type="submit"
+          disabled={loading || shopLoading}
+        >
+          {loading ? "Kaydediliyor..." : "Kaydet"}
+        </Button>
+      </div>
     </form>
   );
 }

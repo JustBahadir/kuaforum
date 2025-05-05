@@ -1,10 +1,13 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { isletmeServisi } from "@/lib/supabase";
 import { toast } from "sonner";
-import CalismaSaatleri from "./WorkingHours";
+import { ServicesList } from "./ServicesList";
+import { ServiceForm } from "./ServiceForm";
+import { WorkingHours } from "./WorkingHours";
+import { ServiceCategoriesList } from "./ServiceCategoriesList";
+import { ServiceCategoryForm } from "./ServiceCategoryForm";
 
 export function ServicesContent() {
   const [yukleniyor, setYukleniyor] = useState(false);
@@ -39,7 +42,7 @@ export function ServicesContent() {
                 <p className="text-sm text-muted-foreground mb-4">
                   İşletmenizin çalışma saatlerini buradan düzenleyebilirsiniz.
                 </p>
-                <CalismaSaatleri />
+                <WorkingHours />
               </CardContent>
               <CardFooter>
                 <Button 

@@ -4,12 +4,13 @@ import { randevuServisi } from "@/lib/supabase";
 import { Randevu, RandevuDurum } from "@/lib/supabase/types";
 import { toast } from "sonner";
 
-interface UseAppointmentsProps {
+export interface UseAppointmentsProps {
   isletmeId?: string;
   personelId?: string;
   musteriId?: string;
   initialDate?: string;
   autoFetch?: boolean;
+  date?: string; // Added this property to fix the error
 }
 
 export const useAppointments = ({ 
@@ -17,12 +18,13 @@ export const useAppointments = ({
   personelId, 
   musteriId, 
   initialDate, 
-  autoFetch = true 
+  autoFetch = true,
+  date
 }: UseAppointmentsProps = {}) => {
   const [appointments, setAppointments] = useState<Randevu[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [filters, setFilters] = useState({
-    date: initialDate || new Date().toISOString().split('T')[0],
+    date: date || initialDate || new Date().toISOString().split('T')[0],
     personelId: personelId || "",
     status: ""
   });

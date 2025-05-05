@@ -1,131 +1,114 @@
 
-// Fix the type conversion issues in WorkingHours.tsx
-import React from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
+import React, { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { useWorkingHours } from "./hooks/useWorkingHours";
+import { Input } from "@/components/ui/input";
+import { useWorkingHours, gunIsimleri } from "@/components/operations/hooks/useWorkingHours";
+import { Loader2 } from "lucide-react";
 
 interface WorkingHoursProps {
   isletmeId: string;
-  editable?: boolean;
-  onSave?: (saatler: any[]) => void;
 }
 
-export function WorkingHours({ isletmeId, editable = true, onSave }: WorkingHoursProps) {
+export function WorkingHours({ isletmeId }: WorkingHoursProps) {
   const {
     calisma_saatleri,
-    gunIsimleri,
     yukleniyor,
+    kaydetmeBasarili,
     saatleriGuncelle,
+    saatleriKaydet,
     gunuKapaliYap,
     butunGunleriAc
   } = useWorkingHours(isletmeId);
 
-  const handleTimeChange = (index: number, field: string, value: string) => {
-    saatleriGuncelle(index, field, value);
-  };
-
-  const handleToggleDay = (index: number, kapali: boolean) => {
-    gunuKapaliYap(index, kapali);
-  };
-
-  const handleSubmit = () => {
-    if (onSave) {
-      onSave(calisma_saatleri);
-    }
-  };
-
-  if (yukleniyor) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>İşletme Çalışma Saatleri</CardTitle>
-          <CardDescription>
-            Yükleniyor...
-          </CardDescription>
-        </CardHeader>
-      </Card>
-    );
-  }
-
   return (
-    <Card>
+    <Card className="shadow-md">
       <CardHeader>
-        <CardTitle>İşletme Çalışma Saatleri</CardTitle>
-        <CardDescription>
-          İşletmenizin açılış ve kapanış saatlerini belirleyin.
-        </CardDescription>
+        <CardTitle className="text-xl font-semibold">Çalışma Saatleri</CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {calisma_saatleri.map((saat, index) => (
-            <div key={index} className="grid grid-cols-5 gap-4 items-center">
-              <div className="font-medium">{gunIsimleri[index]}</div>
-              
-              <Select
-                disabled={!editable || saat.kapali}
-                value={saat.acilis}
-                onValueChange={(value) => handleTimeChange(index, "acilis", value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Açılış" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Array.from({ length: 24 }).map((_, saat) => (
-                    <SelectItem key={saat} value={String(saat).padStart(2, '0') + ':00'}>
-                      {String(saat).padStart(2, '0')}:00
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              
-              <Select
-                disabled={!editable || saat.kapali}
-                value={saat.kapanis}
-                onValueChange={(value) => handleTimeChange(index, "kapanis", value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Kapanış" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Array.from({ length: 24 }).map((_, saat) => (
-                    <SelectItem key={saat} value={String(saat).padStart(2, '0') + ':00'}>
-                      {String(saat).padStart(2, '0')}:00
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id={`day-${index}`}
-                  disabled={!editable}
-                  checked={!saat.kapali}
-                  onCheckedChange={(checked) => handleToggleDay(index, !checked)}
-                />
-                <Label htmlFor={`day-${index}`}>
-                  {saat.kapali ? "Kapalı" : "Açık"}
-                </Label>
-              </div>
+      <CardContent className="space-y-5">
+        {yukleniyor ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : (
+          <>
+            <div className="grid gap-5">
+              {calisma_saatleri.map((saat, index) => (
+                <div key={index} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b">
+                  <div className="flex items-center gap-3">
+                    <Switch 
+                      checked={!saat.kapali} 
+                      onCheckedChange={(checked) => gunuKapaliYap(index, !checked)}
+                      aria-label={`${saat.gun} açık/kapalı durumu`}
+                    />
+                    <Label className="font-medium text-gray-700">{saat.gun}</Label>
+                  </div>
+                  
+                  <div className="flex flex-1 max-w-[280px] gap-3">
+                    <div className="flex-1">
+                      <Input 
+                        type="time"
+                        value={saat.acilis}
+                        onChange={(e) => saatleriGuncelle(index, "acilis", e.target.value)}
+                        disabled={saat.kapali}
+                        className={saat.kapali ? "opacity-50" : ""}
+                      />
+                    </div>
+                    <span className="flex items-center text-gray-500">-</span>
+                    <div className="flex-1">
+                      <Input 
+                        type="time"
+                        value={saat.kapanis}
+                        onChange={(e) => saatleriGuncelle(index, "kapanis", e.target.value)}
+                        disabled={saat.kapali}
+                        className={saat.kapali ? "opacity-50" : ""}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-
-          {editable && (
-            <div className="flex justify-between pt-4">
+            
+            <div className="flex flex-col sm:flex-row pt-4 gap-3">
               <Button 
                 variant="outline" 
+                className="flex-1" 
                 onClick={butunGunleriAc}
               >
                 Tüm Günleri Aç
               </Button>
-              <Button onClick={handleSubmit}>Kaydet</Button>
+              <Button 
+                className="flex-1"
+                onClick={saatleriKaydet}
+                disabled={yukleniyor}
+              >
+                {yukleniyor ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 
+                    Kaydediliyor...
+                  </>
+                ) : (
+                  "Değişiklikleri Kaydet"
+                )}
+              </Button>
             </div>
-          )}
-        </div>
+            
+            {kaydetmeBasarili === true && (
+              <div className="p-3 bg-green-50 text-green-700 rounded-md text-sm">
+                Çalışma saatleri başarıyla kaydedildi.
+              </div>
+            )}
+            
+            {kaydetmeBasarili === false && (
+              <div className="p-3 bg-red-50 text-red-700 rounded-md text-sm">
+                Çalışma saatleri kaydedilirken bir hata oluştu.
+              </div>
+            )}
+          </>
+        )}
       </CardContent>
     </Card>
   );

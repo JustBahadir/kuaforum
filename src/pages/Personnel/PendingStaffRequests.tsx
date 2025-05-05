@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
@@ -8,7 +7,7 @@ import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { StaffJoinRequestDetails } from "@/components/staff/StaffJoinRequestDetails";
+import StaffJoinRequestDetails from "@/components/staff/StaffJoinRequestDetails"; // Fixed import - using default import instead of named import
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";

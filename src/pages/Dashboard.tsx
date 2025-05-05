@@ -7,7 +7,7 @@ import { MainMenuOptions } from '@/pages/Dashboard/components/MainMenuOptions';
 import { CustomerMenu } from '@/pages/Dashboard/components/CustomerMenu';
 import { PersonnelMenu } from '@/pages/Dashboard/components/PersonnelMenu';
 import { ProfitAnalysis } from '@/components/dashboard/ProfitAnalysis';
-import { BusinessReports } from '@/components/dashboard/BusinessReports';
+import BusinessReports from "@/components/dashboard/BusinessReports"; // Fixed import - using default import instead of named import
 import { TestDataButton } from '@/pages/Dashboard/components/TestDataButton';
 
 // Create interfaces for the wrapper components

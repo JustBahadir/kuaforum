@@ -1,19 +1,17 @@
-
-import React from 'react';
+import React from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { useCustomerOperations, CustomerOperation } from '@/hooks/useCustomerOperations';
-import { formatCurrency } from '@/lib/utils';
-import { AlertCircle } from "lucide-react";
+import { formatCurrency } from "@/utils/currencyFormatter";
+import { format } from "date-fns";
+import { useCustomerOperations } from "@/hooks/useCustomerOperations";
 
-export interface CustomerOperationsTableProps {
-  customerId: number | string;
+interface CustomerOperationsTableProps {
+  customerId: string | number;
 }
 
 export function CustomerOperationsTable({ customerId }: CustomerOperationsTableProps) {
-  const { operations, loading, error } = useCustomerOperations({ customerId });
-  
-  if (loading) {
+  const { operations, isLoading, error, refetch } = useCustomerOperations(customerId);
+
+  if (isLoading) {
     return (
       <div className="flex justify-center py-8">
         <div className="animate-spin rounded-full h-8 w-8 border-2 border-purple-500 border-t-transparent"></div>
