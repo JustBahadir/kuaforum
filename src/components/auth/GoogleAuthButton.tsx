@@ -11,7 +11,7 @@ interface GoogleAuthButtonProps {
 }
 
 export function GoogleAuthButton({ 
-  redirectTo = window.location.origin + "/profil-kurulum",
+  redirectTo = window.location.origin + "/auth-google-callback?mode=login",
   className = "",
   text = "Google ile Devam Et"
 }: GoogleAuthButtonProps) {
@@ -55,3 +55,5 @@ export function GoogleAuthButton({
     </Button>
   );
 }
+
+export default GoogleAuthButton;

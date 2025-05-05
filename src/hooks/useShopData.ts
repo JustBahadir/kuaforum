@@ -45,6 +45,7 @@ export function useShopData() {
 
   return {
     isletme,
+    isletmeData: isletme, // Added for backward compatibility
     personel,
     calismaSaatleri,
     loading,
@@ -52,3 +53,6 @@ export function useShopData() {
     yenile: fetchData
   };
 }
+
+// Export for backward compatibility
+export default useShopData;

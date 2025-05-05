@@ -11,7 +11,7 @@ export function useAuth() {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [isletmeId, setIsletmeId] = useState<string | null>(null);
-  const [dukkanId, setDukkanId] = useState<string | number | null>(null); // For backward compatibility
+  const [dukkanId, setDukkanId] = useState<string | null>(null); // Changed to string to be consistent
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -79,7 +79,7 @@ export function useAuth() {
         
         if (data) {
           setIsletmeId(data.kimlik);
-          setDukkanId(data.id); // For backward compatibility
+          setDukkanId(data.kimlik); // Using kimlik for both for consistency
         }
       } catch (err) {
         console.error('Error in fetchUserBusiness:', err);
@@ -133,7 +133,7 @@ export function useAuth() {
     userRole,
     userId,
     isletmeId,
-    dukkanId, // For backward compatibility
+    dukkanId,
     signIn,
     signOut,
     isAuthenticated: !!session,

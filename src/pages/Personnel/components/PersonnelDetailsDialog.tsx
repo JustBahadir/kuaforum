@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
@@ -38,6 +39,12 @@ export function PersonnelDetailsDialog({
     },
     [onOpenChange]
   );
+
+  // Add the missing handleTabDataChange function
+  const handleTabDataChange = useCallback(() => {
+    // Simply trigger the onRefresh callback
+    if (onRefresh) onRefresh();
+  }, [onRefresh]);
 
   if (!personnel) return null;
 

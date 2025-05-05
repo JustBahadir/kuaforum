@@ -6,13 +6,11 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import AccountNotFound from "@/components/auth/AccountNotFound";
-import { profilServisi } from "@/lib/supabase/services/profilServisi";
 
 export default function AuthGoogleCallback() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [accountNotFound, setAccountNotFound] = useState(false);
-  const [accountExists, setAccountExists] = useState(false);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const mode = searchParams.get("mode") || "login";
@@ -24,18 +22,15 @@ export default function AuthGoogleCallback() {
         console.log("Handling auth callback, mode:", mode);
 
         // Get the current session
-        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
         
-        if (sessionError) {
-          console.error("Session error:", sessionError);
+        if (userError) {
+          console.error("User error:", userError);
           setError("Oturum bilgilerinize erişilemedi. Lütfen tekrar giriş yapın.");
           setLoading(false);
           return;
         }
         
-        const session = sessionData?.session;
-        const user = session?.user;
-
         // Check if we have a user
         if (!user) {
           console.log("No user found in session");
@@ -46,7 +41,7 @@ export default function AuthGoogleCallback() {
 
         console.log("Auth callback - User:", user.email);
 
-        // Check for user profile in kullanicilar table (newer structure)
+        // Check for user profile in kullanicilar table
         const { data: kullanici, error: kullaniciError } = await supabase
           .from("kullanicilar")
           .select("*")
@@ -73,7 +68,7 @@ export default function AuthGoogleCallback() {
           }
         }
         
-        // If user exists in kullanicilar (newer structure)
+        // If user exists in kullanicilar table
         if (kullanici) {
           console.log("Found user in kullanicilar table:", kullanici);
           
@@ -111,13 +106,9 @@ export default function AuthGoogleCallback() {
   if (accountNotFound) {
     return <AccountNotFound />;
   }
-  
-  if (accountExists) {
-    return <AccountNotFound accountExists={true} />;
-  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-r from-purple-50 to-blue-50">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
       <div className="max-w-md w-full space-y-6 p-8 bg-white shadow-lg rounded-lg">
         {loading ? (
           <div className="text-center py-8">

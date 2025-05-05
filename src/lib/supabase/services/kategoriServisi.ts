@@ -1,72 +1,84 @@
 
 import { supabase } from '../client';
-import { IslemKategorisi } from '../types';
 
 export const kategoriServisi = {
-  isletmeyeGoreGetir: async (isletmeKimlik: string): Promise<IslemKategorisi[]> => {
+  getir: async (id: string) => {
     const { data, error } = await supabase
       .from('islem_kategorileri')
       .select('*')
-      .eq('isletme_id', isletmeKimlik)
+      .eq('id', id)
+      .single();
+      
+    if (error) throw error;
+    return data;
+  },
+  
+  hepsiniGetir: async () => {
+    const { data, error } = await supabase
+      .from('islem_kategorileri')
+      .select('*')
       .order('sira', { ascending: true });
       
     if (error) throw error;
     return data || [];
   },
   
-  hepsiniGetir: async (): Promise<IslemKategorisi[]> => {
+  isletmeyeGoreGetir: async (isletmeId: string) => {
     const { data, error } = await supabase
       .from('islem_kategorileri')
-      .select('*');
+      .select('*')
+      .eq('dukkan_id', isletmeId)
+      .order('sira', { ascending: true });
       
     if (error) throw error;
     return data || [];
   },
   
-  olustur: async (kategori: Partial<IslemKategorisi>): Promise<IslemKategorisi> => {
+  ekle: async (kategori: any) => {
     const { data, error } = await supabase
       .from('islem_kategorileri')
       .insert([kategori])
-      .select()
-      .single();
+      .select();
       
     if (error) throw error;
-    return data;
+    return data?.[0];
   },
   
-  // Alias for backward compatibility
-  ekle: async (kategori: Partial<IslemKategorisi>): Promise<IslemKategorisi> => {
-    return kategoriServisi.olustur(kategori);
-  },
-  
-  guncelle: async (kategoriKimlik: string, kategori: Partial<IslemKategorisi>): Promise<IslemKategorisi> => {
+  guncelle: async (id: string, kategori: any) => {
     const { data, error } = await supabase
       .from('islem_kategorileri')
       .update(kategori)
-      .eq('kimlik', kategoriKimlik)
-      .select()
-      .single();
+      .eq('id', id)
+      .select();
       
     if (error) throw error;
-    return data;
+    return data?.[0];
   },
   
-  sil: async (kategoriKimlik: string): Promise<void> => {
+  sil: async (id: string) => {
     const { error } = await supabase
       .from('islem_kategorileri')
       .delete()
-      .eq('kimlik', kategoriKimlik);
+      .eq('id', id);
       
     if (error) throw error;
+    return true;
   },
-
-  // Add missing sirayiGuncelle function
-  sirayiGuncelle: async (kategoriId: string, yeniSira: number): Promise<void> => {
-    const { error } = await supabase
+  
+  // Add the missing sirayiGuncelle function
+  sirayiGuncelle: async (categories: { id: string, sira: number }[]) => {
+    // Prepare the updates for a batch operation
+    const updates = categories.map(category => ({
+      id: category.id,
+      sira: category.sira
+    }));
+    
+    const { data, error } = await supabase
       .from('islem_kategorileri')
-      .update({ sira: yeniSira })
-      .eq('kimlik', kategoriId);
-
+      .upsert(updates)
+      .select();
+      
     if (error) throw error;
+    return data;
   }
 };
