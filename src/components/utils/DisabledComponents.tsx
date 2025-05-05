@@ -1,135 +1,80 @@
 
-/**
- * Geçici olarak devre dışı bırakılmış bileşenler
- * Bu bileşenler hata ayıklama tamamlanana kadar kullanılmayacaklar
- */
-
 import React from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertTriangle } from "lucide-react";
+import { Link } from "react-router-dom";
 
-// Boş bileşen - hiçbir şey render etmez
-export const BosKomponent = () => null;
+// Geliştirme sırasında geçici olarak kullanılan bileşenler
 
-// Devre dışı bileşen - "Geliştirme aşamasında" mesajı gösterir
-export const DevreDisiBilesenKartiTemel = ({ baslik = "Geliştirme Aşamasında", aciklama = "Bu özellik şu anda geliştirme aşamasındadır." }) => {
+// İşletme sahibi sayfaları için geçici bileşen
+export const IsletmeSahibiSayfasi: React.FC<{title?: string}> = ({title = "İşletme Sahibi Sayfası"}) => {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{baslik}</CardTitle>
-        <CardDescription>{aciklama}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Alert>
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Dikkat</AlertTitle>
-          <AlertDescription>
-            Bu bileşen henüz kullanıma hazır değildir. Lütfen daha sonra tekrar deneyin.
-          </AlertDescription>
-        </Alert>
-      </CardContent>
-    </Card>
-  );
-};
-
-// Devre dışı bileşen - Özelleştirilebilir içerikle
-export const DevreDisiBilesenKarti = ({ baslik, aciklama, icerik }) => {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{baslik || "Geliştirme Aşamasında"}</CardTitle>
-        {aciklama && <CardDescription>{aciklama}</CardDescription>}
-      </CardHeader>
-      <CardContent>
-        {icerik || (
-          <Alert>
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Dikkat</AlertTitle>
-            <AlertDescription>
-              Bu bileşen henüz kullanıma hazır değildir. Lütfen daha sonra tekrar deneyin.
-            </AlertDescription>
-          </Alert>
-        )}
-      </CardContent>
-    </Card>
-  );
-};
-
-// Devre dışı sayfa bileşeni - tam ekran mesaj gösterir
-export const DevreDisiBilesenSayfa = ({ baslik = "Sayfa Geliştirme Aşamasında", aciklama = "Bu sayfa şu anda geliştirme aşamasındadır ve yakında kullanıma sunulacaktır." }) => {
-  return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4">
-      <Card className="w-full max-w-lg shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-center">{baslik}</CardTitle>
-          <CardDescription className="text-center">{aciklama}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Alert>
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Geliştirme Devam Ediyor</AlertTitle>
-            <AlertDescription>
-              Bu sayfa henüz kullanıma hazır değildir. Lütfen daha sonra tekrar deneyin.
-            </AlertDescription>
-          </Alert>
-        </CardContent>
-      </Card>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+      <div className="text-center bg-white p-8 rounded-lg shadow-lg max-w-lg w-full">
+        <h1 className="text-2xl font-bold mb-4">{title}</h1>
+        <p className="mb-6 text-gray-600">
+          Bu sayfa şu anda geliştirme aşamasındadır. Çok yakında kullanıma açılacaktır.
+        </p>
+        <Link 
+          to="/" 
+          className="inline-block bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
+        >
+          Ana Sayfaya Dön
+        </Link>
+      </div>
     </div>
   );
 };
 
-// İşletme sahibi için geçici ana sayfa
-export const IsletmeSahibiSayfasi = () => {
-  return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4">
-      <Card className="w-full max-w-lg shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-center">İşletme Yönetim Paneli</CardTitle>
-          <CardDescription className="text-center">Bu sayfa şu anda geliştirme aşamasındadır.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Alert>
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Geliştirme Devam Ediyor</AlertTitle>
-            <AlertDescription>
-              İşletme yönetim paneli yakında kullanıma sunulacaktır. Şu anda sadece temel kimlik doğrulama ve profil oluşturma özellikleri aktiftir.
-            </AlertDescription>
-          </Alert>
-        </CardContent>
-      </Card>
-    </div>
-  );
-};
-
-// Personel için geçici ana sayfa
-export const PersonelSayfasi = ({ durum = "atanmamis" }) => {
-  const durumMesaji = {
-    atanmamis: "Henüz bir işletmeye atanmadınız. İşletme kodunu girerek bir işletmeye başvurabilirsiniz.",
-    beklemede: "Başvurunuz işletme sahibi tarafından değerlendirilmeyi bekliyor.",
-    onaylandi: "İşletmeye erişiminiz onaylandı. Yakında tüm özellikler kullanımınıza açılacaktır."
+// Personel sayfaları için geçici bileşen
+export const PersonelSayfasi: React.FC<{durum: string}> = ({durum = "atanmamis"}) => {
+  const durumBasligi = {
+    "atanmamis": "Atanmamış Personel Sayfası",
+    "beklemede": "Başvuru Bekleyen Personel Sayfası",
+    "onaylandi": "Onaylanmış Personel Sayfası"
   };
-
+  
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4">
-      <Card className="w-full max-w-lg shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-center">Personel Paneli</CardTitle>
-          <CardDescription className="text-center">Personel durumu: {durum}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Alert className={durum === "onaylandi" ? "bg-green-50" : durum === "beklemede" ? "bg-yellow-50" : "bg-blue-50"}>
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Bilgi</AlertTitle>
-            <AlertDescription>{durumMesaji[durum]}</AlertDescription>
-          </Alert>
-        </CardContent>
-      </Card>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+      <div className="text-center bg-white p-8 rounded-lg shadow-lg max-w-lg w-full">
+        <h1 className="text-2xl font-bold mb-4">{durumBasligi[durum] || "Personel Sayfası"}</h1>
+        <p className="mb-6 text-gray-600">
+          Bu sayfa şu anda geliştirme aşamasındadır. Çok yakında kullanıma açılacaktır.
+        </p>
+        <Link 
+          to="/" 
+          className="inline-block bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
+        >
+          Ana Sayfaya Dön
+        </Link>
+      </div>
     </div>
   );
 };
 
-// Tüm sorunlu bileşenler için varsayılan dışa aktarımlar
-export const CalismaSaatleri = () => <BosKomponent />;
-export const JoinShopModal = () => <BosKomponent />;
-export const WorkingHours = () => <BosKomponent />;
+// Diğer devre dışı sayfalar için genel bileşen
+export const DevreDisiBilesenSayfa: React.FC = () => {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+      <div className="text-center bg-white p-8 rounded-lg shadow-lg max-w-lg w-full">
+        <h1 className="text-2xl font-bold mb-4">Sayfa Hazırlanıyor</h1>
+        <p className="mb-6 text-gray-600">
+          Bu özellik henüz geliştirme aşamasındadır. Lütfen daha sonra tekrar deneyiniz.
+        </p>
+        <Link 
+          to="/" 
+          className="inline-block bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
+        >
+          Ana Sayfaya Dön
+        </Link>
+      </div>
+    </div>
+  );
+};
+
+// Yardımcı fonksiyon - Devre dışı bileşen oluşturma
+export function createDisabledComponent(name: string) {
+  return () => (
+    <div className="p-4 border border-dashed border-gray-300 rounded-md bg-gray-50 text-center">
+      <p className="text-gray-500">{name} bileşeni şu anda devre dışı.</p>
+    </div>
+  );
+}
