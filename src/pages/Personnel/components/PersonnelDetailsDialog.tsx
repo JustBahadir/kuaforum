@@ -39,6 +39,12 @@ export function PersonnelDetailsDialog({
     [onOpenChange]
   );
 
+  const handleTabDataChange = (tabData: any) => {
+    console.log("Tab data changed:", tabData);
+    // Implementation details depend on how this function is used
+    // in the context of the component
+  };
+
   if (!personnel) return null;
 
   return (

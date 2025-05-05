@@ -63,5 +63,15 @@ export const profilServisi = {
       
     if (error && error.code !== 'PGRST116') throw error;
     return !!data;
+  },
+  
+  // Add sirayiGuncelle function for services
+  sirayiGuncelle: async (id: string, sira: number): Promise<void> => {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ sira })
+      .eq('id', id);
+      
+    if (error) throw error;
   }
 };
