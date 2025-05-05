@@ -11,7 +11,7 @@ export function useAuth() {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [isletmeId, setIsletmeId] = useState<string | null>(null);
-  const [dukkanId, setDukkanId] = useState<string | null>(null); // Changed to string to be consistent
+  const [dukkanId, setDukkanId] = useState<string | null>(null);
 
   useEffect(() => {
     // Set up auth state listener FIRST

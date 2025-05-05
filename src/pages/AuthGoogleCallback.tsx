@@ -45,7 +45,7 @@ export default function AuthGoogleCallback() {
         const { data: kullanici, error: kullaniciError } = await supabase
           .from("kullanicilar")
           .select("*")
-          .eq("kimlik", data.user.id)
+          .eq("auth_id", data.user.id)
           .maybeSingle();
 
         if (kullaniciError && kullaniciError.code !== 'PGRST116') {
@@ -58,7 +58,7 @@ export default function AuthGoogleCallback() {
           
           if (mode === "register") {
             // Directly redirect to profile setup
-            navigate("/profil-kurulum", { replace: true });
+            navigate("/kayit-formu", { replace: true });
             return;
           } else {
             // Show account not found for login attempts
@@ -75,7 +75,7 @@ export default function AuthGoogleCallback() {
           // Check if profile is completed
           if (!kullanici.profil_tamamlandi) {
             console.log("Profile exists but not completed, redirecting to setup");
-            navigate("/profil-kurulum", { replace: true });
+            navigate("/kayit-formu", { replace: true });
             return;
           }
           

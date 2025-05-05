@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase/client";
 import { BsGoogle } from "react-icons/bs";
+import { toast } from "sonner";
 
 interface GoogleAuthButtonProps {
   redirectTo?: string;
@@ -35,10 +36,12 @@ export function GoogleAuthButton({
 
       if (error) {
         console.error("Google giriş hatası:", error);
+        toast.error("Google ile giriş sırasında bir hata oluştu");
         throw error;
       }
     } catch (error) {
       console.error("Google girişi sırasında beklenmeyen hata:", error);
+      toast.error("Google ile giriş sırasında bir hata oluştu");
     } finally {
       setLoading(false);
     }

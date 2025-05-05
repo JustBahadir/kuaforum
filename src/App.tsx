@@ -8,6 +8,7 @@ import Landing from "@/pages/Landing";
 import Login from "@/pages/Login";
 import ProfilKurulum from "@/pages/ProfilKurulum";
 import AuthGoogleCallback from "@/pages/AuthGoogleCallback";
+import KayitFormu from "@/pages/KayitFormu";
 
 // Geçici olarak devre dışı bırakılmış bileşenler
 import { 
@@ -30,6 +31,7 @@ export function App() {
           <Route path="/auth" element={<Login />} />
           <Route path="/auth-google-callback" element={<AuthGoogleCallback />} />
           <Route path="/profil-kurulum" element={<ProfilKurulum />} />
+          <Route path="/kayit-formu" element={<KayitFormu />} />
 
           {/* İşletme sahibi korumalı sayfalar */}
           <Route
@@ -86,6 +88,12 @@ export function App() {
           />
           <Route
             path="/shop/*"
+            element={<DevreDisiBilesenSayfa />}
+          />
+          
+          {/* Müşteri sayfaları */}
+          <Route
+            path="/musteri/anasayfa"
             element={<DevreDisiBilesenSayfa />}
           />
 
