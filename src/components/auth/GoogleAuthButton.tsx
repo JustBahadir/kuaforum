@@ -11,7 +11,7 @@ interface GoogleAuthButtonProps {
 }
 
 export function GoogleAuthButton({ 
-  redirectTo = window.location.origin + "/auth-google-callback?mode=login",
+  redirectTo = `${window.location.origin}/auth-google-callback?mode=login`,
   className = "",
   text = "Google ile Devam Et"
 }: GoogleAuthButtonProps) {
@@ -22,7 +22,7 @@ export function GoogleAuthButton({
       setLoading(true);
       console.log("Redirecting to:", redirectTo);
       
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: redirectTo,
