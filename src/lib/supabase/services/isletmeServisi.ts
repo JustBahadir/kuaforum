@@ -59,6 +59,21 @@ export const isletmeServisi = {
       console.error('Kullanıcı işletmesi getirilirken hata:', error);
       return null;
     }
+  },
+
+  // Tüm işletmeleri getir
+  async hepsiniGetir(): Promise<Isletme[]> {
+    try {
+      const { data, error } = await supabase
+        .from('isletmeler')
+        .select('*');
+      
+      if (error) throw error;
+      
+      return data as Isletme[];
+    } catch (error) {
+      console.error('İşletmeler getirilirken hata:', error);
+      return [];
+    }
   }
 };
-

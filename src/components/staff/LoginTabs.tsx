@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
 
 interface LoginTabsProps {
-  onSuccess: () => void;
+  onSuccess?: () => void;
 }
 
 export function LoginTabs({ onSuccess }: LoginTabsProps) {
@@ -35,3 +35,5 @@ export function LoginTabs({ onSuccess }: LoginTabsProps) {
     </Tabs>
   );
 }
+
+export default LoginTabs;

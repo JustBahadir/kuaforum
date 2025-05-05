@@ -3,7 +3,6 @@ import { supabase } from '../client';
 import { Personel } from '../types';
 
 export const personelServisi = {
-  // İşletmeye göre personelleri getir
   async isletmeyeGoreGetir(isletmeKimlik: string): Promise<Personel[]> {
     try {
       const { data, error } = await supabase
@@ -15,12 +14,27 @@ export const personelServisi = {
       
       return data as Personel[];
     } catch (error) {
-      console.error('Personeller getirilirken hata:', error);
+      console.error('İşletme personelleri getirme hatası:', error);
       return [];
     }
   },
-  
-  // Personel detayını getir
+
+  // Tüm personelleri getir
+  async hepsiniGetir(): Promise<Personel[]> {
+    try {
+      const { data, error } = await supabase
+        .from('personeller')
+        .select('*');
+      
+      if (error) throw error;
+      
+      return data as Personel[];
+    } catch (error) {
+      console.error('Tüm personelleri getirme hatası:', error);
+      return [];
+    }
+  },
+
   async getir(personelKimlik: string): Promise<Personel | null> {
     try {
       const { data, error } = await supabase
@@ -33,12 +47,11 @@ export const personelServisi = {
       
       return data as Personel;
     } catch (error) {
-      console.error('Personel getirilirken hata:', error);
+      console.error('Personel getirme hatası:', error);
       return null;
     }
   },
-  
-  // Kullanıcı kimliğine göre personel getir
+
   async kullaniciKimligiIleGetir(kullaniciKimlik: string): Promise<Personel | null> {
     try {
       const { data, error } = await supabase
@@ -51,12 +64,11 @@ export const personelServisi = {
       
       return data as Personel;
     } catch (error) {
-      console.error('Personel kullanıcı kimliği ile getirilirken hata:', error);
+      console.error('Kullanıcı kimliği ile personel getirme hatası:', error);
       return null;
     }
   },
-  
-  // Personel kaydet/güncelle
+
   async kaydet(personel: Partial<Personel>): Promise<Personel | null> {
     try {
       if (personel.kimlik) {
@@ -75,7 +87,7 @@ export const personelServisi = {
         // Yeni kayıt
         const { data, error } = await supabase
           .from('personeller')
-          .insert([personel])
+          .insert(personel)
           .select()
           .single();
         
@@ -84,25 +96,26 @@ export const personelServisi = {
         return data as Personel;
       }
     } catch (error) {
-      console.error('Personel kaydedilirken hata:', error);
+      console.error('Personel kaydetme hatası:', error);
       return null;
     }
   },
-  
+
   // Personel kayıt
-  async register(personelData: any): Promise<boolean> {
+  async register(personelData: any): Promise<any> {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('personeller')
-        .insert([personelData]);
+        .insert(personelData)
+        .select()
+        .single();
       
       if (error) throw error;
       
-      return true;
+      return data;
     } catch (error) {
-      console.error('Personel kaydı oluşturulurken hata:', error);
-      return false;
+      console.error('Personel kayıt hatası:', error);
+      throw error;
     }
   }
 };
-

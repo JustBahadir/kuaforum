@@ -1,90 +1,130 @@
 
 import { supabase } from '../client';
-import { Randevu } from '../types';
+import { Randevu, RandevuDurum } from '../types';
 
 export const randevuServisi = {
-  // İşletmeye göre randevuları getir
   async isletmeyeGoreGetir(isletmeKimlik: string): Promise<Randevu[]> {
     try {
       const { data, error } = await supabase
         .from('randevular')
         .select('*')
-        .eq('isletme_kimlik', isletmeKimlik)
-        .order('tarih', { ascending: true })
-        .order('saat', { ascending: true });
+        .eq('isletme_kimlik', isletmeKimlik);
       
       if (error) throw error;
       
       return data as Randevu[];
     } catch (error) {
-      console.error('Randevular getirilirken hata:', error);
+      console.error('İşletmeye göre randevu getirme hatası:', error);
       return [];
     }
   },
-  
-  // Tarihe göre randevuları getir
+
   async tariheGoreGetir(isletmeKimlik: string, tarih: string): Promise<Randevu[]> {
     try {
       const { data, error } = await supabase
         .from('randevular')
         .select('*')
         .eq('isletme_kimlik', isletmeKimlik)
-        .eq('tarih', tarih)
-        .order('saat', { ascending: true });
+        .eq('tarih', tarih);
       
       if (error) throw error;
       
       return data as Randevu[];
     } catch (error) {
-      console.error('Tarih randevuları getirilirken hata:', error);
+      console.error('Tarihe göre randevu getirme hatası:', error);
       return [];
     }
   },
-  
-  // Personele göre randevuları getir
-  async personeleGoreGetir(personelKimlik: string): Promise<Randevu[]> {
+
+  // Tüm randevuları getir
+  async hepsiniGetir(): Promise<Randevu[]> {
+    try {
+      const { data, error } = await supabase
+        .from('randevular')
+        .select('*');
+      
+      if (error) throw error;
+      
+      return data as Randevu[];
+    } catch (error) {
+      console.error('Tüm randevuları getirme hatası:', error);
+      return [];
+    }
+  },
+
+  // İşletme randevularını getir (dukkanRandevulariniGetir yerine)
+  async isletmeRandevulariniGetir(isletmeKimlik: string): Promise<Randevu[]> {
     try {
       const { data, error } = await supabase
         .from('randevular')
         .select('*')
-        .eq('personel_kimlik', personelKimlik)
-        .order('tarih', { ascending: true })
-        .order('saat', { ascending: true });
+        .eq('isletme_kimlik', isletmeKimlik);
       
       if (error) throw error;
       
       return data as Randevu[];
     } catch (error) {
-      console.error('Personel randevuları getirilirken hata:', error);
+      console.error('İşletme randevularını getirme hatası:', error);
       return [];
     }
   },
-  
-  // Müşteriye göre randevuları getir
-  async musteriyeGoreGetir(musteriKimlik: string): Promise<Randevu[]> {
+
+  // Personelin kendi randevularını getir
+  async kendiRandevulariniGetir(personelKimlik: string): Promise<Randevu[]> {
     try {
       const { data, error } = await supabase
         .from('randevular')
         .select('*')
-        .eq('musteri_kimlik', musteriKimlik)
-        .order('tarih', { ascending: true })
-        .order('saat', { ascending: true });
+        .eq('personel_kimlik', personelKimlik);
       
       if (error) throw error;
       
       return data as Randevu[];
     } catch (error) {
-      console.error('Müşteri randevuları getirilirken hata:', error);
+      console.error('Personel randevularını getirme hatası:', error);
       return [];
     }
   },
-  
-  // Randevu oluştur
+
+  // Müşterinin kendi randevularını getir
+  async musteriRandevulariniGetir(musteriKimlik: string): Promise<Randevu[]> {
+    try {
+      const { data, error } = await supabase
+        .from('randevular')
+        .select('*')
+        .eq('musteri_kimlik', musteriKimlik);
+      
+      if (error) throw error;
+      
+      return data as Randevu[];
+    } catch (error) {
+      console.error('Müşteri randevularını getirme hatası:', error);
+      return [];
+    }
+  },
+
+  async getir(randevuKimlik: string): Promise<Randevu | null> {
+    try {
+      const { data, error } = await supabase
+        .from('randevular')
+        .select('*')
+        .eq('kimlik', randevuKimlik)
+        .single();
+      
+      if (error) throw error;
+      
+      return data as Randevu;
+    } catch (error) {
+      console.error('Randevu getirme hatası:', error);
+      return null;
+    }
+  },
+
   async olustur(randevu: Partial<Randevu>): Promise<Randevu | null> {
     try {
       const { data, error } = await supabase
         .from('randevular')
-        .insert([randevu])
+        .insert(randevu)
         .select()
         .single();
       
@@ -92,46 +132,47 @@ export const randevuServisi = {
       
       return data as Randevu;
     } catch (error) {
-      console.error('Randevu oluşturulurken hata:', error);
+      console.error('Randevu oluşturma hatası:', error);
       return null;
     }
   },
-  
-  // Randevu güncelle
-  async guncelle(randevuKimlik: string, randevu: Partial<Randevu>): Promise<boolean> {
+
+  async guncelle(randevuKimlik: string, randevu: Partial<Randevu>): Promise<Randevu | null> {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('randevular')
         .update(randevu)
-        .eq('kimlik', randevuKimlik);
+        .eq('kimlik', randevuKimlik)
+        .select()
+        .single();
       
       if (error) throw error;
       
-      return true;
+      return data as Randevu;
     } catch (error) {
-      console.error('Randevu güncellenirken hata:', error);
-      return false;
+      console.error('Randevu güncelleme hatası:', error);
+      return null;
     }
   },
-  
-  // Randevu durumu güncelle
-  async durumGuncelle(randevuKimlik: string, durum: string): Promise<boolean> {
+
+  async durumGuncelle(randevuKimlik: string, durum: RandevuDurum): Promise<Randevu | null> {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('randevular')
         .update({ durum })
-        .eq('kimlik', randevuKimlik);
+        .eq('kimlik', randevuKimlik)
+        .select()
+        .single();
       
       if (error) throw error;
       
-      return true;
+      return data as Randevu;
     } catch (error) {
-      console.error('Randevu durumu güncellenirken hata:', error);
-      return false;
+      console.error('Randevu durum güncelleme hatası:', error);
+      return null;
     }
   },
-  
-  // Randevu sil
+
   async sil(randevuKimlik: string): Promise<boolean> {
     try {
       const { error } = await supabase
@@ -143,9 +184,8 @@ export const randevuServisi = {
       
       return true;
     } catch (error) {
-      console.error('Randevu silinirken hata:', error);
+      console.error('Randevu silme hatası:', error);
       return false;
     }
   }
 };
-

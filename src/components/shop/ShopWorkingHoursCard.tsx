@@ -1,161 +1,168 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { toast } from 'sonner';
-import { calismaSaatleriServisi } from '@/lib/supabase';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
+import { calismaSaatleriServisi } from "@/lib/supabase";
+import { defaultCalismaSaatleriOlustur, gunler } from "../operations/utils/workingHoursUtils";
+import { CalismaSaati } from "@/lib/supabase/types";
+import { useAuth } from "@/hooks/useAuth";
 
-interface WorkingHours {
-  [key: string]: {
-    id: string;
-    acilis: string;
-    kapanis: string;
-    kapali: boolean;
-  };
+interface ShopWorkingHoursCardProps {
+  isletmeId: string;
 }
 
-export default function ShopWorkingHoursCard() {
-  const [workingHours, setWorkingHours] = useState<WorkingHours>({
-    Pazartesi: { id: "", acilis: "09:00", kapanis: "18:00", kapali: false },
-    Salı: { id: "", acilis: "09:00", kapanis: "18:00", kapali: false },
-    Çarşamba: { id: "", acilis: "09:00", kapanis: "18:00", kapali: false },
-    Perşembe: { id: "", acilis: "09:00", kapanis: "18:00", kapali: false },
-    Cuma: { id: "", acilis: "09:00", kapanis: "18:00", kapali: false },
-    Cumartesi: { id: "", acilis: "09:00", kapanis: "18:00", kapali: false },
-    Pazar: { id: "", acilis: "10:00", kapanis: "16:00", kapali: true },
-  });
-  const [isLoading, setIsLoading] = useState(true);
+export function ShopWorkingHoursCard({ isletmeId }: ShopWorkingHoursCardProps) {
+  const [calismaSaatleri, setCalismaSaatleri] = useState<CalismaSaati[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const { user } = useAuth();
 
+  // Saat seçenekleri
+  const saatSecenekleri = [];
+  for (let i = 0; i < 24; i++) {
+    for (let j = 0; j < 60; j += 30) {
+      const saat = `${i.toString().padStart(2, '0')}:${j.toString().padStart(2, '0')}`;
+      saatSecenekleri.push(saat);
+    }
+  }
+  saatSecenekleri.push("23:59");
+
+  // Çalışma saatlerini yükle
   useEffect(() => {
-    const loadWorkingHours = async () => {
-      setIsLoading(true);
+    if (!isletmeId) return;
+
+    const saatleriYukle = async () => {
+      setLoading(true);
       try {
-        const dukkanId = await calismaSaatleriServisi.getCurrentDukkanId();
-        if (!dukkanId) {
-          toast.error("Dükkan ID alınamadı!");
-          return;
+        const saatler = await calismaSaatleriServisi.isletmeyeGoreGetir(isletmeId);
+        
+        if (saatler && saatler.length > 0) {
+          setCalismaSaatleri(saatler);
+        } else {
+          // İşletme için varsayılan çalışma saatleri oluştur
+          const varsayilanSaatler = defaultCalismaSaatleriOlustur(isletmeId);
+          setCalismaSaatleri(varsayilanSaatler);
         }
-        const saatler = await calismaSaatleriServisi.dukkanSaatleriGetir(dukkanId);
-        const initialWorkingHours: WorkingHours = {};
-        saatler.forEach(saat => {
-          initialWorkingHours[saat.gun] = {
-            id: saat.id,
-            acilis: saat.acilis,
-            kapanis: saat.kapanis,
-            kapali: saat.kapali
-          };
-        });
-        setWorkingHours(initialWorkingHours);
       } catch (error) {
         console.error("Çalışma saatleri yüklenirken hata:", error);
-        toast.error("Çalışma saatleri yüklenirken bir hata oluştu.");
+        toast.error("Çalışma saatleri yüklenirken bir sorun oluştu.");
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
 
-    loadWorkingHours();
-  }, []);
+    saatleriYukle();
+  }, [isletmeId]);
 
-  const handleInputChange = (gun: string, field: string, value: string) => {
-    setWorkingHours(prev => ({
-      ...prev,
-      [gun]: {
-        ...prev[gun],
-        [field]: value
-      }
-    }));
+  // Çalışma saatlerini güncelle
+  const handleSaatGuncelle = (index: number, alan: keyof CalismaSaati, deger: any) => {
+    const yeniSaatler = [...calismaSaatleri];
+    yeniSaatler[index] = {
+      ...yeniSaatler[index],
+      [alan]: deger
+    };
+    setCalismaSaatleri(yeniSaatler);
   };
 
-  const handleSwitchChange = (gun: string, checked: boolean) => {
-    setWorkingHours(prev => ({
-      ...prev,
-      [gun]: {
-        ...prev[gun],
-        kapali: checked
-      }
-    }));
-  };
-
-  const saveWorkingHours = async () => {
-    setIsLoading(true);
+  // Tüm değişiklikleri kaydet
+  const handleKaydet = async () => {
+    if (calismaSaatleri.length === 0) return;
+    
+    setSaving(true);
     try {
-      const dukkanId = await calismaSaatleriServisi.getCurrentDukkanId();
-      if (!dukkanId) {
-        toast.error("Dükkan ID alınamadı!");
-        return;
-      }
-
-      const workingHoursData = Object.entries(workingHours).map(([day, hours]) => ({
-        id: String(hours.id),
-        dukkan_id: dukkanId,
-        gun: day,
-        acilis: hours.acilis,
-        kapanis: hours.kapanis,
-        kapali: hours.kapali,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }));
-
-      const success = await calismaSaatleriServisi.saatleriKaydet(workingHoursData);
-      if (success) {
-        toast.success("Çalışma saatleri başarıyla kaydedildi!");
-      } else {
-        toast.error("Çalışma saatleri kaydedilirken bir hata oluştu.");
+      // Her birini ayrı ayrı güncelleyelim ya da hepsini toplu güncelleyelim
+      const sonuc = await calismaSaatleriServisi.topluGuncelle(
+        calismaSaatleri.map(saat => ({
+          ...saat,
+          isletme_id: isletmeId
+        }))
+      );
+      
+      if (sonuc) {
+        toast.success("Çalışma saatleri başarıyla güncellendi.");
+        setCalismaSaatleri(sonuc);
       }
     } catch (error) {
       console.error("Çalışma saatleri kaydedilirken hata:", error);
-      toast.error("Çalışma saatleri kaydedilirken bir hata oluştu.");
+      toast.error("Çalışma saatleri kaydedilirken bir sorun oluştu.");
     } finally {
-      setIsLoading(false);
+      setSaving(false);
     }
   };
-
-  if (isLoading) {
-    return <p>Çalışma saatleri yükleniyor...</p>;
-  }
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Çalışma Saatleri</CardTitle>
-        <CardDescription>İşletmenizin çalışma saatlerini ayarlayın.</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {Object.entries(workingHours).map(([gun, saat]) => (
-          <div key={gun} className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor={gun} className="text-right">
-              {gun}
-            </Label>
-            <Input
-              type="time"
-              id={`${gun}-acilis`}
-              value={saat.acilis}
-              onChange={(e) => handleInputChange(gun, 'acilis', e.target.value)}
-              disabled={saat.kapali}
-              className="col-span-1"
-            />
-            <Input
-              type="time"
-              id={`${gun}-kapanis`}
-              value={saat.kapanis}
-              onChange={(e) => handleInputChange(gun, 'kapanis', e.target.value)}
-              disabled={saat.kapali}
-              className="col-span-1"
-            />
-            <Switch
-              id={gun}
-              checked={saat.kapali}
-              onCheckedChange={(checked) => handleSwitchChange(gun, checked)}
-            />
+      <CardContent>
+        {loading ? (
+          <div className="flex justify-center py-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
           </div>
-        ))}
-        <Button onClick={saveWorkingHours} disabled={isLoading}>
-          Kaydet
-        </Button>
+        ) : (
+          <div className="space-y-4">
+            {calismaSaatleri.map((saat, index) => (
+              <div key={index} className="grid grid-cols-[120px_1fr] gap-4 items-center">
+                <Label>{saat.gun}</Label>
+                <div className="grid grid-cols-[1fr_80px_1fr_80px] gap-2 items-center">
+                  <Select
+                    value={saat.acilis}
+                    onValueChange={(value) => handleSaatGuncelle(index, "acilis", value)}
+                    disabled={saat.kapali}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Açılış" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {saatSecenekleri.map((s) => (
+                        <SelectItem key={`acilis-${s}`} value={s}>{s}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <span className="text-center">-</span>
+                  <Select
+                    value={saat.kapanis}
+                    onValueChange={(value) => handleSaatGuncelle(index, "kapanis", value)}
+                    disabled={saat.kapali}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Kapanış" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {saatSecenekleri.map((s) => (
+                        <SelectItem key={`kapanis-${s}`} value={s}>{s}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id={`kapali-${index}`}
+                      checked={!saat.kapali}
+                      onCheckedChange={(checked) => handleSaatGuncelle(index, "kapali", !checked)}
+                    />
+                    <Label htmlFor={`kapali-${index}`} className="text-sm">Açık</Label>
+                  </div>
+                </div>
+              </div>
+            ))}
+            
+            <Button 
+              onClick={handleKaydet} 
+              disabled={saving || !user}
+              className="w-full mt-4"
+            >
+              {saving ? "Kaydediliyor..." : "Değişiklikleri Kaydet"}
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
 }
+
+export default ShopWorkingHoursCard;

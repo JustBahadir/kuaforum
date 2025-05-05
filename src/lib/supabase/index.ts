@@ -39,4 +39,4 @@ export { personelServisi } from './services/personelServisi';
 export { musteriServisi } from './services/musteriServisi';
 export { randevuServisi } from './services/randevuServisi';
 export { personelIslemleriServisi } from './services/personelIslemleriServisi';
-
+export { profilServisi } from './services/profilServisi';

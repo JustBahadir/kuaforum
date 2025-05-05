@@ -1,239 +1,290 @@
 
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { islemServisi, kategoriServisi } from "@/lib/supabase";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { formatCurrency } from "@/lib/utils";
-import { Pencil, Save, X, Search, AlertCircle } from "lucide-react";
+import { Trash2Icon, Edit2Icon, Plus } from "lucide-react";
+import {
+  Table, TableBody, TableCell, TableHead,
+  TableHeader, TableRow
+} from "@/components/ui/table";
+import { ServiceForm } from "@/components/operations/ServiceForm";
+import { CategoryForm } from "@/components/operations/CategoryForm";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { islemServisi, kategoriServisi } from "@/lib/supabase";
+import { Hizmet, IslemKategorisi } from "@/lib/supabase/types";
 
-interface ServiceCost {
-  id: number;
-  islem_adi: string;
-  fiyat: number;
-  maliyet?: number;
-  kategori_adi?: string;
-  kategori_id?: number;
-  profitMargin?: number;
+interface ServiceCostManagementProps {
+  isletmeKimlik: string;
 }
 
-export function ServiceCostManagement() {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [editedMaliyet, setEditedMaliyet] = useState<number>(0);
-  
-  const queryClient = useQueryClient();
-  
-  // Fetch services
-  const { data: services = [], isLoading: isLoadingServices } = useQuery({
-    queryKey: ["services"],
-    queryFn: async () => {
-      const result = await islemServisi.hepsiniGetir();
-      return result.map((service: any) => ({
-        ...service,
-        maliyet: service.maliyet || 0,
-        profitMargin: service.fiyat > 0 && service.maliyet ? 
-          ((service.fiyat - service.maliyet) / service.fiyat) * 100 : null
-      }));
+export function ServiceCostManagement({ isletmeKimlik }: ServiceCostManagementProps) {
+  const [activeTab, setActiveTab] = useState("hizmetler");
+  const [hizmetler, setHizmetler] = useState<Hizmet[]>([]);
+  const [kategoriler, setKategoriler] = useState<IslemKategorisi[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<string | null>(null);
+  const [dialogType, setDialogType] = useState<"hizmet" | "kategori">("hizmet");
+
+  // Veri yükleme
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        // Hizmetleri ve kategorileri yükle
+        const [hizmetData, kategoriData] = await Promise.all([
+          islemServisi.isletmeyeGoreGetir(isletmeKimlik),
+          kategoriServisi.isletmeyeGoreGetir(isletmeKimlik)
+        ]);
+
+        setHizmetler(hizmetData);
+        setKategoriler(kategoriData);
+      } catch (error) {
+        console.error("Veri yükleme hatası:", error);
+        toast.error("Veriler yüklenirken bir hata oluştu.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (isletmeKimlik) {
+      fetchData();
     }
-  });
-  
-  // Fetch categories
-  const { data: categories = [], isLoading: isLoadingCategories } = useQuery({
-    queryKey: ["categories"],
-    queryFn: () => kategoriServisi.hepsiniGetir()
-  });
-  
-  // Update service cost mutation
-  const updateCostMutation = useMutation({
-    mutationFn: async ({ id, maliyet }: { id: number, maliyet: number }) => {
-      // Ensure we're passing a proper object with correct properties
-      return await islemServisi.guncelle(id, { maliyet });
-    },
-    onSuccess: () => {
-      toast.success("Maliyet başarıyla güncellendi");
-      queryClient.invalidateQueries({ queryKey: ["services"] });
-      setEditingId(null);
-    },
-    onError: (error) => {
-      toast.error("Maliyet güncellenirken bir hata oluştu");
-      console.error("Error updating cost:", error);
+  }, [isletmeKimlik]);
+
+  // Veriyi yeniden yükle
+  const refreshData = async () => {
+    try {
+      if (activeTab === "hizmetler" || activeTab === "all") {
+        const hizmetData = await islemServisi.isletmeyeGoreGetir(isletmeKimlik);
+        setHizmetler(hizmetData);
+      }
+      if (activeTab === "kategoriler" || activeTab === "all") {
+        const kategoriData = await kategoriServisi.isletmeyeGoreGetir(isletmeKimlik);
+        setKategoriler(kategoriData);
+      }
+    } catch (error) {
+      console.error("Veri yenileme hatası:", error);
     }
-  });
-  
-  // Start editing a service cost
-  const handleEdit = (service: ServiceCost) => {
-    setEditingId(service.id);
-    setEditedMaliyet(service.maliyet || 0);
   };
-  
-  // Save the edited cost
-  const handleSave = (id: number) => {
-    updateCostMutation.mutate({ id, maliyet: editedMaliyet });
+
+  // Kategori silme işlevi
+  const handleKategoriSil = async (kategoriKimlik: string) => {
+    if (window.confirm("Bu kategori silinecek. Devam etmek istiyor musunuz?")) {
+      try {
+        await kategoriServisi.sil(kategoriKimlik);
+        toast.success("Kategori başarıyla silindi");
+        refreshData();
+      } catch (error) {
+        console.error("Kategori silme hatası:", error);
+        toast.error("Kategori silinirken bir hata oluştu");
+      }
+    }
   };
-  
-  // Cancel editing
-  const handleCancel = () => {
-    setEditingId(null);
+
+  // Hizmet silme işlevi
+  const handleHizmetSil = async (hizmetKimlik: string) => {
+    if (window.confirm("Bu hizmet silinecek. Devam etmek istiyor musunuz?")) {
+      try {
+        await islemServisi.sil(hizmetKimlik);
+        toast.success("Hizmet başarıyla silindi");
+        refreshData();
+      } catch (error) {
+        console.error("Hizmet silme hatası:", error);
+        toast.error("Hizmet silinirken bir hata oluştu");
+      }
+    }
   };
-  
-  // Filter services based on search term and selected category
-  const filteredServices = services.filter((service: ServiceCost) => {
-    const matchesSearch = service.islem_adi.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === "all" || service.kategori_id?.toString() === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
-  
-  // Get profit margin color based on percentage
-  const getProfitMarginColor = (margin: number | undefined) => {
-    if (margin === undefined || margin === null) return "text-gray-500";
-    if (margin < 0) return "text-red-600";
-    if (margin < 20) return "text-orange-500";
-    if (margin < 40) return "text-yellow-600";
-    return "text-green-600";
+
+  // Dialog açma işlevi
+  const openDialog = (type: "hizmet" | "kategori", id: string | null = null) => {
+    setDialogType(type);
+    setEditingItem(id);
+    setIsDialogOpen(true);
   };
-  
-  return (
-    <div className="space-y-6">
+
+  // Dialog içeriğini renderla
+  const renderDialogContent = () => {
+    if (dialogType === "hizmet") {
+      return (
+        <ServiceForm
+          isletmeKimlik={isletmeKimlik}
+          hizmetKimlik={editingItem || undefined}
+          onSuccess={() => {
+            setIsDialogOpen(false);
+            refreshData();
+          }}
+          onCancel={() => setIsDialogOpen(false)}
+        />
+      );
+    } else {
+      return (
+        <CategoryForm
+          isletmeKimlik={isletmeKimlik}
+          kategoriKimlik={editingItem || undefined}
+          onSuccess={() => {
+            setIsDialogOpen(false);
+            refreshData();
+          }}
+          onCancel={() => setIsDialogOpen(false)}
+        />
+      );
+    }
+  };
+
+  // Kategori tabının içeriği
+  const renderKategoriTab = () => (
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <Button onClick={() => openDialog("kategori")}>
+          <Plus className="mr-2 h-4 w-4" /> Yeni Kategori Ekle
+        </Button>
+      </div>
+
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Hizmet Maliyetleri</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-6 space-y-4">
-            <div className="flex items-center space-x-2">
-              <AlertCircle className="text-blue-500 h-5 w-5" />
-              <p className="text-sm text-muted-foreground">
-                Hizmetlerinizin maliyetlerini buradan güncelleyebilirsiniz. Kâr marjı otomatik olarak hesaplanacaktır.
-              </p>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
             </div>
-            
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1 relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Hizmet ara..."
-                  className="pl-8"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              
-              <Select
-                value={selectedCategory}
-                onValueChange={setSelectedCategory}
-              >
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Kategori" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tüm Kategoriler</SelectItem>
-                  {categories.map((category: any) => (
-                    <SelectItem key={category.id} value={category.id.toString()}>
-                      {category.kategori_adi}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          
-          {isLoadingServices || isLoadingCategories ? (
-            <div className="flex justify-center p-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          ) : kategoriler.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              Henüz kategori bulunmuyor
             </div>
           ) : (
-            <ScrollArea className="h-[500px]">
-              <Table>
-                <TableHeader className="sticky top-0 bg-background">
-                  <TableRow>
-                    <TableHead>Hizmet Adı</TableHead>
-                    <TableHead>Kategori</TableHead>
-                    <TableHead className="text-right">Fiyat</TableHead>
-                    <TableHead className="text-right">Maliyet</TableHead>
-                    <TableHead className="text-right">Kâr Marjı</TableHead>
-                    <TableHead className="text-right">İşlemler</TableHead>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Kategori Adı</TableHead>
+                  <TableHead className="text-right">İşlemler</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {kategoriler.map((kategori) => (
+                  <TableRow key={kategori.kimlik}>
+                    <TableCell>{kategori.baslik}</TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => openDialog("kategori", kategori.kimlik)}
+                      >
+                        <Edit2Icon className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleKategoriSil(kategori.kimlik)}
+                      >
+                        <Trash2Icon className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredServices.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                        Hiçbir hizmet bulunamadı
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredServices.map((service: ServiceCost) => (
-                      <TableRow key={service.id}>
-                        <TableCell>{service.islem_adi}</TableCell>
-                        <TableCell>{service.kategori_adi || "Kategorisiz"}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(service.fiyat)}</TableCell>
-                        <TableCell className="text-right">
-                          {editingId === service.id ? (
-                            <Input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              value={editedMaliyet}
-                              onChange={(e) => setEditedMaliyet(Number(e.target.value))}
-                              className="w-24 text-right inline-block"
-                            />
-                          ) : (
-                            formatCurrency(service.maliyet || 0)
-                          )}
-                        </TableCell>
-                        <TableCell className={`text-right font-medium ${getProfitMarginColor(service.profitMargin)}`}>
-                          {service.profitMargin !== null && service.profitMargin !== undefined
-                            ? `%${service.profitMargin.toFixed(1)}`
-                            : "-"}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {editingId === service.id ? (
-                            <div className="flex justify-end gap-1">
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={() => handleSave(service.id)}
-                                className="h-8 w-8"
-                              >
-                                <Save className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={handleCancel}
-                                className="h-8 w-8"
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          ) : (
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              onClick={() => handleEdit(service)}
-                              className="h-8 w-8"
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </ScrollArea>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>
     </div>
   );
+
+  // Hizmet tabının içeriği
+  const renderHizmetTab = () => (
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <Button onClick={() => openDialog("hizmet")}>
+          <Plus className="mr-2 h-4 w-4" /> Yeni Hizmet Ekle
+        </Button>
+      </div>
+
+      <Card>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+            </div>
+          ) : hizmetler.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              Henüz hizmet bulunmuyor
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Hizmet Adı</TableHead>
+                  <TableHead>Kategori</TableHead>
+                  <TableHead className="text-right">Fiyat (₺)</TableHead>
+                  <TableHead className="text-right">Süre (dk)</TableHead>
+                  <TableHead className="text-right">İşlemler</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {hizmetler.map((hizmet) => {
+                  const kategori = kategoriler.find(k => k.kimlik === hizmet.kategori_kimlik);
+                  return (
+                    <TableRow key={hizmet.kimlik}>
+                      <TableCell>{hizmet.hizmet_adi}</TableCell>
+                      <TableCell>{kategori?.baslik || "Kategori Silinmiş"}</TableCell>
+                      <TableCell className="text-right">{hizmet.fiyat.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">{hizmet.sure_dakika}</TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openDialog("hizmet", hizmet.kimlik)}
+                        >
+                          <Edit2Icon className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleHizmetSil(hizmet.kimlik)}
+                        >
+                          <Trash2Icon className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Hizmet ve Fiyat Yönetimi</CardTitle>
+        </CardHeader>
+      </Card>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="hizmetler">Hizmetler</TabsTrigger>
+          <TabsTrigger value="kategoriler">Kategoriler</TabsTrigger>
+        </TabsList>
+        <TabsContent value="hizmetler" className="mt-6">
+          {renderHizmetTab()}
+        </TabsContent>
+        <TabsContent value="kategoriler" className="mt-6">
+          {renderKategoriTab()}
+        </TabsContent>
+      </Tabs>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-lg">
+          {renderDialogContent()}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
 }
+
+export default ServiceCostManagement;

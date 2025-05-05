@@ -1,97 +1,84 @@
 
-import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase/client';
-import { toast } from 'sonner';
+import { useState } from "react";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+import { supabase } from "@/lib/supabase/client";
 
-interface JoinShopModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSuccess?: () => void;
+export interface JoinShopModalProps {
+  personelId?: number;
+  onOpenChange: (open: boolean) => void;
+  open: boolean;
 }
 
-export default function JoinShopModal({ isOpen, onClose, onSuccess }: JoinShopModalProps) {
-  const [shopCode, setShopCode] = useState('');
-  const [description, setDescription] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const { user } = useAuth();
-
-  const handleSubmit = async () => {
-    if (!user) {
-      toast.error('Kullanıcı girişi yapılmamış!');
-      return;
-    }
+export function JoinShopModal({ personelId, onOpenChange, open }: JoinShopModalProps) {
+  const [shopCode, setShopCode] = useState("");
+  const [loading, setLoading] = useState(false);
+  
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     
     if (!shopCode.trim()) {
-      toast.error('İşletme kodu gereklidir');
+      toast.error("İşletme kodu gerekli");
       return;
     }
     
-    setIsSubmitting(true);
-    
     try {
-      // Check if the shop code exists
-      const { data: isletme, error: isletmeError } = await supabase
+      setLoading(true);
+      
+      // İlk olarak işletme kodunun geçerli olup olmadığını kontrol et
+      const { data: shopData, error: shopError } = await supabase
         .from('isletmeler')
         .select('kimlik, isletme_adi')
         .eq('isletme_kodu', shopCode)
         .single();
       
-      if (isletmeError || !isletme) {
-        toast.error('Geçersiz işletme kodu. Böyle bir işletme bulunamadı.');
-        setIsSubmitting(false);
+      if (shopError || !shopData) {
+        toast.error("Geçersiz işletme kodu");
         return;
       }
       
-      // Create join request
-      const { error: requestError } = await supabase
+      // Başvuru oluştur
+      const { error: applicationError } = await supabase
         .from('personel_basvurulari')
         .insert({
-          kullanici_kimlik: user.id,
+          kullanici_kimlik: (await supabase.auth.getUser()).data.user?.id,
           isletme_kodu: shopCode,
           durum: 'beklemede',
-          aciklama: description,
           tarih: new Date().toISOString().split('T')[0]
         });
       
-      if (requestError) {
-        console.error('Join request error:', requestError);
-        toast.error('Başvuru gönderilirken bir hata oluştu');
-        setIsSubmitting(false);
+      if (applicationError) {
+        toast.error("Başvuru gönderilirken bir hata oluştu");
         return;
       }
       
-      toast.success(`"${isletme.isletme_adi}" işletmesine başvurunuz gönderildi. İşletme sahibinin onayı bekleniyor.`);
+      toast.success(`"${shopData.isletme_adi}" işletmesine başvuru gönderildi`);
+      onOpenChange(false);
       
-      // Reset form and close modal
-      setShopCode('');
-      setDescription('');
-      onClose();
+      // Sayfayı yönlendirme (opsiyonel)
+      setTimeout(() => {
+        window.location.href = "/personel/beklemede";
+      }, 2000);
       
-      if (onSuccess) {
-        onSuccess();
-      }
-    } catch (error) {
-      console.error('Submit error:', error);
-      toast.error('Bir hata oluştu. Lütfen daha sonra tekrar deneyin.');
+    } catch (error: any) {
+      console.error("Join shop error:", error);
+      toast.error("Bir hata oluştu: " + error.message);
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
-
+  
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
         <DialogHeader>
-          <DialogTitle>İşletmeye Katılım Talebi Gönder</DialogTitle>
+          <DialogTitle>İşletmeye Katıl</DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-4 py-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="shopCode">İşletme Kodu</Label>
             <Input
@@ -99,29 +86,22 @@ export default function JoinShopModal({ isOpen, onClose, onSuccess }: JoinShopMo
               value={shopCode}
               onChange={(e) => setShopCode(e.target.value)}
               placeholder="İşletme kodunu giriniz"
-              autoFocus
+              required
             />
           </div>
           
-          <div className="space-y-2">
-            <Label htmlFor="description">Açıklama (İsteğe Bağlı)</Label>
-            <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Eklemek istediğiniz bilgiler"
-              rows={3}
-            />
-          </div>
-        </div>
-        
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>İptal</Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting}>
-            {isSubmitting ? 'Gönderiliyor...' : 'Başvuru Gönder'}
-          </Button>
-        </DialogFooter>
+          <DialogFooter className="mt-4">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+              İptal
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? "Gönderiliyor..." : "Başvur"}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
 }
+
+export default JoinShopModal;

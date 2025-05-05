@@ -1,51 +1,21 @@
 
-import { v4 as uuidv4 } from 'uuid';
-import { CalismaSaati } from '@/lib/supabase/types';
-
-// Varsayılan çalışma saatlerini oluştur
-export const getDefaultWorkingHours = (dukkanId: string): CalismaSaati[] => {
-  const gunler = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"];
-  const simdikiZaman = new Date().toISOString();
-  
-  return gunler.map((gun): CalismaSaati => ({
-    id: uuidv4(),
-    dukkan_id: dukkanId,
-    gun,
-    acilis: "09:00",
-    kapanis: "18:00",
-    kapali: gun === "Pazar",
-    created_at: simdikiZaman,
-    updated_at: simdikiZaman
-  }));
-};
-
-// Çalışma saatlerini sıfırla
-export const resetWorkingHours = (dukkanId: string): CalismaSaati[] => {
-  return getDefaultWorkingHours(dukkanId);
-};
+import { CalismaSaati } from "@/lib/supabase/types";
 
 // Türkçe gün isimleri
-export const gunIsimleri = [
-  "Pazartesi",
-  "Salı",
-  "Çarşamba",
-  "Perşembe",
-  "Cuma",
-  "Cumartesi",
-  "Pazar"
+export const gunler = [
+  "Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"
 ];
 
-// Çalışma saatlerini sırala
-export const sortWorkingHours = (saatler: CalismaSaati[]): CalismaSaati[] => {
-  const gunSiralama: {[key: string]: number} = {
-    "Pazartesi": 0,
-    "Salı": 1,
-    "Çarşamba": 2,
-    "Perşembe": 3,
-    "Cuma": 4,
-    "Cumartesi": 5,
-    "Pazar": 6
-  };
-  
-  return [...saatler].sort((a, b) => gunSiralama[a.gun] - gunSiralama[b.gun]);
+// Varsayılan çalışma saatleri oluştur
+export const defaultCalismaSaatleriOlustur = (isletmeId: string): CalismaSaati[] => {
+  return gunler.map((gun, index) => ({
+    id: `${index + 1}`, // Bu id geçicidir, veritabanında otomatik oluşturulacak
+    isletme_id: isletmeId,
+    gun: gun,
+    acilis: "09:00",
+    kapanis: "18:00",
+    kapali: gun === "Pazar", // Pazar günleri kapalı
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  }));
 };

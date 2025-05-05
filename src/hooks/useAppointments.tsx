@@ -1,109 +1,143 @@
 
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { useAuth } from './useAuth';
-import { randevuServisi } from '@/lib/supabase';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { RandevuDurumu } from '@/lib/supabase/types';
+import { supabase } from '@/lib/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { randevuServisi } from '@/lib/supabase';
+import { Randevu, RandevuDurum } from '@/lib/supabase/types';
 
-export type AppointmentFilters = {
-  status?: RandevuDurumu | null;
-  date?: Date | null;
-  personnelId?: number | null;
-  customerId?: number | null;
-};
+interface UseAppointmentsProps {
+  isletmeKimlik?: string;
+  personelKimlik?: string;
+  tarih?: string;
+  durum?: RandevuDurum;
+}
 
-export function useAppointments(initialFilters: AppointmentFilters = {}) {
+export const useAppointments = ({ isletmeKimlik, personelKimlik, tarih, durum }: UseAppointmentsProps = {}) => {
+  const [randevular, setRandevular] = useState<Randevu[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<any>(null);
   const { user } = useAuth();
-  const [filters, setFilters] = useState<AppointmentFilters>(initialFilters);
-  const userRole = user?.user_metadata?.role || 'customer';
 
-  // Determine the fetch function based on user role
-  const fetchAppointments = async () => {
-    if (!user) {
-      return [];
-    }
+  const fetchRandevular = async () => {
+    if (!user) return;
 
+    setLoading(true);
     try {
-      let appointments = [];
-
-      if (userRole === 'admin') {
-        // Admin sees all appointments for their shop
-        console.log('Fetching appointments for admin');
-        appointments = await randevuServisi.dukkanRandevulariniGetir();
-      } else if (userRole === 'staff') {
-        // Staff sees all appointments for their shop
-        console.log('Fetching appointments for staff');
-        appointments = await randevuServisi.dukkanRandevulariniGetir();
-      } else {
-        // Customers see only their own appointments
-        console.log('Fetching appointments for customer');
-        appointments = await randevuServisi.kendiRandevulariniGetir();
+      let data: Randevu[] = [];
+      
+      // 1. Eğer işletmeKimlik verilmiş ise işletmenin randevularını getir
+      if (isletmeKimlik) {
+        data = await randevuServisi.isletmeyeGoreGetir(isletmeKimlik);
+      } 
+      // 2. Eğer personelKimlik verilmiş ise personelin randevularını getir
+      else if (personelKimlik) {
+        data = await randevuServisi.kendiRandevulariniGetir(personelKimlik);
       }
-
-      return appointments;
-    } catch (error) {
-      console.error('Error fetching appointments:', error);
-      toast.error('Randevular yüklenirken bir hata oluştu.');
-      return [];
+      // 3. Eğer hiçbiri verilmemiş ise kullanıcının rolüne göre al
+      else {
+        const { data: profilData } = await supabase
+          .from('kullanicilar')
+          .select('rol')
+          .eq('kimlik', user.id)
+          .single();
+          
+        if (profilData?.rol === 'isletme_sahibi') {
+          // İşletme sahibi ise, işletmesinin randevularını getir
+          const isletme = await supabase
+            .from('isletmeler')
+            .select('kimlik')
+            .eq('sahip_kimlik', user.id)
+            .single();
+            
+          if (isletme.data) {
+            data = await randevuServisi.isletmeyeGoreGetir(isletme.data.kimlik);
+          }
+        } else if (profilData?.rol === 'personel') {
+          // Personel ise kendi randevularını getir
+          const personel = await supabase
+            .from('personeller')
+            .select('kimlik')
+            .eq('kullanici_kimlik', user.id)
+            .single();
+            
+          if (personel.data) {
+            data = await randevuServisi.kendiRandevulariniGetir(personel.data.kimlik);
+          }
+        }
+      }
+      
+      // Filtrele: Tarih
+      if (tarih && data.length > 0) {
+        data = data.filter(r => r.tarih === tarih);
+      }
+      
+      // Filtrele: Durum
+      if (durum && data.length > 0) {
+        data = data.filter(r => r.durum === durum);
+      }
+      
+      setRandevular(data);
+    } catch (err: any) {
+      console.error('Randevular getirme hatası:', err);
+      setError(err);
+      toast.error('Randevular yüklenirken bir hata oluştu');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const { 
-    data: appointments = [], 
-    isLoading,
-    isError,
-    refetch
-  } = useQuery({
-    queryKey: ['appointments', userRole, user?.id, filters],
-    queryFn: fetchAppointments,
-    enabled: !!user,
-    staleTime: 60000, // 1 minute
-  });
-
-  // Apply filters to the fetched appointments
-  const filteredAppointments = appointments.filter(appointment => {
-    let matches = true;
-
-    // Filter by status if specified
-    if (filters.status && appointment.durum !== filters.status) {
-      matches = false;
-    }
-
-    // Filter by date if specified
-    if (filters.date) {
-      const filterDate = new Date(filters.date);
-      const appointmentDate = new Date(appointment.tarih);
-
-      // Compare year, month, day only
-      if (
-        filterDate.getFullYear() !== appointmentDate.getFullYear() ||
-        filterDate.getMonth() !== appointmentDate.getMonth() ||
-        filterDate.getDate() !== appointmentDate.getDate()
-      ) {
-        matches = false;
+  // Durum güncelleme
+  const durumGuncelle = async (randevuKimlik: string, durum: RandevuDurum) => {
+    try {
+      const guncellenmis = await randevuServisi.durumGuncelle(randevuKimlik, durum);
+      if (guncellenmis) {
+        setRandevular(oncekiRandevular => 
+          oncekiRandevular.map(r => 
+            r.kimlik === randevuKimlik ? { ...r, durum } : r
+          )
+        );
+        return true;
       }
+      return false;
+    } catch (err) {
+      console.error('Randevu durumu güncelleme hatası:', err);
+      toast.error('Randevu durumu güncellenirken bir hata oluştu');
+      return false;
     }
+  };
 
-    // Filter by personnelId if specified
-    if (filters.personnelId && appointment.personel_id !== filters.personnelId) {
-      matches = false;
+  // Randevu silme
+  const randevuSil = async (randevuKimlik: string) => {
+    try {
+      const basarili = await randevuServisi.sil(randevuKimlik);
+      if (basarili) {
+        setRandevular(oncekiRandevular => 
+          oncekiRandevular.filter(r => r.kimlik !== randevuKimlik)
+        );
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.error('Randevu silme hatası:', err);
+      toast.error('Randevu silinirken bir hata oluştu');
+      return false;
     }
+  };
 
-    // Filter by customerId if specified
-    if (filters.customerId && appointment.musteri_id !== filters.customerId) {
-      matches = false;
+  // Kullanıcı değişikliğinde yeniden yükle
+  useEffect(() => {
+    if (user) {
+      fetchRandevular();
     }
-
-    return matches;
-  });
+  }, [user, isletmeKimlik, personelKimlik, tarih, durum]);
 
   return {
-    appointments: filteredAppointments,
-    isLoading,
-    isError,
-    refetch,
-    filters,
-    setFilters,
+    randevular,
+    loading,
+    error,
+    yenile: fetchRandevular,
+    durumGuncelle,
+    randevuSil
   };
-}
+};

@@ -3,7 +3,6 @@ import { supabase } from '../client';
 import { IslemKategorisi } from '../types';
 
 export const kategoriServisi = {
-  // İşletmeye göre kategorileri getir
   async isletmeyeGoreGetir(isletmeKimlik: string): Promise<IslemKategorisi[]> {
     try {
       const { data, error } = await supabase
@@ -16,17 +15,33 @@ export const kategoriServisi = {
       
       return data as IslemKategorisi[];
     } catch (error) {
-      console.error('Kategoriler getirilirken hata:', error);
+      console.error('İşletme kategorileri getirme hatası:', error);
       return [];
     }
   },
-  
-  // Kategori oluştur
+
+  // Tüm kategorileri getir
+  async hepsiniGetir(): Promise<IslemKategorisi[]> {
+    try {
+      const { data, error } = await supabase
+        .from('islem_kategorileri')
+        .select('*')
+        .order('siralama', { ascending: true });
+      
+      if (error) throw error;
+      
+      return data as IslemKategorisi[];
+    } catch (error) {
+      console.error('Tüm kategorileri getirme hatası:', error);
+      return [];
+    }
+  },
+
   async olustur(kategori: Partial<IslemKategorisi>): Promise<IslemKategorisi | null> {
     try {
       const { data, error } = await supabase
         .from('islem_kategorileri')
-        .insert([kategori])
+        .insert(kategori)
         .select()
         .single();
       
@@ -34,29 +49,29 @@ export const kategoriServisi = {
       
       return data as IslemKategorisi;
     } catch (error) {
-      console.error('Kategori oluşturulurken hata:', error);
+      console.error('Kategori oluşturma hatası:', error);
       return null;
     }
   },
-  
-  // Kategori güncelle
-  async guncelle(kategoriKimlik: string, kategori: Partial<IslemKategorisi>): Promise<boolean> {
+
+  async guncelle(kategoriKimlik: string, kategori: Partial<IslemKategorisi>): Promise<IslemKategorisi | null> {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('islem_kategorileri')
         .update(kategori)
-        .eq('kimlik', kategoriKimlik);
+        .eq('kimlik', kategoriKimlik)
+        .select()
+        .single();
       
       if (error) throw error;
       
-      return true;
+      return data as IslemKategorisi;
     } catch (error) {
-      console.error('Kategori güncellenirken hata:', error);
-      return false;
+      console.error('Kategori güncelleme hatası:', error);
+      return null;
     }
   },
-  
-  // Kategori sil
+
   async sil(kategoriKimlik: string): Promise<boolean> {
     try {
       const { error } = await supabase
@@ -68,9 +83,8 @@ export const kategoriServisi = {
       
       return true;
     } catch (error) {
-      console.error('Kategori silinirken hata:', error);
+      console.error('Kategori silme hatası:', error);
       return false;
     }
   }
 };
-

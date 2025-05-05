@@ -102,7 +102,7 @@ export interface PersonelBasvuru {
   tarih: string;
 }
 
-// Adding CalismaSaati type for compatibility
+// CalismaSaati interface updated to use isletme_id instead of dukkan_id
 export interface CalismaSaati {
   id: string;
   isletme_id: string;
@@ -114,7 +114,7 @@ export interface CalismaSaati {
   updated_at: string;
 }
 
-// Adding Profil type
+// Profil interface
 export interface Profil {
   id: string;
   first_name?: string;
@@ -131,7 +131,7 @@ export interface Profil {
   updated_at?: string;
 }
 
-// Tam adları göstermek için yardımcı fonksiyon
+// Durum labels
 export const durum = {
   randevu: {
     planlandi: "Planlandı",
@@ -152,4 +152,3 @@ export const durum = {
 
 // For Supabase client
 export interface Database {}
-

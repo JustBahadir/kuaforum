@@ -1,186 +1,185 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { supabase } from '@/lib/supabase';
-import { toast } from 'sonner';
-import { CalismaSaati } from '@/lib/supabase/types';
-import { shopService } from '@/lib/auth/services/shopService';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CityISOCodes } from '@/utils/cityISOCodes';
+
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
+import { supabase } from "@/lib/supabase/client";
+import { defaultCalismaSaatleriOlustur } from "@/components/operations/utils/workingHoursUtils";
+import { calismaSaatleriServisi } from "@/lib/supabase";
 
 export default function CreateShop() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    isletmeAdi: '',
-    isletmeIl: '',
-    isletmeAcikAdres: '',
-    isletmeTelefon: '',
-    acilisGunleri: {
-      pazartesi: { acilis: "09:00", kapanis: "18:00", kapali: false },
-      sali: { acilis: "09:00", kapanis: "18:00", kapali: false },
-      carsamba: { acilis: "09:00", kapanis: "18:00", kapali: false },
-      persembe: { acilis: "09:00", kapanis: "18:00", kapali: false },
-      cuma: { acilis: "09:00", kapanis: "18:00", kapali: false },
-      cumartesi: { acilis: "09:00", kapanis: "18:00", kapali: false },
-      pazar: { acilis: "10:00", kapanis: "16:00", kapali: true },
-    }
+    isletme_adi: "",
+    telefon: "",
+    adres: "",
+    aciklama: "",
+    iletisim_telefon: "",
+    net_gelir: "0",
+    toplam_prim: "0",
+    toplam_gider: "0",
+    toplam_islem: "0",
+    toplam_randevu: "0",
+    toplam_musteri: "0",
+    toplam_personel: "0"
   });
 
-  // List of Turkish cities from CityISOCodes
-  const cities = Object.keys(CityISOCodes).map(city => ({
-    value: city,
-    label: city
-  })).sort((a, b) => a.label.localeCompare(b.label));
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      [name]: value
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError(null);
 
     try {
-      const { data: authData, error: authError } = await supabase.auth.getSession();
-
-      if (authError) {
-        throw authError;
+      // Get current user ID
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Kullanıcı oturumunuz bulunamadı. Lütfen tekrar giriş yapın.");
+        navigate("/auth");
+        return;
       }
 
-      if (!authData?.session?.user?.id) {
-        throw new Error('Kullanıcı oturumu bulunamadı.');
+      // Check if user already has a shop
+      const { data: existingShop } = await supabase
+        .from('isletmeler')
+        .select('*')
+        .eq('sahip_kimlik', user.id)
+        .maybeSingle();
+
+      if (existingShop) {
+        toast.error("Zaten bir işletmeniz bulunuyor.");
+        navigate("/isletme/anasayfa");
+        return;
       }
 
-      // Generate shop code based on name and city
-      const cityCode = formData.isletmeIl ? CityISOCodes[formData.isletmeIl] : undefined;
-      const shopCode = await shopService.generateShopCode(formData.isletmeAdi, cityCode);
+      // Generate shop code
+      const shopCode = Math.floor(100000 + Math.random() * 900000).toString();
 
-      const ownerId = authData.session.user.id;
-
-      // Create isletme record
-      const { data: shopData, error: shopError } = await supabase
-        .from('dukkanlar')
-        .insert([
-          {
-            ad: formData.isletmeAdi,
-            adres: formData.isletmeIl,
-            acik_adres: formData.isletmeAcikAdres,
-            telefon: formData.isletmeTelefon,
-            kod: shopCode,
-            sahibi_id: ownerId,
-            active: true
-          }
-        ])
+      // Insert new shop
+      const { data: newShop, error: shopError } = await supabase
+        .from('isletmeler')
+        .insert({
+          isletme_adi: formData.isletme_adi,
+          telefon: formData.telefon || null,
+          adres: formData.adres || null,
+          aciklama: formData.aciklama || null,
+          sahip_kimlik: user.id,
+          isletme_kodu: shopCode,
+          // Convert numeric fields from string to number
+          net_gelir: parseFloat(formData.net_gelir) || 0,
+          toplam_prim: parseFloat(formData.toplam_prim) || 0,
+          toplam_gider: parseFloat(formData.toplam_gider) || 0,
+          toplam_islem: parseInt(formData.toplam_islem) || 0,
+          toplam_randevu: parseInt(formData.toplam_randevu) || 0,
+          toplam_musteri: parseInt(formData.toplam_musteri) || 0,
+          toplam_personel: parseInt(formData.toplam_personel) || 0
+        })
         .select()
+        .single();
 
       if (shopError) {
         throw shopError;
       }
 
-      const isletmeId = shopData?.[0]?.id;
-
-      if (!isletmeId) {
-        throw new Error('İşletme oluşturulamadı.');
+      // Create default working hours
+      if (newShop) {
+        // Create default working hours
+        const defaultSaatler = defaultCalismaSaatleriOlustur(newShop.kimlik);
+        await calismaSaatleriServisi.topluGuncelle(defaultSaatler);
       }
 
-      // Create working hours with all required fields
-      const workingHours: CalismaSaati[] = [
-        { id: 1, gun: "pazartesi", gun_sira: 1, acilis: "09:00", kapanis: "18:00", kapali: false, dukkan_id: isletmeId },
-        { id: 2, gun: "sali", gun_sira: 2, acilis: "09:00", kapanis: "18:00", kapali: false, dukkan_id: isletmeId },
-        { id: 3, gun: "carsamba", gun_sira: 3, acilis: "09:00", kapanis: "18:00", kapali: false, dukkan_id: isletmeId },
-        { id: 4, gun: "persembe", gun_sira: 4, acilis: "09:00", kapanis: "18:00", kapali: false, dukkan_id: isletmeId },
-        { id: 5, gun: "cuma", gun_sira: 5, acilis: "09:00", kapanis: "18:00", kapali: false, dukkan_id: isletmeId },
-        { id: 6, gun: "cumartesi", gun_sira: 6, acilis: "09:00", kapanis: "18:00", kapali: false, dukkan_id: isletmeId },
-        { id: 7, gun: "pazar", gun_sira: 7, acilis: "09:00", kapanis: "18:00", kapali: true, dukkan_id: isletmeId }
-      ];
-
-      const { error: workingHoursError } = await supabase
-        .from('calisma_saatleri')
-        .insert(workingHours);
-
-      if (workingHoursError) {
-        throw workingHoursError;
-      }
-
-      toast.success('İşletmeniz başarıyla oluşturuldu!');
-      navigate('/admin');
-    } catch (err: any) {
-      setError(err.message || 'İşletme oluşturulurken bir hata oluştu.');
+      toast.success("İşletme başarıyla oluşturuldu!");
+      navigate("/isletme/anasayfa");
+    } catch (error: any) {
+      console.error("İşletme oluşturma hatası:", error);
+      toast.error(`Hata: ${error.message || "İşletme oluşturulurken bir sorun oluştu"}`);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Dükkan Oluştur</CardTitle>
-          <CardDescription>Yeni bir dükkan oluşturmak için bilgilerinizi giriniz.</CardDescription>
+          <CardTitle>İşletme Oluştur</CardTitle>
+          <CardDescription>
+            İşletme bilgilerinizi girerek işletmenizi oluşturun
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-              <strong className="font-bold">Hata!</strong>
-              <span className="block sm:inline">{error}</span>
-            </div>
-          )}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="isletmeAdi">İşletme Adı</Label>
+              <Label htmlFor="isletme_adi">İşletme Adı</Label>
               <Input
-                id="isletmeAdi"
-                value={formData.isletmeAdi}
-                onChange={(e) => setFormData({ ...formData, isletmeAdi: e.target.value })}
+                id="isletme_adi"
+                name="isletme_adi"
+                value={formData.isletme_adi}
+                onChange={handleInputChange}
+                placeholder="İşletmenizin adı"
                 required
               />
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="isletmeIl">İl</Label>
-              <Select
-                value={formData.isletmeIl}
-                onValueChange={(value) => setFormData({ ...formData, isletmeIl: value })}
-              >
-                <SelectTrigger id="isletmeIl">
-                  <SelectValue placeholder="İl seçin" />
-                </SelectTrigger>
-                <SelectContent>
-                  {cities.map((city) => (
-                    <SelectItem key={city.value} value={city.value}>{city.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="isletmeAcikAdres">Açık Adres</Label>
+              <Label htmlFor="telefon">İşletme Telefonu</Label>
               <Input
-                id="isletmeAcikAdres"
-                value={formData.isletmeAcikAdres}
-                onChange={(e) => setFormData({ ...formData, isletmeAcikAdres: e.target.value })}
-                required
+                id="telefon"
+                name="telefon"
+                value={formData.telefon}
+                onChange={handleInputChange}
+                placeholder="05XX XXX XX XX"
               />
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="isletmeTelefon">İşletme Telefonu</Label>
-              <Input
-                id="isletmeTelefon"
-                value={formData.isletmeTelefon}
-                onChange={(e) => setFormData({ ...formData, isletmeTelefon: e.target.value })}
-                required
+              <Label htmlFor="adres">İşletme Adresi</Label>
+              <Textarea
+                id="adres"
+                name="adres"
+                value={formData.adres}
+                onChange={handleInputChange}
+                placeholder="İşletmenizin açık adresi"
+                rows={3}
               />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Oluşturuluyor...' : 'İşletmeyi Oluştur'}
-            </Button>
+
+            <div className="space-y-2">
+              <Label htmlFor="aciklama">İşletme Açıklaması</Label>
+              <Textarea
+                id="aciklama"
+                name="aciklama"
+                value={formData.aciklama}
+                onChange={handleInputChange}
+                placeholder="İşletmeniz hakkında kısa bir açıklama"
+                rows={3}
+              />
+            </div>
+
+            <div className="pt-4">
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? "İşletme Oluşturuluyor..." : "İşletme Oluştur"}
+              </Button>
+            </div>
           </form>
         </CardContent>
-        <CardFooter className="flex justify-center">
-          <Button variant="link" onClick={() => navigate('/admin')}>
-            Admin sayfasına dön
-          </Button>
-        </CardFooter>
       </Card>
     </div>
   );

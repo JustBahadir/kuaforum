@@ -1,83 +1,57 @@
 
-import { fetchProfile, getUserRole, getUserNameWithTitle } from './profileServices/fetchProfile';
-import { updateProfile } from './profileServices/updateProfile';
-import { createProfile } from './profileServices/createProfile';
-
-// Temiz IBAN için yardımcı fonksiyon
-const cleanIBANForStorage = (iban?: string) => {
-  if (!iban) return undefined;
-
-  let cleaned = iban.replace(/\s/g, '');
-
-  if (cleaned.startsWith('TR')) {
-    cleaned = 'TR' + cleaned.substring(2).replace(/\D/g, '');
-  } else {
-    cleaned = 'TR' + cleaned.replace(/\D/g, '');
-  }
-
-  cleaned = cleaned.substring(0, 26);
-
-  return cleaned;
-};
-
-// IBAN formatlaması
-const formatIBAN = (iban: string) => {
-  if (!iban) return '';
-
-  let cleaned = iban.replace(/\s/g, '');
-
-  if (cleaned.startsWith('TR')) {
-    cleaned = 'TR' + cleaned.substring(2).replace(/\D/g, '');
-  } else {
-    cleaned = 'TR' + cleaned.replace(/\D/g, '');
-  }
-
-  cleaned = cleaned.substring(0, 26);
-
-  let formatted = '';
-  for (let i = 0; i < cleaned.length; i++) {
-    if (i > 0 && i % 4 === 0) {
-      formatted += ' ';
-    }
-    formatted += cleaned[i];
-  }
-
-  return formatted;
-};
-
-// IBAN doğrulama (sadece TR ile başladığını ve sınırlandırmayı kontrol)
-const validateIBAN = (iban: string) => {
-  if (!iban) return '';
-
-  let validated = 'TR';
-  if (iban.startsWith('TR')) {
-    validated += iban.substring(2).replace(/\D/g, '');
-  } else {
-    validated += iban.replace(/\D/g, '');
-  }
-
-  validated = validated.substring(0, 26);
-
-  return validated;
-};
+import { supabase } from '../client';
+import { Profil } from '../types';
 
 export const profilServisi = {
-  getir: fetchProfile,
-  guncelle: (data: any) => {
-    if (data.iban) {
-      data.iban = cleanIBANForStorage(data.iban);
+  async getir(id: string): Promise<Profil | null> {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', id)
+        .single();
+      
+      if (error) throw error;
+      
+      return data as Profil;
+    } catch (error) {
+      console.error('Profil getirme hatası:', error);
+      return null;
     }
-    return updateProfile(data);
   },
-  getUserRole,
-  getUserNameWithTitle,
-  createProfile: (userId: string, data: any) => {
-    if (data.iban) {
-      data.iban = cleanIBANForStorage(data.iban);
+  
+  async guncelle(id: string, profil: Partial<Profil>): Promise<Profil | null> {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .update(profil)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      return data as Profil;
+    } catch (error) {
+      console.error('Profil güncelleme hatası:', error);
+      return null;
     }
-    return createProfile({ ...data, id: userId });
   },
-  formatIBAN,
-  cleanIBANForStorage,
-  validateIBAN,
+  
+  async olustur(profil: Partial<Profil>): Promise<Profil | null> {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .insert(profil)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      return data as Profil;
+    } catch (error) {
+      console.error('Profil oluşturma hatası:', error);
+      return null;
+    }
+  }
 };

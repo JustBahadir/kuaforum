@@ -48,9 +48,10 @@ export default function AuthGoogleCallback() {
 
         if (kullaniciError) {
           console.error("Kullanıcı bilgileri alınamadı:", kullaniciError);
+          // Instead of throwing an error, we'll assume the profile needs to be completed
         }
 
-        // Redirect to profile setup if not completed
+        // Redirect to profile setup if not completed or no profile exists
         if (!kullanici || !kullanici.profil_tamamlandi) {
           console.log("Profil tamamlanmamış, profil-kurulum sayfasına yönlendiriliyor");
           navigate("/profil-kurulum", { replace: true });
@@ -72,7 +73,8 @@ export default function AuthGoogleCallback() {
 
       } catch (error: any) {
         console.error("Auth callback error:", error);
-        setError(`Bir hata oluştu: ${error.message || "Bilinmeyen hata"}`);
+        // Instead of showing an error, redirect to profile setup
+        navigate("/profil-kurulum", { replace: true });
       } finally {
         setLoading(false);
       }
