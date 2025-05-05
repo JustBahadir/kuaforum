@@ -1,3 +1,4 @@
+
 // Enum definitions
 export type KullaniciRol = "isletme_sahibi" | "personel" | "musteri";
 export type PersonelDurum = "aktif" | "izinli" | "cikti";
@@ -70,6 +71,11 @@ export interface Personel extends BaseEntity {
   personel_no?: string;
   calisma_sistemi?: string;
   iban?: string;
+
+  // Backward compatibility fields
+  birth_date?: string;
+  auth_id?: string;
+  dukkan_id?: string | number;
 }
 
 export interface IslemKategorisi extends BaseEntity {
@@ -117,7 +123,7 @@ export interface Musteri extends BaseEntity {
   son_ziyaret?: string;
   kayit_tarihi?: string;
   
-  // Backward compatibility fields for customer components
+  // Backward compatibility fields
   ad?: string;
   soyad?: string;
   first_name?: string;
@@ -126,6 +132,7 @@ export interface Musteri extends BaseEntity {
   birthdate?: string;
   address?: string;
   email?: string;
+  dukkan_id?: string | number;
 }
 
 export interface Randevu extends BaseEntity {
@@ -144,9 +151,11 @@ export interface Randevu extends BaseEntity {
   islemler: any[];
   toplam_tutar?: number;
   customer_id?: string;
+  notlar?: string;
   
   // Backward compatibility fields
   hizmet_kimlik?: string; // For compatibility with customer dashboard
+  dukkan_id?: string | number;
 }
 
 export interface PersonelBasvuru extends BaseEntity {
@@ -183,6 +192,7 @@ export interface Profil extends BaseEntity {
   dogum_tarihi?: string;
   rol?: KullaniciRol;
   durum?: string;
+  profil_tamamlandi?: boolean;
   
   // Backward compatibility fields
   first_name?: string;
@@ -191,6 +201,8 @@ export interface Profil extends BaseEntity {
   address?: string;
   role?: string;
   birthdate?: string;
+  iban?: string;
+  dukkan_id?: string | number;
 }
 
 export interface PersonelIslemi extends BaseEntity {
@@ -205,4 +217,16 @@ export interface PersonelIslemi extends BaseEntity {
   puan?: number;
   aciklama?: string;  // Replaces notlar
   tarih?: string;
+  notlar?: string;
+  personel?: Personel;
+  islem?: Hizmet;
 }
+
+// Export compatible type names
+export type Personnel = Personel;
+export type ServiceCategory = IslemKategorisi;
+export type Service = Hizmet;
+export type Customer = Musteri;
+export type Appointment = Randevu;
+export type Profile = Profil;
+export type PersonnelOperation = PersonelIslemi;

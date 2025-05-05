@@ -40,5 +40,28 @@ export const profilServisi = {
   // Alias method for backward compatibility
   createProfile: async (profil: Partial<Profil>): Promise<Profil> => {
     return profilServisi.olustur(profil);
+  },
+
+  // New method to get profile by role
+  getirByRole: async (role: string): Promise<Profil[]> => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('role', role);
+      
+    if (error) throw error;
+    return data || [];
+  },
+
+  // New method to check if a profile exists
+  exists: async (id: string): Promise<boolean> => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', id)
+      .maybeSingle();
+      
+    if (error && error.code !== 'PGRST116') throw error;
+    return !!data;
   }
 };

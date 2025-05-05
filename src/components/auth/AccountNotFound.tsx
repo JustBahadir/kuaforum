@@ -39,8 +39,8 @@ export default function AccountNotFound({ accountExists = false }: AccountNotFou
   }, [searchParams, navigate, accountExists]);
 
   const handleRegister = () => {
-    // Redirect to login page with register tab active
-    navigate("/login?tab=register");
+    // Redirect to profile setup page
+    navigate("/profil-kurulum");
   };
 
   const handleLogin = () => {

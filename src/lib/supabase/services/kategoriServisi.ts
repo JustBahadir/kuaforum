@@ -34,6 +34,11 @@ export const kategoriServisi = {
     return data;
   },
   
+  // Alias for backward compatibility
+  ekle: async (kategori: Partial<IslemKategorisi>): Promise<IslemKategorisi> => {
+    return kategoriServisi.olustur(kategori);
+  },
+  
   guncelle: async (kategoriKimlik: string, kategori: Partial<IslemKategorisi>): Promise<IslemKategorisi> => {
     const { data, error } = await supabase
       .from('islem_kategorileri')
@@ -52,6 +57,16 @@ export const kategoriServisi = {
       .delete()
       .eq('kimlik', kategoriKimlik);
       
+    if (error) throw error;
+  },
+
+  // Add missing sirayiGuncelle function
+  sirayiGuncelle: async (kategoriId: string, yeniSira: number): Promise<void> => {
+    const { error } = await supabase
+      .from('islem_kategorileri')
+      .update({ sira: yeniSira })
+      .eq('kimlik', kategoriId);
+
     if (error) throw error;
   }
 };
