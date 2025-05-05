@@ -21,7 +21,7 @@ export function PersonnelForm({
 }: PersonnelFormProps) {
   const { isletmeId } = useAuth();
   const [formData, setFormData] = useState<Omit<Personel, "id" | "created_at">>({
-    dukkan_id: isletmeId || "", // Changed to string
+    dukkan_id: isletmeId || "",
     eposta: "",
     telefon: "",
     adres: "",
@@ -36,7 +36,7 @@ export function PersonnelForm({
   useEffect(() => {
     if (personel) {
       setFormData({
-        dukkan_id: personel.dukkan_id.toString(), // Convert to string
+        dukkan_id: typeof personel.dukkan_id === 'number' ? personel.dukkan_id.toString() : personel.dukkan_id,
         eposta: personel.eposta || "",
         telefon: personel.telefon || "",
         adres: personel.adres || "",

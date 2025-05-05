@@ -47,7 +47,7 @@ export function PersonnelDialog({
         </DialogHeader>
         
         <PersonnelForm
-          personel={personnel || undefined}
+          personel={personnel as Personel}
           onSubmit={handleSubmit}
           onCancel={onClose}
           isLoading={loading}
