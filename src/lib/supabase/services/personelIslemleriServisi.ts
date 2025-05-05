@@ -22,7 +22,7 @@ export const personelIslemleriServisi = {
   },
   
   // Müşteriye göre işlemleri getir
-  async musteriyeGoreGetir(musteriId: number): Promise<PersonelIslemi[]> {
+  async musteriyeGoreGetir(musteriId: number | string): Promise<PersonelIslemi[]> {
     try {
       const { data, error } = await supabase
         .from('personel_islemleri')
@@ -39,12 +39,12 @@ export const personelIslemleriServisi = {
     }
   },
   
-  // İşlem oluştur
+  // Yeni işlem oluştur
   async olustur(islem: Partial<PersonelIslemi>): Promise<PersonelIslemi | null> {
     try {
       const { data, error } = await supabase
         .from('personel_islemleri')
-        .insert([islem])
+        .insert(islem)
         .select()
         .single();
       
@@ -52,25 +52,27 @@ export const personelIslemleriServisi = {
       
       return data as PersonelIslemi;
     } catch (error) {
-      console.error('İşlem oluşturulurken hata:', error);
+      console.error('Personel işlemi oluşturulurken hata:', error);
       return null;
     }
   },
   
   // İşlem güncelle
-  async guncelle(islemId: number, islem: Partial<PersonelIslemi>): Promise<boolean> {
+  async guncelle(islemId: number, islem: Partial<PersonelIslemi>): Promise<PersonelIslemi | null> {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('personel_islemleri')
         .update(islem)
-        .eq('id', islemId);
+        .eq('id', islemId)
+        .select()
+        .single();
       
       if (error) throw error;
       
-      return true;
+      return data as PersonelIslemi;
     } catch (error) {
-      console.error('İşlem güncellenirken hata:', error);
-      return false;
+      console.error('Personel işlemi güncellenirken hata:', error);
+      return null;
     }
   },
   
@@ -86,9 +88,13 @@ export const personelIslemleriServisi = {
       
       return true;
     } catch (error) {
-      console.error('İşlem silinirken hata:', error);
+      console.error('Personel işlemi silinirken hata:', error);
       return false;
     }
+  },
+
+  // Geriye dönük uyumluluk için
+  async musteriIslemleriniGetir(musteriId: number | string): Promise<PersonelIslemi[]> {
+    return this.musteriyeGoreGetir(String(musteriId));
   }
 };
-

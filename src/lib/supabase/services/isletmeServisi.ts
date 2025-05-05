@@ -75,5 +75,19 @@ export const isletmeServisi = {
       console.error('İşletmeler getirilirken hata:', error);
       return [];
     }
+  },
+
+  // Kullanıcının işletme kimliğini getir
+  async getCurrentUserIsletmeId(): Promise<string | null> {
+    try {
+      const isletme = await this.kullaniciIsletmesiniGetir();
+      return isletme?.kimlik || null;
+    } catch (error) {
+      console.error('Kullanıcı işletme kimliği getirilirken hata:', error);
+      return null;
+    }
   }
 };
+
+// Geriye dönük uyumluluk için dukkanServisi adıyla da dışa aktarılır
+export const dukkanServisi = isletmeServisi;

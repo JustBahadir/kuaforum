@@ -1,202 +1,237 @@
-import React, { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { musteriServisi, personelIslemleriServisi, randevuServisi } from "@/lib/supabase";
-import { format } from "date-fns";
-import { tr } from "date-fns/locale";
-import { formatPhoneNumber } from "@/utils/phoneFormatter";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar, Phone, Clock, CheckCircle2, XCircle } from "lucide-react";
+
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CalendarRange, CreditCard, User, History } from "lucide-react";
+import { toast } from "sonner";
+import { musteriServisi, randevuServisi, personelIslemleriServisi } from "@/lib/supabase";
+import { Musteri } from "@/lib/supabase/types";
+import CustomerAppointmentsTable from "./CustomerAppointmentsTable";
+import { PersonelIslemi } from "@/lib/supabase/temporaryTypes";
 
 interface CustomerDetailsProps {
-  customerId: number;
+  musteriId: string;
 }
 
-export function CustomerDetails({ customerId }: CustomerDetailsProps) {
-  const { data: customer, isLoading: isCustomerLoading } = useQuery({
-    queryKey: ['customer', customerId],
-    queryFn: () => musteriServisi.getir(customerId),
-    enabled: !!customerId,
-  });
+export function CustomerDetails({ musteriId }: CustomerDetailsProps) {
+  const [musteri, setMusteri] = useState<Musteri | null>(null);
+  const [randevular, setRandevular] = useState<any[]>([]);
+  const [islemler, setIslemler] = useState<PersonelIslemi[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("info");
 
-  const { data: appointments = [], isLoading: isAppointmentsLoading } = useQuery({
-    queryKey: ['customerAppointments', customerId],
-    queryFn: () => randevuServisi.getirByMusteriId(customerId),
-    enabled: !!customerId,
-  });
+  // Load customer details
+  useEffect(() => {
+    const loadCustomerDetails = async () => {
+      if (!musteriId) return;
+      
+      try {
+        setLoading(true);
+        
+        // Get customer profile
+        const musteriVerisi = await musteriServisi.getir(musteriId);
+        if (musteriVerisi) {
+          setMusteri(musteriVerisi);
+        }
+        
+        // Get appointments
+        const randevuVerileri = await randevuServisi.musteriyeGoreGetir(musteriId);
+        setRandevular(randevuVerileri);
+        
+        // Get operations
+        const islemVerileri = await personelIslemleriServisi.musteriyeGoreGetir(musteriId);
+        setIslemler(islemVerileri);
+        
+      } catch (error) {
+        console.error("Müşteri detayları yüklenirken hata:", error);
+        toast.error("Müşteri bilgileri yüklenemedi");
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadCustomerDetails();
+  }, [musteriId]);
 
-  const { data: services = [], isLoading: isServicesLoading } = useQuery({
-    queryKey: ['customerServices', customerId],
-    queryFn: () => personelIslemleriServisi.musteriIslemleriniGetir(customerId),
-    enabled: !!customerId,
-  });
-
-  // Format date
-  const formatDate = (date: string | null | undefined) => {
-    if (!date) return "-";
-    try {
-      return format(new Date(date), "dd MMMM yyyy", { locale: tr });
-    } catch (e) {
-      return "-";
+  // Refresh data
+  const handleRefresh = () => {
+    if (musteriId) {
+      const loadCustomerDetails = async () => {
+        try {
+          // Get appointments
+          const randevuVerileri = await randevuServisi.musteriyeGoreGetir(musteriId);
+          setRandevular(randevuVerileri);
+          
+          // Get operations
+          const islemVerileri = await personelIslemleriServisi.musteriyeGoreGetir(musteriId);
+          setIslemler(islemVerileri);
+          
+          toast.success("Veriler yenilendi");
+        } catch (error) {
+          console.error("Veriler yenilenirken hata:", error);
+          toast.error("Veriler yenilenemedi");
+        }
+      };
+      
+      loadCustomerDetails();
     }
   };
 
-  // Format appointment status
-  const formatStatus = (status: string) => {
-    switch (status) {
-      case "onaylandi":
-        return <span className="text-green-600 flex items-center"><CheckCircle2 className="h-4 w-4 mr-1" /> Onaylandı</span>;
-      case "beklemede":
-        return <span className="text-yellow-600 flex items-center"><Clock className="h-4 w-4 mr-1" /> Beklemede</span>;
-      case "tamamlandi":
-        return <span className="text-green-700 flex items-center"><CheckCircle2 className="h-4 w-4 mr-1" /> Tamamlandı</span>;
-      case "iptal_edildi":
-      case "iptal":
-        return <span className="text-red-600 flex items-center"><XCircle className="h-4 w-4 mr-1" /> İptal Edildi</span>;
-      default:
-        return status;
-    }
-  };
-
-  if (isCustomerLoading) {
+  if (loading) {
     return (
-      <div className="space-y-4">
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-8 w-[200px]" />
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <Skeleton className="h-4 w-[300px]" />
-              <Skeleton className="h-4 w-[250px]" />
-              <Skeleton className="h-4 w-[200px]" />
-            </div>
-          </CardContent>
-        </Card>
+      <div className="flex justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-4 border-primary border-r-transparent"></div>
       </div>
     );
   }
 
-  if (!customer) {
+  if (!musteri) {
     return (
-      <Card>
-        <CardContent className="p-6">
-          <div className="text-center py-8">
-            <h3 className="text-lg font-medium">Müşteri bulunamadı</h3>
-            <p className="text-muted-foreground mt-2">Bu ID ile eşleşen müşteri kaydı bulunmamaktadır.</p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="text-center py-8 text-muted-foreground">
+        Müşteri bilgisi bulunamadı
+      </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-xl">
-            {customer.first_name} {customer.last_name || ""}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {customer.phone && (
-              <div className="flex items-center">
-                <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
-                <span>{formatPhoneNumber(customer.phone)}</span>
-              </div>
-            )}
-            {customer.birthdate && (
-              <div className="flex items-center">
-                <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
-                <span>Doğum Tarihi: {formatDate(customer.birthdate)}</span>
-              </div>
-            )}
-            <div>
-              <p className="text-sm text-muted-foreground">Kayıt Tarihi</p>
-              <p>{formatDate(customer.created_at)}</p>
-            </div>
+    <Card>
+      <CardHeader>
+        <div className="flex justify-between items-start">
+          <div>
+            <CardTitle className="text-2xl font-bold">
+              {musteri.ad} {musteri.soyad}
+            </CardTitle>
+            <CardDescription>
+              {musteri.telefon ? `Telefon: ${musteri.telefon}` : "Telefon bilgisi yok"}
+            </CardDescription>
           </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Son Randevular</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isAppointmentsLoading ? (
-            <div className="space-y-3">
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-12 w-full" />
-            </div>
-          ) : appointments.length > 0 ? (
+          
+          <Button
+            variant="outline"
+            onClick={handleRefresh}
+          >
+            Yenile
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <Tabs defaultValue={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="mb-4">
+            <TabsTrigger value="info" className="flex items-center">
+              <User className="h-4 w-4 mr-2" />
+              Bilgiler
+            </TabsTrigger>
+            <TabsTrigger value="appointments" className="flex items-center">
+              <CalendarRange className="h-4 w-4 mr-2" />
+              Randevular
+            </TabsTrigger>
+            <TabsTrigger value="history" className="flex items-center">
+              <History className="h-4 w-4 mr-2" />
+              İşlem Geçmişi
+            </TabsTrigger>
+            <TabsTrigger value="payments" className="flex items-center">
+              <CreditCard className="h-4 w-4 mr-2" />
+              Ödemeler
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="info">
             <div className="space-y-4">
-              {appointments.slice(0, 5).map((appointment: any) => (
-                <div 
-                  key={appointment.id} 
-                  className="border-b pb-3 last:border-0 last:pb-0"
-                >
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="font-medium">
-                        {format(new Date(appointment.tarih), "dd MMMM yyyy", { locale: tr })}
-                        {" "}
-                        {appointment.saat ? appointment.saat.substring(0, 5) : ""}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {appointment.personel?.ad_soyad || "Personel seçilmedi"}
-                      </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <h3 className="font-medium">Kişisel Bilgiler</h3>
+                  <div className="rounded-md border p-4 space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="text-sm text-muted-foreground">Ad:</div>
+                      <div className="text-sm font-medium">{musteri.ad || "-"}</div>
                     </div>
-                    <div>
-                      {formatStatus(appointment.durum)}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="text-sm text-muted-foreground">Soyad:</div>
+                      <div className="text-sm font-medium">{musteri.soyad || "-"}</div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="text-sm text-muted-foreground">Telefon:</div>
+                      <div className="text-sm font-medium">{musteri.telefon || "-"}</div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="text-sm text-muted-foreground">Doğum Tarihi:</div>
+                      <div className="text-sm font-medium">{musteri.dogum_tarihi || "-"}</div>
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-muted-foreground py-2">Henüz randevu kaydı bulunmamaktadır.</p>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Yapılan İşlemler</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isServicesLoading ? (
-            <div className="space-y-3">
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-12 w-full" />
-            </div>
-          ) : services.length > 0 ? (
-            <div className="space-y-4">
-              {services.slice(0, 5).map((service: any) => (
-                <div 
-                  key={service.id} 
-                  className="border-b pb-3 last:border-0 last:pb-0"
-                >
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="font-medium">{service.aciklama}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {format(new Date(service.created_at), "dd MMMM yyyy", { locale: tr })}
-                      </p>
+                
+                <div className="space-y-2">
+                  <h3 className="font-medium">Müşteri Bilgileri</h3>
+                  <div className="rounded-md border p-4 space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="text-sm text-muted-foreground">Toplam Randevu:</div>
+                      <div className="text-sm font-medium">{randevular.length}</div>
                     </div>
-                    <div>
-                      <p className="font-medium">{service.tutar} ₺</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="text-sm text-muted-foreground">Toplam İşlem:</div>
+                      <div className="text-sm font-medium">{islemler.length}</div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="text-sm text-muted-foreground">İlk Ziyaret:</div>
+                      <div className="text-sm font-medium">
+                        {musteri.created_at ? new Date(musteri.created_at).toLocaleDateString() : "-"}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="text-sm text-muted-foreground">Son İşlem:</div>
+                      <div className="text-sm font-medium">
+                        {islemler.length > 0
+                          ? new Date(islemler[0].created_at).toLocaleDateString()
+                          : "-"}
+                      </div>
                     </div>
                   </div>
                 </div>
-              ))}
+              </div>
             </div>
-          ) : (
-            <p className="text-muted-foreground py-2">Henüz işlem kaydı bulunmamaktadır.</p>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+          </TabsContent>
+          
+          <TabsContent value="appointments">
+            <CustomerAppointmentsTable musteriId={musteriId} onRefresh={handleRefresh} />
+          </TabsContent>
+          
+          <TabsContent value="history">
+            <div className="rounded-md border">
+              {islemler.length === 0 ? (
+                <div className="text-center py-6 text-muted-foreground">
+                  Bu müşteri için işlem kaydı bulunmuyor
+                </div>
+              ) : (
+                <div className="p-4">
+                  <h3 className="font-medium mb-4">İşlem Geçmişi</h3>
+                  <div className="space-y-4">
+                    {islemler.map((islem) => (
+                      <div key={islem.id} className="flex justify-between p-4 rounded-md border">
+                        <div>
+                          <p className="font-medium">{islem.aciklama}</p>
+                          <div className="flex gap-4 text-sm text-muted-foreground mt-1">
+                            <span>Tutar: {islem.tutar} ₺</span>
+                            <span>Tarih: {new Date(islem.created_at).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="payments">
+            <div className="text-center py-8 text-muted-foreground">
+              Ödeme bilgileri şu anda kullanılamıyor
+            </div>
+          </TabsContent>
+        </Tabs>
+      </CardContent>
+    </Card>
   );
 }
+
+export default CustomerDetails;

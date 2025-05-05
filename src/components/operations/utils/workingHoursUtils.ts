@@ -6,6 +6,9 @@ export const gunler = [
   "Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"
 ];
 
+// Ayrıca kullanılan yerde gunIsimleri olarak da tanımla
+export const gunIsimleri = gunler;
+
 // Varsayılan çalışma saatleri oluştur
 export const defaultCalismaSaatleriOlustur = (isletmeId: string): CalismaSaati[] => {
   return gunler.map((gun, index) => ({
@@ -19,3 +22,6 @@ export const defaultCalismaSaatleriOlustur = (isletmeId: string): CalismaSaati[]
     updated_at: new Date().toISOString()
   }));
 };
+
+// getDefaultWorkingHours adıyla da dışa aktar (mevcut kodla uyumluluk için)
+export const getDefaultWorkingHours = defaultCalismaSaatleriOlustur;

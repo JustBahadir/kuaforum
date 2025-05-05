@@ -7,7 +7,7 @@ import { FormGroup, FormLabel, FormMessage } from "@/components/ui/form-elements
 import { InfoIcon, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { dukkanServisi, personelServisi } from "@/lib/supabase";
+import { isletmeServisi, personelServisi } from "@/lib/supabase";
 import { toast } from "sonner";
 
 export function RegisterForm({ onSuccess }: { onSuccess?: () => void }) {
@@ -34,10 +34,10 @@ export function RegisterForm({ onSuccess }: { onSuccess?: () => void }) {
     const fetchUserShop = async () => {
       setIsLoadingShopCode(true);
       try {
-        const userShop = await dukkanServisi.kullaniciDukkaniniGetir();
+        const userShop = await isletmeServisi.kullaniciIsletmesiniGetir();
         if (userShop) {
-          setUserShopCode(userShop.kod);
-          setShopCode(userShop.kod);
+          setUserShopCode(userShop.isletme_kodu);
+          setShopCode(userShop.isletme_kodu);
         }
       } catch (error) {
         console.error("İşletme kodu yüklenirken hata:", error);
@@ -82,7 +82,7 @@ export function RegisterForm({ onSuccess }: { onSuccess?: () => void }) {
       
       try {
         // First check if shop exists with the given code
-        shop = await dukkanServisi.getirByKod(shopCode);
+        shop = await isletmeServisi.getirByKod(shopCode);
       } catch (error) {
         // Handle shop not found
         setErrors({
@@ -111,8 +111,8 @@ export function RegisterForm({ onSuccess }: { onSuccess?: () => void }) {
         maas: salary,
         personel_no: personnelNumber,
         calisma_sistemi: system,
-        dukkan_id: shop.id,
-        dukkan_kod: shopCode
+        isletme_id: shop.kimlik,
+        isletme_kodu: shopCode
       });
       
       setShowSuccessModal(true);

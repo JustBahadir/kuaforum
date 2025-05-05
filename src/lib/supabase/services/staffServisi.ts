@@ -56,7 +56,7 @@ export const staffServisi = {
     const { data, error } = await supabase
       .from('personel')
       .select('*')
-      .eq('user_id', userId)
+      .eq('kullanici_kimlik', userId)
       .single();
       
     if (error && error.code !== 'PGRST116') {
@@ -66,3 +66,6 @@ export const staffServisi = {
     return !!data;
   }
 };
+
+// Export compatibility name
+export const personelServis = staffServisi;

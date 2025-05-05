@@ -48,14 +48,9 @@ export function RouteProtection({ children, allowedRoles = [] }: RouteProtection
           return;
         }
         
-        if (!kullanici) {
-          // Kullanıcı profili yok, kurulum sayfasına yönlendir
-          navigate('/profil-kurulum', { replace: true });
-          return;
-        }
-        
-        if (!kullanici.profil_tamamlandi) {
-          // Profil tamamlanmamış, kurulum sayfasına yönlendir
+        // Kullanıcı profili yoksa veya tamamlanmamışsa, profil kuruluma yönlendir
+        if (!kullanici || !kullanici.profil_tamamlandi) {
+          // Profil yoksa veya tamamlanmamışsa kurulum sayfasına yönlendir
           navigate('/profil-kurulum', { replace: true });
           return;
         }

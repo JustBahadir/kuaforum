@@ -1,322 +1,190 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ProfileDisplay } from '@/components/customer-profile/ProfileDisplay';
-import { ProfileEditForm } from '@/components/customer-profile/ProfileEditForm';
-import { User, Settings, History, Clock } from 'lucide-react';
-import { useCustomerAuth } from '@/hooks/useCustomerAuth';
-import { useProfileManagement } from '@/hooks/useProfileManagement';
-import { supabase } from '@/lib/supabase/client';
+
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useAuth } from "@/contexts/AuthContext";
+import { profilServisi } from "@/lib/supabase";
+import { Profil } from "@/lib/supabase/types";
+import { toast } from "sonner";
 
 export default function CustomerProfile() {
-  const { userId } = useCustomerAuth();
-  const { dukkanId, dukkanAdi, refreshProfile, resetProfile } = useProfileManagement(userId || '', null, () => {});
-  const [isEditing, setIsEditing] = useState(false);
-  const [activeTab, setActiveTab] = useState('personal');
-  const [loading, setLoading] = useState(false);
-  const [profileData, setProfileData] = useState<any>(null);
+  const { user } = useAuth();
+  const [profile, setProfile] = useState<Profil | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState(false);
+  
+  const [formData, setFormData] = useState({
+    first_name: "",
+    last_name: "",
+    phone: "",
+    address: "",
+  });
 
-  // Load profile data when the component mounts
-  React.useEffect(() => {
-    const fetchProfileData = async () => {
-      setLoading(true);
+  // Load profile data
+  useEffect(() => {
+    const loadProfile = async () => {
+      if (!user?.id) return;
+      
       try {
-        // Fetch profile data here
-        const { data: user } = await supabase.auth.getUser();
-        if (user) {
-          const { data, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', user.user.id)
-            .single();
-            
-          if (error) throw error;
-          setProfileData({
-            firstName: data?.first_name || "",
-            lastName: data?.last_name || "",
-            email: user.user.email || "",
-            phone: data?.phone || "",
-            gender: data?.gender || null,
-            birthdate: data?.birthdate || "",
-            avatarUrl: data?.avatar_url || "",
-            address: data?.address || "",
-            role: data?.role || ""
+        setLoading(true);
+        const profileData = await profilServisi.getir(user.id);
+        
+        if (profileData) {
+          setProfile(profileData);
+          setFormData({
+            first_name: profileData.first_name || "",
+            last_name: profileData.last_name || "",
+            phone: profileData.phone || "",
+            address: profileData.address || "",
           });
         }
       } catch (error) {
-        console.error("Error fetching profile:", error);
+        console.error("Profil yüklenirken hata:", error);
+        toast.error("Profil bilgileri yüklenemedi");
       } finally {
         setLoading(false);
       }
     };
     
-    fetchProfileData();
-  }, []);
+    loadProfile();
+  }, [user?.id]);
 
-  const handleSaveProfile = async (formData: any) => {
+  // Handle input changes
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // Update profile
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!user?.id) return;
+    
     try {
-      setLoading(true);
-      // Update profile logic here
-      const { data: user } = await supabase.auth.getUser();
-      if (user) {
-        const { error } = await supabase
-          .from('profiles')
-          .update({
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-            phone: formData.phone,
-            gender: formData.gender,
-            birthdate: formData.birthdate,
-            address: formData.address
-          })
-          .eq('id', user.user.id);
-          
-        if (error) throw error;
-        
-        // Refresh profile data
-        setProfileData({
-          ...profileData,
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          phone: formData.phone,
-          gender: formData.gender,
-          birthdate: formData.birthdate,
-          address: formData.address
-        });
+      setUpdating(true);
+      
+      const updatedProfile = await profilServisi.guncelle(user.id, formData);
+      
+      if (updatedProfile) {
+        setProfile(updatedProfile);
+        toast.success("Profil bilgileriniz güncellendi");
+      } else {
+        toast.error("Profil güncellenemedi");
       }
     } catch (error) {
-      console.error("Error updating profile:", error);
+      console.error("Profil güncellenirken hata:", error);
+      toast.error("Profil güncellenemedi");
     } finally {
-      setLoading(false);
-      setIsEditing(false);
+      setUpdating(false);
     }
   };
 
-  // Wrapper function to handle File upload
-  const handleAvatarUpload = async (file: File): Promise<void> => {
-    try {
-      setLoading(true);
-      const { data: user } = await supabase.auth.getUser();
-      if (!user) throw new Error("No authenticated user");
-      
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.user.id}-avatar.${fileExt}`;
-      
-      // Upload to Storage
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(fileName, file, { upsert: true });
-        
-      if (uploadError) throw uploadError;
-      
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(fileName);
-        
-      // Update profile with URL
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ avatar_url: urlData.publicUrl })
-        .eq('id', user.user.id);
-        
-      if (updateError) throw updateError;
-      
-      // Update local state
-      setProfileData({
-        ...profileData,
-        avatarUrl: urlData.publicUrl
-      });
-    } catch (error) {
-      console.error("Error uploading avatar:", error);
-    } finally {
-      setLoading(false);
+  // Get user initials for avatar fallback
+  const getUserInitials = () => {
+    if (profile?.first_name && profile?.last_name) {
+      return `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase();
     }
+    return "MÜ"; // Müşteri
   };
 
-  if (loading && !profileData) {
-    return <div className="flex justify-center items-center h-96">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
-    </div>;
+  if (loading) {
+    return (
+      <div className="flex justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-4 border-primary border-r-transparent"></div>
+      </div>
+    );
   }
 
-  // Format profile data to match expected props
-  const formattedProfile = {
-    firstName: profileData?.firstName || "",
-    lastName: profileData?.lastName || "",
-    email: profileData?.email || "",
-    phone: profileData?.phone || "",
-    gender: profileData?.gender || null,
-    birthdate: profileData?.birthdate || "",
-    avatarUrl: profileData?.avatarUrl || "",
-    iban: profileData?.iban || "",
-    address: profileData?.address || "",
-    role: profileData?.role || ""
-  };
-
   return (
-    <div className="space-y-6">
-      <div className="border-b pb-4">
-        <h1 className="text-2xl font-bold">Profilim</h1>
-        <p className="text-gray-600 mt-1">Profil bilgilerinizi görüntüleyin ve düzenleyin.</p>
-      </div>
-
-      <div className="grid md:grid-cols-12 gap-6">
-        {/* Sol Sidebar */}
-        <div className="md:col-span-4">
-          <Card className="overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-purple-600 to-blue-600 text-white">
-              <div className="flex flex-col items-center">
-                <Avatar className="w-24 h-24 border-4 border-white mb-4">
-                  {profileData?.avatarUrl ? (
-                    <AvatarImage src={profileData.avatarUrl} />
-                  ) : (
-                    <AvatarFallback className="bg-purple-200 text-purple-800 text-2xl">
-                      {profileData?.firstName?.[0]}{profileData?.lastName?.[0]}
-                    </AvatarFallback>
-                  )}
-                </Avatar>
-                <CardTitle className="text-xl">{profileData?.firstName} {profileData?.lastName}</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <TabsList className="flex flex-col w-full rounded-none">
-                <TabsTrigger 
-                  value="personal" 
-                  className={`justify-start py-3 px-4 ${activeTab === 'personal' ? 'bg-muted' : ''}`}
-                  onClick={() => setActiveTab('personal')}
-                >
-                  <User className="mr-2 h-4 w-4" />
-                  Kişisel Bilgiler
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="appointments" 
-                  className={`justify-start py-3 px-4 ${activeTab === 'appointments' ? 'bg-muted' : ''}`}
-                  onClick={() => setActiveTab('appointments')}
-                >
-                  <Clock className="mr-2 h-4 w-4" />
-                  Randevu Geçmişi
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="history" 
-                  className={`justify-start py-3 px-4 ${activeTab === 'history' ? 'bg-muted' : ''}`}
-                  onClick={() => setActiveTab('history')}
-                >
-                  <History className="mr-2 h-4 w-4" />
-                  İşlem Geçmişi
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="settings" 
-                  className={`justify-start py-3 px-4 ${activeTab === 'settings' ? 'bg-muted' : ''}`}
-                  onClick={() => setActiveTab('settings')}
-                >
-                  <Settings className="mr-2 h-4 w-4" />
-                  Hesap Ayarları
-                </TabsTrigger>
-              </TabsList>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Sağ İçerik */}
-        <div className="md:col-span-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Profil Bilgileri</CardTitle>
-              {activeTab === 'personal' && !isEditing && (
-                <Button 
-                  variant="outline" 
-                  onClick={() => setIsEditing(true)}
-                >
-                  Düzenle
-                </Button>
-              )}
-              {activeTab === 'personal' && isEditing && (
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setIsEditing(false)}
-                  >
-                    İptal
-                  </Button>
-                  <Button
-                    form="profile-form"
-                    type="submit"
-                  >
-                    Kaydet
-                  </Button>
-                </div>
-              )}
-            </CardHeader>
-            <CardContent>
-              <Tabs defaultValue={activeTab} value={activeTab} className="w-full">
-                <TabsContent value="personal">
-                  {isEditing ? (
-                    <ProfileEditForm 
-                      profile={formattedProfile} 
-                      handleChange={() => {}}
-                      handleSelectChange={() => {}}
-                      handleAvatarUpload={handleAvatarUpload}
-                      handleSave={handleSaveProfile}
-                      isSaving={false}
-                      isUploading={false}
-                    />
-                  ) : (
-                    <div className="space-y-6">
-                      <div>
-                        <h3 className="text-lg font-medium mb-1">Kişisel Bilgiler</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <p className="text-sm text-gray-500">Ad</p>
-                            <p>{profileData?.firstName || '-'}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-gray-500">Soyad</p>
-                            <p>{profileData?.lastName || '-'}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-gray-500">E-posta</p>
-                            <p>{profileData?.email || '-'}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-gray-500">Telefon</p>
-                            <p>{profileData?.phone || '-'}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-gray-500">Cinsiyet</p>
-                            <p>{profileData?.gender === 'erkek' ? 'Erkek' : profileData?.gender === 'kadın' ? 'Kadın' : '-'}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-gray-500">Doğum Tarihi</p>
-                            <p>{profileData?.birthdate || '-'}</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </TabsContent>
-                <TabsContent value="appointments">
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p>Randevu geçmişi yakında burada görüntülenebilecek...</p>
-                  </div>
-                </TabsContent>
-                <TabsContent value="history">
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p>İşlem geçmişi yakında burada görüntülenebilecek...</p>
-                  </div>
-                </TabsContent>
-                <TabsContent value="settings">
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p>Hesap ayarları yakında burada görüntülenebilecek...</p>
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-xl">Profil Bilgilerim</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleUpdateProfile} className="space-y-6">
+          <div className="flex flex-col sm:flex-row items-center gap-4 mb-6">
+            <Avatar className="h-20 w-20">
+              <AvatarImage src={profile?.avatar_url || ""} alt={profile?.first_name} />
+              <AvatarFallback className="text-lg">{getUserInitials()}</AvatarFallback>
+            </Avatar>
+            <div className="space-y-1 text-center sm:text-left">
+              <h3 className="font-medium text-lg">
+                {profile?.first_name} {profile?.last_name}
+              </h3>
+              <p className="text-sm text-muted-foreground">{profile?.role || "Müşteri"}</p>
+            </div>
+          </div>
+          
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="first_name">Ad</Label>
+              <Input
+                id="first_name"
+                name="first_name"
+                value={formData.first_name}
+                onChange={handleChange}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="last_name">Soyad</Label>
+              <Input
+                id="last_name"
+                name="last_name"
+                value={formData.last_name}
+                onChange={handleChange}
+              />
+            </div>
+          </div>
+          
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="phone">Telefon</Label>
+              <Input
+                id="phone"
+                name="phone"
+                value={formData.phone}
+                onChange={handleChange}
+                placeholder="05XX XXX XX XX"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="email">E-posta</Label>
+              <Input
+                id="email"
+                value={user?.email || ""}
+                disabled
+                className="bg-muted"
+              />
+              <p className="text-xs text-muted-foreground">
+                E-posta adresi değiştirilemez
+              </p>
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="address">Adres</Label>
+            <Input
+              id="address"
+              name="address"
+              value={formData.address}
+              onChange={handleChange}
+              placeholder="Adres bilgileriniz"
+            />
+          </div>
+          
+          <CardFooter className="px-0 pt-6">
+            <Button type="submit" disabled={updating} className="ml-auto">
+              {updating ? "Kaydediliyor..." : "Değişiklikleri Kaydet"}
+            </Button>
+          </CardFooter>
+        </form>
+      </CardContent>
+    </Card>
   );
 }

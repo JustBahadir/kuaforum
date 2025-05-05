@@ -40,3 +40,5 @@ export { musteriServisi } from './services/musteriServisi';
 export { randevuServisi } from './services/randevuServisi';
 export { personelIslemleriServisi } from './services/personelIslemleriServisi';
 export { profilServisi } from './services/profilServisi';
+// Geriye dönük uyumluluk için dukkanServisi
+export { isletmeServisi as dukkanServisi } from './services/isletmeServisi';

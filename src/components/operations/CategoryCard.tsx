@@ -1,250 +1,304 @@
-
-// Fix the type errors related to setKategoriId usages by wrapping setters that accept number in a function to accept string | number
-
+// Importing required dependencies and components
 import { useState } from "react";
-import { ServiceItem } from "./ServiceItem";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-} from "@dnd-kit/core";
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-  arrayMove,
-  sortableKeyboardCoordinates,
-} from "@dnd-kit/sortable";
-import { ServiceForm } from "./ServiceForm";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Trash2 } from "lucide-react";
+import { kategoriServisi, islemServisi } from "@/lib/supabase";
+import { toast } from "sonner";
+import { IslemKategorisi } from "@/lib/supabase/types";
 
-export function CategoryCard({
-  kategori,
-  islemler,
-  isStaff,
-  onServiceEdit,
-  onServiceDelete,
-  onCategoryDelete,
-  onCategoryEdit,
-  onSiralamaChange,
-  onRandevuAl,
-  puanlamaAktif,
-}) {
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isServiceFormOpen, setIsServiceFormOpen] = useState(false);
-  const [islemAdi, setIslemAdi] = useState("");
-  const [fiyat, setFiyat] = useState(0);
-  const [maliyet, setMaliyet] = useState(0);
-  const [puan, setPuan] = useState(0);
-  const [duzenleId, setDuzenleId] = useState(null);
+// ServiceForm component interface
+interface ServiceFormProps {
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+  kategoriler: IslemKategorisi[];
+  islemAdi: string;
+  setIslemAdi: (value: string) => void;
+  sureDakika: string | number;
+  setSureDakika: (value: string) => void;
+  fiyat: string | number;
+  setFiyat: (value: string) => void;
+  kategoriKimlik: string;
+  setKategoriKimlik: (value: string) => void;
+  puan: string | number;
+  setPuan: (value: string) => void;
+  onSave: () => void;
+  editing: boolean;
+  showCategorySelect?: boolean;
+}
 
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
+// ServiceForm component
+export function ServiceForm({
+  isOpen,
+  onOpenChange,
+  kategoriler,
+  islemAdi,
+  setIslemAdi,
+  sureDakika,
+  setSureDakika,
+  fiyat,
+  setFiyat,
+  kategoriKimlik,
+  setKategoriKimlik,
+  puan,
+  setPuan,
+  onSave,
+  editing,
+  showCategorySelect = true
+}: ServiceFormProps) {
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{editing ? "Hizmet Düzenle" : "Yeni Hizmet Ekle"}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          {/* Service Name */}
+          <div className="space-y-2">
+            <Label htmlFor="islemAdi">Hizmet Adı</Label>
+            <Input
+              id="islemAdi"
+              value={islemAdi}
+              onChange={(e) => setIslemAdi(e.target.value)}
+              placeholder="Örn: Saç Kesimi"
+            />
+          </div>
+          
+          {/* Category Selection */}
+          {showCategorySelect && (
+            <div className="space-y-2">
+              <Label htmlFor="kategori">Kategori</Label>
+              <Select value={kategoriKimlik} onValueChange={setKategoriKimlik}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Kategori Seçin" />
+                </SelectTrigger>
+                <SelectContent>
+                  {kategoriler.map((kategori) => (
+                    <SelectItem key={kategori.kimlik} value={kategori.kimlik}>
+                      {kategori.baslik}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          
+          {/* Duration */}
+          <div className="space-y-2">
+            <Label htmlFor="sureDakika">Süre (dakika)</Label>
+            <Input
+              id="sureDakika"
+              type="number"
+              min="1"
+              value={sureDakika}
+              onChange={(e) => setSureDakika(e.target.value)}
+              placeholder="30"
+            />
+          </div>
+          
+          {/* Price */}
+          <div className="space-y-2">
+            <Label htmlFor="fiyat">Fiyat (₺)</Label>
+            <Input
+              id="fiyat"
+              type="number"
+              min="0"
+              step="0.01"
+              value={fiyat}
+              onChange={(e) => setFiyat(e.target.value)}
+              placeholder="100"
+            />
+          </div>
+          
+          {/* Points */}
+          <div className="space-y-2">
+            <Label htmlFor="puan">Puan</Label>
+            <Input
+              id="puan"
+              type="number"
+              min="0"
+              value={puan}
+              onChange={(e) => setPuan(e.target.value)}
+              placeholder="1"
+            />
+          </div>
+        </div>
+        <DialogFooter className="flex space-x-2 pt-4">
+          <DialogClose asChild>
+            <Button variant="outline">İptal</Button>
+          </DialogClose>
+          <Button onClick={onSave}>{editing ? "Güncelle" : "Ekle"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
+}
 
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
+// CategoryForm component interface
+interface CategoryFormProps {
+  isletmeKimlik: string;
+  kategoriKimlik?: string;
+  kategoriAdi?: string;
+  aciklama?: string;
+  onSuccess: () => void;
+  onCancel: () => void;
+  editing?: boolean;
+}
 
-    if (over && active.id !== over.id) {
-      const oldIndex = islemler.findIndex((item) => item.id === active.id);
-      const newIndex = islemler.findIndex((item) => item.id === over.id);
+// CategoryForm component
+export function CategoryForm({
+  isletmeKimlik,
+  kategoriKimlik,
+  kategoriAdi = "",
+  aciklama = "",
+  onSuccess,
+  onCancel,
+  editing = false,
+}: CategoryFormProps) {
+  const [formData, setFormData] = useState({
+    kategoriAdi,
+    aciklama,
+  });
+  const [loading, setLoading] = useState(false);
 
-      if (oldIndex !== -1 && newIndex !== -1) {
-        const newItems = arrayMove(islemler, oldIndex, newIndex);
-        onSiralamaChange(newItems);
-      }
-    }
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleAddServiceClick = () => {
-    setIslemAdi("");
-    setFiyat(0);
-    setMaliyet(0);
-    setPuan(0);
-    setDuzenleId(null);
-    setIsServiceFormOpen(true);
-  };
-
-  const handleServiceFormSubmit = (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    const service = {
-      islem_adi: islemAdi,
-      fiyat,
-      maliyet,
-      puan,
-      kategori_id: kategori.id,
-    };
-
-    if (duzenleId) {
-      onServiceEdit({ ...service, id: duzenleId });
-    } else {
-      onServiceEdit(service);
+    
+    if (!formData.kategoriAdi.trim()) {
+      toast.error("Kategori adı boş olamaz");
+      return;
     }
-
-    setIsServiceFormOpen(false);
-  };
-
-  // Wrapper setters to accept string or number for TypeScript compatibility
-  const handleSetFiyat = (value) => {
-    if (typeof value === "string") {
-      const numeric = parseFloat(value);
-      setFiyat(isNaN(numeric) ? 0 : numeric);
-    } else {
-      setFiyat(value);
-    }
-  };
-
-  const handleSetMaliyet = (value) => {
-    if (typeof value === "string") {
-      const numeric = parseInt(value, 10);
-      setMaliyet(isNaN(numeric) ? 0 : numeric);
-    } else {
-      setMaliyet(value);
-    }
-  };
-
-  const handleSetPuan = (value) => {
-    if (typeof value === "string") {
-      const numeric = parseInt(value, 10);
-      setPuan(isNaN(numeric) ? 0 : numeric);
-    } else {
-      setPuan(value);
+    
+    setLoading(true);
+    
+    try {
+      if (editing && kategoriKimlik) {
+        // Update existing category
+        await kategoriServisi.guncelle(kategoriKimlik, {
+          baslik: formData.kategoriAdi,
+          aciklama: formData.aciklama || null,
+        });
+        toast.success("Kategori başarıyla güncellendi");
+      } else {
+        // Create new category
+        await kategoriServisi.olustur({
+          isletme_kimlik: isletmeKimlik,
+          baslik: formData.kategoriAdi,
+          aciklama: formData.aciklama || null,
+        });
+        toast.success("Yeni kategori başarıyla oluşturuldu");
+      }
+      
+      onSuccess();
+    } catch (error) {
+      console.error("Kategori işlemi hatası:", error);
+      toast.error("Bir hata oluştu, lütfen tekrar deneyin");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between pb-2">
-        <h3 className="text-lg font-semibold">{kategori.kategori_adi}</h3>
-        {isStaff && (
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => onCategoryEdit(kategori)}
-              className="h-8 w-8 text-gray-500"
-            >
-              <Edit className="h-4 w-4" />
-              <span className="sr-only">Düzenle</span>
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsDeleteDialogOpen(true)}
-              className="h-8 w-8 text-red-500"
-            >
-              <Trash2 className="h-4 w-4" />
-              <span className="sr-only">Sil</span>
-            </Button>
-          </div>
-        )}
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="kategoriAdi">Kategori Adı</Label>
+        <Input
+          id="kategoriAdi"
+          name="kategoriAdi"
+          value={formData.kategoriAdi}
+          onChange={handleChange}
+          placeholder="Örn: Saç Bakımı"
+          required
+        />
       </div>
-
-      <div className="rounded-lg border bg-card">
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
+      
+      <div className="space-y-2">
+        <Label htmlFor="aciklama">Açıklama (Opsiyonel)</Label>
+        <Input
+          id="aciklama"
+          name="aciklama"
+          value={formData.aciklama}
+          onChange={handleChange}
+          placeholder="Kategori hakkında kısa açıklama"
+        />
+      </div>
+      
+      <div className="flex space-x-2 pt-4">
+        <Button 
+          type="button" 
+          variant="outline" 
+          onClick={onCancel}
+          disabled={loading}
         >
-          <SortableContext
-            items={islemler.map((item) => item.id)}
-            strategy={verticalListSortingStrategy}
-          >
-            <div className="divide-y">
-              {islemler.map((islem) => (
-                <ServiceItem
-                  key={islem.id}
-                  islem={islem}
-                  isStaff={isStaff}
-                  onEdit={onServiceEdit}
-                  onDelete={onServiceDelete}
-                  onRandevuAl={onRandevuAl}
-                  puanlamaAktif={puanlamaAktif}
-                />
-              ))}
-            </div>
-          </SortableContext>
-        </DndContext>
-
-        {islemler.length === 0 && (
-          <div className="p-4 text-center text-sm text-muted-foreground">
-            Bu kategoride henüz hizmet bulunmamaktadır.
-          </div>
-        )}
-
-        {isStaff && (
-          <div className="border-t px-4 py-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleAddServiceClick}
-              className="w-full flex items-center justify-center gap-1"
-            >
-              <Plus className="h-4 w-4" />
-              <span>Bu Kategoriye Hizmet Ekle</span>
-            </Button>
-          </div>
-        )}
+          İptal
+        </Button>
+        <Button 
+          type="submit"
+          disabled={loading}
+        >
+          {loading 
+            ? `${editing ? "Güncelleniyor" : "Oluşturuluyor"}...` 
+            : editing 
+              ? "Güncelle" 
+              : "Oluştur"}
+        </Button>
       </div>
-
-      <ServiceForm
-        isOpen={isServiceFormOpen}
-        onOpenChange={setIsServiceFormOpen}
-        kategoriler={[]}
-        islemAdi={islemAdi}
-        setIslemAdi={setIslemAdi}
-        fiyat={fiyat}
-        setFiyat={handleSetFiyat}
-        maliyet={maliyet}
-        setMaliyet={handleSetMaliyet}
-        puan={puan}
-        setPuan={handleSetPuan}
-        kategoriId={kategori.id}
-        setKategoriId={() => {}} // Kategori ID'si zaten belirlenmiş olduğu için boş fonksiyon
-        duzenleId={duzenleId}
-        onSubmit={handleServiceFormSubmit}
-        onReset={() => {}}
-        puanlamaAktif={puanlamaAktif}
-        showCategorySelect={false} // Kategori seçimini gösterme
-      />
-
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Kategoriyi Sil</AlertDialogTitle>
-            <AlertDialogDescription>
-              "{kategori.kategori_adi}" kategorisini ve içindeki tüm hizmetleri silmek istediğinize emin misiniz? Bu işlem geri alınamaz.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>İptal</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => onCategoryDelete(kategori.id)}
-              className="bg-red-500 hover:bg-red-600"
-            >
-              Sil
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+    </form>
   );
 }
+
+// CategoryCard component
+export function CategoryCard() {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Kategori İşlemleri</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p>Kategori eklemek, düzenlemek veya silmek için aşağıdaki butona tıklayın.</p>
+      </CardContent>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <Button>Kategori İşlemleri</Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Kategori İşlemleri</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="name" className="text-right">
+                Name
+              </Label>
+              <Input id="name" value="" className="col-span-3" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="submit">Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </Card>
+  );
+}
+
+export default CategoryCard;

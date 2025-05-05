@@ -18,7 +18,8 @@ interface AuthContextType {
   profileData: any;
   handleLogout: () => Promise<void>;
   userId?: string;
-  activeTab?: string;
+  activeTab: string;
+  setActiveTab: React.Dispatch<React.SetStateAction<string>>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -168,6 +169,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     handleLogout,
     userId,
     activeTab,
+    setActiveTab,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

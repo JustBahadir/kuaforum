@@ -76,6 +76,7 @@ export interface Musteri {
   phone?: string;
   birthdate?: string;
   id?: string;
+  isletme_id?: string;
 }
 
 export interface Randevu {
@@ -91,6 +92,10 @@ export interface Randevu {
   durum: RandevuDurum;
   created_at: string;
   updated_at: string;
+  isletme_id?: string;
+  id?: string;
+  personel?: string;
+  islemler?: any[];
 }
 
 export interface PersonelBasvuru {

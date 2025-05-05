@@ -1,6 +1,7 @@
 
 import { supabase } from '../client';
 import { Musteri } from '../types';
+import { isletmeServisi } from './isletmeServisi';
 
 export const musteriServisi = {
   // İşletmeye göre müşterileri getir
@@ -9,7 +10,7 @@ export const musteriServisi = {
       const { data, error } = await supabase
         .from('musteriler')
         .select('*')
-        .eq('isletme_kimlik', isletmeKimlik);
+        .eq('isletme_id', isletmeKimlik);
       
       if (error) throw error;
       
@@ -20,7 +21,7 @@ export const musteriServisi = {
     }
   },
   
-  // Müşteri detayını getir
+  // Müşteriyi kimliğe göre getir
   async getir(musteriKimlik: string): Promise<Musteri | null> {
     try {
       const { data, error } = await supabase
@@ -38,12 +39,12 @@ export const musteriServisi = {
     }
   },
   
-  // Müşteri oluştur
+  // Yeni müşteri oluştur
   async olustur(musteri: Partial<Musteri>): Promise<Musteri | null> {
     try {
       const { data, error } = await supabase
         .from('musteriler')
-        .insert([musteri])
+        .insert(musteri)
         .select()
         .single();
       
@@ -57,19 +58,21 @@ export const musteriServisi = {
   },
   
   // Müşteri güncelle
-  async guncelle(musteriKimlik: string, musteri: Partial<Musteri>): Promise<boolean> {
+  async guncelle(musteriKimlik: string, musteri: Partial<Musteri>): Promise<Musteri | null> {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('musteriler')
         .update(musteri)
-        .eq('kimlik', musteriKimlik);
+        .eq('kimlik', musteriKimlik)
+        .select()
+        .single();
       
       if (error) throw error;
       
-      return true;
+      return data as Musteri;
     } catch (error) {
       console.error('Müşteri güncellenirken hata:', error);
-      return false;
+      return null;
     }
   },
   
@@ -88,6 +91,26 @@ export const musteriServisi = {
       console.error('Müşteri silinirken hata:', error);
       return false;
     }
+  },
+
+  // Tüm müşterileri getir
+  async hepsiniGetir(): Promise<Musteri[]> {
+    try {
+      const { data, error } = await supabase
+        .from('musteriler')
+        .select('*');
+      
+      if (error) throw error;
+      
+      return data as Musteri[];
+    } catch (error) {
+      console.error('Müşteriler getirilirken hata:', error);
+      return [];
+    }
+  },
+
+  // Mevcut kullanıcının işletmesine ait müşterileri getir
+  async getCurrentUserIsletmeId(): Promise<string | null> {
+    return isletmeServisi.getCurrentUserIsletmeId();
   }
 };
-

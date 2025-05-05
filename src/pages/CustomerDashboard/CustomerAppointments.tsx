@@ -1,253 +1,291 @@
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import { Calendar, Clock, X, Check, AlertTriangle } from 'lucide-react';
-import { randevuServisi } from '@/lib/supabase/services/randevuServisi';
-import { useQuery } from '@tanstack/react-query';
-import { format } from 'date-fns';
-import { tr } from 'date-fns/locale';
-import { useAuth } from '@/hooks/useAuth';
-import { Badge } from '@/components/ui/badge';
-import { toast } from 'sonner';
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { format } from "date-fns";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { randevuServisi, musteriServisi } from "@/lib/supabase";
+import { Randevu, RandevuDurum } from "@/lib/supabase/types";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+import { AlertCircle, Calendar as CalendarIcon } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function CustomerAppointments() {
-  const [activeTab, setActiveTab] = useState('upcoming');
   const { user } = useAuth();
-  
-  const { data: appointments = [], isLoading, refetch } = useQuery({
-    queryKey: ['customerAppointments'],
-    queryFn: async () => {
-      if (!user) return [];
-      try {
-        // Use the new method to get user's appointments
-        return await randevuServisi.kendiRandevulariniGetir();
-      } catch (error) {
-        console.error("Error fetching appointments:", error);
-        return [];
-      }
-    },
-    enabled: !!user,
-  });
+  const [randevular, setRandevular] = useState<Randevu[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedAppointment, setSelectedAppointment] = useState<Randevu | null>(null);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState("upcoming");
 
-  if (isLoading) {
-    return <div className="flex justify-center my-12">
-      <div className="animate-spin rounded-full h-8 w-8 border-2 border-purple-500 border-t-transparent"></div>
-    </div>;
-  }
-  
-  // Filter appointments based on active tab and sort by date/time
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  
-  const filteredAppointments = appointments.filter(appointment => {
-    const appointmentDate = new Date(appointment.tarih);
-    appointmentDate.setHours(0, 0, 0, 0);
+  // Load customer's appointments
+  useEffect(() => {
+    const loadAppointments = async () => {
+      if (!user?.id) return;
+      
+      try {
+        setLoading(true);
+        
+        // Get customer profile first (to get the customer ID)
+        const musteriListesi = await musteriServisi.isletmeyeGoreGetir(user.id);
+        if (musteriListesi.length === 0) {
+          // No customer record for this user
+          setRandevular([]);
+          return;
+        }
+        
+        const musteri = musteriListesi[0];
+        
+        // Get appointments
+        const appointments = await randevuServisi.musteriyeGoreGetir(musteri.kimlik);
+        setRandevular(appointments);
+      } catch (error) {
+        console.error("Randevular yüklenirken hata:", error);
+        toast.error("Randevular yüklenemedi");
+      } finally {
+        setLoading(false);
+      }
+    };
     
-    if (activeTab === 'upcoming') {
-      return appointmentDate >= today && appointment.durum !== 'iptal';
-    } else if (activeTab === 'past') {
-      return appointmentDate < today || appointment.durum === 'tamamlandi';
-    } else if (activeTab === 'canceled') {
-      return appointment.durum === 'iptal';
+    loadAppointments();
+  }, [user?.id]);
+
+  // Filter appointments based on active tab
+  const filteredAppointments = randevular.filter((randevu) => {
+    if (activeTab === "upcoming") {
+      return randevu.durum === "planlandi";
+    } else if (activeTab === "past") {
+      return randevu.durum === "tamamlandi" || randevu.durum === "iptal";
     }
     return true;
-  }).sort((a, b) => {
-    // Sort by date first, then by time
-    const dateA = new Date(a.tarih);
-    const dateB = new Date(b.tarih);
-    
-    if (dateA.getTime() !== dateB.getTime()) {
-      return dateA.getTime() - dateB.getTime();
-    }
-    
-    // If dates are the same, sort by time
-    const timeA = a.saat.split(':');
-    const timeB = b.saat.split(':');
-    
-    return (parseInt(timeA[0]) * 60 + parseInt(timeA[1])) - 
-           (parseInt(timeB[0]) * 60 + parseInt(timeB[1]));
   });
-  
-  const handleCancelAppointment = async (appointmentId) => {
+
+  // Format appointment date
+  const formatAppointmentDate = (dateStr: string) => {
     try {
-      await randevuServisi.durumGuncelle(appointmentId, 'iptal');
-      toast.success('Randevunuz iptal edildi.');
-      refetch();
+      const date = new Date(dateStr);
+      return format(date, "d MMMM yyyy");
     } catch (error) {
-      console.error("Error canceling appointment:", error);
-      toast.error('Randevu iptal edilemedi.');
+      return dateStr;
     }
   };
-  
-  const getStatusBadge = (status) => {
+
+  // Open cancel dialog
+  const openCancelDialog = (appointment: Randevu) => {
+    setSelectedAppointment(appointment);
+    setCancelDialogOpen(true);
+  };
+
+  // Cancel appointment
+  const cancelAppointment = async () => {
+    if (!selectedAppointment) return;
+    
+    try {
+      setCancelLoading(true);
+      
+      const success = await randevuServisi.durumGuncelle(selectedAppointment.kimlik, "iptal");
+      
+      if (success) {
+        // Update local state
+        setRandevular((prev) =>
+          prev.map((randevu) =>
+            randevu.kimlik === selectedAppointment.kimlik
+              ? { ...randevu, durum: "iptal" as RandevuDurum }
+              : randevu
+          )
+        );
+        
+        toast.success("Randevu başarıyla iptal edildi");
+        setCancelDialogOpen(false);
+      } else {
+        toast.error("Randevu iptal edilemedi");
+      }
+    } catch (error) {
+      console.error("Randevu iptal edilirken hata:", error);
+      toast.error("Randevu iptal edilemedi");
+    } finally {
+      setCancelLoading(false);
+    }
+  };
+
+  // Render status badge
+  const renderStatusBadge = (status: RandevuDurum) => {
     switch (status) {
-      case 'onaylandi':
-        return <Badge className="bg-green-500">Onaylandı</Badge>;
-      case 'iptal':
-        return <Badge variant="destructive">İptal Edildi</Badge>;
-      case 'tamamlandi':
-        return <Badge className="bg-blue-500">Tamamlandı</Badge>;
-      case 'beklemede':
-        return <Badge variant="outline" className="text-yellow-600 border-yellow-600">Beklemede</Badge>;
+      case "planlandi":
+        return <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded-full">Planlandı</span>;
+      case "tamamlandi":
+        return <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded-full">Tamamlandı</span>;
+      case "iptal":
+        return <span className="text-xs px-2 py-1 bg-red-100 text-red-800 rounded-full">İptal</span>;
       default:
-        return <Badge variant="secondary">{status}</Badge>;
+        return null;
     }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <h1 className="text-2xl font-bold">Randevularım</h1>
-        <Button 
-          onClick={() => window.location.href = '/dashboard/appointments/new'} 
-          className="bg-purple-600 hover:bg-purple-700 text-white"
-        >
-          Yeni Randevu Al
-        </Button>
-      </div>
-      
+    <div className="space-y-4">
       <Card>
-        <CardHeader className="pb-3">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="upcoming">Yaklaşan</TabsTrigger>
-              <TabsTrigger value="past">Geçmiş</TabsTrigger>
-              <TabsTrigger value="canceled">İptal Edilen</TabsTrigger>
-            </TabsList>
-          </Tabs>
+        <CardHeader>
+          <CardTitle className="text-xl">Randevularım</CardTitle>
         </CardHeader>
         <CardContent>
-          <TabsContent value="upcoming" className="mt-0">
-            {filteredAppointments.length > 0 ? (
-              <div className="space-y-4">
-                {filteredAppointments.map((appointment) => (
-                  <AppointmentCard 
-                    key={appointment.id} 
-                    appointment={appointment} 
-                    onCancel={() => handleCancelAppointment(appointment.id)}
-                    allowCancel={true}
-                    getStatusBadge={getStatusBadge}
-                  />
-                ))}
-              </div>
-            ) : (
-              <EmptyState message="Yaklaşan randevunuz bulunmamaktadır." />
-            )}
-          </TabsContent>
-          
-          <TabsContent value="past" className="mt-0">
-            {filteredAppointments.length > 0 ? (
-              <div className="space-y-4">
-                {filteredAppointments.map((appointment) => (
-                  <AppointmentCard 
-                    key={appointment.id} 
-                    appointment={appointment} 
-                    onCancel={() => {}}
-                    allowCancel={false}
-                    getStatusBadge={getStatusBadge}
-                  />
-                ))}
-              </div>
-            ) : (
-              <EmptyState message="Geçmiş randevunuz bulunmamaktadır." />
-            )}
-          </TabsContent>
-          
-          <TabsContent value="canceled" className="mt-0">
-            {filteredAppointments.length > 0 ? (
-              <div className="space-y-4">
-                {filteredAppointments.map((appointment) => (
-                  <AppointmentCard 
-                    key={appointment.id} 
-                    appointment={appointment} 
-                    onCancel={() => {}}
-                    allowCancel={false}
-                    getStatusBadge={getStatusBadge}
-                  />
-                ))}
-              </div>
-            ) : (
-              <EmptyState message="İptal edilen randevunuz bulunmamaktadır." />
-            )}
-          </TabsContent>
+          <Tabs defaultValue="upcoming" value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="mb-4">
+              <TabsTrigger value="upcoming">Yaklaşan Randevular</TabsTrigger>
+              <TabsTrigger value="past">Geçmiş Randevular</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="upcoming">
+              {loading ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-4 border-primary border-r-transparent"></div>
+                </div>
+              ) : filteredAppointments.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  Yaklaşan randevunuz bulunmamaktadır
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {filteredAppointments.map((randevu) => (
+                    <div
+                      key={randevu.kimlik}
+                      className="flex justify-between items-center p-4 rounded-lg border"
+                    >
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                          <p className="font-medium">
+                            {formatAppointmentDate(randevu.tarih)} - {randevu.saat}
+                          </p>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          İşlem: {randevu.hizmet_kimlik || "Belirtilmemiş"}
+                        </p>
+                        <div className="mt-2">
+                          {renderStatusBadge(randevu.durum)}
+                        </div>
+                      </div>
+                      <div>
+                        {randevu.durum === "planlandi" && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openCancelDialog(randevu)}
+                          >
+                            İptal Et
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+            
+            <TabsContent value="past">
+              {loading ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-4 border-primary border-r-transparent"></div>
+                </div>
+              ) : filteredAppointments.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  Geçmiş randevunuz bulunmamaktadır
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {filteredAppointments.map((randevu) => (
+                    <div
+                      key={randevu.kimlik}
+                      className="flex justify-between items-center p-4 rounded-lg border"
+                    >
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                          <p className="font-medium">
+                            {formatAppointmentDate(randevu.tarih)} - {randevu.saat}
+                          </p>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          İşlem: {randevu.hizmet_kimlik || "Belirtilmemiş"}
+                        </p>
+                        <div className="mt-2">
+                          {renderStatusBadge(randevu.durum)}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
-    </div>
-  );
-}
-
-function AppointmentCard({ appointment, onCancel, allowCancel, getStatusBadge }) {
-  const appointmentDate = new Date(appointment.tarih);
-  const formattedDate = format(appointmentDate, 'd MMMM yyyy', { locale: tr });
-  const isToday = new Date().toDateString() === appointmentDate.toDateString();
-  
-  // Check if the appointment is in the future and can be cancelled
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const appointmentDay = new Date(appointment.tarih);
-  appointmentDay.setHours(0, 0, 0, 0);
-  const canCancel = allowCancel && appointmentDay >= today;
-
-  return (
-    <Card className="overflow-hidden">
-      <div className="flex flex-col md:flex-row">
-        <div className="bg-purple-50 p-4 flex flex-row md:flex-col items-center justify-center md:w-32 gap-3 md:gap-1">
-          <Calendar className="h-5 w-5 text-purple-700" />
-          <div className="text-center">
-            <div className="font-medium">{isToday ? 'Bugün' : formattedDate}</div>
-            <div className="text-sm text-muted-foreground">
-              <Clock className="h-3.5 w-3.5 inline-block mr-1" />
-              {appointment.saat.substring(0, 5)}
-            </div>
-          </div>
-        </div>
-        
-        <div className="p-4 flex-1">
-          <div className="flex justify-between items-start">
-            <div>
-              <h3 className="font-medium">
-                {appointment.personel?.ad_soyad || 'Personel'}
-              </h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                {Array.isArray(appointment.islemler) && appointment.islemler.length > 0 
-                  ? `${appointment.islemler.length} hizmet` 
-                  : 'Hizmet detayı yok'}
-              </p>
-              <div className="mt-2">
-                {getStatusBadge(appointment.durum)}
+      
+      {/* Randevu İptal Diyaloğu */}
+      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Randevu İptal</DialogTitle>
+            <DialogDescription>
+              Randevunuzu iptal etmek istediğinizden emin misiniz?
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedAppointment && (
+            <div className="space-y-4">
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Bu işlem geri alınamaz. Randevunuz iptal edilecektir.
+                </AlertDescription>
+              </Alert>
+              
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Randevu Bilgileri:</p>
+                <p className="text-sm">
+                  Tarih: {formatAppointmentDate(selectedAppointment.tarih)}
+                </p>
+                <p className="text-sm">
+                  Saat: {selectedAppointment.saat}
+                </p>
+                <p className="text-sm">
+                  İşlem: {selectedAppointment.hizmet_kimlik || "Belirtilmemiş"}
+                </p>
               </div>
             </div>
-            
-            {canCancel && (
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={(e) => {
-                  e.preventDefault();
-                  onCancel();
-                }}
-                className="h-8 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
-              >
-                <X className="h-4 w-4 mr-1" /> İptal Et
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
-    </Card>
-  );
-}
-
-function EmptyState({ message }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-12 text-center">
-      <AlertTriangle className="h-12 w-12 text-muted-foreground mb-4" />
-      <h3 className="text-lg font-medium">{message}</h3>
-      <p className="text-sm text-muted-foreground mt-1">
-        Yeni bir randevu oluşturmak için yukarıdaki butonu kullanabilirsiniz.
-      </p>
+          )}
+          
+          <DialogFooter className="flex space-x-2 sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setCancelDialogOpen(false)}
+              disabled={cancelLoading}
+            >
+              Vazgeç
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={cancelAppointment}
+              disabled={cancelLoading}
+            >
+              {cancelLoading ? "İptal Ediliyor..." : "Randevuyu İptal Et"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
