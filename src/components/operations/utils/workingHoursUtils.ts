@@ -34,3 +34,18 @@ export const gunIsimleri = [
   "Cumartesi",
   "Pazar"
 ];
+
+// Çalışma saatlerini sırala
+export const sortWorkingHours = (saatler: CalismaSaati[]): CalismaSaati[] => {
+  const gunSiralama: {[key: string]: number} = {
+    "Pazartesi": 0,
+    "Salı": 1,
+    "Çarşamba": 2,
+    "Perşembe": 3,
+    "Cuma": 4,
+    "Cumartesi": 5,
+    "Pazar": 6
+  };
+  
+  return [...saatler].sort((a, b) => gunSiralama[a.gun] - gunSiralama[b.gun]);
+};

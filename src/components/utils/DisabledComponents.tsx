@@ -1,80 +1,50 @@
 
-import React from "react";
-import { Link } from "react-router-dom";
+import { AlertCircle } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
-// Geliştirme sırasında geçici olarak kullanılan bileşenler
+// Bu bileşenler geçici olarak devre dışı bırakılmış sayfalar için kullanılır
 
-// İşletme sahibi sayfaları için geçici bileşen
-export const IsletmeSahibiSayfasi: React.FC<{title?: string}> = ({title = "İşletme Sahibi Sayfası"}) => {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <div className="text-center bg-white p-8 rounded-lg shadow-lg max-w-lg w-full">
-        <h1 className="text-2xl font-bold mb-4">{title}</h1>
-        <p className="mb-6 text-gray-600">
-          Bu sayfa şu anda geliştirme aşamasındadır. Çok yakında kullanıma açılacaktır.
-        </p>
-        <Link 
-          to="/" 
-          className="inline-block bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
-        >
-          Ana Sayfaya Dön
-        </Link>
-      </div>
-    </div>
-  );
-};
+interface DisabledComponentProps {
+  title?: string;
+  description?: string;
+}
 
-// Personel sayfaları için geçici bileşen
-export const PersonelSayfasi: React.FC<{durum: string}> = ({durum = "atanmamis"}) => {
-  const durumBasligi = {
-    "atanmamis": "Atanmamış Personel Sayfası",
-    "beklemede": "Başvuru Bekleyen Personel Sayfası",
-    "onaylandi": "Onaylanmış Personel Sayfası"
-  };
+export function DevreDisiBilesenSayfa({ title = "Bu Sayfa Henüz Hazır Değil", description = "Bu sayfa şu anda geliştirme aşamasındadır ve yakında kullanıma açılacaktır." }: DisabledComponentProps) {
+  const navigate = useNavigate();
   
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <div className="text-center bg-white p-8 rounded-lg shadow-lg max-w-lg w-full">
-        <h1 className="text-2xl font-bold mb-4">{durumBasligi[durum] || "Personel Sayfası"}</h1>
-        <p className="mb-6 text-gray-600">
-          Bu sayfa şu anda geliştirme aşamasındadır. Çok yakında kullanıma açılacaktır.
-        </p>
-        <Link 
-          to="/" 
-          className="inline-block bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
-        >
+    <div className="min-h-screen flex flex-col items-center justify-center p-4">
+      <div className="max-w-md w-full space-y-4">
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>{title}</AlertTitle>
+          <AlertDescription>{description}</AlertDescription>
+        </Alert>
+        
+        <Button onClick={() => navigate("/")} className="w-full">
           Ana Sayfaya Dön
-        </Link>
+        </Button>
       </div>
     </div>
   );
-};
+}
 
-// Diğer devre dışı sayfalar için genel bileşen
-export const DevreDisiBilesenSayfa: React.FC = () => {
+export function IsletmeSahibiSayfasi({ durum = "" } = {}) {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <div className="text-center bg-white p-8 rounded-lg shadow-lg max-w-lg w-full">
-        <h1 className="text-2xl font-bold mb-4">Sayfa Hazırlanıyor</h1>
-        <p className="mb-6 text-gray-600">
-          Bu özellik henüz geliştirme aşamasındadır. Lütfen daha sonra tekrar deneyiniz.
-        </p>
-        <Link 
-          to="/" 
-          className="inline-block bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
-        >
-          Ana Sayfaya Dön
-        </Link>
-      </div>
-    </div>
+    <DevreDisiBilesenSayfa 
+      title="İşletme Sahibi Sayfası"
+      description={`Bu sayfa işletme sahipleri için tasarlanmıştır. Şu anda geliştirme aşamasındadır. ${durum ? `Durum: ${durum}` : ""}`}
+    />
   );
-};
+}
 
-// Yardımcı fonksiyon - Devre dışı bileşen oluşturma
-export function createDisabledComponent(name: string) {
-  return () => (
-    <div className="p-4 border border-dashed border-gray-300 rounded-md bg-gray-50 text-center">
-      <p className="text-gray-500">{name} bileşeni şu anda devre dışı.</p>
-    </div>
+export function PersonelSayfasi({ durum = "" } = {}) {
+  return (
+    <DevreDisiBilesenSayfa 
+      title="Personel Sayfası"
+      description={`Bu sayfa personel için tasarlanmıştır. Şu anda geliştirme aşamasındadır. ${durum ? `Durum: ${durum}` : ""}`}
+    />
   );
 }

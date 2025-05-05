@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { Scissors, Users } from "lucide-react";
+import { Scissors } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { useEffect } from "react";
 
@@ -57,7 +57,7 @@ export default function Landing() {
                   className="flex-1 h-12"
                   onClick={() => navigate("/auth")}
                 >
-                  <Users className="mr-2" />
+                  <Scissors className="mr-2" />
                   Kuaför Girişi
                 </Button>
               </div>
