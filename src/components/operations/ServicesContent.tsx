@@ -1,85 +1,85 @@
-import { useState, useEffect } from "react";
+
+import React, { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { Tabs, TabsList, TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { isletmeServisi } from "@/lib/supabase";
-import { toast } from "sonner";
-import { ServicesList } from "./ServicesList";
-import { ServiceForm } from "./ServiceForm";
-import { WorkingHours } from "./WorkingHours";
-import { ServiceCategoriesList } from "./ServiceCategoriesList";
-import { ServiceCategoryForm } from "./ServiceCategoryForm";
+import { ServicesList } from './ServicesList';
+import { WorkingHours } from './WorkingHours';
+import { ServiceCategoriesList } from './ServiceCategoriesList';
+import { ServiceCategoryForm } from './ServiceCategoryForm';
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
+import { Loader2 } from "lucide-react";
 
 export function ServicesContent() {
-  const [yukleniyor, setYukleniyor] = useState(false);
-  
-  // Demo için
-  const handleSaatGuncelleClick = async () => {
-    setYukleniyor(true);
+  const { userId } = useAuth();
+  const [activeTab, setActiveTab] = useState<string>("services");
+  const [loading, setLoading] = useState(false);
+  const [isletmeId, setIsletmeId] = useState<string>("");
+
+  // This is a placeholder - you would fetch the real isletmeId
+  React.useEffect(() => {
+    const fetchIsletmeId = async () => {
+      setIsletmeId("placeholder-id");
+    };
     
-    // Simüle edilmiş gecikme
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    toast.success("Çalışma saatleri güncellendi", {
-      position: "bottom-right"
-    });
-    
-    setYukleniyor(false);
-  };
-  
+    fetchIsletmeId();
+  }, [userId]);
+
   return (
-    <div className="space-y-8">
-      <Card>
-        <CardHeader>
-          <CardTitle>Hizmet Ayarları</CardTitle>
-        </CardHeader>
-        <CardContent className="pt-2">
-          <div className="grid md:grid-cols-2 gap-6">
-            <Card className="border shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-lg">Çalışma Saatleri</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">
-                  İşletmenizin çalışma saatlerini buradan düzenleyebilirsiniz.
-                </p>
-                <WorkingHours />
-              </CardContent>
-              <CardFooter>
-                <Button 
-                  className="w-full" 
-                  onClick={handleSaatGuncelleClick}
-                  disabled={yukleniyor}
-                >
-                  {yukleniyor ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 
-                      Güncelleniyor...
-                    </>
-                  ) : (
-                    'Saatleri Güncelle'
-                  )}
+    <div className="container mx-auto p-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid grid-cols-3 mb-4">
+          <TabsTrigger value="services">Hizmetler</TabsTrigger>
+          <TabsTrigger value="categories">Kategoriler</TabsTrigger>
+          <TabsTrigger value="working-hours">Çalışma Saatleri</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="services">
+          <Card>
+            <CardHeader>
+              <CardTitle>İşletme Hizmetleri</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ServicesList />
+            </CardContent>
+            <CardFooter className="flex justify-end">
+              {loading ? (
+                <Button disabled>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Yükleniyor
                 </Button>
-              </CardFooter>
-            </Card>
-            
-            <Card className="border shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-lg">Hizmet Kategorileri</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  Hizmet kategorilerinizi buradan düzenleyebilirsiniz.
-                </p>
-              </CardContent>
-              <CardFooter>
-                <Button className="w-full" variant="outline">
-                  Kategorileri Düzenle
-                </Button>
-              </CardFooter>
-            </Card>
-          </div>
-        </CardContent>
-      </Card>
+              ) : (
+                <Button>Yeni Hizmet Ekle</Button>
+              )}
+            </CardFooter>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="categories">
+          <Card>
+            <CardHeader>
+              <CardTitle>Hizmet Kategorileri</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ServiceCategoriesList />
+            </CardContent>
+            <CardFooter className="flex justify-end">
+              <ServiceCategoryForm />
+            </CardFooter>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="working-hours">
+          <Card>
+            <CardHeader>
+              <CardTitle>Çalışma Saatleri</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isletmeId && <WorkingHours isletmeId={isletmeId} />}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

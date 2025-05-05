@@ -18,5 +18,15 @@ export function formatPhoneNumber(phoneNumber: string): string {
   }
 }
 
-// Export the formatting function
-export { formatPhoneNumber as default };
+// Validate Turkish phone number
+export function validatePhoneNumber(phoneNumber: string): boolean {
+  // Basic validation: Turkish mobile numbers start with 05 and are 10-11 digits
+  const cleaned = phoneNumber.replace(/\D/g, '');
+  if (cleaned.startsWith('05') && (cleaned.length === 10 || cleaned.length === 11)) {
+    return true;
+  }
+  return false;
+}
+
+// Export the formatting function as default
+export default formatPhoneNumber;

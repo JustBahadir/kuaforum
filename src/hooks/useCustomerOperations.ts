@@ -8,10 +8,14 @@ export interface CustomerOperation {
   date: string;
   amount: number;
   staff_name: string;
+  description?: string;
+  service_name?: string;
+  personnel_name?: string;
+  created_at?: string;
 }
 
 export const useCustomerOperations = (customerId: string | number) => {
-  const [operations, setOperations] = useState<any[]>([]);
+  const [operations, setOperations] = useState<CustomerOperation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<any>(null);
 
@@ -41,5 +45,4 @@ export const useCustomerOperations = (customerId: string | number) => {
   return { operations, isLoading, error, refetch: fetchOperations };
 };
 
-// Export the type for use in components
-export type { CustomerOperation };
+export default useCustomerOperations;

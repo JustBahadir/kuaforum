@@ -19,6 +19,7 @@ export default function AuthGoogleCallback() {
     const handleCallback = async () => {
       try {
         setLoading(true);
+        console.log("Handling auth callback");
 
         // Get the current session
         const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
@@ -43,62 +44,85 @@ export default function AuthGoogleCallback() {
 
         console.log("Auth callback - User:", user.email);
 
-        // Check if the user profile exists and is completed
+        // First check for profiles table (current structure)
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (profileError && profileError.code !== 'PGRST116') {
+          console.error("Error fetching user profile from profiles:", profileError);
+        }
+
+        // Then check for kullanicilar table (new structure)
         const { data: kullanici, error: kullaniciError } = await supabase
           .from("kullanicilar")
-          .select("profil_tamamlandi")
+          .select("*")
           .eq("kimlik", user.id)
           .maybeSingle();
 
         if (kullaniciError && kullaniciError.code !== 'PGRST116') {
-          console.error("Error fetching user profile:", kullaniciError);
-          setError("Kullanıcı bilgileriniz alınırken bir hata oluştu.");
-          setLoading(false);
-          return;
+          console.error("Error fetching user from kullanicilar:", kullaniciError);
         }
         
-        // If user doesn't exist in kullanicilar table yet
-        if (!kullanici) {
-          // Check if user exists in profiles table first (older DB structure)
-          const { data: existingProfile } = await supabase
-            .from("profiles")
-            .select("id")
-            .eq("id", user.id)
-            .maybeSingle();
-            
-          if (existingProfile) {
-            setAccountExists(true);
-            setLoading(false);
-            return;
-          }
-          
-          // No profile found - redirect to AccountNotFound component
+        // If user doesn't exist in either table
+        if (!profile && !kullanici) {
+          console.log("No profile found in either table");
           setAccountNotFound(true);
           setLoading(false);
           return;
         }
-
-        // If profile exists but is not completed, redirect to profile setup
-        if (!kullanici.profil_tamamlandi) {
-          console.log("Profile not completed, redirecting to profile setup");
-          navigate("/profil-kurulum", { replace: true });
+        
+        // If account exists in profiles (older structure)
+        if (profile) {
+          console.log("Found profile in profiles table:", profile);
+          
+          // Check if profile is completed
+          if (profile.profil_tamamlandi === false || !profile.first_name) {
+            console.log("Profile exists but not completed, redirecting to setup");
+            navigate("/profil-kurulum", { replace: true });
+            return;
+          }
+          
+          // If completed, redirect based on role
+          const role = profile.role || 'customer';
+          
+          if (role === "isletme_sahibi" || role === "admin") {
+            navigate("/isletme/anasayfa", { replace: true });
+          } else if (role === "personel" || role === "staff") {
+            navigate("/personel/anasayfa", { replace: true });
+          } else {
+            navigate("/musteri/anasayfa", { replace: true });
+          }
+          return;
+        }
+        
+        // If account exists in kullanicilar (newer structure)
+        if (kullanici) {
+          console.log("Found user in kullanicilar table:", kullanici);
+          
+          // Check if profile is completed
+          if (!kullanici.profil_tamamlandi) {
+            console.log("Profile exists but not completed, redirecting to setup");
+            navigate("/profil-kurulum", { replace: true });
+            return;
+          }
+          
+          // If completed, redirect based on role
+          if (kullanici.rol === "isletme_sahibi") {
+            navigate("/isletme/anasayfa", { replace: true });
+          } else if (kullanici.rol === "personel") {
+            navigate("/personel/anasayfa", { replace: true });
+          } else {
+            navigate("/musteri/anasayfa", { replace: true });
+          }
           return;
         }
 
-        // If profile is completed, redirect based on role
-        const { data: kullaniciRol } = await supabase
-          .from("kullanicilar")
-          .select("rol")
-          .eq("kimlik", user.id)
-          .single();
-
-        if (kullaniciRol?.rol === "isletme_sahibi") {
-          navigate("/isletme/anasayfa", { replace: true });
-        } else if (kullaniciRol?.rol === "personel") {
-          navigate("/personel/anasayfa", { replace: true });
-        } else {
-          navigate("/musteri/anasayfa", { replace: true });
-        }
+        // This should not happen if all checks above are exhaustive
+        setError("Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.");
+        setLoading(false);
 
       } catch (error: any) {
         console.error("Auth callback error:", error);

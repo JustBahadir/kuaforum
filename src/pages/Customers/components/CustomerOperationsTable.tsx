@@ -1,8 +1,10 @@
+
 import React from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatCurrency } from "@/utils/currencyFormatter";
-import { format } from "date-fns";
-import { useCustomerOperations } from "@/hooks/useCustomerOperations";
+import { Button } from "@/components/ui/button";
+import { AlertCircle } from "lucide-react";
+import { useCustomerOperations, CustomerOperation } from "@/hooks/useCustomerOperations";
 
 interface CustomerOperationsTableProps {
   customerId: string | number;
@@ -51,13 +53,13 @@ export function CustomerOperationsTable({ customerId }: CustomerOperationsTableP
           </TableRow>
         </TableHeader>
         <TableBody>
-          {operations.map((operation: CustomerOperation) => (
+          {operations.map((operation) => (
             <TableRow key={operation.id}>
               <TableCell className="font-medium">
-                {new Date(operation.created_at).toLocaleDateString('tr-TR')}
+                {new Date(operation.created_at || operation.date).toLocaleDateString('tr-TR')}
               </TableCell>
-              <TableCell>{operation.description || 'Bilinmiyor'}</TableCell>
-              <TableCell>{operation.staff_name || 'Bilinmiyor'}</TableCell>
+              <TableCell>{operation.description || operation.service_name || 'Bilinmiyor'}</TableCell>
+              <TableCell>{operation.staff_name || operation.personnel_name || 'Bilinmiyor'}</TableCell>
               <TableCell className="text-right">{formatCurrency(operation.amount || 0)}</TableCell>
               <TableCell className="text-center">
                 <Button variant="ghost" size="sm">

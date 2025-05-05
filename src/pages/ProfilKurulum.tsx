@@ -1,416 +1,375 @@
 
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
+import { useForm } from "react-hook-form";
 import { supabase } from "@/lib/supabase/client";
-import { KullaniciRol } from "@/lib/supabase/types";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertCircle, ArrowLeft, Loader2 } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
+
+const profilSchema = z.object({
+  ad: z.string().min(2, "Ad en az 2 karakter olmalıdır"),
+  soyad: z.string().min(2, "Soyad en az 2 karakter olmalıdır"),
+  telefon: z.string().min(10, "Telefon numarası geçerli değil"),
+  cinsiyet: z.enum(["erkek", "kadın", "belirtmek_istemiyorum"]),
+  rol: z.enum(["musteri", "personel", "isletme_sahibi"]),
+  isletme_kodu: z.string().optional(),
+});
+
+type ProfilFormValues = z.infer<typeof profilSchema>;
 
 export default function ProfilKurulum() {
   const navigate = useNavigate();
-  
-  // Form state
-  const [formData, setFormData] = useState({
-    ad: "",
-    soyad: "",
-    telefon: "",
-    cinsiyet: "",
-    rol: "" as KullaniciRol,
-    isletme_adi: "",
-    il: "",
-    isletme_kodu: ""
-  });
-  
-  // Error state
-  const [errors, setErrors] = useState<{
-    ad?: string;
-    soyad?: string;
-    telefon?: string;
-    rol?: string;
-    isletme_adi?: string;
-    il?: string;
-    isletme_kodu?: string;
-    general?: string;
-  }>({});
-  
-  // Loading state
   const [loading, setLoading] = useState(false);
-  
-  // Handle text input change
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-  };
-  
-  // Handle phone input change, strip non-digits
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/[^\d]/g, "").substring(0, 11);
-    setFormData({ ...formData, telefon: value });
-  };
-  
-  // Format phone number for display
-  const formatPhoneNumber = (value: string): string => {
-    if (!value) return value;
-    
-    // Remove non-digits
-    const phoneNumber = value.replace(/[^\d]/g, "");
-    
-    // Format with spaces based on length
-    if (phoneNumber.length <= 4) {
-      return phoneNumber;
-    } else if (phoneNumber.length <= 7) {
-      return `${phoneNumber.slice(0, 4)} ${phoneNumber.slice(4)}`;
-    } else if (phoneNumber.length <= 9) {
-      return `${phoneNumber.slice(0, 4)} ${phoneNumber.slice(4, 7)} ${phoneNumber.slice(7)}`;
-    } else {
-      return `${phoneNumber.slice(0, 4)} ${phoneNumber.slice(4, 7)} ${phoneNumber.slice(7, 9)} ${phoneNumber.slice(9, 11)}`;
-    }
-  };
-  
-  // Handle select change
-  const handleSelectChange = (name: string, value: string) => {
-    setFormData({ ...formData, [name]: value });
-  };
-  
-  // Validate form data
-  const validateForm = (): boolean => {
-    const newErrors: {[key: string]: string} = {};
-    
-    // Required fields
-    if (!formData.ad.trim()) {
-      newErrors.ad = "Ad alanı zorunludur";
-    }
-    
-    if (!formData.soyad.trim()) {
-      newErrors.soyad = "Soyad alanı zorunludur";
-    }
-    
-    if (!formData.rol) {
-      newErrors.rol = "Kullanıcı türü seçmelisiniz";
-    }
-    
-    // Role-specific validations
-    if (formData.rol === "isletme_sahibi") {
-      if (!formData.isletme_adi?.trim()) {
-        newErrors.isletme_adi = "İşletme adı zorunludur";
+  const [initialCheckDone, setInitialCheckDone] = useState(false);
+  const [userEmail, setUserEmail] = useState("");
+
+  const form = useForm<ProfilFormValues>({
+    resolver: zodResolver(profilSchema),
+    defaultValues: {
+      ad: "",
+      soyad: "",
+      telefon: "",
+      cinsiyet: "belirtmek_istemiyorum",
+      rol: "musteri",
+      isletme_kodu: "",
+    },
+  });
+
+  const roleValue = form.watch("rol");
+
+  // Check if user is already logged in and profile is completed
+  useEffect(() => {
+    const checkUser = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user) {
+          toast.error("Oturum açmanız gerekiyor");
+          navigate("/login");
+          return;
+        }
+        
+        setUserEmail(user.email || "");
+        
+        // Check if user already has a profile
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", user.id)
+          .single();
+          
+        // If profile exists and is completed, redirect to appropriate dashboard
+        if (profile && profile.profil_tamamlandi) {
+          const role = profile.role || "customer";
+          if (role === "isletme_sahibi" || role === "admin") {
+            navigate("/isletme/anasayfa");
+          } else if (role === "personel" || role === "staff") {
+            navigate("/personel/anasayfa");
+          } else {
+            navigate("/musteri/anasayfa");
+          }
+          return;
+        }
+      } catch (error) {
+        console.error("Profil kurulum hatası:", error);
+      } finally {
+        setInitialCheckDone(true);
       }
-      
-      if (!formData.il) {
-        newErrors.il = "İl seçmelisiniz";
-      }
-    }
+    };
     
-    // Phone number validation if provided
-    if (formData.telefon && formData.telefon.length < 10) {
-      newErrors.telefon = "Telefon numarası en az 10 haneli olmalıdır";
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-  
-  // Save profile data
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
-    
+    checkUser();
+  }, [navigate]);
+
+  const onSubmit = async (data: ProfilFormValues) => {
     setLoading(true);
-    setErrors({});
-    
     try {
-      // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
-        throw new Error("Kullanıcı bilgilerinize erişilemedi. Lütfen tekrar giriş yapın.");
-      }
-      
-      // Update user profile
-      const { error: profileError } = await supabase
-        .from("kullanicilar")
-        .update({
-          ad: formData.ad,
-          soyad: formData.soyad,
-          telefon: formData.telefon || null,
-          rol: formData.rol,
-          profil_tamamlandi: true
-        } as any)
-        .eq("kimlik", user.id);
-      
-      if (profileError) {
-        throw profileError;
-      }
-      
-      // Handle business owner workflow
-      if (formData.rol === "isletme_sahibi") {
-        // Generate a random business code (6 digits)
-        const businessCode = Math.floor(100000 + Math.random() * 900000).toString();
-        
-        // Create business record
-        const { error: businessError } = await supabase
-          .from("isletmeler")
-          .insert({
-            isletme_adi: formData.isletme_adi,
-            isletme_kodu: businessCode,
-            sahip_kimlik: user.id,
-            adres: formData.il ? `${formData.il}` : null
-          } as any);
-        
-        if (businessError) {
-          throw businessError;
-        }
-        
-        toast.success("Profil bilgileri kaydedildi. İşletme bilgilerinizi tamamlamak için yönlendiriliyorsunuz.");
-        navigate("/isletme/olustur", { replace: true });
+        toast.error("Kullanıcı bilgileri alınamadı");
+        navigate("/login");
         return;
-      } 
-      // Handle personnel workflow
-      else if (formData.rol === "personel") {
-        // Create personnel record
-        const { error: personnelError } = await supabase
-          .from("personeller")
-          .insert({
-            kullanici_kimlik: user.id,
-            durum: "atanmadi"
-          } as any);
-        
-        if (personnelError) {
-          throw personnelError;
+      }
+      
+      // Prepare role mapping (English to Turkish)
+      let role = "customer";
+      if (data.rol === "isletme_sahibi") role = "admin";
+      if (data.rol === "personel") role = "staff";
+      
+      // Check if personnel's shop code exists when role is personnel
+      if (data.rol === "personel" && data.isletme_kodu) {
+        const { data: shop, error: shopError } = await supabase
+          .from("isletmeler")
+          .select("id")
+          .eq("kod", data.isletme_kodu)
+          .maybeSingle();
+          
+        if (shopError || !shop) {
+          toast.error("Girilen işletme kodu geçerli değil");
+          setLoading(false);
+          return;
         }
+      }
+      
+      // Update profile in both tables for compatibility
+      // 1. Update profiles table (older structure)
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .upsert({
+          id: user.id,
+          first_name: data.ad,
+          last_name: data.soyad,
+          phone: data.telefon,
+          gender: data.cinsiyet,
+          role: role,
+          profil_tamamlandi: true,
+        });
         
-        // If business code provided, create an application
-        if (formData.isletme_kodu?.trim()) {
-          // Check if business code exists
-          const { data: business, error: businessCheckError } = await supabase
-            .from("isletmeler")
-            .select("kimlik")
-            .eq("isletme_kodu", formData.isletme_kodu.trim())
-            .single();
+      if (profileError) {
+        console.error("Profil güncelleme hatası:", profileError);
+        toast.error("Profil kaydedilemedi");
+        setLoading(false);
+        return;
+      }
+      
+      // 2. Update kullanicilar table (newer structure)
+      const { error: userError } = await supabase
+        .from("kullanicilar")
+        .upsert({
+          kimlik: user.id,
+          ad: data.ad,
+          soyad: data.soyad,
+          telefon: data.telefon,
+          cinsiyet: data.cinsiyet,
+          rol: data.rol,
+          profil_tamamlandi: true,
+          eposta: user.email,
+        });
+        
+      if (userError) {
+        console.error("Kullanıcı güncelleme hatası:", userError);
+        // Continue anyway since we updated the profiles table
+      }
+      
+      // If personnel role, create join request
+      if (data.rol === "personel" && data.isletme_kodu) {
+        const { data: shop } = await supabase
+          .from("isletmeler")
+          .select("id")
+          .eq("kod", data.isletme_kodu)
+          .single();
           
-          if (businessCheckError) {
-            toast.error("Belirtilen işletme kodu bulunamadı");
-            navigate("/personel/atanmamis", { replace: true });
-            return;
-          }
-          
-          // Create application
-          const { error: applicationError } = await supabase
-            .from("personel_basvurulari")
+        if (shop) {
+          const { error: joinRequestError } = await supabase
+            .from("personel_basvurular")
             .insert({
               kullanici_kimlik: user.id,
-              isletme_kodu: formData.isletme_kodu.trim(),
+              isletme_id: shop.id,
+              isletme_kodu: data.isletme_kodu,
               durum: "beklemede",
-              tarih: new Date().toISOString().split('T')[0]
-            } as any);
-          
-          if (applicationError) {
-            throw applicationError;
+              tarih: new Date().toISOString(),
+            });
+            
+          if (joinRequestError) {
+            console.error("Personel başvurusu hatası:", joinRequestError);
+            toast.error("Personel başvurusu oluşturulamadı");
           }
-          
-          toast.success("Başvuru gönderildi. İşletme sahibi başvurunuzu değerlendirdikten sonra bilgilendirileceksiniz.");
-          navigate("/personel/beklemede", { replace: true });
-          return;
-        } else {
-          toast.success("Profil bilgileri kaydedildi. Personel bilgilerinizi tamamlamak için yönlendiriliyorsunuz.");
-          navigate("/personel/atanmamis", { replace: true });
-          return;
         }
       }
-    } catch (error: any) {
-      console.error("Profile save error:", error);
-      setErrors({
-        general: `Bir hata oluştu: ${error.message || "Bilinmeyen hata"}`
+      
+      // Update user metadata
+      await supabase.auth.updateUser({
+        data: {
+          first_name: data.ad,
+          last_name: data.soyad,
+          role: role
+        }
       });
       
-      toast.error("Profil bilgileri kaydedilemedi");
+      toast.success("Profiliniz başarıyla oluşturuldu");
+      
+      // Redirect based on role
+      if (data.rol === "isletme_sahibi") {
+        navigate("/isletme/anasayfa");
+      } else if (data.rol === "personel") {
+        navigate("/personel/atanmamis");
+      } else {
+        navigate("/musteri/anasayfa");
+      }
+      
+    } catch (error) {
+      console.error("Form gönderme hatası:", error);
+      toast.error("İşlem sırasında bir hata oluştu");
     } finally {
       setLoading(false);
     }
   };
-  
-  // List of Turkish cities
-  const iller = [
-    "Adana", "Adıyaman", "Afyonkarahisar", "Ağrı", "Amasya", "Ankara", "Antalya", "Artvin", "Aydın", "Balıkesir",
-    "Bilecik", "Bingöl", "Bitlis", "Bolu", "Burdur", "Bursa", "Çanakkale", "Çankırı", "Çorum", "Denizli",
-    "Diyarbakır", "Edirne", "Elazığ", "Erzincan", "Erzurum", "Eskişehir", "Gaziantep", "Giresun", "Gümüşhane", "Hakkari",
-    "Hatay", "Isparta", "Mersin", "İstanbul", "İzmir", "Kars", "Kastamonu", "Kayseri", "Kırklareli", "Kırşehir",
-    "Kocaeli", "Konya", "Kütahya", "Malatya", "Manisa", "Kahramanmaraş", "Mardin", "Muğla", "Muş", "Nevşehir",
-    "Niğde", "Ordu", "Rize", "Sakarya", "Samsun", "Siirt", "Sinop", "Sivas", "Tekirdağ", "Tokat",
-    "Trabzon", "Tunceli", "Şanlıurfa", "Uşak", "Van", "Yozgat", "Zonguldak", "Aksaray", "Bayburt", "Karaman",
-    "Kırıkkale", "Batman", "Şırnak", "Bartın", "Ardahan", "Iğdır", "Yalova", "Karabük", "Kilis", "Osmaniye", "Düzce"
-  ];
-  
+
+  if (!initialCheckDone) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-r from-blue-50 to-indigo-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-r from-purple-50 to-blue-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <div className="flex justify-between items-center">
-            <Button 
-              variant="ghost" 
-              className="w-8 h-8 p-0" 
-              onClick={() => navigate("/")}
-            >
-              <ArrowLeft size={16} />
-            </Button>
-            <CardTitle className="text-2xl text-center flex-1">
-              Profil Bilgilerini Tamamla
-            </CardTitle>
-            <div className="w-8"></div>
-          </div>
-          <CardDescription className="text-center">
-            Hesabınızı oluşturmak için lütfen aşağıdaki bilgileri doldurun
-          </CardDescription>
+        <CardHeader>
+          <CardTitle className="text-2xl text-center">Profil Kurulumu</CardTitle>
+          {userEmail && (
+            <p className="text-center text-sm text-gray-500">{userEmail}</p>
+          )}
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {errors.general && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  {errors.general}
-                </AlertDescription>
-              </Alert>
-            )}
-            
-            <div className="space-y-2">
-              <Label htmlFor="ad">Ad <span className="text-red-500">*</span></Label>
-              <Input
-                id="ad"
-                name="ad"
-                value={formData.ad}
-                onChange={handleInputChange}
-                placeholder="Adınız"
-                autoComplete="given-name"
-                className={errors.ad ? "border-red-500" : ""}
-              />
-              {errors.ad && <p className="text-sm text-red-500">{errors.ad}</p>}
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="soyad">Soyad <span className="text-red-500">*</span></Label>
-              <Input
-                id="soyad"
-                name="soyad"
-                value={formData.soyad}
-                onChange={handleInputChange}
-                placeholder="Soyadınız"
-                autoComplete="family-name"
-                className={errors.soyad ? "border-red-500" : ""}
-              />
-              {errors.soyad && <p className="text-sm text-red-500">{errors.soyad}</p>}
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="telefon">Telefon Numarası</Label>
-              <Input
-                id="telefon"
-                name="telefon"
-                value={formatPhoneNumber(formData.telefon)}
-                onChange={handlePhoneChange}
-                placeholder="05xx xxx xx xx"
-                autoComplete="tel"
-                className={errors.telefon ? "border-red-500" : ""}
-              />
-              {errors.telefon && <p className="text-sm text-red-500">{errors.telefon}</p>}
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="cinsiyet">Cinsiyet</Label>
-              <Select value={formData.cinsiyet} onValueChange={(value) => handleSelectChange("cinsiyet", value)}>
-                <SelectTrigger id="cinsiyet">
-                  <SelectValue placeholder="Cinsiyet seçiniz" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="kadin">Kadın</SelectItem>
-                  <SelectItem value="erkek">Erkek</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="rol">Kullanıcı Türü <span className="text-red-500">*</span></Label>
-              <Select value={formData.rol} onValueChange={(value) => handleSelectChange("rol", value as KullaniciRol)}>
-                <SelectTrigger id="rol" className={errors.rol ? "border-red-500" : ""}>
-                  <SelectValue placeholder="Kullanıcı türü seçiniz" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="isletme_sahibi">İşletme Sahibi</SelectItem>
-                  <SelectItem value="personel">Personel</SelectItem>
-                </SelectContent>
-              </Select>
-              {errors.rol && <p className="text-sm text-red-500">{errors.rol}</p>}
-            </div>
-            
-            {/* İşletme sahibi için ek alanlar */}
-            {formData.rol === "isletme_sahibi" && (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="isletme_adi">İşletme Adı <span className="text-red-500">*</span></Label>
-                  <Input
-                    id="isletme_adi"
-                    name="isletme_adi"
-                    value={formData.isletme_adi}
-                    onChange={handleInputChange}
-                    placeholder="İşletmenizin adı"
-                    className={errors.isletme_adi ? "border-red-500" : ""}
-                  />
-                  {errors.isletme_adi && <p className="text-sm text-red-500">{errors.isletme_adi}</p>}
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="il">İl <span className="text-red-500">*</span></Label>
-                  <Select value={formData.il} onValueChange={(value) => handleSelectChange("il", value)}>
-                    <SelectTrigger id="il" className={errors.il ? "border-red-500" : ""}>
-                      <SelectValue placeholder="İl seçiniz" />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-[300px]">
-                      {iller.map((il) => (
-                        <SelectItem key={il} value={il}>{il}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {errors.il && <p className="text-sm text-red-500">{errors.il}</p>}
-                </div>
-              </>
-            )}
-            
-            {/* Personel için ek alan */}
-            {formData.rol === "personel" && (
-              <div className="space-y-2">
-                <Label htmlFor="isletme_kodu">İşletme Kodu (Opsiyonel)</Label>
-                <Input
-                  id="isletme_kodu"
-                  name="isletme_kodu"
-                  value={formData.isletme_kodu}
-                  onChange={handleInputChange}
-                  placeholder="İşletme kodunu biliyorsanız giriniz"
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="ad"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Ad <span className="text-red-500">*</span></FormLabel>
+                      <FormControl>
+                        <Input placeholder="Adınız" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-                <p className="text-xs text-gray-500">
-                  İşletme kodunu bilmiyorsanız, boş bırakabilir ve daha sonra ekleyebilirsiniz.
-                </p>
+                
+                <FormField
+                  control={form.control}
+                  name="soyad"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Soyad <span className="text-red-500">*</span></FormLabel>
+                      <FormControl>
+                        <Input placeholder="Soyadınız" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
-            )}
-          </form>
+              
+              <FormField
+                control={form.control}
+                name="telefon"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Telefon <span className="text-red-500">*</span></FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="05XX XXX XX XX" 
+                        {...field} 
+                        onChange={(e) => {
+                          // Simple phone formatter
+                          const value = e.target.value.replace(/\D/g, '');
+                          let formatted = '';
+                          
+                          if (value.length <= 4) {
+                            formatted = value;
+                          } else if (value.length <= 7) {
+                            formatted = `${value.slice(0, 4)} ${value.slice(4)}`;
+                          } else if (value.length <= 9) {
+                            formatted = `${value.slice(0, 4)} ${value.slice(4, 7)} ${value.slice(7)}`;
+                          } else {
+                            formatted = `${value.slice(0, 4)} ${value.slice(4, 7)} ${value.slice(7, 9)} ${value.slice(9, 11)}`;
+                          }
+                          
+                          field.onChange(formatted);
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="cinsiyet"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cinsiyet <span className="text-red-500">*</span></FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Cinsiyet seçin" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="erkek">Erkek</SelectItem>
+                        <SelectItem value="kadın">Kadın</SelectItem>
+                        <SelectItem value="belirtmek_istemiyorum">Belirtmek İstemiyorum</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="rol"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Kayıt Türü <span className="text-red-500">*</span></FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Kayıt türü seçin" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="isletme_sahibi">İşletme Sahibi</SelectItem>
+                        <SelectItem value="personel">Personel</SelectItem>
+                        <SelectItem value="musteri">Müşteri</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              {roleValue === "personel" && (
+                <FormField
+                  control={form.control}
+                  name="isletme_kodu"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>İşletme Kodu</FormLabel>
+                      <FormControl>
+                        <Input placeholder="İşletme kodunu girin" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        İşletme sahibinden alacağınız kod
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+              
+              <CardFooter className="flex justify-end p-0">
+                <Button type="submit" disabled={loading}>
+                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Profili Tamamla
+                </Button>
+              </CardFooter>
+            </form>
+          </Form>
         </CardContent>
-        <CardFooter>
-          <Button 
-            onClick={handleSubmit}
-            className="w-full" 
-            disabled={loading}
-          >
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Profil Bilgilerini Tamamla
-          </Button>
-        </CardFooter>
       </Card>
     </div>
   );

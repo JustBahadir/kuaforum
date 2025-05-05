@@ -1,63 +1,59 @@
 
-import { Input } from "@/components/ui/input";
-import { useState, useEffect } from "react";
-import { formatPhoneNumber, validatePhoneNumber } from "@/utils/phoneFormatter";
+import React from 'react';
+import { Controller } from 'react-hook-form';
+import { Input } from '@/components/ui/input';
+import { formatPhoneNumber, validatePhoneNumber } from '@/utils/phoneFormatter';
 
 interface PhoneInputFieldProps {
-  value: string;
-  onChange: (value: string) => void;
+  control: any;
+  name: string;
+  label: string;
+  required?: boolean;
   placeholder?: string;
-  id?: string;
-  error?: string;
-  disabled?: boolean;
+  className?: string;
 }
 
 export function PhoneInputField({
-  value,
-  onChange,
-  placeholder = "05xx xxx xx xx",
-  id = "phone",
-  error,
-  disabled = false
+  control,
+  name,
+  label,
+  required = false,
+  placeholder = "05__ ___ __ __",
+  className,
 }: PhoneInputFieldProps) {
-  const [displayValue, setDisplayValue] = useState<string>(formatPhoneNumber(value));
-  
-  // Update display value when external value changes
-  useEffect(() => {
-    setDisplayValue(formatPhoneNumber(value));
-  }, [value]);
-  
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (disabled) return;
-
-    // Get only digits from the input
-    const rawInput = e.target.value;
-    const digitsOnly = rawInput.replace(/\D/g, '');
-    
-    // Limit to 10 digits (Turkish phone number format)
-    const limitedDigits = digitsOnly.substring(0, 10);
-    
-    // Update the formatted display value
-    setDisplayValue(formatPhoneNumber(limitedDigits));
-    
-    // Pass only digits to the parent component
-    onChange(limitedDigits);
-  };
-
   return (
-    <div>
-      <Input
-        id={id}
-        value={displayValue}
-        onChange={handleInputChange}
-        placeholder={placeholder}
-        className={error ? "border-red-500" : ""}
-        disabled={disabled}
-        maxLength={15} // Allow some space for formatting
-        type="tel"
-        inputMode="tel"
+    <div className={className}>
+      <label htmlFor={name} className="block text-sm font-medium mb-1">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      <Controller
+        control={control}
+        name={name}
+        rules={{
+          required: required ? `${label} alanı zorunludur.` : false,
+          validate: {
+            validPhone: (value) => !value || !required || validatePhoneNumber(value) || 'Geçerli bir telefon numarası giriniz.',
+          },
+        }}
+        render={({ field, fieldState: { error } }) => (
+          <div>
+            <Input
+              id={name}
+              {...field}
+              value={field.value || ''}
+              onChange={(e) => {
+                const formattedValue = formatPhoneNumber(e.target.value);
+                field.onChange(formattedValue);
+              }}
+              placeholder={placeholder}
+              className={`${error ? 'border-red-500' : ''}`}
+            />
+            {error && <p className="text-red-500 text-xs mt-1">{error.message}</p>}
+          </div>
+        )}
       />
-      {error && <p className="text-sm text-red-500 mt-1">{error}</p>}
     </div>
   );
 }
+
+export default PhoneInputField;
